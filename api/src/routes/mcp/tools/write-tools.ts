@@ -1,180 +1,30 @@
-import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
-import { z } from 'zod'
+import type { McpServer } from '@modelcontextprotocol/server'
 
-import { app } from '#app'
-import { taskIdOrNumber } from '#lib/numeric-id'
-import { callInternalRoute } from '#routes/mcp/route-bridge'
 import {
-  agentArgSchema,
-  authorHeader,
-  toolResult,
-} from '#routes/mcp/tools/tool-helpers'
+  registerCreatePageTool,
+  registerUpdatePageTool,
+} from '#routes/mcp/tools/page-write-tools'
 import {
-  createTaskSchema,
-  taskStatus,
-  taskStatusReason,
-  updateTaskSchema,
-} from '#schemas/task'
-import { createPageSchema, updatePageSchema } from '#schemas/task-page'
+  registerCreateTaskTool,
+  registerUpdateTaskStatusTool,
+  registerUpdateTaskTool,
+} from '#routes/mcp/tools/task-write-tools'
 
-// Narrower than `RequestInit`: every call site here passes headers as a
-// plain object (or omits them), never the `Headers`/`string[][]` shapes
-// `RequestInit['headers']` also allows, so `headers` can be merged with a
-// plain object spread below.
-type RouteInit = Omit<RequestInit, 'headers'> & {
-  headers?: Record<string, string>
-}
-
-async function callRoute(
-  path: string,
-  agent: string | undefined,
-  init: RouteInit = {},
-): Promise<CallToolResult> {
-  const result = await callInternalRoute(app, path, {
-    ...init,
-    headers: { ...init.headers, ...authorHeader(agent) },
-  })
-  return result.ok ? toolResult(result.data) : result.result
-}
+export {
+  registerCreatePageTool,
+  registerUpdatePageTool,
+} from '#routes/mcp/tools/page-write-tools'
+export {
+  registerCreateTaskTool,
+  registerUpdateTaskStatusTool,
+  registerUpdateTaskTool,
+} from '#routes/mcp/tools/task-write-tools'
 
 /** Write tools: creating, updating, and deleting tasks/projects/labels/etc. */
 export function registerWriteTools(server: McpServer): void {
-  server.registerTool(
-    'create_task',
-    {
-      description:
-        'Create a new task. `labels` is an array of label names to attach; ' +
-        'names that do not match an existing label are created ' +
-        "automatically, inheriting this task's context — an existing " +
-        "label's context is left unchanged. `recurrenceRule`, when set, " +
-        'makes the task recur: ' +
-        '`type` is one of daily/weekly/monthly/custom, `interval` is the ' +
-        'repeat count (e.g. 2 with type weekly means every 2 weeks), ' +
-        '`daysOfWeek` (0=Sunday..6=Saturday) restricts a weekly rule to ' +
-        'specific days, and `dayOfMonth` (1-31) fixes the day for a ' +
-        'monthly rule. `blockedBy` is an array of task ids or numbers that ' +
-        'must complete before this task can, resolved to a 404 if any of ' +
-        'them do not exist.',
-      inputSchema: z.object({
-        ...createTaskSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ agent, ...input }) =>
-      callRoute('/api/tasks', agent, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
-      }),
-  )
-
-  server.registerTool(
-    'update_task',
-    {
-      description:
-        'Partially update an existing task by id. Only the fields provided ' +
-        'are changed; omit a field to leave it as-is. Nullable fields ' +
-        '(description, startDate, dueDate, estimatedMinutes, projectId, ' +
-        'recurrenceRule, remindAt) are cleared by passing null. `labels`, when ' +
-        'provided, replaces the full set of labels on the task — pass an ' +
-        'empty array to remove all labels; names that do not match an ' +
-        "existing label are created automatically, inheriting the task's " +
-        "(possibly just-updated) context — an existing label's context is " +
-        'left unchanged. `recurrenceRule` takes the same shape as in ' +
-        'create_task, or null to remove recurrence from the task.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        ...updateTaskSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}`, agent, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'update_task_status',
-    {
-      description:
-        'Change a task to todo or completed. Completing an already-completed ' +
-        'task is rejected. When closing a task (status: completed), ' +
-        'optionally pass statusReason to record why it was closed, and, ' +
-        "when statusReason is 'duplicate', duplicateOfTaskId to record " +
-        'which task it duplicates.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        status: taskStatus,
-        statusReason: taskStatusReason.optional(),
-        duplicateOfTaskId: z.uuid().optional(),
-        agent: agentArgSchema,
-      }),
-    },
-    // Completing routes through /complete since only it rejects an
-    // already-completed task with 409; todo routes through the plain
-    // /status PATCH.
-    async ({ taskId, status, statusReason, duplicateOfTaskId, agent }) =>
-      status === 'completed'
-        ? callRoute(`/api/tasks/${String(taskId)}/complete`, agent, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ statusReason, duplicateOfTaskId }),
-          })
-        : callRoute(`/api/tasks/${String(taskId)}/status`, agent, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status }),
-          }),
-  )
-
-  server.registerTool(
-    'create_page',
-    {
-      description:
-        'Create a new page under a task. Pages hold longer-form content ' +
-        "associated with a task, separate from the task's own " +
-        '`description` field. Set `format: "html"` to save an HTML ' +
-        'document instead of Markdown — it renders in a sandboxed iframe ' +
-        "with no access to this app's cookies, localStorage, or API. " +
-        'Prefer inlining any CSS/JS rather than referencing external ' +
-        "files, since there's no guarantee an external resource stays " +
-        'reachable when the page is viewed later. `sortOrder` controls ' +
-        "display order among the task's pages and defaults to 0.",
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        ...createPageSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}/pages`, agent, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'update_page',
-    {
-      description:
-        'Partially update an existing page by task id and page id. Only ' +
-        'the fields provided are changed; omit a field to leave it as-is.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        pageId: z.uuid(),
-        ...updatePageSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, pageId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}/pages/${pageId}`, agent, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
+  registerCreateTaskTool(server)
+  registerUpdateTaskTool(server)
+  registerUpdateTaskStatusTool(server)
+  registerCreatePageTool(server)
+  registerUpdatePageTool(server)
 }

@@ -10,17 +10,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
-import { db } from '#db/connection'
-import { labels } from '#db/schema'
 import { operations } from '#operations/index'
 import {
   createComment,
   createLabel,
-  createPage,
   createTask,
   TEST_UUID,
 } from '#routes/tasks/testing'
-import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
+import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -61,9 +58,6 @@ function normalizeDynamicValues(
   return value
 }
 
-// Raw parse, keeping real ids/timestamps as-is. Use this only to pull a
-// value (e.g. a created task's id) needed to drive further calls in the
-// test; use `parseToolData` when asserting on the result itself.
 function parseToolJson(result: CallToolResult): unknown {
   const [first] = result.content
   if (first?.type !== 'text') throw new Error('expected text content')
@@ -171,942 +165,442 @@ function expectedPathSegmentValidationError(
   }
 }
 
-describe('create_task tool', () => {
-  it('creates a task with the given fields', async () => {
-    const result = await callTool('create_task', {
-      title: 'Write MCP tools',
-      context: 'work',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Write MCP tools',
-      description: null,
-      status: 'todo',
-      statusReason: null,
-      context: 'work',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('creates any label names that do not exist yet and attaches all of them', async () => {
-    await db.insert(labels).values({ name: 'urgent' })
-
-    const result = await callTool('create_task', {
-      title: 'Labeled task',
-      labels: ['urgent', 'new-label'],
-    })
-
-    const data = passthroughSchema<{ labels: string[] }>().parse(
-      parseToolJson(result),
-    )
-
-    expect(data.labels.toSorted()).toEqual(['new-label', 'urgent'])
-  })
-
-  it('rejects a non-existent parentId', async () => {
-    const result = await callTool('create_task', {
-      title: 'Orphan',
-      parentId: TEST_UUID,
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Parent task not found' }],
-    })
-  })
-})
-
-describe('update_task tool', () => {
-  it('partially updates the given fields', async () => {
-    const task = await createTask('Original title', {
-      description: 'Original description',
-    })
-
-    const result = await callTool('update_task', {
-      taskId: task.id,
-      title: 'Updated title',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Updated title',
-      description: 'Original description',
-      status: 'todo',
-      statusReason: null,
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-  })
-
-  it('clears a nullable field by passing null', async () => {
-    const task = await createTask('Has description', {
-      description: 'Will be cleared',
-    })
-
-    const result = await callTool('update_task', {
-      taskId: task.id,
-      description: null,
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Has description',
-      description: null,
-      status: 'todo',
-      statusReason: null,
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('rejects a non-existent taskId', async () => {
-    const result = await callTool('update_task', {
-      taskId: TEST_UUID,
-      title: 'New title',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Task not found' }],
-    })
-  })
-
-  it('replaces the labels of a task, creating any that do not exist yet', async () => {
-    const task = await createTask('Has a label', { labels: ['urgent'] })
-
-    const result = await callTool('update_task', {
-      taskId: task.id,
-      labels: ['bug'],
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Has a label',
-      description: null,
-      status: 'todo',
-      statusReason: null,
-      context: 'personal',
-      commitment: 'inbox',
-      labels: ['bug'],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-  })
-})
-
-describe('update_task_status tool', () => {
-  it('sets a task to completed', async () => {
-    const task = await createTask('Start me')
-
-    const result = await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'completed',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Start me',
-      description: null,
-      status: 'completed',
-      statusReason: 'completed',
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-  })
-
-  it('keeps the labels of a labeled task', async () => {
-    await createLabel('urgent')
-    const task = await createTask('Start me', { labels: ['urgent'] })
-
-    const result = await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'completed',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Start me',
-      description: null,
-      status: 'completed',
-      statusReason: 'completed',
-      context: 'personal',
-      commitment: 'inbox',
-      labels: ['urgent'],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-  })
-
-  it('reopens a completed task by moving it back to todo', async () => {
-    const task = await createTask('Reopen me')
-    await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'completed',
-    })
-
-    const result = await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'todo',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Reopen me',
-      description: null,
-      status: 'todo',
-      statusReason: null,
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-  })
-
-  it('closes a task as a duplicate and records the target', async () => {
-    const target = await createTask('Target')
-    const task = await createTask('Duplicate me')
-
-    const result = await callTool('update_task_status', {
-      taskId: task.id,
-      status: 'completed',
-      statusReason: 'duplicate',
-      duplicateOfTaskId: target.id,
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Duplicate me',
-      description: null,
-      status: 'completed',
-      statusReason: 'duplicate',
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-
-    // The tool response itself carries no duplicateOfNumber/duplicateOfTask
-    // field (see TaskResponse) — the detail endpoint is the only way to
-    // confirm `duplicateOfTaskId` actually reached the request body.
-    const detailRes = await app.request(`/api/tasks/${task.id}`)
-    const detailBody = await jsonBody<{ duplicateOfNumber: number | null }>(
-      detailRes,
-    )
-    expect(detailBody.duplicateOfNumber).toBe(target.number)
-  })
-})
-
-describe('create_page tool', () => {
-  it('creates a page with the given fields, attributed to the default mcp agent', async () => {
-    const task = await createTask('Has pages')
-
-    const result = await callTool('create_page', {
-      taskId: task.id,
-      title: 'My Page',
-      content: 'Hello',
-    })
-
-    expect(parseToolData(result, ['taskId'])).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      title: 'My Page',
-      content: 'Hello',
-      format: 'markdown',
-      sortOrder: 0,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('attributes the page to an explicitly passed agent', async () => {
-    const task = await createTask('Has pages')
-
-    const result = await callTool('create_page', {
-      taskId: task.id,
-      title: 'My Page',
-      agent: 'test-agent',
-    })
-
-    expect(parseToolData(result, ['taskId'])).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      title: 'My Page',
-      content: '',
-      format: 'markdown',
-      sortOrder: 0,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('creates a page with format html', async () => {
-    const task = await createTask('Has pages')
-
-    const result = await callTool('create_page', {
-      taskId: task.id,
-      title: 'HTML Page',
-      content: '<p>Hello</p>',
-      format: 'html',
-    })
-
-    expect(parseToolData(result, ['taskId'])).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      title: 'HTML Page',
-      content: '<p>Hello</p>',
-      format: 'html',
-      sortOrder: 0,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('rejects a non-existent taskId', async () => {
-    const result = await callTool('create_page', {
-      taskId: TEST_UUID,
-      title: 'Orphan page',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Task not found' }],
-    })
-  })
-})
-
-describe('update_page tool', () => {
-  it('partially updates the given fields', async () => {
-    const task = await createTask('Has pages')
-    const page = await createPage(task.id, 'Original title', 'Original content')
-
-    const result = await callTool('update_page', {
-      taskId: task.id,
-      pageId: page.id,
-      title: 'Updated title',
-    })
-
-    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
-      id: page.id,
-      taskId: task.id,
-      title: 'Updated title',
-      content: 'Original content',
-      format: 'markdown',
-      sortOrder: 0,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'mcp' },
-    })
-  })
-
-  it('attributes the update to an explicitly passed agent', async () => {
-    const task = await createTask('Has pages')
-    const page = await createPage(task.id, 'Original title', 'Original content')
-
-    const result = await callTool('update_page', {
-      taskId: task.id,
-      pageId: page.id,
-      content: 'Updated content',
-      agent: 'test-agent',
-    })
-
-    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
-      id: page.id,
-      taskId: task.id,
-      title: 'Original title',
-      content: 'Updated content',
-      format: 'markdown',
-      sortOrder: 0,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('updates format from markdown to html', async () => {
-    const task = await createTask('Has pages')
-    const page = await createPage(task.id, 'Original title', 'Original content')
-
-    const result = await callTool('update_page', {
-      taskId: task.id,
-      pageId: page.id,
-      format: 'html',
-    })
-
-    // `author` reflects the page's last recorded edit, not this call: a
-    // format-only change isn't tracked by `diffFields` (title/content only),
-    // so no new edit is recorded and the author stays whoever created the
-    // page — the `createPage` helper's default `human` author, not the mcp
-    // tool's own `llm:mcp`.
-    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
-      id: page.id,
-      taskId: task.id,
-      title: 'Original title',
-      content: 'Original content',
-      format: 'html',
-      sortOrder: 0,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'human', agent: null },
-    })
-  })
-
-  it('rejects a non-existent pageId', async () => {
-    const task = await createTask('Has pages')
-
-    const result = await callTool('update_page', {
-      taskId: task.id,
-      pageId: TEST_UUID,
-      title: 'Updated title',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Page not found' }],
-    })
-  })
-})
-
-describe('comment_create tool', () => {
-  it('creates a comment, attributed to the default mcp agent', async () => {
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_create', {
-      taskId: task.id,
-      content: 'A comment',
-    })
-
-    expect(parseToolData(result, ['taskId'])).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      content: 'A comment',
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('attributes the comment to an explicitly passed agent', async () => {
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_create', {
-      taskId: task.id,
-      content: 'A comment',
-      agent: 'test-agent',
-    })
-
-    expect(parseToolData(result, ['taskId'])).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      content: 'A comment',
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('rejects a non-existent taskId', async () => {
-    const result = await callTool('comment_create', {
-      taskId: TEST_UUID,
-      content: 'Orphan comment',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Task not found' }],
-    })
-  })
-})
-
-describe('comment_update tool', () => {
-  it('rejects empty and dot comment ids before tool execution', async () => {
-    const outcomes = await Promise.all(
-      ['comment_update', 'comment_delete'].flatMap((name) =>
-        ['', '.', '..'].map((commentId) =>
-          summarizeToolCallOutcome(
-            name,
-            name === 'comment_update'
-              ? { taskId: TEST_UUID, commentId, content: 'Updated content' }
-              : { taskId: TEST_UUID, commentId },
-          ),
-        ),
-      ),
-    )
-
-    expect(outcomes).toEqual(
-      ['comment_update', 'comment_delete'].flatMap((name) =>
-        ['', '.', '..'].map((commentId) =>
-          expectedPathSegmentValidationError(
-            name,
-            'commentId',
-            'Comment ID',
-            commentId,
-          ),
-        ),
-      ),
-    )
-  })
-
-  it('updates the comment content', async () => {
-    const task = await createTask('Has comments')
-    const comment = await createComment(task.id, 'Original content')
-
-    const result = await callTool('comment_update', {
-      taskId: task.id,
-      commentId: comment.id,
-      content: 'Updated content',
-    })
-
-    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
-      id: comment.id,
-      taskId: task.id,
-      content: 'Updated content',
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('attributes the update to an explicitly passed agent', async () => {
-    const task = await createTask('Has comments')
-    const comment = await createComment(task.id, 'Original content')
-
-    const result = await callTool('comment_update', {
-      taskId: task.id,
-      commentId: comment.id,
-      content: 'Updated content',
-      agent: 'test-agent',
-    })
-
-    expect(parseToolData(result, ['id', 'taskId'])).toEqual({
-      id: comment.id,
-      taskId: task.id,
-      content: 'Updated content',
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
-    })
-  })
-
-  it('rejects a non-existent commentId', async () => {
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_update', {
-      taskId: task.id,
-      commentId: TEST_UUID,
-      content: 'Updated content',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Comment not found' }],
-    })
-  })
-
-  it('accepts a synthetic comment id and lets the API report it missing', async () => {
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_update', {
-      taskId: task.id,
-      commentId: 'c1',
-      content: 'Updated content',
-    })
-
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Comment not found' }],
-    })
-  })
-
-  it('does not route a traversal comment id to a project update', async () => {
-    const project = await createProject('Original project')
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_update', {
-      taskId: task.id,
-      commentId: `../../../projects/${project.id}`,
-      content: 'Changed project',
-    })
-
-    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
-      result: {
-        isError: true,
-        content: [{ type: 'text', text: 'Comment not found' }],
-      },
-      projectTitle: 'Original project',
-    })
-  })
-})
-
-describe('comment_list tool', () => {
-  it('returns comments with their full content', async () => {
-    const task = await createTask('Has comments')
-    await createComment(task.id, 'A long comment body')
-
-    const result = await callTool('comment_list', { taskId: task.id })
-
-    expect(parseToolData(result, ['taskId'])).toEqual([
-      {
+describe('write tools', () => {
+  describe('comment_create tool', () => {
+    it('creates a comment, attributed to the default mcp agent', async () => {
+      const task = await createTask('Has comments')
+
+      const result = await callTool('comment_create', {
+        taskId: task.id,
+        content: 'A comment',
+      })
+
+      expect(parseToolData(result, ['taskId'])).toEqual({
         id: '<uuid>',
         taskId: task.id,
-        content: 'A long comment body',
+        content: 'A comment',
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
-        author: { kind: 'human', agent: null },
-      },
-    ])
-  })
-})
-
-describe('comment_delete tool', () => {
-  it('returns a confirmation after deleting a comment', async () => {
-    const task = await createTask('Has comments')
-    const comment = await createComment(task.id, 'Delete this comment')
-
-    const result = await callTool('comment_delete', {
-      taskId: task.id,
-      commentId: comment.id,
+        author: { kind: 'llm', agent: 'mcp' },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
     })
 
-    expect(parseToolData(result, ['taskId', 'commentId'])).toEqual({
-      deleted: true,
-      taskId: task.id,
-      commentId: comment.id,
-    })
-  })
+    it('attributes the comment to an explicitly passed agent', async () => {
+      const task = await createTask('Has comments')
 
-  it('removes the comment from the task list', async () => {
-    const task = await createTask('Has comments')
-    const comment = await createComment(task.id, 'Delete this comment')
-    await callTool('comment_delete', {
-      taskId: task.id,
-      commentId: comment.id,
-    })
+      const result = await callTool('comment_create', {
+        taskId: task.id,
+        content: 'A comment',
+        agent: 'test-agent',
+      })
 
-    const commentsResponse = await app.request(`/api/tasks/${task.id}/comments`)
-
-    expect(await jsonBody(commentsResponse)).toEqual([])
-  })
-
-  it('returns not found for an unknown comment', async () => {
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_delete', {
-      taskId: task.id,
-      commentId: TEST_UUID,
+      expect(parseToolData(result, ['taskId'])).toEqual({
+        id: '<uuid>',
+        taskId: task.id,
+        content: 'A comment',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'llm', agent: 'test-agent' },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
     })
 
-    expect(result).toEqual({
-      isError: true,
-      content: [{ type: 'text', text: 'Comment not found' }],
-    })
-  })
+    it('rejects a non-existent taskId', async () => {
+      const result = await callTool('comment_create', {
+        taskId: TEST_UUID,
+        content: 'Orphan comment',
+      })
 
-  it('does not route a traversal comment id to a project deletion', async () => {
-    const project = await createProject('Original project')
-    const task = await createTask('Has comments')
-
-    const result = await callTool('comment_delete', {
-      taskId: task.id,
-      commentId: `../../../projects/${project.id}`,
-    })
-
-    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
-      result: {
+      expect(result).toEqual({
         isError: true,
-        content: [{ type: 'text', text: 'Comment not found' }],
-      },
-      projectTitle: 'Original project',
+        content: [{ type: 'text', text: 'Task not found' }],
+      })
     })
   })
-})
 
-describe('label_update tool', () => {
-  it('rejects empty and dot ids before tool execution', async () => {
-    const outcomes = await Promise.all(
-      ['label_update', 'label_delete'].flatMap((name) =>
-        ['', '.', '..'].map((id) =>
-          summarizeToolCallOutcome(
-            name,
-            name === 'label_update' ? { id, name: 'renamed-label' } : { id },
+  describe('comment_update tool', () => {
+    it('rejects empty and dot comment ids before tool execution', async () => {
+      const outcomes = await Promise.all(
+        ['comment_update', 'comment_delete'].flatMap((name) =>
+          ['', '.', '..'].map((commentId) =>
+            summarizeToolCallOutcome(
+              name,
+              name === 'comment_update'
+                ? { taskId: TEST_UUID, commentId, content: 'Updated content' }
+                : { taskId: TEST_UUID, commentId },
+            ),
           ),
         ),
-      ),
-    )
+      )
 
-    expect(outcomes).toEqual(
-      ['label_update', 'label_delete'].flatMap((name) =>
-        ['', '.', '..'].map((id) =>
-          expectedPathSegmentValidationError(name, 'id', 'Label ID', id),
+      expect(outcomes).toEqual(
+        ['comment_update', 'comment_delete'].flatMap((name) =>
+          ['', '.', '..'].map((commentId) =>
+            expectedPathSegmentValidationError(
+              name,
+              'commentId',
+              'Comment ID',
+              commentId,
+            ),
+          ),
         ),
-      ),
-    )
-  })
-
-  it('updates a label by id', async () => {
-    const label = await createLabel('operation-label', { context: 'personal' })
-
-    const result = await callTool('label_update', {
-      id: label.id,
-      name: 'renamed-operation-label',
-      context: 'work',
+      )
     })
 
-    expect(parseToolData(result, ['id'])).toEqual({
-      id: label.id,
-      name: 'renamed-operation-label',
-      color: null,
-      context: 'work',
-      createdAt: '<timestamp>',
+    it('updates the comment content', async () => {
+      const task = await createTask('Has comments')
+      const comment = await createComment(task.id, 'Original content')
+
+      const result = await callTool('comment_update', {
+        taskId: task.id,
+        commentId: comment.id,
+        content: 'Updated content',
+      })
+
+      expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+        id: comment.id,
+        taskId: task.id,
+        content: 'Updated content',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'llm', agent: 'mcp' },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
     })
-  })
 
-  it('does not route a traversal label id to a project update', async () => {
-    const project = await createProject('Original project')
+    it('attributes the update to an explicitly passed agent', async () => {
+      const task = await createTask('Has comments')
+      const comment = await createComment(task.id, 'Original content')
 
-    const result = await callTool('label_update', {
-      id: `../projects/${project.id}`,
-      name: 'Changed project',
+      const result = await callTool('comment_update', {
+        taskId: task.id,
+        commentId: comment.id,
+        content: 'Updated content',
+        agent: 'test-agent',
+      })
+
+      expect(parseToolData(result, ['id', 'taskId'])).toEqual({
+        id: comment.id,
+        taskId: task.id,
+        content: 'Updated content',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'llm', agent: 'test-agent' },
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      })
     })
 
-    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
-      result: {
+    it('rejects a non-existent commentId', async () => {
+      const task = await createTask('Has comments')
+
+      const result = await callTool('comment_update', {
+        taskId: task.id,
+        commentId: TEST_UUID,
+        content: 'Updated content',
+      })
+
+      expect(result).toEqual({
         isError: true,
-        content: [{ type: 'text', text: 'Label not found' }],
-      },
-      projectTitle: 'Original project',
-    })
-  })
-})
-
-describe('label_delete tool', () => {
-  it('returns a confirmation after deleting a label', async () => {
-    const label = await createLabel('label-for-deletion', { context: 'work' })
-    const result = await callTool('label_delete', { id: label.id })
-
-    expect(parseToolData(result, ['id'])).toEqual({
-      deleted: true,
-      id: label.id,
-    })
-  })
-
-  it('removes the label from the label list', async () => {
-    const label = await createLabel('label-for-deletion', { context: 'work' })
-    await callTool('label_delete', { id: label.id })
-
-    const response = await app.request('/api/labels?context=work')
-
-    expect(await jsonBody(response)).toEqual([])
-  })
-
-  it('does not route a traversal label id to a project deletion', async () => {
-    const project = await createProject('Original project')
-
-    const result = await callTool('label_delete', {
-      id: `../projects/${project.id}`,
+        content: [{ type: 'text', text: 'Comment not found' }],
+      })
     })
 
-    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
-      result: {
+    it('accepts a synthetic comment id and lets the API report it missing', async () => {
+      const task = await createTask('Has comments')
+
+      const result = await callTool('comment_update', {
+        taskId: task.id,
+        commentId: 'c1',
+        content: 'Updated content',
+      })
+
+      expect(result).toEqual({
         isError: true,
-        content: [{ type: 'text', text: 'Label not found' }],
-      },
-      projectTitle: 'Original project',
+        content: [{ type: 'text', text: 'Comment not found' }],
+      })
+    })
+
+    it('does not route a traversal comment id to a project update', async () => {
+      const project = await createProject('Original project')
+      const task = await createTask('Has comments')
+
+      const result = await callTool('comment_update', {
+        taskId: task.id,
+        commentId: `../../../projects/${project.id}`,
+        content: 'Changed project',
+      })
+
+      expect(
+        summarizeTraversal(result, await projectTitle(project.id)),
+      ).toEqual({
+        result: {
+          isError: true,
+          content: [{ type: 'text', text: 'Comment not found' }],
+        },
+        projectTitle: 'Original project',
+      })
     })
   })
-})
 
-describe('operation tool input schemas', () => {
-  it('exposes agent only for operations that support attribution', async () => {
-    const tools = await client.listTools()
-    const operationToolNames = operations.map((operation) =>
-      operation.path.join('_'),
-    )
-    const agentArguments = Object.fromEntries(
-      tools.tools
-        .filter((tool) => operationToolNames.includes(tool.name))
-        .map((tool) => [
-          tool.name,
-          Object.keys(tool.inputSchema.properties ?? {}).includes('agent'),
-        ]),
-    )
+  describe('comment_list tool', () => {
+    it('returns comments with their full content', async () => {
+      const task = await createTask('Has comments')
+      await createComment(task.id, 'A long comment body')
 
-    expect(agentArguments).toEqual({
-      comment_create: true,
-      comment_delete: false,
-      comment_list: false,
-      comment_update: true,
-      label_delete: false,
-      label_list: false,
-      label_update: false,
-      project_create: false,
-      project_delete: false,
-      project_get: false,
-      project_list: false,
-      project_tasks: false,
-      project_update: false,
+      const result = await callTool('comment_list', { taskId: task.id })
+
+      expect(parseToolData(result, ['taskId'])).toEqual([
+        {
+          id: '<uuid>',
+          taskId: task.id,
+          content: 'A long comment body',
+          createdAt: '<timestamp>',
+          updatedAt: '<timestamp>',
+          author: { kind: 'human', agent: null },
+        },
+      ])
     })
   })
-})
 
-describe('operation tool annotations', () => {
-  it('maps operation kinds to MCP annotations', async () => {
-    const tools = await client.listTools()
-    const annotations = Object.fromEntries(
-      tools.tools
-        .filter(
-          (tool) =>
-            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
-        )
-        .map((tool) => [tool.name, tool.annotations ?? null]),
-    )
+  describe('comment_delete tool', () => {
+    it('returns a confirmation after deleting a comment', async () => {
+      const task = await createTask('Has comments')
+      const comment = await createComment(task.id, 'Delete this comment')
 
-    expect(annotations).toEqual({
-      comment_create: {
-        readOnlyHint: false,
-        destructiveHint: false,
-      },
-      comment_delete: {
-        readOnlyHint: false,
-        destructiveHint: true,
-      },
-      comment_list: { readOnlyHint: true },
-      comment_update: {
-        readOnlyHint: false,
-        destructiveHint: false,
-      },
-      label_delete: {
-        readOnlyHint: false,
-        destructiveHint: true,
-      },
-      label_list: { readOnlyHint: true },
-      label_update: {
-        readOnlyHint: false,
-        destructiveHint: false,
-      },
+      const result = await callTool('comment_delete', {
+        taskId: task.id,
+        commentId: comment.id,
+      })
+
+      expect(parseToolData(result, ['taskId', 'commentId'])).toEqual({
+        deleted: true,
+        taskId: task.id,
+        commentId: comment.id,
+      })
+    })
+
+    it('removes the comment from the task list', async () => {
+      const task = await createTask('Has comments')
+      const comment = await createComment(task.id, 'Delete this comment')
+      await callTool('comment_delete', {
+        taskId: task.id,
+        commentId: comment.id,
+      })
+
+      const commentsResponse = await app.request(
+        `/api/tasks/${task.id}/comments`,
+      )
+
+      expect(await jsonBody(commentsResponse)).toEqual([])
+    })
+
+    it('returns not found for an unknown comment', async () => {
+      const task = await createTask('Has comments')
+
+      const result = await callTool('comment_delete', {
+        taskId: task.id,
+        commentId: TEST_UUID,
+      })
+
+      expect(result).toEqual({
+        isError: true,
+        content: [{ type: 'text', text: 'Comment not found' }],
+      })
+    })
+
+    it('does not route a traversal comment id to a project deletion', async () => {
+      const project = await createProject('Original project')
+      const task = await createTask('Has comments')
+
+      const result = await callTool('comment_delete', {
+        taskId: task.id,
+        commentId: `../../../projects/${project.id}`,
+      })
+
+      expect(
+        summarizeTraversal(result, await projectTitle(project.id)),
+      ).toEqual({
+        result: {
+          isError: true,
+          content: [{ type: 'text', text: 'Comment not found' }],
+        },
+        projectTitle: 'Original project',
+      })
+    })
+  })
+
+  describe('label_update tool', () => {
+    it('rejects empty and dot ids before tool execution', async () => {
+      const outcomes = await Promise.all(
+        ['label_update', 'label_delete'].flatMap((name) =>
+          ['', '.', '..'].map((id) =>
+            summarizeToolCallOutcome(
+              name,
+              name === 'label_update' ? { id, name: 'renamed-label' } : { id },
+            ),
+          ),
+        ),
+      )
+
+      expect(outcomes).toEqual(
+        ['label_update', 'label_delete'].flatMap((name) =>
+          ['', '.', '..'].map((id) =>
+            expectedPathSegmentValidationError(name, 'id', 'Label ID', id),
+          ),
+        ),
+      )
+    })
+
+    it('updates a label by id', async () => {
+      const label = await createLabel('operation-label', {
+        context: 'personal',
+      })
+
+      const result = await callTool('label_update', {
+        id: label.id,
+        name: 'renamed-operation-label',
+        context: 'work',
+      })
+
+      expect(parseToolData(result, ['id'])).toEqual({
+        id: label.id,
+        name: 'renamed-operation-label',
+        color: null,
+        context: 'work',
+        createdAt: '<timestamp>',
+      })
+    })
+
+    it('does not route a traversal label id to a project update', async () => {
+      const project = await createProject('Original project')
+
+      const result = await callTool('label_update', {
+        id: `../projects/${project.id}`,
+        name: 'Changed project',
+      })
+
+      expect(
+        summarizeTraversal(result, await projectTitle(project.id)),
+      ).toEqual({
+        result: {
+          isError: true,
+          content: [{ type: 'text', text: 'Label not found' }],
+        },
+        projectTitle: 'Original project',
+      })
+    })
+  })
+
+  describe('label_delete tool', () => {
+    it('returns a confirmation after deleting a label', async () => {
+      const label = await createLabel('label-for-deletion', { context: 'work' })
+      const result = await callTool('label_delete', { id: label.id })
+
+      expect(parseToolData(result, ['id'])).toEqual({
+        deleted: true,
+        id: label.id,
+      })
+    })
+
+    it('removes the label from the label list', async () => {
+      const label = await createLabel('label-for-deletion', { context: 'work' })
+      await callTool('label_delete', { id: label.id })
+
+      const response = await app.request('/api/labels?context=work')
+
+      expect(await jsonBody(response)).toEqual([])
+    })
+
+    it('does not route a traversal label id to a project deletion', async () => {
+      const project = await createProject('Original project')
+
+      const result = await callTool('label_delete', {
+        id: `../projects/${project.id}`,
+      })
+
+      expect(
+        summarizeTraversal(result, await projectTitle(project.id)),
+      ).toEqual({
+        result: {
+          isError: true,
+          content: [{ type: 'text', text: 'Label not found' }],
+        },
+        projectTitle: 'Original project',
+      })
+    })
+  })
+
+  describe('operation tool input schemas', () => {
+    it('exposes agent only for operations that support attribution', async () => {
+      const tools = await client.listTools()
+      const operationToolNames = operations.map((operation) =>
+        operation.path.join('_'),
+      )
+      const agentArguments = Object.fromEntries(
+        tools.tools
+          .filter((tool) => operationToolNames.includes(tool.name))
+          .map((tool) => [
+            tool.name,
+            Object.keys(tool.inputSchema.properties ?? {}).includes('agent'),
+          ]),
+      )
+
+      expect(agentArguments).toEqual({
+        comment_create: true,
+        comment_delete: false,
+        comment_list: false,
+        comment_update: true,
+        label_delete: false,
+        label_list: false,
+        label_update: false,
+        project_create: false,
+        project_delete: false,
+        project_get: false,
+        project_list: false,
+        project_tasks: false,
+        project_update: false,
+      })
+    })
+  })
+
+  describe('operation tool annotations', () => {
+    it('maps operation kinds to MCP annotations', async () => {
+      const tools = await client.listTools()
+      const annotations = Object.fromEntries(
+        tools.tools
+          .filter(
+            (tool) =>
+              tool.name.startsWith('comment_') ||
+              tool.name.startsWith('label_'),
+          )
+          .map((tool) => [tool.name, tool.annotations ?? null]),
+      )
+
+      expect(annotations).toEqual({
+        comment_create: {
+          readOnlyHint: false,
+          destructiveHint: false,
+        },
+        comment_delete: {
+          readOnlyHint: false,
+          destructiveHint: true,
+        },
+        comment_list: { readOnlyHint: true },
+        comment_update: {
+          readOnlyHint: false,
+          destructiveHint: false,
+        },
+        label_delete: {
+          readOnlyHint: false,
+          destructiveHint: true,
+        },
+        label_list: { readOnlyHint: true },
+        label_update: {
+          readOnlyHint: false,
+          destructiveHint: false,
+        },
+      })
     })
   })
 })

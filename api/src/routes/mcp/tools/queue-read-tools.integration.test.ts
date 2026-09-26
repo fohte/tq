@@ -5,21 +5,10 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { normalizeDynamicValues } from '#routes/mcp/testing'
-import { createLabel } from '#routes/tasks/testing'
-import { setupTestDb } from '#testing'
+import { createTask } from '#routes/tasks/testing'
+import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
-
-const READ_TOOL_NAMES = [
-  'get_page',
-  'get_task',
-  'get_today_tasks',
-  'label_list',
-  'list_tasks',
-  'search_pages',
-  'search_tasks',
-]
 
 async function withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   const client = new Client({ name: 'test-client', version: '1.0.0' })
@@ -64,61 +53,46 @@ function parseJson(result: CallToolResult): unknown {
   return JSON.parse(first.text)
 }
 
-describe('read tools', () => {
-  it('declares every read tool as read-only', async () => {
-    const result = await withClient((client) => client.listTools())
+describe('queue read tools', () => {
+  describe('get_today_tasks', () => {
+    it('rejects invalid input', async () => {
+      const result = await callTool('get_today_tasks', { date: 'not-a-date' })
 
-    expect(
-      result.tools
-        .filter((tool) => READ_TOOL_NAMES.includes(tool.name))
-        .map((tool) => ({
-          name: tool.name,
-          readOnlyHint: tool.annotations?.readOnlyHint,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    ).toEqual([
-      { name: 'get_page', readOnlyHint: true },
-      { name: 'get_task', readOnlyHint: true },
-      { name: 'get_today_tasks', readOnlyHint: true },
-      { name: 'label_list', readOnlyHint: true },
-      { name: 'list_tasks', readOnlyHint: true },
-      { name: 'search_pages', readOnlyHint: true },
-      { name: 'search_tasks', readOnlyHint: true },
-    ])
-  })
-
-  describe('label_list', () => {
-    it('returns all labels', async () => {
-      const label = await createLabel('urgent')
-
-      const toolResult = await callTool('label_list')
-
-      expect(parseJson(toolResult)).toEqual([
-        {
-          id: label.id,
-          name: 'urgent',
-          color: label.color,
-          context: label.context,
-          createdAt: label.createdAt.toISOString(),
-        },
-      ])
+      expect(result.isError).toBe(true)
     })
 
-    it('returns labels in the requested context', async () => {
-      await createLabel('work-label', { context: 'work' })
-      await createLabel('personal-label', { context: 'personal' })
+    it('returns the queue for an explicit date', async () => {
+      const task = await createTask('Queued task')
+      const putRes = await app.request('/api/queues/day/items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskIds: [task.id], date: '2026-01-15' }),
+      })
+      const queued = await jsonBody<Record<string, unknown>[]>(putRes)
 
-      const toolResult = await callTool('label_list', { context: 'work' })
+      const toolResult = await callTool('get_today_tasks', {
+        date: '2026-01-15',
+      })
 
-      expect(normalizeDynamicValues(parseJson(toolResult))).toEqual([
-        {
-          id: '<uuid>',
-          name: 'work-label',
-          color: null,
-          context: 'work',
-          createdAt: '<timestamp>',
-        },
-      ])
+      expect(parseJson(toolResult)).toEqual(queued)
+    })
+
+    // `today` and the tool's own internal `new Date()` call are evaluated a
+    // few milliseconds apart, so this could in principle flake right at a
+    // UTC midnight boundary; accepted as negligible.
+    it('defaults to the current UTC date when date is omitted', async () => {
+      const today = new Date().toISOString().slice(0, 10)
+      const task = await createTask('Queued task')
+      const putRes = await app.request('/api/queues/day/items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskIds: [task.id], date: today }),
+      })
+      const queued = await jsonBody<Record<string, unknown>[]>(putRes)
+
+      const toolResult = await callTool('get_today_tasks')
+
+      expect(parseJson(toolResult)).toEqual(queued)
     })
   })
 })
