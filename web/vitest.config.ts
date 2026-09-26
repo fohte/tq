@@ -31,6 +31,7 @@ const alias = {
 function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
   return {
     ...project,
+    optimizeDeps: { include: BASE_UI_ENTRIES },
     plugins: [
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- withTailwind casts through `any`, see comment above its definition
       ...project.plugins,
@@ -40,6 +41,13 @@ function withTailwind(project: ReturnType<typeof createStorybookProject>): any {
 }
 
 const BROWSER_TEST_PATTERN = '**/*.browser.test.{ts,tsx}'
+const BASE_UI_ENTRIES = [
+  '@base-ui/react/button',
+  '@base-ui/react/dialog',
+  '@base-ui/react/input',
+  '@base-ui/react/select',
+  '@base-ui/react/tooltip',
+]
 
 export default defineConfig({
   resolve: { alias },
@@ -59,6 +67,7 @@ export default defineConfig({
         },
       },
       {
+        optimizeDeps: { include: BASE_UI_ENTRIES },
         plugins: [tailwindcss()],
         test: {
           name: 'browser',

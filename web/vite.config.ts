@@ -7,6 +7,16 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { pwaManifest } from './src/lib/pwa-manifest'
 
 export default defineConfig({
+  optimizeDeps: {
+    // Base UI is reached through source exports in @fohte/ui, so the dependency scanner misses it.
+    include: [
+      '@base-ui/react/button',
+      '@base-ui/react/dialog',
+      '@base-ui/react/input',
+      '@base-ui/react/select',
+      '@base-ui/react/tooltip',
+    ],
+  },
   plugins: [
     tanstackRouter({
       routesDirectory: './src/routes',
