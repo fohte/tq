@@ -1,20 +1,6 @@
-import type { AppType } from 'api/types'
-import type { ExtractSchema } from 'hono/types'
+import type { AllRoutes, OperationRoutes } from 'api/operations'
 
-type Schema = ExtractSchema<AppType>
-
-/**
- * Every `${METHOD} ${path}` pair the API exposes, derived from the Hono app
- * type. Adding a route to `api/src/app.ts` grows this union, which is what
- * makes an unclassified route below a compile error instead of a silent gap.
- */
-export type AllRoutes = {
-  [Path in keyof Schema]: {
-    [Method in keyof Schema[Path]]: Method extends `$${infer M}`
-      ? `${Uppercase<M>} ${Path}`
-      : never
-  }[keyof Schema[Path]]
-}[keyof Schema]
+export type { AllRoutes }
 
 export const COVERED_ROUTES = [
   'GET /api/tasks/:taskId/pages',
@@ -75,12 +61,6 @@ export const COVERED_ROUTES = [
   'GET /api/tasks/:taskId/agent-sessions',
   'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId',
 
-  // comment
-  'GET /api/tasks/:taskId/comments',
-  'POST /api/tasks/:taskId/comments',
-  'PATCH /api/tasks/:taskId/comments/:commentId',
-  'DELETE /api/tasks/:taskId/comments/:commentId',
-
   // project
   'POST /api/projects',
   'GET /api/projects',
@@ -101,7 +81,7 @@ export const COVERED_ROUTES = [
   'DELETE /api/saved-views/:id',
 ] as const satisfies readonly AllRoutes[]
 
-type CoveredRoutes = (typeof COVERED_ROUTES)[number]
+type CoveredRoutes = (typeof COVERED_ROUTES)[number] | OperationRoutes
 
 export const EXCLUDED_ROUTES = {
   // Written by `tq hook` (the Claude Code hook integration). Bulk session

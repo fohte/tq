@@ -256,10 +256,10 @@ describe('REST/MCP parity', () => {
     expect(await jsonBody(res)).toEqual([data])
   })
 
-  it('a comment created via create_comment is visible through GET /api/tasks/:taskId/comments', async () => {
+  it('a comment created via comment_create is visible through GET /api/tasks/:taskId/comments', async () => {
     const task = await createTask('Has comments')
 
-    const created = await callTool('create_comment', {
+    const created = await callTool('comment_create', {
       taskId: task.id,
       content: 'A comment',
     })
@@ -275,9 +275,9 @@ describe('REST/MCP parity', () => {
     expect(await jsonBody(res)).toEqual([data])
   })
 
-  it('a comment updated via update_comment with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/comments', async () => {
+  it('a comment updated via comment_update with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/comments', async () => {
     const task = await createTask('Has comments')
-    const created = await callTool('create_comment', {
+    const created = await callTool('comment_create', {
       taskId: task.id,
       content: 'Original content',
     })
@@ -285,7 +285,7 @@ describe('REST/MCP parity', () => {
       parseToolJson(created),
     )
 
-    const updated = await callTool('update_comment', {
+    const updated = await callTool('comment_update', {
       taskId: task.id,
       commentId: comment.id,
       content: 'Updated content',

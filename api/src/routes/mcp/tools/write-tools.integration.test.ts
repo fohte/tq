@@ -4,8 +4,10 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import {
   type CallToolResult,
   CallToolResultSchema,
+  McpError,
 } from '@modelcontextprotocol/sdk/types.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { z } from 'zod'
 
 import { app } from '#app'
 import { db } from '#db/connection'
@@ -78,6 +80,25 @@ function parseToolData(
   )
 }
 
+async function createProject(title: string): Promise<{ id: string }> {
+  const response = await app.request('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+async function projectTitle(projectId: string): Promise<string> {
+  const response = await app.request(`/api/projects/${projectId}`)
+  const project = await jsonBody(response, z.object({ title: z.string() }))
+  return project.title
+}
+
+function summarizeTraversal(result: CallToolResult, projectTitle: string) {
+  return { result, projectTitle }
+}
+
 let client: Client
 
 beforeEach(async () => {
@@ -107,6 +128,41 @@ async function callTool(
   // guarantees the `content` shape at runtime without narrowing the type.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
   return result as CallToolResult
+}
+
+async function summarizeToolCallOutcome(
+  name: string,
+  args: Record<string, unknown>,
+) {
+  try {
+    return { kind: 'result' as const, result: await callTool(name, args) }
+  } catch (error) {
+    return error instanceof McpError
+      ? { kind: 'mcp-error' as const, code: error.code }
+      : {
+          kind: 'unexpected-error' as const,
+          message: error instanceof Error ? error.message : String(error),
+        }
+  }
+}
+
+function expectedCommentIdValidationError(name: string, commentId: string) {
+  const issue =
+    commentId === ''
+      ? 'Too small: expected string to have >=1 characters'
+      : 'Comment ID must be a valid path segment'
+  return {
+    kind: 'result',
+    result: {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: `Input validation error: Invalid arguments for tool ${name}: commentId: ${issue}`,
+        },
+      ],
+    },
+  }
 }
 
 describe('create_task tool', () => {
@@ -477,7 +533,7 @@ describe('create_page tool', () => {
     const result = await callTool('create_page', {
       taskId: task.id,
       title: 'My Page',
-      agent: 'claude-opus-5',
+      agent: 'test-agent',
     })
 
     expect(parseToolData(result, ['taskId'])).toEqual({
@@ -489,7 +545,7 @@ describe('create_page tool', () => {
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'claude-opus-5' },
+      author: { kind: 'llm', agent: 'test-agent' },
       linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
@@ -563,7 +619,7 @@ describe('update_page tool', () => {
       taskId: task.id,
       pageId: page.id,
       content: 'Updated content',
-      agent: 'claude-opus-5',
+      agent: 'test-agent',
     })
 
     expect(parseToolData(result, ['id', 'taskId'])).toEqual({
@@ -575,7 +631,7 @@ describe('update_page tool', () => {
       sortOrder: 0,
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'claude-opus-5' },
+      author: { kind: 'llm', agent: 'test-agent' },
       linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
@@ -624,11 +680,11 @@ describe('update_page tool', () => {
   })
 })
 
-describe('create_comment tool', () => {
+describe('comment_create tool', () => {
   it('creates a comment, attributed to the default mcp agent', async () => {
     const task = await createTask('Has comments')
 
-    const result = await callTool('create_comment', {
+    const result = await callTool('comment_create', {
       taskId: task.id,
       content: 'A comment',
     })
@@ -647,10 +703,10 @@ describe('create_comment tool', () => {
   it('attributes the comment to an explicitly passed agent', async () => {
     const task = await createTask('Has comments')
 
-    const result = await callTool('create_comment', {
+    const result = await callTool('comment_create', {
       taskId: task.id,
       content: 'A comment',
-      agent: 'claude-opus-5',
+      agent: 'test-agent',
     })
 
     expect(parseToolData(result, ['taskId'])).toEqual({
@@ -659,13 +715,13 @@ describe('create_comment tool', () => {
       content: 'A comment',
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'claude-opus-5' },
+      author: { kind: 'llm', agent: 'test-agent' },
       linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
 
   it('rejects a non-existent taskId', async () => {
-    const result = await callTool('create_comment', {
+    const result = await callTool('comment_create', {
       taskId: TEST_UUID,
       content: 'Orphan comment',
     })
@@ -677,12 +733,35 @@ describe('create_comment tool', () => {
   })
 })
 
-describe('update_comment tool', () => {
+describe('comment_update tool', () => {
+  it('rejects empty and dot comment ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['comment_update', 'comment_delete'].flatMap((name) =>
+        ['', '.', '..'].map((commentId) =>
+          summarizeToolCallOutcome(
+            name,
+            name === 'comment_update'
+              ? { taskId: TEST_UUID, commentId, content: 'Updated content' }
+              : { taskId: TEST_UUID, commentId },
+          ),
+        ),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['comment_update', 'comment_delete'].flatMap((name) =>
+        ['', '.', '..'].map((commentId) =>
+          expectedCommentIdValidationError(name, commentId),
+        ),
+      ),
+    )
+  })
+
   it('updates the comment content', async () => {
     const task = await createTask('Has comments')
     const comment = await createComment(task.id, 'Original content')
 
-    const result = await callTool('update_comment', {
+    const result = await callTool('comment_update', {
       taskId: task.id,
       commentId: comment.id,
       content: 'Updated content',
@@ -703,11 +782,11 @@ describe('update_comment tool', () => {
     const task = await createTask('Has comments')
     const comment = await createComment(task.id, 'Original content')
 
-    const result = await callTool('update_comment', {
+    const result = await callTool('comment_update', {
       taskId: task.id,
       commentId: comment.id,
       content: 'Updated content',
-      agent: 'claude-opus-5',
+      agent: 'test-agent',
     })
 
     expect(parseToolData(result, ['id', 'taskId'])).toEqual({
@@ -716,7 +795,7 @@ describe('update_comment tool', () => {
       content: 'Updated content',
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      author: { kind: 'llm', agent: 'claude-opus-5' },
+      author: { kind: 'llm', agent: 'test-agent' },
       linkSync: { outgoing: [], unresolvedRefs: [] },
     })
   })
@@ -724,7 +803,7 @@ describe('update_comment tool', () => {
   it('rejects a non-existent commentId', async () => {
     const task = await createTask('Has comments')
 
-    const result = await callTool('update_comment', {
+    const result = await callTool('comment_update', {
       taskId: task.id,
       commentId: TEST_UUID,
       content: 'Updated content',
@@ -733,6 +812,150 @@ describe('update_comment tool', () => {
     expect(result).toEqual({
       isError: true,
       content: [{ type: 'text', text: 'Comment not found' }],
+    })
+  })
+
+  it('accepts a synthetic comment id and lets the API report it missing', async () => {
+    const task = await createTask('Has comments')
+
+    const result = await callTool('comment_update', {
+      taskId: task.id,
+      commentId: 'c1',
+      content: 'Updated content',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Comment not found' }],
+    })
+  })
+
+  it('does not route a traversal comment id to a project update', async () => {
+    const project = await createProject('Original project')
+    const task = await createTask('Has comments')
+
+    const result = await callTool('comment_update', {
+      taskId: task.id,
+      commentId: `../../../projects/${project.id}`,
+      content: 'Changed project',
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Comment not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
+describe('comment_list tool', () => {
+  it('returns comments with their full content', async () => {
+    const task = await createTask('Has comments')
+    await createComment(task.id, 'A long comment body')
+
+    const result = await callTool('comment_list', { taskId: task.id })
+
+    expect(parseToolData(result, ['taskId'])).toEqual([
+      {
+        id: '<uuid>',
+        taskId: task.id,
+        content: 'A long comment body',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      },
+    ])
+  })
+})
+
+describe('comment_delete tool', () => {
+  it('returns a confirmation after deleting a comment', async () => {
+    const task = await createTask('Has comments')
+    const comment = await createComment(task.id, 'Delete this comment')
+
+    const result = await callTool('comment_delete', {
+      taskId: task.id,
+      commentId: comment.id,
+    })
+
+    expect(parseToolData(result, ['taskId', 'commentId'])).toEqual({
+      deleted: true,
+      taskId: task.id,
+      commentId: comment.id,
+    })
+  })
+
+  it('removes the comment from the task list', async () => {
+    const task = await createTask('Has comments')
+    const comment = await createComment(task.id, 'Delete this comment')
+    await callTool('comment_delete', {
+      taskId: task.id,
+      commentId: comment.id,
+    })
+
+    const commentsResponse = await app.request(`/api/tasks/${task.id}/comments`)
+
+    expect(await jsonBody(commentsResponse)).toEqual([])
+  })
+
+  it('returns not found for an unknown comment', async () => {
+    const task = await createTask('Has comments')
+
+    const result = await callTool('comment_delete', {
+      taskId: task.id,
+      commentId: TEST_UUID,
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Comment not found' }],
+    })
+  })
+
+  it('does not route a traversal comment id to a project deletion', async () => {
+    const project = await createProject('Original project')
+    const task = await createTask('Has comments')
+
+    const result = await callTool('comment_delete', {
+      taskId: task.id,
+      commentId: `../../../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Comment not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
+describe('comment tool annotations', () => {
+  it('maps operation kinds to MCP annotations', async () => {
+    const tools = await client.listTools()
+    const annotations = Object.fromEntries(
+      tools.tools
+        .filter((tool) => tool.name.startsWith('comment_'))
+        .map((tool) => [tool.name, tool.annotations ?? null]),
+    )
+
+    expect(annotations).toEqual({
+      comment_create: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      comment_delete: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
+      comment_list: { readOnlyHint: true },
+      comment_update: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
     })
   })
 })

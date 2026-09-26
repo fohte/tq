@@ -7,11 +7,13 @@ import { z } from 'zod'
 import { app } from '#app'
 import { jsonBody, setupTestDb } from '#testing'
 
-// Per-tool schema/description/annotation detail is covered by each tool
-// group's own tests; both protocol-era tests below only pin down that every
-// registered tool is reachable through the wire protocol.
+// Tool-specific schema and annotation details live with their operation or
+// write-tool integration tests; these tests pin down wire-level reachability.
 const REGISTERED_TOOL_NAMES = [
-  'create_comment',
+  'comment_create',
+  'comment_delete',
+  'comment_list',
+  'comment_update',
   'create_page',
   'create_task',
   'get_page',
@@ -22,11 +24,16 @@ const REGISTERED_TOOL_NAMES = [
   'list_tasks',
   'search_pages',
   'search_tasks',
-  'update_comment',
   'update_page',
   'update_task',
   'update_task_status',
 ]
+
+function summarizeTools(
+  tools: Awaited<ReturnType<Client['listTools']>>['tools'],
+) {
+  return tools.map((tool) => tool.name).sort()
+}
 
 // `mcpApp` is mounted with `.route()` on the same `app` instance as every
 // other route (see api/src/app.ts) instead of a dedicated server or
@@ -50,9 +57,7 @@ describe('MCP endpoint', () => {
     try {
       const result = await client.listTools()
 
-      expect(result.tools.map((tool) => tool.name).sort()).toEqual(
-        REGISTERED_TOOL_NAMES,
-      )
+      expect(summarizeTools(result.tools)).toEqual(REGISTERED_TOOL_NAMES)
     } finally {
       await client.close()
     }

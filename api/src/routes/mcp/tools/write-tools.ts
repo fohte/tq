@@ -2,47 +2,20 @@ import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
 import { z } from 'zod'
 
 import { app } from '#app'
-import { AUTHOR_HEADER } from '#lib/author'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { callInternalRoute } from '#routes/mcp/route-bridge'
+import {
+  agentArgSchema,
+  authorHeader,
+  toolResult,
+} from '#routes/mcp/tools/tool-helpers'
 import {
   createTaskSchema,
   taskStatus,
   taskStatusReason,
   updateTaskSchema,
 } from '#schemas/task'
-import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
-
-function toolResult(data: unknown): CallToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(data) }] }
-}
-
-// A human never calls these write tools directly (humans use the web UI,
-// which sends its own `X-Author: human`); the MCP protocol here is only ever
-// driven by an LLM agent, so every write is recorded as `llm`, never
-// `human`. There's no reliable way to learn the calling model's name from
-// the MCP protocol itself (the stateless per-request server never observes
-// the `initialize` handshake that carries `clientInfo`), so each write tool
-// accepts an optional `agent` argument the caller can self-report; absent
-// that, `mcp` is a generic stand-in identifying the channel rather than the
-// agent.
-const DEFAULT_AGENT = 'mcp'
-
-const agentArgSchema = z
-  .string()
-  .min(1)
-  .regex(/^[^\x00-\x1f\x7f]+$/, 'must not contain control characters')
-  .optional()
-  .describe(
-    'Your own model name (e.g. "claude-opus-5"), so this write is ' +
-      'attributed to you specifically in the edit history. Always pass ' +
-      'this when you know it.',
-  )
-
-function authorHeaderValue(agent: string | undefined): string {
-  return `llm:${agent ?? DEFAULT_AGENT}`
-}
 
 // Narrower than `RequestInit`: every call site here passes headers as a
 // plain object (or omits them), never the `Headers`/`string[][]` shapes
@@ -59,7 +32,7 @@ async function callRoute(
 ): Promise<CallToolResult> {
   const result = await callInternalRoute(app, path, {
     ...init,
-    headers: { ...init.headers, [AUTHOR_HEADER]: authorHeaderValue(agent) },
+    headers: { ...init.headers, ...authorHeader(agent) },
   })
   return result.ok ? toolResult(result.data) : result.result
 }
@@ -199,44 +172,6 @@ export function registerWriteTools(server: McpServer): void {
     },
     async ({ taskId, pageId, agent, ...body }) =>
       callRoute(`/api/tasks/${String(taskId)}/pages/${pageId}`, agent, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'create_comment',
-    {
-      description: 'Add a comment to a task.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        ...createCommentSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}/comments`, agent, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-  )
-
-  server.registerTool(
-    'update_comment',
-    {
-      description:
-        'Update the content of an existing comment by task id and comment id.',
-      inputSchema: z.object({
-        taskId: taskIdOrNumber,
-        commentId: z.uuid(),
-        ...updateCommentSchema.shape,
-        agent: agentArgSchema,
-      }),
-    },
-    async ({ taskId, commentId, agent, ...body }) =>
-      callRoute(`/api/tasks/${String(taskId)}/comments/${commentId}`, agent, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

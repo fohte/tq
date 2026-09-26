@@ -1,10 +1,11 @@
+import type { OperationClient } from 'api/operations'
 import type { AppType } from 'api/types'
 import { hc } from 'hono/client'
 
 import { ApiError, NetworkError } from '#errors'
 import { tryParseJson } from '#result'
 
-export type Client = ReturnType<typeof hc<AppType>>
+export type Client = OperationClient
 
 export interface ClientConfig {
   apiUrl: string
