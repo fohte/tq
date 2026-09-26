@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  handleImageLoadError,
-  ImageTooLargeError,
-  parseImageId,
-  resolveImageSrc,
-  UnsupportedImageTypeError,
-  uploadImageFile,
-  uploadImageFiles,
-} from '#lib/image-upload'
+  AssetTooLargeError,
+  handleAssetLoadError,
+  parseAssetId,
+  resolveAssetSrc,
+  UnsupportedAssetTypeError,
+  uploadAssetFile,
+  uploadAssetFiles,
+} from '#lib/asset-upload'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
@@ -18,7 +18,7 @@ vi.mock('#lib/api', () => {
   return {
     api: {
       api: {
-        images: {
+        assets: {
           $post: mockPost,
           ':id': { $get: mockGet },
         },
@@ -48,17 +48,21 @@ function makeFile(name: string, type: string, sizeBytes: number): File {
   return new File([new Uint8Array(sizeBytes)], name, { type })
 }
 
-describe('parseImageId', () => {
-  it('extracts the id from an /api/images/:id path', () => {
-    expect(parseImageId('/api/images/abc-123')).toBe('abc-123')
+describe('parseAssetId', () => {
+  it('extracts the id from an /api/assets/:id path', () => {
+    expect(parseAssetId('/api/assets/abc-123')).toBe('abc-123')
+  })
+
+  it('does not extract ids from the former image path', () => {
+    expect(parseAssetId('/api/images/abc-123')).toBeNull()
   })
 
   it('returns null for URLs that do not match the pattern', () => {
-    expect(parseImageId('https://example.com/foo.png')).toBeNull()
+    expect(parseAssetId('https://example.com/foo.png')).toBeNull()
   })
 })
 
-describe('uploadImageFile', () => {
+describe('uploadAssetFile', () => {
   it('uploads the file and returns the markdown-embeddable path', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockPost']).mockResolvedValue({
@@ -66,30 +70,30 @@ describe('uploadImageFile', () => {
       json: () => Promise.resolve({ id: 'new-id' }),
     })
 
-    const result = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
+    const result = await uploadAssetFile(makeFile('photo.png', 'image/png', 10))
 
-    expect(result._unsafeUnwrap()).toBe('/api/images/new-id')
+    expect(result._unsafeUnwrap()).toBe('/api/assets/new-id')
   })
 
   it('rejects unsupported file types without calling the API', async () => {
     const mocks = await getMocks()
 
-    const result = await uploadImageFile(
+    const result = await uploadAssetFile(
       makeFile('doc.pdf', 'application/pdf', 10),
     )
 
-    expect(result._unsafeUnwrapErr()).toEqual(new UnsupportedImageTypeError())
+    expect(result._unsafeUnwrapErr()).toEqual(new UnsupportedAssetTypeError())
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
   it('rejects files exceeding the size limit without calling the API', async () => {
     const mocks = await getMocks()
 
-    const result = await uploadImageFile(
+    const result = await uploadAssetFile(
       makeFile('big.png', 'image/png', 10 * 1024 * 1024 + 1),
     )
 
-    expect(result._unsafeUnwrapErr()).toEqual(new ImageTooLargeError())
+    expect(result._unsafeUnwrapErr()).toEqual(new AssetTooLargeError())
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
@@ -97,15 +101,15 @@ describe('uploadImageFile', () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockPost']).mockResolvedValue({ ok: false })
 
-    const result = await uploadImageFile(makeFile('photo.png', 'image/png', 10))
+    const result = await uploadAssetFile(makeFile('photo.png', 'image/png', 10))
 
     expect(result._unsafeUnwrapErr().message).toBe('Failed to upload image')
   })
 })
 
-describe('uploadImageFiles', () => {
+describe('uploadAssetFiles', () => {
   function fileList(...files: File[]): FileList {
-    // jsdom has no real DataTransfer/FileList constructor; uploadImageFiles
+    // jsdom has no real DataTransfer/FileList constructor; uploadAssetFiles
     // only calls Array.from(files), so a plain array satisfies it at runtime.
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test-only array-like stand-in for FileList
     return files as unknown as FileList
@@ -123,7 +127,7 @@ describe('uploadImageFiles', () => {
         json: () => Promise.resolve({ id: 'id-b' }),
       })
 
-    const nodes = await uploadImageFiles(
+    const nodes = await uploadAssetFiles(
       fileList(
         makeFile('a.png', 'image/png', 10),
         makeFile('b.png', 'image/png', 10),
@@ -132,8 +136,8 @@ describe('uploadImageFiles', () => {
     )
 
     expect(nodes).toEqual([
-      { src: '/api/images/id-a', alt: 'a.png' },
-      { src: '/api/images/id-b', alt: 'b.png' },
+      { src: '/api/assets/id-a', alt: 'a.png' },
+      { src: '/api/assets/id-b', alt: 'b.png' },
     ])
   })
 
@@ -147,7 +151,7 @@ describe('uploadImageFiles', () => {
         json: () => Promise.resolve({ id: 'id-b' }),
       })
 
-    const nodes = await uploadImageFiles(
+    const nodes = await uploadAssetFiles(
       fileList(
         makeFile('a.png', 'image/png', 10),
         makeFile('b.png', 'image/png', 10),
@@ -155,19 +159,19 @@ describe('uploadImageFiles', () => {
       (src, alt) => ({ src, alt }),
     )
 
-    expect(nodes).toEqual([{ src: '/api/images/id-b', alt: 'b.png' }])
+    expect(nodes).toEqual([{ src: '/api/assets/id-b', alt: 'b.png' }])
     expect(consoleError).toHaveBeenCalledTimes(1)
     consoleError.mockRestore()
   })
 })
 
-// resolveImageSrc/handleImageLoadError share module-level cache state, so
+// resolveAssetSrc/handleAssetLoadError share module-level cache state, so
 // each test below uses its own image id rather than resetting the cache.
-describe('resolveImageSrc', () => {
-  it('passes through URLs that are not /api/images/:id paths', async () => {
+describe('resolveAssetSrc', () => {
+  it('passes through URLs that are not /api/assets/:id paths', async () => {
     const mocks = await getMocks()
 
-    const result = await resolveImageSrc('https://example.com/foo.png')
+    const result = await resolveAssetSrc('https://example.com/foo.png')
 
     expect(result._unsafeUnwrap()).toBe('https://example.com/foo.png')
     expect(mocks['mockGet']).not.toHaveBeenCalled()
@@ -180,8 +184,8 @@ describe('resolveImageSrc', () => {
       json: () => Promise.resolve({ url: 'https://signed.example.com/a' }),
     })
 
-    const first = await resolveImageSrc('/api/images/cache-test-1')
-    const second = await resolveImageSrc('/api/images/cache-test-1')
+    const first = await resolveAssetSrc('/api/assets/cache-test-1')
+    const second = await resolveAssetSrc('/api/assets/cache-test-1')
 
     expect(first._unsafeUnwrap()).toBe('https://signed.example.com/a')
     expect(second._unsafeUnwrap()).toBe('https://signed.example.com/a')
@@ -204,9 +208,9 @@ describe('resolveImageSrc', () => {
             Promise.resolve({ url: 'https://signed.example.com/second' }),
         })
 
-      const first = await resolveImageSrc('/api/images/cache-test-2')
+      const first = await resolveAssetSrc('/api/assets/cache-test-2')
       vi.advanceTimersByTime(56 * 60 * 1000)
-      const second = await resolveImageSrc('/api/images/cache-test-2')
+      const second = await resolveAssetSrc('/api/assets/cache-test-2')
 
       expect(first._unsafeUnwrap()).toBe('https://signed.example.com/first')
       expect(second._unsafeUnwrap()).toBe('https://signed.example.com/second')
@@ -220,7 +224,7 @@ describe('resolveImageSrc', () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockGet']).mockResolvedValue({ ok: false })
 
-    const result = await resolveImageSrc('/api/images/cache-test-3')
+    const result = await resolveAssetSrc('/api/assets/cache-test-3')
 
     expect(result._unsafeUnwrapErr().message).toBe(
       'Failed to fetch signed image URL',
@@ -234,11 +238,11 @@ function makeErrorEvent(target: EventTarget | null): Event {
   return event
 }
 
-describe('handleImageLoadError', () => {
+describe('handleAssetLoadError', () => {
   it('does nothing when the event target is not an image element', async () => {
     const mocks = await getMocks()
 
-    await handleImageLoadError(makeErrorEvent(null))
+    await handleAssetLoadError(makeErrorEvent(null))
 
     expect(mocks['mockGet']).not.toHaveBeenCalled()
   })
@@ -248,7 +252,7 @@ describe('handleImageLoadError', () => {
     const img = document.createElement('img')
     img.src = 'https://unrelated.example.com/x.png'
 
-    await handleImageLoadError(makeErrorEvent(img))
+    await handleAssetLoadError(makeErrorEvent(img))
 
     expect(mocks['mockGet']).not.toHaveBeenCalled()
   })
@@ -267,11 +271,11 @@ describe('handleImageLoadError', () => {
           Promise.resolve({ url: 'https://signed.example.com/fresh' }),
       })
 
-    const resolved = await resolveImageSrc('/api/images/error-test')
+    const resolved = await resolveAssetSrc('/api/assets/error-test')
     const img = document.createElement('img')
     img.src = resolved._unsafeUnwrap()
 
-    await handleImageLoadError(makeErrorEvent(img))
+    await handleAssetLoadError(makeErrorEvent(img))
 
     expect(img.src).toBe('https://signed.example.com/fresh')
     expect(mocks['mockGet']).toHaveBeenCalledTimes(2)

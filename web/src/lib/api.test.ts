@@ -21,7 +21,7 @@ describe('API client type inference', () => {
     expectTypeOf<Client['api']['calendar']>().toBeObject()
   })
 
-  it('resolves api.images route type', () => {
-    expectTypeOf<Client['api']['images']>().toBeObject()
+  it('resolves api.assets route type', () => {
+    expectTypeOf<Client['api']['assets']>().toBeObject()
   })
 })

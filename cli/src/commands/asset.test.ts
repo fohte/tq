@@ -58,7 +58,7 @@ function captureMultipartFetch(respond: () => Response): {
   return { fetchStub, calls }
 }
 
-describe('image upload', () => {
+describe('asset upload', () => {
   let tmpDir: string | undefined
 
   afterEach(async () => {
@@ -68,10 +68,10 @@ describe('image upload', () => {
     }
   })
 
-  it('sends the file as multipart/form-data to POST /api/images and prints the response', async () => {
+  it('sends the file as multipart/form-data to POST /api/assets and prints the response', async () => {
     const uploaded = {
       id: 'img1',
-      r2Key: 'images/img1.png',
+      r2Key: 'assets/img1.png',
       contentType: 'image/png',
       sizeBytes: 4,
       url: 'https://signed.example/img1',
@@ -81,7 +81,7 @@ describe('image upload', () => {
     )
     const write = spyStdout()
 
-    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-image-upload-'))
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-asset-upload-'))
     const filePath = join(tmpDir, 'photo.png')
     const pngBytes = new Uint8Array([
       0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0x10, 0x7f,
@@ -89,7 +89,7 @@ describe('image upload', () => {
     await writeFile(filePath, pngBytes)
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'image', 'upload', filePath],
+      ['--api-url', apiUrl, 'asset', 'upload', filePath],
       fetchStub,
       fakeStdin(true),
     )
@@ -97,7 +97,7 @@ describe('image upload', () => {
     expect(exitCode).toBe(0)
     await expect(calls[0]).resolves.toEqual({
       method: 'POST',
-      url: `${apiUrl}/api/images`,
+      url: `${apiUrl}/api/assets`,
       fileName: 'photo.png',
       fileType: 'image/png',
       fileBytes: pngBytes,
@@ -113,13 +113,13 @@ describe('image upload', () => {
       () => new Response(JSON.stringify(uploaded), { status: 201 }),
     )
 
-    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-image-upload-'))
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-asset-upload-'))
     const filePath = join(tmpDir, 'photo.jpg')
     const jpgBytes = new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x10, 0x7f])
     await writeFile(filePath, jpgBytes)
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'image', 'upload', filePath],
+      ['--api-url', apiUrl, 'asset', 'upload', filePath],
       fetchStub,
       fakeStdin(true),
     )
@@ -127,7 +127,7 @@ describe('image upload', () => {
     expect(exitCode).toBe(0)
     await expect(calls[0]).resolves.toEqual({
       method: 'POST',
-      url: `${apiUrl}/api/images`,
+      url: `${apiUrl}/api/assets`,
       fileName: 'photo.jpg',
       fileType: 'image/jpeg',
       fileBytes: jpgBytes,
@@ -135,7 +135,7 @@ describe('image upload', () => {
   })
 })
 
-describe('image get', () => {
+describe('asset get', () => {
   it('prints the signed URL as JSON when --output is not given', async () => {
     const signedUrlResponse = { url: 'https://signed.example/img1' }
     const { fetchStub, calls } = captureFetch(
@@ -144,7 +144,7 @@ describe('image get', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'image', 'get', 'img1'],
+      ['--api-url', apiUrl, 'asset', 'get', 'img1'],
       fetchStub,
       fakeStdin(true),
     )
@@ -153,7 +153,7 @@ describe('image get', () => {
     expect(calls).toEqual([
       {
         method: 'GET',
-        url: `${apiUrl}/api/images/img1`,
+        url: `${apiUrl}/api/assets/img1`,
         headers: {},
         body: undefined,
       },
@@ -178,7 +178,7 @@ describe('image get', () => {
       const binary = new Uint8Array([1, 2, 3, 4])
       const fetchStub = ((input: string | URL | Request) => {
         const url = requestUrl(input)
-        if (url === `${apiUrl}/api/images/img1`) {
+        if (url === `${apiUrl}/api/assets/img1`) {
           return Promise.resolve(
             new Response(JSON.stringify({ url: signedUrl }), { status: 200 }),
           )
@@ -190,11 +190,11 @@ describe('image get', () => {
       }) as typeof fetch
       const write = spyStdout()
 
-      tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-image-get-'))
+      tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-asset-get-'))
       const outputPath = join(tmpDir, 'downloaded.png')
 
       const exitCode = await runCli(
-        ['--api-url', apiUrl, 'image', 'get', 'img1', '--output', outputPath],
+        ['--api-url', apiUrl, 'asset', 'get', 'img1', '--output', outputPath],
         fetchStub,
         fakeStdin(true),
       )
@@ -209,7 +209,7 @@ describe('image get', () => {
   })
 })
 
-describe('image delete', () => {
+describe('asset delete', () => {
   it('prints a deletion confirmation', async () => {
     const { fetchStub } = captureFetch(
       () => new Response(null, { status: 204 }),
@@ -217,7 +217,7 @@ describe('image delete', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'image', 'delete', 'img1'],
+      ['--api-url', apiUrl, 'asset', 'delete', 'img1'],
       fetchStub,
       fakeStdin(true),
     )

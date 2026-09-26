@@ -27,7 +27,7 @@ describe('AppType for Hono RPC', () => {
     expectTypeOf<Client['api']['calendar']>().toBeObject()
   })
 
-  it('has api.images route', () => {
-    expectTypeOf<Client['api']['images']>().toBeObject()
+  it('has api.assets route', () => {
+    expectTypeOf<Client['api']['assets']>().toBeObject()
   })
 })
