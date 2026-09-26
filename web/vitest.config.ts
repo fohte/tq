@@ -28,9 +28,9 @@ const alias = {
 // vitest's `BrowserProviderOption<T>`, a self-referential generic that
 // TypeScript's `exactOptionalPropertyTypes` structural check reports as "two
 // different types... unrelated" as soon as an object literal embeds it.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
 function withStorybook(
   project: ReturnType<typeof createStorybookProject>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
 ): any {
   return {
     ...project,
