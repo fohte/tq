@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import type { MouseEvent, ReactNode } from 'react'
 
@@ -7,7 +8,6 @@ import {
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Button } from '#components/ui/button'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type { PageSearchResult, SearchResult } from '#hooks/use-search'

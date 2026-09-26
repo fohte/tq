@@ -1,9 +1,9 @@
 'use client'
 
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
+import { DialogOverlay, DialogPortal } from '@fohte/ui/dialog'
 import * as React from 'react'
 
-import { DialogOverlay, DialogPortal } from '#components/ui/dialog'
 import { cn } from '#lib/utils'
 
 function ActionSheet({ ...props }: DialogPrimitive.Root.Props) {

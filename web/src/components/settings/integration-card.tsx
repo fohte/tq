@@ -1,6 +1,6 @@
+import { Button } from '@fohte/ui/button'
 import type { ReactNode } from 'react'
 
-import { Button } from '#components/ui/button'
 import { cn } from '#lib/utils'
 
 export interface IntegrationAccountView {

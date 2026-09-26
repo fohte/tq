@@ -1,9 +1,9 @@
+import { Button } from '@fohte/ui/button'
 import { CircleHelp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useId, useRef, useState } from 'react'
 
 import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
 
 interface HelpPopoverProps {
   label: string

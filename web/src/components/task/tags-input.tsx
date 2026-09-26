@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import { X } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
 import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
 import { Chip } from '#components/ui/chip'
-import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 import type { LabelTreeNode } from '#lib/tag-tree'

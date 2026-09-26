@@ -1,7 +1,7 @@
+import { Input } from '@fohte/ui/input'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CalendarPlus, Layers } from 'lucide-react'
 
-import { Input } from '#components/ui/input'
 import {
   ExpandableFieldChip,
   InlineFieldGroup,

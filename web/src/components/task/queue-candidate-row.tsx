@@ -1,9 +1,9 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { Button } from '@fohte/ui/button'
 import { Plus } from 'lucide-react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Button } from '#components/ui/button'
 import { DragHandle } from '#components/ui/drag-handle'
 import type { Task } from '#hooks/use-tasks'
 import {

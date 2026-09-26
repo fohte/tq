@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { X } from 'lucide-react'
 
@@ -5,7 +6,6 @@ import {
   BottomSheetHeader,
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
-import { Button } from '#components/ui/button'
 
 const meta = {
   title: 'UI/BottomSheetPanel',

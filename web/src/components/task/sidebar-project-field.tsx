@@ -1,11 +1,12 @@
-import { SidebarField } from '#components/task/sidebar-field'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '#components/ui/select'
+} from '@fohte/ui/select'
+
+import { SidebarField } from '#components/task/sidebar-field'
 import { useProjects } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'

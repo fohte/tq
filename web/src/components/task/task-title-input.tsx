@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
 import { useMemo, useRef, useState } from 'react'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import { TaskShorthandHelp } from '#components/task/task-shorthand-help'
 import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
-import { Input } from '#components/ui/input'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 import {

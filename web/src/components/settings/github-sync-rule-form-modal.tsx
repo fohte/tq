@@ -1,7 +1,4 @@
-import { useState } from 'react'
-
-import { Button } from '#components/ui/button'
-import { Checkbox } from '#components/ui/checkbox'
+import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,16 +6,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '#components/ui/dialog'
-import { Input } from '#components/ui/input'
-import { SegmentedControl } from '#components/ui/segmented-control'
+} from '@fohte/ui/dialog'
+import { Input } from '@fohte/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '#components/ui/select'
+} from '@fohte/ui/select'
+import { useState } from 'react'
+
+import { Checkbox } from '#components/ui/checkbox'
+import { SegmentedControl } from '#components/ui/segmented-control'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
   useCreateGithubSyncRule,

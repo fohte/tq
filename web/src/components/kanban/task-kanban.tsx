@@ -15,13 +15,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { Button } from '@fohte/ui/button'
 import { Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
 import { CandidateReasonBadge } from '#components/task/queue-candidate-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Button } from '#components/ui/button'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import type { Task } from '#hooks/use-tasks'
 import {

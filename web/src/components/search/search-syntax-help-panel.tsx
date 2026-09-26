@@ -1,8 +1,8 @@
+import { Button } from '@fohte/ui/button'
 import type { RefObject } from 'react'
 
 import type { SearchSyntaxHelpSection } from '#components/search/search-syntax-help-data'
 import { taskFilterSyntaxIcons } from '#components/task/task-filter-icons'
-import { Button } from '#components/ui/button'
 import { cn } from '#lib/utils'
 
 interface SearchSyntaxHelpPanelProps {

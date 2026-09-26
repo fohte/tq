@@ -1,5 +1,6 @@
+import { Button } from '@fohte/ui/button'
+
 import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Button } from '#components/ui/button'
 
 export type CalendarChangeFeedback =
   { kind: 'undo'; onUndo: () => void } | { kind: 'error' }

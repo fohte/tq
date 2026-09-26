@@ -1,10 +1,10 @@
+import { Button } from '@fohte/ui/button'
 import { useNavigate } from '@tanstack/react-router'
 import { Bell, CalendarRange, Repeat } from 'lucide-react'
 import { useState } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import type { StatusPickerValue } from '#components/task/task-status-picker'
-import { Button } from '#components/ui/button'
 import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
