@@ -59,7 +59,7 @@ export const commentOperations = [
     kind: 'write',
     routes: ['POST /api/tasks/:taskId/comments'],
     cli: {
-      contentInputField: 'content',
+      contentInput: { field: 'content' },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, content }) =>
@@ -77,7 +77,7 @@ export const commentOperations = [
     kind: 'write',
     routes: ['PATCH /api/tasks/:taskId/comments/:commentId'],
     cli: {
-      contentInputField: 'content',
+      contentInput: { field: 'content' },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, commentId, content }) =>

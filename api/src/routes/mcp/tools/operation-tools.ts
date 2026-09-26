@@ -4,7 +4,7 @@ import { hc } from 'hono/client'
 import { z } from 'zod'
 
 import { app, type AppType } from '#app'
-import { commentOperations, type OperationDefinition } from '#operations/index'
+import { type OperationDefinition, operations } from '#operations/index'
 import { toErrorResult } from '#routes/mcp/route-bridge'
 import {
   agentArgSchema,
@@ -52,8 +52,13 @@ function requestErrorResult(message: string): CallToolResult {
   }
 }
 
-export function registerOperationTools(server: McpServer): void {
-  for (const operation of commentOperations) {
+export function registerOperationTools(
+  server: McpServer,
+  definitions: readonly OperationDefinition[] = operations,
+): void {
+  for (const operation of definitions) {
+    if (operation.surface?.only === 'cli') continue
+
     const inputSchema = inputSchemaFor(operation)
     server.registerTool(
       operation.path.join('_'),

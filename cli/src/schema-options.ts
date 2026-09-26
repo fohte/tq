@@ -2,6 +2,8 @@ import { Command, InvalidArgumentError, Option } from 'commander'
 import { err, ok, Result } from 'neverthrow'
 import { z } from 'zod'
 
+import { splitCommaList } from '#commands/split-comma-list'
+
 function toKebabCase(key: string): string {
   return key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)
 }
@@ -81,13 +83,32 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   schema: z.ZodObject<Shape>,
   exclude: readonly string[] = [],
   envDefaults: Readonly<Record<string, string>> = {},
+  commaSeparatedOptions: readonly string[] = [],
 ): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
     const inner = unwrapOptional(field)
     if (inner === undefined) continue
 
-    if (!isSupportedLeaf(inner)) {
+    const isArray = inner instanceof z.ZodArray
+    const shouldSplitCommaSeparated = commaSeparatedOptions.includes(key)
+    if (isArray !== shouldSplitCommaSeparated) {
+      return err(
+        new Error(
+          shouldSplitCommaSeparated
+            ? `addSchemaOptions: comma-separated field "${key}" must be an array`
+            : `addSchemaOptions: unsupported schema type for field "${key}"`,
+        ),
+      )
+    }
+
+    const valueType = isArray ? inner.element : inner
+    if (
+      (!isArray && !isSupportedLeaf(valueType)) ||
+      (isArray &&
+        !isSupportedLeaf(valueType) &&
+        !(valueType instanceof z.ZodUnion))
+    ) {
       return err(
         new Error(
           `addSchemaOptions: unsupported schema type for field "${key}"`,
@@ -95,17 +116,25 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       )
     }
 
+    const leafType = isSupportedLeaf(valueType) ? valueType : undefined
     const envVar = envDefaults[key]
     const description =
       envVar != null
-        ? `${inner.description ?? toLabel(key)} (or set ${envVar})`
-        : (inner.description ?? toLabel(key))
+        ? `${leafType?.description ?? toLabel(key)} (or set ${envVar})`
+        : (leafType?.description ?? toLabel(key))
     const option = new Option(`--${toKebabCase(key)} <value>`, description)
-    if (inner instanceof z.ZodEnum) {
-      option.choices(inner.options.map(String))
+    if (!isArray && leafType instanceof z.ZodEnum) {
+      option.choices(leafType.options.map(String))
     }
 
-    option.argParser((raw: string) => parseValue(inner, raw))
+    option.argParser((raw: string) => {
+      if (isArray) {
+        return splitCommaList(raw).map((value) =>
+          leafType == null ? value : parseValue(leafType, value),
+        )
+      }
+      return leafType == null ? raw : parseValue(leafType, raw)
+    })
     if (envVar != null) {
       const envValue = process.env[envVar]
       // Left unvalidated here (unlike an explicit flag, which goes through
@@ -113,7 +142,11 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       // object against the schema before it reaches the API, so an invalid
       // env value is still rejected by the CLI rather than sent.
       option.default(
-        envValue != null && envValue.length > 0 ? envValue : undefined,
+        envValue != null && envValue.length > 0
+          ? isArray
+            ? splitCommaList(envValue)
+            : envValue
+          : undefined,
       )
     }
     command.addOption(option)
