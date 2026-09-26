@@ -14,10 +14,14 @@ import {
 } from '#components/search/search-modal-result-items'
 import { makePageSearchResult } from '#components/search/search-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import type { SearchResult } from '#hooks/use-search'
 import { StoryRouter } from '#storybook-config/story-router'
 
 type ResultKind =
   | 'task'
+  | 'taskTitleMatch'
+  | 'taskDescriptionMatch'
+  | 'taskPageMatch'
   | 'project'
   | 'view'
   | 'page'
@@ -44,6 +48,37 @@ const taskLongTitle = makeTask({
     'Review the customer onboarding flow across account and workspace configurations',
   context: 'work',
 })
+const taskTitleMatch: SearchResult = {
+  ...makeTask({
+    id: 'task-title-match-story',
+    number: 15,
+    title: 'Review the release checklist',
+  }),
+  match: { field: 'title', snippet: 'Review the release checklist' },
+}
+const taskDescriptionMatch: SearchResult = {
+  ...makeTask({
+    id: 'task-description-match-story',
+    number: 16,
+    title: 'Review deployment notes',
+  }),
+  match: {
+    field: 'description',
+    snippet: 'Document how the service recovers after an interrupted sync.',
+  },
+}
+const taskPageMatch: SearchResult = {
+  ...makeTask({
+    id: 'task-page-match-story',
+    number: 17,
+    title: 'Review integration notes',
+  }),
+  match: {
+    field: 'page',
+    pageTitle: 'Connector setup',
+    snippet: 'Configure the connector after access is approved.',
+  },
+}
 const noop = () => undefined
 const taskOnOpenChangeRef = { current: noop }
 const pageOnOpenChangeRef = { current: noop }
@@ -61,6 +96,31 @@ const itemsByKind: Record<ResultKind, ListItem[]> = {
       key: taskLongTitle.id,
       select: noop,
       render: renderTaskOption(taskLongTitle, taskOnOpenChangeRef),
+    },
+  ],
+  taskTitleMatch: [
+    {
+      key: taskTitleMatch.id,
+      select: noop,
+      render: renderTaskOption(taskTitleMatch, taskOnOpenChangeRef, 'review'),
+    },
+  ],
+  taskDescriptionMatch: [
+    {
+      key: taskDescriptionMatch.id,
+      select: noop,
+      render: renderTaskOption(
+        taskDescriptionMatch,
+        taskOnOpenChangeRef,
+        'recovery',
+      ),
+    },
+  ],
+  taskPageMatch: [
+    {
+      key: taskPageMatch.id,
+      select: noop,
+      render: renderTaskOption(taskPageMatch, taskOnOpenChangeRef, 'connector'),
     },
   ],
   project: createProjectItems(
@@ -166,6 +226,21 @@ type Story = StoryObj<typeof meta>
 export const Task: Story = {
   name: 'a task result shows its title and task number',
   args: { kind: 'task', isSelected: false },
+}
+
+export const TaskTitleMatch: Story = {
+  name: 'a title match highlights the search term in the task title',
+  args: { kind: 'taskTitleMatch', isSelected: false },
+}
+
+export const TaskDescriptionMatch: Story = {
+  name: 'a description match shows its label and highlighted snippet',
+  args: { kind: 'taskDescriptionMatch', isSelected: false },
+}
+
+export const TaskPageMatch: Story = {
+  name: 'a page match shows its page title and highlighted snippet',
+  args: { kind: 'taskPageMatch', isSelected: false },
 }
 
 export const Project: Story = {

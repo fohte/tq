@@ -52,6 +52,7 @@ function useDebouncedSearchQuery(query: string) {
 export function useSearchTasks(query: string, defaultContext?: SearchContext) {
   const debouncedQuery = useDebouncedSearchQuery(query)
   const context = resolveSearchContext(debouncedQuery, defaultContext)
+  const hasFreeText = parseSearchQuery(debouncedQuery).freeText.length > 0
 
   const queryResult = useQuery({
     queryKey: searchKeys.results(debouncedQuery, context),
@@ -61,6 +62,7 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
           q: debouncedQuery,
           limit: '20',
           ...(context == null ? {} : { context }),
+          ...(hasFreeText ? { includeMatch: 'true' } : {}),
         },
       })
       return unwrapOrThrow(assertOk(res)).json()

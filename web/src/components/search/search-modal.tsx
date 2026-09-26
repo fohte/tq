@@ -15,6 +15,7 @@ import {
 import { useSearchModalResultGroups } from '#components/search/search-modal-result-groups'
 import {
   indexResultGroups,
+  resultGroupItemCount,
   SearchModalResultList,
 } from '#components/search/search-modal-result-list'
 import { useSearchModalTaskActions } from '#components/search/search-modal-task-actions'
@@ -273,6 +274,8 @@ export function SearchModal({
     canSearchViews,
     canSuggest,
     hasSearchQuery,
+    freeTextQuery,
+    hasExplicitSort: parsedSearchQuery.sortBy != null,
     hasActiveScope,
     isSearchPending,
     onSearchEverywhere: handleSearchEverywhere,
@@ -340,7 +343,7 @@ export function SearchModal({
   }
 
   const visibleGroups = indexedGroups.filter((group) =>
-    group.isVisible(searchQuery, group.items.length),
+    group.isVisible(searchQuery, resultGroupItemCount(group)),
   )
 
   const emptyMessage =
