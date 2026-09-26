@@ -1,7 +1,8 @@
 import { commentOperations } from '#operations/comment'
+import { projectOperations } from '#operations/project'
 
-export { commentOperations }
-export const operations = [...commentOperations] as const
+export { commentOperations, projectOperations }
+export const operations = [...commentOperations, ...projectOperations] as const
 export type OperationRoutes = (typeof operations)[number]['routes'][number]
 export type { AllRoutes } from '#operations/route-types'
 export type {

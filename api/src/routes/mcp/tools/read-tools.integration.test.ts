@@ -22,8 +22,10 @@ const READ_TOOL_NAMES = [
   'get_task',
   'get_today_tasks',
   'list_labels',
-  'list_projects',
   'list_tasks',
+  'project_get',
+  'project_list',
+  'project_tasks',
   'search_pages',
   'search_tasks',
 ]
@@ -110,8 +112,10 @@ describe('read tools', () => {
       { name: 'get_task', readOnlyHint: true },
       { name: 'get_today_tasks', readOnlyHint: true },
       { name: 'list_labels', readOnlyHint: true },
-      { name: 'list_projects', readOnlyHint: true },
       { name: 'list_tasks', readOnlyHint: true },
+      { name: 'project_get', readOnlyHint: true },
+      { name: 'project_list', readOnlyHint: true },
+      { name: 'project_tasks', readOnlyHint: true },
       { name: 'search_pages', readOnlyHint: true },
       { name: 'search_tasks', readOnlyHint: true },
     ])
@@ -471,33 +475,6 @@ describe('read tools', () => {
       const toolResult = await callTool('get_today_tasks')
 
       expect(parseJson(toolResult)).toEqual(queued)
-    })
-  })
-
-  describe('list_projects', () => {
-    it('rejects invalid input', async () => {
-      const result = await callTool('list_projects', { status: 'bogus' })
-
-      expect(result.isError).toBe(true)
-    })
-
-    it('returns projects matching the given filter', async () => {
-      const postRes = await app.request('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Website redesign' }),
-      })
-      const project = await jsonBody<Record<string, unknown>>(postRes)
-
-      const toolResult = await callTool('list_projects')
-
-      expect(parseJson(toolResult)).toEqual([
-        {
-          ...project,
-          completionRate: 0,
-          taskCount: { total: 0, completed: 0 },
-        },
-      ])
     })
   })
 

@@ -13,6 +13,13 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+function summarizeProjectListRequest(exitCode: number, url: string) {
+  return {
+    exitCode,
+    query: Object.fromEntries(new URL(url).searchParams.entries()),
+  }
+}
+
 describe('project list', () => {
   it('sends an empty query and prints the projects returned by the server as JSON', async () => {
     const projects = [{ id: 'p1', title: 'Website' }]
@@ -72,21 +79,32 @@ describe('project list', () => {
     ])
   })
 
-  it('sends --status as the query string', async () => {
+  it('sends the title, status, and context filters as query parameters', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify([]), { status: 200 }),
     )
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'project', 'list', '--status', 'active'],
+      [
+        '--api-url',
+        apiUrl,
+        'project',
+        'list',
+        '--q',
+        'website',
+        '--status',
+        'active',
+        '--context',
+        'work',
+      ],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(new URL(calls[0]?.url ?? '').searchParams.get('status')).toBe(
-      'active',
-    )
+    expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
+      exitCode: 0,
+      query: { q: 'website', status: 'active', context: 'work' },
+    })
   })
 })
 
