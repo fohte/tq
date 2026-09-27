@@ -1,9 +1,9 @@
+import { assetOperations } from '#operations/asset'
 import { calendarOperations } from '#operations/calendar'
 import { commentOperations } from '#operations/comment'
 import { githubOperations } from '#operations/github'
 import { healthOperations } from '#operations/health'
 import { hookOperations } from '#operations/hook'
-import { imageOperations } from '#operations/image'
 import { labelOperations } from '#operations/label'
 import { linkOperations } from '#operations/link'
 import { pageOperations } from '#operations/page'
@@ -16,12 +16,12 @@ import { taskReadOperations } from '#operations/task-read'
 import { taskWriteOperations } from '#operations/task-write'
 
 export {
+  assetOperations,
   calendarOperations,
   commentOperations,
   githubOperations,
   healthOperations,
   hookOperations,
-  imageOperations,
   labelOperations,
   linkOperations,
   pageOperations,
@@ -34,12 +34,12 @@ export {
   taskWriteOperations,
 }
 export const operations = [
+  ...assetOperations,
   ...calendarOperations,
   ...commentOperations,
   ...githubOperations,
   ...healthOperations,
   ...hookOperations,
-  ...imageOperations,
   ...labelOperations,
   ...linkOperations,
   ...pageOperations,
@@ -64,6 +64,7 @@ export type OperationRoutes = CliOperation<
 export type { AllRoutes } from '#operations/route-types'
 export type {
   CliContentInput,
+  CliFileInput,
   CliFileOutput,
   CliOutput,
   OperationClient,

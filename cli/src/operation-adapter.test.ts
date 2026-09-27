@@ -87,6 +87,26 @@ function stdinOutcome(status: string, reads: unknown, stderr: string[]) {
 }
 
 describe('registerOperations', () => {
+  it('registers positional arguments on a root operation', async () => {
+    const operation = makeOperation({
+      path: ['demo'],
+      inputSchema: z.object({ id: z.string() }),
+      positionalArgs: ['id'],
+    })
+    const write = spyStdout()
+
+    await parse(createProgram([operation]), [
+      '--api-url',
+      'https://api.example',
+      'demo',
+      'item-1',
+    ])
+
+    expect(write.mock.calls).toEqual([
+      [`${JSON.stringify({ id: 'item-1' }, null, 2)}\n`],
+    ])
+  })
+
   it('omits an optional positional argument from the operation input', async () => {
     const operation = makeOperation({
       path: ['demo', 'search'],

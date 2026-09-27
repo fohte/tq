@@ -26,7 +26,7 @@ type TaskListRow = TaskListItemResponse & {
 // `get_task` drops page `content` to keep the response small — pages are
 // meant for notes that can grow arbitrarily long, so returning it here would
 // let a single call inflate the agent's context with the full text of every
-// page on the task. Callers fetch a specific page's content with `get_page`.
+// page on the task. Callers fetch a specific page's content with `page_get`.
 function toPageMetadata(page: PageDetail): Omit<PageDetail, 'content'> {
   return {
     id: page.id,
@@ -83,7 +83,7 @@ export function registerGetTaskTool(server: McpServer): void {
     'get_task',
     {
       description:
-        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>` or a pasted task URL, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`, each entry including its own labels). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to get_page to read a page's content.",
+        "Get the full detail of a single task by id: its attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions via `#<number>` or a pasted task URL, as `links.outgoing`/`links.incoming`), labels, and the nested subtree of its subtasks (as `subtasks`, each entry including its own labels). Each entry in `pages` is metadata only (id, taskId, title, sortOrder, timestamps, author) with no `content` — pass its `id` and this task's `id` to page_get to read a page's content.",
       inputSchema: z.object({
         taskId: taskIdOrNumber.describe(
           'The task id (UUID) or task number to look up.',

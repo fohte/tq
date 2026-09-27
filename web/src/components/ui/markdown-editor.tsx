@@ -152,6 +152,7 @@ export function MarkdownEditor({
           {...editorProps}
           mode={isToggleEnabled ? mode : 'edit'}
           focusOnEdit={isControlled}
+          skipNoopChanges={isToggleEnabled}
         />
       </Suspense>
     </div>

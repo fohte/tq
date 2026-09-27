@@ -119,6 +119,8 @@ export async function printOperationOutput(
   fetchImpl: typeof fetch,
 ): Promise<Result<void, Error>> {
   switch (output.kind) {
+    case 'none':
+      return ok(undefined)
     case 'json':
       return printJsonOutput(output, value, options, fetchImpl)
     case 'json-with-link-sync':
