@@ -167,10 +167,10 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
  * overwriting an existing value the caller never asked to change. Array
  * environment defaults use the same comma-separated parsing as their flags.
  *
- * `commaSeparatedOptions` opts array fields into a single comma-separated
- * flag. `repeatableOptions` opts array fields into a flag that may be repeated
- * once per value. Every array field must be listed in exactly one of those
- * options.
+ * `arrayOptions.commaSeparated` opts array fields into a single
+ * comma-separated flag. `arrayOptions.repeatable` opts array fields into a
+ * flag that may be repeated once per value. Every array field must be listed
+ * in exactly one of those options.
  *
  * `optionDefaults` supplies a static fallback for optional flags.
  * `envDefaults` takes precedence when its environment variable has a value.
