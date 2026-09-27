@@ -139,6 +139,12 @@ describe('link', () => {
           query: {},
           body: undefined,
         },
+        {
+          method: 'POST',
+          pathname: '/api/tasks/42/agent-sessions',
+          query: {},
+          body: { agentSessionId: 'agent-session-1' },
+        },
       ],
       stderr: [],
       stdout: [[`${JSON.stringify({ id: 'agent-session-1' }, null, 2)}\n`]],
