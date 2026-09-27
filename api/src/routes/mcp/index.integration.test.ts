@@ -10,6 +10,7 @@ import { jsonBody, setupTestDb } from '#testing'
 // Tool-specific schema and annotation details live with their operation or
 // write-tool integration tests; these tests pin down wire-level reachability.
 const REGISTERED_TOOL_NAMES = [
+  'calendar_events',
   'comment_create',
   'comment_delete',
   'comment_list',
@@ -18,6 +19,10 @@ const REGISTERED_TOOL_NAMES = [
   'create_task',
   'get_page',
   'get_today_tasks',
+  'github_link',
+  'github_resolve',
+  'github_sync',
+  'github_unlink',
   'label_delete',
   'label_list',
   'label_update',
@@ -28,6 +33,7 @@ const REGISTERED_TOOL_NAMES = [
   'project_tasks',
   'project_update',
   'search_pages',
+  'slack_resolve',
   'task_activity',
   'task_get',
   'task_list',
