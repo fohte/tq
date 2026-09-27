@@ -10,6 +10,7 @@ import {
 } from '@fohte/ui/select'
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
+import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
 import {
   contextValues,
@@ -21,7 +22,6 @@ import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { DesktopModalFrame } from '#components/ui/desktop-modal-frame'
 import { InlineFieldGroup } from '#components/ui/modal-field'
 import { selectValueHandler } from '#lib/form-utils'
-import { cn } from '#lib/utils'
 
 export function ScheduleModalDesktopPanel({
   schedule,
@@ -190,30 +190,12 @@ export function ScheduleModalDesktopPanel({
               <Palette className="size-3.5" />
               Color
             </span>
-            <div className="flex gap-1">
-              {presetColors.map((c) => (
-                <Button
-                  key={c}
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => {
-                    setColor(color === c ? '' : c)
-                  }}
-                  className={cn(
-                    'rounded-none border-2 bg-(--schedule-color) bg-clip-border p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
-                    color === c
-                      ? 'border-foreground scale-110'
-                      : 'border-transparent hover:scale-110',
-                  )}
-                  style={
-                    { '--schedule-color': c } as React.CSSProperties & {
-                      '--schedule-color': string
-                    }
-                  }
-                />
-              ))}
-            </div>
+            <ColorSwatchRadioGroup
+              options={presetColors}
+              value={color}
+              onValueChange={setColor}
+              clearOnReselect
+            />
           </div>
         </div>
       </div>

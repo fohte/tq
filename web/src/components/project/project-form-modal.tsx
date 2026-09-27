@@ -17,6 +17,7 @@ import {
 import { Calendar, CalendarPlus, ChevronLeft, Palette, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
 import {
   contextLabels,
   type ContextValue,
@@ -31,7 +32,6 @@ import {
   useUpdateProject,
 } from '#hooks/use-projects'
 import { selectValueHandler } from '#lib/form-utils'
-import { cn } from '#lib/utils'
 
 interface ProjectFormModalProps {
   open: boolean
@@ -255,30 +255,11 @@ export function ProjectFormModal({
         </FieldRow>
 
         <FieldRow label="Color" icon={<Palette className="size-3.5" />}>
-          <div className="flex gap-2">
-            {PROJECT_COLOR_PRESETS.map((preset) => (
-              <Button
-                key={preset.hex}
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setColor(preset.hex)
-                }}
-                className={cn(
-                  'size-6 rounded-none border-2 bg-(--project-color) bg-clip-border p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
-                  color === preset.hex
-                    ? 'scale-110 border-foreground'
-                    : 'border-transparent hover:scale-110',
-                )}
-                style={
-                  { '--project-color': preset.hex } as React.CSSProperties & {
-                    '--project-color': string
-                  }
-                }
-                title={preset.name}
-              />
-            ))}
-          </div>
+          <ColorSwatchRadioGroup
+            options={PROJECT_COLOR_PRESETS}
+            value={color}
+            onValueChange={setColor}
+          />
         </FieldRow>
       </div>
     </>
