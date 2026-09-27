@@ -42,7 +42,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function positionalName(
   argument: OperationDefinition['positionalArgs'][number],
 ) {
-  return typeof argument === 'string' ? argument : argument.name
+  return typeof argument === 'string'
+    ? argument
+    : (argument.field ?? argument.name)
 }
 
 function positionalSyntax(
@@ -54,6 +56,31 @@ function positionalSyntax(
   return argument.optional === true ? `[${name}]` : `<${name}>`
 }
 
+function mapCliInput(
+  operation: OperationDefinition,
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  return operation.cli.mapInput?.(input, options) ?? ok(input)
+}
+
+function normalizeOptionNames(
+  operation: OperationDefinition,
+  options: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalized = { ...options }
+  for (const [field, optionName] of Object.entries(
+    operation.cli.optionNames ?? {},
+  )) {
+    const optionKey = optionName.replace(
+      /-([a-z])/g,
+      (_match, letter: string) => letter.toUpperCase(),
+    )
+    if (options[optionKey] !== undefined) normalized[field] = options[optionKey]
+  }
+  return normalized
+}
+
 function operationInputError(
   operation: OperationDefinition,
   input: Record<string, unknown>,
@@ -63,7 +90,7 @@ function operationInputError(
   return new Error(formatInputIssues(parsed.error))
 }
 
-function failUnlessIgnored(
+function reportError(
   actionCommand: Command,
   error: Error,
   ignoreErrors: boolean,
@@ -133,6 +160,7 @@ type OperationInput =
 
 async function executeOperation(
   operation: OperationDefinition,
+  output: Exclude<OperationDefinition['cli']['output'], { kind: 'web-url' }>,
   actionCommand: Command,
   options: Record<string, unknown>,
   client: OperationClient,
@@ -149,27 +177,17 @@ async function executeOperation(
         : operationError.kind === 'http'
           ? await toApiError(operationError.response)
           : operationError.error
-    failUnlessIgnored(actionCommand, error, ignoreErrors)
-    return
-  }
-
-  if (operation.cli.output.kind === 'web-url') {
-    const printed = printWebUrl(actionCommand, operation.cli.output, input)
-    if (printed.isErr()) {
-      failUnlessIgnored(actionCommand, printed.error, ignoreErrors)
-    }
+    reportError(actionCommand, error, ignoreErrors)
     return
   }
 
   const printed = await printOperationOutput(
-    operation.cli.output,
+    output,
     result.value,
     options,
     fetchImpl,
   )
-  if (printed.isErr()) {
-    failUnlessIgnored(actionCommand, printed.error, ignoreErrors)
-  }
+  if (printed.isErr()) reportError(actionCommand, printed.error, ignoreErrors)
 }
 
 async function executeCommandOperation(
@@ -181,45 +199,42 @@ async function executeCommandOperation(
   input: OperationInput,
   { ignoreErrors = false }: { ignoreErrors?: boolean } = {},
 ): Promise<void> {
-  const resolveInput = () => (typeof input === 'function' ? input() : ok(input))
+  const resolveInput = () => {
+    const collected = typeof input === 'function' ? input() : ok(input)
+    return collected.andThen((value) => mapCliInput(operation, value, options))
+  }
+  const output = operation.cli.output
 
-  if (operation.cli.output.kind === 'web-url') {
+  if (output.kind === 'web-url') {
     const collected = resolveInput()
     if (collected.isErr()) {
-      failUnlessIgnored(actionCommand, collected.error, ignoreErrors)
+      reportError(actionCommand, collected.error, ignoreErrors)
       return
     }
     const inputError = operationInputError(operation, collected.value)
     if (inputError != null) {
-      failUnlessIgnored(actionCommand, inputError, ignoreErrors)
+      reportError(actionCommand, inputError, ignoreErrors)
       return
     }
-    const printed = printWebUrl(
-      actionCommand,
-      operation.cli.output,
-      collected.value,
-    )
-    if (printed.isErr()) {
-      failUnlessIgnored(actionCommand, printed.error, ignoreErrors)
-    }
+    const printed = printWebUrl(actionCommand, output, collected.value)
+    if (printed.isErr()) reportError(actionCommand, printed.error, ignoreErrors)
     return
   }
 
   const clientResult = buildClient(actionCommand, fetchImpl)
   if (clientResult.isErr()) {
-    failUnlessIgnored(actionCommand, clientResult.error, ignoreErrors)
+    reportError(actionCommand, clientResult.error, ignoreErrors)
     return
   }
 
   const collected = resolveInput()
   if (collected.isErr()) {
-    failUnlessIgnored(actionCommand, collected.error, ignoreErrors)
+    reportError(actionCommand, collected.error, ignoreErrors)
     return
   }
   const inputValue = collected.value
 
-  const listOutput =
-    operation.cli.output.kind === 'list' ? operation.cli.output : undefined
+  const listOutput = output.kind === 'list' ? output : undefined
   if (listOutput?.fullField != null && options['full'] === true) {
     inputValue[listOutput.fullField] = true
   }
@@ -232,11 +247,11 @@ async function executeCommandOperation(
         : undefined
     const content = await readContentInput(filePath, stdin)
     if (content.isErr()) {
-      failUnlessIgnored(actionCommand, content.error, ignoreErrors)
+      reportError(actionCommand, content.error, ignoreErrors)
       return
     }
     if (content.value === undefined && contentInput.required !== false) {
-      failUnlessIgnored(
+      reportError(
         actionCommand,
         new Error(
           'Content is required. Provide --file <path> or pipe content via stdin.',
@@ -254,7 +269,7 @@ async function executeCommandOperation(
   if (fileInput != null) {
     const filePath: unknown = inputValue[fileInput.pathField]
     if (typeof filePath !== 'string') {
-      failUnlessIgnored(
+      reportError(
         actionCommand,
         new Error('File input path refers to a missing input field.'),
         ignoreErrors,
@@ -264,13 +279,13 @@ async function executeCommandOperation(
 
     const data = await readBinaryFile(filePath)
     if (data.isErr()) {
-      failUnlessIgnored(actionCommand, data.error, ignoreErrors)
+      reportError(actionCommand, data.error, ignoreErrors)
       return
     }
 
     const contentType = fileInput.contentTypes[extname(filePath).toLowerCase()]
     if (contentType == null) {
-      failUnlessIgnored(
+      reportError(
         actionCommand,
         new Error(
           `Unsupported file extension for ${filePath}. Allowed types: ${fileInput.allowedContentTypes.join(', ')}`,
@@ -287,6 +302,7 @@ async function executeCommandOperation(
 
   await executeOperation(
     operation,
+    output,
     actionCommand,
     options,
     clientResult.value,
@@ -309,17 +325,31 @@ export function registerOperations(
   )
   const groupName = (cliOperations[0]?.cli.path ?? cliOperations[0]?.path)?.[0]
   if (groupName === undefined) return
+  const group = program.command(groupName).description(groupDescription)
+
+  registerOperationsInGroup(group, operations, fetchImpl, stdin, handler)
+}
+
+export function registerOperationsInGroup(
+  group: Command,
+  operations: readonly OperationDefinition[],
+  fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
+  handler?: OperationCommandHandler,
+): void {
+  const cliOperations = operations.filter(
+    (operation) => operation.surface?.only !== 'mcp',
+  )
   if (
     cliOperations.some(
-      (operation) => (operation.cli.path ?? operation.path)[0] !== groupName,
+      (operation) => (operation.cli.path ?? operation.path)[0] !== group.name(),
     )
   ) {
     return fail(
-      program,
+      group,
       new Error('An operation group must contain a single root command.'),
     )
   }
-  const group = program.command(groupName).description(groupDescription)
 
   for (const operation of cliOperations) {
     const commandPath = (operation.cli.path ?? operation.path).slice(1)
@@ -329,7 +359,7 @@ export function registerOperations(
       for (const positional of operation.positionalArgs) {
         command = command.argument(positionalSyntax(positional))
       }
-      command.description(operation.description)
+      command.description(operation.cli.description ?? operation.description)
     } else {
       const commandName = commandPath.at(-1)
       if (commandName === undefined) continue
@@ -343,7 +373,7 @@ export function registerOperations(
         .command(
           `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
         )
-        .description(operation.description)
+        .description(operation.cli.description ?? operation.description)
     }
 
     const contentInput = operation.cli.contentInput
@@ -374,26 +404,44 @@ export function registerOperations(
       )
     }
 
+    for (const option of operation.cli.customOptions ?? []) {
+      command = command.option(option.flags, option.description)
+    }
+
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
       ...(operation.cli.hiddenFields ?? []),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(operation.cli.excludeFields ?? []),
       ...(listOutput?.fullField == null ? [] : [listOutput.fullField]),
       ...(operation.cli.fileInput == null
         ? []
         : [operation.cli.fileInput.field]),
     ]
-    addSchemaOptions(
-      command,
-      operation.inputSchema,
-      excluded,
-      operation.cli.envDefaults,
-      {
-        commaSeparated: operation.cli.commaSeparatedOptions ?? [],
-        repeatable: operation.cli.repeatableOptions ?? [],
-        defaults: operation.cli.optionDefaults ?? {},
-      },
-    ).match(
+    addSchemaOptions(command, operation.inputSchema, {
+      exclude: excluded,
+      ...(operation.cli.envDefaults == null
+        ? {}
+        : { envDefaults: operation.cli.envDefaults }),
+      ...(operation.cli.commaSeparatedOptions == null
+        ? {}
+        : { commaSeparatedOptions: operation.cli.commaSeparatedOptions }),
+      ...(operation.cli.repeatableOptions == null
+        ? {}
+        : { repeatableOptions: operation.cli.repeatableOptions }),
+      ...(operation.cli.optionDefaults == null
+        ? {}
+        : { optionDefaults: operation.cli.optionDefaults }),
+      ...(operation.cli.optionNames == null
+        ? {}
+        : { optionNames: operation.cli.optionNames }),
+      ...(operation.cli.optionDescriptions == null
+        ? {}
+        : { optionDescriptions: operation.cli.optionDescriptions }),
+      ...(operation.cli.optionMetavars == null
+        ? {}
+        : { optionMetavars: operation.cli.optionMetavars }),
+    }).match(
       () => undefined,
       (error) => fail(group, error),
     )
@@ -403,7 +451,10 @@ export function registerOperations(
       if (!(commandValue instanceof Command)) return
       const actionCommand = commandValue
       const optionsValue = actionArgs[operation.positionalArgs.length]
-      const options = isRecord(optionsValue) ? optionsValue : {}
+      const options = normalizeOptionNames(
+        operation,
+        isRecord(optionsValue) ? optionsValue : {},
+      )
       const collected = collectInput(operation, actionArgs, options, excluded)
 
       if (handler != null) {

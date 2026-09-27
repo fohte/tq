@@ -3,37 +3,32 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
+import { makeComment } from '#components/task/task-activity-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseComments: Comment[] = [
-  {
+  makeComment({
     id: 'comment-1',
-    taskId: 'task-1',
     content: 'Started working on this. The API layer looks straightforward.',
     createdAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
     updatedAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
-    author: null,
-  },
-  {
+  }),
+  makeComment({
     id: 'comment-2',
-    taskId: 'task-1',
     content:
       'Found an edge case with empty strings. Need to add validation on the frontend too.',
     createdAt: new Date(Date.now() - 3_600_000).toISOString(),
     updatedAt: new Date(Date.now() - 1_800_000).toISOString(),
-    author: null,
-  },
-  {
+  }),
+  makeComment({
     id: 'comment-3',
-    taskId: 'task-1',
     content: 'All tests passing now. Ready for review.',
     createdAt: new Date(Date.now() - 600_000).toISOString(),
     updatedAt: new Date(Date.now() - 600_000).toISOString(),
-    author: null,
-  },
+  }),
 ]
 
 function Providers({
@@ -125,14 +120,17 @@ export const SingleComment: Story = {
 export const ManyComments: Story = {
   name: 'the timeline shows enough comments to fill a long list',
   args: {
-    comments: Array.from({ length: 10 }, (_, i) => ({
-      id: `comment-${String(i)}`,
-      taskId: 'task-1',
-      content: `Comment #${String(i + 1)}: This is a sample comment for testing scroll behavior and layout with many items.`,
-      createdAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
-      updatedAt: new Date(Date.now() - 3_600_000 * (10 - i)).toISOString(),
-      author: null,
-    })),
+    comments: Array.from({ length: 10 }, (_, i) => {
+      const timestamp = new Date(
+        Date.now() - 3_600_000 * (10 - i),
+      ).toISOString()
+      return makeComment({
+        id: `comment-${String(i)}`,
+        content: `Comment #${String(i + 1)}: This is a sample comment for testing scroll behavior and layout with many items.`,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      })
+    }),
     events: [],
   },
 }
@@ -142,14 +140,13 @@ export const LlmAuthored: Story = {
   args: {
     comments: [
       ...baseComments,
-      {
+      makeComment({
         id: 'comment-4',
-        taskId: 'task-1',
         content: 'Applied the suggested fix and re-ran the test suite.',
         createdAt: new Date(Date.now() - 300_000).toISOString(),
         updatedAt: new Date(Date.now() - 300_000).toISOString(),
         author: { kind: 'llm', agent: 'claude-opus-5' },
-      },
+      }),
     ],
     events: [],
   },
@@ -159,23 +156,20 @@ export const MixedTimeline: Story = {
   name: 'the timeline combines comments with task events',
   args: {
     comments: [
-      {
+      makeComment({
         id: 'comment-1',
-        taskId: 'task-1',
         content:
           'greedy な詰め方をやめたら auto-schedule の作り直しが 1/3 になった。minBlock のガードは別 PR に切る。',
         createdAt: new Date(Date.now() - 3_600_000 * 3).toISOString(),
         updatedAt: new Date(Date.now() - 3_600_000 * 3).toISOString(),
-        author: null,
-      },
-      {
+      }),
+      makeComment({
         id: 'comment-2',
-        taskId: 'task-1',
         content: 'Applied the suggested fix and re-ran the test suite.',
         createdAt: new Date(Date.now() - 300_000).toISOString(),
         updatedAt: new Date(Date.now() - 300_000).toISOString(),
         author: { kind: 'llm', agent: 'claude-opus-5' },
-      },
+      }),
     ],
     events: [
       {

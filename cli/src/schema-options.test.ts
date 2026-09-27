@@ -12,11 +12,9 @@ const testSchema = z.object({
 })
 
 function buildCommand(exclude: string[] = []): Command {
-  return addSchemaOptions(
-    new Command('test').exitOverride(),
-    testSchema,
+  return addSchemaOptions(new Command('test').exitOverride(), testSchema, {
     exclude,
-  )._unsafeUnwrap()
+  })._unsafeUnwrap()
 }
 
 function captureError(run: () => void): Error {
@@ -45,6 +43,53 @@ Options:
   -h, --help          display help for command
 `,
     )
+  })
+
+  it('uses configured flag names, descriptions, and metavars', () => {
+    const schema = z.object({
+      statusReason: z.string().optional(),
+      duplicateOfTaskId: z.string().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      {
+        optionNames: {
+          statusReason: 'reason',
+          duplicateOfTaskId: 'duplicate-of',
+        },
+        optionDescriptions: {
+          statusReason: 'Why the task is being closed',
+          duplicateOfTaskId: 'Task this task duplicates',
+        },
+        optionMetavars: {
+          statusReason: 'reason',
+          duplicateOfTaskId: 'taskId',
+        },
+      },
+    )._unsafeUnwrap()
+
+    expect(command.helpInformation()).toBe(
+      `Usage: test [options]
+
+Options:
+  --reason <reason>        Why the task is being closed
+  --duplicate-of <taskId>  Task this task duplicates
+  -h, --help               display help for command
+`,
+    )
+  })
+
+  it('uses object configuration for comma-separated array options', () => {
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      z.object({ labels: z.array(z.string()).optional() }),
+      { commaSeparatedOptions: ['labels'] },
+    )._unsafeUnwrap()
+
+    command.parse(['--labels', 'alpha,beta'], { from: 'user' })
+
+    expect(command.opts()).toEqual({ labels: ['alpha', 'beta'] })
   })
 
   it('drops an excluded field from --help even when optional', () => {
@@ -101,9 +146,7 @@ Options:
     const result = addSchemaOptions(
       new Command(),
       z.object({ labels: z.string().optional() }),
-      [],
-      {},
-      { commaSeparated: ['labels'] },
+      { commaSeparatedOptions: ['labels'] },
     )
 
     expect(result._unsafeUnwrapErr().message).toBe(
@@ -127,9 +170,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      { commaSeparated: ['labels'] },
+      { commaSeparatedOptions: ['labels'] },
     )._unsafeUnwrap()
 
     command.parse(['--labels', 'alpha, beta,,gamma'], { from: 'user' })
@@ -142,9 +183,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      { commaSeparated: ['values'] },
+      { commaSeparatedOptions: ['values'] },
     )._unsafeUnwrap()
 
     command.parse(['--values', '3,5'], { from: 'user' })
@@ -156,9 +195,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       z.object({ sessionId: z.array(z.string()).optional() }),
-      [],
-      {},
-      { repeatable: ['sessionId'] },
+      { repeatableOptions: ['sessionId'] },
     )._unsafeUnwrap()
 
     command.parse(['--session-id', 'first', '--session-id', 'second'], {
@@ -168,14 +205,27 @@ Options:
     expect(command.opts()).toEqual({ sessionId: ['first', 'second'] })
   })
 
+  it('uses an object-configured option default', () => {
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      z.object({ provider: z.enum(['claude_code', 'codex']).optional() }),
+      { optionDefaults: { provider: 'claude_code' } },
+    )._unsafeUnwrap()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({ provider: 'claude_code' })
+  })
+
   it('uses an operation-provided option default', () => {
     vi.stubEnv('TQ_TEST_PROVIDER', '')
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       z.object({ provider: z.enum(['claude_code', 'codex']).optional() }),
-      [],
-      { provider: 'TQ_TEST_PROVIDER' },
-      { defaults: { provider: 'claude_code' } },
+      {
+        envDefaults: { provider: 'TQ_TEST_PROVIDER' },
+        optionDefaults: { provider: 'claude_code' },
+      },
     )._unsafeUnwrap()
 
     command.parse([], { from: 'user' })
@@ -188,9 +238,10 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       z.object({ provider: z.enum(['claude_code', 'codex']).optional() }),
-      [],
-      { provider: 'TQ_TEST_PROVIDER' },
-      { defaults: { provider: 'claude_code' } },
+      {
+        envDefaults: { provider: 'TQ_TEST_PROVIDER' },
+        optionDefaults: { provider: 'claude_code' },
+      },
     )._unsafeUnwrap()
 
     command.parse([], { from: 'user' })
@@ -202,9 +253,7 @@ Options:
     const result = addSchemaOptions(
       new Command(),
       z.object({ note: z.string().optional() }),
-      [],
-      {},
-      { repeatable: ['note'] },
+      { repeatableOptions: ['note'] },
     )
 
     expect(result._unsafeUnwrapErr().message).toBe(
@@ -216,9 +265,10 @@ Options:
     const result = addSchemaOptions(
       new Command(),
       z.object({ values: z.array(z.string()).optional() }),
-      [],
-      {},
-      { commaSeparated: ['values'], repeatable: ['values'] },
+      {
+        commaSeparatedOptions: ['values'],
+        repeatableOptions: ['values'],
+      },
     )
 
     expect(result._unsafeUnwrapErr().message).toBe(
@@ -231,9 +281,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      { commaSeparated: ['values'] },
+      { commaSeparatedOptions: ['values'] },
     )._unsafeUnwrap()
     const error = captureError(() =>
       command.parse(['--values', '3,nope'], { from: 'user' }),
@@ -251,9 +299,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      { commaSeparated: ['labels'] },
+      { commaSeparatedOptions: ['labels'] },
     )._unsafeUnwrap()
 
     expect(command.helpInformation()).toBe(
@@ -274,9 +320,10 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      { labels: 'TQ_LABELS' },
-      { commaSeparated: ['labels'] },
+      {
+        envDefaults: { labels: 'TQ_LABELS' },
+        commaSeparatedOptions: ['labels'],
+      },
     )._unsafeUnwrap()
 
     command.parse([], { from: 'user' })
@@ -411,12 +458,9 @@ describe('a field defaulted from an env var via envDefaults', () => {
   })
 
   function buildContextCommand(): Command {
-    return addSchemaOptions(
-      new Command('test').exitOverride(),
-      contextSchema,
-      [],
-      { context: 'TQ_CONTEXT' },
-    )._unsafeUnwrap()
+    return addSchemaOptions(new Command('test').exitOverride(), contextSchema, {
+      envDefaults: { context: 'TQ_CONTEXT' },
+    })._unsafeUnwrap()
   }
 
   afterEach(() => {

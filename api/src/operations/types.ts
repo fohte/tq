@@ -1,4 +1,5 @@
 import type { hc } from 'hono/client'
+import type { Result } from 'neverthrow'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
@@ -68,6 +69,15 @@ export type CliFileOutput =
       outputPathField: string
     }
 
+type CliListOutput = {
+  kind: 'list'
+  fullOption?: '--full'
+  fullDescription?: string
+} & (
+  | { fullField: string; omitKey?: string }
+  | { fullField?: undefined; omitKey: string }
+)
+
 export type CliOutput =
   | { kind: 'none' }
   | {
@@ -76,17 +86,23 @@ export type CliOutput =
       fileOutput?: CliFileOutput
     }
   | { kind: 'json-with-link-sync' }
-  | {
-      kind: 'list'
-      omitKey: string
-      fullOption?: '--full'
-      fullDescription?: string
-      fullField?: string
-    }
+  | CliListOutput
   | { kind: 'web-url'; path: string }
 
 export type PositionalArgument<Key extends string = string> =
-  Key | { name: Key; optional?: boolean; variadic?: boolean }
+  | Key
+  | {
+      name: Key
+      field?: undefined
+      optional?: boolean
+      variadic?: boolean
+    }
+  | {
+      name: string
+      field: Key
+      optional?: boolean
+      variadic?: boolean
+    }
 
 export type CliContentInput = {
   field: string
@@ -104,18 +120,29 @@ export interface OperationDefinition {
   path: readonly [rootCommand: string, ...subcommandPath: string[]]
   description: string
   inputSchema: z.ZodObject
+  mcpInputSchema?: z.ZodObject
   positionalArgs: readonly PositionalArgument[]
   kind: OperationKind
   attribution?: 'agent'
   routes: readonly AllRoutes[]
   surface?: OperationSurface
   cli: {
+    description?: string
     path?: readonly string[]
     hiddenFields?: readonly string[]
     contentInput?: CliContentInput
+    excludeFields?: readonly string[]
     fileInput?: CliFileInput
     envDefaults?: Readonly<Record<string, string>>
     commaSeparatedOptions?: readonly string[]
+    optionNames?: Readonly<Record<string, string>>
+    optionDescriptions?: Readonly<Record<string, string>>
+    optionMetavars?: Readonly<Record<string, string>>
+    customOptions?: readonly { flags: string; description: string }[]
+    mapInput?: (
+      input: Record<string, unknown>,
+      options: Record<string, unknown>,
+    ) => Result<Record<string, unknown>, Error>
     repeatableOptions?: readonly string[]
     optionDefaults?: Readonly<Record<string, string>>
     output: CliOutput
@@ -130,6 +157,7 @@ type OperationConfig<Schema extends z.ZodObject, Output> = {
   path: readonly string[]
   description: string
   positionalArgs: readonly PositionalArgument<keyof z.output<Schema> & string>[]
+  mcpInputSchema?: z.ZodObject
   kind: OperationKind
   attribution?: OperationDefinition['attribution']
   routes: readonly AllRoutes[]

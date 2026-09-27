@@ -1,10 +1,19 @@
 import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, Code2, ExternalLink, Loader2, Plus } from 'lucide-react'
+import {
+  ChevronDown,
+  Code2,
+  ExternalLink,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
-import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
+import { ActionsMenu } from '#components/ui/actions-menu'
+import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { Panel } from '#components/ui/panel'
@@ -133,12 +142,14 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
         deletePage.mutate(page.id)
       }}
       isDeleting={deletePage.isPending}
-      renderEditor={(defaultValue) => (
+      renderEditor={(defaultValue, { editing, onEditingChange }) => (
         <PageInlineEditor
           taskId={taskId}
           pageId={page.id}
           format={page.format}
           defaultValue={defaultValue}
+          editing={editing}
+          onEditingChange={onEditingChange}
         />
       )}
     />
@@ -151,6 +162,8 @@ export function PageCardPresentation({
   onDelete,
   isDeleting,
   isExpanded: controlledExpanded,
+  defaultEditing = false,
+  defaultActionsMenuOpen,
   deleteDialogOpen,
   renderEditor,
 }: {
@@ -159,10 +172,21 @@ export function PageCardPresentation({
   onDelete?: () => void
   isDeleting?: boolean
   isExpanded?: boolean
+  defaultEditing?: boolean
+  defaultActionsMenuOpen?: 'desktop' | 'mobile' | undefined
   deleteDialogOpen?: boolean
-  renderEditor?: (defaultValue: string) => React.ReactNode
+  renderEditor?: (
+    defaultValue: string,
+    options: {
+      editing: boolean
+      onEditingChange: (editing: boolean) => void
+    },
+  ) => React.ReactNode
 }) {
   const [internalExpanded, setInternalExpanded] = useState(false)
+  const [isEditing, setIsEditing] = useState(defaultEditing)
+  const [internalDeleteDialogOpen, setInternalDeleteDialogOpen] =
+    useState(false)
   const isExpanded = controlledExpanded ?? internalExpanded
 
   const previewLines =
@@ -170,6 +194,32 @@ export function PageCardPresentation({
   const hasMore =
     page.format !== 'html' &&
     page.content.split('\n').filter((line) => line.trim()).length > 3
+  const actionItems = [
+    ...(page.format === 'markdown'
+      ? [
+          {
+            icon: <Pencil className="h-4 w-4" />,
+            label: 'edit',
+            onClick: () => {
+              setInternalExpanded(true)
+              setIsEditing(true)
+            },
+          },
+        ]
+      : []),
+    ...(isDeleting !== true
+      ? [
+          {
+            icon: <Trash2 className="h-4 w-4" />,
+            label: 'delete…',
+            onClick: () => {
+              setInternalDeleteDialogOpen(true)
+            },
+            destructive: true,
+          },
+        ]
+      : []),
+  ]
 
   return (
     <Panel>
@@ -221,16 +271,23 @@ export function PageCardPresentation({
           >
             <ExternalLink className="size-3.5" />
           </Link>
-          <DeleteConfirmButton
-            title="Delete page"
-            description={`Are you sure you want to delete "${page.title}"? This action cannot be undone.`}
-            onDelete={() => onDelete?.()}
-            disabled={isDeleting}
-            open={deleteDialogOpen}
-            iconClassName="size-3.5"
-          />
+          {actionItems.length > 0 && (
+            <ActionsMenu
+              aria-label="Page actions"
+              defaultOpen={defaultActionsMenuOpen}
+              items={actionItems}
+            />
+          )}
         </div>
       </div>
+
+      <DeleteConfirmDialog
+        title="Delete page"
+        description={`Are you sure you want to delete "${page.title}"? This action cannot be undone.`}
+        onConfirm={() => onDelete?.()}
+        open={deleteDialogOpen ?? internalDeleteDialogOpen}
+        onOpenChange={setInternalDeleteDialogOpen}
+      />
 
       {/* Preview (collapsed) */}
       {!isExpanded && page.format === 'html' && (
@@ -263,7 +320,10 @@ export function PageCardPresentation({
       {/* Expanded editor */}
       {isExpanded && renderEditor && (
         <div className="border-t border-border bg-card p-3">
-          {renderEditor(page.content)}
+          {renderEditor(page.content, {
+            editing: isEditing,
+            onEditingChange: setIsEditing,
+          })}
         </div>
       )}
     </Panel>
@@ -277,11 +337,15 @@ function PageInlineEditor({
   pageId,
   format,
   defaultValue,
+  editing,
+  onEditingChange,
 }: {
   taskId: string
   pageId: string
   format: TaskPage['format']
   defaultValue: string
+  editing: boolean
+  onEditingChange: (editing: boolean) => void
 }) {
   const updatePage = useUpdateTaskPage(taskId)
   const { onChange, flush } = useDebouncedSave((content) => {
@@ -306,6 +370,8 @@ function PageInlineEditor({
       <MarkdownEditor
         defaultValue={defaultValue}
         placeholder="Write something..."
+        editing={editing}
+        onEditingChange={onEditingChange}
         onChange={onChange}
         viewEditToggle={{ onExitEditMode: flush }}
         size="compact"

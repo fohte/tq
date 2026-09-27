@@ -49,10 +49,16 @@ function Providers({ children }: { children: ReactNode }) {
 function Story({
   page,
   isExpanded,
+  isDeleting = false,
+  defaultEditing,
+  defaultActionsMenuOpen,
   deleteDialogOpen,
 }: {
   page: TaskPage
   isExpanded: boolean
+  isDeleting?: boolean
+  defaultEditing: boolean
+  defaultActionsMenuOpen?: 'desktop' | 'mobile' | undefined
   deleteDialogOpen: boolean
 }) {
   return (
@@ -63,8 +69,11 @@ function Story({
           page={page}
           onDelete={() => {}}
           isExpanded={isExpanded}
+          isDeleting={isDeleting}
+          defaultEditing={defaultEditing}
+          defaultActionsMenuOpen={defaultActionsMenuOpen}
           deleteDialogOpen={deleteDialogOpen}
-          renderEditor={(defaultValue) =>
+          renderEditor={(defaultValue, { editing, onEditingChange }) =>
             page.format === 'html' ? (
               <div className="text-sm">
                 <HtmlPageEditor defaultValue={defaultValue} />
@@ -74,6 +83,9 @@ function Story({
                 <MarkdownEditor
                   defaultValue={defaultValue}
                   placeholder="Write something..."
+                  editing={editing}
+                  onEditingChange={onEditingChange}
+                  viewEditToggle={{}}
                   size="compact"
                 />
               </div>
@@ -98,22 +110,101 @@ type CardStory = StoryObj<typeof meta>
 
 export const Collapsed: CardStory = {
   name: 'the card shows a page title with its content collapsed',
-  args: { page: samplePage, isExpanded: false, deleteDialogOpen: false },
+  args: {
+    page: samplePage,
+    isExpanded: false,
+    defaultEditing: false,
+    deleteDialogOpen: false,
+  },
 }
 
 export const Expanded: CardStory = {
-  name: 'the card opens the page content in its editor',
-  args: { page: samplePage, isExpanded: true, deleteDialogOpen: false },
+  name: 'the card shows its content in read mode',
+  args: {
+    page: samplePage,
+    isExpanded: true,
+    defaultEditing: false,
+    deleteDialogOpen: false,
+  },
+}
+
+export const ExpandedEditing: CardStory = {
+  name: 'the card shows its content in edit mode',
+  args: {
+    page: samplePage,
+    isExpanded: true,
+    defaultEditing: true,
+    deleteDialogOpen: false,
+  },
+}
+
+export const ActionsMenuOpen: CardStory = {
+  name: 'the card shows the page actions menu',
+  args: {
+    page: samplePage,
+    isExpanded: false,
+    defaultEditing: false,
+    defaultActionsMenuOpen: 'desktop',
+    deleteDialogOpen: false,
+  },
+  tags: ['desktop-only'],
+}
+
+export const ActionsMenuOpenSP: CardStory = {
+  name: 'the card shows the page actions sheet on mobile',
+  args: {
+    page: samplePage,
+    isExpanded: false,
+    defaultEditing: false,
+    defaultActionsMenuOpen: 'mobile',
+    deleteDialogOpen: false,
+  },
+  tags: ['mobile-only'],
+}
+
+export const HtmlActionsMenuOpen: CardStory = {
+  name: 'the HTML page actions menu offers deletion without an edit action',
+  args: {
+    page: htmlPage,
+    isExpanded: false,
+    defaultEditing: false,
+    defaultActionsMenuOpen: 'desktop',
+    deleteDialogOpen: false,
+  },
+  tags: ['desktop-only'],
+}
+
+export const DeletePending: CardStory = {
+  name: 'the page actions menu hides deletion while a delete is pending',
+  args: {
+    page: samplePage,
+    isExpanded: false,
+    isDeleting: true,
+    defaultEditing: false,
+    defaultActionsMenuOpen: 'desktop',
+    deleteDialogOpen: false,
+  },
+  tags: ['desktop-only'],
 }
 
 export const DeleteConfirmation: CardStory = {
   name: 'the card shows a confirmation prompt before deleting the page',
-  args: { page: samplePage, isExpanded: false, deleteDialogOpen: true },
+  args: {
+    page: samplePage,
+    isExpanded: false,
+    defaultEditing: false,
+    deleteDialogOpen: true,
+  },
 }
 
 export const EmptyContent: CardStory = {
   name: 'the card has no page content to preview',
-  args: { page: emptyPage, isExpanded: false, deleteDialogOpen: false },
+  args: {
+    page: emptyPage,
+    isExpanded: false,
+    defaultEditing: false,
+    deleteDialogOpen: false,
+  },
 }
 
 export const LlmAuthored: CardStory = {
@@ -121,16 +212,27 @@ export const LlmAuthored: CardStory = {
   args: {
     page: { ...samplePage, author: { kind: 'llm', agent: 'claude-opus-5' } },
     isExpanded: false,
+    defaultEditing: false,
     deleteDialogOpen: false,
   },
 }
 
 export const HtmlCollapsed: CardStory = {
   name: 'the card shows an HTML page with its content collapsed',
-  args: { page: htmlPage, isExpanded: false, deleteDialogOpen: false },
+  args: {
+    page: htmlPage,
+    isExpanded: false,
+    defaultEditing: false,
+    deleteDialogOpen: false,
+  },
 }
 
 export const HtmlExpanded: CardStory = {
   name: 'the card expands an HTML page inside the editor',
-  args: { page: htmlPage, isExpanded: true, deleteDialogOpen: false },
+  args: {
+    page: htmlPage,
+    isExpanded: true,
+    defaultEditing: false,
+    deleteDialogOpen: false,
+  },
 }

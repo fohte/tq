@@ -10,6 +10,8 @@ import {
 } from '#operations/types'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
+const pageContentKey = 'content'
+
 const taskIdSchema = taskIdOrNumber.describe(
   'The id (UUID) or number of the task the page belongs to.',
 )
@@ -73,7 +75,7 @@ export const pageOperations = [
     cli: {
       output: {
         kind: 'list',
-        omitKey: 'content',
+        omitKey: pageContentKey,
         fullOption: '--full',
         fullDescription: 'Include full page content in the output',
         fullField: 'full',
@@ -85,7 +87,7 @@ export const pageOperations = [
           param: { taskId: String(taskId) },
         }),
       ).map((result) =>
-        full === true ? result : omitKeyRecursively(result, 'content'),
+        full === true ? result : omitKeyRecursively(result, pageContentKey),
       ),
   }),
   defineOperation(pageRefSchema, {
@@ -104,7 +106,7 @@ export const pageOperations = [
             name: 'output',
             description: 'Write the page content to a file instead of stdout',
           },
-          field: 'content',
+          field: pageContentKey,
         },
       },
     },
@@ -127,7 +129,7 @@ export const pageOperations = [
     attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/pages'],
     cli: {
-      contentInput: { field: 'content', required: false },
+      contentInput: { field: pageContentKey, required: false },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, ...json }) =>
@@ -147,7 +149,7 @@ export const pageOperations = [
     attribution: 'agent',
     routes: ['PATCH /api/tasks/:taskId/pages/:pageId'],
     cli: {
-      contentInput: { field: 'content', required: false },
+      contentInput: { field: pageContentKey, required: false },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, pageId, ...json }) =>

@@ -112,11 +112,12 @@ describe('link', () => {
 
   it('encodes path separators in the current session id', async () => {
     vi.stubEnv('TQ_SESSION_ID', 'segment/with separator')
+    const session = {
+      id: 'agent-session-1',
+      sessionId: 'segment/with separator',
+    }
     const { fetchStub, calls } = captureFetch(
-      () =>
-        new Response(JSON.stringify({ id: 'agent-session-1' }), {
-          status: 200,
-        }),
+      () => new Response(JSON.stringify(session), { status: 200 }),
     )
     const stderr = spyStderr()
     const stdout = spyStdout()
@@ -147,11 +148,11 @@ describe('link', () => {
         },
       ],
       stderr: [],
-      stdout: [[`${JSON.stringify({ id: 'agent-session-1' }, null, 2)}\n`]],
+      stdout: [[`${JSON.stringify(session, null, 2)}\n`]],
     })
   })
 
-  it('rejects a dot path segment before making a request', async () => {
+  it('rejects dot path segments in the current session id', async () => {
     vi.stubEnv('TQ_SESSION_ID', '..')
     const { fetchStub, calls } = captureFetch(
       () =>
