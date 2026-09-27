@@ -5,10 +5,7 @@ import { tryParseJson } from '#result'
 const headerNamePattern = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
 const headerValuePattern = /^[\t\x20-\xFF]*$/
 
-export function validateHeader(
-  name: string,
-  value: string,
-): Result<void, Error> {
+function validateHeader(name: string, value: string): Result<void, Error> {
   if (!headerNamePattern.test(name)) {
     return err(new Error(`Invalid HTTP header name ${JSON.stringify(name)}.`))
   }
