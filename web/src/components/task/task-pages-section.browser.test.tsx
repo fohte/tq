@@ -6,23 +6,28 @@ import { describe, expect, it, vi } from 'vitest'
 import { makeTaskPage } from '#components/task/task-page-test-fixtures'
 import { PageCardPresentation } from '#components/task/task-pages-section'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
+import type { TaskPage } from '#hooks/use-task-pages'
 import { assertDefined } from '#lib/test-utils'
 import { createStoryRouter } from '#storybook-config/story-router'
 
 async function renderPageCard({
+  page = makeTaskPage(),
   isExpanded,
+  isDeleting = false,
   onDelete = vi.fn(),
 }: {
+  page?: TaskPage
   isExpanded?: boolean
+  isDeleting?: boolean
   onDelete?: () => void
 } = {}) {
-  const page = makeTaskPage()
   const router = createStoryRouter({
     component: () => (
       <PageCardPresentation
         taskId={page.taskId}
         page={page}
         onDelete={onDelete}
+        isDeleting={isDeleting}
         {...(isExpanded === undefined ? {} : { isExpanded })}
         renderEditor={(defaultValue, { editing, onEditingChange }) => (
           <MarkdownEditor
@@ -74,6 +79,13 @@ function getDeleteState(deleteCalls: number) {
   }
 }
 
+function getAvailablePageActions() {
+  return {
+    edit: screen.queryByText('edit') != null,
+    delete: screen.queryByText('delete…') != null,
+  }
+}
+
 describe('PageCardPresentation', () => {
   it('expands into edit mode when edit is selected from the page actions', async () => {
     const { container } = await renderPageCard()
@@ -99,6 +111,26 @@ describe('PageCardPresentation', () => {
       expanded: true,
       mode: 'view',
     })
+  })
+
+  it('does not offer edit for HTML pages', async () => {
+    const { container } = await renderPageCard({
+      page: makeTaskPage({ format: 'html' }),
+    })
+    await openPageActions(container)
+
+    await screen.findByText('delete…')
+
+    expect(getAvailablePageActions()).toEqual({ edit: false, delete: true })
+  })
+
+  it('hides delete while a page deletion is pending', async () => {
+    const { container } = await renderPageCard({ isDeleting: true })
+    await openPageActions(container)
+
+    await screen.findByText('edit')
+
+    expect(getAvailablePageActions()).toEqual({ edit: true, delete: false })
   })
 
   it('deletes the page only after the confirmation is accepted', async () => {

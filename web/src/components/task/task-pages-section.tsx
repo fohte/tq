@@ -141,6 +141,7 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
       onDelete={() => {
         deletePage.mutate(page.id)
       }}
+      isDeleting={deletePage.isPending}
       renderEditor={(defaultValue, { editing, onEditingChange }) => (
         <PageInlineEditor
           taskId={taskId}
@@ -159,6 +160,7 @@ export function PageCardPresentation({
   taskId,
   page,
   onDelete,
+  isDeleting,
   isExpanded: controlledExpanded,
   defaultEditing = false,
   defaultActionsMenuOpen,
@@ -168,6 +170,7 @@ export function PageCardPresentation({
   taskId: string
   page: TaskPage
   onDelete?: () => void
+  isDeleting?: boolean
   isExpanded?: boolean
   defaultEditing?: boolean
   defaultActionsMenuOpen?: 'desktop' | 'mobile' | undefined
@@ -191,6 +194,32 @@ export function PageCardPresentation({
   const hasMore =
     page.format !== 'html' &&
     page.content.split('\n').filter((line) => line.trim()).length > 3
+  const actionItems = [
+    ...(page.format === 'markdown'
+      ? [
+          {
+            icon: <Pencil className="h-4 w-4" />,
+            label: 'edit',
+            onClick: () => {
+              setInternalExpanded(true)
+              setIsEditing(true)
+            },
+          },
+        ]
+      : []),
+    ...(isDeleting !== true
+      ? [
+          {
+            icon: <Trash2 className="h-4 w-4" />,
+            label: 'delete…',
+            onClick: () => {
+              setInternalDeleteDialogOpen(true)
+            },
+            destructive: true,
+          },
+        ]
+      : []),
+  ]
 
   return (
     <Panel>
@@ -242,28 +271,13 @@ export function PageCardPresentation({
           >
             <ExternalLink className="size-3.5" />
           </Link>
-          <ActionsMenu
-            aria-label="Page actions"
-            defaultOpen={defaultActionsMenuOpen}
-            items={[
-              {
-                icon: <Pencil className="h-4 w-4" />,
-                label: 'edit',
-                onClick: () => {
-                  setInternalExpanded(true)
-                  setIsEditing(true)
-                },
-              },
-              {
-                icon: <Trash2 className="h-4 w-4" />,
-                label: 'delete…',
-                onClick: () => {
-                  setInternalDeleteDialogOpen(true)
-                },
-                destructive: true,
-              },
-            ]}
-          />
+          {actionItems.length > 0 && (
+            <ActionsMenu
+              aria-label="Page actions"
+              defaultOpen={defaultActionsMenuOpen}
+              items={actionItems}
+            />
+          )}
         </div>
       </div>
 

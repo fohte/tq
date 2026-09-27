@@ -49,12 +49,14 @@ function Providers({ children }: { children: ReactNode }) {
 function Story({
   page,
   isExpanded,
+  isDeleting = false,
   defaultEditing,
   defaultActionsMenuOpen,
   deleteDialogOpen,
 }: {
   page: TaskPage
   isExpanded: boolean
+  isDeleting?: boolean
   defaultEditing: boolean
   defaultActionsMenuOpen?: 'desktop' | 'mobile' | undefined
   deleteDialogOpen: boolean
@@ -67,6 +69,7 @@ function Story({
           page={page}
           onDelete={() => {}}
           isExpanded={isExpanded}
+          isDeleting={isDeleting}
           defaultEditing={defaultEditing}
           defaultActionsMenuOpen={defaultActionsMenuOpen}
           deleteDialogOpen={deleteDialogOpen}
@@ -144,6 +147,7 @@ export const ActionsMenuOpen: CardStory = {
     defaultActionsMenuOpen: 'desktop',
     deleteDialogOpen: false,
   },
+  tags: ['desktop-only'],
 }
 
 export const ActionsMenuOpenSP: CardStory = {
@@ -156,6 +160,31 @@ export const ActionsMenuOpenSP: CardStory = {
     deleteDialogOpen: false,
   },
   tags: ['mobile-only'],
+}
+
+export const HtmlActionsMenuOpen: CardStory = {
+  name: 'the HTML page actions menu offers deletion without an edit action',
+  args: {
+    page: htmlPage,
+    isExpanded: false,
+    defaultEditing: false,
+    defaultActionsMenuOpen: 'desktop',
+    deleteDialogOpen: false,
+  },
+  tags: ['desktop-only'],
+}
+
+export const DeletePending: CardStory = {
+  name: 'the page actions menu hides deletion while a delete is pending',
+  args: {
+    page: samplePage,
+    isExpanded: false,
+    isDeleting: true,
+    defaultEditing: false,
+    defaultActionsMenuOpen: 'desktop',
+    deleteDialogOpen: false,
+  },
+  tags: ['desktop-only'],
 }
 
 export const DeleteConfirmation: CardStory = {
