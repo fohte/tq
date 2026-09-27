@@ -178,6 +178,7 @@ export function registerOperations(
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(listOutput?.fullField == null ? [] : [listOutput.fullField]),
       ...(operation.cli.fileInput == null
         ? []
         : [operation.cli.fileInput.field]),
@@ -230,6 +231,10 @@ export function registerOperations(
         (value) => value,
         (error) => fail(actionCommand, error),
       )
+
+      if (listOutput?.fullField != null && options['full'] === true) {
+        input[listOutput.fullField] = true
+      }
 
       if (contentInput != null) {
         const filePath =

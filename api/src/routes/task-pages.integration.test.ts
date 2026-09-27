@@ -25,6 +25,10 @@ function normalizePage(page: PageResponse) {
   return { ...page, id: 'ID', createdAt: 'DATE', updatedAt: 'DATE' }
 }
 
+function sortPagesById(pages: PageResponse[]) {
+  return pages.toSorted((left, right) => left.id.localeCompare(right.id))
+}
+
 describe('task pages API', () => {
   describe('GET /api/tasks/:taskId/pages', () => {
     it('returns empty list when no pages exist', async () => {
@@ -81,16 +85,18 @@ describe('task pages API', () => {
       const res = await app.request(`/api/tasks/${task.id}/pages`)
 
       expect(res.status).toBe(200)
-      expect(await jsonBody<PageResponse[]>(res)).toEqual([
-        {
-          ...withoutLinkSync(humanPage),
-          author: { kind: 'human', agent: null },
-        },
-        {
-          ...withoutLinkSync(llmPage),
-          author: { kind: 'llm', agent: 'claude-opus-5' },
-        },
-      ])
+      expect(sortPagesById(await jsonBody<PageResponse[]>(res))).toEqual(
+        sortPagesById([
+          {
+            ...withoutLinkSync(humanPage),
+            author: { kind: 'human', agent: null },
+          },
+          {
+            ...withoutLinkSync(llmPage),
+            author: { kind: 'llm', agent: 'claude-opus-5' },
+          },
+        ]),
+      )
     })
   })
 

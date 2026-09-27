@@ -1,10 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/server'
 
 import {
-  registerCreatePageTool,
-  registerUpdatePageTool,
-} from '#routes/mcp/tools/page-write-tools'
-import {
   registerCreateTaskTool,
   registerUpdateTaskStatusTool,
   registerUpdateTaskTool,
@@ -15,6 +11,4 @@ export function registerWriteTools(server: McpServer): void {
   registerCreateTaskTool(server)
   registerUpdateTaskTool(server)
   registerUpdateTaskStatusTool(server)
-  registerCreatePageTool(server)
-  registerUpdatePageTool(server)
 }

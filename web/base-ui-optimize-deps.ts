@@ -3,6 +3,8 @@ export const BASE_UI_OPTIMIZE_DEPS = [
   '@base-ui/react/button',
   '@base-ui/react/dialog',
   '@base-ui/react/input',
+  '@base-ui/react/radio',
+  '@base-ui/react/radio-group',
   '@base-ui/react/select',
   '@base-ui/react/tooltip',
 ]

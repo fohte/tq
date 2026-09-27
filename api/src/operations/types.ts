@@ -54,6 +54,7 @@ export type CliOutput =
       omitKey: string
       fullOption?: '--full'
       fullDescription?: string
+      fullField?: string
     }
   | { kind: 'web-url'; path: string }
 
