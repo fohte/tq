@@ -174,7 +174,7 @@ export const BlockVideoAsset: Story = {
 }
 
 export const InlineVideoAsset: Story = {
-  name: 'renders an inline video from a Markdown image',
+  name: 'the editor gives an inline video its own line between surrounding text',
   render: renderWithLiveReferences,
   args: {
     defaultValue: `Use ![a short comparison clip](/api/assets/${VIDEO_ASSET_ID}) to compare the movement.`,

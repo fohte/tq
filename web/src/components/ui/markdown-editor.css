@@ -265,9 +265,8 @@
 }
 
 .markdown-asset-node-view.markdown-asset-video.markdown-asset-inline-node-view {
-  display: inline-block;
+  display: block;
   max-width: 100%;
-  vertical-align: middle;
 }
 
 .markdown-asset-node-view.markdown-asset-video > .markdown-asset-video-player {
@@ -280,10 +279,9 @@
 
 .markdown-asset-inline-node-view.markdown-asset-video
   > .markdown-asset-video-player {
-  display: inline-block;
+  display: block;
   height: auto;
   max-width: 100%;
-  vertical-align: middle;
   width: auto;
 }
 
