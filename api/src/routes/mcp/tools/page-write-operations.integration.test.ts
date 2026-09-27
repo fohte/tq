@@ -237,6 +237,20 @@ describe('page_update', () => {
 })
 
 describe('page_delete', () => {
+  it('returns not found for a non-existent page id', async () => {
+    const task = await createTask('Has pages')
+
+    const result = await callMcpTool(client, 'page_delete', {
+      taskId: task.id,
+      pageId: TEST_UUID,
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [{ type: 'text', text: 'Page not found' }],
+    })
+  })
+
   it('deletes a page and returns its identity', async () => {
     const task = await createTask('Sample task')
     const page = await createPage(task.id, 'Sample page', 'Sample content')

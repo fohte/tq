@@ -33,13 +33,9 @@ const searchPagesSchema = z.object({
     ),
 })
 const listPagesSchema = z.object({ taskId: taskIdSchema })
-const getPageSchema = z.object({ taskId: taskIdSchema, pageId: pageIdSchema })
+const pageRefSchema = z.object({ taskId: taskIdSchema, pageId: pageIdSchema })
 const createPageInputSchema = createPageSchema.extend({ taskId: taskIdSchema })
 const updatePageInputSchema = updatePageSchema.extend({
-  taskId: taskIdSchema,
-  pageId: pageIdSchema,
-})
-const deletePageSchema = z.object({
   taskId: taskIdSchema,
   pageId: pageIdSchema,
 })
@@ -48,7 +44,7 @@ export const pageOperations = [
   defineOperation(searchPagesSchema, {
     path: ['page', 'search'],
     description:
-      'Find where a phrase appears across task pages, comments, and task title or description. Returns matching locations with the task number, page identity when applicable, a snippet, and match metadata; it does not return page content. Use page_get with the returned task number and page id when the full page is needed.',
+      'Find where a phrase appears across task pages, comments, and task title or description. Returns matching locations with the task number, page identity when applicable, a snippet, and match metadata; it does not return page content. Fetch a full page by its task number and page id when needed.',
     positionalArgs: ['q'],
     kind: 'read',
     routes: ['GET /api/tasks/search/pages'],
@@ -65,7 +61,8 @@ export const pageOperations = [
   }),
   defineOperation(listPagesSchema, {
     path: ['page', 'list'],
-    description: 'List pages for a task.',
+    description:
+      'List pages for a task. MCP responses include full content for every page and can be large; CLI output omits content by default and includes it with --full. Task details include page metadata without content.',
     positionalArgs: ['taskId'],
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/pages'],
@@ -84,10 +81,10 @@ export const pageOperations = [
         }),
       ),
   }),
-  defineOperation(getPageSchema, {
+  defineOperation(pageRefSchema, {
     path: ['page', 'get'],
     description:
-      'Get the full content of a single page (a task note) by id. page_list returns pages for a task; resolve taskId and pageId from a result before calling this. get_task also lists page metadata without content.',
+      'Get the full content of a single page (a task note) by id. Resolve taskId and pageId from a page listing or task detail; task detail contains page metadata without content.',
     positionalArgs: ['taskId', 'pageId'],
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/pages/:pageId'],
@@ -157,7 +154,7 @@ export const pageOperations = [
         }),
       ),
   }),
-  defineOperation(deletePageSchema, {
+  defineOperation(pageRefSchema, {
     path: ['page', 'delete'],
     description: 'Delete a page from a task.',
     positionalArgs: ['taskId', 'pageId'],
