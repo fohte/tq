@@ -31,6 +31,7 @@ export const projectOperations = [
     kind: 'read',
     routes: ['GET /api/projects'],
     cli: {
+      group: { description: 'Manage projects', order: 3 },
       output: {
         kind: 'list',
         omitKey: 'description',

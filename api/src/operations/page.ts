@@ -54,7 +54,10 @@ export const pageOperations = [
     positionalArgs: ['q'],
     kind: 'read',
     routes: ['GET /api/tasks/search/pages'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { description: 'Manage task pages', order: 0 },
+      output: { kind: 'json' },
+    },
     run: (client, { q, limit }) =>
       requestJson(
         client.api.tasks.search.pages.$get({

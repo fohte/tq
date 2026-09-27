@@ -11,7 +11,10 @@ export const slackOperations = [
     positionalArgs: ['url'],
     kind: 'read',
     routes: ['POST /api/slack/resolve'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { description: 'Manage Slack links', order: 10 },
+      output: { kind: 'json' },
+    },
     run: (client, { url }) =>
       requestJson(client.api.slack.resolve.$post({ json: { url } })),
   }),

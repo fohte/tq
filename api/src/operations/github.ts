@@ -29,7 +29,10 @@ export const githubOperations = [
     kind: 'write',
     attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/github-link'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { description: 'Manage GitHub links', order: 7 },
+      output: { kind: 'json' },
+    },
     run: (client, { taskId, url }) =>
       requestJson(
         client.api.tasks[':taskId']['github-link'].$post({

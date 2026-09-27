@@ -1,8 +1,6 @@
 import { appendFile, readFile } from 'node:fs/promises'
 
-import { hookOperations } from 'api/operations'
 import { agentProviderSchema } from 'api/schemas/agent-session'
-import type { Command } from 'commander'
 import { z } from 'zod'
 
 import type { ReadableStdin } from '#input'
@@ -10,7 +8,6 @@ import { readContentInput } from '#input'
 import {
   type OperationCommandContext,
   type OperationCommandHandler,
-  registerOperations,
 } from '#operation-adapter'
 import { tryParseJson } from '#result'
 import { resolveSessionLabel } from '#transcript'
@@ -48,7 +45,9 @@ async function persistSessionIdToEnvFile(sessionId: string): Promise<void> {
 
 type HookCommandContext = OperationCommandContext
 
-const handleHookCommand: OperationCommandHandler = async (context) => {
+export const hookOperationHandler: OperationCommandHandler = async (
+  context,
+) => {
   const event = context.input['event']
   if (typeof event !== 'string') return
 
@@ -110,20 +109,5 @@ async function reportHookEvent(
       ended: event === 'SessionEnd',
     },
     { ignoreErrors: true },
-  )
-}
-
-export function registerHookCommands(
-  program: Command,
-  fetchImpl: typeof fetch,
-  stdin: ReadableStdin,
-): void {
-  registerOperations(
-    program,
-    hookOperations,
-    hookOperations[0].description,
-    fetchImpl,
-    stdin,
-    handleHookCommand,
   )
 }

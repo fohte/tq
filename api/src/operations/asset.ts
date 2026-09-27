@@ -47,6 +47,7 @@ export const assetOperations = [
     },
     routes: ['POST /api/assets'],
     cli: {
+      group: { description: 'Manage assets', order: 6 },
       fileInput: {
         field: 'file',
         pathField: 'filePath',

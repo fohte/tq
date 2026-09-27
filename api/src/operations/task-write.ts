@@ -170,6 +170,7 @@ export const taskWriteOperations = [
     routes: ['POST /api/tasks'],
     mcpInputSchema: createTaskSchema,
     cli: {
+      commandOrder: 3,
       description: 'Create a task',
       excludeFields: ['parentId', 'recurrenceRule'],
       envDefaults: { context: 'TQ_CONTEXT' },
@@ -208,6 +209,7 @@ export const taskWriteOperations = [
     routes: ['PATCH /api/tasks/:id'],
     mcpInputSchema: updateTaskToolInputSchema,
     cli: {
+      commandOrder: 4,
       description: 'Update a task',
       excludeFields: ['recurrenceRule'],
       commaSeparatedOptions: ['labels', 'blockedBy'],
@@ -243,7 +245,11 @@ export const taskWriteOperations = [
     kind: 'delete',
     routes: ['DELETE /api/tasks/:id'],
     mcpInputSchema: taskIdToolSchema,
-    cli: { description: 'Delete a task', output: { kind: 'json' } },
+    cli: {
+      commandOrder: 5,
+      description: 'Delete a task',
+      output: { kind: 'json' },
+    },
     run: (client, { taskId }) =>
       requestNoContent(
         client.api.tasks[':id'].$delete({
@@ -262,6 +268,7 @@ export const taskWriteOperations = [
     routes: ['PATCH /api/tasks/:id/status'],
     mcpInputSchema: taskStatusToolInputSchema,
     cli: {
+      commandOrder: 6,
       description: `Update task status (${taskStatus.options.join(', ')})`,
       mapInput: mapTaskStatusCliInput,
       output: { kind: 'json' },
@@ -286,6 +293,7 @@ export const taskWriteOperations = [
     routes: ['PATCH /api/tasks/:id/parent'],
     mcpInputSchema: taskParentToolInputSchema,
     cli: {
+      commandOrder: 7,
       description: "Set or clear a task's parent (omit parentId to clear it)",
       output: { kind: 'json' },
     },
@@ -309,6 +317,7 @@ export const taskWriteOperations = [
     routes: ['POST /api/tasks/:id/complete'],
     mcpInputSchema: taskCompleteToolInputSchema,
     cli: {
+      commandOrder: 8,
       description: 'Complete a task',
       optionNames: {
         statusReason: 'reason',
@@ -342,6 +351,7 @@ export const taskWriteOperations = [
     routes: ['POST /api/tasks/from-github'],
     mcpInputSchema: fromGithubToolInputSchema,
     cli: {
+      commandOrder: 12,
       description: 'Create a task from a GitHub issue or pull request URL',
       output: { kind: 'json' },
     },

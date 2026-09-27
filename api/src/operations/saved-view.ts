@@ -26,6 +26,7 @@ export const savedViewOperations = [
     kind: 'read',
     routes: ['GET /api/saved-views'],
     cli: {
+      group: { description: 'Manage saved views', order: 4 },
       envDefaults: { context: 'TQ_CONTEXT' },
       output: { kind: 'json' },
     },

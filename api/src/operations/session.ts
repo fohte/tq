@@ -67,6 +67,7 @@ export const sessionOperations = [
     kind: 'read',
     routes: ['GET /api/agent-sessions', 'GET /api/agent-sessions/by-task'],
     cli: {
+      group: { description: 'Manage agent sessions', order: 15 },
       repeatableOptions: ['sessionId'],
       output: {
         kind: 'list',

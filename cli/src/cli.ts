@@ -1,23 +1,12 @@
+import { operations } from 'api/operations'
 import { Command, CommanderError, Option } from 'commander'
 
-import { registerAssetCommands } from '#commands/asset'
-import { registerCalendarCommands } from '#commands/calendar'
-import { registerCommentCommands } from '#commands/comment'
-import { registerGithubCommands } from '#commands/github'
-import { registerHealthCommand } from '#commands/health'
-import { registerHookCommands } from '#commands/hook'
-import { registerLabelCommands } from '#commands/label'
-import { registerLinkCommands } from '#commands/link'
-import { registerPageCommands } from '#commands/page'
-import { registerProjectCommands } from '#commands/project'
-import { registerQueueCommands } from '#commands/queue'
-import { registerSavedViewCommands } from '#commands/saved-view'
-import { registerSessionCommands } from '#commands/session'
-import { registerSlackCommands } from '#commands/slack'
-import { registerTaskCommands } from '#commands/task'
+import { hookOperationHandler } from '#commands/hook'
+import { linkOperationHandler } from '#commands/link'
 import { formatError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
+import { registerOperations } from '#operation-adapter'
 
 function buildProgram(
   fetchImpl: typeof fetch = fetch,
@@ -55,21 +44,10 @@ function buildProgram(
       '\nSet TQ_HEADERS_JSON to a JSON object of header names and string values. Use it for secrets because -H values may be visible in process listings.\n',
     )
 
-  registerPageCommands(program, fetchImpl, stdin)
-  registerTaskCommands(program, fetchImpl, stdin)
-  registerCommentCommands(program, fetchImpl, stdin)
-  registerProjectCommands(program, fetchImpl, stdin)
-  registerSavedViewCommands(program, fetchImpl, stdin)
-  registerLabelCommands(program, fetchImpl, stdin)
-  registerAssetCommands(program, fetchImpl, stdin)
-  registerGithubCommands(program, fetchImpl, stdin)
-  registerQueueCommands(program, fetchImpl, stdin)
-  registerCalendarCommands(program, fetchImpl, stdin)
-  registerSlackCommands(program, fetchImpl, stdin)
-  registerHealthCommand(program, fetchImpl, stdin)
-  registerHookCommands(program, fetchImpl, stdin)
-  registerLinkCommands(program, fetchImpl, stdin)
-  registerSessionCommands(program, fetchImpl, stdin)
+  registerOperations(program, operations, fetchImpl, stdin, {
+    hook: hookOperationHandler,
+    link: linkOperationHandler,
+  })
 
   return program
 }

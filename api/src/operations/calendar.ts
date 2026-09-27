@@ -14,7 +14,10 @@ export const calendarOperations = [
     positionalArgs: ['timeMin', 'timeMax'],
     kind: 'read',
     routes: ['GET /api/calendar/events'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { description: 'Manage calendar events', order: 9 },
+      output: { kind: 'json' },
+    },
     run: (client, query) =>
       requestJson(client.api.calendar.events.$get({ query })),
   }),

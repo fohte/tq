@@ -37,6 +37,8 @@ export const linkOperations = [
     ],
     surface,
     cli: {
+      group: { order: 13 },
+      handler: 'link',
       path: ['link'],
       hiddenFields: ['provider', 'sessionId'],
       output: { kind: 'json' },
@@ -63,6 +65,8 @@ export const linkOperations = [
     ],
     surface,
     cli: {
+      group: { order: 14 },
+      handler: 'link',
       path: ['unlink'],
       hiddenFields: ['provider', 'sessionId'],
       output: { kind: 'json' },

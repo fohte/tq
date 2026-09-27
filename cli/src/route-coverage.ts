@@ -2,75 +2,6 @@ import type { AllRoutes, OperationRoutes } from 'api/operations'
 
 export type { AllRoutes }
 
-export const COVERED_ROUTES = [
-  'GET /api/tasks/:taskId/pages',
-  'POST /api/tasks/:taskId/pages',
-  'GET /api/tasks/:taskId/pages/:pageId',
-  'PATCH /api/tasks/:taskId/pages/:pageId',
-  'DELETE /api/tasks/:taskId/pages/:pageId',
-
-  'GET /health',
-
-  // asset
-  'POST /api/assets',
-  'GET /api/assets/:id',
-  'DELETE /api/assets/:id',
-
-  // github
-  'POST /api/tasks/:taskId/github-link',
-  'DELETE /api/tasks/:taskId/github-link/:linkId',
-  'POST /api/tasks/:taskId/github-link/sync',
-  'POST /api/github/resolve',
-  'POST /api/github/sync',
-
-  // queue
-  'GET /api/queues',
-  'GET /api/queues/:key/items',
-  'PUT /api/queues/:key/items',
-
-  // calendar
-  'GET /api/calendar/events',
-
-  // slack
-  'POST /api/slack/resolve',
-
-  // task
-  'GET /api/tasks',
-  'GET /api/tasks/search/pages',
-  'POST /api/tasks',
-  'GET /api/tasks/:id',
-  'PATCH /api/tasks/:id',
-  'DELETE /api/tasks/:id',
-  'PATCH /api/tasks/:id/status',
-  'PATCH /api/tasks/:id/parent',
-  'POST /api/tasks/:id/complete',
-  'GET /api/tasks/:id/activity',
-  'POST /api/tasks/from-github',
-
-  // hook
-  'POST /api/agent-sessions',
-  'GET /api/agent-sessions/by-session/:provider/:sessionId',
-  'DELETE /api/agent-sessions/by-session/:provider/:sessionId',
-
-  // session
-  'GET /api/agent-sessions',
-  'GET /api/agent-sessions/by-task',
-
-  // task <-> agent session links
-  'POST /api/tasks/:taskId/agent-sessions',
-  'GET /api/tasks/:taskId/agent-sessions',
-  'DELETE /api/tasks/:taskId/agent-sessions/:agentSessionId',
-
-  // saved view
-  'POST /api/saved-views',
-  'GET /api/saved-views',
-  'GET /api/saved-views/:id',
-  'PATCH /api/saved-views/:id',
-  'DELETE /api/saved-views/:id',
-] as const satisfies readonly AllRoutes[]
-
-type CoveredRoutes = (typeof COVERED_ROUTES)[number] | OperationRoutes
-
 export const EXCLUDED_ROUTES = {
   // Written by `tq hook` (the Claude Code hook integration). Bulk session
   // browsing (`tq session list`) is covered; single-session lookup and
@@ -173,14 +104,13 @@ type AssertNever<T extends never> = T
  */
 export type UnclassifiedRoutes = Exclude<
   AllRoutes,
-  CoveredRoutes | ExcludedRoutes
+  OperationRoutes | ExcludedRoutes
 >
 export type _AssertAllRoutesClassified = AssertNever<UnclassifiedRoutes>
 
 /**
- * Coverage alone doesn't catch a route classified in both tables at once —
- * this asserts `COVERED_ROUTES` and `EXCLUDED_ROUTES` are disjoint.
+ * Operation-backed and excluded routes must be disjoint.
  */
 export type _AssertCoveredExcludedDisjoint = AssertNever<
-  Extract<CoveredRoutes, ExcludedRoutes>
+  Extract<OperationRoutes, ExcludedRoutes>
 >

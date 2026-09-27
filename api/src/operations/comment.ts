@@ -30,6 +30,7 @@ export const commentOperations = [
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/comments'],
     cli: {
+      group: { description: 'Manage comments', order: 2 },
       output: {
         kind: 'list',
         omitKey: 'content',

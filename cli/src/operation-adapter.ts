@@ -35,6 +35,10 @@ export type OperationCommandHandler = (
   context: OperationCommandContext,
 ) => Promise<void>
 
+export type OperationCommandHandlers = Readonly<
+  Record<string, OperationCommandHandler>
+>
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -315,27 +319,69 @@ async function executeCommandOperation(
 export function registerOperations(
   program: Command,
   operations: readonly OperationDefinition[],
-  groupDescription: string,
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
-  handler?: OperationCommandHandler,
+  handlers: OperationCommandHandlers = {},
 ): void {
   const cliOperations = operations.filter(
     (operation) => operation.surface?.only !== 'mcp',
   )
-  const groupName = (cliOperations[0]?.cli.path ?? cliOperations[0]?.path)?.[0]
-  if (groupName === undefined) return
-  const group = program.command(groupName).description(groupDescription)
+  const groups = new Map<
+    string,
+    { firstIndex: number; operations: OperationDefinition[] }
+  >()
 
-  registerOperationsInGroup(group, operations, fetchImpl, stdin, handler)
+  cliOperations.forEach((operation, index) => {
+    const groupName = (operation.cli.path ?? operation.path)[0]
+    if (groupName === undefined) return
+    const group = groups.get(groupName)
+    if (group == null) {
+      groups.set(groupName, { firstIndex: index, operations: [operation] })
+      return
+    }
+    group.operations.push(operation)
+  })
+
+  const orderedGroups = [...groups.entries()].sort(
+    ([, left], [, right]) =>
+      (left.operations[0]?.cli.group?.order ?? left.firstIndex) -
+      (right.operations[0]?.cli.group?.order ?? right.firstIndex),
+  )
+
+  for (const [groupName, groupDefinition] of orderedGroups) {
+    const groupOperations = groupDefinition.operations
+      .map((operation, index) => ({ operation, index }))
+      .sort(
+        (left, right) =>
+          (left.operation.cli.commandOrder ?? left.index) -
+          (right.operation.cli.commandOrder ?? right.index),
+      )
+      .map(({ operation }) => operation)
+    const groupDescription =
+      groupOperations.find(
+        (operation) => operation.cli.group?.description != null,
+      )?.cli.group?.description ??
+      groupOperations[0]?.cli.description ??
+      groupOperations[0]?.description
+    if (groupDescription == null) continue
+
+    const group = program.command(groupName).description(groupDescription)
+    registerOperationsInGroup(
+      group,
+      groupOperations,
+      fetchImpl,
+      stdin,
+      handlers,
+    )
+  }
 }
 
-export function registerOperationsInGroup(
+function registerOperationsInGroup(
   group: Command,
   operations: readonly OperationDefinition[],
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
-  handler?: OperationCommandHandler,
+  handlers: OperationCommandHandlers,
 ): void {
   const cliOperations = operations.filter(
     (operation) => operation.surface?.only !== 'mcp',
@@ -352,6 +398,15 @@ export function registerOperationsInGroup(
   }
 
   for (const operation of cliOperations) {
+    const handlerKey = operation.cli.handler
+    const handler = handlerKey == null ? undefined : handlers[handlerKey]
+    if (handlerKey != null && handler == null) {
+      return fail(
+        group,
+        new Error(`No CLI handler is registered for "${handlerKey}".`),
+      )
+    }
+
     const commandPath = (operation.cli.path ?? operation.path).slice(1)
     const positionals = operation.positionalArgs.map(positionalSyntax).join(' ')
     let command = group

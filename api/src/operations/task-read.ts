@@ -197,6 +197,8 @@ export const taskReadOperations = [
     kind: 'read',
     routes: ['GET /api/tasks'],
     cli: {
+      group: { description: 'Manage tasks', order: 1 },
+      commandOrder: 0,
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
@@ -215,7 +217,7 @@ export const taskReadOperations = [
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id', 'GET /api/tasks'],
-    cli: { output: { kind: 'json' } },
+    cli: { commandOrder: 1, output: { kind: 'json' } },
     run: (client, { taskId }) => getTaskWithSubtasks(client, taskId),
   }),
   defineOperation(taskSearchInputSchema, {
@@ -226,6 +228,7 @@ export const taskReadOperations = [
     kind: 'read',
     routes: ['GET /api/tasks'],
     cli: {
+      commandOrder: 10,
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
@@ -247,7 +250,7 @@ export const taskReadOperations = [
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id/activity'],
-    cli: { output: { kind: 'json' } },
+    cli: { commandOrder: 9, output: { kind: 'json' } },
     run: (client, { taskId }) =>
       requestJson(
         client.api.tasks[':id'].activity.$get({
@@ -261,7 +264,7 @@ export const taskReadOperations = [
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/agent-sessions'],
-    cli: { output: { kind: 'json' } },
+    cli: { commandOrder: 11, output: { kind: 'json' } },
     run: (client, { taskId }) =>
       requestJson(
         client.api.tasks[':taskId']['agent-sessions'].$get({
@@ -280,7 +283,10 @@ export const taskReadOperations = [
       reason:
         'The web URL depends on CLI configuration that is unavailable to MCP operations.',
     },
-    cli: { output: { kind: 'web-url', path: '/tasks/{id}' } },
+    cli: {
+      commandOrder: 2,
+      output: { kind: 'web-url', path: '/tasks/{id}' },
+    },
     run: () => okAsync(undefined),
   }),
 ] as const
