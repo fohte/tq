@@ -468,10 +468,12 @@ describe('operation tool input schemas', () => {
     )
 
     expect(agentArguments).toEqual({
+      asset_delete: false,
       comment_create: true,
       comment_delete: false,
       comment_list: false,
       comment_update: true,
+      health: false,
       label_delete: false,
       label_list: false,
       label_update: false,
@@ -488,16 +490,8 @@ describe('operation tool input schemas', () => {
 describe('operation tool annotations', () => {
   it('maps operation kinds to MCP annotations', async () => {
     const tools = await client.listTools()
-    const annotations = Object.fromEntries(
-      tools.tools
-        .filter(
-          (tool) =>
-            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
-        )
-        .map((tool) => [tool.name, tool.annotations ?? null]),
-    )
-
-    expect(annotations).toEqual({
+    const expectedAnnotations = {
+      asset_delete: { readOnlyHint: false, destructiveHint: true },
       comment_create: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -511,6 +505,7 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      health: { readOnlyHint: true },
       label_delete: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -520,6 +515,13 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
-    })
+    }
+    const annotations = Object.fromEntries(
+      tools.tools
+        .filter((tool) => Object.hasOwn(expectedAnnotations, tool.name))
+        .map((tool) => [tool.name, tool.annotations ?? null]),
+    )
+
+    expect(annotations).toEqual(expectedAnnotations)
   })
 })

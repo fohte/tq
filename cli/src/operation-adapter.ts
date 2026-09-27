@@ -1,10 +1,12 @@
+import { basename, extname } from 'node:path'
+
 import { formatInputIssues, type OperationDefinition } from 'api/operations'
 import { Command } from 'commander'
 
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
 import type { ReadableStdin } from '#input'
-import { readContentInput } from '#input'
+import { readBinaryFile, readContentInput } from '#input'
 import { printOperationOutput } from '#operation-output'
 import { fail } from '#result'
 import {
@@ -117,23 +119,30 @@ export function registerOperations(
 
   for (const operation of cliOperations) {
     const commandPath = operation.path.slice(1)
-    const commandName = commandPath.at(-1)
-    if (commandName === undefined) continue
+    let command: Command
+    if (commandPath.length === 0) {
+      command = group.description(operation.description)
+    } else {
+      const commandName = commandPath.at(-1)
+      if (commandName === undefined) continue
 
-    let parent = group
-    for (const part of commandPath.slice(0, -1)) {
-      const existing = parent.commands.find(
-        (command) => command.name() === part,
-      )
-      parent = existing ?? parent.command(part)
+      let parent = group
+      for (const part of commandPath.slice(0, -1)) {
+        const existing = parent.commands.find(
+          (candidate) => candidate.name() === part,
+        )
+        parent = existing ?? parent.command(part)
+      }
+
+      const positionals = operation.positionalArgs
+        .map(positionalSyntax)
+        .join(' ')
+      command = parent
+        .command(
+          `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
+        )
+        .description(operation.description)
     }
-
-    const positionals = operation.positionalArgs.map(positionalSyntax).join(' ')
-    let command = parent
-      .command(
-        `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
-      )
-      .description(operation.description)
 
     const contentInput = operation.cli.contentInput
     if (contentInput != null) {
@@ -166,6 +175,9 @@ export function registerOperations(
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(operation.cli.fileInput == null
+        ? []
+        : [operation.cli.fileInput.field]),
     ]
     addSchemaOptions(
       command,
@@ -234,6 +246,34 @@ export function registerOperations(
           )
         }
         if (content !== undefined) input[contentInput.field] = content
+      }
+
+      const fileInput = operation.cli.fileInput
+      if (fileInput != null) {
+        const filePath: unknown = input[fileInput.pathField]
+        if (typeof filePath !== 'string') {
+          return fail(
+            actionCommand,
+            new Error('File input path refers to a missing input field.'),
+          )
+        }
+        const data = await readBinaryFile(filePath).match(
+          (value) => value,
+          (error) => fail(actionCommand, error),
+        )
+        const contentType =
+          fileInput.contentTypes[extname(filePath).toLowerCase()]
+        if (contentType == null) {
+          return fail(
+            actionCommand,
+            new Error(
+              `Unsupported file extension for ${filePath}. Allowed types: ${fileInput.allowedContentTypes.join(', ')}`,
+            ),
+          )
+        }
+        input[fileInput.field] = new File([data], basename(filePath), {
+          type: contentType,
+        })
       }
 
       const result = await operation.run(client, input)

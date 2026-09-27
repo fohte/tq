@@ -10,6 +10,7 @@ import { jsonBody, setupTestDb } from '#testing'
 // Tool-specific schema and annotation details live with their operation or
 // write-tool integration tests; these tests pin down wire-level reachability.
 const REGISTERED_TOOL_NAMES = [
+  'asset_delete',
   'comment_create',
   'comment_delete',
   'comment_list',
@@ -19,6 +20,7 @@ const REGISTERED_TOOL_NAMES = [
   'get_page',
   'get_task',
   'get_today_tasks',
+  'health',
   'label_delete',
   'label_list',
   'label_update',
