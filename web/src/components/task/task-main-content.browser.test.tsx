@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -26,7 +26,7 @@ import { commentKeys } from '#hooks/use-task-comments'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { assertDefined, focusDescriptionEditor } from '#lib/test-utils'
+import { assertDefined, waitForFocus } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 // AppLayout mounts Sidebar/StatusLine, and this test also mounts
@@ -119,6 +119,24 @@ function shrinkVisualViewportForKeyboard(height: number) {
   return visualViewport
 }
 
+async function focusTaskDescriptionEditor(
+  user: ReturnType<typeof userEvent.setup>,
+  root: ParentNode,
+) {
+  const editor = await waitFor(
+    () =>
+      assertDefined(
+        root.querySelector('.milkdown .ProseMirror'),
+        'the task description renders its Markdown editor',
+      ),
+    { timeout: 10_000 },
+  )
+  await user.click(
+    screen.getByRole('button', { name: 'Edit task description' }),
+  )
+  await waitForFocus(editor)
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
@@ -131,7 +149,7 @@ describe('TaskMainContent on mobile with the on-screen keyboard open', () => {
     const user = userEvent.setup()
     const { container } = await renderMobileTaskDetail(makeTaskDetail())
 
-    await focusDescriptionEditor(user, container, { timeout: 10_000 })
+    await focusTaskDescriptionEditor(user, container)
     shrinkVisualViewportForKeyboard(200)
     const scrollBySpy = vi
       .spyOn(window, 'scrollBy')
@@ -147,7 +165,7 @@ describe('TaskMainContent on mobile with the on-screen keyboard open', () => {
     const user = userEvent.setup()
     const { container } = await renderMobileTaskDetail(makeTaskDetail())
 
-    await focusDescriptionEditor(user, container, { timeout: 10_000 })
+    await focusTaskDescriptionEditor(user, container)
     const visualViewport = shrinkVisualViewportForKeyboard(200)
 
     // A character follows each newline: a collapsed range at an empty line

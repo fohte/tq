@@ -15,7 +15,7 @@ import { CreateTaskModal } from '#components/task/create-task-modal'
 import { FloatingActionButton } from '#components/task/floating-action-button'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskTreeList } from '#components/task/task-tree-list'
-import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
@@ -199,15 +199,14 @@ function ProjectDescription({
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-muted-foreground">Description</span>
-      <div className="border border-border p-1 text-sm leading-relaxed focus-within:border-primary/50">
-        <MarkdownEditor
-          defaultValue={defaultValue ?? ''}
-          placeholder="Add description..."
-          onChange={onChange}
-          viewEditToggle={{ onExitEditMode: flush }}
-          size="compact"
-        />
-      </div>
+      <EditableMarkdownDescription
+        defaultValue={defaultValue}
+        placeholder="Add description..."
+        editButtonLabel="Edit project description"
+        onChange={onChange}
+        onExitEditMode={flush}
+        className="p-1 focus-within:border-primary/50"
+      />
     </div>
   )
 }
