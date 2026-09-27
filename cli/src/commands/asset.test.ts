@@ -68,7 +68,7 @@ describe('asset upload', () => {
     }
   })
 
-  it('sends the file as multipart/form-data to POST /api/assets and prints the response', async () => {
+  it('sends the file as multipart/form-data and prints markdown for the uploaded asset', async () => {
     const uploaded = {
       id: 'img1',
       r2Key: 'assets/img1.png',
@@ -103,7 +103,13 @@ describe('asset upload', () => {
       fileBytes: pngBytes,
     })
     expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(uploaded, null, 2)}\n`],
+      [
+        `${JSON.stringify(
+          { ...uploaded, markdown: '![photo.png](/api/assets/img1)' },
+          null,
+          2,
+        )}\n`,
+      ],
     ])
   })
 

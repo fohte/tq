@@ -57,7 +57,11 @@ export function registerAssetCommands(
 
       const res = await client.api.assets.$post({ form: { file } })
       if (!res.ok) return fail(command, await toApiError(res))
-      printJson(await res.json())
+      const uploaded = await res.json()
+      printJson({
+        ...uploaded,
+        markdown: `![${basename(filePath)}](/api/assets/${uploaded.id})`,
+      })
     })
 
   asset
