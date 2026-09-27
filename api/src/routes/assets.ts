@@ -1,9 +1,11 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { z } from 'zod'
 
 import type { assets } from '#db/schema'
+import { ASSET_MAX_SIZE_BYTES } from '#env'
 import {
   AssetNotFoundError,
   AssetTooLargeError,
@@ -14,6 +16,8 @@ import {
 } from '#services/assets'
 
 const uploadSchema = z.object({ file: z.instanceof(File) })
+// The body limit includes the multipart boundary and headers as well as the file.
+const MAX_MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 function assetToResponse(asset: typeof assets.$inferSelect, url: string) {
   return {
@@ -26,27 +30,35 @@ function assetToResponse(asset: typeof assets.$inferSelect, url: string) {
 }
 
 export const assetsApp = new Hono()
-  .post('/', zValidator('form', uploadSchema), async (c) => {
-    const { file } = c.req.valid('form')
+  .post(
+    '/',
+    bodyLimit({
+      maxSize: ASSET_MAX_SIZE_BYTES + MAX_MULTIPART_OVERHEAD_BYTES,
+      onError: (c) => c.json({ error: new AssetTooLargeError().message }, 413),
+    }),
+    zValidator('form', uploadSchema),
+    async (c) => {
+      const { file } = c.req.valid('form')
 
-    const result = await uploadAsset(file).andThen((asset) =>
-      getAssetSignedUrl(asset.id).map((url) => assetToResponse(asset, url)),
-    )
+      const result = await uploadAsset(file).andThen((asset) =>
+        getAssetSignedUrl(asset.id).map((url) => assetToResponse(asset, url)),
+      )
 
-    return result.match(
-      (body) => c.json(body, 201),
-      (error) => {
-        if (error instanceof InvalidAssetTypeError) {
-          return c.json({ error: error.message }, 400)
-        }
-        if (error instanceof AssetTooLargeError) {
-          return c.json({ error: error.message }, 413)
-        }
-        captureWithFingerprint(error, 'api.assets.upload-failed')
-        return c.json({ error: 'Internal server error' }, 500)
-      },
-    )
-  })
+      return result.match(
+        (body) => c.json(body, 201),
+        (error) => {
+          if (error instanceof InvalidAssetTypeError) {
+            return c.json({ error: error.message }, 400)
+          }
+          if (error instanceof AssetTooLargeError) {
+            return c.json({ error: error.message }, 413)
+          }
+          captureWithFingerprint(error, 'api.assets.upload-failed')
+          return c.json({ error: 'Internal server error' }, 500)
+        },
+      )
+    },
+  )
   .get('/:id', async (c) => {
     const id = c.req.param('id')
 
