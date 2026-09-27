@@ -8,8 +8,15 @@ import {
   spyStdout,
 } from '#commands/test-support'
 
+function summarizeQueueRun(exitCode: number, calls: unknown, stdout?: unknown) {
+  return stdout === undefined
+    ? { exitCode, calls }
+    : { exitCode, calls, stdout }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 describe('queue list', () => {
@@ -28,16 +35,18 @@ describe('queue list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'GET',
-        url: `${apiUrl}/api/queues`,
-        headers: {},
-        body: undefined,
-      },
-    ])
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(queues, null, 2)}\n`]])
+    expect(summarizeQueueRun(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'GET',
+          url: `${apiUrl}/api/queues`,
+          headers: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(queues, null, 2)}\n`]],
+    })
   })
 })
 
@@ -64,16 +73,44 @@ describe('queue get', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'GET',
-        url: `${apiUrl}/api/queues/day/items?date=2026-08-06`,
-        headers: {},
-        body: undefined,
-      },
-    ])
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(rows, null, 2)}\n`]])
+    expect(summarizeQueueRun(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'GET',
+          url: `${apiUrl}/api/queues/day/items?date=2026-08-06`,
+          headers: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(rows, null, 2)}\n`]],
+    })
+  })
+
+  it('uses the current UTC date when the date is omitted', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-06T12:00:00.000Z'))
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'queue', 'get', 'day'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeQueueRun(exitCode, calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'GET',
+          url: `${apiUrl}/api/queues/day/items?date=2026-08-06`,
+          headers: {},
+          body: undefined,
+        },
+      ],
+    })
   })
 })
 
@@ -83,34 +120,31 @@ describe('queue set', () => {
       { id: 'tt1', taskId: 'task1', periodStart: '2026-08-06', sortOrder: 0 },
       { id: 'tt2', taskId: 'task2', periodStart: '2026-08-06', sortOrder: 1 },
     ]
+    const taskIds = [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+    ]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
     )
 
     const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'queue',
-        'set',
-        'week',
-        '2026-08-06',
-        'task1',
-        'task2',
-      ],
+      ['--api-url', apiUrl, 'queue', 'set', 'week', '2026-08-06', ...taskIds],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'PUT',
-        url: `${apiUrl}/api/queues/week/items`,
-        headers: { 'content-type': 'application/json' },
-        body: { date: '2026-08-06', taskIds: ['task1', 'task2'] },
-      },
-    ])
+    expect(summarizeQueueRun(exitCode, calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'PUT',
+          url: `${apiUrl}/api/queues/week/items`,
+          headers: { 'content-type': 'application/json' },
+          body: { date: '2026-08-06', taskIds },
+        },
+      ],
+    })
   })
 
   it('sends an empty taskIds array when task ids are omitted', async () => {
@@ -124,14 +158,16 @@ describe('queue set', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'PUT',
-        url: `${apiUrl}/api/queues/day/items`,
-        headers: { 'content-type': 'application/json' },
-        body: { date: '2026-08-06', taskIds: [] },
-      },
-    ])
+    expect(summarizeQueueRun(exitCode, calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'PUT',
+          url: `${apiUrl}/api/queues/day/items`,
+          headers: { 'content-type': 'application/json' },
+          body: { date: '2026-08-06', taskIds: [] },
+        },
+      ],
+    })
   })
 })
