@@ -6,6 +6,7 @@ import {
   captureFetch,
   fakeStdin,
   request,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -13,6 +14,13 @@ afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
 })
+
+function commandResult<Fields extends Record<string, unknown>>(
+  exitCode: number,
+  fields: Fields,
+) {
+  return { exitCode, ...fields }
+}
 
 describe('task list', () => {
   it('sends the schema-derived flags as a query string and prints the response', async () => {
@@ -36,6 +44,74 @@ describe('task list', () => {
       body: undefined,
     })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
+  })
+
+  it('sends mixed task identifiers and the strict ancestor flag', async () => {
+    const ids = ['00000000-0000-4000-8000-000000000001', '42']
+    const tasks = [{ id: ids[0], number: 42, title: 'Selected task' }]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'list',
+        '--ids',
+        ids.join(','),
+        '--include-ancestors',
+        'true',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandResult(exitCode, {
+        request: request(calls[0]),
+        output: write.mock.calls,
+      }),
+    ).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'GET',
+        pathname: '/api/tasks',
+        query: { ids, includeAncestors: 'true' },
+        body: undefined,
+      },
+      output: [[`${JSON.stringify(tasks, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects an invalid include-ancestors value without making a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--include-ancestors', 'sometimes'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandResult(exitCode, {
+        requests: calls.map(request),
+        errors: stderr.mock.calls,
+      }),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      errors: [
+        [
+          'error: option \'--include-ancestors <value>\' argument \'sometimes\' is invalid. Invalid option: expected one of "true"|"false"\n',
+        ],
+      ],
+    })
   })
 
   it('omits description from the printed output by default', async () => {

@@ -97,6 +97,22 @@ function normalizeTask<
   }
 }
 
+function normalizeTaskListItem(
+  task: TaskListItemResponse & { ancestorOnly?: boolean },
+) {
+  const { ancestorOnly, ...fields } = task
+  return {
+    ...normalizeTask(fields),
+    parentId: fields.parentId === null ? null : 'PARENT_ID',
+    parentNumber: fields.parentNumber === null ? null : -1,
+    ancestorOnly: ancestorOnly ?? false,
+  }
+}
+
+function responseSnapshot<T>(status: number, body: T) {
+  return { status, body }
+}
+
 // Simulates a legacy task where recurrenceRuleId is owned directly without a template.
 async function attachLegacyRecurrenceRule(
   taskId: string,
@@ -1189,6 +1205,78 @@ describe('tasks CRUD API', () => {
       expect(body.map((t) => t.id).toSorted()).toEqual(
         [child.id, grandchild.id].toSorted(),
       )
+    })
+
+    it('filters by mixed task identifiers and includes their ancestors', async () => {
+      const root = await createTask('Root')
+      const selectedByNumber = await createTask('Selected by number', {
+        parentId: root.id,
+        dueDate: '2026-09-30',
+        commitment: 'active',
+      })
+      const selectedById = await createTask('Selected by ID', {
+        parentId: root.id,
+      })
+      const completed = await createTask('Completed selection', {
+        parentId: root.id,
+      })
+      await setStatus(completed.id, 'completed')
+      await createTask('Unselected')
+
+      const ids = [selectedByNumber.number, selectedById.id, completed.id]
+      const res = await app.request(
+        `/api/tasks?ids=${ids.join(',')}&status=todo&includeAncestors=true`,
+      )
+      const body =
+        await jsonBody<
+          Array<TaskListItemResponse & { ancestorOnly?: boolean }>
+        >(res)
+
+      expect(
+        responseSnapshot(
+          res.status,
+          body
+            .map(normalizeTaskListItem)
+            .toSorted((left, right) => left.title.localeCompare(right.title)),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          normalizeTaskListItem({
+            ...toListItemResponse(root, {
+              childCompletionCount: { completed: 1, total: 3 },
+            }),
+            ancestorOnly: true,
+          }),
+          normalizeTaskListItem({
+            ...toListItemResponse(selectedById),
+            parentNumber: root.number,
+          }),
+          normalizeTaskListItem({
+            ...toListItemResponse(selectedByNumber),
+            parentNumber: root.number,
+          }),
+        ].toSorted((left, right) => left.title.localeCompare(right.title)),
+      })
+    })
+
+    it('returns an empty list when no requested task identifier exists', async () => {
+      const res = await app.request(
+        '/api/tasks?ids=00000000-0000-4000-8000-000000000001',
+      )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('rejects an invalid includeAncestors value', async () => {
+      const res = await app.request('/api/tasks?includeAncestors=typo')
+
+      expect(res.status).toBe(400)
     })
 
     it('limits the returned tasks', async () => {
