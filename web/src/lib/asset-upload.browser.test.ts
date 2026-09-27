@@ -181,7 +181,11 @@ describe('resolveAssetSrc', () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockGet']).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ url: 'https://signed.example.com/a' }),
+      json: () =>
+        Promise.resolve({
+          url: 'https://signed.example.com/a',
+          contentType: 'image/png',
+        }),
     })
 
     const first = await resolveAssetSrc('/api/assets/cache-test-1')
@@ -200,12 +204,18 @@ describe('resolveAssetSrc', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
-            Promise.resolve({ url: 'https://signed.example.com/first' }),
+            Promise.resolve({
+              url: 'https://signed.example.com/first',
+              contentType: 'image/png',
+            }),
         })
         .mockResolvedValueOnce({
           ok: true,
           json: () =>
-            Promise.resolve({ url: 'https://signed.example.com/second' }),
+            Promise.resolve({
+              url: 'https://signed.example.com/second',
+              contentType: 'image/png',
+            }),
         })
 
       const first = await resolveAssetSrc('/api/assets/cache-test-2')
@@ -227,7 +237,7 @@ describe('resolveAssetSrc', () => {
     const result = await resolveAssetSrc('/api/assets/cache-test-3')
 
     expect(result._unsafeUnwrapErr().message).toBe(
-      'Failed to fetch signed image URL',
+      'Failed to fetch signed asset URL',
     )
   })
 })
@@ -263,12 +273,18 @@ describe('handleAssetLoadError', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
-          Promise.resolve({ url: 'https://signed.example.com/stale' }),
+          Promise.resolve({
+            url: 'https://signed.example.com/stale',
+            contentType: 'image/png',
+          }),
       })
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
-          Promise.resolve({ url: 'https://signed.example.com/fresh' }),
+          Promise.resolve({
+            url: 'https://signed.example.com/fresh',
+            contentType: 'image/png',
+          }),
       })
 
     const resolved = await resolveAssetSrc('/api/assets/error-test')

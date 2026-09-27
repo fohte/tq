@@ -15,7 +15,7 @@ const SIGNED_URL_CACHE_TTL_MS = 55 * 60 * 1000
 export class UnsupportedAssetTypeError extends Error {
   constructor() {
     super(
-      `Unsupported image type. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
+      `Unsupported asset type. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
     )
     this.name = 'UnsupportedAssetTypeError'
   }
@@ -40,12 +40,12 @@ export function uploadAssetFile(
 
   return ResultAsync.fromPromise(
     api.api.assets.$post({ form: { file } }),
-    (cause) => new Error('Failed to upload image', { cause }),
+    (cause) => new Error('Failed to upload asset', { cause }),
   ).andThen((res) => {
-    if (!res.ok) return errAsync(new Error('Failed to upload image'))
+    if (!res.ok) return errAsync(new Error('Failed to upload asset'))
     return ResultAsync.fromPromise(
       res.json(),
-      (cause) => new Error('Failed to upload image', { cause }),
+      (cause) => new Error('Failed to upload asset', { cause }),
     ).map(({ id }) => `/api/assets/${id}`)
   })
 }
@@ -59,7 +59,7 @@ export function uploadAssetFile(
  */
 export async function uploadAssetFiles<T>(
   files: FileList,
-  createNode: (src: string, alt: string) => T | null | undefined,
+  createNode: (src: string, alt: string, file: File) => T | null | undefined,
 ): Promise<T[]> {
   const results = await Promise.allSettled(
     Array.from(files).map(async (file) => ({
@@ -71,60 +71,85 @@ export async function uploadAssetFiles<T>(
   const nodes: T[] = []
   for (const settled of results) {
     if (settled.status === 'rejected') {
-      console.error('Failed to upload pasted/dropped image', settled.reason)
+      console.error('Failed to upload pasted/dropped asset', settled.reason)
       continue
     }
     const { file, result } = settled.value
     if (result.isErr()) {
-      console.error('Failed to upload pasted/dropped image', result.error)
+      console.error('Failed to upload pasted/dropped asset', result.error)
       continue
     }
-    const node = createNode(result.value, file.name)
+    const node = createNode(result.value, file.name, file)
     if (node != null) nodes.push(node)
   }
   return nodes
 }
 
 interface CacheEntry {
-  url: string
+  asset: ResolvedAsset
   expiresAt: number
 }
 
+export interface ResolvedAsset {
+  url: string
+  contentType: string | null
+}
+
 const cacheById = new Map<string, CacheEntry>()
+const pendingById = new Map<string, ResultAsync<ResolvedAsset, Error>>()
 // Reverse lookup so a failed <img> load (which only exposes the resolved
 // signed URL, not the original /api/assets/:id path) can find its asset id.
 const idBySignedUrl = new Map<string, string>()
 
-function fetchSignedUrl(id: string): ResultAsync<string, Error> {
-  return ResultAsync.fromPromise(
+function fetchAsset(id: string): ResultAsync<ResolvedAsset, Error> {
+  const cached = cacheById.get(id)
+  if (cached && cached.expiresAt > Date.now()) {
+    return okAsync(cached.asset)
+  }
+
+  const pending = pendingById.get(id)
+  if (pending) return pending
+
+  const result = ResultAsync.fromPromise(
     api.api.assets[':id'].$get({ param: { id } }),
-    (cause) => new Error('Failed to fetch signed image URL', { cause }),
-  ).andThen((res) => {
-    if (!res.ok) return errAsync(new Error('Failed to fetch signed image URL'))
-    return ResultAsync.fromPromise(
-      res.json(),
-      (cause) => new Error('Failed to fetch signed image URL', { cause }),
-    ).map(({ url }) => {
-      cacheById.set(id, {
-        url,
-        expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
+    (cause) => new Error('Failed to fetch signed asset URL', { cause }),
+  )
+    .andThen((res) => {
+      if (!res.ok)
+        return errAsync(new Error('Failed to fetch signed asset URL'))
+      return ResultAsync.fromPromise(
+        res.json(),
+        (cause) => new Error('Failed to fetch signed asset URL', { cause }),
+      ).map(({ url, contentType }) => {
+        const asset = { url, contentType }
+        cacheById.set(id, {
+          asset,
+          expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
+        })
+        idBySignedUrl.set(url, id)
+        return asset
       })
-      idBySignedUrl.set(url, id)
-      return url
     })
-  })
+    .orElse((error) => {
+      pendingById.delete(id)
+      return errAsync(error)
+    })
+  pendingById.set(id, result)
+  void result.then(() => pendingById.delete(id))
+  return result
+}
+
+export function resolveAssetDetails(
+  src: string,
+): ResultAsync<ResolvedAsset, Error> {
+  const id = parseAssetId(src)
+  if (id == null) return okAsync({ url: src, contentType: null })
+
+  return fetchAsset(id)
 }
 
 export function resolveAssetSrc(src: string): ResultAsync<string, Error> {
-  const id = parseAssetId(src)
-  if (id == null) return okAsync(src)
-
-  const cached = cacheById.get(id)
-  if (cached && cached.expiresAt > Date.now()) {
-    return okAsync(cached.url)
-  }
-
-  return fetchSignedUrl(id)
+  return resolveAssetDetails(src).map(({ url }) => url)
 }
 
 export async function handleAssetLoadError(event: Event): Promise<void> {
@@ -135,10 +160,10 @@ export async function handleAssetLoadError(event: Event): Promise<void> {
   if (id == null) return
 
   cacheById.delete(id)
-  const result = await fetchSignedUrl(id)
+  const result = await fetchAsset(id)
   if (result.isErr()) {
     console.error('Failed to refresh signed image URL', result.error)
     return
   }
-  target.src = result.value
+  target.src = result.value.url
 }

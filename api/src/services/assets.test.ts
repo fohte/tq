@@ -85,9 +85,9 @@ describe('getAssetSignedUrl', () => {
       await uploadAsset(makeFile('photo.png', 'image/png', 10))
     )._unsafeUnwrap()
 
-    const url = (await getAssetSignedUrl(asset.id))._unsafeUnwrap()
+    const resolved = (await getAssetSignedUrl(asset.id))._unsafeUnwrap()
 
-    expect(url).toBe(SIGNED_URL)
+    expect(resolved).toEqual({ url: SIGNED_URL, contentType: 'image/png' })
     expect(vi.mocked(r2.getObjectSignedUrl).mock.calls).toEqual([
       [asset.r2Key, 3600],
     ])

@@ -92,7 +92,10 @@ describe('GET /api/assets/:id', () => {
     const res = await app.request(`/api/assets/${asset.id}`)
 
     expect(res.status).toBe(200)
-    expect(await jsonBody(res)).toEqual({ url: SIGNED_URL })
+    expect(await jsonBody(res)).toEqual({
+      url: SIGNED_URL,
+      contentType: asset.contentType,
+    })
   })
 
   it('returns 404 for a non-existent asset', async () => {

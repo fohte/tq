@@ -5,6 +5,8 @@ export const ALLOWED_CONTENT_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
+  'video/mp4',
+  'video/webm',
 ] as const
 
 export const MAX_SIZE_BYTES = 10 * 1024 * 1024

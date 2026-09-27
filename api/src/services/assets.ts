@@ -80,12 +80,17 @@ export function uploadAsset(
 
 export function getAssetSignedUrl(
   id: string,
-): ResultAsync<string, AssetNotFoundError | R2ConfigError | R2OperationError> {
+): ResultAsync<
+  { url: string; contentType: string },
+  AssetNotFoundError | R2ConfigError | R2OperationError
+> {
   return ResultAsync.fromSafePromise(
     db.query.assets.findFirst({ where: eq(assets.id, id) }),
   ).andThen((asset) => {
     if (!asset) return errAsync(new AssetNotFoundError())
-    return getObjectSignedUrl(asset.r2Key, SIGNED_URL_EXPIRES_IN_SECONDS)
+    return getObjectSignedUrl(asset.r2Key, SIGNED_URL_EXPIRES_IN_SECONDS).map(
+      (url) => ({ url, contentType: asset.contentType }),
+    )
   })
 }
 

@@ -264,3 +264,39 @@
   word-break: break-all;
   font-family: var(--font-code);
 }
+.markdown-asset-node-view {
+  display: contents;
+}
+
+.markdown-asset-node-view.markdown-asset-video {
+  display: block;
+  margin: 0;
+}
+
+.markdown-asset-node-view.markdown-asset-video.markdown-asset-inline-node-view {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.markdown-asset-node-view.markdown-asset-video > .markdown-asset-video-player {
+  display: block;
+  max-height: 80vh;
+  max-width: 100%;
+  width: 100%;
+}
+
+.markdown-asset-inline-node-view.markdown-asset-video
+  > .markdown-asset-video-player {
+  display: inline-block;
+  height: auto;
+  max-width: 100%;
+  vertical-align: middle;
+  width: auto;
+}
+
+.markdown-asset-node-view.markdown-asset-video figcaption {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
