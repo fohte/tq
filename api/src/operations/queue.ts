@@ -30,7 +30,10 @@ export const queueOperations = [
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/queues'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { description: 'Manage task queues', order: 8 },
+      output: { kind: 'json' },
+    },
     run: (client) => requestJson(client.api.queues.$get()),
   }),
   defineOperation(queueGetInputSchema, {

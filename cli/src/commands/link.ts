@@ -1,13 +1,7 @@
-import { linkOperations } from 'api/operations'
 import type { AgentProvider } from 'api/schemas/agent-session'
-import type { Command } from 'commander'
 import { err, ok, type Result } from 'neverthrow'
 
-import type { ReadableStdin } from '#input'
-import {
-  type OperationCommandHandler,
-  registerOperations,
-} from '#operation-adapter'
+import type { OperationCommandHandler } from '#operation-adapter'
 
 const noAgentSessionIdError =
   'No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).'
@@ -33,25 +27,11 @@ function resolveAgentSession(): Result<AgentSessionReference, Error> {
   return err(new Error(noAgentSessionIdError))
 }
 
-export function registerLinkCommands(
-  program: Command,
-  fetchImpl: typeof fetch,
-  stdin: ReadableStdin = process.stdin,
-): void {
-  const handler: OperationCommandHandler = async ({ input, execute }) => {
-    await execute(() =>
-      resolveAgentSession().map((session) => ({ ...input, ...session })),
-    )
-  }
-
-  for (const operation of linkOperations) {
-    registerOperations(
-      program,
-      [operation],
-      operation.description,
-      fetchImpl,
-      stdin,
-      handler,
-    )
-  }
+export const linkOperationHandler: OperationCommandHandler = async ({
+  input,
+  execute,
+}) => {
+  await execute(() =>
+    resolveAgentSession().map((session) => ({ ...input, ...session })),
+  )
 }

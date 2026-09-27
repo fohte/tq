@@ -2,7 +2,11 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { OperationDefinition } from 'api/operations'
+import {
+  type OperationDefinition,
+  taskReadOperations,
+  taskWriteOperations,
+} from 'api/operations'
 import { makeOperation } from 'api/operations/test-fixtures'
 import { Command } from 'commander'
 import { okAsync } from 'neverthrow'
@@ -26,13 +30,7 @@ function createProgram(
     .exitOverride()
     .option('--api-url <url>')
     .option('--web-url <url>')
-  registerOperations(
-    program,
-    operations,
-    'Exercise operation adapter behavior.',
-    fetchImpl,
-    stdin,
-  )
+  registerOperations(program, operations, fetchImpl, stdin)
   return program
 }
 
@@ -87,6 +85,88 @@ function stdinOutcome(status: string, reads: unknown, stderr: string[]) {
 }
 
 describe('registerOperations', () => {
+  it('registers command groups and subcommands in operation metadata order', () => {
+    const program = createProgram([
+      makeOperation({
+        path: ['sample', 'first'],
+        description: 'First sample command',
+        cli: {
+          commandOrder: 0,
+          output: { kind: 'json' },
+        },
+      }),
+      makeOperation({
+        path: ['other', 'run'],
+        description: 'Run another command',
+        cli: {
+          group: { description: 'Other commands', order: 0 },
+          output: { kind: 'json' },
+        },
+      }),
+      makeOperation({
+        path: ['sample', 'later'],
+        description: 'Later sample command',
+        cli: {
+          group: { description: 'Sample commands', order: 1 },
+          commandOrder: 1,
+          output: { kind: 'json' },
+        },
+      }),
+    ])
+
+    expect(
+      program.commands.map((command) => ({
+        name: command.name(),
+        description: command.description(),
+        subcommands: command.commands.map((subcommand) => subcommand.name()),
+      })),
+    ).toEqual([
+      {
+        name: 'other',
+        description: 'Other commands',
+        subcommands: ['run'],
+      },
+      {
+        name: 'sample',
+        description: 'Sample commands',
+        subcommands: ['first', 'later'],
+      },
+    ])
+  })
+
+  it('preserves the existing task subcommand order', () => {
+    const program = createProgram([
+      ...taskReadOperations,
+      ...taskWriteOperations,
+    ])
+
+    expect(
+      program.commands.map((command) => ({
+        name: command.name(),
+        subcommands: command.commands.map((subcommand) => subcommand.name()),
+      })),
+    ).toEqual([
+      {
+        name: 'task',
+        subcommands: [
+          'list',
+          'get',
+          'url',
+          'create',
+          'update',
+          'delete',
+          'status',
+          'parent',
+          'complete',
+          'search',
+          'activity',
+          'sessions',
+          'from-github',
+        ],
+      },
+    ])
+  })
+
   it('registers positional arguments on a root operation', async () => {
     const operation = makeOperation({
       path: ['demo'],

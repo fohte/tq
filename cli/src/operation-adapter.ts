@@ -12,13 +12,17 @@ import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readBinaryFile, readContentInput } from '#input'
+import {
+  collectInput,
+  collectPositionals,
+  normalizeOptionNames,
+  positionalName,
+  positionalSyntax,
+} from '#operation-input'
+import { getOrderedOperationGroups } from '#operation-order'
 import { printOperationOutput } from '#operation-output'
 import { fail } from '#result'
-import {
-  addSchemaOptions,
-  pickSchemaFields,
-  toKebabCase,
-} from '#schema-options'
+import { addSchemaOptions, toKebabCase } from '#schema-options'
 
 export type OperationCommandContext = {
   options: Record<string, unknown>
@@ -35,25 +39,12 @@ export type OperationCommandHandler = (
   context: OperationCommandContext,
 ) => Promise<void>
 
+export type OperationCommandHandlers = Readonly<
+  Record<string, OperationCommandHandler>
+>
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function positionalName(
-  argument: OperationDefinition['positionalArgs'][number],
-) {
-  return typeof argument === 'string'
-    ? argument
-    : (argument.field ?? argument.name)
-}
-
-function positionalSyntax(
-  argument: OperationDefinition['positionalArgs'][number],
-) {
-  if (typeof argument === 'string') return `<${argument}>`
-
-  const name = `${argument.name}${argument.variadic === true ? '...' : ''}`
-  return argument.optional === true ? `[${name}]` : `<${name}>`
 }
 
 function mapCliInput(
@@ -62,23 +53,6 @@ function mapCliInput(
   options: Record<string, unknown>,
 ): Result<Record<string, unknown>, Error> {
   return operation.cli.mapInput?.(input, options) ?? ok(input)
-}
-
-function normalizeOptionNames(
-  operation: OperationDefinition,
-  options: Record<string, unknown>,
-): Record<string, unknown> {
-  const normalized = { ...options }
-  for (const [field, optionName] of Object.entries(
-    operation.cli.optionNames ?? {},
-  )) {
-    const optionKey = optionName.replace(
-      /-([a-z])/g,
-      (_match, letter: string) => letter.toUpperCase(),
-    )
-    if (options[optionKey] !== undefined) normalized[field] = options[optionKey]
-  }
-  return normalized
 }
 
 function operationInputError(
@@ -96,31 +70,6 @@ function reportError(
   ignoreErrors: boolean,
 ): void {
   if (!ignoreErrors) fail(actionCommand, error)
-}
-
-function collectInput(
-  operation: OperationDefinition,
-  actionArgs: unknown[],
-  options: Record<string, unknown>,
-  excluded: readonly string[],
-) {
-  const input = collectPositionals(operation, actionArgs)
-
-  return pickSchemaFields(operation.inputSchema, options, excluded).map(
-    (fields) => Object.assign(input, fields),
-  )
-}
-
-function collectPositionals(
-  operation: OperationDefinition,
-  actionArgs: readonly unknown[],
-): Record<string, unknown> {
-  const input: Record<string, unknown> = {}
-  operation.positionalArgs.forEach((argument, index) => {
-    const value = actionArgs[index]
-    if (value !== undefined) input[positionalName(argument)] = value
-  })
-  return input
 }
 
 function renderWebPath(
@@ -315,43 +264,45 @@ async function executeCommandOperation(
 export function registerOperations(
   program: Command,
   operations: readonly OperationDefinition[],
-  groupDescription: string,
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
-  handler?: OperationCommandHandler,
+  handlers: OperationCommandHandlers = {},
 ): void {
-  const cliOperations = operations.filter(
-    (operation) => operation.surface?.only !== 'mcp',
-  )
-  const groupName = (cliOperations[0]?.cli.path ?? cliOperations[0]?.path)?.[0]
-  if (groupName === undefined) return
-  const group = program.command(groupName).description(groupDescription)
+  for (const {
+    groupName,
+    groupOperations,
+    groupDescription,
+  } of getOrderedOperationGroups(operations)) {
+    if (groupDescription == null) continue
 
-  registerOperationsInGroup(group, operations, fetchImpl, stdin, handler)
+    const group = program.command(groupName).description(groupDescription)
+    registerOperationsInGroup(
+      group,
+      groupOperations,
+      fetchImpl,
+      stdin,
+      handlers,
+    )
+  }
 }
 
-export function registerOperationsInGroup(
+function registerOperationsInGroup(
   group: Command,
   operations: readonly OperationDefinition[],
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
-  handler?: OperationCommandHandler,
+  handlers: OperationCommandHandlers,
 ): void {
-  const cliOperations = operations.filter(
-    (operation) => operation.surface?.only !== 'mcp',
-  )
-  if (
-    cliOperations.some(
-      (operation) => (operation.cli.path ?? operation.path)[0] !== group.name(),
-    )
-  ) {
-    return fail(
-      group,
-      new Error('An operation group must contain a single root command.'),
-    )
-  }
+  for (const operation of operations) {
+    const handlerKey = operation.cli.handler
+    const handler = handlerKey == null ? undefined : handlers[handlerKey]
+    if (handlerKey != null && handler == null) {
+      return fail(
+        group,
+        new Error(`No CLI handler is registered for "${handlerKey}".`),
+      )
+    }
 
-  for (const operation of cliOperations) {
     const commandPath = (operation.cli.path ?? operation.path).slice(1)
     const positionals = operation.positionalArgs.map(positionalSyntax).join(' ')
     let command = group

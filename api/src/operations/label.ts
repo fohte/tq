@@ -20,7 +20,10 @@ export const labelOperations = [
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/labels'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { description: 'Manage labels', order: 5 },
+      output: { kind: 'json' },
+    },
     run: (client, { context }) =>
       requestJson(
         client.api.labels.$get({

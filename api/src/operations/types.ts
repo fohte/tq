@@ -129,6 +129,9 @@ export interface OperationDefinition {
   cli: {
     description?: string
     path?: readonly string[]
+    group?: { description?: string; order?: number }
+    commandOrder?: number
+    handler?: string
     hiddenFields?: readonly string[]
     contentInput?: CliContentInput
     excludeFields?: readonly string[]

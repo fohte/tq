@@ -9,7 +9,10 @@ export const healthOperations = [
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /health'],
-    cli: { output: { kind: 'json' } },
+    cli: {
+      group: { order: 11 },
+      output: { kind: 'json' },
+    },
     run: (client) => requestJson(client.health.$get()),
   }),
 ] as const

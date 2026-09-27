@@ -37,6 +37,8 @@ export const hookOperations = [
         "The CLI reads hook JSON from local stdin, resolves a local transcript, and writes TQ_SESSION_ID to Claude Code's local environment file; the remote MCP server cannot access these local sources.",
     },
     cli: {
+      group: { order: 12 },
+      handler: 'hook',
       path: ['hook'],
       hiddenFields: ['sessionId', 'cwd', 'label', 'lastMessage', 'ended'],
       envDefaults: {
