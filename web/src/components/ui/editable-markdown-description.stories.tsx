@@ -31,7 +31,7 @@ function DescriptionStory({
         onExitEditMode={fn()}
         className={
           isProject
-            ? 'p-1 focus-within:border-primary/50'
+            ? 'px-1 pb-1 pt-3 focus-within:border-primary/50'
             : 'p-4 focus-within:border-ring'
         }
         {...(initiallyEditing != null ? { initiallyEditing } : {})}

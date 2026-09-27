@@ -27,7 +27,10 @@ export function EditableMarkdownDescription({
 
   return (
     <div
-      className={cn('border border-border text-sm leading-relaxed', className)}
+      className={cn(
+        'relative border border-border text-sm leading-relaxed',
+        className,
+      )}
       onClick={(event) => {
         if (
           !isEditing &&
@@ -40,20 +43,18 @@ export function EditableMarkdownDescription({
       }}
     >
       {!isEditing && (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={editButtonLabel}
-            onClick={() => {
-              setIsEditing(true)
-            }}
-            className="h-11 w-11 opacity-100 transition-opacity hover:bg-transparent active:translate-y-0 md:h-7 md:w-7 md:opacity-40 md:hover:opacity-100 md:focus-visible:opacity-100"
-          >
-            <Pencil className="size-4" />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={editButtonLabel}
+          onClick={() => {
+            setIsEditing(true)
+          }}
+          className="absolute -top-6 right-0 flex h-11 w-11 items-end justify-end p-1 opacity-100 transition-opacity hover:bg-transparent active:translate-y-0 md:top-0 md:h-5 md:w-7 md:opacity-40 md:hover:opacity-100 md:focus-visible:opacity-100"
+        >
+          <Pencil className="size-4" />
+        </Button>
       )}
       <MarkdownEditor
         defaultValue={defaultValue ?? ''}

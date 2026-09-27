@@ -205,7 +205,7 @@ function ProjectDescription({
         editButtonLabel="Edit project description"
         onChange={onChange}
         onExitEditMode={flush}
-        className="p-1 focus-within:border-primary/50"
+        className="px-1 pb-1 pt-3 focus-within:border-primary/50"
       />
     </div>
   )
