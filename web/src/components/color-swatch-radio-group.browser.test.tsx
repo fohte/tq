@@ -28,19 +28,33 @@ function InteractiveColorSwatchRadioGroup({
   )
 }
 
+function getSwatchStates() {
+  return screen.getAllByRole('radio').map((radio) => ({
+    name: radio.getAttribute('aria-label'),
+    checked: radio.getAttribute('aria-checked') === 'true',
+  }))
+}
+
 describe('ColorSwatchRadioGroup', () => {
+  it('keeps the selected color when it is selected again', async () => {
+    const user = userEvent.setup()
+    render(<InteractiveColorSwatchRadioGroup />)
+
+    await user.click(screen.getByRole('radio', { name: 'Coral' }))
+
+    expect(getSwatchStates()).toEqual([
+      { name: 'Coral', checked: true },
+      { name: 'Sage', checked: false },
+    ])
+  })
+
   it('clears the selected color when it is selected again', async () => {
     const user = userEvent.setup()
     render(<InteractiveColorSwatchRadioGroup clearOnReselect />)
 
     await user.click(screen.getByRole('radio', { name: 'Coral' }))
 
-    expect(
-      screen.getAllByRole('radio').map((radio) => ({
-        name: radio.getAttribute('aria-label'),
-        checked: radio.getAttribute('aria-checked') === 'true',
-      })),
-    ).toEqual([
+    expect(getSwatchStates()).toEqual([
       { name: 'Coral', checked: false },
       { name: 'Sage', checked: false },
     ])
@@ -53,12 +67,7 @@ describe('ColorSwatchRadioGroup', () => {
     await user.tab()
     await user.keyboard('{ArrowRight}')
 
-    expect(
-      screen.getAllByRole('radio').map((radio) => ({
-        name: radio.getAttribute('aria-label'),
-        checked: radio.getAttribute('aria-checked') === 'true',
-      })),
-    ).toEqual([
+    expect(getSwatchStates()).toEqual([
       { name: 'Coral', checked: false },
       { name: 'Sage', checked: true },
     ])

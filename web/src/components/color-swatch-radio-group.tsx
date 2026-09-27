@@ -34,6 +34,7 @@ export function ColorSwatchRadioGroup({
           key={option.hex}
           value={option.hex}
           aria-label={option.name}
+          title={option.name}
           onClick={() => {
             if (clearOnReselect && value === option.hex) {
               onValueChange('')
