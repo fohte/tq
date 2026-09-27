@@ -426,12 +426,12 @@ each of `max-h`/`padding-top` does resolve against a per-utility theme
 namespace (`--max-height-*`, confirmed by compiling with this repo's
 tailwindcss 4.2.2), so each value gets a name instead of a bracket:
 
-| Token                                            | Utility                | Value                                               | Role                                                                     |
-| ------------------------------------------------ | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------ |
-| `--max-height-sheet`                             | `max-h-sheet`          | `calc(var(--visual-viewport-height, 100vh) * 0.85)` | Mobile bottom sheet's overall height cap (`BottomSheetPanel`)            |
-| `--max-height-modal-composer`                    | `max-h-modal-composer` | `max-height: 40vh`                                  | PC create-task modal's description composer height cap                   |
-| `--max-height-sheet-composer`                    | `max-h-sheet-composer` | `max-height: 30vh`                                  | Mobile create-task bottom sheet's description composer height cap        |
-| n/a (`@utility`, no `--padding-top-*` namespace) | `modal-top-offset`     | `padding-top: 15vh`                                 | Drops the search modal down from the top of the viewport (`SearchModal`) |
+| Token                                            | Utility                | Value                                               | Role                                                                                       |
+| ------------------------------------------------ | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `--max-height-sheet`                             | `max-h-sheet`          | `calc(var(--visual-viewport-height, 100vh) * 0.85)` | Mobile bottom sheet's overall height cap (`BottomSheetPanel`)                              |
+| `--max-height-modal-composer`                    | `max-h-modal-composer` | `max-height: 40vh`                                  | PC create-task modal's description composer height cap                                     |
+| `--max-height-sheet-composer`                    | `max-h-sheet-composer` | `max-height: 30vh`                                  | Mobile create-task bottom sheet's description composer height cap                          |
+| n/a (`@utility`, no `--padding-top-*` namespace) | `modal-top-offset`     | `padding-top: 15vh`                                 | Drops the search modal down from the top of the viewport at `md` and above (`SearchModal`) |
 
 These four values don't collapse into one token — each clamps a different
 role — but the role each one plays is now named and documented here instead
