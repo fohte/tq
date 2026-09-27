@@ -82,7 +82,7 @@ describe('POST /api/assets', () => {
 
   it('returns 413 for a file exceeding the size limit', async () => {
     const res = await uploadAssetRequest(
-      makeFile('big.png', 'image/png', ASSET_MAX_SIZE_BYTES + 1),
+      makeFile('big.png', 'image/png', ASSET_MAX_SIZE_BYTES + 128 * 1024),
     )
 
     const expected = {

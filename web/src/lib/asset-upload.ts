@@ -21,6 +21,18 @@ export class UnsupportedAssetTypeError extends Error {
   }
 }
 
+function readApiErrorMessage(body: unknown): string | null {
+  if (
+    typeof body !== 'object' ||
+    body == null ||
+    !('error' in body) ||
+    typeof body.error !== 'string'
+  ) {
+    return null
+  }
+  return body.error
+}
+
 export function uploadAssetFile(
   file: File,
 ): ResultAsync<string, UnsupportedAssetTypeError | Error> {
@@ -31,7 +43,18 @@ export function uploadAssetFile(
     api.api.assets.$post({ form: { file } }),
     (cause) => new Error('Failed to upload image', { cause }),
   ).andThen((res) => {
-    if (!res.ok) return errAsync(new Error('Failed to upload image'))
+    if (!res.ok) {
+      return ResultAsync.fromPromise(
+        res.json(),
+        (cause) => new Error('Failed to upload image', { cause }),
+      ).andThen((body) => {
+        const errorMessage = readApiErrorMessage(body)
+        if (errorMessage != null) return errAsync(new Error(errorMessage))
+        return errAsync(
+          new Error(`Failed to upload image (status ${String(res.status)})`),
+        )
+      })
+    }
     return ResultAsync.fromPromise(
       res.json(),
       (cause) => new Error('Failed to upload image', { cause }),

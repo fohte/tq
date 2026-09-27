@@ -85,7 +85,7 @@ describe('uploadAssetFile', () => {
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
-  it('sends files larger than the former default limit to the API', async () => {
+  it('defers file size validation to the API', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockPost']).mockResolvedValue({
       ok: true,
@@ -99,13 +99,21 @@ describe('uploadAssetFile', () => {
     expect(result._unsafeUnwrap()).toBe('/api/assets/server-accepted')
   })
 
-  it('fails when the upload request fails', async () => {
+  it('returns the API error when an upload is rejected', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockPost']).mockResolvedValue({ ok: false })
+    assertDefined(mocks['mockPost']).mockResolvedValue({
+      ok: false,
+      json: () =>
+        Promise.resolve({
+          error: 'File too large. Maximum size is 2048 bytes',
+        }),
+    })
 
     const result = await uploadAssetFile(makeFile('photo.png', 'image/png', 10))
 
-    expect(result._unsafeUnwrapErr().message).toBe('Failed to upload image')
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'File too large. Maximum size is 2048 bytes',
+    )
   })
 })
 
