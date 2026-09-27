@@ -247,12 +247,12 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: 'search' }))
     const dialog = await screen.findByRole('dialog', { name: 'Search' })
 
-    expect(
-      JSON.stringify([
-        dialog.getAttribute('aria-label'),
-        dialog.getAttribute('aria-modal'),
-      ]),
-    ).toBe(JSON.stringify(['Search', 'true']))
+    const dialogState = Array.of(
+      dialog.getAttribute('aria-label'),
+      dialog.getAttribute('aria-modal'),
+    )
+
+    expect(dialogState).toEqual(['Search', 'true'])
   })
 
   it('opens the task creation dialog from the mobile bottom bar', async () => {
@@ -271,12 +271,12 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: 'new' }))
     const titleInput = await screen.findByPlaceholderText('タスクのタイトル')
 
-    expect(
-      JSON.stringify([
-        titleInput.getAttribute('placeholder'),
-        titleInput.checkVisibility(),
-      ]),
-    ).toBe(JSON.stringify(['タスクのタイトル', true]))
+    const titleInputState = Array.of(
+      titleInput.getAttribute('placeholder'),
+      titleInput.checkVisibility(),
+    )
+
+    expect(titleInputState).toEqual(['タスクのタイトル', true])
   })
 
   // Regression check: day view's calendar and queue pane must scroll

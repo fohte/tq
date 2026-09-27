@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
+import { assertDefined } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -50,19 +51,22 @@ describe('BottomTabBar', () => {
     await renderBottomTabBar()
     const nav = screen.getByRole('navigation', { hidden: true })
 
-    expect(JSON.stringify([nav.checkVisibility(), nav.className])).toBe(
-      JSON.stringify([
-        false,
-        'sticky bottom-0 flex shrink-0 flex-col border-t border-border bg-background md:hidden',
-      ]),
-    )
+    const visibility = Array.of(nav.checkVisibility(), nav.className)
+
+    expect(visibility).toEqual([
+      false,
+      'sticky bottom-0 flex shrink-0 flex-col border-t border-border bg-background md:hidden',
+    ])
   })
 
   it('shows four route links followed by the search and new actions', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     await renderBottomTabBar()
     const nav = screen.getByRole('navigation')
-    const row = nav.querySelector('div')
+    const row = assertDefined(
+      nav.querySelector('div'),
+      'BottomTabBar renders a row wrapping tabs and actions',
+    )
 
     const renderedItems = Array.from(row.children, (item) => ({
       element: item.tagName.toLowerCase(),
@@ -111,22 +115,35 @@ describe('BottomTabBar', () => {
     ])
   })
 
-  it('calls the search and new task handlers from their actions', async () => {
+  it('calls onSearch when the search action is clicked', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     const actions: string[] = []
     await renderBottomTabBar(
       () => {
         actions.push('search')
       },
+      () => {},
+    )
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'search' }))
+
+    expect(actions).toEqual(['search'])
+  })
+
+  it('calls onNewTask when the new action is clicked', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const actions: string[] = []
+    await renderBottomTabBar(
+      () => {},
       () => {
         actions.push('new')
       },
     )
     const user = userEvent.setup()
 
-    await user.click(screen.getByRole('button', { name: 'search' }))
     await user.click(screen.getByRole('button', { name: 'new' }))
 
-    expect(actions).toEqual(['search', 'new'])
+    expect(actions).toEqual(['new'])
   })
 })
