@@ -10,6 +10,7 @@ import { app } from '#app'
 import {
   callMcpTool,
   connectMcpClient,
+  expectedPathSegmentValidationError as expectedMcpPathSegmentValidationError,
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
@@ -97,21 +98,14 @@ async function summarizeToolCallOutcome(
 }
 
 function expectedPathSegmentValidationError(name: string, value: string) {
-  const issue =
-    value === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : 'Saved view ID must be a valid path segment'
   return {
     kind: 'result',
-    result: {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: id: ${issue}`,
-        },
-      ],
-    },
+    result: expectedMcpPathSegmentValidationError(
+      name,
+      'id',
+      'Saved view ID',
+      value,
+    ),
   }
 }
 

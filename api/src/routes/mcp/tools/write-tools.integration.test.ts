@@ -11,6 +11,7 @@ import { operations } from '#operations/index'
 import {
   callMcpTool,
   connectMcpClient,
+  expectedPathSegmentValidationError as expectedMcpPathSegmentValidationError,
   parseToolData,
 } from '#routes/mcp/testing'
 import { operationToolName } from '#routes/mcp/tools/operation-tools'
@@ -78,21 +79,9 @@ function expectedPathSegmentValidationError(
   label: string,
   value: string,
 ) {
-  const issue =
-    value === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : `${label} must be a valid path segment`
   return {
     kind: 'result',
-    result: {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
-        },
-      ],
-    },
+    result: expectedMcpPathSegmentValidationError(name, field, label, value),
   }
 }
 

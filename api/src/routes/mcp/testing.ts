@@ -98,6 +98,27 @@ export async function callMcpTool(
   return result as CallToolResult
 }
 
+export function expectedPathSegmentValidationError(
+  name: string,
+  field: string,
+  label: string,
+  value: string,
+): CallToolResult {
+  const issue =
+    value === ''
+      ? 'Too small: expected string to have >=1 characters'
+      : `${label} must be a valid path segment`
+  return {
+    isError: true,
+    content: [
+      {
+        type: 'text',
+        text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
+      },
+    ],
+  }
+}
+
 function normalizeToolData(
   value: unknown,
   skipKeys: readonly string[] = [],
