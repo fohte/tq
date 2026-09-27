@@ -420,10 +420,10 @@ export const SearchEverywhere: Story = {
 }
 
 export const MobileFullscreen: Story = {
-  name: 'the mobile search modal fills the screen and keeps its results visible',
+  name: 'the mobile search modal shows a scrollable task list in fullscreen',
   tags: ['mobile-only'],
   args: {
     defaultContext: 'work',
-    defaultQuery: `#${keyboardQuery}`,
+    defaultQuery: `#${scrollableQuery}`,
   },
 }
