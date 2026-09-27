@@ -2,7 +2,11 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import type { OperationDefinition } from 'api/operations'
+import {
+  type OperationDefinition,
+  taskReadOperations,
+  taskWriteOperations,
+} from 'api/operations'
 import { makeOperation } from 'api/operations/test-fixtures'
 import { Command } from 'commander'
 import { okAsync } from 'neverthrow'
@@ -84,11 +88,10 @@ describe('registerOperations', () => {
   it('registers command groups and subcommands in operation metadata order', () => {
     const program = createProgram([
       makeOperation({
-        path: ['sample', 'later'],
-        description: 'Later sample command',
+        path: ['sample', 'first'],
+        description: 'First sample command',
         cli: {
-          group: { description: 'Sample commands', order: 1 },
-          commandOrder: 1,
+          commandOrder: 0,
           output: { kind: 'json' },
         },
       }),
@@ -101,10 +104,11 @@ describe('registerOperations', () => {
         },
       }),
       makeOperation({
-        path: ['sample', 'first'],
-        description: 'First sample command',
+        path: ['sample', 'later'],
+        description: 'Later sample command',
         cli: {
-          commandOrder: 0,
+          group: { description: 'Sample commands', order: 1 },
+          commandOrder: 1,
           output: { kind: 'json' },
         },
       }),
@@ -126,6 +130,39 @@ describe('registerOperations', () => {
         name: 'sample',
         description: 'Sample commands',
         subcommands: ['first', 'later'],
+      },
+    ])
+  })
+
+  it('preserves the existing task subcommand order', () => {
+    const program = createProgram([
+      ...taskReadOperations,
+      ...taskWriteOperations,
+    ])
+
+    expect(
+      program.commands.map((command) => ({
+        name: command.name(),
+        subcommands: command.commands.map((subcommand) => subcommand.name()),
+      })),
+    ).toEqual([
+      {
+        name: 'task',
+        subcommands: [
+          'list',
+          'get',
+          'url',
+          'create',
+          'update',
+          'delete',
+          'status',
+          'parent',
+          'complete',
+          'search',
+          'activity',
+          'sessions',
+          'from-github',
+        ],
       },
     ])
   })

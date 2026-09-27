@@ -1,5 +1,10 @@
 import type { OperationDefinition } from 'api/operations'
 
+type OperationGroup = {
+  firstIndex: number
+  operations: OperationDefinition[]
+}
+
 export type OrderedOperationGroup = {
   groupName: string
   groupOperations: OperationDefinition[]
@@ -12,10 +17,7 @@ export function getOrderedOperationGroups(
   const cliOperations = operations.filter(
     (operation) => operation.surface?.only !== 'mcp',
   )
-  const groups = new Map<
-    string,
-    { firstIndex: number; operations: OperationDefinition[] }
-  >()
+  const groups = new Map<string, OperationGroup>()
 
   cliOperations.forEach((operation, index) => {
     const groupName = (operation.cli.path ?? operation.path)[0]
@@ -28,10 +30,11 @@ export function getOrderedOperationGroups(
     group.operations.push(operation)
   })
 
+  const groupOrder = (group: OperationGroup) =>
+    group.operations.find((operation) => operation.cli.group?.order != null)
+      ?.cli.group?.order ?? group.firstIndex
   const orderedGroups = [...groups.entries()].sort(
-    ([, left], [, right]) =>
-      (left.operations[0]?.cli.group?.order ?? left.firstIndex) -
-      (right.operations[0]?.cli.group?.order ?? right.firstIndex),
+    ([, left], [, right]) => groupOrder(left) - groupOrder(right),
   )
 
   return orderedGroups.map(([groupName, groupDefinition]) => {

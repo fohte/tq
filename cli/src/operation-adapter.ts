@@ -293,21 +293,7 @@ function registerOperationsInGroup(
   stdin: ReadableStdin,
   handlers: OperationCommandHandlers,
 ): void {
-  const cliOperations = operations.filter(
-    (operation) => operation.surface?.only !== 'mcp',
-  )
-  if (
-    cliOperations.some(
-      (operation) => (operation.cli.path ?? operation.path)[0] !== group.name(),
-    )
-  ) {
-    return fail(
-      group,
-      new Error('An operation group must contain a single root command.'),
-    )
-  }
-
-  for (const operation of cliOperations) {
+  for (const operation of operations) {
     const handlerKey = operation.cli.handler
     const handler = handlerKey == null ? undefined : handlers[handlerKey]
     if (handlerKey != null && handler == null) {

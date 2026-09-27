@@ -228,7 +228,7 @@ export const taskReadOperations = [
     kind: 'read',
     routes: ['GET /api/tasks'],
     cli: {
-      commandOrder: 10,
+      commandOrder: 9,
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
@@ -250,7 +250,7 @@ export const taskReadOperations = [
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id/activity'],
-    cli: { commandOrder: 9, output: { kind: 'json' } },
+    cli: { commandOrder: 10, output: { kind: 'json' } },
     run: (client, { taskId }) =>
       requestJson(
         client.api.tasks[':id'].activity.$get({
