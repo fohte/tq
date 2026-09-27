@@ -172,12 +172,35 @@ describe('page_search', () => {
 })
 
 describe('page_list', () => {
-  it('returns complete pages for the requested task', async () => {
+  it('returns page metadata without content by default', async () => {
     const task = await createTask('Sample task')
     await createPage(task.id, 'Sample page', 'Sample page content')
 
     const toolResult = await callMcpTool(client, 'page_list', {
       taskId: task.id,
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(toolResult))).toEqual([
+      {
+        id: '<uuid>',
+        taskId: '<uuid>',
+        title: 'Sample page',
+        format: 'markdown',
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      },
+    ])
+  })
+
+  it('returns full page content when requested', async () => {
+    const task = await createTask('Sample task')
+    await createPage(task.id, 'Sample page', 'Sample page content')
+
+    const toolResult = await callMcpTool(client, 'page_list', {
+      taskId: task.id,
+      full: true,
     })
 
     expect(normalizeDynamicValues(parseToolJson(toolResult))).toEqual([

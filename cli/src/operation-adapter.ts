@@ -166,6 +166,7 @@ export function registerOperations(
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(listOutput?.fullField == null ? [] : [listOutput.fullField]),
     ]
     addSchemaOptions(
       command,
@@ -215,6 +216,10 @@ export function registerOperations(
         (value) => value,
         (error) => fail(actionCommand, error),
       )
+
+      if (listOutput?.fullField != null && options['full'] === true) {
+        input[listOutput.fullField] = true
+      }
 
       if (contentInput != null) {
         const filePath =

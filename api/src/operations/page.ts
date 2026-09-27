@@ -32,13 +32,29 @@ const searchPagesSchema = z.object({
       'Maximum number of matching locations to return (1-50). Defaults to 20.',
     ),
 })
-const listPagesSchema = z.object({ taskId: taskIdSchema })
+const listPagesSchema = z.object({
+  taskId: taskIdSchema,
+  full: z.boolean().optional().describe('Include full page content.'),
+})
 const pageRefSchema = z.object({ taskId: taskIdSchema, pageId: pageIdSchema })
 const createPageInputSchema = createPageSchema.extend({ taskId: taskIdSchema })
 const updatePageInputSchema = updatePageSchema.extend({
   taskId: taskIdSchema,
   pageId: pageIdSchema,
 })
+
+function omitKeyRecursively(value: unknown, key: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => omitKeyRecursively(item, key))
+  }
+  if (typeof value !== 'object' || value === null) return value
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([field]) => field !== key)
+      .map(([field, nested]) => [field, omitKeyRecursively(nested, key)]),
+  )
+}
 
 export const pageOperations = [
   defineOperation(searchPagesSchema, {
@@ -62,7 +78,7 @@ export const pageOperations = [
   defineOperation(listPagesSchema, {
     path: ['page', 'list'],
     description:
-      'List pages for a task. MCP responses include full content for every page and can be large; CLI output omits content by default and includes it with --full. Task details include page metadata without content.',
+      'List pages for a task. Returns metadata by default; set full to true to include page content. Task details also include page metadata without content.',
     positionalArgs: ['taskId'],
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/pages'],
@@ -72,13 +88,16 @@ export const pageOperations = [
         omitKey: 'content',
         fullOption: '--full',
         fullDescription: 'Include full page content in the output',
+        fullField: 'full',
       },
     },
-    run: (client, { taskId }) =>
+    run: (client, { taskId, full }) =>
       requestJson(
         client.api.tasks[':taskId'].pages.$get({
           param: { taskId: String(taskId) },
         }),
+      ).map((result) =>
+        full === true ? result : omitKeyRecursively(result, 'content'),
       ),
   }),
   defineOperation(pageRefSchema, {
