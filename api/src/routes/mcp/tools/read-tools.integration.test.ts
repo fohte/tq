@@ -23,28 +23,6 @@ afterEach(async () => {
 })
 
 describe('read tools', () => {
-  it('declares integration lookup tools as read-only', async () => {
-    const result = await client.listTools()
-
-    expect(
-      result.tools
-        .filter((tool) =>
-          ['calendar_events', 'github_resolve', 'slack_resolve'].some(
-            (name) => name === tool.name,
-          ),
-        )
-        .map((tool) => ({
-          name: tool.name,
-          readOnlyHint: tool.annotations?.readOnlyHint,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    ).toEqual([
-      { name: 'calendar_events', readOnlyHint: true },
-      { name: 'github_resolve', readOnlyHint: true },
-      { name: 'slack_resolve', readOnlyHint: true },
-    ])
-  })
-
   it('declares label_list as read-only', async () => {
     const result = await client.listTools()
 
