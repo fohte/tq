@@ -27,9 +27,6 @@ export function GithubUrlCard({
         target="_blank"
         rel="noopener noreferrer"
         onClick={preventClickWhileSelecting}
-        onMouseUp={(event) => {
-          event.stopPropagation()
-        }}
         className="flex flex-col gap-1.5"
       >
         <div className="flex items-center gap-2">
@@ -53,9 +50,6 @@ export function GithubUrlCard({
           to="/tasks/$taskId"
           params={{ taskId: summary.linkedTaskId }}
           onClick={preventClickWhileSelecting}
-          onMouseUp={(event) => {
-            event.stopPropagation()
-          }}
           className="mt-1.5 block text-xs text-muted-foreground hover:underline"
         >
           Linked to a TQ task →

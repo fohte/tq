@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -46,16 +46,16 @@ async function waitForMarkdownUpdateNotifications() {
   await new Promise((resolve) => setTimeout(resolve, 300))
 }
 
-function getModeToggleResult(
-  modeAfterEntering: string | null,
+function getEditSessionResult(
   wrapper: Element,
-  onChangeCalls: readonly (readonly string[])[],
+  events: string[],
+  changes: readonly (readonly string[])[],
 ) {
-  return [
-    modeAfterEntering,
-    wrapper.getAttribute('data-view-mode'),
-    onChangeCalls,
-  ]
+  return {
+    mode: wrapper.getAttribute('data-view-mode'),
+    events,
+    changes,
+  }
 }
 
 describe('MarkdownEditor size', () => {
@@ -81,15 +81,54 @@ describe('MarkdownEditor size', () => {
   })
 })
 
-describe('MarkdownEditor mode toggle', () => {
+function ControlledEditingHarness({
+  events,
+  initiallyEditing = false,
+  defaultValue = TRAILING_BLOCKQUOTE_CONTENT,
+  onChange,
+}: {
+  events: string[]
+  initiallyEditing?: boolean
+  defaultValue?: string
+  onChange?: (markdown: string) => void
+}) {
+  const [editing, setEditing] = useState(initiallyEditing)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(true)
+        }}
+      >
+        open editor
+      </button>
+      <button type="button">outside editor</button>
+      <MarkdownEditor
+        defaultValue={defaultValue}
+        editing={editing}
+        onEditingChange={(nextEditing) => {
+          events.push(`editing:${String(nextEditing)}`)
+          setEditing(nextEditing)
+        }}
+        onExitEditMode={() => events.push('flush')}
+        {...(onChange == null ? {} : { onChange })}
+      />
+    </>
+  )
+}
+
+describe('MarkdownEditor edit sessions', () => {
   it.each(TRAILING_BLOCK_CONTENTS)(
     'does not autosave when opening and exiting a trailing $kind without editing',
     async ({ markdown, selector, visibleText }) => {
+      const events: string[] = []
       const onChange = vi.fn<(markdown: string) => void>()
       const { container } = render(
-        <MarkdownEditor
+        <ControlledEditingHarness
+          events={events}
           defaultValue={markdown}
-          viewEditToggle={{}}
           onChange={onChange}
         />,
       )
@@ -97,33 +136,58 @@ describe('MarkdownEditor mode toggle', () => {
 
       const wrapper = assertDefined(
         container.querySelector('.milkdown-wrapper'),
-        'MarkdownEditor always renders its wrapper and root',
+        'MarkdownEditor always renders its wrapper',
       )
-      const trailingBlock = assertDefined(
+      assertDefined(
         container.querySelector(selector),
         'the editor renders the trailing block',
       )
       const user = userEvent.setup()
-      await user.click(trailingBlock)
-      const modeAfterEntering = wrapper.getAttribute('data-view-mode')
-
-      // The click enters edit mode after the event, so Escape must target the
-      // wrapper directly instead of relying on keyboard focus.
-      fireEvent.keyDown(wrapper, { key: 'Escape' })
+      await user.click(screen.getByRole('button', { name: 'open editor' }))
+      await waitFor(() =>
+        expect(wrapper).toHaveAttribute('data-view-mode', 'edit'),
+      )
+      await user.keyboard('{Escape}')
       await waitForMarkdownUpdateNotifications()
 
       expect(
-        getModeToggleResult(modeAfterEntering, wrapper, onChange.mock.calls),
-      ).toEqual(['edit', 'view', []])
+        getEditSessionResult(wrapper, events, onChange.mock.calls),
+      ).toEqual({
+        mode: 'view',
+        events: ['flush', 'editing:false'],
+        changes: [],
+      })
     },
   )
 
-  it('autosaves changes when starting in edit mode', async () => {
+  it('does not enter edit mode when the body is clicked', async () => {
+    const events: string[] = []
+    const { container } = render(<ControlledEditingHarness events={events} />)
+    await findEditorText('Some intro text.')
+
+    const wrapper = assertDefined(
+      container.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const paragraph = assertDefined(
+      container.querySelector('.milkdown .ProseMirror p'),
+      'editor always renders a paragraph',
+    )
+    await userEvent.setup().click(paragraph)
+
+    expect(getModeAndEvents(wrapper, events)).toEqual({
+      mode: 'view',
+      events: [],
+    })
+  })
+
+  it('autosaves changes when rendered in edit mode', async () => {
     const onChange = vi.fn<(markdown: string) => void>()
+    const events: string[] = []
     const { container } = render(
-      <MarkdownEditor
-        defaultValue={TRAILING_BLOCKQUOTE_CONTENT}
-        viewEditToggle={{ defaultMode: 'edit' }}
+      <ControlledEditingHarness
+        events={events}
+        initiallyEditing
         onChange={onChange}
       />,
     )
@@ -150,7 +214,8 @@ describe('MarkdownEditor mode toggle', () => {
     const { container } = render(
       <MarkdownEditor
         defaultValue=""
-        viewEditToggle={{}}
+        editing={true}
+        onEditingChange={() => {}}
         onChange={onChange}
       />,
     )
@@ -163,7 +228,6 @@ describe('MarkdownEditor mode toggle', () => {
       'an empty document renders its paragraph',
     )
     const user = userEvent.setup()
-    await user.click(paragraph)
     await user.click(paragraph)
     await user.keyboard('x')
     await findEditorText('x')
@@ -179,7 +243,8 @@ describe('MarkdownEditor mode toggle', () => {
     const { container } = render(
       <MarkdownEditor
         defaultValue={TRAILING_BLOCKQUOTE_CONTENT}
-        viewEditToggle={{}}
+        editing={true}
+        onEditingChange={() => {}}
         onChange={onChange}
       />,
     )
@@ -190,7 +255,6 @@ describe('MarkdownEditor mode toggle', () => {
       'editor renders the blockquote',
     )
     const user = userEvent.setup()
-    await user.click(blockquote)
     await user.click(blockquote)
     await user.keyboard('!')
     await screen.findByText('A blockquote at the very end.!')
@@ -231,75 +295,7 @@ describe('MarkdownEditor mode toggle', () => {
       expect(onChange.mock.calls).toEqual([['Editable content.!\n']])
     })
   })
-
-  it('changes the document after entering edit mode and typing', async () => {
-    const { container } = render(
-      <MarkdownEditor
-        defaultValue={TRAILING_BLOCKQUOTE_CONTENT}
-        viewEditToggle={{}}
-      />,
-    )
-    await findEditorText('Some intro text.')
-
-    const wrapper = assertDefined(
-      container.querySelector('.milkdown-wrapper'),
-      'MarkdownEditor always renders its wrapper',
-    )
-    const blockquote = assertDefined(
-      container.querySelector('.milkdown .ProseMirror blockquote'),
-      'editor always renders the blockquote',
-    )
-
-    const user = userEvent.setup()
-    // A first click flips the editor into edit mode, but Crepe only applies
-    // contenteditable=true in a React effect that runs after that click
-    // event has already finished. A second click, now that it's actually
-    // editable, gives it real focus so the following keystroke lands in the
-    // document.
-    await user.click(blockquote)
-    await user.click(blockquote)
-    await user.keyboard('!')
-
-    await findEditorText('A blockquote at the very end.!')
-
-    await user.keyboard('{Escape}')
-    await waitFor(() =>
-      expect(wrapper).toHaveAttribute('data-view-mode', 'view'),
-    )
-    expect(
-      screen.getByText('A blockquote at the very end.!'),
-    ).toBeInTheDocument()
-  })
 })
-
-function ControlledEditingHarness({ events }: { events: string[] }) {
-  const [editing, setEditing] = useState(false)
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          setEditing(true)
-        }}
-      >
-        open editor
-      </button>
-      <button type="button">outside editor</button>
-      <MarkdownEditor
-        defaultValue={TRAILING_BLOCKQUOTE_CONTENT}
-        editing={editing}
-        onEditingChange={(nextEditing) => {
-          events.push(`editing:${String(nextEditing)}`)
-          setEditing(nextEditing)
-        }}
-        viewEditToggle={{
-          onExitEditMode: () => events.push('flush'),
-        }}
-      />
-    </>
-  )
-}
 
 function getModeAndEvents(wrapper: Element, events: string[]) {
   return { mode: wrapper.getAttribute('data-view-mode'), events }
@@ -318,28 +314,6 @@ function getEditorFocusState(
 }
 
 describe('MarkdownEditor controlled editing', () => {
-  it('stays in view mode when the body is clicked', async () => {
-    const events: string[] = []
-    const { container } = render(<ControlledEditingHarness events={events} />)
-    await findEditorText('Some intro text.')
-
-    const wrapper = assertDefined(
-      container.querySelector('.milkdown-wrapper'),
-      'MarkdownEditor always renders its wrapper',
-    )
-    const paragraph = assertDefined(
-      container.querySelector('.milkdown .ProseMirror p'),
-      'editor always renders a paragraph',
-    )
-
-    await userEvent.setup().click(paragraph)
-
-    expect(getModeAndEvents(wrapper, events)).toEqual({
-      mode: 'view',
-      events: [],
-    })
-  })
-
   it('focuses the editor when the caller opens edit mode', async () => {
     const events: string[] = []
     const { container } = render(<ControlledEditingHarness events={events} />)
@@ -416,8 +390,17 @@ function ExternalUpdateHarness({
   updatedValue: string
 }) {
   const [value, setValue] = useState(initialValue)
+  const [editing, setEditing] = useState(false)
   return (
     <>
+      <button
+        type="button"
+        onClick={() => {
+          setEditing(true)
+        }}
+      >
+        open editor
+      </button>
       <button
         type="button"
         // Prevents moving focus to this button so the editor doesn't
@@ -431,7 +414,11 @@ function ExternalUpdateHarness({
       >
         simulate external update
       </button>
-      <MarkdownEditor defaultValue={value} viewEditToggle={{}} />
+      <MarkdownEditor
+        defaultValue={value}
+        editing={editing}
+        onEditingChange={setEditing}
+      />
     </>
   )
 }
@@ -469,7 +456,7 @@ describe('MarkdownEditor external updates', () => {
     )
 
     const user = userEvent.setup()
-    await user.click(blockquote)
+    await user.click(screen.getByRole('button', { name: 'open editor' }))
     await user.click(blockquote)
     await user.keyboard('!')
 
@@ -503,7 +490,7 @@ describe('MarkdownEditor external updates', () => {
     )
 
     const user = userEvent.setup()
-    await user.click(blockquote)
+    await user.click(screen.getByRole('button', { name: 'open editor' }))
     await user.click(blockquote)
     await user.keyboard('!')
 

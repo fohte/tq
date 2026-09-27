@@ -59,9 +59,9 @@ export function EditableMarkdownDescription({
         defaultValue={defaultValue ?? ''}
         placeholder={placeholder}
         onChange={onChange}
-        viewEditToggle={{ onExitEditMode }}
         editing={isEditing}
         onEditingChange={setIsEditing}
+        onExitEditMode={onExitEditMode}
         size="compact"
       />
     </div>

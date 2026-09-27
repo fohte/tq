@@ -34,7 +34,6 @@ async function renderPageCard({
             defaultValue={defaultValue}
             editing={editing}
             onEditingChange={onEditingChange}
-            viewEditToggle={{}}
             size="compact"
           />
         )}

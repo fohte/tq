@@ -36,6 +36,33 @@ function getControlledNavigationState(
   }
 }
 
+function getViewModeAndChanges(wrapper: Element, editingChanges: string[]) {
+  return {
+    mode: wrapper.getAttribute('data-view-mode'),
+    editingChanges,
+  }
+}
+
+function getChipClickState(
+  wrapper: Element,
+  editingChanges: string[],
+  chipVisible: boolean,
+) {
+  return { ...getViewModeAndChanges(wrapper, editingChanges), chipVisible }
+}
+
+function getUnsafeLinkClickState(
+  wrapper: Element,
+  dispatchResult: boolean,
+  defaultPrevented: boolean,
+) {
+  return {
+    dispatchResult,
+    defaultPrevented,
+    mode: wrapper.getAttribute('data-view-mode'),
+  }
+}
+
 // Seeds a GitHub URL preview already linked to a TQ task, so GithubUrlCard
 // renders its nested "Linked to a TQ task" router `Link` in addition to its
 // plain `<a>` — combined with seedLiveReferenceFixtures' task-mention card
@@ -98,7 +125,8 @@ describe('MarkdownEditor live references', () => {
     renderWithProviders(
       <MarkdownEditor
         defaultValue={`See #${String(MENTION_FIXTURE_NUMBER)} and ${GITHUB_URL_FIXTURE} for details.`}
-        viewEditToggle={{}}
+        editing={false}
+        onEditingChange={() => {}}
       />,
       seedLiveReferenceFixtures,
     )
@@ -109,20 +137,21 @@ describe('MarkdownEditor live references', () => {
     ).resolves.toBeVisible()
   })
 
-  // Clicking anywhere in the read-only view switches to edit mode: chips
-  // disappear and the raw Markdown source they were hiding becomes visible
-  // instead. The click lands on the paragraph itself rather than on the
-  // chip, since hovering the chip opens its own preview popup that would
-  // otherwise intercept the click.
-  it('reveals the raw markdown source and hides the chip when clicking into edit mode', async () => {
+  it('keeps the chip and view mode when the caller has not opened editing', async () => {
+    const editingChanges: string[] = []
     const { container } = renderWithProviders(
       <MarkdownEditor
         defaultValue={`See #${String(MENTION_FIXTURE_NUMBER)} for details.`}
-        viewEditToggle={{}}
+        editing={false}
+        onEditingChange={(editing) => editingChanges.push(String(editing))}
       />,
       seedLiveReferenceFixtures,
     )
     await findEditorText(MENTION_FIXTURE_TITLE)
+    const wrapper = assertDefined(
+      container.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
     const paragraph = assertDefined(
       container.querySelector('.milkdown .ProseMirror p'),
       'editor always renders a paragraph',
@@ -131,20 +160,26 @@ describe('MarkdownEditor live references', () => {
     const user = userEvent.setup()
     await user.click(paragraph)
 
-    await expect(
-      findEditorText(new RegExp(`#${String(MENTION_FIXTURE_NUMBER)}`)),
-    ).resolves.toBeVisible()
-    expect(screen.queryByText(MENTION_FIXTURE_TITLE)).not.toBeInTheDocument()
+    expect(
+      getChipClickState(
+        wrapper,
+        editingChanges,
+        screen.queryByText(MENTION_FIXTURE_TITLE) != null,
+      ),
+    ).toEqual({
+      mode: 'view',
+      editingChanges: [],
+      chipVisible: true,
+    })
   })
 
-  // Cards must stay clickable without ever flipping the editor into edit
-  // mode (see plugin.tsx's createCardWidgetComponent and the per-element
-  // `onMouseUp` stopPropagation in github-url-card.tsx/task-mention-card.tsx).
-  it('keeps view mode when clicking a task-mention or linked-GitHub card, but flips to edit mode for plain text', async () => {
+  it('keeps view mode when clicking reference cards and plain text', async () => {
+    const editingChanges: string[] = []
     const { container } = renderWithProviders(
       <MarkdownEditor
         defaultValue={`#${String(MENTION_FIXTURE_NUMBER)}\n\n${LINKED_GITHUB_URL_FIXTURE}\n\n${OUTSIDE_CARD_TEXT}`}
-        viewEditToggle={{}}
+        editing={false}
+        onEditingChange={(editing) => editingChanges.push(String(editing))}
       />,
       (queryClient) => {
         seedLiveReferenceFixtures(queryClient)
@@ -171,25 +206,25 @@ describe('MarkdownEditor live references', () => {
     await user.click(screen.getByText(LINKED_TASK_LINK_TEXT))
     expect(wrapper).toHaveAttribute('data-view-mode', 'view')
 
-    // Control: clicking plain text outside any card must still flip the
-    // editor into edit mode, proving the two assertions above are actually
-    // capable of detecting a mode switch (not a false negative from a
-    // selector that can never observe it).
+    // Plain text follows the same controlled view state as reference cards.
     await user.click(screen.getByText(OUTSIDE_CARD_TEXT))
-    expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+    expect(getViewModeAndChanges(wrapper, editingChanges)).toEqual({
+      mode: 'view',
+      editingChanges: [],
+    })
   })
 
   const MARKDOWN_LINK_TEXT = 'a plain markdown link'
   const MARKDOWN_LINK_HASH = '#markdown-link-target'
 
-  // A bare Markdown link (as opposed to an inline-reference chip/card) must
-  // stay clickable in view mode too: clicking it should navigate, not flip
-  // the editor into edit mode. See markdown-editor.tsx's onMouseUp guard.
+  // A bare Markdown link remains visible and does not request an edit-mode
+  // transition when its mouse button is released.
   it('keeps view mode when clicking a bare markdown link', async () => {
     const { container } = renderWithProviders(
       <MarkdownEditor
         defaultValue={`[${MARKDOWN_LINK_TEXT}](${MARKDOWN_LINK_HASH})\n\n${OUTSIDE_CARD_TEXT}`}
-        viewEditToggle={{}}
+        editing={false}
+        onEditingChange={() => {}}
       />,
     )
 
@@ -206,16 +241,10 @@ describe('MarkdownEditor live references', () => {
     fireEvent.mouseUp(link, { button: 0 })
 
     expect(wrapper).toHaveAttribute('data-view-mode', 'view')
-    // The point of this test: readonly must stay true past onMouseUp so a
-    // real click that follows still hits a non-editable <a> and navigates (a
-    // contenteditable one loses the browser's default click-through).
     expect(link.isContentEditable).toBe(false)
 
-    // Control: clicking plain text outside the link must still flip the
-    // editor into edit mode, proving the assertion above is actually capable
-    // of detecting a mode switch.
     fireEvent.mouseUp(screen.getByText(OUTSIDE_CARD_TEXT), { button: 0 })
-    expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+    expect(wrapper).toHaveAttribute('data-view-mode', 'view')
   })
 
   it('navigates through an inline task chip while editing is controlled', async () => {
@@ -223,7 +252,6 @@ describe('MarkdownEditor live references', () => {
     const { container, router } = renderWithProviders(
       <MarkdownEditor
         defaultValue={`See #${String(MENTION_FIXTURE_NUMBER)} for details.`}
-        viewEditToggle={{}}
         editing={false}
         onEditingChange={(editing) => editingChanges.push(String(editing))}
       />,
@@ -256,16 +284,12 @@ describe('MarkdownEditor live references', () => {
 
   const UNSAFE_SCHEME_LINK_TEXT = 'a javascript: link'
 
-  // Regression check: a Markdown link's href is unfiltered user content, so
-  // an executable scheme like `javascript:` must NOT get the click-through
-  // treatment above — it has to keep flipping the editor into edit mode
-  // (never becoming clickable) or clicking it would run arbitrary script.
-  // See markdown-editor.tsx's NAVIGABLE_LINK_PROTOCOLS.
-  it('enters edit mode when clicking an unsafe-scheme link', async () => {
+  it('keeps executable Markdown links inert in view mode', async () => {
     const { container } = renderWithProviders(
       <MarkdownEditor
         defaultValue={`[${UNSAFE_SCHEME_LINK_TEXT}](javascript:alert(1))`}
-        viewEditToggle={{}}
+        editing={false}
+        onEditingChange={() => {}}
       />,
     )
 
@@ -276,8 +300,18 @@ describe('MarkdownEditor live references', () => {
       container.querySelector('.milkdown-wrapper'),
       'MarkdownEditor always renders its wrapper',
     )
-    fireEvent.mouseUp(link, { button: 0 })
+    let defaultPrevented = false
+    link.addEventListener('click', (event) => {
+      defaultPrevented = event.defaultPrevented
+    })
+    const dispatchResult = fireEvent.click(link)
 
-    expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+    expect(
+      getUnsafeLinkClickState(wrapper, dispatchResult, defaultPrevented),
+    ).toEqual({
+      dispatchResult: false,
+      defaultPrevented: true,
+      mode: 'view',
+    })
   })
 })

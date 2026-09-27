@@ -144,10 +144,7 @@ function createChipWidgetComponent<TData>(
 }
 
 // Parallel to createChipWidgetComponent, but renders the provider's block-level
-// Card. The wrapper also stops the React synthetic `mouseup` event from
-// propagating: MarkdownEditor listens for `mouseup` bubbling up from view-mode
-// content to switch into edit mode, and a card's whole point is to stay
-// clickable (e.g. its internal links) without ever triggering that switch.
+// Card.
 function createCardWidgetComponent<TData>(
   provider: InlineReferenceProvider<TData>,
 ): ReactWidgetViewComponent {
@@ -160,13 +157,7 @@ function createCardWidgetComponent<TData>(
     const { data, raw } = spec as { data: TData; raw: string }
 
     return (
-      <div
-        ref={containerRef}
-        className="inline-reference-card"
-        onMouseUp={(event) => {
-          event.stopPropagation()
-        }}
-      >
+      <div ref={containerRef} className="inline-reference-card">
         <provider.Card data={data} raw={raw} />
       </div>
     )

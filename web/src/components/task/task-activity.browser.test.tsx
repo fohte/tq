@@ -22,14 +22,14 @@ vi.mock('#components/ui/markdown-editor', () => ({
     onChange,
     editing,
     onEditingChange,
-    viewEditToggle,
+    onExitEditMode,
   }: {
     defaultValue?: string
     placeholder?: string
     editing?: boolean
     onEditingChange?: (editing: boolean) => void
     onChange?: (md: string) => void
-    viewEditToggle?: { onExitEditMode?: () => void }
+    onExitEditMode?: () => void
   }) => (
     <textarea
       data-testid="mock-markdown-editor"
@@ -39,12 +39,12 @@ vi.mock('#components/ui/markdown-editor', () => ({
       onChange={(e) => onChange?.(e.target.value)}
       onBlur={() => {
         if (editing !== true) return
-        viewEditToggle?.onExitEditMode?.()
+        onExitEditMode?.()
         onEditingChange?.(false)
       }}
       onKeyDown={(e) => {
         if (e.key !== 'Escape' || editing !== true) return
-        viewEditToggle?.onExitEditMode?.()
+        onExitEditMode?.()
         onEditingChange?.(false)
       }}
     />

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
@@ -10,7 +10,11 @@ const NESTED_LIST = '- First item\n  - Nested item'
 
 async function renderMarkdownEditor(defaultValue: string) {
   const rendered = render(
-    <MarkdownEditor defaultValue={defaultValue} viewEditToggle={{}} />,
+    <MarkdownEditor
+      defaultValue={defaultValue}
+      editing={true}
+      onEditingChange={() => {}}
+    />,
   )
   await waitFor(
     () =>
@@ -37,9 +41,7 @@ async function placeCaretAtStart(
     'editor content always lives inside .ProseMirror',
   )
 
-  // Keystrokes only reach ProseMirror once the wrapper's mouseup has taken
-  // the editor out of its initial read-only mode.
-  fireEvent.mouseUp(element, { button: 0 })
+  // The controlled editor starts in edit mode for this interaction test.
   await waitFor(() => {
     expect(editor.isContentEditable).toBe(true)
   })
