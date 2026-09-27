@@ -146,3 +146,25 @@ export const AllMarkdownElementsEditMode: Story = {
     viewEditToggle: { defaultMode: 'edit' },
   },
 }
+
+export const ControlledViewMode: Story = {
+  name: 'keeps references as chips until the caller opens the editor',
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: {},
+    editing: false,
+    onEditingChange: fn(),
+  },
+}
+
+export const ControlledEditMode: Story = {
+  name: 'shows editable Markdown when the caller opens the editor',
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: {},
+    editing: true,
+    onEditingChange: fn(),
+  },
+}

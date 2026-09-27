@@ -4,7 +4,7 @@ import '#components/ui/markdown-editor.css'
 
 import { shift } from '@floating-ui/dom'
 import { Crepe } from '@milkdown/crepe'
-import { serializerCtx } from '@milkdown/kit/core'
+import { EditorStatus, editorViewCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose, replaceAll } from '@milkdown/kit/utils'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
@@ -37,6 +37,7 @@ export interface CrepeEditorProps {
   onChange?: (markdown: string) => void
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
+  focusOnEdit?: boolean
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
   // mid-edit typing form a chip out from under the cursor.
@@ -63,6 +64,7 @@ function CrepeEditor({
   onFocusedDocumentChange,
   placeholder,
   mode,
+  focusOnEdit = false,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
   const viewModeStoreRef = useRef<ReturnType<
@@ -74,7 +76,7 @@ function CrepeEditor({
   // dropped) until mode returns to 'view' — see the sync effect below.
   const lastSyncedValueRef = useRef(defaultValue ?? '')
 
-  useEditor((root) => {
+  const { loading } = useEditor((root) => {
     // Clamp the handle to the nearest padded ancestor so it uses that
     // padding before overlapping the block's text. Some call sites nest
     // `root` inside one or more unpadded wrapper divs before their card,
@@ -260,6 +262,18 @@ function CrepeEditor({
       crepe.editor.action(replaceAll(incoming, true))
     })
   }, [defaultValue, mode])
+
+  useEffect(() => {
+    if (!focusOnEdit || loading) return
+    const crepe = crepeRef.current
+    if (crepe == null || crepe.editor.status !== EditorStatus.Created) return
+    const shouldBeReadonly = mode === 'view'
+    if (crepe.readonly !== shouldBeReadonly) crepe.setReadonly(shouldBeReadonly)
+    if (mode === 'edit')
+      crepe.editor.action((ctx) => {
+        ctx.get(editorViewCtx).focus()
+      })
+  }, [focusOnEdit, loading, mode])
 
   return <Milkdown />
 }

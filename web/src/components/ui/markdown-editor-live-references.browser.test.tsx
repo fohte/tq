@@ -22,6 +22,15 @@ const LINKED_GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9104'
 const LINKED_TASK_LINK_TEXT = 'Linked to a TQ task →'
 const OUTSIDE_CARD_TEXT = 'A plain paragraph outside any card.'
 
+// Milkdown loads lazily; allow extra time for its first browser mount.
+function findEditorText(text: string | RegExp) {
+  return screen.findByText(text, {}, { timeout: 10_000 })
+}
+
+function getModeAndEditingChanges(wrapper: Element, editingChanges: string[]) {
+  return { mode: wrapper.getAttribute('data-view-mode'), editingChanges }
+}
+
 // Seeds a GitHub URL preview already linked to a TQ task, so GithubUrlCard
 // renders its nested "Linked to a TQ task" router `Link` in addition to its
 // plain `<a>` — combined with seedLiveReferenceFixtures' task-mention card
@@ -82,11 +91,9 @@ describe('MarkdownEditor live references', () => {
       seedLiveReferenceFixtures,
     )
 
+    await expect(findEditorText(MENTION_FIXTURE_TITLE)).resolves.toBeVisible()
     await expect(
-      screen.findByText(MENTION_FIXTURE_TITLE),
-    ).resolves.toBeVisible()
-    await expect(
-      screen.findByText(GITHUB_URL_FIXTURE_TITLE),
+      findEditorText(GITHUB_URL_FIXTURE_TITLE),
     ).resolves.toBeVisible()
   })
 
@@ -103,7 +110,7 @@ describe('MarkdownEditor live references', () => {
       />,
       seedLiveReferenceFixtures,
     )
-    await screen.findByText(MENTION_FIXTURE_TITLE)
+    await findEditorText(MENTION_FIXTURE_TITLE)
     const paragraph = assertDefined(
       container.querySelector('.milkdown .ProseMirror p'),
       'editor always renders a paragraph',
@@ -113,7 +120,7 @@ describe('MarkdownEditor live references', () => {
     await user.click(paragraph)
 
     await expect(
-      screen.findByText(new RegExp(`#${String(MENTION_FIXTURE_NUMBER)}`)),
+      findEditorText(new RegExp(`#${String(MENTION_FIXTURE_NUMBER)}`)),
     ).resolves.toBeVisible()
     expect(screen.queryByText(MENTION_FIXTURE_TITLE)).not.toBeInTheDocument()
   })
@@ -133,8 +140,8 @@ describe('MarkdownEditor live references', () => {
       },
     )
 
-    await screen.findByText(MENTION_FIXTURE_TITLE)
-    await screen.findByText(LINKED_TASK_LINK_TEXT)
+    await findEditorText(MENTION_FIXTURE_TITLE)
+    await findEditorText(LINKED_TASK_LINK_TEXT)
     const wrapper = assertDefined(
       container.querySelector('.milkdown-wrapper'),
       'MarkdownEditor always renders its wrapper',
@@ -197,6 +204,34 @@ describe('MarkdownEditor live references', () => {
     // of detecting a mode switch.
     fireEvent.mouseUp(screen.getByText(OUTSIDE_CARD_TEXT), { button: 0 })
     expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+  })
+
+  it('keeps chips and links clickable while editing is controlled', async () => {
+    const editingChanges: string[] = []
+    const { container } = renderWithProviders(
+      <MarkdownEditor
+        defaultValue={`#${String(MENTION_FIXTURE_NUMBER)}\n\n[${MARKDOWN_LINK_TEXT}](${MARKDOWN_LINK_HASH})\n\n${OUTSIDE_CARD_TEXT}`}
+        viewEditToggle={{}}
+        editing={false}
+        onEditingChange={(editing) => editingChanges.push(String(editing))}
+      />,
+      seedLiveReferenceFixtures,
+    )
+
+    await findEditorText(MENTION_FIXTURE_TITLE)
+    const wrapper = assertDefined(
+      container.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    const user = userEvent.setup()
+    await user.click(screen.getByText(MENTION_FIXTURE_TITLE))
+    await user.click(screen.getByRole('link', { name: MARKDOWN_LINK_TEXT }))
+    await user.click(screen.getByText(OUTSIDE_CARD_TEXT))
+
+    expect(getModeAndEditingChanges(wrapper, editingChanges)).toEqual({
+      mode: 'view',
+      editingChanges: [],
+    })
   })
 
   const UNSAFE_SCHEME_LINK_TEXT = 'a javascript: link'
