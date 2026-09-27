@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { CONTENT_KEY, omitKeyDeep } from '#operations/omit-key'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
@@ -43,19 +44,6 @@ const updatePageInputSchema = updatePageSchema.extend({
   pageId: pageIdSchema,
 })
 
-function omitKeyRecursively(value: unknown, key: string): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => omitKeyRecursively(item, key))
-  }
-  if (typeof value !== 'object' || value === null) return value
-
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([field]) => field !== key)
-      .map(([field, nested]) => [field, omitKeyRecursively(nested, key)]),
-  )
-}
-
 export const pageOperations = [
   defineOperation(searchPagesSchema, {
     path: ['page', 'search'],
@@ -85,7 +73,7 @@ export const pageOperations = [
     cli: {
       output: {
         kind: 'list',
-        omitKey: 'content',
+        omitKey: CONTENT_KEY,
         fullOption: '--full',
         fullDescription: 'Include full page content in the output',
         fullField: 'full',
@@ -97,7 +85,7 @@ export const pageOperations = [
           param: { taskId: String(taskId) },
         }),
       ).map((result) =>
-        full === true ? result : omitKeyRecursively(result, 'content'),
+        full === true ? result : omitKeyDeep(result, CONTENT_KEY),
       ),
   }),
   defineOperation(pageRefSchema, {
@@ -116,7 +104,7 @@ export const pageOperations = [
             name: 'output',
             description: 'Write the page content to a file instead of stdout',
           },
-          field: 'content',
+          field: CONTENT_KEY,
         },
       },
     },
@@ -139,7 +127,7 @@ export const pageOperations = [
     attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/pages'],
     cli: {
-      contentInput: { field: 'content', required: false },
+      contentInput: { field: CONTENT_KEY, required: false },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, ...json }) =>
@@ -159,7 +147,7 @@ export const pageOperations = [
     attribution: 'agent',
     routes: ['PATCH /api/tasks/:taskId/pages/:pageId'],
     cli: {
-      contentInput: { field: 'content', required: false },
+      contentInput: { field: CONTENT_KEY, required: false },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, pageId, ...json }) =>
