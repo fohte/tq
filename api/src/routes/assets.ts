@@ -41,7 +41,9 @@ export const assetsApp = new Hono()
       const { file } = c.req.valid('form')
 
       const result = await uploadAsset(file).andThen((asset) =>
-        getAssetSignedUrl(asset.id).map((url) => assetToResponse(asset, url)),
+        getAssetSignedUrl(asset.id).map(({ url }) =>
+          assetToResponse(asset, url),
+        ),
       )
 
       return result.match(
@@ -65,7 +67,7 @@ export const assetsApp = new Hono()
     const result = await getAssetSignedUrl(id)
 
     return result.match(
-      (url) => c.json({ url }, 200),
+      ({ url, contentType }) => c.json({ url, contentType }, 200),
       (error) => {
         if (error instanceof AssetNotFoundError) {
           return c.json({ error: error.message }, 404)

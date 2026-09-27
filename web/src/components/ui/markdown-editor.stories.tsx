@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import type { ComponentProps, ReactNode } from 'react'
 import { fn } from 'storybook/test'
 
@@ -32,6 +33,19 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const VIDEO_ASSET_ID = 'a1111111-1111-4111-8111-111111111111'
+const VIDEO_FIXTURE_URL = new URL(
+  './markdown-editor-video-fixture.webm',
+  import.meta.url,
+).href
+
+const videoAssetHandler = http.get(`/api/assets/${VIDEO_ASSET_ID}`, () =>
+  HttpResponse.json({
+    url: VIDEO_FIXTURE_URL,
+    contentType: 'video/webm',
+  }),
+)
 
 export const Empty: Story = {
   name: 'shows an empty editor with its placeholder',
@@ -144,5 +158,29 @@ export const AllMarkdownElementsEditMode: Story = {
   args: {
     defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
     viewEditToggle: { defaultMode: 'edit' },
+  },
+}
+
+export const BlockVideoAsset: Story = {
+  name: 'renders a block video from a Markdown image',
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: `![A short comparison clip](/api/assets/${VIDEO_ASSET_ID})`,
+    viewEditToggle: {},
+  },
+  parameters: {
+    msw: { handlers: [videoAssetHandler] },
+  },
+}
+
+export const InlineVideoAsset: Story = {
+  name: 'the editor gives an inline video its own line between surrounding text',
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: `Use ![a short comparison clip](/api/assets/${VIDEO_ASSET_ID}) to compare the movement.`,
+    viewEditToggle: {},
+  },
+  parameters: {
+    msw: { handlers: [videoAssetHandler] },
   },
 }

@@ -247,15 +247,6 @@
   display: none;
 }
 
-/* Image source reveal (see lib/image-source-reveal/plugin.tsx): while the
-   cursor is on an image's line, its rendered form (Crepe's own
-   `.milkdown-image-inline`/`.milkdown-image-block` NodeView) is hidden and
-   replaced by an editable `![alt](src "title")` text overlay. */
-.milkdown-image-inline.image-source-active,
-.milkdown-image-block.image-source-active {
-  display: none;
-}
-
 .image-source-text {
   display: inline-block;
   width: 100%;
@@ -263,4 +254,45 @@
   white-space: pre-wrap;
   word-break: break-all;
   font-family: var(--font-code);
+}
+.markdown-asset-node-view {
+  display: contents;
+}
+
+.markdown-asset-node-view.markdown-asset-video {
+  display: block;
+  margin: 0;
+}
+
+.markdown-asset-node-view.markdown-asset-video.markdown-asset-inline-node-view {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.markdown-asset-node-view.markdown-asset-video > .markdown-asset-video-player {
+  display: block;
+  height: auto;
+  max-height: 80vh;
+  max-width: 100%;
+  width: 100%;
+}
+
+.markdown-asset-inline-node-view.markdown-asset-video
+  > .markdown-asset-video-player {
+  height: auto;
+  max-width: 100%;
+  width: auto;
+}
+
+.markdown-asset-node-view.markdown-asset-video figcaption {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Image-source reveal decorates the NodeView DOM. Hide its wrapper while the
+   editable Markdown overlay shows; keep this after player styles because the
+   inline video rule has equal specificity. */
+.markdown-asset-node-view.markdown-asset-node-view.image-source-active {
+  display: none;
 }

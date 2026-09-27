@@ -23,6 +23,8 @@ const EXTENSION_CONTENT_TYPES = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
 } as const
 
 function escapeMarkdownAlt(text: string): string {

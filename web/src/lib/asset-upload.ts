@@ -9,13 +9,20 @@ export function parseAssetId(src: string): string | null {
   return ASSET_PATH_PATTERN.exec(src)?.[1] ?? null
 }
 
+export const ASSET_FILE_ACCEPT = [
+  'image/*',
+  ...ALLOWED_CONTENT_TYPES.filter((contentType) =>
+    contentType.startsWith('video/'),
+  ),
+].join(',')
+
 // Refresh signed URLs before the server-issued 1-hour expiry actually lapses.
 const SIGNED_URL_CACHE_TTL_MS = 55 * 60 * 1000
 
 export class UnsupportedAssetTypeError extends Error {
   constructor() {
     super(
-      `Unsupported image type. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
+      `Unsupported asset type. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
     )
     this.name = 'UnsupportedAssetTypeError'
   }
@@ -41,23 +48,23 @@ export function uploadAssetFile(
   }
   return ResultAsync.fromPromise(
     api.api.assets.$post({ form: { file } }),
-    (cause) => new Error('Failed to upload image', { cause }),
+    (cause) => new Error('Failed to upload asset', { cause }),
   ).andThen((res) => {
     if (!res.ok) {
       return ResultAsync.fromPromise(
         res.json(),
-        (cause) => new Error('Failed to upload image', { cause }),
+        (cause) => new Error('Failed to upload asset', { cause }),
       ).andThen((body) => {
         const errorMessage = readApiErrorMessage(body)
         if (errorMessage != null) return errAsync(new Error(errorMessage))
         return errAsync(
-          new Error(`Failed to upload image (status ${String(res.status)})`),
+          new Error(`Failed to upload asset (status ${String(res.status)})`),
         )
       })
     }
     return ResultAsync.fromPromise(
       res.json(),
-      (cause) => new Error('Failed to upload image', { cause }),
+      (cause) => new Error('Failed to upload asset', { cause }),
     ).map(({ id }) => `/api/assets/${id}`)
   })
 }
@@ -83,12 +90,12 @@ export async function uploadAssetFiles<T>(
   const nodes: T[] = []
   for (const settled of results) {
     if (settled.status === 'rejected') {
-      console.error('Failed to upload pasted/dropped image', settled.reason)
+      console.error('Failed to upload pasted/dropped asset', settled.reason)
       continue
     }
     const { file, result } = settled.value
     if (result.isErr()) {
-      console.error('Failed to upload pasted/dropped image', result.error)
+      console.error('Failed to upload pasted/dropped asset', result.error)
       continue
     }
     const node = createNode(result.value, file.name)
@@ -98,59 +105,117 @@ export async function uploadAssetFiles<T>(
 }
 
 interface CacheEntry {
-  url: string
+  asset: ResolvedAsset
   expiresAt: number
 }
 
+export interface ResolvedAsset {
+  url: string
+  contentType: string | null
+}
+
 const cacheById = new Map<string, CacheEntry>()
-// Reverse lookup so a failed <img> load (which only exposes the resolved
+const pendingById = new Map<string, ResultAsync<ResolvedAsset, Error>>()
+// Reverse lookup so a failed media load (which only exposes the resolved
 // signed URL, not the original /api/assets/:id path) can find its asset id.
 const idBySignedUrl = new Map<string, string>()
+// Broken media sources can emit repeated errors even after a fresh signed URL.
+const lastRefreshByElement = new WeakMap<
+  HTMLImageElement | HTMLVideoElement,
+  number
+>()
+const ASSET_REFRESH_COOLDOWN_MS = 10_000
 
-function fetchSignedUrl(id: string): ResultAsync<string, Error> {
-  return ResultAsync.fromPromise(
+function getAssetDetails(id: string): ResultAsync<ResolvedAsset, Error> {
+  const cached = cacheById.get(id)
+  if (cached && cached.expiresAt > Date.now()) {
+    return okAsync(cached.asset)
+  }
+
+  const pending = pendingById.get(id)
+  if (pending) return pending
+
+  const result = ResultAsync.fromPromise(
     api.api.assets[':id'].$get({ param: { id } }),
-    (cause) => new Error('Failed to fetch signed image URL', { cause }),
+    (cause) => new Error('Failed to fetch signed asset URL', { cause }),
   ).andThen((res) => {
-    if (!res.ok) return errAsync(new Error('Failed to fetch signed image URL'))
+    if (!res.ok) return errAsync(new Error('Failed to fetch signed asset URL'))
     return ResultAsync.fromPromise(
       res.json(),
-      (cause) => new Error('Failed to fetch signed image URL', { cause }),
-    ).map(({ url }) => {
+      (cause) => new Error('Failed to fetch signed asset URL', { cause }),
+    ).map(({ url, contentType }) => {
+      const asset = { url, contentType }
       cacheById.set(id, {
-        url,
+        asset,
         expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
       })
       idBySignedUrl.set(url, id)
-      return url
+      return asset
     })
   })
+  pendingById.set(id, result)
+  void result.then(() => pendingById.delete(id))
+  return result
+}
+
+export function resolveAssetDetails(
+  src: string,
+): ResultAsync<ResolvedAsset, Error> {
+  const id = parseAssetId(src)
+  if (id == null) return okAsync({ url: src, contentType: null })
+
+  return getAssetDetails(id)
 }
 
 export function resolveAssetSrc(src: string): ResultAsync<string, Error> {
-  const id = parseAssetId(src)
-  if (id == null) return okAsync(src)
-
-  const cached = cacheById.get(id)
-  if (cached && cached.expiresAt > Date.now()) {
-    return okAsync(cached.url)
-  }
-
-  return fetchSignedUrl(id)
+  return resolveAssetDetails(src).map(({ url }) => url)
 }
 
 export async function handleAssetLoadError(event: Event): Promise<void> {
   const target = event.target
-  if (!(target instanceof HTMLImageElement)) return
+  if (!(
+    target instanceof HTMLImageElement || target instanceof HTMLVideoElement
+  ))
+    return
 
-  const id = idBySignedUrl.get(target.src)
+  const previousSrc = target.src
+  const failedSrc =
+    target instanceof HTMLVideoElement
+      ? target.currentSrc || target.src
+      : target.src
+  const id = idBySignedUrl.get(failedSrc)
   if (id == null) return
 
-  cacheById.delete(id)
-  const result = await fetchSignedUrl(id)
-  if (result.isErr()) {
-    console.error('Failed to refresh signed image URL', result.error)
+  const now = Date.now()
+  const lastRefreshAt = lastRefreshByElement.get(target)
+  if (
+    lastRefreshAt != null &&
+    now - lastRefreshAt < ASSET_REFRESH_COOLDOWN_MS
+  ) {
     return
   }
-  target.src = result.value
+  lastRefreshByElement.set(target, now)
+
+  cacheById.delete(id)
+  const result = await getAssetDetails(id)
+  if (result.isErr()) {
+    console.error('Failed to refresh signed asset URL', result.error)
+    return
+  }
+  if (target.src !== previousSrc || result.value.url === previousSrc) return
+
+  if (target instanceof HTMLVideoElement) {
+    const currentTime = target.currentTime
+    if (Number.isFinite(currentTime) && currentTime > 0) {
+      const refreshedSrc = result.value.url
+      target.addEventListener(
+        'loadedmetadata',
+        () => {
+          if (target.src === refreshedSrc) target.currentTime = currentTime
+        },
+        { once: true },
+      )
+    }
+  }
+  target.src = result.value.url
 }

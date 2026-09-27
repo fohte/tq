@@ -177,7 +177,7 @@ describe('asset upload', () => {
       stdout: [],
       stderr: [
         [
-          `Error: Unsupported file extension for ${filePath}. Allowed types: image/jpeg, image/png, image/gif, image/webp\n`,
+          `Error: Unsupported file extension for ${filePath}. Allowed types: image/jpeg, image/png, image/gif, image/webp, video/mp4, video/webm\n`,
         ],
       ],
       requests: [],
