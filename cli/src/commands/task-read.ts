@@ -13,11 +13,16 @@ type ListTasksQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
 type SearchQuery = InferRequestType<Client['api']['tasks']['$get']>['query']
 
 // hono's client types every query field as `string | string[] | undefined`
-// regardless of the underlying zod schema, so numbers/enums picked from the
-// schema (real types) must be stringified before being sent as a query.
-function toQuery(fields: Record<string, unknown>): Record<string, string> {
+// regardless of Zod transforms, so stringify scalar values and each array
+// item before sending the query.
+function toQuery(
+  fields: Record<string, unknown>,
+): Record<string, string | string[]> {
   return Object.fromEntries(
-    Object.entries(fields).map(([key, value]) => [key, String(value)]),
+    Object.entries(fields).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.map(String) : String(value),
+    ]),
   )
 }
 
@@ -31,12 +36,9 @@ export function registerTaskListCommand(
       .description('List tasks')
       .option('--full', 'Include full task description in the output'),
     listTasksQuerySchema,
-    // hasEstimate/hasDue/includeAncestors unwrap to a raw ZodString (their
-    // pre-transform type), so addSchemaOptions would expose them but without
-    // true/false validation (any string round-trips through the
-    // 'v === "true"' transform silently, e.g. a typo'd value becomes false).
-    // Excluded until that gets its own stricter boolean flag type.
-    ['hasEstimate', 'hasDue', 'includeAncestors'],
+    // hasEstimate/hasDue still use a permissive legacy transform, so keep
+    // them excluded until their query schema validates true/false strictly.
+    ['hasEstimate', 'hasDue'],
     { context: 'TQ_CONTEXT' },
   )
     .match(
@@ -56,7 +58,6 @@ export function registerTaskListCommand(
           pickSchemaFields(listTasksQuerySchema, options, [
             'hasEstimate',
             'hasDue',
-            'includeAncestors',
           ]).match(
             (value) => value,
             (error) => fail(command, error),
@@ -131,13 +132,9 @@ export function registerTaskSearchCommand(
       .description('Search tasks')
       .option('--full', 'Include full task description in the output'),
     listTasksQuerySchema,
-    // hasEstimate/hasDue/includeAncestors unwrap to a raw ZodString (their
-    // pre-transform type), so addSchemaOptions would expose them but without
-    // true/false validation (any string round-trips through the
-    // 'v === "true"' transform silently). Excluded until that gets its own
-    // stricter boolean flag type. `q` is excluded since it's handled via the
-    // positional query argument below.
-    ['q', 'hasEstimate', 'hasDue', 'includeAncestors'],
+    // hasEstimate/hasDue still use a permissive legacy transform, so keep
+    // them excluded. `q` is handled via the positional query argument below.
+    ['q', 'hasEstimate', 'hasDue'],
     { context: 'TQ_CONTEXT' },
   )
     .match(
@@ -160,7 +157,6 @@ export function registerTaskSearchCommand(
             'q',
             'hasEstimate',
             'hasDue',
-            'includeAncestors',
           ]).match(
             (value) => value,
             (error) => fail(command, error),

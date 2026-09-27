@@ -104,6 +104,14 @@ function buildConditions(query: ListTasksQuery) {
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const conditions = []
 
+  if (query.ids != null) {
+    conditions.push(
+      query.ids.length > 0
+        ? inArray(tasks.id, query.ids.map(String))
+        : sql`false`,
+    )
+  }
+
   const statuses = parsed?.status ?? query.status
   if (statuses != null && statuses.length > 0) {
     conditions.push(inArray(tasks.status, statuses))

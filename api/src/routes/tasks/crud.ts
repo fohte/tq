@@ -215,8 +215,16 @@ export const tasksCrudApp = new Hono()
   })
   .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
     const query = c.req.valid('query')
+    const resolvedIds =
+      query.ids === undefined
+        ? undefined
+        : await findTasksByIdsOrNumbers(query.ids.map(String))
+    const ids =
+      resolvedIds === undefined
+        ? undefined
+        : [...new Set([...resolvedIds.values()].map((task) => task.id))]
     const { rows, ancestorOnlyIds, matchByTaskId } = await queryTaskList(
-      query,
+      { ...query, ...(ids === undefined ? {} : { ids }) },
       {
         includeSearchMatch: query.includeMatch === true,
         prioritizeTitleMatches: query.includeMatch === true,
