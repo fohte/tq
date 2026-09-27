@@ -7,7 +7,7 @@ import { registerOperations } from '#operation-adapter'
 export function registerSlackCommands(
   program: Command,
   fetchImpl: typeof fetch,
-  stdin: ReadableStdin = process.stdin,
+  stdin: ReadableStdin,
 ): void {
   registerOperations(
     program,

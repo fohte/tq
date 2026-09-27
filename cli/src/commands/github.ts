@@ -7,7 +7,7 @@ import { registerOperations } from '#operation-adapter'
 export function registerGithubCommands(
   program: Command,
   fetchImpl: typeof fetch,
-  stdin: ReadableStdin = process.stdin,
+  stdin: ReadableStdin,
 ): void {
   registerOperations(
     program,
