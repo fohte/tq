@@ -12,23 +12,28 @@ import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
+// These tests confirm that data written through an MCP write tool is visible,
+// in the same shape, through the plain REST routes the web UI reads from —
+// not the MCP read tools (read-tools.integration.test.ts) and not the write
+// tool's own response (write-tools.integration.test.ts).
+
 let client: Client
 
 beforeEach(async () => {
   client = await connectMcpClient()
 })
-
 afterEach(async () => {
   await client.close()
 })
 
 describe('REST/MCP parity', () => {
-  it('a comment created via comment_create is visible through GET /api/tasks/:taskId/comments', async () => {
-    const task = await createTask('Has comments')
+  it('a page created via create_page is visible through GET /api/tasks/:taskId/pages', async () => {
+    const task = await createTask('Has pages')
 
-    const created = await callMcpTool(client, 'comment_create', {
+    const created = await callMcpTool(client, 'create_page', {
       taskId: task.id,
-      content: 'A comment',
+      title: 'Notes',
+      content: 'Some content',
     })
     const data = withoutLinkSync(
       passthroughSchema<Record<string, unknown>>().parse(
@@ -36,25 +41,25 @@ describe('REST/MCP parity', () => {
       ),
     )
 
-    const res = await app.request(`/api/tasks/${task.id}/comments`)
+    const res = await app.request(`/api/tasks/${task.id}/pages`)
     expect(res.status).toBe(200)
 
     expect(await jsonBody(res)).toEqual([data])
   })
 
-  it('a comment updated via comment_update with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/comments', async () => {
-    const task = await createTask('Has comments')
-    const created = await callMcpTool(client, 'comment_create', {
+  it('a page updated via update_page with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/pages', async () => {
+    const task = await createTask('Has pages')
+    const created = await callMcpTool(client, 'create_page', {
       taskId: task.id,
-      content: 'Original content',
+      title: 'Notes',
     })
-    const comment = passthroughSchema<{ id: string }>().parse(
+    const page = passthroughSchema<{ id: string }>().parse(
       parseToolJson(created),
     )
 
-    const updated = await callMcpTool(client, 'comment_update', {
+    const updated = await callMcpTool(client, 'update_page', {
       taskId: task.id,
-      commentId: comment.id,
+      pageId: page.id,
       content: 'Updated content',
       agent: 'claude-opus-5',
     })
@@ -64,7 +69,7 @@ describe('REST/MCP parity', () => {
       ),
     )
 
-    const res = await app.request(`/api/tasks/${task.id}/comments`)
+    const res = await app.request(`/api/tasks/${task.id}/pages`)
     expect(res.status).toBe(200)
 
     expect(await jsonBody(res)).toEqual([data])
