@@ -24,6 +24,33 @@ const hasFlagSchema = z
   .transform((v) => v === 'true')
   .optional()
 
+const strictBooleanFlagSchema = z
+  .enum(['true', 'false'])
+  .transform((v) => v === 'true')
+  .optional()
+
+const taskIdsQuerySchema = z
+  .union([
+    z.string().describe('Comma-separated task IDs or numbers'),
+    z.array(z.string()),
+  ])
+  .transform((values, ctx) => {
+    const identifiers = (Array.isArray(values) ? values : [values])
+      .flatMap((value) => value.split(','))
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+    const result = z.array(taskIdOrNumber).min(1).safeParse(identifiers)
+    if (!result.success) {
+      ctx.addIssue({
+        code: 'custom',
+        message: result.error.issues[0]?.message ?? 'Invalid value',
+      })
+      return z.NEVER
+    }
+    return result.data
+  })
+  .optional()
+
 export const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
@@ -71,6 +98,7 @@ export const updateTaskSchema = z.object({
 })
 
 export const listTasksQuerySchema = z.object({
+  ids: taskIdsQuerySchema,
   status: z
     .union([taskStatus, z.array(taskStatus)])
     .transform((v) => (Array.isArray(v) ? v : [v]))
@@ -89,7 +117,7 @@ export const listTasksQuerySchema = z.object({
   templateId: z.uuid().optional(),
   parentId: z.union([z.literal('root'), z.uuid()]).optional(),
   descendantOf: z.uuid().optional(),
-  includeAncestors: hasFlagSchema,
+  includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
   sortBy: taskSortBy.optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),

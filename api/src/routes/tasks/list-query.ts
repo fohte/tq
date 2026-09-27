@@ -31,6 +31,7 @@ import {
 import {
   parentTasks,
   resolveTaskListOrderBy,
+  resolveTasksByIdsOrNumbers,
   type TaskSearchMatch,
 } from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
@@ -100,9 +101,16 @@ export function selectTaskListRows() {
 
 export type TaskListRow = Awaited<ReturnType<typeof selectTaskListRows>>[number]
 
-function buildConditions(query: ListTasksQuery) {
+function buildConditions(
+  query: Omit<ListTasksQuery, 'ids'>,
+  ids: string[] | undefined,
+) {
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const conditions = []
+
+  if (ids != null) {
+    conditions.push(ids.length > 0 ? inArray(tasks.id, ids) : sql`false`)
+  }
 
   const statuses = parsed?.status ?? query.status
   if (statuses != null && statuses.length > 0) {
@@ -311,7 +319,16 @@ export async function queryTaskList(
   ancestorOnlyIds: Set<string>
   matchByTaskId: Map<string, TaskSearchMatch> | undefined
 }> {
-  const { conditions, sortBy, freeTextWords: words } = buildConditions(query)
+  const { ids: rawIds, ...filters } = query
+  const ids =
+    rawIds === undefined
+      ? undefined
+      : (await resolveTasksByIdsOrNumbers(rawIds.map(String))).ids
+  const {
+    conditions,
+    sortBy,
+    freeTextWords: words,
+  } = buildConditions(filters, ids)
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
     sortBy == null &&
