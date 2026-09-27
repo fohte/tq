@@ -43,6 +43,7 @@ export type CliFileOutput =
     }
 
 export type CliOutput =
+  | { kind: 'none' }
   | {
       kind: 'json'
       fields?: readonly string[]
@@ -75,9 +76,13 @@ export interface OperationDefinition {
   routes: readonly AllRoutes[]
   surface?: OperationSurface
   cli: {
+    path?: readonly string[]
+    hiddenFields?: readonly string[]
     contentInput?: CliContentInput
     envDefaults?: Readonly<Record<string, string>>
     commaSeparatedOptions?: readonly string[]
+    repeatableOptions?: readonly string[]
+    optionDefaults?: Readonly<Record<string, string>>
     output: CliOutput
   }
   run: (

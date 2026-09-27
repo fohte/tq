@@ -1,91 +1,67 @@
-import type { AgentProvider } from 'api/schemas/agent-session'
+import { linkOperations } from 'api/operations'
 import type { Command } from 'commander'
-import { err, ok, Result } from 'neverthrow'
 
-import type { Client } from '#client'
-import { toApiError } from '#client'
-import { buildClient } from '#command-context'
-import { printJson } from '#output'
+import type { ReadableStdin } from '#input'
+import {
+  type OperationCommandHandler,
+  registerOperations,
+} from '#operation-adapter'
 import { fail } from '#result'
 
-interface AgentSessionReference {
-  provider: AgentProvider
-  sessionId: string
-}
-
-const NO_AGENT_SESSION_ID_ERROR =
+const noAgentSessionIdError =
   'No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).'
 
-// Codex exposes its session id in the shell environment, while Claude Code's
-// hook persists its id through CLAUDE_ENV_FILE. Prefer the native Codex value
-// when both are present so a nested Codex shell cannot link the Claude session.
-function resolveAgentSession(): Result<AgentSessionReference, Error> {
+function resolveAgentSession(command: Command): {
+  provider: 'codex' | 'claude_code'
+  sessionId: string
+} {
+  // Prefer Codex's native session id so a nested Codex shell does not link the
+  // Claude session.
   const codexSessionId = process.env['CODEX_SESSION_ID']
   if (codexSessionId != null && codexSessionId.length > 0) {
-    return ok({ provider: 'codex', sessionId: codexSessionId })
+    return { provider: 'codex', sessionId: codexSessionId }
   }
 
   const claudeSessionId = process.env['TQ_SESSION_ID']
   if (claudeSessionId != null && claudeSessionId.length > 0) {
-    return ok({ provider: 'claude_code', sessionId: claudeSessionId })
+    return { provider: 'claude_code', sessionId: claudeSessionId }
   }
 
-  return err(new Error(NO_AGENT_SESSION_ID_ERROR))
-}
-
-async function resolveAgentSessionId(
-  client: Client,
-  command: Command,
-): Promise<string> {
-  const session = resolveAgentSession().match(
-    (value) => value,
-    (error) => fail(command, error),
-  )
-  const res = await client.api['agent-sessions']['by-session'][':provider'][
-    ':sessionId'
-  ].$get({
-    param: session,
-  })
-  if (!res.ok) return fail(command, await toApiError(res))
-  return (await res.json()).id
+  return fail(command, new Error(noAgentSessionIdError))
 }
 
 export function registerLinkCommands(
   program: Command,
   fetchImpl: typeof fetch,
+  stdin: ReadableStdin = process.stdin,
 ): void {
-  program
-    .command('link <taskId>')
-    .description('Link the current agent session to a task')
-    .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const agentSessionId = await resolveAgentSessionId(client, command)
+  const handler: OperationCommandHandler = async ({
+    actionCommand,
+    clientResult,
+    input,
+    execute,
+  }) => {
+    clientResult.match(
+      () => undefined,
+      (error) => fail(actionCommand, error),
+    )
+    await execute({ ...input, ...resolveAgentSession(actionCommand) })
+  }
 
-      const res = await client.api.tasks[':taskId']['agent-sessions'].$post({
-        param: { taskId },
-        json: { agentSessionId },
-      })
-      if (!res.ok) return fail(command, await toApiError(res))
-      printJson(await res.json())
-    })
-
-  program
-    .command('unlink <taskId>')
-    .description('Unlink the current agent session from a task')
-    .action(async (taskId: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const agentSessionId = await resolveAgentSessionId(client, command)
-
-      const res = await client.api.tasks[':taskId']['agent-sessions'][
-        ':agentSessionId'
-      ].$delete({ param: { taskId, agentSessionId } })
-      if (!res.ok) return fail(command, await toApiError(res))
-      printJson({ unlinked: true, taskId })
-    })
+  registerOperations(
+    program,
+    [linkOperations[0]],
+    'Link the current agent session to a task',
+    fetchImpl,
+    stdin,
+    handler,
+  )
+  registerOperations(
+    program,
+    [linkOperations[1]],
+    'Unlink the current agent session from a task',
+    fetchImpl,
+    stdin,
+    handler,
+  )
 }

@@ -152,6 +152,39 @@ Options:
     expect(command.opts()).toEqual({ values: [3, 5] })
   })
 
+  it('collects repeated flag values into an array', () => {
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      z.object({ sessionId: z.array(z.string()).optional() }),
+      [],
+      {},
+      [],
+      ['sessionId'],
+    )._unsafeUnwrap()
+
+    command.parse(['--session-id', 'first', '--session-id', 'second'], {
+      from: 'user',
+    })
+
+    expect(command.opts()).toEqual({ sessionId: ['first', 'second'] })
+  })
+
+  it('uses an operation-provided option default', () => {
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      z.object({ provider: z.enum(['claude_code', 'codex']).optional() }),
+      [],
+      {},
+      [],
+      [],
+      { provider: 'claude_code' },
+    )._unsafeUnwrap()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({ provider: 'claude_code' })
+  })
+
   it('rejects a comma-separated array value that fails its numeric schema', () => {
     const schema = z.object({ values: z.array(z.number().int()).optional() })
     const command = addSchemaOptions(

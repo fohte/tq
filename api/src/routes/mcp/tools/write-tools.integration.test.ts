@@ -481,6 +481,8 @@ describe('operation tool input schemas', () => {
       project_list: false,
       project_tasks: false,
       project_update: false,
+      session_delete: false,
+      session_list: false,
     })
   })
 })

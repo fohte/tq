@@ -1,29 +1,23 @@
 import { appendFile, readFile } from 'node:fs/promises'
 
+import { hookOperations } from 'api/operations'
 import {
   agentProviderSchema,
   upsertAgentSessionSchema,
 } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
-import { Option } from 'commander'
-import type { InferRequestType } from 'hono/client'
 import { z } from 'zod'
 
-import type { Client } from '#client'
-import { buildClient } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
-import { fail, tryParseJson } from '#result'
-import { addSchemaOptions, pickSchemaFields } from '#schema-options'
+import {
+  type OperationCommandHandler,
+  registerOperations,
+} from '#operation-adapter'
+import { tryParseJson } from '#result'
+import { pickSchemaFields } from '#schema-options'
 import { resolveSessionLabel } from '#transcript'
 
-type UpsertAgentSessionJson = InferRequestType<
-  Client['api']['agent-sessions']['$post']
->['json']
-
-// Fields tq's hook integration sets itself (from the hook input JSON or the
-// resolved transcript), as opposed to `context` and `parentSessionId`, the
-// fields left for addSchemaOptions to expose as a flag/env default.
 const HOOK_MANAGED_FIELDS = [
   'provider',
   'sessionId',
@@ -64,52 +58,27 @@ async function persistSessionIdToEnvFile(sessionId: string): Promise<void> {
   )
 }
 
-export function registerHookCommands(
-  program: Command,
-  fetchImpl: typeof fetch,
-  stdin: ReadableStdin,
-): void {
-  const hook = addSchemaOptions(
-    program
-      .command('hook <event>')
-      .description(
-        'Report a coding agent hook event (SessionStart, Stop, SessionEnd) to tq, reading the hook JSON payload from stdin. Never fails: a broken connection or malformed input is swallowed silently so it never blocks the agent.',
-      )
-      .addOption(
-        new Option('--provider <provider>', 'Agent reporting this session')
-          .choices(agentProviderSchema.options)
-          .default('claude_code'),
-      ),
-    upsertAgentSessionSchema,
-    HOOK_MANAGED_FIELDS,
-    { context: 'TQ_CONTEXT', parentSessionId: 'TQ_PARENT_SESSION_ID' },
-  ).match(
-    (command) => command,
-    (error) => fail(program, error),
-  )
+type HookCommandContext = Parameters<OperationCommandHandler>[0]
 
-  hook.action(
-    async (
-      event: string,
-      options: Record<string, unknown>,
-      command: Command,
-    ) => {
-      // Guards the whole pipeline, not just the fetch call: this command
-      // must never fail (see description above), and a stream-level error
-      // event on stdin would otherwise reject unhandled.
-      await reportHookEvent(event, options, fetchImpl, stdin, command).catch(
-        () => undefined,
-      )
-    },
-  )
+export const handleHookCommand: OperationCommandHandler = async (context) => {
+  const event = context.input['event']
+  if (typeof event !== 'string') return
+
+  // Guards the whole pipeline, not just the fetch call: this command must
+  // never fail, and a stream-level error on stdin would otherwise reject.
+  await reportHookEvent(
+    event,
+    context.options,
+    context.stdin,
+    context.execute,
+  ).catch(() => undefined)
 }
 
 async function reportHookEvent(
   event: string,
-  options: Record<string, unknown>,
-  fetchImpl: typeof fetch,
+  options: HookCommandContext['options'],
   stdin: ReadableStdin,
-  command: Command,
+  execute: HookCommandContext['execute'],
 ): Promise<void> {
   const raw = await readContentInput(undefined, stdin).match(
     (value) => value,
@@ -127,10 +96,8 @@ async function reportHookEvent(
     await persistSessionIdToEnvFile(input.data.session_id)
   }
 
-  // The `: 'claude_code'` branch never actually runs: the --provider
-  // Option's .choices() already rejects any other value before the action
-  // handler runs. safeParse only exists to narrow `options['provider']`
-  // (unknown) to AgentProvider without an unsafe type assertion.
+  // The `: 'claude_code'` branch is only a fallback: the --provider option
+  // validates explicit values before this handler runs.
   const parsedProvider = agentProviderSchema.safeParse(options['provider'])
   const provider = parsedProvider.success ? parsedProvider.data : 'claude_code'
 
@@ -141,31 +108,41 @@ async function reportHookEvent(
     provider,
   )
 
-  const client = buildClient(command, fetchImpl).match(
+  const additionalInput = pickSchemaFields(
+    upsertAgentSessionSchema,
+    options,
+    HOOK_MANAGED_FIELDS,
+  ).match(
     (value) => value,
-    () => undefined,
+    () => ({}),
   )
-  if (client == null) return
 
-  const json: UpsertAgentSessionJson = {
-    // Unlike every other pickSchemaFields caller (e.g. task.ts's `task
-    // create`), an invalid TQ_CONTEXT is dropped silently here instead of
-    // being surfaced via fail(): this command must never fail (see
-    // description above), so the session is still reported, just without
-    // `context`.
-    ...pickSchemaFields(upsertAgentSessionSchema, options, [
-      ...HOOK_MANAGED_FIELDS,
-    ]).match(
-      (value) => value,
-      () => ({}),
-    ),
-    provider,
-    sessionId: input.data.session_id,
-    cwd: input.data.cwd,
-    label,
-    lastMessage,
-    ended: event === 'SessionEnd',
-  }
+  await execute(
+    {
+      ...additionalInput,
+      event,
+      provider,
+      sessionId: input.data.session_id,
+      cwd: input.data.cwd,
+      label,
+      lastMessage,
+      ended: event === 'SessionEnd',
+    },
+    { ignoreErrors: true },
+  )
+}
 
-  await client.api['agent-sessions'].$post({ json }).catch(() => undefined)
+export function registerHookCommands(
+  program: Command,
+  fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
+): void {
+  registerOperations(
+    program,
+    hookOperations,
+    'Report coding agent hook events to tq',
+    fetchImpl,
+    stdin,
+    handleHookCommand,
+  )
 }

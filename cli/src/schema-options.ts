@@ -57,7 +57,7 @@ function parseDefaultValue(
 
 type OptionParser = {
   leafType?: SupportedLeaf
-  parse: (raw: string) => unknown
+  parse: (raw: string, previous: unknown) => unknown
 }
 
 function unsupportedSchemaType(key: string): Error {
@@ -70,9 +70,21 @@ function resolveOptionParser(
   valueType: unknown,
   key: string,
   isArray: boolean,
+  repeatable: boolean,
 ): Result<OptionParser, Error> {
   if (isArray) {
     if (isSupportedLeaf(valueType)) {
+      if (repeatable) {
+        return ok({
+          leafType: valueType,
+          parse: (raw, previous) => {
+            const previousValues: readonly unknown[] = Array.isArray(previous)
+              ? previous
+              : []
+            return [...previousValues, parseValue(valueType, raw)]
+          },
+        })
+      }
       return ok({
         leafType: valueType,
         parse: (raw) =>
@@ -80,6 +92,16 @@ function resolveOptionParser(
       })
     }
     if (valueType instanceof z.ZodUnion) {
+      if (repeatable) {
+        return ok({
+          parse: (raw, previous) => {
+            const previousValues: readonly unknown[] = Array.isArray(previous)
+              ? previous
+              : []
+            return [...previousValues, raw]
+          },
+        })
+      }
       return ok({ parse: splitCommaList })
     }
     return err(unsupportedSchemaType(key))
@@ -148,6 +170,8 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   exclude: readonly string[] = [],
   envDefaults: Readonly<Record<string, string>> = {},
   commaSeparatedOptions: readonly string[] = [],
+  repeatableOptions: readonly string[] = [],
+  optionDefaults: Readonly<Record<string, string>> = {},
 ): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
@@ -156,18 +180,24 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
 
     const isArray = inner instanceof z.ZodArray
     const commaSeparated = commaSeparatedOptions.includes(key)
-    if (isArray !== commaSeparated) {
+    const repeatable = repeatableOptions.includes(key)
+    if (
+      (isArray && commaSeparated === repeatable) ||
+      (!isArray && (commaSeparated || repeatable))
+    ) {
       return err(
         new Error(
           commaSeparated
             ? `addSchemaOptions: comma-separated field "${key}" must be an array`
-            : `addSchemaOptions: unsupported schema type for field "${key}"`,
+            : repeatable
+              ? `addSchemaOptions: repeatable field "${key}" must be an array`
+              : `addSchemaOptions: unsupported schema type for field "${key}"`,
         ),
       )
     }
 
     const valueType: unknown = isArray ? inner.element : inner
-    const parser = resolveOptionParser(valueType, key, isArray)
+    const parser = resolveOptionParser(valueType, key, isArray, repeatable)
     if (parser.isErr()) return err(parser.error)
     const { leafType, parse: parseOptionValue } = parser.value
 
@@ -176,9 +206,11 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       schemaDescription(inner) ??
       (leafType == null ? undefined : schemaDescription(leafType)) ??
       toLabel(key)
-    const fieldDescription = isArray
+    const fieldDescription = commaSeparated
       ? `${baseDescription} (comma-separated)`
-      : baseDescription
+      : repeatable
+        ? `${baseDescription} (repeatable)`
+        : baseDescription
     const description =
       envVar != null
         ? `${fieldDescription} (or set ${envVar})`
@@ -189,6 +221,8 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     }
 
     option.argParser(parseOptionValue)
+    const defaultValue = optionDefaults[key]
+    if (defaultValue != null) option.default(defaultValue)
     if (envVar != null) {
       const envValue = process.env[envVar]
       // Left unvalidated here (unlike an explicit flag, which goes through

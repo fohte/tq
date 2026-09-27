@@ -13,6 +13,24 @@ import {
   toKebabCase,
 } from '#schema-options'
 
+export type OperationCommandContext = {
+  actionCommand: Command
+  actionArgs: readonly unknown[]
+  options: Record<string, unknown>
+  input: Record<string, unknown>
+  inputError?: Error
+  clientResult: ReturnType<typeof buildClient>
+  stdin: ReadableStdin
+  execute: (
+    input: Record<string, unknown>,
+    options?: { ignoreErrors?: boolean },
+  ) => Promise<void>
+}
+
+export type OperationCommandHandler = (
+  context: OperationCommandContext,
+) => Promise<void>
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -58,6 +76,18 @@ function collectInput(
   )
 }
 
+function collectPositionals(
+  operation: OperationDefinition,
+  actionArgs: readonly unknown[],
+): Record<string, unknown> {
+  const input: Record<string, unknown> = {}
+  operation.positionalArgs.forEach((argument, index) => {
+    const value = actionArgs[index]
+    if (value !== undefined) input[positionalName(argument)] = value
+  })
+  return input
+}
+
 function renderWebPath(
   path: string,
   input: Record<string, unknown>,
@@ -101,13 +131,18 @@ export function registerOperations(
   groupDescription: string,
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
+  handler?: OperationCommandHandler,
 ): void {
   const cliOperations = operations.filter(
     (operation) => operation.surface?.only !== 'mcp',
   )
-  const groupName = cliOperations[0]?.path[0]
+  const groupName = (cliOperations[0]?.cli.path ?? cliOperations[0]?.path)?.[0]
   if (groupName === undefined) return
-  if (cliOperations.some((operation) => operation.path[0] !== groupName)) {
+  if (
+    cliOperations.some(
+      (operation) => (operation.cli.path ?? operation.path)[0] !== groupName,
+    )
+  ) {
     return fail(
       program,
       new Error('An operation group must contain a single root command.'),
@@ -116,24 +151,29 @@ export function registerOperations(
   const group = program.command(groupName).description(groupDescription)
 
   for (const operation of cliOperations) {
-    const commandPath = operation.path.slice(1)
-    const commandName = commandPath.at(-1)
-    if (commandName === undefined) continue
-
-    let parent = group
-    for (const part of commandPath.slice(0, -1)) {
-      const existing = parent.commands.find(
-        (command) => command.name() === part,
-      )
-      parent = existing ?? parent.command(part)
-    }
-
+    const commandPath = (operation.cli.path ?? operation.path).slice(1)
     const positionals = operation.positionalArgs.map(positionalSyntax).join(' ')
-    let command = parent
-      .command(
-        `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
-      )
-      .description(operation.description)
+    let command = group
+    if (commandPath.length === 0) {
+      for (const positional of operation.positionalArgs) {
+        command = command.argument(positionalSyntax(positional))
+      }
+      command.description(operation.description)
+    } else {
+      const commandName = commandPath.at(-1)
+      if (commandName === undefined) continue
+      for (const part of commandPath.slice(0, -1)) {
+        const existing = command.commands.find(
+          (candidate) => candidate.name() === part,
+        )
+        command = existing ?? command.command(part)
+      }
+      command = command
+        .command(
+          `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
+        )
+        .description(operation.description)
+    }
 
     const contentInput = operation.cli.contentInput
     if (contentInput != null) {
@@ -165,6 +205,7 @@ export function registerOperations(
 
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
+      ...(operation.cli.hiddenFields ?? []),
       ...(contentInput == null ? [] : [contentInput.field]),
     ]
     addSchemaOptions(
@@ -173,6 +214,8 @@ export function registerOperations(
       excluded,
       operation.cli.envDefaults,
       operation.cli.commaSeparatedOptions,
+      operation.cli.repeatableOptions,
+      operation.cli.optionDefaults,
     ).match(
       () => undefined,
       (error) => fail(group, error),
@@ -184,14 +227,62 @@ export function registerOperations(
       const actionCommand = commandValue
       const optionsValue = actionArgs[operation.positionalArgs.length]
       const options = isRecord(optionsValue) ? optionsValue : {}
+      const collected = collectInput(operation, actionArgs, options, excluded)
 
-      if (operation.cli.output.kind === 'web-url') {
-        const input = collectInput(
-          operation,
+      if (handler != null) {
+        const clientResult = buildClient(actionCommand, fetchImpl)
+        await handler({
+          actionCommand,
           actionArgs,
           options,
-          excluded,
-        ).match(
+          input: collected.isOk()
+            ? collected.value
+            : collectPositionals(operation, actionArgs),
+          ...(collected.isErr() ? { inputError: collected.error } : {}),
+          clientResult,
+          stdin,
+          execute: async (
+            input,
+            { ignoreErrors = false }: { ignoreErrors?: boolean } = {},
+          ) => {
+            if (clientResult.isErr()) {
+              if (!ignoreErrors) fail(actionCommand, clientResult.error)
+              return
+            }
+
+            const result = await operation.run(clientResult.value, input)
+            if (result.isErr()) {
+              if (ignoreErrors) return
+              const operationError = result.error
+              const error =
+                operationError.kind === 'input'
+                  ? new Error(operationError.message)
+                  : operationError.kind === 'http'
+                    ? await toApiError(operationError.response)
+                    : operationError.error
+              return fail(actionCommand, error)
+            }
+
+            if (operation.cli.output.kind === 'web-url') {
+              printWebUrl(actionCommand, operation.cli.output, input)
+              return
+            }
+            const printed = await printOperationOutput(
+              operation.cli.output,
+              result.value,
+              options,
+              fetchImpl,
+            )
+            if (printed.isErr() && !ignoreErrors) {
+              fail(actionCommand, printed.error)
+            }
+          },
+        })
+        return
+      }
+
+      if (operation.cli.output.kind === 'web-url') {
+        const input = collected.match(
           (value) => value,
           (error) => fail(actionCommand, error),
         )
@@ -205,13 +296,7 @@ export function registerOperations(
         (value) => value,
         (error) => fail(actionCommand, error),
       )
-
-      const input = collectInput(
-        operation,
-        actionArgs,
-        options,
-        excluded,
-      ).match(
+      const input = collected.match(
         (value) => value,
         (error) => fail(actionCommand, error),
       )

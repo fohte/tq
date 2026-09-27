@@ -31,6 +31,8 @@ const REGISTERED_TOOL_NAMES = [
   'project_update',
   'search_pages',
   'search_tasks',
+  'session_delete',
+  'session_list',
   'update_page',
   'update_task',
   'update_task_status',
