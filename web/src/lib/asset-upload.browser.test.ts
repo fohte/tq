@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import videoFixtureAsset from '#components/ui/markdown-editor-video-fixture.webm?url'
 import {
   handleAssetLoadError,
   parseAssetId,
@@ -52,6 +53,10 @@ function signedAssetResponse(url: string, contentType = 'image/png') {
     ok: true,
     json: () => Promise.resolve({ url, contentType }),
   }
+}
+
+function videoFixtureUrl(version: string): string {
+  return `${new URL(videoFixtureAsset, document.baseURI).href}#${version}`
 }
 
 describe('parseAssetId', () => {
@@ -287,5 +292,124 @@ describe('handleAssetLoadError', () => {
 
     expect(img.src).toBe('https://signed.example.com/fresh')
     expect(mocks['mockGet']).toHaveBeenCalledTimes(2)
+  })
+
+  it('refreshes a failed <video> URL and restores its playback position after metadata loads', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockGet'])
+      .mockResolvedValueOnce(
+        signedAssetResponse(videoFixtureUrl('video-stale'), 'video/webm'),
+      )
+      .mockResolvedValueOnce(
+        signedAssetResponse(videoFixtureUrl('video-fresh'), 'video/webm'),
+      )
+
+    const resolved = await resolveAssetSrc('/api/assets/video-refresh-test')
+    const video = document.createElement('video')
+    video.src = resolved._unsafeUnwrap()
+    let currentTime = 37
+    const currentTimeWrites = vi.fn((time: number) => {
+      currentTime = time
+    })
+    Object.defineProperty(video, 'currentTime', {
+      configurable: true,
+      get: () => currentTime,
+      set: currentTimeWrites,
+    })
+
+    await handleAssetLoadError(makeErrorEvent(video))
+    video.dispatchEvent(new Event('loadedmetadata'))
+
+    const actual = () => ({
+      src: video.src,
+      currentTime,
+      currentTimeWrites: currentTimeWrites.mock.calls,
+      requestCount: mocks['mockGet']?.mock.calls.length,
+    })
+
+    expect(actual()).toEqual({
+      src: videoFixtureUrl('video-fresh'),
+      currentTime: 37,
+      currentTimeWrites: [[37]],
+      requestCount: 2,
+    })
+  })
+
+  it('does not refresh a video again during the per-element cooldown', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockGet'])
+      .mockResolvedValueOnce(
+        signedAssetResponse(videoFixtureUrl('cooldown-stale'), 'video/webm'),
+      )
+      .mockResolvedValueOnce(
+        signedAssetResponse(videoFixtureUrl('cooldown-fresh'), 'video/webm'),
+      )
+      .mockResolvedValueOnce(
+        signedAssetResponse(videoFixtureUrl('cooldown-newer'), 'video/webm'),
+      )
+
+    const resolved = await resolveAssetSrc('/api/assets/video-cooldown-test')
+    const video = document.createElement('video')
+    video.src = resolved._unsafeUnwrap()
+
+    await handleAssetLoadError(makeErrorEvent(video))
+    await handleAssetLoadError(makeErrorEvent(video))
+
+    const actual = () => ({
+      src: video.src,
+      requestCount: mocks['mockGet']?.mock.calls.length,
+    })
+
+    expect(actual()).toEqual({
+      src: videoFixtureUrl('cooldown-fresh'),
+      requestCount: 2,
+    })
+  })
+
+  it('keeps stale URLs usable by other media nodes until the signed URL expires', async () => {
+    vi.useFakeTimers()
+    try {
+      const mocks = await getMocks()
+      assertDefined(mocks['mockGet'])
+        .mockResolvedValueOnce(
+          signedAssetResponse('https://signed.example.com/shared-stale'),
+        )
+        .mockResolvedValueOnce(
+          signedAssetResponse('https://signed.example.com/shared-fresh'),
+        )
+        .mockResolvedValueOnce(
+          signedAssetResponse('https://signed.example.com/shared-peer-fresh'),
+        )
+
+      const resolved = await resolveAssetSrc('/api/assets/shared-media-test')
+      const firstImage = document.createElement('img')
+      const peerImage = document.createElement('img')
+      firstImage.src = resolved._unsafeUnwrap()
+      peerImage.src = resolved._unsafeUnwrap()
+
+      await handleAssetLoadError(makeErrorEvent(firstImage))
+      await handleAssetLoadError(makeErrorEvent(peerImage))
+
+      const expiredImage = document.createElement('img')
+      expiredImage.src = resolved._unsafeUnwrap()
+      vi.advanceTimersByTime(60 * 60 * 1000)
+      await handleAssetLoadError(makeErrorEvent(expiredImage))
+
+      const actual = () => ({
+        firstImageSrc: firstImage.src,
+        peerImageSrc: peerImage.src,
+        expiredImageSrc: expiredImage.src,
+        requestCount: mocks['mockGet']?.mock.calls.length,
+      })
+
+      expect(actual()).toEqual({
+        firstImageSrc: 'https://signed.example.com/shared-fresh',
+        peerImageSrc: 'https://signed.example.com/shared-peer-fresh',
+        expiredImageSrc: 'https://signed.example.com/shared-stale',
+        requestCount: 3,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
