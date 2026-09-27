@@ -137,9 +137,12 @@ describe('MarkdownEditor mode toggle', () => {
     await user.click(blockquote)
     await user.keyboard('!')
     await screen.findByText('A blockquote at the very end.!')
-    await waitForMarkdownUpdateNotifications()
 
-    expect(onChange.mock.calls).toEqual([[`${TRAILING_BLOCKQUOTE_CONTENT}!\n`]])
+    await waitFor(() => {
+      expect(onChange.mock.calls).toEqual([
+        [`${TRAILING_BLOCKQUOTE_CONTENT}!\n`],
+      ])
+    })
   })
 
   it('autosaves a change that is reverted before exiting edit mode', async () => {
@@ -162,15 +165,21 @@ describe('MarkdownEditor mode toggle', () => {
     await user.click(blockquote)
     await user.keyboard('!')
     await screen.findByText('A blockquote at the very end.!')
-    await waitForMarkdownUpdateNotifications()
+    await waitFor(() => {
+      expect(onChange.mock.calls).toEqual([
+        [`${TRAILING_BLOCKQUOTE_CONTENT}!\n`],
+      ])
+    })
+
     await user.keyboard('{Backspace}')
     await screen.findByText('A blockquote at the very end.')
-    await waitForMarkdownUpdateNotifications()
 
-    expect(onChange.mock.calls).toEqual([
-      [`${TRAILING_BLOCKQUOTE_CONTENT}!\n`],
-      [`${TRAILING_BLOCKQUOTE_CONTENT}\n`],
-    ])
+    await waitFor(() => {
+      expect(onChange.mock.calls).toEqual([
+        [`${TRAILING_BLOCKQUOTE_CONTENT}!\n`],
+        [`${TRAILING_BLOCKQUOTE_CONTENT}\n`],
+      ])
+    })
   })
 
   it('continues notifying changes in an always-editable editor', async () => {
@@ -188,9 +197,10 @@ describe('MarkdownEditor mode toggle', () => {
     await user.click(paragraph)
     await user.keyboard('!')
     await screen.findByText('Editable content.!')
-    await waitForMarkdownUpdateNotifications()
 
-    expect(onChange.mock.calls).toEqual([['Editable content.!\n']])
+    await waitFor(() => {
+      expect(onChange.mock.calls).toEqual([['Editable content.!\n']])
+    })
   })
 
   it('changes the document after entering edit mode and typing', async () => {

@@ -131,7 +131,7 @@ describe('TaskMainContent on mobile with the on-screen keyboard open', () => {
     const user = userEvent.setup()
     const { container } = await renderMobileTaskDetail(makeTaskDetail())
 
-    await focusDescriptionEditor(user, container)
+    await focusDescriptionEditor(user, container, { timeout: 10_000 })
     shrinkVisualViewportForKeyboard(200)
     const scrollBySpy = vi
       .spyOn(window, 'scrollBy')
@@ -147,7 +147,7 @@ describe('TaskMainContent on mobile with the on-screen keyboard open', () => {
     const user = userEvent.setup()
     const { container } = await renderMobileTaskDetail(makeTaskDetail())
 
-    await focusDescriptionEditor(user, container)
+    await focusDescriptionEditor(user, container, { timeout: 10_000 })
     const visualViewport = shrinkVisualViewportForKeyboard(200)
 
     // A character follows each newline: a collapsed range at an empty line

@@ -672,9 +672,14 @@ describe('operation tool input schemas', () => {
       saved_view_get: false,
       saved_view_list: false,
       saved_view_update: false,
-      slack_resolve: false,
       session_delete: false,
       session_list: false,
+      slack_resolve: false,
+      task_activity: false,
+      task_get: false,
+      task_list: false,
+      task_search: false,
+      task_sessions: false,
     })
   })
 })

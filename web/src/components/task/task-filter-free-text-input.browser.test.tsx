@@ -68,8 +68,9 @@ describe('TaskFilterFreeTextInput', () => {
     const input = screen.getByRole('textbox', { name: 'Filter query' })
     await user.type(input, 'is:')
 
-    expect(screen.getByText('is:todo')).toBeInTheDocument()
-    expect(input).toHaveFocus()
+    await screen.findByRole('button', { name: 'is:todo Todo' })
+
+    expect(document.activeElement).toBe(input)
   })
 
   it('applies the highlighted suggestion on Tab', async () => {
