@@ -32,6 +32,13 @@ function detectContentType(filePath: string): Result<string, Error> {
   return ok(contentType)
 }
 
+function escapeMarkdownAlt(text: string): string {
+  return text
+    .replaceAll('\\', '\\\\')
+    .replaceAll('[', '\\[')
+    .replaceAll(']', '\\]')
+}
+
 export function registerAssetCommands(
   program: Command,
   fetchImpl: typeof fetch,
@@ -50,7 +57,8 @@ export function registerAssetCommands(
         (value) => value,
         (error) => fail(command, error),
       )
-      const file = new File([data], basename(filePath), {
+      const fileName = basename(filePath)
+      const file = new File([data], fileName, {
         type: detectContentType(filePath).match(
           (value) => value,
           (error) => fail(command, error),
@@ -59,7 +67,11 @@ export function registerAssetCommands(
 
       const res = await client.api.assets.$post({ form: { file } })
       if (!res.ok) return fail(command, await toApiError(res))
-      printJson(await res.json())
+      const uploaded = await res.json()
+      printJson({
+        ...uploaded,
+        markdown: `![${escapeMarkdownAlt(fileName)}](/api/assets/${uploaded.id})`,
+      })
     })
 
   asset
