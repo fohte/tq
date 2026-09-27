@@ -58,6 +58,48 @@ describe('queue operation tools', () => {
     expect(result.isError).toEqual(true)
   })
 
+  it('rejects malformed queue keys before making a request', async () => {
+    const invalidKeys = ['', '.', '..', '\uD800']
+    const results = await Promise.all(
+      invalidKeys.flatMap((key) => [
+        callMcpTool(client, 'queue_get', { key }),
+        callMcpTool(client, 'queue_set', {
+          key,
+          date: '2026-08-06',
+          taskIds: [],
+        }),
+      ]),
+    )
+
+    expect(results.map(({ isError }) => isError)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ])
+  })
+
+  it('rejects invalid dates and task UUIDs when setting a queue', async () => {
+    const results = await Promise.all([
+      callMcpTool(client, 'queue_set', {
+        key: 'day',
+        date: 'not-a-date',
+        taskIds: [],
+      }),
+      callMcpTool(client, 'queue_set', {
+        key: 'day',
+        date: '2026-08-06',
+        taskIds: ['not-a-uuid'],
+      }),
+    ])
+
+    expect(results.map(({ isError }) => isError)).toEqual([true, true])
+  })
+
   it('returns the selected queue for an explicit date', async () => {
     const task = await createTask('Queued item')
     const putRes = await app.request('/api/queues/day/items', {

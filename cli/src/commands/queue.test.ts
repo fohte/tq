@@ -5,13 +5,27 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  request,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
-function summarizeQueueRun(exitCode: number, calls: unknown, stdout?: unknown) {
-  return stdout === undefined
-    ? { exitCode, calls }
-    : { exitCode, calls, stdout }
+async function runQueueCli(args: string[], response: Response) {
+  const { fetchStub, calls } = captureFetch(() => response)
+  const stderr = spyStderr()
+  const stdout = spyStdout()
+  const exitCode = await runCli(
+    ['--api-url', apiUrl, ...args],
+    fetchStub,
+    fakeStdin(true),
+  )
+
+  return {
+    exitCode,
+    requests: calls.map(request),
+    stderr: stderr.mock.calls,
+    stdout: stdout.mock.calls,
+  }
 }
 
 afterEach(() => {
@@ -24,27 +38,18 @@ describe('queue list', () => {
     const queues = [
       { key: 'day', name: 'today', periodUnit: 'day', position: 0 },
     ]
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(queues), { status: 200 }),
-    )
-    const write = spyStdout()
 
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'queue', 'list'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeQueueRun(exitCode, calls, write.mock.calls)).toEqual({
+    expect(
+      await runQueueCli(
+        ['queue', 'list'],
+        new Response(JSON.stringify(queues), { status: 200 }),
+      ),
+    ).toEqual({
       exitCode: 0,
-      calls: [
-        {
-          method: 'GET',
-          url: `${apiUrl}/api/queues`,
-          headers: {},
-          body: undefined,
-        },
+      requests: [
+        { method: 'GET', pathname: '/api/queues', query: {}, body: undefined },
       ],
+      stderr: [],
       stdout: [[`${JSON.stringify(queues, null, 2)}\n`]],
     })
   })
@@ -62,27 +67,23 @@ describe('queue get', () => {
         updatedAt: '2026-08-06T00:00:00.000Z',
       },
     ]
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(rows), { status: 200 }),
-    )
-    const write = spyStdout()
 
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'queue', 'get', 'day', '2026-08-06'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeQueueRun(exitCode, calls, write.mock.calls)).toEqual({
+    expect(
+      await runQueueCli(
+        ['queue', 'get', 'day', '2026-08-06'],
+        new Response(JSON.stringify(rows), { status: 200 }),
+      ),
+    ).toEqual({
       exitCode: 0,
-      calls: [
+      requests: [
         {
           method: 'GET',
-          url: `${apiUrl}/api/queues/day/items?date=2026-08-06`,
-          headers: {},
+          pathname: '/api/queues/day/items',
+          query: { date: '2026-08-06' },
           body: undefined,
         },
       ],
+      stderr: [],
       stdout: [[`${JSON.stringify(rows, null, 2)}\n`]],
     })
   })
@@ -90,26 +91,24 @@ describe('queue get', () => {
   it('uses the current UTC date when the date is omitted', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-06T12:00:00.000Z'))
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify([]), { status: 200 }),
-    )
 
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'queue', 'get', 'day'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeQueueRun(exitCode, calls)).toEqual({
+    expect(
+      await runQueueCli(
+        ['queue', 'get', 'day'],
+        new Response(JSON.stringify([]), { status: 200 }),
+      ),
+    ).toEqual({
       exitCode: 0,
-      calls: [
+      requests: [
         {
           method: 'GET',
-          url: `${apiUrl}/api/queues/day/items?date=2026-08-06`,
-          headers: {},
+          pathname: '/api/queues/day/items',
+          query: { date: '2026-08-06' },
           body: undefined,
         },
       ],
+      stderr: [],
+      stdout: [['[]\n']],
     })
   })
 })
@@ -124,50 +123,59 @@ describe('queue set', () => {
       '11111111-1111-4111-8111-111111111111',
       '22222222-2222-4222-8222-222222222222',
     ]
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(updated), { status: 200 }),
-    )
 
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'queue', 'set', 'week', '2026-08-06', ...taskIds],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeQueueRun(exitCode, calls)).toEqual({
+    expect(
+      await runQueueCli(
+        ['queue', 'set', 'week', '2026-08-06', ...taskIds],
+        new Response(JSON.stringify(updated), { status: 200 }),
+      ),
+    ).toEqual({
       exitCode: 0,
-      calls: [
+      requests: [
         {
           method: 'PUT',
-          url: `${apiUrl}/api/queues/week/items`,
-          headers: { 'content-type': 'application/json' },
+          pathname: '/api/queues/week/items',
+          query: {},
           body: { date: '2026-08-06', taskIds },
         },
       ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
     })
   })
 
   it('sends an empty taskIds array when task ids are omitted', async () => {
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify([]), { status: 200 }),
-    )
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'queue', 'set', 'day', '2026-08-06'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeQueueRun(exitCode, calls)).toEqual({
+    expect(
+      await runQueueCli(
+        ['queue', 'set', 'day', '2026-08-06'],
+        new Response(JSON.stringify([]), { status: 200 }),
+      ),
+    ).toEqual({
       exitCode: 0,
-      calls: [
+      requests: [
         {
           method: 'PUT',
-          url: `${apiUrl}/api/queues/day/items`,
-          headers: { 'content-type': 'application/json' },
+          pathname: '/api/queues/day/items',
+          query: {},
           body: { date: '2026-08-06', taskIds: [] },
         },
       ],
+      stderr: [],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('rejects invalid task UUIDs before sending a request', async () => {
+    expect(
+      await runQueueCli(
+        ['queue', 'set', 'day', '2026-08-06', 'not-a-uuid'],
+        new Response(JSON.stringify([]), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [['Error: taskIds.0: Invalid UUID\n']],
+      stdout: [],
     })
   })
 })
