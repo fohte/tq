@@ -11,11 +11,22 @@ import {
   parseToolJson,
 } from '#routes/mcp/testing'
 import { createLabel, createTask, TEST_UUID } from '#routes/tasks/testing'
-import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
+import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
 let client: Client
+
+function summarizeDuplicateTarget(duplicateOfNumber: number | null) {
+  return { duplicateOfNumber }
+}
+
+function summarizeTaskDeletion(
+  result: Awaited<ReturnType<typeof callMcpTool>>,
+  lookupStatus: number,
+) {
+  return { result: parseToolJson(result), lookupStatus }
+}
 
 beforeEach(async () => {
   client = await connectMcpClient()
@@ -25,9 +36,9 @@ afterEach(async () => {
   await client.close()
 })
 
-describe('create_task tool', () => {
+describe('task_create tool', () => {
   it('creates a task with the given fields', async () => {
-    const result = await callMcpTool(client, 'create_task', {
+    const result = await callMcpTool(client, 'task_create', {
       title: 'Write MCP tools',
       context: 'work',
     })
@@ -62,20 +73,40 @@ describe('create_task tool', () => {
   it('creates any label names that do not exist yet and attaches all of them', async () => {
     await db.insert(labels).values({ name: 'urgent' })
 
-    const result = await callMcpTool(client, 'create_task', {
+    const result = await callMcpTool(client, 'task_create', {
       title: 'Labeled task',
       labels: ['urgent', 'new-label'],
     })
 
-    const data = passthroughSchema<{ labels: string[] }>().parse(
-      parseToolJson(result),
-    )
-
-    expect(data.labels.toSorted()).toEqual(['new-label', 'urgent'])
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Labeled task',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: ['urgent', 'new-label'],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      linkSync: { outgoing: [], unresolvedRefs: [] },
+    })
   })
 
   it('rejects a non-existent parentId', async () => {
-    const result = await callMcpTool(client, 'create_task', {
+    const result = await callMcpTool(client, 'task_create', {
       title: 'Orphan',
       parentId: TEST_UUID,
     })
@@ -87,13 +118,13 @@ describe('create_task tool', () => {
   })
 })
 
-describe('update_task tool', () => {
+describe('task_update tool', () => {
   it('partially updates the given fields', async () => {
     const task = await createTask('Original title', {
       description: 'Original description',
     })
 
-    const result = await callMcpTool(client, 'update_task', {
+    const result = await callMcpTool(client, 'task_update', {
       taskId: task.id,
       title: 'Updated title',
     })
@@ -129,7 +160,7 @@ describe('update_task tool', () => {
       description: 'Will be cleared',
     })
 
-    const result = await callMcpTool(client, 'update_task', {
+    const result = await callMcpTool(client, 'task_update', {
       taskId: task.id,
       description: null,
     })
@@ -162,7 +193,7 @@ describe('update_task tool', () => {
   })
 
   it('rejects a non-existent taskId', async () => {
-    const result = await callMcpTool(client, 'update_task', {
+    const result = await callMcpTool(client, 'task_update', {
       taskId: TEST_UUID,
       title: 'New title',
     })
@@ -176,7 +207,7 @@ describe('update_task tool', () => {
   it('replaces the labels of a task, creating any that do not exist yet', async () => {
     const task = await createTask('Has a label', { labels: ['urgent'] })
 
-    const result = await callMcpTool(client, 'update_task', {
+    const result = await callMcpTool(client, 'task_update', {
       taskId: task.id,
       labels: ['bug'],
     })
@@ -208,13 +239,12 @@ describe('update_task tool', () => {
   })
 })
 
-describe('update_task_status tool', () => {
+describe('task_complete tool', () => {
   it('sets a task to completed', async () => {
     const task = await createTask('Start me')
 
-    const result = await callMcpTool(client, 'update_task_status', {
+    const result = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
-      status: 'completed',
     })
 
     expect(parseToolData(result)).toEqual({
@@ -247,9 +277,8 @@ describe('update_task_status tool', () => {
     await createLabel('urgent')
     const task = await createTask('Start me', { labels: ['urgent'] })
 
-    const result = await callMcpTool(client, 'update_task_status', {
+    const result = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
-      status: 'completed',
     })
 
     expect(parseToolData(result)).toEqual({
@@ -280,12 +309,11 @@ describe('update_task_status tool', () => {
 
   it('reopens a completed task by moving it back to todo', async () => {
     const task = await createTask('Reopen me')
-    await callMcpTool(client, 'update_task_status', {
+    await callMcpTool(client, 'task_complete', {
       taskId: task.id,
-      status: 'completed',
     })
 
-    const result = await callMcpTool(client, 'update_task_status', {
+    const result = await callMcpTool(client, 'task_status', {
       taskId: task.id,
       status: 'todo',
     })
@@ -320,9 +348,8 @@ describe('update_task_status tool', () => {
     const target = await createTask('Target')
     const task = await createTask('Duplicate me')
 
-    const result = await callMcpTool(client, 'update_task_status', {
+    const result = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
-      status: 'completed',
       statusReason: 'duplicate',
       duplicateOfTaskId: target.id,
     })
@@ -359,6 +386,99 @@ describe('update_task_status tool', () => {
     const detailBody = await jsonBody<{ duplicateOfNumber: number | null }>(
       detailRes,
     )
-    expect(detailBody.duplicateOfNumber).toBe(target.number)
+    expect(summarizeDuplicateTarget(detailBody.duplicateOfNumber)).toEqual({
+      duplicateOfNumber: target.number,
+    })
+  })
+})
+
+describe('task_parent tool', () => {
+  it('sets the parent task', async () => {
+    const parent = await createTask('Parent task')
+    const child = await createTask('Child task')
+
+    const result = await callMcpTool(client, 'task_parent', {
+      taskId: child.id,
+      parentId: parent.id,
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Child task',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: '<uuid>',
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+
+  it('clears the parent when parentId is omitted', async () => {
+    const parent = await createTask('Parent task')
+    const child = await createTask('Child task')
+    await callMcpTool(client, 'task_parent', {
+      taskId: child.id,
+      parentId: parent.id,
+    })
+
+    const result = await callMcpTool(client, 'task_parent', {
+      taskId: child.id,
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Child task',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+})
+
+describe('task_delete tool', () => {
+  it('deletes the task and returns its id', async () => {
+    const task = await createTask('Delete me')
+
+    const result = await callMcpTool(client, 'task_delete', {
+      taskId: task.id,
+    })
+    const lookup = await app.request(`/api/tasks/${task.id}`)
+
+    expect(summarizeTaskDeletion(result, lookup.status)).toEqual({
+      result: { deleted: true, id: task.id },
+      lookupStatus: 404,
+    })
   })
 })

@@ -1,5 +1,6 @@
 import { formatInputIssues, type OperationDefinition } from 'api/operations'
 import { Command } from 'commander'
+import { ok } from 'neverthrow'
 
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
@@ -20,7 +21,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function positionalName(
   argument: OperationDefinition['positionalArgs'][number],
 ) {
-  return typeof argument === 'string' ? argument : argument.name
+  return typeof argument === 'string'
+    ? argument
+    : 'field' in argument
+      ? argument.field
+      : argument.name
 }
 
 function positionalSyntax(
@@ -30,6 +35,31 @@ function positionalSyntax(
 
   const name = `${argument.name}${argument.variadic === true ? '...' : ''}`
   return argument.optional === true ? `[${name}]` : `<${name}>`
+}
+
+function mapCliInput(
+  operation: OperationDefinition,
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+) {
+  return operation.cli.mapInput?.(input, options) ?? ok(input)
+}
+
+function normalizeOptionNames(
+  operation: OperationDefinition,
+  options: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalized = { ...options }
+  for (const [field, optionName] of Object.entries(
+    operation.cli.optionNames ?? {},
+  )) {
+    const optionKey = optionName.replace(
+      /-([a-z])/g,
+      (_match, letter: string) => letter.toUpperCase(),
+    )
+    if (options[optionKey] !== undefined) normalized[field] = options[optionKey]
+  }
+  return normalized
 }
 
 function operationInputError(
@@ -113,7 +143,9 @@ export function registerOperations(
       new Error('An operation group must contain a single root command.'),
     )
   }
-  const group = program.command(groupName).description(groupDescription)
+  const group =
+    program.commands.find((command) => command.name() === groupName) ??
+    program.command(groupName).description(groupDescription)
 
   for (const operation of cliOperations) {
     const commandPath = operation.path.slice(1)
@@ -133,7 +165,7 @@ export function registerOperations(
       .command(
         `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
       )
-      .description(operation.description)
+      .description(operation.cli.description ?? operation.description)
 
     const contentInput = operation.cli.contentInput
     if (contentInput != null) {
@@ -163,9 +195,14 @@ export function registerOperations(
       )
     }
 
+    for (const option of operation.cli.customOptions ?? []) {
+      command = command.option(option.flags, option.description)
+    }
+
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(operation.cli.excludeFields ?? []),
     ]
     addSchemaOptions(
       command,
@@ -173,6 +210,9 @@ export function registerOperations(
       excluded,
       operation.cli.envDefaults,
       operation.cli.commaSeparatedOptions,
+      operation.cli.optionNames,
+      operation.cli.optionDescriptions,
+      operation.cli.optionMetavars,
     ).match(
       () => undefined,
       (error) => fail(group, error),
@@ -183,15 +223,20 @@ export function registerOperations(
       if (!(commandValue instanceof Command)) return
       const actionCommand = commandValue
       const optionsValue = actionArgs[operation.positionalArgs.length]
-      const options = isRecord(optionsValue) ? optionsValue : {}
+      const rawOptions = isRecord(optionsValue) ? optionsValue : {}
+      const options = normalizeOptionNames(operation, rawOptions)
 
       if (operation.cli.output.kind === 'web-url') {
-        const input = collectInput(
+        const collectedInput = collectInput(
           operation,
           actionArgs,
           options,
           excluded,
         ).match(
+          (value) => value,
+          (error) => fail(actionCommand, error),
+        )
+        const input = mapCliInput(operation, collectedInput, options).match(
           (value) => value,
           (error) => fail(actionCommand, error),
         )
@@ -206,7 +251,7 @@ export function registerOperations(
         (error) => fail(actionCommand, error),
       )
 
-      const input = collectInput(
+      const collectedInput = collectInput(
         operation,
         actionArgs,
         options,
@@ -215,6 +260,8 @@ export function registerOperations(
         (value) => value,
         (error) => fail(actionCommand, error),
       )
+
+      const input = collectedInput
 
       if (contentInput != null) {
         const filePath =
@@ -236,7 +283,12 @@ export function registerOperations(
         if (content !== undefined) input[contentInput.field] = content
       }
 
-      const result = await operation.run(client, input)
+      const mappedInput = mapCliInput(operation, input, options).match(
+        (value) => value,
+        (error) => fail(actionCommand, error),
+      )
+
+      const result = await operation.run(client, mappedInput)
       if (result.isErr()) {
         switch (result.error.kind) {
           case 'input':

@@ -30,8 +30,9 @@ function operationClient(
 }
 
 function inputSchemaFor(operation: OperationDefinition) {
-  if (operation.attribution !== 'agent') return operation.inputSchema
-  return z.object({ ...operation.inputSchema.shape, agent: agentArgSchema })
+  const schema = operation.mcpInputSchema ?? operation.inputSchema
+  if (operation.attribution !== 'agent') return schema
+  return z.object({ ...schema.shape, agent: agentArgSchema })
 }
 
 function annotationsFor(operation: OperationDefinition) {

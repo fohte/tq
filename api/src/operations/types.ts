@@ -1,4 +1,5 @@
 import type { hc } from 'hono/client'
+import type { Result } from 'neverthrow'
 import { errAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
@@ -58,7 +59,19 @@ export type CliOutput =
   | { kind: 'web-url'; path: string }
 
 export type PositionalArgument<Key extends string = string> =
-  Key | { name: Key; optional?: boolean; variadic?: boolean }
+  | Key
+  | { name: Key; optional?: boolean; variadic?: boolean }
+  | {
+      name: string
+      field: Key
+      optional?: boolean
+      variadic?: boolean
+    }
+
+export type CliCustomOption = {
+  flags: string
+  description: string
+}
 
 export type CliContentInput = {
   field: string
@@ -69,15 +82,26 @@ export interface OperationDefinition {
   path: readonly [group: string, command: string, ...nestedPath: string[]]
   description: string
   inputSchema: z.ZodObject
+  mcpInputSchema?: z.ZodObject
   positionalArgs: readonly PositionalArgument[]
   kind: OperationKind
   attribution?: 'agent'
   routes: readonly AllRoutes[]
   surface?: OperationSurface
   cli: {
+    description?: string
     contentInput?: CliContentInput
+    excludeFields?: readonly string[]
     envDefaults?: Readonly<Record<string, string>>
     commaSeparatedOptions?: readonly string[]
+    optionNames?: Readonly<Record<string, string>>
+    optionDescriptions?: Readonly<Record<string, string>>
+    optionMetavars?: Readonly<Record<string, string>>
+    customOptions?: readonly CliCustomOption[]
+    mapInput?: (
+      input: Record<string, unknown>,
+      options: Record<string, unknown>,
+    ) => Result<Record<string, unknown>, Error>
     output: CliOutput
   }
   run: (
@@ -90,6 +114,7 @@ type OperationConfig<Schema extends z.ZodObject, Output> = {
   path: readonly string[]
   description: string
   positionalArgs: readonly PositionalArgument<keyof z.output<Schema> & string>[]
+  mcpInputSchema?: z.ZodObject
   kind: OperationKind
   attribution?: OperationDefinition['attribution']
   routes: readonly AllRoutes[]

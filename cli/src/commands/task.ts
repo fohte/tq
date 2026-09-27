@@ -1,3 +1,4 @@
+import { taskWriteOperations } from 'api/operations'
 import type { Command } from 'commander'
 
 import {
@@ -8,33 +9,37 @@ import {
   registerTaskSessionsCommand,
   registerTaskUrlCommand,
 } from '#commands/task-read'
-import {
-  registerTaskCompleteCommand,
-  registerTaskCreateCommand,
-  registerTaskDeleteCommand,
-  registerTaskFromGithubCommand,
-  registerTaskParentCommand,
-  registerTaskStatusCommand,
-  registerTaskUpdateCommand,
-} from '#commands/task-write'
+import type { ReadableStdin } from '#input'
+import { registerOperations } from '#operation-adapter'
 
 export function registerTaskCommands(
   program: Command,
   fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
 ): void {
   const task = program.command('task').description('Manage tasks')
 
   registerTaskListCommand(task, fetchImpl)
   registerTaskGetCommand(task, fetchImpl)
   registerTaskUrlCommand(task)
-  registerTaskCreateCommand(task, fetchImpl)
-  registerTaskUpdateCommand(task, fetchImpl)
-  registerTaskDeleteCommand(task, fetchImpl)
-  registerTaskStatusCommand(task, fetchImpl)
-  registerTaskParentCommand(task, fetchImpl)
-  registerTaskCompleteCommand(task, fetchImpl)
+
+  registerOperations(
+    program,
+    taskWriteOperations.slice(0, 6),
+    'Manage tasks',
+    fetchImpl,
+    stdin,
+  )
+
   registerTaskActivityCommand(task, fetchImpl)
   registerTaskSearchCommand(task, fetchImpl)
   registerTaskSessionsCommand(task, fetchImpl)
-  registerTaskFromGithubCommand(task, fetchImpl)
+
+  registerOperations(
+    program,
+    taskWriteOperations.slice(6),
+    'Manage tasks',
+    fetchImpl,
+    stdin,
+  )
 }

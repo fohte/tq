@@ -4,17 +4,9 @@ import {
   registerCreatePageTool,
   registerUpdatePageTool,
 } from '#routes/mcp/tools/page-write-tools'
-import {
-  registerCreateTaskTool,
-  registerUpdateTaskStatusTool,
-  registerUpdateTaskTool,
-} from '#routes/mcp/tools/task-write-tools'
 
-/** Write tools: creating, updating, and deleting tasks/projects/labels/etc. */
+/** Page write tools. */
 export function registerWriteTools(server: McpServer): void {
-  registerCreateTaskTool(server)
-  registerUpdateTaskTool(server)
-  registerUpdateTaskStatusTool(server)
   registerCreatePageTool(server)
   registerUpdatePageTool(server)
 }

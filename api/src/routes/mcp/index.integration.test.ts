@@ -15,7 +15,6 @@ const REGISTERED_TOOL_NAMES = [
   'comment_list',
   'comment_update',
   'create_page',
-  'create_task',
   'get_page',
   'get_task',
   'get_today_tasks',
@@ -31,9 +30,14 @@ const REGISTERED_TOOL_NAMES = [
   'project_update',
   'search_pages',
   'search_tasks',
+  'task_complete',
+  'task_create',
+  'task_delete',
+  'task_from-github',
+  'task_parent',
+  'task_status',
+  'task_update',
   'update_page',
-  'update_task',
-  'update_task_status',
 ]
 
 function summarizeTools(

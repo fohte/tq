@@ -481,6 +481,13 @@ describe('operation tool input schemas', () => {
       project_list: false,
       project_tasks: false,
       project_update: false,
+      task_complete: true,
+      task_create: true,
+      task_delete: false,
+      'task_from-github': false,
+      task_parent: false,
+      task_status: true,
+      task_update: true,
     })
   })
 })

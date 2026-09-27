@@ -148,6 +148,9 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   exclude: readonly string[] = [],
   envDefaults: Readonly<Record<string, string>> = {},
   commaSeparatedOptions: readonly string[] = [],
+  optionNames: Readonly<Record<string, string>> = {},
+  optionDescriptions: Readonly<Record<string, string>> = {},
+  optionMetavars: Readonly<Record<string, string>> = {},
 ): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
@@ -179,11 +182,17 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     const fieldDescription = isArray
       ? `${baseDescription} (comma-separated)`
       : baseDescription
-    const description =
+    const generatedDescription =
       envVar != null
         ? `${fieldDescription} (or set ${envVar})`
         : fieldDescription
-    const option = new Option(`--${toKebabCase(key)} <value>`, description)
+    const description = optionDescriptions[key] ?? generatedDescription
+    const optionName = optionNames[key] ?? key
+    const metavar = optionMetavars[key] ?? 'value'
+    const option = new Option(
+      `--${toKebabCase(optionName)} <${metavar}>`,
+      description,
+    )
     if (!isArray && inner instanceof z.ZodEnum) {
       option.choices(inner.options.map(String))
     }
