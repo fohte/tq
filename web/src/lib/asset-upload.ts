@@ -1,4 +1,4 @@
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from 'api/constants/assets'
+import { ALLOWED_CONTENT_TYPES } from 'api/constants/assets'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { api } from '#lib/api'
@@ -21,23 +21,12 @@ export class UnsupportedAssetTypeError extends Error {
   }
 }
 
-export class AssetTooLargeError extends Error {
-  constructor() {
-    super(`Image too large. Maximum size is ${String(MAX_SIZE_BYTES)} bytes`)
-    this.name = 'AssetTooLargeError'
-  }
-}
-
 export function uploadAssetFile(
   file: File,
-): ResultAsync<string, UnsupportedAssetTypeError | AssetTooLargeError | Error> {
+): ResultAsync<string, UnsupportedAssetTypeError | Error> {
   if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
     return errAsync(new UnsupportedAssetTypeError())
   }
-  if (file.size > MAX_SIZE_BYTES) {
-    return errAsync(new AssetTooLargeError())
-  }
-
   return ResultAsync.fromPromise(
     api.api.assets.$post({ form: { file } }),
     (cause) => new Error('Failed to upload image', { cause }),

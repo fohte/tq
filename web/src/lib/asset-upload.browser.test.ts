@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  AssetTooLargeError,
   handleAssetLoadError,
   parseAssetId,
   resolveAssetSrc,
@@ -86,15 +85,18 @@ describe('uploadAssetFile', () => {
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
-  it('rejects files exceeding the size limit without calling the API', async () => {
+  it('sends files larger than the former default limit to the API', async () => {
     const mocks = await getMocks()
+    assertDefined(mocks['mockPost']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 'server-accepted' }),
+    })
 
     const result = await uploadAssetFile(
       makeFile('big.png', 'image/png', 10 * 1024 * 1024 + 1),
     )
 
-    expect(result._unsafeUnwrapErr()).toEqual(new AssetTooLargeError())
-    expect(mocks['mockPost']).not.toHaveBeenCalled()
+    expect(result._unsafeUnwrap()).toBe('/api/assets/server-accepted')
   })
 
   it('fails when the upload request fails', async () => {
