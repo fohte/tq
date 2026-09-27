@@ -1,7 +1,9 @@
 import { Button } from '@fohte/ui/button'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
-import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
+import { ActionsMenu } from '#components/ui/actions-menu'
+import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
@@ -170,7 +172,19 @@ function EventRow({ event }: { event: ActivityItem }) {
 
 // --- Comment Row ---
 
-function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
+export function CommentRow({
+  taskId,
+  comment,
+  initiallyEditing = false,
+  defaultMenuOpen,
+}: {
+  taskId: string
+  comment: Comment
+  initiallyEditing?: boolean
+  defaultMenuOpen?: 'desktop' | 'mobile' | undefined
+}) {
+  const [editing, setEditing] = useState(initiallyEditing)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const updateComment = useUpdateComment(taskId)
   const deleteComment = useDeleteComment(taskId)
   const { onChange, cancel, flush } = useDebouncedSave((markdown) => {
@@ -184,6 +198,11 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
     cancel()
     deleteComment.mutate(comment.id)
   }, [cancel, comment.id, deleteComment])
+
+  const handleRequestDelete = useCallback(() => {
+    cancel()
+    setDeleteDialogOpen(true)
+  }, [cancel])
 
   const isEdited = comment.createdAt !== comment.updatedAt
 
@@ -202,30 +221,47 @@ function CommentRow({ taskId, comment }: { taskId: string; comment: Comment }) {
             when={formatRelativeTime(comment.createdAt)}
           />
 
-          {/* onMouseDownCapture cancels the pending debounced save before
-              opening the dialog moves focus off the editor, which would
-              otherwise flush (and thus save) it out from under this delete
-              flow — even if the user then cancels the dialog. */}
-          <div onMouseDownCapture={cancel}>
-            <DeleteConfirmButton
-              title="Delete comment"
-              description="Are you sure you want to delete this comment? This action cannot be undone."
-              onDelete={handleDelete}
-              iconClassName="size-3"
-            />
-          </div>
+          <ActionsMenu
+            aria-label="Comment actions"
+            defaultOpen={defaultMenuOpen}
+            items={[
+              {
+                icon: <Pencil className="h-4 w-4" />,
+                label: 'Edit',
+                onClick: () => {
+                  setEditing(true)
+                },
+              },
+              {
+                icon: <Trash2 className="h-4 w-4" />,
+                label: 'Delete',
+                onClick: handleRequestDelete,
+                destructive: true,
+              },
+            ]}
+          />
         </div>
 
         {/* Body - inline editable with debounced auto-save */}
         <div className="border-l-3 border-l-primary bg-card p-2.5 text-sm leading-relaxed text-muted-foreground">
           <MarkdownEditor
             defaultValue={comment.content}
+            editing={editing}
+            onEditingChange={setEditing}
             onChange={onChange}
             viewEditToggle={{ onExitEditMode: flush }}
             size="compact"
           />
         </div>
       </div>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete comment"
+        description="Are you sure you want to delete this comment? This action cannot be undone."
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

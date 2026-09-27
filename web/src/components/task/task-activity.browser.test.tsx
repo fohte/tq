@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { TaskActivity } from '#components/task/task-activity'
+import { makeComment } from '#components/task/task-activity-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import { useTaskActivity } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
@@ -19,16 +20,33 @@ vi.mock('#components/ui/markdown-editor', () => ({
     defaultValue,
     placeholder,
     onChange,
+    editing,
+    onEditingChange,
+    viewEditToggle,
   }: {
     defaultValue?: string
     placeholder?: string
+    editing?: boolean
+    onEditingChange?: (editing: boolean) => void
     onChange?: (md: string) => void
+    viewEditToggle?: { onExitEditMode?: () => void }
   }) => (
     <textarea
       data-testid="mock-markdown-editor"
+      data-editing={String(editing === true)}
       defaultValue={defaultValue}
       placeholder={placeholder}
       onChange={(e) => onChange?.(e.target.value)}
+      onBlur={() => {
+        if (editing !== true) return
+        viewEditToggle?.onExitEditMode?.()
+        onEditingChange?.(false)
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'Escape' || editing !== true) return
+        viewEditToggle?.onExitEditMode?.()
+        onEditingChange?.(false)
+      }}
     />
   ),
 }))
@@ -59,18 +77,6 @@ const mockUseCreateComment = vi.mocked(useCreateComment)
 const mockUseUpdateComment = vi.mocked(useUpdateComment)
 const mockUseDeleteComment = vi.mocked(useDeleteComment)
 const mockUseTaskActivity = vi.mocked(useTaskActivity)
-
-function makeComment(overrides: Partial<Comment> = {}): Comment {
-  return {
-    id: 'comment-1',
-    taskId: 'task-1',
-    content: 'Test comment',
-    createdAt: '2026-03-20T10:00:00.000Z',
-    updatedAt: '2026-03-20T10:00:00.000Z',
-    author: null,
-    ...overrides,
-  }
-}
 
 function makeCreatedEvent(
   overrides: Partial<Extract<ActivityItem, { type: 'created' }>> = {},
@@ -128,7 +134,9 @@ function setupMocks({
   commentsLoading?: boolean
   eventsLoading?: boolean
 } = {}) {
-  const mutateFn = vi.fn()
+  const createMutate = vi.fn()
+  const updateMutate = vi.fn()
+  const deleteMutate = vi.fn()
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseTaskComments.mockReturnValue({
@@ -144,21 +152,21 @@ function setupMocks({
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseCreateComment.mockReturnValue({
-    mutate: mutateFn,
+    mutate: createMutate,
     isPending: false,
   } as unknown as ReturnType<typeof useCreateComment>)
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseUpdateComment.mockReturnValue({
-    mutate: vi.fn(),
+    mutate: updateMutate,
   } as unknown as ReturnType<typeof useUpdateComment>)
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock of hook return value
   mockUseDeleteComment.mockReturnValue({
-    mutate: vi.fn(),
+    mutate: deleteMutate,
   } as unknown as ReturnType<typeof useDeleteComment>)
 
-  return { createMutate: mutateFn }
+  return { createMutate, updateMutate, deleteMutate }
 }
 
 function renderActivity(taskId = 'task-1') {
@@ -171,6 +179,25 @@ function renderActivity(taskId = 'task-1') {
       <TaskActivity taskId={taskId} />
     </QueryClientProvider>,
   )
+}
+
+function getEditorSaveResult(editor: HTMLElement, updateCalls: unknown) {
+  return {
+    editing: editor.getAttribute('data-editing'),
+    updateCalls,
+  }
+}
+
+function getDeleteResult(
+  confirmationShown: boolean,
+  deleteCallsBeforeConfirmation: number,
+  deleteCalls: unknown,
+) {
+  return {
+    confirmationShown,
+    deleteCallsBeforeConfirmation,
+    deleteCalls,
+  }
 }
 
 describe('TaskActivity', () => {
@@ -284,6 +311,81 @@ describe('TaskActivity', () => {
 
     expect(createdIdx).toBeLessThan(commentIdx)
     expect(commentIdx).toBeLessThan(statusIdx)
+  })
+
+  it('keeps a comment in view mode when its body is clicked', async () => {
+    const user = userEvent.setup()
+    const comment = makeComment({ content: 'Test comment' })
+    setupMocks({ comments: [comment] })
+    renderActivity()
+
+    const editor = screen.getByDisplayValue(comment.content)
+    await user.click(editor)
+
+    expect(editor.getAttribute('data-editing')).toBe('false')
+  })
+
+  it('enters edit mode from the comment actions menu', async () => {
+    const user = userEvent.setup()
+    const comment = makeComment({ content: 'Test comment' })
+    setupMocks({ comments: [comment] })
+    renderActivity()
+
+    await user.click(screen.getByRole('button', { name: 'Comment actions' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+
+    expect(
+      screen.getByDisplayValue(comment.content).getAttribute('data-editing'),
+    ).toBe('true')
+  })
+
+  it('saves edited comment content when Escape exits edit mode', async () => {
+    const user = userEvent.setup()
+    const comment = makeComment({ content: 'Test comment' })
+    const { updateMutate } = setupMocks({ comments: [comment] })
+    renderActivity()
+
+    await user.click(screen.getByRole('button', { name: 'Comment actions' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+
+    const editor = screen.getByDisplayValue(comment.content)
+    await user.clear(editor)
+    await user.type(editor, ' Updated comment ')
+    await user.keyboard('{Escape}')
+
+    expect(getEditorSaveResult(editor, updateMutate.mock.calls)).toEqual({
+      editing: 'false',
+      updateCalls: [[{ commentId: comment.id, content: 'Updated comment' }]],
+    })
+  })
+
+  it('deletes a comment only after confirming from the actions menu', async () => {
+    const user = userEvent.setup()
+    const comment = makeComment()
+    const { deleteMutate } = setupMocks({ comments: [comment] })
+    renderActivity()
+
+    await user.click(screen.getByRole('button', { name: 'Comment actions' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Delete' }))
+    const confirmation = await screen.findByText(
+      'Are you sure you want to delete this comment? This action cannot be undone.',
+    )
+    const confirmationShown = confirmation.isConnected
+    const deleteCallsBeforeConfirmation = deleteMutate.mock.calls.length
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(
+      getDeleteResult(
+        confirmationShown,
+        deleteCallsBeforeConfirmation,
+        deleteMutate.mock.calls,
+      ),
+    ).toEqual({
+      confirmationShown: true,
+      deleteCallsBeforeConfirmation: 0,
+      deleteCalls: [[comment.id]],
+    })
   })
 
   it('submits a new comment', async () => {
