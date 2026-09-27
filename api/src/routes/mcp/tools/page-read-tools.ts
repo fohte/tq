@@ -9,7 +9,7 @@ export function registerGetPageTool(server: McpServer): void {
     'get_page',
     {
       description:
-        "Get the full content of a single page (a task note) by id. get_task lists a task's pages as metadata only — resolve taskId and pageId from an entry in its `pages` array before calling this.",
+        "Get the full content of a single page (a task note) by id. task_get lists a task's pages as metadata only — resolve taskId and pageId from an entry in its `pages` array before calling this.",
       inputSchema: z.object({
         taskId: taskIdOrNumber.describe(
           'The id (UUID) or number of the task the page belongs to.',

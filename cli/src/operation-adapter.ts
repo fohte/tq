@@ -20,7 +20,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function positionalName(
   argument: OperationDefinition['positionalArgs'][number],
 ) {
-  return typeof argument === 'string' ? argument : argument.name
+  return typeof argument === 'string'
+    ? argument
+    : (argument.field ?? argument.name)
 }
 
 function positionalSyntax(
@@ -114,6 +116,25 @@ export function registerOperations(
     )
   }
   const group = program.command(groupName).description(groupDescription)
+
+  registerOperationsInGroup(group, cliOperations, fetchImpl, stdin)
+}
+
+export function registerOperationsInGroup(
+  group: Command,
+  operations: readonly OperationDefinition[],
+  fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
+): void {
+  const cliOperations = operations.filter(
+    (operation) => operation.surface?.only !== 'mcp',
+  )
+  if (cliOperations.some((operation) => operation.path[0] !== group.name())) {
+    return fail(
+      group,
+      new Error('An operation group must contain a single root command.'),
+    )
+  }
 
   for (const operation of cliOperations) {
     const commandPath = operation.path.slice(1)

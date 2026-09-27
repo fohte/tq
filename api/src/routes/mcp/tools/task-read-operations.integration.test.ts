@@ -33,7 +33,13 @@ it('declares task read tools as read-only', async () => {
   expect(
     result.tools
       .filter((tool) =>
-        ['get_task', 'list_tasks', 'search_tasks'].includes(tool.name),
+        [
+          'task_activity',
+          'task_get',
+          'task_list',
+          'task_search',
+          'task_sessions',
+        ].includes(tool.name),
       )
       .map((tool) => ({
         name: tool.name,
@@ -41,15 +47,17 @@ it('declares task read tools as read-only', async () => {
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   ).toEqual([
-    { name: 'get_task', readOnlyHint: true },
-    { name: 'list_tasks', readOnlyHint: true },
-    { name: 'search_tasks', readOnlyHint: true },
+    { name: 'task_activity', readOnlyHint: true },
+    { name: 'task_get', readOnlyHint: true },
+    { name: 'task_list', readOnlyHint: true },
+    { name: 'task_search', readOnlyHint: true },
+    { name: 'task_sessions', readOnlyHint: true },
   ])
 })
 
-describe('list_tasks', () => {
+describe('task_list', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'list_tasks', {
+    const result = await callMcpTool(client, 'task_list', {
       projectId: 'not-a-uuid',
     })
 
@@ -60,7 +68,7 @@ describe('list_tasks', () => {
     const task = await createTask('Work task', { context: 'work' })
     await createTask('Personal task')
 
-    const toolResult = await callMcpTool(client, 'list_tasks', {
+    const toolResult = await callMcpTool(client, 'task_list', {
       context: 'work',
     })
 
@@ -80,7 +88,7 @@ describe('list_tasks', () => {
     const parent = await createTask('Parent')
     await createTask('Child', { parentId: parent.id })
 
-    const toolResult = await callMcpTool(client, 'list_tasks', {
+    const toolResult = await callMcpTool(client, 'task_list', {
       parentId: 'root',
     })
 
@@ -97,9 +105,9 @@ describe('list_tasks', () => {
   })
 })
 
-describe('get_task', () => {
+describe('task_get', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'get_task', {
+    const result = await callMcpTool(client, 'task_get', {
       taskId: 'not-a-uuid',
     })
 
@@ -110,8 +118,8 @@ describe('get_task', () => {
     const parent = await createTask('Parent')
     const child = await createTask('Child', { parentId: parent.id })
 
-    const toolResult = await callMcpTool(client, 'get_task', {
-      taskId: parent.id,
+    const toolResult = await callMcpTool(client, 'task_get', {
+      taskId: parent.number,
     })
 
     expect(parseToolJson(toolResult)).toEqual({
@@ -142,7 +150,7 @@ describe('get_task', () => {
   })
 
   it('maps a non-existent task id to a 404 error result', async () => {
-    const result = await callMcpTool(client, 'get_task', { taskId: TEST_UUID })
+    const result = await callMcpTool(client, 'task_get', { taskId: TEST_UUID })
 
     expect(result).toEqual({
       content: [{ type: 'text', text: 'Task not found' }],
@@ -171,7 +179,7 @@ describe('get_task', () => {
       author: unknown
     }>(pageRes)
 
-    const toolResult = await callMcpTool(client, 'get_task', {
+    const toolResult = await callMcpTool(client, 'task_get', {
       taskId: task.id,
     })
 
@@ -205,9 +213,9 @@ describe('get_task', () => {
   })
 })
 
-describe('search_tasks', () => {
+describe('task_search', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'search_tasks', { limit: 0 })
+    const result = await callMcpTool(client, 'task_search', { limit: 0 })
 
     expect(result.isError).toBe(true)
   })
@@ -216,7 +224,7 @@ describe('search_tasks', () => {
     const match = await createTask('Deploy to production')
     await createTask('Buy groceries')
 
-    const toolResult = await callMcpTool(client, 'search_tasks', {
+    const toolResult = await callMcpTool(client, 'task_search', {
       q: 'deploy',
     })
 
@@ -235,7 +243,7 @@ describe('search_tasks', () => {
     await createTask('With estimate', { estimatedMinutes: 30 })
     const withoutEstimate = await createTask('Without estimate')
 
-    const toolResult = await callMcpTool(client, 'search_tasks', {
+    const toolResult = await callMcpTool(client, 'task_search', {
       hasEstimate: false,
     })
 
@@ -256,7 +264,7 @@ describe('search_tasks', () => {
     })
     await createTask('Without due date')
 
-    const toolResult = await callMcpTool(client, 'search_tasks', {
+    const toolResult = await callMcpTool(client, 'task_search', {
       hasDue: true,
     })
 
@@ -269,5 +277,50 @@ describe('search_tasks', () => {
         childCompletionCount: { total: 0, completed: 0 },
       },
     ])
+  })
+})
+
+describe('task_activity', () => {
+  it('returns the task activity response', async () => {
+    const task = await createTask('Activity task')
+    const response = await app.request(`/api/tasks/${task.id}/activity`)
+    const expected = await jsonBody(response)
+
+    const toolResult = await callMcpTool(client, 'task_activity', {
+      taskId: task.number,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual(expected)
+  })
+})
+
+describe('task_sessions', () => {
+  it('returns the sessions linked to the task', async () => {
+    const task = await createTask('Session task')
+    const sessionResponse = await app.request('/api/agent-sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: 'codex',
+        sessionId: 'session-example',
+        cwd: '/tmp/task-read',
+        label: null,
+        lastMessage: null,
+      }),
+    })
+    const session = await jsonBody<{ id: string }>(sessionResponse)
+    await app.request(`/api/tasks/${task.id}/agent-sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agentSessionId: session.id }),
+    })
+    const response = await app.request(`/api/tasks/${task.id}/agent-sessions`)
+    const expected = await jsonBody(response)
+
+    const toolResult = await callMcpTool(client, 'task_sessions', {
+      taskId: task.id,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual(expected)
   })
 })

@@ -58,7 +58,13 @@ export type CliOutput =
   | { kind: 'web-url'; path: string }
 
 export type PositionalArgument<Key extends string = string> =
-  Key | { name: Key; optional?: boolean; variadic?: boolean }
+  | Key
+  | {
+      name: string
+      field?: Key
+      optional?: boolean
+      variadic?: boolean
+    }
 
 export type CliContentInput = {
   field: string

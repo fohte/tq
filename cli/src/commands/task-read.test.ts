@@ -14,9 +14,23 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+function cliOutcome(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  output: ReturnType<typeof spyStdout>,
+) {
+  return {
+    exitCode,
+    requests: calls.map(request),
+    stdout: output.mock.calls,
+  }
+}
+
 describe('task list', () => {
-  it('sends the schema-derived flags as a query string and prints the response', async () => {
-    const tasks = [{ id: 't1', number: 1, title: 'Task one', status: 'todo' }]
+  it('sends schema-derived flags and prints the response', async () => {
+    const tasks = [
+      { id: 'task-example', number: 1, title: 'Example', status: 'todo' },
+    ]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )
@@ -28,27 +42,31 @@ describe('task list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'GET',
-      pathname: '/api/tasks',
-      query: { status: 'todo' },
-      body: undefined,
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { status: 'todo' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
   })
 
-  it('omits description from the printed output by default', async () => {
+  it('omits descriptions by default', async () => {
     const tasks = [
       {
-        id: 't1',
+        id: 'task-example',
         number: 1,
-        title: 'Task one',
+        title: 'Example',
         status: 'todo',
         description: 'long body',
       },
     ]
-    const { fetchStub } = captureFetch(
+    const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )
     const write = spyStdout()
@@ -59,23 +77,45 @@ describe('task list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([
-      [
-        `${JSON.stringify(
-          [{ id: 't1', number: 1, title: 'Task one', status: 'todo' }],
-          null,
-          2,
-        )}\n`,
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: {},
+          body: undefined,
+        },
       ],
-    ])
+      stdout: [
+        [
+          `${JSON.stringify(
+            [
+              {
+                id: 'task-example',
+                number: 1,
+                title: 'Example',
+                status: 'todo',
+              },
+            ],
+            null,
+            2,
+          )}\n`,
+        ],
+      ],
+    })
   })
 
-  it('includes description in the list output when --full is given', async () => {
+  it('includes descriptions with --full', async () => {
     const tasks = [
-      { id: 't1', number: 1, title: 'Task one', description: 'long body' },
+      {
+        id: 'task-example',
+        number: 1,
+        title: 'Example',
+        description: 'long body',
+      },
     ]
-    const { fetchStub } = captureFetch(
+    const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )
     const write = spyStdout()
@@ -86,16 +126,80 @@ describe('task list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
+    })
+  })
+
+  it('uses TQ_CONTEXT when --context is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { context: 'work' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
   })
 })
 
 describe('task get', () => {
-  it('fetches the task by id and prints it', async () => {
-    const found = { id: 't1', number: 42, title: 'Task one' }
+  it('prints page metadata and the nested subtree', async () => {
+    const task = {
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      number: 42,
+      title: 'Example',
+      pages: [
+        {
+          id: 'page-example',
+          taskId: '550e8400-e29b-41d4-a716-446655440000',
+          title: 'Notes',
+          format: 'markdown',
+          sortOrder: 0,
+          createdAt: '2031-01-02T03:04:05.000Z',
+          updatedAt: '2031-01-02T03:04:05.000Z',
+          author: { kind: 'human', agent: null },
+          content: 'page body',
+        },
+      ],
+    }
+    const child = {
+      id: 'child-example',
+      parentId: task.id,
+      title: 'Child',
+    }
+    let responseIndex = 0
+    const responses = [task, [child]]
     const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(found), { status: 200 }),
+      () =>
+        new Response(JSON.stringify(responses[responseIndex++]), {
+          status: 200,
+        }),
     )
     const write = spyStdout()
 
@@ -105,21 +209,48 @@ describe('task get', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'GET',
-      pathname: '/api/tasks/42',
-      query: {},
-      body: undefined,
+    const taskWithSubtasks = {
+      ...task,
+      pages: [
+        {
+          id: 'page-example',
+          taskId: task.id,
+          title: 'Notes',
+          format: 'markdown',
+          sortOrder: 0,
+          createdAt: '2031-01-02T03:04:05.000Z',
+          updatedAt: '2031-01-02T03:04:05.000Z',
+          author: { kind: 'human', agent: null },
+        },
+      ],
+      subtasks: [{ ...child, children: [] }],
+    }
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/42',
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { descendantOf: task.id },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(taskWithSubtasks, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(found, null, 2)}\n`]])
   })
 })
 
 describe('task url', () => {
-  it('falls back to the API base URL when --web-url is not given, without making any fetch call', async () => {
+  it('uses the API base URL when no web URL is configured and makes no request', async () => {
     const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify({}), { status: 200 }),
+      () => new Response('{}', { status: 200 }),
     )
     const write = spyStdout()
 
@@ -129,15 +260,17 @@ describe('task url', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls.length).toBe(0)
-    expect(write.mock.calls).toEqual([[`${apiUrl}/tasks/42\n`]])
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [],
+      stdout: [[`${apiUrl}/tasks/42\n`]],
+    })
   })
 
-  it('prefers --web-url over the API base URL when both are given', async () => {
-    const webUrl = 'http://web.test'
+  it('prefers --web-url when both URLs are given', async () => {
+    const webUrl = 'http://web.example'
     const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify({}), { status: 200 }),
+      () => new Response('{}', { status: 200 }),
     )
     const write = spyStdout()
 
@@ -147,15 +280,38 @@ describe('task url', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls.length).toBe(0)
-    expect(write.mock.calls).toEqual([[`${webUrl}/tasks/42\n`]])
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [],
+      stdout: [[`${webUrl}/tasks/42\n`]],
+    })
+  })
+
+  it('uses TQ_WEB_URL when --web-url is omitted', async () => {
+    const webUrl = 'http://web.example'
+    vi.stubEnv('TQ_WEB_URL', webUrl)
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('{}', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'url', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [],
+      stdout: [[`${webUrl}/tasks/42\n`]],
+    })
   })
 })
 
 describe('task activity', () => {
   it('prints the activity items returned by the server', async () => {
-    const items = [{ id: 'edit-1', type: 'created' }]
+    const items = [{ id: 'event-example', type: 'created' }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(items), { status: 200 }),
     )
@@ -167,20 +323,24 @@ describe('task activity', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'GET',
-      pathname: '/api/tasks/42/activity',
-      query: {},
-      body: undefined,
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/42/activity',
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(items, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(items, null, 2)}\n`]])
   })
 })
 
 describe('task search', () => {
-  it('combines the positional query with schema-derived flags into the query string', async () => {
-    const results = [{ id: 't1', number: 1, title: 'Match' }]
+  it('maps the query positional and schema flags into the REST request', async () => {
+    const results = [{ id: 'task-example', number: 1, title: 'Match' }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(results), { status: 200 }),
     )
@@ -192,23 +352,65 @@ describe('task search', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'GET',
-      pathname: '/api/tasks',
-      query: { q: 'hello', limit: '5' },
-      body: undefined,
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { q: 'hello', limit: '5' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(results, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(results, null, 2)}\n`],
-    ])
   })
 
-  it('omits description from the printed output by default', async () => {
+  it('converts boolean filters to REST query strings', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'search',
+        '--has-estimate',
+        'false',
+        '--has-due',
+        'true',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { hasEstimate: 'false', hasDue: 'true', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('omits descriptions by default', async () => {
     const results = [
-      { id: 't1', number: 1, title: 'Match', description: 'long body' },
+      {
+        id: 'task-example',
+        number: 1,
+        title: 'Match',
+        description: 'long body',
+      },
     ]
-    const { fetchStub } = captureFetch(
+    const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(results), { status: 200 }),
     )
     const write = spyStdout()
@@ -219,19 +421,38 @@ describe('task search', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([
-      [
-        `${JSON.stringify([{ id: 't1', number: 1, title: 'Match' }], null, 2)}\n`,
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { q: 'hello', limit: '20' },
+          body: undefined,
+        },
       ],
-    ])
+      stdout: [
+        [
+          `${JSON.stringify(
+            [{ id: 'task-example', number: 1, title: 'Match' }],
+            null,
+            2,
+          )}\n`,
+        ],
+      ],
+    })
   })
 
-  it('includes description in search results when --full is given', async () => {
+  it('includes descriptions with --full', async () => {
     const results = [
-      { id: 't1', number: 1, title: 'Match', description: 'long body' },
+      {
+        id: 'task-example',
+        number: 1,
+        title: 'Match',
+        description: 'long body',
+      },
     ]
-    const { fetchStub } = captureFetch(
+    const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(results), { status: 200 }),
     )
     const write = spyStdout()
@@ -242,17 +463,29 @@ describe('task search', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(results, null, 2)}\n`],
-    ])
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { q: 'hello', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(results, null, 2)}\n`]],
+    })
   })
 })
 
 describe('task sessions', () => {
-  it('fetches the sessions linked to a task and prints them', async () => {
+  it('prints the sessions linked to a task', async () => {
     const sessions = [
-      { id: 's1', provider: 'claude_code', sessionId: 'sess-1' },
+      {
+        id: 'session-example',
+        provider: 'claude_code',
+        sessionId: 'session-1',
+      },
     ]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(sessions), { status: 200 }),
@@ -265,15 +498,17 @@ describe('task sessions', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'GET',
-      pathname: '/api/tasks/42/agent-sessions',
-      query: {},
-      body: undefined,
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/42/agent-sessions',
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(sessions, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(sessions, null, 2)}\n`],
-    ])
   })
 })

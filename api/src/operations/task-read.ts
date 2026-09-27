@@ -1,1 +1,268 @@
-export const taskReadOperations = [] as const
+import { errAsync, okAsync } from 'neverthrow'
+import { z } from 'zod'
+
+import { taskIdOrNumber } from '#lib/numeric-id'
+import {
+  defineOperation,
+  type OperationClient,
+  type OperationError,
+  requestJson,
+} from '#operations/types'
+import { nestTaskListRows } from '#routes/tasks/shared'
+import { contextEnum, listTasksQuerySchema } from '#schemas/task'
+
+type TaskDetail = Record<string, unknown> & {
+  id: string
+  pages: Record<string, unknown>[]
+}
+type TaskListRow = Record<string, unknown> & {
+  id: string
+  parentId: string | null
+}
+type TaskListQuery = NonNullable<
+  Parameters<OperationClient['api']['tasks']['$get']>[0]
+>['query']
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isTaskDetail(value: unknown): value is TaskDetail {
+  return (
+    isRecord(value) &&
+    typeof value['id'] === 'string' &&
+    Array.isArray(value['pages']) &&
+    value['pages'].every(isRecord)
+  )
+}
+
+function isTaskListRow(value: unknown): value is TaskListRow {
+  return (
+    isRecord(value) &&
+    typeof value['id'] === 'string' &&
+    (value['parentId'] === null || typeof value['parentId'] === 'string')
+  )
+}
+
+function isTaskListRows(value: unknown): value is TaskListRow[] {
+  return Array.isArray(value) && value.every(isTaskListRow)
+}
+
+function invalidResponse(message: string): OperationError {
+  return { kind: 'request', error: new Error(message) }
+}
+
+const taskListInputSchema = listTasksQuerySchema
+  .omit({
+    q: true,
+    hasEstimate: true,
+    hasDue: true,
+    includeAncestors: true,
+  })
+  .extend({
+    status: listTasksQuerySchema.shape.status.describe(
+      'Only return tasks in this status.',
+    ),
+    statusReason: listTasksQuerySchema.shape.statusReason.describe(
+      'Only return tasks closed with this reason.',
+    ),
+    projectId: listTasksQuerySchema.shape.projectId.describe(
+      'Only return tasks belonging to this project id.',
+    ),
+    parentId: listTasksQuerySchema.shape.parentId.describe(
+      "Only return direct subtasks of this task id, or 'root' for tasks with no parent.",
+    ),
+    context: contextEnum
+      .optional()
+      .describe('Only return tasks in this context.'),
+  })
+
+const booleanOption = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((value) => value === true || value === 'true')
+
+const taskSearchInputSchema = listTasksQuerySchema
+  .omit({ hasEstimate: true, hasDue: true, includeAncestors: true })
+  .extend({
+    q: listTasksQuerySchema.shape.q.describe(
+      'Free-text query, optionally containing prefixed filter tokens.',
+    ),
+    status: listTasksQuerySchema.shape.status.describe(
+      'Only return tasks in this status. Equivalent to is: in q.',
+    ),
+    statusReason: listTasksQuerySchema.shape.statusReason.describe(
+      'Only return tasks closed with this reason. Equivalent to reason: in q.',
+    ),
+    label: listTasksQuerySchema.shape.label.describe(
+      'Only return tasks with this label or a descendant label. Equivalent to label: in q.',
+    ),
+    context: contextEnum
+      .optional()
+      .describe(
+        'Only return tasks in this context. Equivalent to context: in q.',
+      ),
+    hasEstimate: booleanOption
+      .optional()
+      .describe(
+        'Only return tasks that have (true) or lack (false) an estimate.',
+      ),
+    hasDue: booleanOption
+      .optional()
+      .describe(
+        'Only return tasks that have (true) or lack (false) a due date.',
+      ),
+    sortBy: listTasksQuerySchema.shape.sortBy.describe(
+      'Sort order for results. Defaults to creation date.',
+    ),
+    limit: listTasksQuerySchema.shape.limit.describe(
+      'Maximum number of results to return (1-100). Defaults to 20.',
+    ),
+    offset: listTasksQuerySchema.shape.offset.describe(
+      'Number of results to skip, for pagination.',
+    ),
+  })
+
+const taskIdInputSchema = z.object({
+  taskId: taskIdOrNumber.describe(
+    'The task id (UUID) or task number to look up.',
+  ),
+})
+
+function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
+  const query = Object.fromEntries(
+    Object.entries(fields)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [
+        key,
+        Array.isArray(value) ? value.map(String) : String(value),
+      ]),
+  )
+  return query
+}
+
+function toPageMetadata(page: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(page).filter(([key]) => key !== 'content'),
+  )
+}
+
+function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
+  return requestJson(
+    client.api.tasks[':id'].$get({ param: { id: String(taskId) } }),
+  ).andThen((taskResult) => {
+    if (!isTaskDetail(taskResult)) {
+      return errAsync(invalidResponse('The task detail response is invalid.'))
+    }
+    return requestJson(
+      client.api.tasks.$get({ query: { descendantOf: taskResult.id } }),
+    ).andThen((descendantResult) => {
+      if (!isTaskListRows(descendantResult)) {
+        return errAsync(
+          invalidResponse('The task descendants response is invalid.'),
+        )
+      }
+      return okAsync({
+        ...taskResult,
+        pages: taskResult.pages.map(toPageMetadata),
+        subtasks: nestTaskListRows(descendantResult),
+      })
+    })
+  })
+}
+
+export const taskReadOperations = [
+  defineOperation(taskListInputSchema, {
+    path: ['task', 'list'],
+    description:
+      'List tasks by status, project, parent, context, or other supported filters. Use task_search for free-text search.',
+    positionalArgs: [],
+    kind: 'read',
+    routes: ['GET /api/tasks'],
+    cli: {
+      envDefaults: { context: 'TQ_CONTEXT' },
+      output: {
+        kind: 'list',
+        omitKey: 'description',
+        fullOption: '--full',
+        fullDescription: 'Include full task description in the output',
+      },
+    },
+    run: (client, input) =>
+      requestJson(client.api.tasks.$get({ query: toTaskQuery(input) })),
+  }),
+  defineOperation(taskIdInputSchema, {
+    path: ['task', 'get'],
+    description:
+      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content. Pass its id and this task's id to get_page to read the page content.",
+    positionalArgs: [{ name: 'id', field: 'taskId' }],
+    kind: 'read',
+    routes: ['GET /api/tasks/:id', 'GET /api/tasks'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { taskId }) => getTaskWithSubtasks(client, taskId),
+  }),
+  defineOperation(taskSearchInputSchema, {
+    path: ['task', 'search'],
+    description:
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers, parent:<uuid>|root, project:<uuid|title>, and sort:due|created|updated|estimate. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
+    positionalArgs: [{ name: 'query', field: 'q', optional: true }],
+    kind: 'read',
+    routes: ['GET /api/tasks'],
+    cli: {
+      envDefaults: { context: 'TQ_CONTEXT' },
+      output: {
+        kind: 'list',
+        omitKey: 'description',
+        fullOption: '--full',
+        fullDescription: 'Include full task description in the output',
+      },
+    },
+    run: (client, input) =>
+      requestJson(
+        client.api.tasks.$get({
+          query: toTaskQuery({ ...input, limit: input.limit ?? 20 }),
+        }),
+      ),
+  }),
+  defineOperation(taskIdInputSchema, {
+    path: ['task', 'activity'],
+    description: 'Get the activity history of a task.',
+    positionalArgs: [{ name: 'id', field: 'taskId' }],
+    kind: 'read',
+    routes: ['GET /api/tasks/:id/activity'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { taskId }) =>
+      requestJson(
+        client.api.tasks[':id'].activity.$get({
+          param: { id: String(taskId) },
+        }),
+      ),
+  }),
+  defineOperation(taskIdInputSchema, {
+    path: ['task', 'sessions'],
+    description: 'List agent sessions linked to a task.',
+    positionalArgs: [{ name: 'id', field: 'taskId' }],
+    kind: 'read',
+    routes: ['GET /api/tasks/:taskId/agent-sessions'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { taskId }) =>
+      requestJson(
+        client.api.tasks[':taskId']['agent-sessions'].$get({
+          param: { taskId: String(taskId) },
+        }),
+      ),
+  }),
+  defineOperation(z.object({ id: taskIdOrNumber }), {
+    path: ['task', 'url'],
+    description: "Print a task's web URL.",
+    positionalArgs: ['id'],
+    kind: 'read',
+    routes: [],
+    surface: {
+      only: 'cli',
+      reason:
+        'The web URL depends on CLI configuration that is unavailable to MCP operations.',
+    },
+    cli: { output: { kind: 'web-url', path: '/tasks/{id}' } },
+    run: () => okAsync(undefined),
+  }),
+] as const
