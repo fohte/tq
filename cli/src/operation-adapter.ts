@@ -63,6 +63,14 @@ function operationInputError(
   return new Error(formatInputIssues(parsed.error))
 }
 
+function failUnlessIgnored(
+  actionCommand: Command,
+  error: Error,
+  ignoreErrors: boolean,
+): void {
+  if (!ignoreErrors) fail(actionCommand, error)
+}
+
 function collectInput(
   operation: OperationDefinition,
   actionArgs: unknown[],
@@ -141,13 +149,15 @@ async function executeOperation(
         : operationError.kind === 'http'
           ? await toApiError(operationError.response)
           : operationError.error
-    if (!ignoreErrors) fail(actionCommand, error)
+    failUnlessIgnored(actionCommand, error, ignoreErrors)
     return
   }
 
   if (operation.cli.output.kind === 'web-url') {
     const printed = printWebUrl(actionCommand, operation.cli.output, input)
-    if (printed.isErr() && !ignoreErrors) fail(actionCommand, printed.error)
+    if (printed.isErr()) {
+      failUnlessIgnored(actionCommand, printed.error, ignoreErrors)
+    }
     return
   }
 
@@ -157,7 +167,9 @@ async function executeOperation(
     options,
     fetchImpl,
   )
-  if (printed.isErr() && !ignoreErrors) fail(actionCommand, printed.error)
+  if (printed.isErr()) {
+    failUnlessIgnored(actionCommand, printed.error, ignoreErrors)
+  }
 }
 
 async function executeCommandOperation(
@@ -174,12 +186,12 @@ async function executeCommandOperation(
   if (operation.cli.output.kind === 'web-url') {
     const collected = resolveInput()
     if (collected.isErr()) {
-      if (!ignoreErrors) fail(actionCommand, collected.error)
+      failUnlessIgnored(actionCommand, collected.error, ignoreErrors)
       return
     }
     const inputError = operationInputError(operation, collected.value)
     if (inputError != null) {
-      if (!ignoreErrors) fail(actionCommand, inputError)
+      failUnlessIgnored(actionCommand, inputError, ignoreErrors)
       return
     }
     const printed = printWebUrl(
@@ -187,19 +199,21 @@ async function executeCommandOperation(
       operation.cli.output,
       collected.value,
     )
-    if (printed.isErr() && !ignoreErrors) fail(actionCommand, printed.error)
+    if (printed.isErr()) {
+      failUnlessIgnored(actionCommand, printed.error, ignoreErrors)
+    }
     return
   }
 
   const clientResult = buildClient(actionCommand, fetchImpl)
   if (clientResult.isErr()) {
-    if (!ignoreErrors) fail(actionCommand, clientResult.error)
+    failUnlessIgnored(actionCommand, clientResult.error, ignoreErrors)
     return
   }
 
   const collected = resolveInput()
   if (collected.isErr()) {
-    if (!ignoreErrors) fail(actionCommand, collected.error)
+    failUnlessIgnored(actionCommand, collected.error, ignoreErrors)
     return
   }
   const inputValue = collected.value
@@ -218,18 +232,17 @@ async function executeCommandOperation(
         : undefined
     const content = await readContentInput(filePath, stdin)
     if (content.isErr()) {
-      if (!ignoreErrors) fail(actionCommand, content.error)
+      failUnlessIgnored(actionCommand, content.error, ignoreErrors)
       return
     }
     if (content.value === undefined && contentInput.required !== false) {
-      if (!ignoreErrors) {
-        fail(
-          actionCommand,
-          new Error(
-            'Content is required. Provide --file <path> or pipe content via stdin.',
-          ),
-        )
-      }
+      failUnlessIgnored(
+        actionCommand,
+        new Error(
+          'Content is required. Provide --file <path> or pipe content via stdin.',
+        ),
+        ignoreErrors,
+      )
       return
     }
     if (content.value !== undefined) {
@@ -241,31 +254,29 @@ async function executeCommandOperation(
   if (fileInput != null) {
     const filePath: unknown = inputValue[fileInput.pathField]
     if (typeof filePath !== 'string') {
-      if (!ignoreErrors) {
-        fail(
-          actionCommand,
-          new Error('File input path refers to a missing input field.'),
-        )
-      }
+      failUnlessIgnored(
+        actionCommand,
+        new Error('File input path refers to a missing input field.'),
+        ignoreErrors,
+      )
       return
     }
 
     const data = await readBinaryFile(filePath)
     if (data.isErr()) {
-      if (!ignoreErrors) fail(actionCommand, data.error)
+      failUnlessIgnored(actionCommand, data.error, ignoreErrors)
       return
     }
 
     const contentType = fileInput.contentTypes[extname(filePath).toLowerCase()]
     if (contentType == null) {
-      if (!ignoreErrors) {
-        fail(
-          actionCommand,
-          new Error(
-            `Unsupported file extension for ${filePath}. Allowed types: ${fileInput.allowedContentTypes.join(', ')}`,
-          ),
-        )
-      }
+      failUnlessIgnored(
+        actionCommand,
+        new Error(
+          `Unsupported file extension for ${filePath}. Allowed types: ${fileInput.allowedContentTypes.join(', ')}`,
+        ),
+        ignoreErrors,
+      )
       return
     }
 
