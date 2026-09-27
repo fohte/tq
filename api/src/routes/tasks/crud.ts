@@ -8,13 +8,13 @@ import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
-  findTasksByIdsOrNumbers,
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   getRecurrenceRulesByTemplateIds,
   hydrateTaskListRows,
   requireTask,
   resolveParentId,
+  resolveTasksByIdsOrNumbers,
   taskToResponse,
 } from '#routes/tasks/shared'
 import {
@@ -37,7 +37,8 @@ async function resolveBlockedByExistence(
   const uniqueRaw = [...new Set(blockedBy)]
   if (uniqueRaw.length === 0) return { targetIds: [] }
 
-  const resolved = await findTasksByIdsOrNumbers(uniqueRaw)
+  const { byParam: resolved, ids: targetIds } =
+    await resolveTasksByIdsOrNumbers(uniqueRaw)
   const missing = uniqueRaw.filter((raw) => !resolved.has(raw))
   if (missing.length > 0) {
     return {
@@ -45,7 +46,6 @@ async function resolveBlockedByExistence(
     }
   }
 
-  const targetIds = [...new Set([...resolved.values()].map((t) => t.id))]
   return { targetIds }
 }
 
@@ -215,16 +215,8 @@ export const tasksCrudApp = new Hono()
   })
   .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
     const query = c.req.valid('query')
-    const resolvedIds =
-      query.ids === undefined
-        ? undefined
-        : await findTasksByIdsOrNumbers(query.ids.map(String))
-    const ids =
-      resolvedIds === undefined
-        ? undefined
-        : [...new Set([...resolvedIds.values()].map((task) => task.id))]
     const { rows, ancestorOnlyIds, matchByTaskId } = await queryTaskList(
-      { ...query, ...(ids === undefined ? {} : { ids }) },
+      query,
       {
         includeSearchMatch: query.includeMatch === true,
         prioritizeTitleMatches: query.includeMatch === true,

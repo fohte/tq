@@ -431,6 +431,12 @@ export async function findTasksByIdsOrNumbers(
   return result
 }
 
+export async function resolveTasksByIdsOrNumbers(params: string[]) {
+  const byParam = await findTasksByIdsOrNumbers(params)
+  const ids = [...new Set([...byParam.values()].map((task) => task.id))]
+  return { byParam, ids }
+}
+
 const factory = createFactory<TaskEnv, '/:id'>()
 
 export const requireTask = factory.createMiddleware(async (c, next) => {
