@@ -47,8 +47,21 @@ export interface CrepeEditorProps {
 
 interface EditSession {
   initialMarkdown: string
-  latestMarkdown: string
   hasChanged: boolean
+  lastNotifiedMarkdown: string
+}
+
+interface EditSessionChange {
+  session: EditSession
+  markdown: string
+}
+
+function createEditSession(initialMarkdown: string): EditSession {
+  return {
+    initialMarkdown,
+    hasChanged: false,
+    lastNotifiedMarkdown: initialMarkdown,
+  }
 }
 
 function serializeWithoutEmptyTrailingParagraph(
@@ -105,9 +118,11 @@ function CrepeEditor({
   // dropped) until mode returns to 'view' — see the sync effect below.
   const lastSyncedValueRef = useRef(defaultValue ?? '')
   const editSessionRef = useRef<EditSession | null>(null)
-  // Milkdown delays change callbacks, so retain the mode for each changed doc.
+  const modeRef = useRef(mode)
+  // Milkdown delays change callbacks, so retain each changed doc's edit
+  // session and Markdown.
   const editSessionByDocRef = useRef(
-    new WeakMap<ProseMirrorNode, EditSession | null>(),
+    new WeakMap<ProseMirrorNode, EditSessionChange | null>(),
   )
 
   useEditor((root) => {
@@ -247,20 +262,39 @@ function CrepeEditor({
               key: new PluginKey('markdown-edit-session'),
               state: {
                 init: (_, state) => {
-                  editSessionByDocRef.current.set(state.doc, null)
+                  const session =
+                    modeRef.current === 'edit'
+                      ? createEditSession(
+                          serializeWithoutEmptyTrailingParagraph(
+                            state.doc,
+                            ctx.get(serializerCtx),
+                          ),
+                        )
+                      : null
+                  editSessionRef.current = session
+                  editSessionByDocRef.current.set(
+                    state.doc,
+                    session == null
+                      ? null
+                      : { session, markdown: session.initialMarkdown },
+                  )
                   return null
                 },
                 apply: (tr, pluginState, _, state) => {
                   if (tr.docChanged) {
                     const session = editSessionRef.current
-                    editSessionByDocRef.current.set(state.doc, session)
-                    if (session != null) {
-                      session.latestMarkdown =
-                        serializeWithoutEmptyTrailingParagraph(
-                          state.doc,
-                          ctx.get(serializerCtx),
-                        )
-                    }
+                    editSessionByDocRef.current.set(
+                      state.doc,
+                      session == null
+                        ? null
+                        : {
+                            session,
+                            markdown: serializeWithoutEmptyTrailingParagraph(
+                              state.doc,
+                              ctx.get(serializerCtx),
+                            ),
+                          },
+                    )
                   }
                   return pluginState
                 },
@@ -269,22 +303,18 @@ function CrepeEditor({
         ),
       )
       crepe.on((listener) => {
-        listener.updated((ctx, doc) => {
-          const session = editSessionByDocRef.current.get(doc)
-          if (session == null) return
+        listener.updated((_ctx, doc) => {
+          const change = editSessionByDocRef.current.get(doc)
+          if (change == null) return
 
-          const changedMarkdown = serializeWithoutEmptyTrailingParagraph(
-            doc,
-            ctx.get(serializerCtx),
-          )
-          if (
-            !session.hasChanged &&
-            changedMarkdown === session.initialMarkdown
-          )
+          const { session, markdown } = change
+          if (!session.hasChanged && markdown === session.initialMarkdown)
             return
+          if (markdown === session.lastNotifiedMarkdown) return
 
           session.hasChanged = true
-          onChange(session.latestMarkdown)
+          session.lastNotifiedMarkdown = markdown
+          onChange(markdown)
         })
       })
     } else if (onChange) {
@@ -316,18 +346,17 @@ function CrepeEditor({
   // ProseMirror recompute decorations against the store's new value (see
   // view-mode.ts).
   useEffect(() => {
+    modeRef.current = mode
     const crepe = crepeRef.current
     if (skipNoopChanges) {
       const initialMarkdown =
-        mode === 'edit' && crepe != null ? getEditorMarkdown(crepe) : null
+        mode === 'edit'
+          ? crepe != null
+            ? getEditorMarkdown(crepe)
+            : lastSyncedValueRef.current
+          : null
       editSessionRef.current =
-        initialMarkdown == null
-          ? null
-          : {
-              initialMarkdown,
-              latestMarkdown: initialMarkdown,
-              hasChanged: false,
-            }
+        initialMarkdown == null ? null : createEditSession(initialMarkdown)
     }
     viewModeStoreRef.current?.setMode(mode)
     crepe?.setReadonly(mode === 'view')

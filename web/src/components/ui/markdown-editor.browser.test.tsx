@@ -46,6 +46,18 @@ async function waitForMarkdownUpdateNotifications() {
   await new Promise((resolve) => setTimeout(resolve, 300))
 }
 
+function getModeToggleResult(
+  modeAfterEntering: string | null,
+  wrapper: Element,
+  onChangeCalls: readonly (readonly string[])[],
+) {
+  return [
+    modeAfterEntering,
+    wrapper.getAttribute('data-view-mode'),
+    onChangeCalls,
+  ]
+}
+
 describe('MarkdownEditor size', () => {
   // Regression check: 'compact' (a few-lines inline editor, e.g. a
   // task/project description) must render its own min-height (120px) rather
@@ -100,14 +112,35 @@ describe('MarkdownEditor mode toggle', () => {
       fireEvent.keyDown(wrapper, { key: 'Escape' })
       await waitForMarkdownUpdateNotifications()
 
-      const result = JSON.stringify([
-        modeAfterEntering,
-        wrapper.getAttribute('data-view-mode'),
-        onChange.mock.calls,
-      ])
-      expect(result).toBe(JSON.stringify(['edit', 'view', []]))
+      expect(
+        getModeToggleResult(modeAfterEntering, wrapper, onChange.mock.calls),
+      ).toEqual(['edit', 'view', []])
     },
   )
+
+  it('autosaves changes when starting in edit mode', async () => {
+    const onChange = vi.fn<(markdown: string) => void>()
+    const { container } = render(
+      <MarkdownEditor
+        defaultValue={TRAILING_BLOCKQUOTE_CONTENT}
+        viewEditToggle={{ defaultMode: 'edit' }}
+        onChange={onChange}
+      />,
+    )
+    await screen.findByText('Some intro text.')
+
+    const blockquote = assertDefined(
+      container.querySelector('.milkdown .ProseMirror blockquote'),
+      'editor renders the blockquote',
+    )
+    const user = userEvent.setup()
+    await user.click(blockquote)
+    await user.keyboard('!')
+    await screen.findByText('A blockquote at the very end.!')
+    await waitForMarkdownUpdateNotifications()
+
+    expect(onChange.mock.calls).toEqual([[`${TRAILING_BLOCKQUOTE_CONTENT}!\n`]])
+  })
 
   it('autosaves a change that is reverted before exiting edit mode', async () => {
     const onChange = vi.fn<(markdown: string) => void>()
@@ -134,12 +167,9 @@ describe('MarkdownEditor mode toggle', () => {
     await screen.findByText('A blockquote at the very end.')
     await waitForMarkdownUpdateNotifications()
 
-    const changedValues = Array.from(
-      new Set(onChange.mock.calls.map(([value]) => value)),
-    )
-    expect(changedValues).toEqual([
-      `${TRAILING_BLOCKQUOTE_CONTENT}!\n`,
-      `${TRAILING_BLOCKQUOTE_CONTENT}\n`,
+    expect(onChange.mock.calls).toEqual([
+      [`${TRAILING_BLOCKQUOTE_CONTENT}!\n`],
+      [`${TRAILING_BLOCKQUOTE_CONTENT}\n`],
     ])
   })
 
