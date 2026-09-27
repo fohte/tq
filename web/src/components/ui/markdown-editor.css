@@ -265,7 +265,7 @@
 }
 
 .markdown-asset-node-view.markdown-asset-video.markdown-asset-inline-node-view {
-  display: block;
+  width: fit-content;
   max-width: 100%;
 }
 
@@ -279,7 +279,6 @@
 
 .markdown-asset-inline-node-view.markdown-asset-video
   > .markdown-asset-video-player {
-  display: block;
   height: auto;
   max-width: 100%;
   width: auto;
