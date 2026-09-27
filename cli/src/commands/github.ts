@@ -1,120 +1,19 @@
+import { githubOperations } from 'api/operations'
 import type { Command } from 'commander'
-import type { InferRequestType } from 'hono/client'
 
-import type { Client } from '#client'
-import { toApiError } from '#client'
-import { buildClient } from '#command-context'
-import { printJson } from '#output'
-import { fail } from '#result'
-
-type LinkJson = InferRequestType<
-  Client['api']['tasks'][':taskId']['github-link']['$post']
->['json']
-
-type ResolveJson = InferRequestType<
-  Client['api']['github']['resolve']['$post']
->['json']
+import type { ReadableStdin } from '#input'
+import { registerOperations } from '#operation-adapter'
 
 export function registerGithubCommands(
   program: Command,
   fetchImpl: typeof fetch,
+  stdin: ReadableStdin = process.stdin,
 ): void {
-  const github = program.command('github').description('Manage GitHub links')
-
-  github
-    .command('link <taskId> <url>')
-    .description('Link a task to a GitHub issue or pull request')
-    .action(
-      async (
-        taskId: string,
-        url: string,
-        _options: unknown,
-        command: Command,
-      ) => {
-        const client = buildClient(command, fetchImpl).match(
-          (value) => value,
-          (error) => fail(command, error),
-        )
-        const json: LinkJson = { url }
-        const res = await client.api.tasks[':taskId']['github-link'].$post({
-          param: { taskId },
-          json,
-        })
-        if (!res.ok) return fail(command, await toApiError(res))
-        printJson(await res.json())
-      },
-    )
-
-  github
-    .command('unlink <taskId> <linkId>')
-    .description("Remove one of a task's GitHub links, by link id")
-    .action(
-      async (
-        taskId: string,
-        linkId: string,
-        _options: unknown,
-        command: Command,
-      ) => {
-        const client = buildClient(command, fetchImpl).match(
-          (value) => value,
-          (error) => fail(command, error),
-        )
-        const res = await client.api.tasks[':taskId']['github-link'][
-          ':linkId'
-        ].$delete({
-          param: { taskId, linkId },
-        })
-        if (!res.ok) return fail(command, await toApiError(res))
-        printJson({ unlinked: true, taskId, linkId })
-      },
-    )
-
-  github
-    .command('sync [taskId]')
-    .description(
-      "Sync a task's GitHub link, or every linked task if no task is given",
-    )
-    .action(
-      async (
-        taskId: string | undefined,
-        _options: unknown,
-        command: Command,
-      ) => {
-        const client = buildClient(command, fetchImpl).match(
-          (value) => value,
-          (error) => fail(command, error),
-        )
-
-        if (taskId != null) {
-          const res = await client.api.tasks[':taskId'][
-            'github-link'
-          ].sync.$post({ param: { taskId } })
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 204 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-          if (!res.ok) return fail(command, await toApiError(res))
-          printJson({ synced: true, taskId })
-          return
-        }
-
-        const res = await client.api.github.sync.$post()
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the route only declares a 204 response, so `res.ok` is always true at the type level; kept as a defense against status codes (e.g. from a proxy in front of the API) the client types don't know about
-        if (!res.ok) return fail(command, await toApiError(res))
-        printJson({ synced: true })
-      },
-    )
-
-  github
-    .command('resolve <url>')
-    .description(
-      'Resolve a GitHub issue/pull request URL to its linked task, or a preview if unlinked',
-    )
-    .action(async (url: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const json: ResolveJson = { url }
-      const res = await client.api.github.resolve.$post({ json })
-      if (!res.ok) return fail(command, await toApiError(res))
-      printJson(await res.json())
-    })
+  registerOperations(
+    program,
+    githubOperations,
+    'Manage GitHub links',
+    fetchImpl,
+    stdin,
+  )
 }

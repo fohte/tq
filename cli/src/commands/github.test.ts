@@ -4,6 +4,7 @@ import { runCli } from '#cli'
 import {
   apiUrl,
   captureFetch,
+  commandOutcome,
   fakeStdin,
   spyStdout,
 } from '#commands/test-support'
@@ -36,23 +37,25 @@ describe('github link', () => {
         apiUrl,
         'github',
         'link',
-        'task1',
+        '42',
         'https://github.com/fohte/tq/issues/42',
       ],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'POST',
-        url: `${apiUrl}/api/tasks/task1/github-link`,
-        headers: { 'content-type': 'application/json' },
-        body: { url: 'https://github.com/fohte/tq/issues/42' },
-      },
-    ])
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(linked, null, 2)}\n`]])
+    expect(commandOutcome(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'POST',
+          url: `${apiUrl}/api/tasks/42/github-link`,
+          headers: { 'content-type': 'application/json' },
+          body: { url: 'https://github.com/fohte/tq/issues/42' },
+        },
+      ],
+      stdout: [[`${JSON.stringify(linked, null, 2)}\n`]],
+    })
   })
 })
 
@@ -64,29 +67,31 @@ describe('github unlink', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'github', 'unlink', 'task1', 'link1'],
+      ['--api-url', apiUrl, 'github', 'unlink', '42', 'link1'],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'DELETE',
-        url: `${apiUrl}/api/tasks/task1/github-link/link1`,
-        headers: {},
-        body: undefined,
-      },
-    ])
-    expect(write.mock.calls).toEqual([
-      [
-        `${JSON.stringify(
-          { unlinked: true, taskId: 'task1', linkId: 'link1' },
-          null,
-          2,
-        )}\n`,
+    expect(commandOutcome(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'DELETE',
+          url: `${apiUrl}/api/tasks/42/github-link/link1`,
+          headers: {},
+          body: undefined,
+        },
       ],
-    ])
+      stdout: [
+        [
+          `${JSON.stringify(
+            { unlinked: true, taskId: '42', linkId: 'link1' },
+            null,
+            2,
+          )}\n`,
+        ],
+      ],
+    })
   })
 })
 
@@ -98,23 +103,25 @@ describe('github sync', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'github', 'sync', 'task1'],
+      ['--api-url', apiUrl, 'github', 'sync', '42'],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'POST',
-        url: `${apiUrl}/api/tasks/task1/github-link/sync`,
-        headers: {},
-        body: undefined,
-      },
-    ])
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify({ synced: true, taskId: 'task1' }, null, 2)}\n`],
-    ])
+    expect(commandOutcome(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'POST',
+          url: `${apiUrl}/api/tasks/42/github-link/sync`,
+          headers: {},
+          body: undefined,
+        },
+      ],
+      stdout: [
+        [`${JSON.stringify({ synced: true, taskId: '42' }, null, 2)}\n`],
+      ],
+    })
   })
 
   it('syncs every linked task when taskId is omitted', async () => {
@@ -129,18 +136,18 @@ describe('github sync', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'POST',
-        url: `${apiUrl}/api/github/sync`,
-        headers: {},
-        body: undefined,
-      },
-    ])
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify({ synced: true }, null, 2)}\n`],
-    ])
+    expect(commandOutcome(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'POST',
+          url: `${apiUrl}/api/github/sync`,
+          headers: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify({ synced: true }, null, 2)}\n`]],
+    })
   })
 })
 
@@ -164,17 +171,17 @@ describe('github resolve', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls).toEqual([
-      {
-        method: 'POST',
-        url: `${apiUrl}/api/github/resolve`,
-        headers: { 'content-type': 'application/json' },
-        body: { url: 'https://github.com/fohte/tq/issues/42' },
-      },
-    ])
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(resolved, null, 2)}\n`],
-    ])
+    expect(commandOutcome(exitCode, calls, write.mock.calls)).toEqual({
+      exitCode: 0,
+      calls: [
+        {
+          method: 'POST',
+          url: `${apiUrl}/api/github/resolve`,
+          headers: { 'content-type': 'application/json' },
+          body: { url: 'https://github.com/fohte/tq/issues/42' },
+        },
+      ],
+      stdout: [[`${JSON.stringify(resolved, null, 2)}\n`]],
+    })
   })
 })

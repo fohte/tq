@@ -60,7 +60,7 @@ function buildProgram(
   registerAssetCommands(program, fetchImpl)
   registerGithubCommands(program, fetchImpl)
   registerQueueCommands(program, fetchImpl)
-  registerCalendarCommands(program, fetchImpl)
+  registerCalendarCommands(program, fetchImpl, stdin)
   registerSlackCommands(program, fetchImpl)
   registerHealthCommand(program, fetchImpl)
   registerHookCommands(program, fetchImpl, stdin)

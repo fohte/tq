@@ -11,6 +11,14 @@ export interface CapturedRequest {
   body: unknown
 }
 
+export function commandOutcome<Output>(
+  exitCode: number,
+  calls: CapturedRequest[],
+  stdout: Output,
+) {
+  return { exitCode, calls, stdout }
+}
+
 export function captureFetch(respond: () => Response): {
   fetchStub: typeof fetch
   calls: CapturedRequest[]

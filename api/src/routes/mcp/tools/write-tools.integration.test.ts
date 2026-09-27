@@ -468,10 +468,15 @@ describe('operation tool input schemas', () => {
     )
 
     expect(agentArguments).toEqual({
+      calendar_events: false,
       comment_create: true,
       comment_delete: false,
       comment_list: false,
       comment_update: true,
+      github_link: true,
+      github_resolve: false,
+      github_sync: false,
+      github_unlink: true,
       label_delete: false,
       label_list: false,
       label_update: false,
@@ -481,6 +486,7 @@ describe('operation tool input schemas', () => {
       project_list: false,
       project_tasks: false,
       project_update: false,
+      slack_resolve: false,
     })
   })
 })
@@ -492,7 +498,11 @@ describe('operation tool annotations', () => {
       tools.tools
         .filter(
           (tool) =>
-            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
+            tool.name.startsWith('comment_') ||
+            tool.name.startsWith('github_') ||
+            tool.name.startsWith('label_') ||
+            tool.name.startsWith('slack_') ||
+            tool.name.startsWith('calendar_'),
         )
         .map((tool) => [tool.name, tool.annotations ?? null]),
     )
@@ -511,6 +521,20 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      calendar_events: { readOnlyHint: true },
+      github_link: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      github_resolve: { readOnlyHint: true },
+      github_sync: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      github_unlink: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
       label_delete: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -520,6 +544,7 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      slack_resolve: { readOnlyHint: true },
     })
   })
 })
