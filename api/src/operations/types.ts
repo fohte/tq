@@ -1,5 +1,5 @@
 import type { hc } from 'hono/client'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import type { AppType } from '#app'
@@ -18,6 +18,19 @@ export type OperationError =
   | { kind: 'input'; message: string }
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
+
+export function parseResponse<Schema extends z.ZodType>(
+  schema: Schema,
+  value: unknown,
+) {
+  const parsed = schema.safeParse(value)
+  return parsed.success
+    ? okAsync(parsed.data)
+    : errAsync({
+        kind: 'request',
+        error: parsed.error,
+      } satisfies OperationError)
+}
 
 export function formatInputIssues(error: z.ZodError): string {
   return error.issues

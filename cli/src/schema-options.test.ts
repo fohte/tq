@@ -103,7 +103,7 @@ Options:
       z.object({ labels: z.string().optional() }),
       [],
       {},
-      ['labels'],
+      { commaSeparated: ['labels'] },
     )
 
     expect(result._unsafeUnwrapErr().message).toBe(
@@ -129,7 +129,7 @@ Options:
       schema,
       [],
       {},
-      ['labels'],
+      { commaSeparated: ['labels'] },
     )._unsafeUnwrap()
 
     command.parse(['--labels', 'alpha, beta,,gamma'], { from: 'user' })
@@ -144,7 +144,7 @@ Options:
       schema,
       [],
       {},
-      ['values'],
+      { commaSeparated: ['values'] },
     )._unsafeUnwrap()
 
     command.parse(['--values', '3,5'], { from: 'user' })
@@ -158,8 +158,7 @@ Options:
       z.object({ sessionId: z.array(z.string()).optional() }),
       [],
       {},
-      [],
-      ['sessionId'],
+      { repeatable: ['sessionId'] },
     )._unsafeUnwrap()
 
     command.parse(['--session-id', 'first', '--session-id', 'second'], {
@@ -170,19 +169,61 @@ Options:
   })
 
   it('uses an operation-provided option default', () => {
+    vi.stubEnv('TQ_TEST_PROVIDER', '')
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       z.object({ provider: z.enum(['claude_code', 'codex']).optional() }),
       [],
-      {},
-      [],
-      [],
-      { provider: 'claude_code' },
+      { provider: 'TQ_TEST_PROVIDER' },
+      { defaults: { provider: 'claude_code' } },
     )._unsafeUnwrap()
 
     command.parse([], { from: 'user' })
 
     expect(command.opts()).toEqual({ provider: 'claude_code' })
+  })
+
+  it('lets an environment default override an operation-provided default', () => {
+    vi.stubEnv('TQ_TEST_PROVIDER', 'codex')
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      z.object({ provider: z.enum(['claude_code', 'codex']).optional() }),
+      [],
+      { provider: 'TQ_TEST_PROVIDER' },
+      { defaults: { provider: 'claude_code' } },
+    )._unsafeUnwrap()
+
+    command.parse([], { from: 'user' })
+
+    expect(command.opts()).toEqual({ provider: 'codex' })
+  })
+
+  it('rejects a repeatable option for a non-array field', () => {
+    const result = addSchemaOptions(
+      new Command(),
+      z.object({ note: z.string().optional() }),
+      [],
+      {},
+      { repeatable: ['note'] },
+    )
+
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'addSchemaOptions: repeatable field "note" must be an array',
+    )
+  })
+
+  it('rejects an array field configured as both comma-separated and repeatable', () => {
+    const result = addSchemaOptions(
+      new Command(),
+      z.object({ values: z.array(z.string()).optional() }),
+      [],
+      {},
+      { commaSeparated: ['values'], repeatable: ['values'] },
+    )
+
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'addSchemaOptions: field "values" cannot be both comma-separated and repeatable',
+    )
   })
 
   it('rejects a comma-separated array value that fails its numeric schema', () => {
@@ -192,7 +233,7 @@ Options:
       schema,
       [],
       {},
-      ['values'],
+      { commaSeparated: ['values'] },
     )._unsafeUnwrap()
     const error = captureError(() =>
       command.parse(['--values', '3,nope'], { from: 'user' }),
@@ -212,7 +253,7 @@ Options:
       schema,
       [],
       {},
-      ['labels'],
+      { commaSeparated: ['labels'] },
     )._unsafeUnwrap()
 
     expect(command.helpInformation()).toBe(
@@ -235,7 +276,7 @@ Options:
       schema,
       [],
       { labels: 'TQ_LABELS' },
-      ['labels'],
+      { commaSeparated: ['labels'] },
     )._unsafeUnwrap()
 
     command.parse([], { from: 'user' })

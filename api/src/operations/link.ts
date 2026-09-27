@@ -1,10 +1,9 @@
-import { errAsync, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import {
   defineOperation,
   type OperationClient,
-  type OperationError,
+  parseResponse,
   requestJson,
   requestNoContent,
 } from '#operations/types'
@@ -88,13 +87,7 @@ function requestAgentSessionId(
     client.api['agent-sessions']['by-session'][':provider'][':sessionId'].$get({
       param: { provider, sessionId },
     }),
-  ).andThen((value) => {
-    const parsed = agentSessionSchema.safeParse(value)
-    return parsed.success
-      ? okAsync(parsed.data.id)
-      : errAsync({
-          kind: 'request',
-          error: parsed.error,
-        } satisfies OperationError)
-  })
+  )
+    .andThen((value) => parseResponse(agentSessionSchema, value))
+    .map((session) => session.id)
 }

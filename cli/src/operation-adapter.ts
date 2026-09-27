@@ -1,5 +1,10 @@
-import { formatInputIssues, type OperationDefinition } from 'api/operations'
+import {
+  formatInputIssues,
+  type OperationClient,
+  type OperationDefinition,
+} from 'api/operations'
 import { Command } from 'commander'
+import { err, ok, type Result } from 'neverthrow'
 
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
@@ -14,15 +19,12 @@ import {
 } from '#schema-options'
 
 export type OperationCommandContext = {
-  actionCommand: Command
-  actionArgs: readonly unknown[]
   options: Record<string, unknown>
   input: Record<string, unknown>
-  inputError?: Error
-  clientResult: ReturnType<typeof buildClient>
   stdin: ReadableStdin
   execute: (
-    input: Record<string, unknown>,
+    input:
+      Record<string, unknown> | (() => Result<Record<string, unknown>, Error>),
     options?: { ignoreErrors?: boolean },
   ) => Promise<void>
 }
@@ -65,11 +67,7 @@ function collectInput(
   options: Record<string, unknown>,
   excluded: readonly string[],
 ) {
-  const input: Record<string, unknown> = {}
-  operation.positionalArgs.forEach((argument, index) => {
-    const value = actionArgs[index]
-    if (value !== undefined) input[positionalName(argument)] = value
-  })
+  const input = collectPositionals(operation, actionArgs)
 
   return pickSchemaFields(operation.inputSchema, options, excluded).map(
     (fields) => Object.assign(input, fields),
@@ -110,19 +108,136 @@ function printWebUrl(
   actionCommand: Command,
   output: Extract<OperationDefinition['cli']['output'], { kind: 'web-url' }>,
   input: Record<string, unknown>,
-): void {
+): Result<void, Error> {
   const path = renderWebPath(output.path, input)
   if (path == null) {
-    return fail(
-      actionCommand,
-      new Error('Web URL path refers to a missing input field.'),
-    )
+    return err(new Error('Web URL path refers to a missing input field.'))
   }
-  const webUrl = resolveWebUrl(actionCommand).match(
-    (value) => value,
-    (error) => fail(actionCommand, error),
+  return resolveWebUrl(actionCommand).map((webUrl) => {
+    process.stdout.write(`${webUrl}${path}\n`)
+  })
+}
+
+type OperationInput =
+  Record<string, unknown> | (() => Result<Record<string, unknown>, Error>)
+
+async function executeOperation(
+  operation: OperationDefinition,
+  actionCommand: Command,
+  options: Record<string, unknown>,
+  client: OperationClient,
+  input: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+  ignoreErrors: boolean,
+): Promise<void> {
+  const result = await operation.run(client, input)
+  if (result.isErr()) {
+    const operationError = result.error
+    const error =
+      operationError.kind === 'input'
+        ? new Error(operationError.message)
+        : operationError.kind === 'http'
+          ? await toApiError(operationError.response)
+          : operationError.error
+    if (!ignoreErrors) fail(actionCommand, error)
+    return
+  }
+
+  if (operation.cli.output.kind === 'web-url') {
+    const printed = printWebUrl(actionCommand, operation.cli.output, input)
+    if (printed.isErr() && !ignoreErrors) fail(actionCommand, printed.error)
+    return
+  }
+
+  const printed = await printOperationOutput(
+    operation.cli.output,
+    result.value,
+    options,
+    fetchImpl,
   )
-  process.stdout.write(`${webUrl}${path}\n`)
+  if (printed.isErr() && !ignoreErrors) fail(actionCommand, printed.error)
+}
+
+async function executeCommandOperation(
+  operation: OperationDefinition,
+  actionCommand: Command,
+  options: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
+  input: OperationInput,
+  { ignoreErrors = false }: { ignoreErrors?: boolean } = {},
+): Promise<void> {
+  const resolveInput = () => (typeof input === 'function' ? input() : ok(input))
+
+  if (operation.cli.output.kind === 'web-url') {
+    const collected = resolveInput()
+    if (collected.isErr()) {
+      if (!ignoreErrors) fail(actionCommand, collected.error)
+      return
+    }
+    const inputError = operationInputError(operation, collected.value)
+    if (inputError != null) {
+      if (!ignoreErrors) fail(actionCommand, inputError)
+      return
+    }
+    const printed = printWebUrl(
+      actionCommand,
+      operation.cli.output,
+      collected.value,
+    )
+    if (printed.isErr() && !ignoreErrors) fail(actionCommand, printed.error)
+    return
+  }
+
+  const clientResult = buildClient(actionCommand, fetchImpl)
+  if (clientResult.isErr()) {
+    if (!ignoreErrors) fail(actionCommand, clientResult.error)
+    return
+  }
+
+  const collected = resolveInput()
+  if (collected.isErr()) {
+    if (!ignoreErrors) fail(actionCommand, collected.error)
+    return
+  }
+  const inputValue = collected.value
+
+  const contentInput = operation.cli.contentInput
+  if (contentInput != null) {
+    const filePath =
+      'file' in options && typeof options['file'] === 'string'
+        ? options['file']
+        : undefined
+    const content = await readContentInput(filePath, stdin)
+    if (content.isErr()) {
+      if (!ignoreErrors) fail(actionCommand, content.error)
+      return
+    }
+    if (content.value === undefined && contentInput.required !== false) {
+      if (!ignoreErrors) {
+        fail(
+          actionCommand,
+          new Error(
+            'Content is required. Provide --file <path> or pipe content via stdin.',
+          ),
+        )
+      }
+      return
+    }
+    if (content.value !== undefined) {
+      inputValue[contentInput.field] = content.value
+    }
+  }
+
+  await executeOperation(
+    operation,
+    actionCommand,
+    options,
+    clientResult.value,
+    inputValue,
+    fetchImpl,
+    ignoreErrors,
+  )
 }
 
 export function registerOperations(
@@ -213,9 +328,11 @@ export function registerOperations(
       operation.inputSchema,
       excluded,
       operation.cli.envDefaults,
-      operation.cli.commaSeparatedOptions,
-      operation.cli.repeatableOptions,
-      operation.cli.optionDefaults,
+      {
+        commaSeparated: operation.cli.commaSeparatedOptions ?? [],
+        repeatable: operation.cli.repeatableOptions ?? [],
+        defaults: operation.cli.optionDefaults ?? {},
+      },
     ).match(
       () => undefined,
       (error) => fail(group, error),
@@ -230,118 +347,33 @@ export function registerOperations(
       const collected = collectInput(operation, actionArgs, options, excluded)
 
       if (handler != null) {
-        const clientResult = buildClient(actionCommand, fetchImpl)
         await handler({
-          actionCommand,
-          actionArgs,
           options,
           input: collected.isOk()
             ? collected.value
             : collectPositionals(operation, actionArgs),
-          ...(collected.isErr() ? { inputError: collected.error } : {}),
-          clientResult,
           stdin,
-          execute: async (
-            input,
-            { ignoreErrors = false }: { ignoreErrors?: boolean } = {},
-          ) => {
-            if (clientResult.isErr()) {
-              if (!ignoreErrors) fail(actionCommand, clientResult.error)
-              return
-            }
-
-            const result = await operation.run(clientResult.value, input)
-            if (result.isErr()) {
-              if (ignoreErrors) return
-              const operationError = result.error
-              const error =
-                operationError.kind === 'input'
-                  ? new Error(operationError.message)
-                  : operationError.kind === 'http'
-                    ? await toApiError(operationError.response)
-                    : operationError.error
-              return fail(actionCommand, error)
-            }
-
-            if (operation.cli.output.kind === 'web-url') {
-              printWebUrl(actionCommand, operation.cli.output, input)
-              return
-            }
-            const printed = await printOperationOutput(
-              operation.cli.output,
-              result.value,
+          execute: (input, runOptions) =>
+            executeCommandOperation(
+              operation,
+              actionCommand,
               options,
               fetchImpl,
-            )
-            if (printed.isErr() && !ignoreErrors) {
-              fail(actionCommand, printed.error)
-            }
-          },
+              stdin,
+              input,
+              runOptions,
+            ),
         })
         return
       }
 
-      if (operation.cli.output.kind === 'web-url') {
-        const input = collected.match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        const inputError = operationInputError(operation, input)
-        if (inputError != null) return fail(actionCommand, inputError)
-        printWebUrl(actionCommand, operation.cli.output, input)
-        return
-      }
-
-      const client = buildClient(actionCommand, fetchImpl).match(
-        (value) => value,
-        (error) => fail(actionCommand, error),
-      )
-      const input = collected.match(
-        (value) => value,
-        (error) => fail(actionCommand, error),
-      )
-
-      if (contentInput != null) {
-        const filePath =
-          'file' in options && typeof options['file'] === 'string'
-            ? options['file']
-            : undefined
-        const content = await readContentInput(filePath, stdin).match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        if (content === undefined && contentInput.required !== false) {
-          return fail(
-            actionCommand,
-            new Error(
-              'Content is required. Provide --file <path> or pipe content via stdin.',
-            ),
-          )
-        }
-        if (content !== undefined) input[contentInput.field] = content
-      }
-
-      const result = await operation.run(client, input)
-      if (result.isErr()) {
-        switch (result.error.kind) {
-          case 'input':
-            return fail(actionCommand, new Error(result.error.message))
-          case 'http':
-            return fail(actionCommand, await toApiError(result.error.response))
-          case 'request':
-            return fail(actionCommand, result.error.error)
-        }
-      }
-
-      const printed = await printOperationOutput(
-        operation.cli.output,
-        result.value,
+      await executeCommandOperation(
+        operation,
+        actionCommand,
         options,
         fetchImpl,
-      )
-      printed.match(
-        () => undefined,
-        (error) => fail(actionCommand, error),
+        stdin,
+        () => collected,
       )
     })
   }

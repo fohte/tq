@@ -1,10 +1,9 @@
-import { errAsync, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
-  type OperationError,
+  parseResponse,
   requestJson,
   requestNoContent,
 } from '#operations/types'
@@ -45,19 +44,6 @@ function groupTasksBySessionId(
     map.set(row.id, list)
   }
   return map
-}
-
-function parseResponse<Schema extends z.ZodType>(
-  schema: Schema,
-  value: unknown,
-) {
-  const parsed = schema.safeParse(value)
-  return parsed.success
-    ? okAsync(parsed.data)
-    : errAsync({
-        kind: 'request',
-        error: parsed.error,
-      } satisfies OperationError)
 }
 
 const listSessionsInputSchema = z.object({

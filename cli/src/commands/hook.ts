@@ -1,31 +1,19 @@
 import { appendFile, readFile } from 'node:fs/promises'
 
 import { hookOperations } from 'api/operations'
-import {
-  agentProviderSchema,
-  upsertAgentSessionSchema,
-} from 'api/schemas/agent-session'
+import { agentProviderSchema } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
 import { z } from 'zod'
 
 import type { ReadableStdin } from '#input'
 import { readContentInput } from '#input'
 import {
+  type OperationCommandContext,
   type OperationCommandHandler,
   registerOperations,
 } from '#operation-adapter'
 import { tryParseJson } from '#result'
-import { pickSchemaFields } from '#schema-options'
 import { resolveSessionLabel } from '#transcript'
-
-const HOOK_MANAGED_FIELDS = [
-  'provider',
-  'sessionId',
-  'cwd',
-  'label',
-  'lastMessage',
-  'ended',
-] as const
 
 // Claude Code's hook input carries more fields than this (source,
 // notification_type, tool_name, ...), but SessionStart/Stop/SessionEnd only
@@ -58,7 +46,7 @@ async function persistSessionIdToEnvFile(sessionId: string): Promise<void> {
   )
 }
 
-type HookCommandContext = Parameters<OperationCommandHandler>[0]
+type HookCommandContext = OperationCommandContext
 
 export const handleHookCommand: OperationCommandHandler = async (context) => {
   const event = context.input['event']
@@ -68,7 +56,8 @@ export const handleHookCommand: OperationCommandHandler = async (context) => {
   // never fail, and a stream-level error on stdin would otherwise reject.
   await reportHookEvent(
     event,
-    context.options,
+    context.input,
+    context.options['provider'],
     context.stdin,
     context.execute,
   ).catch(() => undefined)
@@ -76,7 +65,8 @@ export const handleHookCommand: OperationCommandHandler = async (context) => {
 
 async function reportHookEvent(
   event: string,
-  options: HookCommandContext['options'],
+  inputOptions: HookCommandContext['input'],
+  providerOption: unknown,
   stdin: ReadableStdin,
   execute: HookCommandContext['execute'],
 ): Promise<void> {
@@ -98,7 +88,7 @@ async function reportHookEvent(
 
   // The `: 'claude_code'` branch is only a fallback: the --provider option
   // validates explicit values before this handler runs.
-  const parsedProvider = agentProviderSchema.safeParse(options['provider'])
+  const parsedProvider = agentProviderSchema.safeParse(providerOption)
   const provider = parsedProvider.success ? parsedProvider.data : 'claude_code'
 
   const transcript = await readTranscript(input.data.transcript_path)
@@ -108,18 +98,9 @@ async function reportHookEvent(
     provider,
   )
 
-  const additionalInput = pickSchemaFields(
-    upsertAgentSessionSchema,
-    options,
-    HOOK_MANAGED_FIELDS,
-  ).match(
-    (value) => value,
-    () => ({}),
-  )
-
   await execute(
     {
-      ...additionalInput,
+      ...inputOptions,
       event,
       provider,
       sessionId: input.data.session_id,
@@ -140,7 +121,7 @@ export function registerHookCommands(
   registerOperations(
     program,
     hookOperations,
-    'Report coding agent hook events to tq',
+    hookOperations[0].description,
     fetchImpl,
     stdin,
     handleHookCommand,

@@ -42,6 +42,13 @@ const session2 = {
   endedAt: null,
 }
 
+function summarizeSessionDeleteRequest(
+  exitCode: number,
+  requestDetails: ReturnType<typeof request>,
+) {
+  return { exitCode, request: requestDetails }
+}
+
 describe('session list', () => {
   it('lists sessions with the tasks each is linked to, defaulting unlinked sessions to an empty array', async () => {
     const sessions = [session1, session2]
@@ -315,5 +322,34 @@ describe('session delete', () => {
     expect(stderr.mock.calls).toEqual([
       ['Error: Agent session not found (HTTP 404)\n'],
     ])
+  })
+
+  it('encodes path separators in the session id', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 204 }),
+    )
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'session',
+        'delete',
+        'claude_code',
+        'segment/with separator',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeSessionDeleteRequest(exitCode, request(calls[0]))).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'DELETE',
+        pathname:
+          '/api/agent-sessions/by-session/claude_code/segment%2Fwith%20separator',
+        query: {},
+        body: undefined,
+      },
+    })
   })
 })

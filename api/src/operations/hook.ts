@@ -14,7 +14,9 @@ import {
 const hookInputSchema = z.object({
   ...upsertAgentSessionSchema.shape,
   event: z.string(),
-  provider: agentProviderSchema.optional(),
+  provider: agentProviderSchema
+    .describe('Agent reporting this session')
+    .optional(),
 })
 
 // `event` and the fields sourced from the local hook payload are assembled by
