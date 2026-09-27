@@ -392,7 +392,7 @@ export async function resolveParentId(
 
 // Batch counterpart of `findTaskByIdOrNumber`; unmatched inputs are simply
 // absent from the returned map.
-export async function findTasksByIdsOrNumbers(
+async function findTasksByIdsOrNumbers(
   params: string[],
 ): Promise<Map<string, typeof tasks.$inferSelect>> {
   if (params.length === 0) return new Map()
