@@ -48,7 +48,7 @@ async function persistSessionIdToEnvFile(sessionId: string): Promise<void> {
 
 type HookCommandContext = OperationCommandContext
 
-export const handleHookCommand: OperationCommandHandler = async (context) => {
+const handleHookCommand: OperationCommandHandler = async (context) => {
   const event = context.input['event']
   if (typeof event !== 'string') return
 
