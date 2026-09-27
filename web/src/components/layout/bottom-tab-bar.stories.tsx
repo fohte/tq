@@ -6,7 +6,7 @@ import { StoryRouter } from '#storybook-config/story-router'
 function BottomTabBarStory() {
   return (
     <div className="flex h-dvh flex-col justify-end">
-      <BottomTabBar />
+      <BottomTabBar onSearch={() => {}} onNewTask={() => {}} />
     </div>
   )
 }
@@ -26,7 +26,7 @@ const meta = {
   argTypes: {
     currentPath: {
       control: 'select',
-      options: ['/', '/tasks', '/projects', '/today', '/browse'],
+      options: ['/', '/tasks', '/today', '/browse'],
     },
   },
 } satisfies Meta<typeof BottomTabBarWithRouter>

@@ -29,6 +29,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   )
   const copiedUrl = useUrlCopiedToast()
   const defaultSearchQuery = useSearchModalDefaultQuery()
+  const openSearch = useCallback(() => {
+    setSearchOpen(true)
+  }, [])
   const openNewTask = useCallback(() => {
     setNewTaskOpen(true)
   }, [])
@@ -76,7 +79,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </SearchModalOpenContext.Provider>
         </main>
         <StatusLine searchKeybinding={searchKeybinding} />
-        <BottomTabBar />
+        <BottomTabBar onSearch={openSearch} onNewTask={openNewTask} />
       </div>
       <SearchModal
         open={searchOpen}

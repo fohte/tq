@@ -1,10 +1,11 @@
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import {
   Calendar,
-  FolderKanban,
   ListChecks,
   type LucideIcon,
   Menu,
+  Plus,
+  Search,
   Sun,
 } from 'lucide-react'
 
@@ -22,8 +23,12 @@ const tabs: TabItem[] = [
   { to: '/today', icon: Sun, label: 'today' },
   { to: '/', icon: Calendar, label: 'calendar', exact: true },
   { to: '/tasks', icon: ListChecks, label: 'tasks' },
-  { to: '/projects', icon: FolderKanban, label: 'projects' },
 ]
+
+interface BottomTabBarProps {
+  onSearch: () => void
+  onNewTask: () => void
+}
 
 function Tab({ tab }: { tab: TabItem }) {
   const matchRoute = useMatchRoute()
@@ -46,13 +51,54 @@ function Tab({ tab }: { tab: TabItem }) {
   )
 }
 
-export function BottomTabBar() {
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  isPrimary = false,
+  hasDivider = false,
+}: {
+  icon: LucideIcon
+  label: string
+  onClick: () => void
+  isPrimary?: boolean
+  hasDivider?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'relative flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-t-2 border-t-transparent',
+        isPrimary ? 'text-primary' : 'text-muted-foreground-faint',
+      )}
+    >
+      {hasDivider && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-3 left-0 w-px bg-border"
+        />
+      )}
+      <Icon className="size-5" />
+      <span className="font-mono text-2xs tracking-wider">{label}</span>
+    </button>
+  )
+}
+
+export function BottomTabBar({ onSearch, onNewTask }: BottomTabBarProps) {
   return (
     <nav className="sticky bottom-0 flex shrink-0 flex-col border-t border-border bg-background md:hidden">
       <div className="flex h-13 items-stretch">
         {tabs.map((tab) => (
           <Tab key={tab.to} tab={tab} />
         ))}
+        <ActionButton
+          icon={Search}
+          label="search"
+          onClick={onSearch}
+          hasDivider
+        />
+        <ActionButton icon={Plus} label="new" onClick={onNewTask} isPrimary />
       </div>
     </nav>
   )
