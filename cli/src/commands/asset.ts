@@ -1,124 +1,19 @@
-import { basename, extname } from 'node:path'
-
-import { ALLOWED_CONTENT_TYPES } from 'api/constants/assets'
+import { assetOperations } from 'api/operations'
 import type { Command } from 'commander'
-import { err, ok, Result } from 'neverthrow'
 
-import { toApiError } from '#client'
-import { buildClient } from '#command-context'
-import { readBinaryFile } from '#input'
-import { printJson, writeBinaryFile } from '#output'
-import { fail } from '#result'
-
-const EXTENSION_CONTENT_TYPES: Record<string, string> = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-}
-
-function detectContentType(filePath: string): Result<string, Error> {
-  const contentType = EXTENSION_CONTENT_TYPES[extname(filePath).toLowerCase()]
-  if (contentType == null) {
-    return err(
-      new Error(
-        `Unsupported file extension for ${filePath}. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
-      ),
-    )
-  }
-  return ok(contentType)
-}
-
-function escapeMarkdownAlt(text: string): string {
-  return text
-    .replaceAll('\\', '\\\\')
-    .replaceAll('[', '\\[')
-    .replaceAll(']', '\\]')
-}
+import type { ReadableStdin } from '#input'
+import { registerOperations } from '#operation-adapter'
 
 export function registerAssetCommands(
   program: Command,
   fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
 ): void {
-  const asset = program.command('asset').description('Manage assets')
-
-  asset
-    .command('upload <filePath>')
-    .description('Upload an asset')
-    .action(async (filePath: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const data = await readBinaryFile(filePath).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const fileName = basename(filePath)
-      const file = new File([data], fileName, {
-        type: detectContentType(filePath).match(
-          (value) => value,
-          (error) => fail(command, error),
-        ),
-      })
-
-      const res = await client.api.assets.$post({ form: { file } })
-      if (!res.ok) return fail(command, await toApiError(res))
-      const uploaded = await res.json()
-      printJson({
-        ...uploaded,
-        markdown: `![${escapeMarkdownAlt(fileName)}](/api/assets/${uploaded.id})`,
-      })
-    })
-
-  asset
-    .command('get <id>')
-    .description(
-      'Get an asset (prints its signed URL, or downloads it with --output)',
-    )
-    .option(
-      '--output <path>',
-      'Download the asset to a file instead of printing its URL',
-    )
-    .action(
-      async (id: string, options: { output?: string }, command: Command) => {
-        const client = buildClient(command, fetchImpl).match(
-          (value) => value,
-          (error) => fail(command, error),
-        )
-        const res = await client.api.assets[':id'].$get({ param: { id } })
-        if (!res.ok) return fail(command, await toApiError(res))
-        const { url } = await res.json()
-
-        if (options.output != null) {
-          const download = await fetchImpl(url)
-          if (!download.ok) return fail(command, await toApiError(download))
-          await writeBinaryFile(
-            options.output,
-            new Uint8Array(await download.arrayBuffer()),
-          ).match(
-            (value) => value,
-            (error) => fail(command, error),
-          )
-          printJson({ id, output: options.output })
-          return
-        }
-
-        printJson({ url })
-      },
-    )
-
-  asset
-    .command('delete <id>')
-    .description('Delete an asset')
-    .action(async (id: string, _options: unknown, command: Command) => {
-      const client = buildClient(command, fetchImpl).match(
-        (value) => value,
-        (error) => fail(command, error),
-      )
-      const res = await client.api.assets[':id'].$delete({ param: { id } })
-      if (!res.ok) return fail(command, await toApiError(res))
-      printJson({ deleted: true, id })
-    })
+  registerOperations(
+    program,
+    assetOperations,
+    'Manage assets',
+    fetchImpl,
+    stdin,
+  )
 }
