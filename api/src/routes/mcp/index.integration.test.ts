@@ -10,6 +10,7 @@ import { jsonBody, setupTestDb } from '#testing'
 // Tool-specific schema and annotation details live with their operation or
 // write-tool integration tests; these tests pin down wire-level reachability.
 const REGISTERED_TOOL_NAMES = [
+  'asset_delete',
   'calendar_events',
   'comment_create',
   'comment_delete',
@@ -23,6 +24,7 @@ const REGISTERED_TOOL_NAMES = [
   'github_resolve',
   'github_sync',
   'github_unlink',
+  'health',
   'label_delete',
   'label_list',
   'label_update',
