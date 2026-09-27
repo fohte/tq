@@ -55,6 +55,14 @@ function summarizeTraversal(result: CallToolResult, projectTitle: string) {
   return { result, projectTitle }
 }
 
+function summarizeSessionDeleteTraversal(
+  result: CallToolResult,
+  taskStatus: number,
+  task: { title: string },
+) {
+  return { result, task: { status: taskStatus, body: task } }
+}
+
 function summarizeAssetDelete(result: CallToolResult, assetStatus: number) {
   return { result: parseToolData(result, ['id']), assetStatus }
 }
@@ -168,6 +176,66 @@ describe('comment_create tool', () => {
     expect(result).toEqual({
       isError: true,
       content: [{ type: 'text', text: 'Task not found' }],
+    })
+  })
+})
+
+describe('session_delete tool', () => {
+  it('rejects empty, dot, and dot-dot provider and session ids', async () => {
+    const invalidSegments = ['', '.', '..']
+    const cases = [
+      ...invalidSegments.map((value) => ({
+        field: 'provider',
+        label: 'Provider',
+        value,
+      })),
+      ...invalidSegments.map((value) => ({
+        field: 'sessionId',
+        label: 'Session ID',
+        value,
+      })),
+    ]
+    const outcomes = await Promise.all(
+      cases.map(({ field, value }) =>
+        summarizeToolCallOutcome('session_delete', {
+          provider: field === 'provider' ? value : 'claude_code',
+          sessionId: field === 'sessionId' ? value : 'session-id',
+        }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      cases.map(({ field, label, value }) =>
+        expectedPathSegmentValidationError(
+          'session_delete',
+          field,
+          label,
+          value,
+        ),
+      ),
+    )
+  })
+
+  it('does not route an encoded session id to a task deletion', async () => {
+    const task = await createTask('Protected test task')
+    const result = await callMcpTool(client, 'session_delete', {
+      provider: 'claude_code',
+      sessionId: `../../../tasks/${task.id}`,
+    })
+    const taskResponse = await app.request(`/api/tasks/${task.id}`)
+    const currentTask = await jsonBody(
+      taskResponse,
+      z.object({ title: z.string() }),
+    )
+
+    expect(
+      summarizeSessionDeleteTraversal(result, taskResponse.status, currentTask),
+    ).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Agent session not found' }],
+      },
+      task: { status: 200, body: { title: 'Protected test task' } },
     })
   })
 })
@@ -612,6 +680,8 @@ describe('operation tool input schemas', () => {
       queue_list: false,
       queue_set: false,
       slack_resolve: false,
+      session_delete: false,
+      session_list: false,
     })
   })
 })

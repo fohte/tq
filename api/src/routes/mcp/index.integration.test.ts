@@ -43,6 +43,8 @@ const REGISTERED_TOOL_NAMES = [
   'queue_list',
   'queue_set',
   'search_tasks',
+  'session_delete',
+  'session_list',
   'slack_resolve',
   'update_task',
   'update_task_status',

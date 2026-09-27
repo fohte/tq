@@ -64,8 +64,8 @@ function buildProgram(
   registerSlackCommands(program, fetchImpl, stdin)
   registerHealthCommand(program, fetchImpl, stdin)
   registerHookCommands(program, fetchImpl, stdin)
-  registerLinkCommands(program, fetchImpl)
-  registerSessionCommands(program, fetchImpl)
+  registerLinkCommands(program, fetchImpl, stdin)
+  registerSessionCommands(program, fetchImpl, stdin)
 
   return program
 }
