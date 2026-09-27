@@ -161,6 +161,28 @@ export const AllMarkdownElementsEditMode: Story = {
   },
 }
 
+export const ControlledViewMode: Story = {
+  name: 'keeps a task mention as a chip while the caller controls editing',
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: `The caller keeps this editor in view mode with #${String(MENTION_FIXTURE_NUMBER)} as a chip.`,
+    viewEditToggle: {},
+    editing: false,
+    onEditingChange: fn(),
+  },
+}
+
+export const ControlledEditMode: Story = {
+  name: 'shows editable Markdown when the caller opens the editor',
+  render: renderWithLiveReferences,
+  args: {
+    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    viewEditToggle: {},
+    editing: true,
+    onEditingChange: fn(),
+  },
+}
+
 export const BlockVideoAsset: Story = {
   name: 'renders a block video from a Markdown image',
   render: renderWithLiveReferences,
