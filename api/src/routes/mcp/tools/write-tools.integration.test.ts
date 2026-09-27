@@ -355,6 +355,48 @@ describe('comment_delete tool', () => {
   })
 })
 
+describe('github_unlink tool', () => {
+  it('rejects empty and dot link ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['', '.', '..'].map((linkId) =>
+        summarizeToolCallOutcome('github_unlink', {
+          taskId: TEST_UUID,
+          linkId,
+        }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['', '.', '..'].map((linkId) =>
+        expectedPathSegmentValidationError(
+          'github_unlink',
+          'linkId',
+          'GitHub link ID',
+          linkId,
+        ),
+      ),
+    )
+  })
+
+  it('does not route a traversal link id to a project deletion', async () => {
+    const project = await createProject('Original project')
+    const task = await createTask('Has GitHub links')
+
+    const result = await callMcpTool(client, 'github_unlink', {
+      taskId: task.id,
+      linkId: `../../../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'GitHub link not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
 describe('label_update tool', () => {
   it('rejects empty and dot ids before tool execution', async () => {
     const outcomes = await Promise.all(
