@@ -5,6 +5,7 @@ import { app } from '#app'
 import {
   callMcpTool,
   connectMcpClient,
+  expectedPathSegmentValidationError,
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
@@ -36,14 +37,6 @@ function expectedToolValidationError(
       },
     ],
   }
-}
-
-function expectedPathSegmentValidationError(name: string, value: string) {
-  const issue =
-    value === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : 'Queue key must be a valid path segment'
-  return expectedToolValidationError(name, 'key', issue)
 }
 
 let client: Client
@@ -82,7 +75,7 @@ describe('queue operation tools', () => {
     expect(parseToolJson(result)).toEqual(expected)
   })
 
-  it('rejects an invalid date', async () => {
+  it('rejects an invalid date when getting a queue', async () => {
     const result = await callMcpTool(client, 'queue_get', {
       key: 'day',
       date: 'not-a-date',
@@ -112,34 +105,48 @@ describe('queue operation tools', () => {
 
     expect(results).toEqual(
       invalidKeys.flatMap((key) => [
-        expectedPathSegmentValidationError('queue_get', key),
-        expectedPathSegmentValidationError('queue_set', key),
+        expectedPathSegmentValidationError(
+          'queue_get',
+          'key',
+          'Queue key',
+          key,
+        ),
+        expectedPathSegmentValidationError(
+          'queue_set',
+          'key',
+          'Queue key',
+          key,
+        ),
       ]),
     )
   })
 
-  it('rejects invalid dates and task UUIDs when setting a queue', async () => {
-    const results = await Promise.all([
-      callMcpTool(client, 'queue_set', {
-        key: 'day',
-        date: 'not-a-date',
-        taskIds: [],
-      }),
-      callMcpTool(client, 'queue_set', {
-        key: 'day',
-        date: '2026-08-06',
-        taskIds: ['not-a-uuid'],
-      }),
-    ])
+  it('rejects an invalid date when setting a queue', async () => {
+    const result = await callMcpTool(client, 'queue_set', {
+      key: 'day',
+      date: 'not-a-date',
+      taskIds: [],
+    })
 
-    expect(results).toEqual([
+    expect(result).toEqual(
       expectedToolValidationError(
         'queue_set',
         'date',
         'Invalid date format (YYYY-MM-DD)',
       ),
+    )
+  })
+
+  it('rejects a non-UUID task ID when setting a queue', async () => {
+    const result = await callMcpTool(client, 'queue_set', {
+      key: 'day',
+      date: '2026-08-06',
+      taskIds: ['not-a-uuid'],
+    })
+
+    expect(result).toEqual(
       expectedToolValidationError('queue_set', 'taskIds.0', 'Invalid UUID'),
-    ])
+    )
   })
 
   it('returns the selected queue for an explicit date', async () => {

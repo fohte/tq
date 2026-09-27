@@ -263,44 +263,41 @@ function CrepeEditor({
           (ctx) =>
             new Plugin({
               key: new PluginKey('markdown-edit-session'),
-              state: {
-                init: (_, state) => {
-                  const session =
-                    modeRef.current === 'edit'
-                      ? createEditSession(
-                          serializeWithoutEmptyTrailingParagraph(
-                            state.doc,
-                            ctx.get(serializerCtx),
-                          ),
-                        )
-                      : null
-                  editSessionRef.current = session
-                  editSessionByDocRef.current.set(
-                    state.doc,
-                    session == null
-                      ? null
-                      : { session, markdown: session.initialMarkdown },
-                  )
-                  return null
-                },
-                apply: (tr, pluginState, _, state) => {
-                  if (tr.docChanged) {
+              view: (view) => {
+                const session =
+                  modeRef.current === 'edit'
+                    ? createEditSession(
+                        serializeWithoutEmptyTrailingParagraph(
+                          view.state.doc,
+                          ctx.get(serializerCtx),
+                        ),
+                      )
+                    : null
+                editSessionRef.current = session
+                editSessionByDocRef.current.set(
+                  view.state.doc,
+                  session == null
+                    ? null
+                    : { session, markdown: session.initialMarkdown },
+                )
+                return {
+                  update: (nextView, previousState) => {
+                    if (previousState.doc.eq(nextView.state.doc)) return
                     const session = editSessionRef.current
                     editSessionByDocRef.current.set(
-                      state.doc,
+                      nextView.state.doc,
                       session == null
                         ? null
                         : {
                             session,
                             markdown: serializeWithoutEmptyTrailingParagraph(
-                              state.doc,
+                              nextView.state.doc,
                               ctx.get(serializerCtx),
                             ),
                           },
                     )
-                  }
-                  return pluginState
-                },
+                  },
+                }
               },
             }),
         ),

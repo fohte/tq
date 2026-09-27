@@ -4,6 +4,7 @@ import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
+  omitKeyRecursively,
   requestJson,
   requestNoContent,
 } from '#operations/types'
@@ -42,19 +43,6 @@ const updatePageInputSchema = updatePageSchema.extend({
   taskId: taskIdSchema,
   pageId: pageIdSchema,
 })
-
-function omitKeyRecursively(value: unknown, key: string): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => omitKeyRecursively(item, key))
-  }
-  if (typeof value !== 'object' || value === null) return value
-
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([field]) => field !== key)
-      .map(([field, nested]) => [field, omitKeyRecursively(nested, key)]),
-  )
-}
 
 export const pageOperations = [
   defineOperation(searchPagesSchema, {

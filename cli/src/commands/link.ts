@@ -1,4 +1,5 @@
 import { linkOperations } from 'api/operations'
+import type { AgentProvider } from 'api/schemas/agent-session'
 import type { Command } from 'commander'
 import { err, ok, type Result } from 'neverthrow'
 
@@ -12,7 +13,7 @@ const noAgentSessionIdError =
   'No agent session ID is set. Expected CODEX_SESSION_ID for Codex or TQ_SESSION_ID for Claude Code (set by the SessionStart hook configured to run `tq hook SessionStart`).'
 
 type AgentSessionReference = {
-  provider: 'codex' | 'claude_code'
+  provider: AgentProvider
   sessionId: string
 }
 

@@ -12,8 +12,10 @@ import { operations } from '#operations/index'
 import {
   callMcpTool,
   connectMcpClient,
+  expectedPathSegmentValidationError as expectedMcpPathSegmentValidationError,
   parseToolData,
 } from '#routes/mcp/testing'
+import { operationToolName } from '#routes/mcp/tools/operation-tools'
 import {
   createComment,
   createLabel,
@@ -109,21 +111,9 @@ function expectedPathSegmentValidationError(
   label: string,
   value: string,
 ) {
-  const issue =
-    value === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : `${label} must be a valid path segment`
   return {
     kind: 'result',
-    result: {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
-        },
-      ],
-    },
+    result: expectedMcpPathSegmentValidationError(name, field, label, value),
   }
 }
 
@@ -637,9 +627,7 @@ describe('asset_delete tool', () => {
 describe('operation tool input schemas', () => {
   it('exposes agent only for operations that support attribution', async () => {
     const tools = await client.listTools()
-    const operationToolNames = operations.map((operation) =>
-      operation.path.join('_'),
-    )
+    const operationToolNames = operations.map(operationToolName)
     const agentArguments = Object.fromEntries(
       tools.tools
         .filter((tool) => operationToolNames.includes(tool.name))
@@ -679,6 +667,11 @@ describe('operation tool input schemas', () => {
       queue_get: false,
       queue_list: false,
       queue_set: false,
+      saved_view_create: false,
+      saved_view_delete: false,
+      saved_view_get: false,
+      saved_view_list: false,
+      saved_view_update: false,
       slack_resolve: false,
       session_delete: false,
       session_list: false,

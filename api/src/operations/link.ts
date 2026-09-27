@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
   type OperationClient,
@@ -10,11 +11,13 @@ import {
 import { agentProviderSchema } from '#schemas/agent-session'
 
 const linkInputSchema = z.object({
-  taskId: z.string(),
-  provider: agentProviderSchema,
-  sessionId: z.string().min(1),
+  taskId: pathSegmentSchema('Task ID'),
+  provider: pathSegmentSchema('Provider').pipe(agentProviderSchema),
+  sessionId: pathSegmentSchema('Session ID'),
 })
-const agentSessionSchema = z.object({ id: z.string() })
+const agentSessionSchema = z.object({
+  id: pathSegmentSchema('Agent session ID'),
+})
 
 const surface = {
   only: 'cli',
@@ -43,7 +46,7 @@ export const linkOperations = [
         (agentSessionId) =>
           requestJson(
             client.api.tasks[':taskId']['agent-sessions'].$post({
-              param: { taskId },
+              param: { taskId: encodePathSegment(taskId) },
               json: { agentSessionId },
             }),
           ),
@@ -71,7 +74,10 @@ export const linkOperations = [
             client.api.tasks[':taskId']['agent-sessions'][
               ':agentSessionId'
             ].$delete({
-              param: { taskId, agentSessionId },
+              param: {
+                taskId: encodePathSegment(taskId),
+                agentSessionId: encodePathSegment(agentSessionId),
+              },
             }),
           ).map(() => ({ unlinked: true, taskId })),
       ),
@@ -85,7 +91,10 @@ function requestAgentSessionId(
 ) {
   return requestJson(
     client.api['agent-sessions']['by-session'][':provider'][':sessionId'].$get({
-      param: { provider, sessionId },
+      param: {
+        provider: encodePathSegment(provider),
+        sessionId: encodePathSegment(sessionId),
+      },
     }),
   )
     .andThen((value) => parseResponse(agentSessionSchema, value))

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
+  omitKeyRecursively,
   parseResponse,
   requestJson,
   requestNoContent,
@@ -51,6 +52,7 @@ const listSessionsInputSchema = z.object({
     .array(z.string())
     .describe('Only list the session with this session id')
     .optional(),
+  full: z.boolean().optional().describe("Include each session's last message"),
 })
 const deleteSessionInputSchema = z.object({
   provider: pathSegmentSchema('Provider'),
@@ -71,9 +73,10 @@ export const sessionOperations = [
         omitKey: 'lastMessage',
         fullOption: '--full',
         fullDescription: "Include the session's last message in the output",
+        fullField: 'full',
       },
     },
-    run: (client, { sessionId }) => {
+    run: (client, { sessionId, full }) => {
       const query = sessionId == null ? {} : { sessionId }
       const sessions = requestJson(
         client.api['agent-sessions'].$get({ query }),
@@ -87,10 +90,13 @@ export const sessionOperations = [
       return sessions.andThen((sessionRows) =>
         sessionsByTask.map((taskRows) => {
           const tasksBySessionId = groupTasksBySessionId(taskRows)
-          return sessionRows.map((session) => ({
+          const sessionsWithTasks = sessionRows.map((session) => ({
             ...session,
             tasks: tasksBySessionId.get(session.id) ?? [],
           }))
+          return full === true
+            ? sessionsWithTasks
+            : omitKeyRecursively(sessionsWithTasks, 'lastMessage')
         }),
       )
     },

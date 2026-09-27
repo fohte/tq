@@ -19,6 +19,19 @@ export type OperationError =
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
 
+export function omitKeyRecursively(value: unknown, key: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => omitKeyRecursively(item, key))
+  }
+  if (typeof value !== 'object' || value === null) return value
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([field]) => field !== key)
+      .map(([field, nested]) => [field, omitKeyRecursively(nested, key)]),
+  )
+}
+
 export function parseResponse<Schema extends z.ZodType>(
   schema: Schema,
   value: unknown,
