@@ -7,7 +7,11 @@ import { imageSchema } from '@milkdown/kit/preset/commonmark'
 import type { NodeView, NodeViewConstructor } from '@milkdown/kit/prose/view'
 import { $view } from '@milkdown/kit/utils'
 
-import { resolveAssetDetails } from '#lib/asset-upload'
+import {
+  ASSET_FILE_ACCEPT,
+  handleAssetLoadError,
+  resolveAssetDetails,
+} from '#lib/asset-upload'
 
 type AssetNodeViewMode = 'block' | 'inline'
 
@@ -37,19 +41,45 @@ function createAssetNodeView(
 
     dom.append(imageView.dom)
 
+    const getCaption = () =>
+      String(currentNode.attrs[mode === 'block' ? 'caption' : 'alt'] ?? '')
+
+    const handleVideoError = (event: Event) => {
+      void handleAssetLoadError(event)
+    }
+
     const allowVideoFileSelection = () => {
       dom
         .querySelectorAll<HTMLInputElement>('input[type="file"]')
         .forEach((input) => {
-          input.accept = 'image/*,video/mp4,video/webm'
+          input.accept = ASSET_FILE_ACCEPT
         })
     }
 
-    const handlePickerClick = () => {
-      allowVideoFileSelection()
-    }
-    dom.addEventListener('click', handlePickerClick, true)
+    dom.addEventListener('click', allowVideoFileSelection, true)
     allowVideoFileSelection()
+
+    const syncVideo = (url: string) => {
+      if (video == null) return
+
+      if (video.src !== url) video.src = url
+      const caption = getCaption()
+      if (caption) video.setAttribute('aria-label', caption)
+      else video.removeAttribute('aria-label')
+
+      if (mode !== 'block') return
+
+      if (caption) {
+        if (videoCaption == null) {
+          videoCaption = document.createElement('figcaption')
+          dom.append(videoCaption)
+        }
+        videoCaption.textContent = caption
+      } else {
+        videoCaption?.remove()
+        videoCaption = null
+      }
+    }
 
     const renderVideo = (url: string) => {
       imageView?.destroy?.()
@@ -59,27 +89,17 @@ function createAssetNodeView(
       video.controls = true
       video.preload = 'metadata'
       video.playsInline = true
-      video.src = url
-
-      const caption = String(
-        mode === 'block'
-          ? (currentNode.attrs['caption'] ?? '')
-          : (currentNode.attrs['alt'] ?? ''),
-      )
-      if (caption) video.setAttribute('aria-label', caption)
-
-      videoCaption = null
-      if (mode === 'block' && caption) {
-        videoCaption = document.createElement('figcaption')
-        videoCaption.textContent = caption
-      }
-      dom.replaceChildren(video, ...(videoCaption ? [videoCaption] : []))
+      video.addEventListener('error', handleVideoError)
+      dom.replaceChildren(video)
       dom.classList.add('markdown-asset-video')
       if (selected) dom.classList.add('selected')
+      syncVideo(url)
     }
 
     const renderImage = (node: typeof initialNode) => {
+      video?.removeEventListener('error', handleVideoError)
       video = null
+      videoCaption = null
       dom.classList.remove('markdown-asset-video')
       imageView = originalNodeView(
         node,
@@ -102,35 +122,18 @@ function createAssetNodeView(
             asset.contentType != null &&
             asset.contentType.startsWith('video/')
           ) {
-            if (video != null) {
-              if (video.src !== asset.url) video.src = asset.url
-              const caption = String(
-                mode === 'block'
-                  ? (currentNode.attrs['caption'] ?? '')
-                  : (currentNode.attrs['alt'] ?? ''),
-              )
-              if (caption) video.setAttribute('aria-label', caption)
-              else video.removeAttribute('aria-label')
-              if (mode === 'block') {
-                if (caption) {
-                  if (!videoCaption) {
-                    videoCaption = document.createElement('figcaption')
-                    dom.append(videoCaption)
-                  }
-                  videoCaption.textContent = caption
-                } else {
-                  videoCaption?.remove()
-                  videoCaption = null
-                }
-              }
-            } else {
+            if (video == null) {
               renderVideo(asset.url)
+            } else {
+              syncVideo(asset.url)
             }
           } else if (video != null) {
             renderImage(currentNode)
           }
         },
-        () => {},
+        (error) => {
+          console.error('Failed to resolve asset details', error)
+        },
       )
     }
 
@@ -183,7 +186,8 @@ function createAssetNodeView(
         video != null || (imageView?.ignoreMutation?.(mutation) ?? true),
       destroy: () => {
         destroyed = true
-        dom.removeEventListener('click', handlePickerClick, true)
+        dom.removeEventListener('click', allowVideoFileSelection, true)
+        video?.removeEventListener('error', handleVideoError)
         imageView?.destroy?.()
       },
     }

@@ -126,8 +126,8 @@ function CrepeEditor({
     const viewModeStore = createInlineReferenceViewModeStore(mode)
 
     // Crepe's image-block feature only covers file-picker uploads; wire up
-    // plugin-upload so pasting/dropping an image anywhere in the editor
-    // uploads it too.
+    // plugin-upload so pasting/dropping an image or video anywhere in the
+    // editor uploads it too.
     crepe.editor
       .use(assetBlockNodeView)
       .use(assetInlineNodeView)
