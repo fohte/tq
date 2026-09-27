@@ -14,16 +14,21 @@ interface ViewEditToggleOptions {
 
 interface MarkdownEditorProps {
   defaultValue?: string
+  /** Controls whether the editor is in edit mode. When set, body clicks do not enter edit mode. */
+  editing?: boolean
+  /** Reports a request to leave edit mode; the caller updates `editing`. */
+  onEditingChange?: (editing: boolean) => void
   onChange?: (markdown: string) => void
   /** Reports the focused editor after a document change so callers can read its current Markdown. */
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
   /**
-   * Enables the view/edit toggle: read-only by default with inline
+   * Enables the internal view/edit toggle: read-only by default with inline
    * reference chips; a click enters edit mode at the click position, except
-   * on a link or chip/card, which navigates/interacts with it instead.
-   * Blur or Escape returns to read-only. Omit for an always-editable editor
-   * with no chips (e.g. CommentInput, create-task-modal).
+   * on a link or chip/card, which navigates/interacts with it instead. When
+   * `editing` is set, the caller controls transitions instead. Blur or
+   * Escape returns to read-only. Omit for an always-editable editor with no
+   * chips (e.g. CommentInput, create-task-modal).
    */
   viewEditToggle?: ViewEditToggleOptions
   /**
@@ -69,19 +74,27 @@ function isEventTargetInsideEditorUi(
 
 export function MarkdownEditor({
   viewEditToggle,
+  editing,
+  onEditingChange,
   size = 'default',
   ...editorProps
 }: MarkdownEditorProps) {
-  const isToggleEnabled = viewEditToggle != null
-  const [mode, setMode] = useState<'view' | 'edit'>(
+  const isControlled = editing != null
+  const isToggleEnabled = viewEditToggle != null || isControlled
+  const [uncontrolledMode, setUncontrolledMode] = useState<'view' | 'edit'>(
     viewEditToggle?.defaultMode ?? 'view',
   )
+  const mode = isControlled ? (editing ? 'edit' : 'view') : uncontrolledMode
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const exitEditMode = () => {
     if (mode !== 'edit') return
     viewEditToggle?.onExitEditMode?.()
-    setMode('view')
+    if (isControlled) {
+      onEditingChange?.(false)
+    } else {
+      setUncontrolledMode('view')
+    }
   }
 
   return (
@@ -93,7 +106,7 @@ export function MarkdownEditor({
       )}
       data-view-mode={isToggleEnabled ? mode : undefined}
       onMouseUp={
-        isToggleEnabled && mode === 'view'
+        !isControlled && viewEditToggle != null && mode === 'view'
           ? (event) => {
               // Left click only: a right/middle click opening a context
               // menu or auto-scroll shouldn't also switch to edit mode.
@@ -107,7 +120,7 @@ export function MarkdownEditor({
                   : null
               if (link != null && NAVIGABLE_LINK_PROTOCOLS.has(link.protocol))
                 return
-              setMode('edit')
+              setUncontrolledMode('edit')
             }
           : undefined
       }
@@ -138,6 +151,7 @@ export function MarkdownEditor({
         <CrepeEditorRoot
           {...editorProps}
           mode={isToggleEnabled ? mode : 'edit'}
+          focusOnEdit={isControlled}
           skipNoopChanges={isToggleEnabled}
         />
       </Suspense>

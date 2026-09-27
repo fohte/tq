@@ -6,6 +6,7 @@ import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
 
 export const MENTION_FIXTURE_NUMBER = 9101
+export const MENTION_FIXTURE_TASK_ID = '00000000-0000-0000-0000-000000000099'
 export const GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9102'
 export const MENTION_FIXTURE_TITLE = 'Investigate flaky auth test suite'
 export const GITHUB_URL_FIXTURE_TITLE =
@@ -16,7 +17,7 @@ export const GITHUB_URL_FIXTURE_TITLE =
 // chip synchronously instead of via a real network round-trip.
 export function seedLiveReferenceFixtures(queryClient: QueryClient): void {
   const task = makeTaskDetail({
-    id: '00000000-0000-0000-0000-000000000099',
+    id: MENTION_FIXTURE_TASK_ID,
     number: MENTION_FIXTURE_NUMBER,
     title: MENTION_FIXTURE_TITLE,
     description: null,

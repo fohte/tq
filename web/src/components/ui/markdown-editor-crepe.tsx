@@ -4,7 +4,7 @@ import '#components/ui/markdown-editor.css'
 
 import { shift } from '@floating-ui/dom'
 import { Crepe } from '@milkdown/crepe'
-import { editorViewCtx, serializerCtx } from '@milkdown/kit/core'
+import { EditorStatus, editorViewCtx, serializerCtx } from '@milkdown/kit/core'
 import type { Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose, replaceAll } from '@milkdown/kit/utils'
@@ -39,6 +39,7 @@ export interface CrepeEditorProps {
   onChange?: (markdown: string) => void
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
+  focusOnEdit?: boolean
   skipNoopChanges?: boolean
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
@@ -107,6 +108,7 @@ function CrepeEditor({
   onFocusedDocumentChange,
   placeholder,
   mode,
+  focusOnEdit = false,
   skipNoopChanges = false,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
@@ -126,7 +128,7 @@ function CrepeEditor({
     new WeakMap<ProseMirrorNode, EditSessionChange | null>(),
   )
 
-  useEditor((root) => {
+  const { loading } = useEditor((root) => {
     // Clamp the handle to the nearest padded ancestor so it uses that
     // padding before overlapping the block's text. Some call sites nest
     // `root` inside one or more unpadded wrapper divs before their card,
@@ -332,7 +334,8 @@ function CrepeEditor({
 
   // Follows `mode` after the initial render: the Crepe instance itself is
   // only ever created once (see the initial-mode comment above), so later
-  // changes have to be pushed onto it imperatively.
+  // changes have to be pushed onto it imperatively. Controlled mode also
+  // waits for lazy initialization before applying a pending mode and focus.
   //
   // This deliberately never dispatches a ProseMirror transaction. Any
   // dispatched transaction — even one that changes no document content —
@@ -345,13 +348,14 @@ function CrepeEditor({
   // calls `view.setProps()` below, which alone is enough to make
   // ProseMirror recompute decorations against the store's new value (see
   // view-mode.ts).
+  const canFocusOnEdit = focusOnEdit && !loading
   useEffect(() => {
     modeRef.current = mode
     const crepe = crepeRef.current
     if (skipNoopChanges) {
       const initialMarkdown =
         mode === 'edit'
-          ? crepe != null
+          ? crepe?.editor.status === EditorStatus.Created
             ? getEditorMarkdown(crepe)
             : lastSyncedValueRef.current
           : null
@@ -359,8 +363,18 @@ function CrepeEditor({
         initialMarkdown == null ? null : createEditSession(initialMarkdown)
     }
     viewModeStoreRef.current?.setMode(mode)
-    crepe?.setReadonly(mode === 'view')
-  }, [mode, skipNoopChanges])
+    if (crepe == null) return
+    const shouldBeReadonly = mode === 'view'
+    if (crepe.readonly !== shouldBeReadonly) crepe.setReadonly(shouldBeReadonly)
+    if (
+      canFocusOnEdit &&
+      mode === 'edit' &&
+      crepe.editor.status === EditorStatus.Created
+    )
+      crepe.editor.action((ctx) => {
+        ctx.get(editorViewCtx).focus()
+      })
+  }, [canFocusOnEdit, mode, skipNoopChanges])
 
   // Syncs a `defaultValue` that changed externally while in view mode;
   // skipped during editing so a live cursor isn't overwritten, and diffed
