@@ -29,7 +29,7 @@ import {
 } from '#components/task/task-subtasks-section'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { Chip } from '#components/ui/chip'
-import { MarkdownEditor } from '#components/ui/markdown-editor'
+import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { TaskPage } from '#hooks/use-task-pages'
@@ -350,15 +350,14 @@ function TaskDescription({
   return (
     <div className="flex flex-col gap-1.5">
       <LlmAuthorLabel author={author} />
-      <div className="border border-border p-4 text-sm leading-relaxed focus-within:border-ring">
-        <MarkdownEditor
-          defaultValue={defaultValue ?? ''}
-          placeholder="Add description..."
-          onChange={onChange}
-          viewEditToggle={{ onExitEditMode: flush }}
-          size="compact"
-        />
-      </div>
+      <EditableMarkdownDescription
+        defaultValue={defaultValue}
+        placeholder="Add description..."
+        editButtonLabel="Edit task description"
+        onChange={onChange}
+        onExitEditMode={flush}
+        className="p-4 focus-within:border-ring"
+      />
     </div>
   )
 }

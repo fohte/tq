@@ -73,6 +73,7 @@ function serializeWithoutEmptyTrailingParagraph(
   const lastChild = doc.lastChild
   if (lastChild?.type.name !== 'paragraph' || lastChild.content.size !== 0)
     return serialize(doc)
+  if (doc.childCount === 1) return ''
 
   const contentWithoutTrailingParagraph = doc.content.cut(
     0,
