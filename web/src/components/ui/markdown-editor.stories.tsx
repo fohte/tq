@@ -201,7 +201,7 @@ export const ControlledEditMode: Story = {
   name: 'shows editable Markdown when the caller opens the editor',
   render: renderWithLiveReferences,
   args: {
-    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    defaultValue: 'This short note is open for changes.',
     editing: true,
     onEditingChange: fn(),
   },
