@@ -392,7 +392,7 @@ export async function resolveParentId(
 
 // Batch counterpart of `findTaskByIdOrNumber`; unmatched inputs are simply
 // absent from the returned map.
-export async function findTasksByIdsOrNumbers(
+async function findTasksByIdsOrNumbers(
   params: string[],
 ): Promise<Map<string, typeof tasks.$inferSelect>> {
   if (params.length === 0) return new Map()
@@ -429,6 +429,12 @@ export async function findTasksByIdsOrNumbers(
     if (row) result.set(param, row)
   }
   return result
+}
+
+export async function resolveTasksByIdsOrNumbers(params: string[]) {
+  const byParam = await findTasksByIdsOrNumbers(params)
+  const ids = [...new Set([...byParam.values()].map((task) => task.id))]
+  return { byParam, ids }
 }
 
 const factory = createFactory<TaskEnv, '/:id'>()
