@@ -51,14 +51,14 @@ export const contextLabels: Record<ContextValue, string> = {
 export const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export const presetColors = [
-  '#6C63FF',
-  '#FF6B6B',
-  '#4ECDC4',
-  '#FFE66D',
-  '#95E1D3',
-  '#F38181',
-  '#AA96DA',
-  '#A8D8EA',
+  { name: 'Indigo', hex: '#6C63FF' },
+  { name: 'Coral', hex: '#FF6B6B' },
+  { name: 'Turquoise', hex: '#4ECDC4' },
+  { name: 'Lemon', hex: '#FFE66D' },
+  { name: 'Mint', hex: '#95E1D3' },
+  { name: 'Salmon', hex: '#F38181' },
+  { name: 'Lavender', hex: '#AA96DA' },
+  { name: 'Sky blue', hex: '#A8D8EA' },
 ]
 
 export function toggleWeekday(days: number[], day: number): number[] {
