@@ -27,10 +27,10 @@ afterEach(async () => {
 })
 
 describe('REST/MCP parity', () => {
-  it('a page created via create_page is visible through GET /api/tasks/:taskId/pages', async () => {
+  it('a page created via page_create is visible through GET /api/tasks/:taskId/pages', async () => {
     const task = await createTask('Has pages')
 
-    const created = await callMcpTool(client, 'create_page', {
+    const created = await callMcpTool(client, 'page_create', {
       taskId: task.id,
       title: 'Notes',
       content: 'Some content',
@@ -47,9 +47,9 @@ describe('REST/MCP parity', () => {
     expect(await jsonBody(res)).toEqual([data])
   })
 
-  it('a page updated via update_page with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/pages', async () => {
+  it('a page updated via page_update with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/pages', async () => {
     const task = await createTask('Has pages')
-    const created = await callMcpTool(client, 'create_page', {
+    const created = await callMcpTool(client, 'page_create', {
       taskId: task.id,
       title: 'Notes',
     })
@@ -57,7 +57,7 @@ describe('REST/MCP parity', () => {
       parseToolJson(created),
     )
 
-    const updated = await callMcpTool(client, 'update_page', {
+    const updated = await callMcpTool(client, 'page_update', {
       taskId: task.id,
       pageId: page.id,
       content: 'Updated content',

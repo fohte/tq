@@ -27,31 +27,42 @@ afterEach(async () => {
   await client.close()
 })
 
-it('declares page read tools as read-only', async () => {
+it('registers page read operations as read-only', async () => {
   const result = await client.listTools()
 
   expect(
     result.tools
-      .filter((tool) => ['get_page', 'search_pages'].includes(tool.name))
+      .filter((tool) =>
+        ['page_get', 'page_list', 'page_search'].includes(tool.name),
+      )
       .map((tool) => ({
         name: tool.name,
         readOnlyHint: tool.annotations?.readOnlyHint,
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   ).toEqual([
-    { name: 'get_page', readOnlyHint: true },
-    { name: 'search_pages', readOnlyHint: true },
+    { name: 'page_get', readOnlyHint: true },
+    { name: 'page_list', readOnlyHint: true },
+    { name: 'page_search', readOnlyHint: true },
   ])
 })
 
-describe('get_page', () => {
+describe('page_get', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'get_page', {
+    const result = await callMcpTool(client, 'page_get', {
       taskId: 'not-a-uuid',
       pageId: TEST_UUID,
     })
 
-    expect(result.isError).toBe(true)
+    expect(result).toEqual({
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: 'Input validation error: Invalid arguments for tool page_get: taskId: Invalid input',
+        },
+      ],
+    })
   })
 
   it('returns the full page including content', async () => {
@@ -62,7 +73,7 @@ describe('get_page', () => {
       '# Findings\n\nSome long content.',
     )
 
-    const toolResult = await callMcpTool(client, 'get_page', {
+    const toolResult = await callMcpTool(client, 'page_get', {
       taskId: task.id,
       pageId: created.id,
     })
@@ -83,7 +94,7 @@ describe('get_page', () => {
   it('maps a non-existent page id to a 404 error result', async () => {
     const task = await createTask('Task')
 
-    const result = await callMcpTool(client, 'get_page', {
+    const result = await callMcpTool(client, 'page_get', {
       taskId: task.id,
       pageId: TEST_UUID,
     })
@@ -95,18 +106,26 @@ describe('get_page', () => {
   })
 })
 
-describe('search_pages', () => {
+describe('page_search', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'search_pages', { q: '   ' })
+    const result = await callMcpTool(client, 'page_search', { q: '   ' })
 
-    expect(result.isError).toBe(true)
+    expect(result).toEqual({
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: 'Input validation error: Invalid arguments for tool page_search: q: Too small: expected string to have >=1 characters',
+        },
+      ],
+    })
   })
 
   it('returns page matches with location metadata', async () => {
     const task = await createTask('Task with searchable history')
     await createPage(task.id, 'Investigation log', 'mcp page locator')
 
-    const toolResult = await callMcpTool(client, 'search_pages', {
+    const toolResult = await callMcpTool(client, 'page_search', {
       q: 'mcp page locator',
       limit: 1,
     })
@@ -131,7 +150,7 @@ describe('search_pages', () => {
     const task = await createTask('Task with searchable history')
     await createComment(task.id, 'mcp comment locator')
 
-    const toolResult = await callMcpTool(client, 'search_pages', {
+    const toolResult = await callMcpTool(client, 'page_search', {
       q: 'mcp comment locator',
     })
 
@@ -149,5 +168,30 @@ describe('search_pages', () => {
         },
       ],
     })
+  })
+})
+
+describe('page_list', () => {
+  it('returns complete pages for the requested task', async () => {
+    const task = await createTask('Sample task')
+    await createPage(task.id, 'Sample page', 'Sample page content')
+
+    const toolResult = await callMcpTool(client, 'page_list', {
+      taskId: task.id,
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(toolResult))).toEqual([
+      {
+        id: '<uuid>',
+        taskId: '<uuid>',
+        title: 'Sample page',
+        content: 'Sample page content',
+        format: 'markdown',
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      },
+    ])
   })
 })

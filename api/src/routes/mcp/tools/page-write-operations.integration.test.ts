@@ -5,11 +5,16 @@ import {
   callMcpTool,
   connectMcpClient,
   parseToolData,
+  parseToolJson,
 } from '#routes/mcp/testing'
 import { createPage, createTask, TEST_UUID } from '#routes/tasks/testing'
 import { setupTestDb } from '#testing'
 
 setupTestDb()
+
+function summarizePageDeletion(deletion: unknown, remaining: unknown) {
+  return { deletion, remaining }
+}
 
 let client: Client
 
@@ -21,11 +26,44 @@ afterEach(async () => {
   await client.close()
 })
 
-describe('create_page tool', () => {
+it('marks page writes and deletes with their operation annotations', async () => {
+  const result = await client.listTools()
+
+  expect(
+    result.tools
+      .filter((tool) =>
+        ['page_create', 'page_delete', 'page_update'].includes(tool.name),
+      )
+      .map((tool) => ({
+        name: tool.name,
+        readOnlyHint: tool.annotations?.readOnlyHint,
+        destructiveHint: tool.annotations?.destructiveHint,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  ).toEqual([
+    {
+      name: 'page_create',
+      readOnlyHint: false,
+      destructiveHint: false,
+    },
+    {
+      name: 'page_delete',
+      readOnlyHint: false,
+      destructiveHint: true,
+    },
+    {
+      name: 'page_update',
+      readOnlyHint: false,
+      destructiveHint: false,
+    },
+  ])
+})
+
+describe('page_create', () => {
   it('creates a page with the given fields, attributed to the default mcp agent', async () => {
     const task = await createTask('Has pages')
 
-    const result = await callMcpTool(client, 'create_page', {
+    const result = await callMcpTool(client, 'page_create', {
       taskId: task.id,
       title: 'My Page',
       content: 'Hello',
@@ -48,7 +86,7 @@ describe('create_page tool', () => {
   it('attributes the page to an explicitly passed agent', async () => {
     const task = await createTask('Has pages')
 
-    const result = await callMcpTool(client, 'create_page', {
+    const result = await callMcpTool(client, 'page_create', {
       taskId: task.id,
       title: 'My Page',
       agent: 'test-agent',
@@ -71,7 +109,7 @@ describe('create_page tool', () => {
   it('creates a page with format html', async () => {
     const task = await createTask('Has pages')
 
-    const result = await callMcpTool(client, 'create_page', {
+    const result = await callMcpTool(client, 'page_create', {
       taskId: task.id,
       title: 'HTML Page',
       content: '<p>Hello</p>',
@@ -93,7 +131,7 @@ describe('create_page tool', () => {
   })
 
   it('rejects a non-existent taskId', async () => {
-    const result = await callMcpTool(client, 'create_page', {
+    const result = await callMcpTool(client, 'page_create', {
       taskId: TEST_UUID,
       title: 'Orphan page',
     })
@@ -105,12 +143,12 @@ describe('create_page tool', () => {
   })
 })
 
-describe('update_page tool', () => {
+describe('page_update', () => {
   it('partially updates the given fields', async () => {
     const task = await createTask('Has pages')
     const page = await createPage(task.id, 'Original title', 'Original content')
 
-    const result = await callMcpTool(client, 'update_page', {
+    const result = await callMcpTool(client, 'page_update', {
       taskId: task.id,
       pageId: page.id,
       title: 'Updated title',
@@ -133,7 +171,7 @@ describe('update_page tool', () => {
     const task = await createTask('Has pages')
     const page = await createPage(task.id, 'Original title', 'Original content')
 
-    const result = await callMcpTool(client, 'update_page', {
+    const result = await callMcpTool(client, 'page_update', {
       taskId: task.id,
       pageId: page.id,
       content: 'Updated content',
@@ -158,7 +196,7 @@ describe('update_page tool', () => {
     const task = await createTask('Has pages')
     const page = await createPage(task.id, 'Original title', 'Original content')
 
-    const result = await callMcpTool(client, 'update_page', {
+    const result = await callMcpTool(client, 'page_update', {
       taskId: task.id,
       pageId: page.id,
       format: 'html',
@@ -185,7 +223,7 @@ describe('update_page tool', () => {
   it('rejects a non-existent pageId', async () => {
     const task = await createTask('Has pages')
 
-    const result = await callMcpTool(client, 'update_page', {
+    const result = await callMcpTool(client, 'page_update', {
       taskId: task.id,
       pageId: TEST_UUID,
       title: 'Updated title',
@@ -194,6 +232,31 @@ describe('update_page tool', () => {
     expect(result).toEqual({
       isError: true,
       content: [{ type: 'text', text: 'Page not found' }],
+    })
+  })
+})
+
+describe('page_delete', () => {
+  it('deletes a page and returns its identity', async () => {
+    const task = await createTask('Sample task')
+    const page = await createPage(task.id, 'Sample page', 'Sample content')
+
+    const result = await callMcpTool(client, 'page_delete', {
+      taskId: task.id,
+      pageId: page.id,
+    })
+    const remainingPages = await callMcpTool(client, 'page_list', {
+      taskId: task.id,
+    })
+
+    expect(
+      summarizePageDeletion(
+        parseToolData(result, ['taskId', 'pageId']),
+        parseToolJson(remainingPages),
+      ),
+    ).toEqual({
+      deletion: { deleted: true, taskId: task.id, pageId: page.id },
+      remaining: [],
     })
   })
 })
