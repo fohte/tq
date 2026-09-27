@@ -271,7 +271,7 @@ describe('AppLayout', () => {
     await user.click(screen.getByRole('button', { name: 'new' }))
     const titleInput = await screen.findByPlaceholderText('タスクのタイトル')
 
-    const titleInputState = Array.of<string | boolean>(
+    const titleInputState = Array.of<string | boolean | null>(
       titleInput.getAttribute('placeholder'),
       titleInput.checkVisibility(),
     )
