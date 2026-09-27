@@ -1,16 +1,50 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { assertDefined } from '#lib/test-utils'
 
-// Must end in a blockquote, not a list: a list's own mount-time selection-sync
-// transaction already masks the bug this fixture is meant to expose
-// (@milkdown/plugin-trailing appending a paragraph on any transaction).
 const TRAILING_BLOCKQUOTE_CONTENT =
   'Some intro text.\n\n> A blockquote at the very end.'
+
+beforeAll(async () => {
+  await import('#components/ui/markdown-editor-crepe')
+}, 20_000)
+
+const TRAILING_BLOCK_CONTENTS = [
+  {
+    kind: 'list',
+    markdown: '- First item\n- A list item.',
+    visibleText: 'First item',
+    selector: '.milkdown .ProseMirror ul',
+  },
+  {
+    kind: 'code block',
+    markdown: 'Some intro text.\n\n```text\nA code block.\n```',
+    visibleText: 'Some intro text.',
+    selector: '.milkdown .ProseMirror .cm-editor',
+  },
+  {
+    kind: 'table',
+    markdown:
+      'Some intro text.\n\n| Column A | Column B |\n| --- | --- |\n| Value A | Value B |',
+    visibleText: 'Some intro text.',
+    selector: '.milkdown .ProseMirror table',
+  },
+  {
+    kind: 'blockquote',
+    markdown: TRAILING_BLOCKQUOTE_CONTENT,
+    visibleText: 'Some intro text.',
+    selector: '.milkdown .ProseMirror blockquote',
+  },
+] as const
+
+async function waitForMarkdownUpdateNotifications() {
+  // Milkdown's listener debounces document updates for 200 ms.
+  await new Promise((resolve) => setTimeout(resolve, 300))
+}
 
 describe('MarkdownEditor size', () => {
   // Regression check: 'compact' (a few-lines inline editor, e.g. a
@@ -36,8 +70,47 @@ describe('MarkdownEditor size', () => {
 })
 
 describe('MarkdownEditor mode toggle', () => {
-  it('does not autosave when switching mode without editing', async () => {
-    const onChange = vi.fn()
+  it.each(TRAILING_BLOCK_CONTENTS)(
+    'does not autosave when opening and exiting a trailing $kind without editing',
+    async ({ markdown, selector, visibleText }) => {
+      const onChange = vi.fn<(markdown: string) => void>()
+      const { container } = render(
+        <MarkdownEditor
+          defaultValue={markdown}
+          viewEditToggle={{}}
+          onChange={onChange}
+        />,
+      )
+      await screen.findByText(visibleText, {}, { timeout: 5000 })
+
+      const wrapper = assertDefined(
+        container.querySelector('.milkdown-wrapper'),
+        'MarkdownEditor always renders its wrapper and root',
+      )
+      const trailingBlock = assertDefined(
+        container.querySelector(selector),
+        'the editor renders the trailing block',
+      )
+      const user = userEvent.setup()
+      await user.click(trailingBlock)
+      const modeAfterEntering = wrapper.getAttribute('data-view-mode')
+
+      // The click enters edit mode after the event, so Escape must target the
+      // wrapper directly instead of relying on keyboard focus.
+      fireEvent.keyDown(wrapper, { key: 'Escape' })
+      await waitForMarkdownUpdateNotifications()
+
+      const result = JSON.stringify([
+        modeAfterEntering,
+        wrapper.getAttribute('data-view-mode'),
+        onChange.mock.calls,
+      ])
+      expect(result).toBe(JSON.stringify(['edit', 'view', []]))
+    },
+  )
+
+  it('autosaves a change that is reverted before exiting edit mode', async () => {
+    const onChange = vi.fn<(markdown: string) => void>()
     const { container } = render(
       <MarkdownEditor
         defaultValue={TRAILING_BLOCKQUOTE_CONTENT}
@@ -47,37 +120,47 @@ describe('MarkdownEditor mode toggle', () => {
     )
     await screen.findByText('Some intro text.')
 
-    const wrapper = assertDefined(
-      container.querySelector('.milkdown-wrapper'),
-      'MarkdownEditor always renders its wrapper and root',
-    )
-    const proseMirrorRoot = assertDefined(
-      container.querySelector('.milkdown .ProseMirror'),
-      'MarkdownEditor always renders its wrapper and root',
-    )
     const blockquote = assertDefined(
       container.querySelector('.milkdown .ProseMirror blockquote'),
-      'editor always renders the blockquote',
+      'editor renders the blockquote',
     )
-    const blockCountBefore = proseMirrorRoot.children.length
-
     const user = userEvent.setup()
     await user.click(blockquote)
-    expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
+    await user.click(blockquote)
+    await user.keyboard('!')
+    await screen.findByText('A blockquote at the very end.!')
+    await waitForMarkdownUpdateNotifications()
+    await user.keyboard('{Backspace}')
+    await screen.findByText('A blockquote at the very end.')
+    await waitForMarkdownUpdateNotifications()
 
-    // fireEvent (not userEvent.keyboard) targets the wrapper directly: the
-    // click above flips the editor into edit mode, but Crepe only applies
-    // contenteditable=true in a React effect that runs after that click
-    // event has already finished, so the browser never focuses the (still
-    // read-only at click time) DOM node — there'd be nothing for a
-    // keyboard-targeted Escape to bubble up from.
-    fireEvent.keyDown(wrapper, { key: 'Escape' })
-    await waitFor(() =>
-      expect(wrapper).toHaveAttribute('data-view-mode', 'view'),
+    const changedValues = Array.from(
+      new Set(onChange.mock.calls.map(([value]) => value)),
     )
+    expect(changedValues).toEqual([
+      `${TRAILING_BLOCKQUOTE_CONTENT}!\n`,
+      `${TRAILING_BLOCKQUOTE_CONTENT}\n`,
+    ])
+  })
 
-    expect(proseMirrorRoot.children.length).toBe(blockCountBefore)
-    expect(onChange).not.toHaveBeenCalled()
+  it('continues notifying changes in an always-editable editor', async () => {
+    const onChange = vi.fn<(markdown: string) => void>()
+    const { container } = render(
+      <MarkdownEditor defaultValue="Editable content." onChange={onChange} />,
+    )
+    await screen.findByText('Editable content.')
+
+    const paragraph = assertDefined(
+      container.querySelector('.milkdown .ProseMirror p'),
+      'editor renders a paragraph',
+    )
+    const user = userEvent.setup()
+    await user.click(paragraph)
+    await user.keyboard('!')
+    await screen.findByText('Editable content.!')
+    await waitForMarkdownUpdateNotifications()
+
+    expect(onChange.mock.calls).toEqual([['Editable content.!\n']])
   })
 
   it('changes the document after entering edit mode and typing', async () => {
