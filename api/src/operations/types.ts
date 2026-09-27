@@ -69,6 +69,15 @@ export type CliFileOutput =
       outputPathField: string
     }
 
+type CliListOutput = {
+  kind: 'list'
+  fullOption?: '--full'
+  fullDescription?: string
+} & (
+  | { fullField: string; omitKey?: string }
+  | { fullField?: undefined; omitKey: string }
+)
+
 export type CliOutput =
   | { kind: 'none' }
   | {
@@ -77,13 +86,7 @@ export type CliOutput =
       fileOutput?: CliFileOutput
     }
   | { kind: 'json-with-link-sync' }
-  | {
-      kind: 'list'
-      omitKey: string
-      fullOption?: '--full'
-      fullDescription?: string
-      fullField?: string
-    }
+  | CliListOutput
   | { kind: 'web-url'; path: string }
 
 export type PositionalArgument<Key extends string = string> =
