@@ -456,7 +456,7 @@ describe('operation tool input schemas', () => {
   it('exposes agent only for operations that support attribution', async () => {
     const tools = await client.listTools()
     const operationToolNames = operations.map((operation) =>
-      operation.path.join('_'),
+      operation.path.map((segment) => segment.replaceAll('-', '_')).join('_'),
     )
     const agentArguments = Object.fromEntries(
       tools.tools
@@ -481,6 +481,11 @@ describe('operation tool input schemas', () => {
       project_list: false,
       project_tasks: false,
       project_update: false,
+      saved_view_create: false,
+      saved_view_delete: false,
+      saved_view_get: false,
+      saved_view_list: false,
+      saved_view_update: false,
     })
   })
 })

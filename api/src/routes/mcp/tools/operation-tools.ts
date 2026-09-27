@@ -45,6 +45,10 @@ function annotationsFor(operation: OperationDefinition) {
   }
 }
 
+function operationToolName(operation: OperationDefinition): string {
+  return operation.path.map((segment) => segment.replaceAll('-', '_')).join('_')
+}
+
 function requestErrorResult(message: string): CallToolResult {
   return {
     isError: true,
@@ -60,7 +64,7 @@ export function registerOperationTools(
     if (operation.surface?.only === 'cli') continue
     const inputSchema = inputSchemaFor(operation)
     server.registerTool(
-      operation.path.join('_'),
+      operationToolName(operation),
       {
         description: operation.description,
         inputSchema,
@@ -91,7 +95,7 @@ export function registerOperationTools(
               captureWithFingerprint(
                 result.error.error,
                 'api.mcp.operation-request-failed',
-                { extras: { operation: operation.path.join('_') } },
+                { extras: { operation: operationToolName(operation) } },
               )
               return requestErrorResult(
                 'An internal error occurred while processing the request.',
