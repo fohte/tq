@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
   type OperationClient,
@@ -11,8 +12,8 @@ import { agentProviderSchema } from '#schemas/agent-session'
 
 const linkInputSchema = z.object({
   taskId: z.string(),
-  provider: agentProviderSchema,
-  sessionId: z.string().min(1),
+  provider: agentProviderSchema.and(pathSegmentSchema('Provider')),
+  sessionId: pathSegmentSchema('Session ID'),
 })
 const agentSessionSchema = z.object({ id: z.string() })
 
@@ -85,7 +86,10 @@ function requestAgentSessionId(
 ) {
   return requestJson(
     client.api['agent-sessions']['by-session'][':provider'][':sessionId'].$get({
-      param: { provider, sessionId },
+      param: {
+        provider: encodePathSegment(provider),
+        sessionId: encodePathSegment(sessionId),
+      },
     }),
   )
     .andThen((value) => parseResponse(agentSessionSchema, value))

@@ -20,6 +20,21 @@ function summarizeCliResult(
   return { exitCode, stderr: stderr.mock.calls }
 }
 
+function summarizeLinkOutcome(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  stderr: ReturnType<typeof spyStderr>,
+) {
+  return { exitCode, calls, stderr: stderr.mock.calls }
+}
+
+function summarizeLinkRequest(
+  exitCode: number,
+  requestValue: ReturnType<typeof request>,
+) {
+  return { exitCode, request: requestValue }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
@@ -94,6 +109,53 @@ describe('link', () => {
     expect(write.mock.calls).toEqual([
       [`${JSON.stringify(session, null, 2)}\n`],
     ])
+  })
+
+  it('rejects dot path segments in the current session id', async () => {
+    vi.stubEnv('TQ_SESSION_ID', '..')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'link', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeLinkOutcome(exitCode, calls, stderr)).toEqual({
+      exitCode: 1,
+      calls: [],
+      stderr: [['Error: sessionId: Session ID must be a valid path segment\n']],
+    })
+  })
+
+  it('encodes path separators in the current session id', async () => {
+    vi.stubEnv('TQ_SESSION_ID', 'segment/with separator')
+    const session = {
+      id: 'agent-session-1',
+      sessionId: 'segment/with separator',
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(session), { status: 200 }),
+    )
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'link', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeLinkRequest(exitCode, request(calls[0]))).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'GET',
+        pathname:
+          '/api/agent-sessions/by-session/claude_code/segment%2Fwith%20separator',
+        query: {},
+        body: undefined,
+      },
+    })
   })
 
   it('fails before making any fetch call when no agent session id is set', async () => {
