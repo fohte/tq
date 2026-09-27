@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
-import { render, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { AppLayout } from '#components/layout/app-layout'
@@ -14,6 +15,7 @@ import {
 import type { Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { assertDefined } from '#lib/test-utils'
+import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 import { createStoryRouter } from '#storybook-config/story-router'
 
 // AppLayout always mounts Sidebar/StatusLine/BottomTabBar/SearchModal/
@@ -227,6 +229,54 @@ describe('AppLayout', () => {
         main.getBoundingClientRect().height,
     )
     expect(heightDiff).toBeLessThanOrEqual(1)
+  })
+
+  it('opens the search dialog from the mobile bottom bar', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    await renderWithRouter(
+      queryClient,
+      () => (
+        <AppLayout>
+          <div />
+        </AppLayout>
+      ),
+      { initialPath: '/tasks' },
+    )
+
+    await user.click(screen.getByRole('button', { name: 'search' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Search' })
+
+    const dialogState = Array.of(
+      dialog.getAttribute('aria-label'),
+      dialog.getAttribute('aria-modal'),
+    )
+
+    expect(dialogState).toEqual(['Search', 'true'])
+  })
+
+  it('opens the task creation dialog from the mobile bottom bar', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    await renderWithRouter(
+      queryClient,
+      () => (
+        <AppLayout>
+          <div />
+        </AppLayout>
+      ),
+      { initialPath: '/tasks' },
+    )
+
+    await user.click(screen.getByRole('button', { name: 'new' }))
+    const titleInput = await screen.findByPlaceholderText('タスクのタイトル')
+
+    const titleInputState = Array.of<string | boolean | null>(
+      titleInput.getAttribute('placeholder'),
+      titleInput.checkVisibility(),
+    )
+
+    expect(titleInputState).toEqual(['タスクのタイトル', true])
   })
 
   // Regression check: day view's calendar and queue pane must scroll

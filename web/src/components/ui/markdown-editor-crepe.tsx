@@ -16,6 +16,7 @@ import {
 } from '@prosemirror-adapter/react'
 import { useEffect, useRef } from 'react'
 
+import { assetBlockNodeView, assetInlineNodeView } from '#lib/asset-node-view'
 import {
   handleAssetLoadError,
   resolveAssetSrc,
@@ -178,9 +179,11 @@ function CrepeEditor({
     const viewModeStore = createInlineReferenceViewModeStore(mode)
 
     // Crepe's image-block feature only covers file-picker uploads; wire up
-    // plugin-upload so pasting/dropping an image anywhere in the editor
-    // uploads it too.
+    // plugin-upload so pasting/dropping an image or video anywhere in the
+    // editor uploads it too.
     crepe.editor
+      .use(assetBlockNodeView)
+      .use(assetInlineNodeView)
       .use(upload)
       .config((ctx) => {
         ctx.update(uploadConfig.key, (prev) => ({
