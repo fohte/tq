@@ -11,11 +11,13 @@ import {
 import { agentProviderSchema } from '#schemas/agent-session'
 
 const linkInputSchema = z.object({
-  taskId: z.string(),
-  provider: agentProviderSchema.and(pathSegmentSchema('Provider')),
+  taskId: pathSegmentSchema('Task ID'),
+  provider: pathSegmentSchema('Provider').pipe(agentProviderSchema),
   sessionId: pathSegmentSchema('Session ID'),
 })
-const agentSessionSchema = z.object({ id: z.string() })
+const agentSessionSchema = z.object({
+  id: pathSegmentSchema('Agent session ID'),
+})
 
 const surface = {
   only: 'cli',
@@ -44,7 +46,7 @@ export const linkOperations = [
         (agentSessionId) =>
           requestJson(
             client.api.tasks[':taskId']['agent-sessions'].$post({
-              param: { taskId },
+              param: { taskId: encodePathSegment(taskId) },
               json: { agentSessionId },
             }),
           ),
@@ -72,7 +74,10 @@ export const linkOperations = [
             client.api.tasks[':taskId']['agent-sessions'][
               ':agentSessionId'
             ].$delete({
-              param: { taskId, agentSessionId },
+              param: {
+                taskId: encodePathSegment(taskId),
+                agentSessionId: encodePathSegment(agentSessionId),
+              },
             }),
           ).map(() => ({ unlinked: true, taskId })),
       ),

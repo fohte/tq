@@ -5,6 +5,22 @@ import { describe, expect, it, vi } from 'vitest'
 import { registerOperationTools } from '#routes/mcp/tools/operation-tools'
 
 describe('registerOperationTools', () => {
+  it('converts hyphenated path segments to MCP tool name segments', () => {
+    const server = new McpServer(
+      { name: 'test', version: '0.0.0' },
+      { capabilities: { tools: {} } },
+    )
+    const registerTool = vi.spyOn(server, 'registerTool')
+
+    registerOperationTools(server, [
+      makeOperation({ path: ['saved-view', 'list'] }),
+    ])
+
+    expect(registerTool.mock.calls.map(([name]) => name)).toEqual([
+      'saved_view_list',
+    ])
+  })
+
   it('omits operations that are only available to the CLI', () => {
     const server = new McpServer(
       { name: 'test', version: '0.0.0' },

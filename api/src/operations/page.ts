@@ -1,14 +1,16 @@
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
-import { CONTENT_KEY, omitKeyDeep } from '#operations/omit-key'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
+  omitKeyRecursively,
   requestJson,
   requestNoContent,
 } from '#operations/types'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
+
+const pageContentKey = 'content'
 
 const taskIdSchema = taskIdOrNumber.describe(
   'The id (UUID) or number of the task the page belongs to.',
@@ -73,7 +75,7 @@ export const pageOperations = [
     cli: {
       output: {
         kind: 'list',
-        omitKey: CONTENT_KEY,
+        omitKey: pageContentKey,
         fullOption: '--full',
         fullDescription: 'Include full page content in the output',
         fullField: 'full',
@@ -85,7 +87,7 @@ export const pageOperations = [
           param: { taskId: String(taskId) },
         }),
       ).map((result) =>
-        full === true ? result : omitKeyDeep(result, CONTENT_KEY),
+        full === true ? result : omitKeyRecursively(result, pageContentKey),
       ),
   }),
   defineOperation(pageRefSchema, {
@@ -104,7 +106,7 @@ export const pageOperations = [
             name: 'output',
             description: 'Write the page content to a file instead of stdout',
           },
-          field: CONTENT_KEY,
+          field: pageContentKey,
         },
       },
     },
@@ -127,7 +129,7 @@ export const pageOperations = [
     attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/pages'],
     cli: {
-      contentInput: { field: CONTENT_KEY, required: false },
+      contentInput: { field: pageContentKey, required: false },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, ...json }) =>
@@ -147,7 +149,7 @@ export const pageOperations = [
     attribution: 'agent',
     routes: ['PATCH /api/tasks/:taskId/pages/:pageId'],
     cli: {
-      contentInput: { field: CONTENT_KEY, required: false },
+      contentInput: { field: pageContentKey, required: false },
       output: { kind: 'json-with-link-sync' },
     },
     run: (client, { taskId, pageId, ...json }) =>

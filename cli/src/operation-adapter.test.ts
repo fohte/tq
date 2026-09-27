@@ -275,6 +275,23 @@ describe('registerOperations', () => {
     ])
   })
 
+  it('does not register hidden fields as CLI options', () => {
+    const operation = makeOperation({
+      path: ['demo', 'list'],
+      inputSchema: z.object({
+        context: z.string().optional(),
+        sessionId: z.string().optional(),
+      }),
+      cli: {
+        hiddenFields: ['sessionId'],
+        output: { kind: 'json' },
+      },
+    })
+    const command = createProgram([operation]).commands[0]?.commands[0]
+
+    expect(command?.options.map((option) => option.long)).toEqual(['--context'])
+  })
+
   it('omits absent optional content input', async () => {
     const operation = makeOperation({
       path: ['demo', 'page', 'create'],
@@ -332,6 +349,48 @@ describe('registerOperations', () => {
       stderr: [
         'Error: API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.',
       ],
+    })
+  })
+
+  it('rejects a file input without its configured path field', async () => {
+    const operation = makeOperation({
+      path: ['demo', 'upload'],
+      inputSchema: z.object({
+        filePath: z.string().optional(),
+        file: z.unknown().optional(),
+      }),
+      cli: {
+        fileInput: {
+          field: 'file',
+          pathField: 'filePath',
+          contentTypes: { '.txt': 'text/plain' },
+          allowedContentTypes: ['text/plain'],
+        },
+        output: { kind: 'json' },
+      },
+    })
+    const write = spyStdout()
+    const stderr = spyStderr()
+    const status = await parse(createProgram([operation]), [
+      '--api-url',
+      'https://api.example',
+      'demo',
+      'upload',
+    ]).then(
+      () => 'resolved',
+      () => 'rejected',
+    )
+
+    expect(
+      adapterOutcome(
+        write.mock.calls,
+        stderr.mock.calls.map(([message]) => String(message).trimEnd()),
+        { status },
+      ),
+    ).toEqual({
+      stdout: [],
+      stderr: ['Error: File input path refers to a missing input field.'],
+      status: 'rejected',
     })
   })
 

@@ -118,6 +118,50 @@ describe('task_list', () => {
       },
     ])
   })
+
+  it('filters by mixed task ids and includes their ancestors', async () => {
+    const root = await createTask('Root')
+    const selectedByNumber = await createTask('Selected by number', {
+      parentId: root.id,
+    })
+    const selectedById = await createTask('Selected by id', {
+      parentId: root.id,
+    })
+    await createTask('Unselected')
+
+    const toolResult = await callMcpTool(client, 'task_list', {
+      ids: [String(selectedByNumber.number), selectedById.id],
+      includeAncestors: true,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(selectedByNumber),
+        parentNumber: root.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+      {
+        ...withoutLinkSync(selectedById),
+        parentNumber: root.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+      {
+        ...withoutLinkSync(root),
+        parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        labels: [],
+        childCompletionCount: { total: 2, completed: 0 },
+        ancestorOnly: true,
+      },
+    ])
+  })
 })
 
 describe('task_get', () => {
@@ -238,6 +282,37 @@ describe('task_search', () => {
         duplicateOfNumber: null,
         blockedByNumbers: [],
         childCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
+  it('includes ancestors of tasks filtered by id', async () => {
+    const root = await createTask('Parent')
+    const match = await createTask('Selected task', { parentId: root.id })
+    await createTask('Unselected task')
+
+    const toolResult = await callMcpTool(client, 'task_search', {
+      q: 'Selected',
+      ids: [match.id],
+      includeAncestors: true,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(match),
+        parentNumber: root.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+      {
+        ...withoutLinkSync(root),
+        parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        labels: [],
+        childCompletionCount: { total: 1, completed: 0 },
+        ancestorOnly: true,
       },
     ])
   })

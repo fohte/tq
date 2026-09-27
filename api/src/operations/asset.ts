@@ -23,6 +23,8 @@ const EXTENSION_CONTENT_TYPES = {
   '.png': 'image/png',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
 } as const
 
 function escapeMarkdownAlt(text: string): string {
@@ -54,15 +56,14 @@ export const assetOperations = [
       output: { kind: 'json' },
     },
     run: (client, { file }) =>
-      requestJson(client.api.assets.$post({ form: { file } })).andThen(
-        (response) =>
-          parseResponse(assetUploadResponseSchema, response).map(
-            (uploaded) => ({
-              ...uploaded,
-              markdown: `![${escapeMarkdownAlt(file.name)}](/api/assets/${uploaded.id})`,
-            }),
-          ),
-      ),
+      requestJson(client.api.assets.$post({ form: { file } }))
+        .andThen((response) =>
+          parseResponse(assetUploadResponseSchema, response),
+        )
+        .map((uploaded) => ({
+          ...uploaded,
+          markdown: `![${escapeMarkdownAlt(file.name)}](/api/assets/${uploaded.id})`,
+        })),
   }),
   defineOperation(assetIdSchema, {
     path: ['asset', 'get'],
@@ -98,12 +99,9 @@ export const assetOperations = [
         client.api.assets[':id'].$get({
           param: { id: encodePathSegment(id) },
         }),
-      ).andThen((response) =>
-        parseResponse(assetGetResponseSchema, response).map((asset) => ({
-          ...asset,
-          id,
-        })),
-      ),
+      )
+        .andThen((response) => parseResponse(assetGetResponseSchema, response))
+        .map((asset) => ({ ...asset, id })),
   }),
   defineOperation(assetIdSchema, {
     path: ['asset', 'delete'],

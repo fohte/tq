@@ -6,6 +6,7 @@ import {
   captureFetch,
   fakeStdin,
   request,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -23,6 +24,18 @@ function cliOutcome(
     exitCode,
     requests: calls.map(request),
     stdout: output.mock.calls,
+  }
+}
+
+function cliErrorOutcome(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  errors: ReturnType<typeof spyStderr>,
+) {
+  return {
+    exitCode,
+    requests: calls.map(request),
+    errors: errors.mock.calls,
   }
 }
 
@@ -88,6 +101,66 @@ describe('task list', () => {
         },
       ],
       stdout: [['[]\n']],
+    })
+  })
+
+  it('sends mixed task identifiers and the strict ancestor flag', async () => {
+    const ids = ['00000000-0000-4000-8000-000000000001', '42']
+    const tasks = [{ id: ids[0], number: 42, title: 'Selected task' }]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'list',
+        '--ids',
+        ids.join(','),
+        '--include-ancestors',
+        'true',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { ids, includeAncestors: 'true' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects an invalid include-ancestors value without making a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--include-ancestors', 'sometimes'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliErrorOutcome(exitCode, calls, stderr)).toEqual({
+      exitCode: 1,
+      requests: [],
+      errors: [
+        [
+          'error: option \'--include-ancestors <value>\' argument \'sometimes\' is invalid. Invalid option: expected one of "true"|"false"\n',
+        ],
+      ],
     })
   })
 
@@ -421,6 +494,52 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: { q: 'hello', limit: '5' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(results, null, 2)}\n`]],
+    })
+  })
+
+  it('sends ID and ancestor filters with the positional query', async () => {
+    const ids = ['00000000-0000-4000-8000-000000000001', '42']
+    const results = [
+      { id: ids[0], title: 'Parent', ancestorOnly: true },
+      { id: 'task-example', number: 42, title: 'Selected task' },
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(results), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'search',
+        'Selected',
+        '--ids',
+        ids.join(','),
+        '--include-ancestors',
+        'true',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: {
+            q: 'Selected',
+            ids,
+            includeAncestors: 'true',
+            limit: '20',
+          },
           body: undefined,
         },
       ],

@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 
-import { omitKeyDeep } from 'api/operations/omit-key'
+import { omitKeyRecursively } from 'api/operations'
 import { err, ok, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
@@ -20,7 +20,7 @@ export function printJsonList(
   omitKey: string,
   { full = false }: { full?: boolean | undefined } = {},
 ): void {
-  printJson(full ? data : omitKeyDeep(data, omitKey))
+  printJson(full ? data : omitKeyRecursively(data, omitKey))
 }
 
 const refSourceSchema = z.discriminatedUnion('kind', [

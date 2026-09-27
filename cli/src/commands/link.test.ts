@@ -20,19 +20,18 @@ function summarizeCliResult(
   return { exitCode, stderr: stderr.mock.calls }
 }
 
-function summarizeLinkOutcome(
+function summarizePathHandlingResult(
   exitCode: number,
-  calls: ReturnType<typeof captureFetch>['calls'],
+  requests: ReturnType<typeof request>[],
   stderr: ReturnType<typeof spyStderr>,
+  stdout: ReturnType<typeof spyStdout>,
 ) {
-  return { exitCode, calls, stderr: stderr.mock.calls }
-}
-
-function summarizeLinkRequest(
-  exitCode: number,
-  requestValue: ReturnType<typeof request>,
-) {
-  return { exitCode, request: requestValue }
+  return {
+    exitCode,
+    requests,
+    stderr: stderr.mock.calls,
+    stdout: stdout.mock.calls,
+  }
 }
 
 afterEach(() => {
@@ -111,26 +110,6 @@ describe('link', () => {
     ])
   })
 
-  it('rejects dot path segments in the current session id', async () => {
-    vi.stubEnv('TQ_SESSION_ID', '..')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify({}), { status: 200 }),
-    )
-    const stderr = spyStderr()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'link', '42'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeLinkOutcome(exitCode, calls, stderr)).toEqual({
-      exitCode: 1,
-      calls: [],
-      stderr: [['Error: sessionId: Session ID must be a valid path segment\n']],
-    })
-  })
-
   it('encodes path separators in the current session id', async () => {
     vi.stubEnv('TQ_SESSION_ID', 'segment/with separator')
     const session = {
@@ -140,21 +119,63 @@ describe('link', () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(session), { status: 200 }),
     )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'link', '42'],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(summarizeLinkRequest(exitCode, request(calls[0]))).toEqual({
+    expect(
+      summarizePathHandlingResult(exitCode, calls.map(request), stderr, stdout),
+    ).toEqual({
       exitCode: 0,
-      request: {
-        method: 'GET',
-        pathname:
-          '/api/agent-sessions/by-session/claude_code/segment%2Fwith%20separator',
-        query: {},
-        body: undefined,
-      },
+      requests: [
+        {
+          method: 'GET',
+          pathname:
+            '/api/agent-sessions/by-session/claude_code/segment%2Fwith%20separator',
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'POST',
+          pathname: '/api/tasks/42/agent-sessions',
+          query: {},
+          body: { agentSessionId: 'agent-session-1' },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(session, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects dot path segments in the current session id', async () => {
+    vi.stubEnv('TQ_SESSION_ID', '..')
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response(JSON.stringify({ id: 'agent-session-1' }), {
+          status: 200,
+        }),
+    )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'link', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizePathHandlingResult(exitCode, calls.map(request), stderr, stdout),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [['Error: sessionId: Session ID must be a valid path segment\n']],
+      stdout: [],
     })
   })
 

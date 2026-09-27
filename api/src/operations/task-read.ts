@@ -60,13 +60,15 @@ const taskListInputSchema = listTasksQuerySchema
   .omit({
     hasEstimate: true,
     hasDue: true,
-    includeAncestors: true,
     includeMatch: true,
   })
   .extend({
     includeMatch: booleanOption
       .optional()
       .describe('Include the matched text in results.'),
+    includeAncestors: booleanOption
+      .optional()
+      .describe('Include ancestors of matching tasks in results.'),
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
@@ -91,13 +93,15 @@ const taskSearchInputSchema = listTasksQuerySchema
   .omit({
     hasEstimate: true,
     hasDue: true,
-    includeAncestors: true,
     includeMatch: true,
   })
   .extend({
     includeMatch: booleanOption
       .optional()
       .describe('Include the matched text in results.'),
+    includeAncestors: booleanOption
+      .optional()
+      .describe('Include ancestors of matching tasks in results.'),
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
