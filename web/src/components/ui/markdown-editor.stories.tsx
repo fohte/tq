@@ -162,10 +162,10 @@ export const AllMarkdownElementsEditMode: Story = {
 }
 
 export const ControlledViewMode: Story = {
-  name: 'keeps references as chips until the caller opens the editor',
+  name: 'keeps a task mention as a chip while the caller controls editing',
   render: renderWithLiveReferences,
   args: {
-    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
+    defaultValue: `The caller keeps this editor in view mode with #${String(MENTION_FIXTURE_NUMBER)} as a chip.`,
     viewEditToggle: {},
     editing: false,
     onEditingChange: fn(),
