@@ -37,7 +37,10 @@ import {
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
 import { useTask } from '#hooks/use-tasks'
-import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
+import {
+  getVisualViewportStyle,
+  useVisualViewportInsets,
+} from '#hooks/use-visual-viewport-insets'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -380,17 +383,7 @@ export function SearchModal({
             ? 'inset-y-0'
             : 'top-(--visual-viewport-top) h-(--visual-viewport-height)',
         )}
-        style={
-          visualViewportInsets === null
-            ? undefined
-            : ({
-                '--visual-viewport-top': `${String(visualViewportInsets.top)}px`,
-                '--visual-viewport-height': `${String(visualViewportInsets.height)}px`,
-              } as React.CSSProperties & {
-                '--visual-viewport-top': string
-                '--visual-viewport-height': string
-              })
-        }
+        style={getVisualViewportStyle(visualViewportInsets)}
         data-testid="search-overlay"
         onKeyDown={handleKeyDown}
         onClick={(e) => {

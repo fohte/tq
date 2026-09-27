@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { MouseEventHandler, ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { makeSavedView } from '#components/layout/sidebar-test-fixtures'
 import {
@@ -25,6 +26,7 @@ import {
 } from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { getUrlCopiedFromEvent } from '#hooks/use-url-copied-toast'
+import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 interface MockTask {
   id: string
@@ -1659,5 +1661,30 @@ describe('SearchModal', () => {
     const overlay = screen.getByTestId('search-overlay')
     await user.click(overlay)
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('switches search mode from a mobile filter button', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    renderSearchModal({ defaultQuery: 'planning' })
+
+    await user.click(screen.getByRole('button', { name: '# tasks' }))
+
+    const getOutput = () => ({
+      mode: screen.getByTestId('search-mode-indicator').textContent,
+      inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
+    })
+    expect(getOutput()).toEqual({ mode: '#', inputValue: 'planning' })
+  })
+
+  it('closes the mobile search dialog from its close button', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    renderSearchModal({ onOpenChange })
+
+    await user.click(screen.getByRole('button', { name: 'Close search' }))
+
+    expect(onOpenChange.mock.calls).toEqual([[false]])
   })
 })

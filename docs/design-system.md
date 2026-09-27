@@ -364,11 +364,11 @@ it is:
   counterpart to `BottomSheetPanel`, with `600px` as the one canonical
   width, expressed as `max-w-150` (Tailwind's spacing-scale dynamic
   utility, `150 × 4px`) since no `--container-*` step lands on 600px.
-  `search-modal.tsx`'s `max-w-160`/`max-h-120` (640px/480px, same
-  spacing-scale mechanism) were judged a separate command-palette pattern
-  — no PC/mobile split, no shared `Dialog` primitive, single-layer portal
-  for z-index reasons — and were left as-is rather than folded into
-  `ModalPanel`.
+  `search-modal.tsx` uses `max-w-160`/`max-h-120` (640px/480px, same
+  spacing-scale mechanism) on desktop and a full-screen layout below `md`,
+  with mobile-only mode chips and a close button. It remains a separate
+  command-palette pattern with a single-layer portal for z-index reasons and
+  no shared `Dialog` primitive, so it is not folded into `ModalPanel`.
 
 The same defect showed up in the app shell's fixed-width panels: the width
 lived on each call site's wrapper `<div>` instead of on the panel component,
