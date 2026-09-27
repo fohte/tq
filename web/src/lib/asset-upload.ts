@@ -186,7 +186,7 @@ export async function handleAssetLoadError(event: Event): Promise<void> {
     console.error('Failed to refresh signed asset URL', result.error)
     return
   }
-  if (target.src !== previousSrc) return
+  if (target.src !== previousSrc || result.value.url === previousSrc) return
 
   if (target instanceof HTMLVideoElement) {
     const currentTime = target.currentTime
