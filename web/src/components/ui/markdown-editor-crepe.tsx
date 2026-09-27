@@ -4,7 +4,8 @@ import '#components/ui/markdown-editor.css'
 
 import { shift } from '@floating-ui/dom'
 import { Crepe } from '@milkdown/crepe'
-import { serializerCtx } from '@milkdown/kit/core'
+import { EditorStatus, editorViewCtx, serializerCtx } from '@milkdown/kit/core'
+import type { Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
 import { $prose, replaceAll } from '@milkdown/kit/utils'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
@@ -15,6 +16,7 @@ import {
 } from '@prosemirror-adapter/react'
 import { useEffect, useRef } from 'react'
 
+import { assetBlockNodeView, assetInlineNodeView } from '#lib/asset-node-view'
 import {
   handleAssetLoadError,
   resolveAssetSrc,
@@ -37,10 +39,53 @@ export interface CrepeEditorProps {
   onChange?: (markdown: string) => void
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
+  focusOnEdit?: boolean
+  skipNoopChanges?: boolean
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
   // mid-edit typing form a chip out from under the cursor.
   mode: 'view' | 'edit'
+}
+
+interface EditSession {
+  initialMarkdown: string
+  hasChanged: boolean
+  lastNotifiedMarkdown: string
+}
+
+interface EditSessionChange {
+  session: EditSession
+  markdown: string
+}
+
+function createEditSession(initialMarkdown: string): EditSession {
+  return {
+    initialMarkdown,
+    hasChanged: false,
+    lastNotifiedMarkdown: initialMarkdown,
+  }
+}
+
+function serializeWithoutEmptyTrailingParagraph(
+  doc: ProseMirrorNode,
+  serialize: (doc: ProseMirrorNode) => string,
+): string {
+  const lastChild = doc.lastChild
+  if (lastChild?.type.name !== 'paragraph' || lastChild.content.size !== 0)
+    return serialize(doc)
+
+  const contentWithoutTrailingParagraph = doc.content.cut(
+    0,
+    doc.content.size - lastChild.nodeSize,
+  )
+  return serialize(doc.copy(contentWithoutTrailingParagraph))
+}
+
+function getEditorMarkdown(crepe: Crepe): string {
+  return crepe.editor.action((ctx) => {
+    const doc = ctx.get(editorViewCtx).state.doc
+    return serializeWithoutEmptyTrailingParagraph(doc, ctx.get(serializerCtx))
+  })
 }
 
 // Walks up from `el` to the nearest ancestor with its own left padding —
@@ -63,6 +108,8 @@ function CrepeEditor({
   onFocusedDocumentChange,
   placeholder,
   mode,
+  focusOnEdit = false,
+  skipNoopChanges = false,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
   const viewModeStoreRef = useRef<ReturnType<
@@ -73,8 +120,15 @@ function CrepeEditor({
   // change that arrives while the user is mid-edit stays pending (not
   // dropped) until mode returns to 'view' — see the sync effect below.
   const lastSyncedValueRef = useRef(defaultValue ?? '')
+  const editSessionRef = useRef<EditSession | null>(null)
+  const modeRef = useRef(mode)
+  // Milkdown delays change callbacks, so retain each changed doc's edit
+  // session and Markdown.
+  const editSessionByDocRef = useRef(
+    new WeakMap<ProseMirrorNode, EditSessionChange | null>(),
+  )
 
-  useEditor((root) => {
+  const { loading } = useEditor((root) => {
     // Clamp the handle to the nearest padded ancestor so it uses that
     // padding before overlapping the block's text. Some call sites nest
     // `root` inside one or more unpadded wrapper divs before their card,
@@ -125,9 +179,11 @@ function CrepeEditor({
     const viewModeStore = createInlineReferenceViewModeStore(mode)
 
     // Crepe's image-block feature only covers file-picker uploads; wire up
-    // plugin-upload so pasting/dropping an image anywhere in the editor
-    // uploads it too.
+    // plugin-upload so pasting/dropping an image or video anywhere in the
+    // editor uploads it too.
     crepe.editor
+      .use(assetBlockNodeView)
+      .use(assetInlineNodeView)
       .use(upload)
       .config((ctx) => {
         ctx.update(uploadConfig.key, (prev) => ({
@@ -203,7 +259,67 @@ function CrepeEditor({
       )
     }
 
-    if (onChange) {
+    if (onChange && skipNoopChanges) {
+      crepe.editor.use(
+        $prose(
+          (ctx) =>
+            new Plugin({
+              key: new PluginKey('markdown-edit-session'),
+              view: (view) => {
+                const session =
+                  modeRef.current === 'edit'
+                    ? createEditSession(
+                        serializeWithoutEmptyTrailingParagraph(
+                          view.state.doc,
+                          ctx.get(serializerCtx),
+                        ),
+                      )
+                    : null
+                editSessionRef.current = session
+                editSessionByDocRef.current.set(
+                  view.state.doc,
+                  session == null
+                    ? null
+                    : { session, markdown: session.initialMarkdown },
+                )
+                return {
+                  update: (nextView, previousState) => {
+                    if (previousState.doc.eq(nextView.state.doc)) return
+                    const session = editSessionRef.current
+                    editSessionByDocRef.current.set(
+                      nextView.state.doc,
+                      session == null
+                        ? null
+                        : {
+                            session,
+                            markdown: serializeWithoutEmptyTrailingParagraph(
+                              nextView.state.doc,
+                              ctx.get(serializerCtx),
+                            ),
+                          },
+                    )
+                  },
+                }
+              },
+            }),
+        ),
+      )
+      crepe.on((listener) => {
+        listener.updated((_ctx, doc) => {
+          const change = editSessionByDocRef.current.get(doc)
+          if (change == null) return
+
+          const { session, markdown } = change
+          if (!session.hasChanged && markdown === session.initialMarkdown)
+            return
+          if (markdown === session.lastNotifiedMarkdown) return
+
+          session.hasChanged = true
+          session.lastNotifiedMarkdown = markdown
+          onChange(markdown)
+        })
+      })
+    } else if (onChange) {
       crepe.on((listener) => {
         listener.markdownUpdated((_ctx, markdown) => {
           onChange(markdown)
@@ -218,7 +334,8 @@ function CrepeEditor({
 
   // Follows `mode` after the initial render: the Crepe instance itself is
   // only ever created once (see the initial-mode comment above), so later
-  // changes have to be pushed onto it imperatively.
+  // changes have to be pushed onto it imperatively. Controlled mode also
+  // waits for lazy initialization before applying a pending mode and focus.
   //
   // This deliberately never dispatches a ProseMirror transaction. Any
   // dispatched transaction — even one that changes no document content —
@@ -231,10 +348,33 @@ function CrepeEditor({
   // calls `view.setProps()` below, which alone is enough to make
   // ProseMirror recompute decorations against the store's new value (see
   // view-mode.ts).
+  const canFocusOnEdit = focusOnEdit && !loading
   useEffect(() => {
+    modeRef.current = mode
+    const crepe = crepeRef.current
+    if (skipNoopChanges) {
+      const initialMarkdown =
+        mode === 'edit'
+          ? crepe?.editor.status === EditorStatus.Created
+            ? getEditorMarkdown(crepe)
+            : lastSyncedValueRef.current
+          : null
+      editSessionRef.current =
+        initialMarkdown == null ? null : createEditSession(initialMarkdown)
+    }
     viewModeStoreRef.current?.setMode(mode)
-    crepeRef.current?.setReadonly(mode === 'view')
-  }, [mode])
+    if (crepe == null) return
+    const shouldBeReadonly = mode === 'view'
+    if (crepe.readonly !== shouldBeReadonly) crepe.setReadonly(shouldBeReadonly)
+    if (
+      canFocusOnEdit &&
+      mode === 'edit' &&
+      crepe.editor.status === EditorStatus.Created
+    )
+      crepe.editor.action((ctx) => {
+        ctx.get(editorViewCtx).focus()
+      })
+  }, [canFocusOnEdit, mode, skipNoopChanges])
 
   // Syncs a `defaultValue` that changed externally while in view mode;
   // skipped during editing so a live cursor isn't overwritten, and diffed

@@ -418,3 +418,12 @@ export const SearchEverywhere: Story = {
     defaultQuery: `${projectScopeQuery}nothing-matches`,
   },
 }
+
+export const MobileFullscreen: Story = {
+  name: 'the mobile search modal shows a scrollable task list in fullscreen',
+  tags: ['mobile-only'],
+  args: {
+    defaultContext: 'work',
+    defaultQuery: `#${scrollableQuery}`,
+  },
+}

@@ -13,6 +13,27 @@ function spyStderr() {
   return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 }
 
+function summarizeCliResult(
+  exitCode: number,
+  stderr: ReturnType<typeof spyStderr>,
+) {
+  return { exitCode, stderr: stderr.mock.calls }
+}
+
+function summarizePathHandlingResult(
+  exitCode: number,
+  requests: ReturnType<typeof request>[],
+  stderr: ReturnType<typeof spyStderr>,
+  stdout: ReturnType<typeof spyStdout>,
+) {
+  return {
+    exitCode,
+    requests,
+    stderr: stderr.mock.calls,
+    stdout: stdout.mock.calls,
+  }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
@@ -89,6 +110,75 @@ describe('link', () => {
     ])
   })
 
+  it('encodes path separators in the current session id', async () => {
+    vi.stubEnv('TQ_SESSION_ID', 'segment/with separator')
+    const session = {
+      id: 'agent-session-1',
+      sessionId: 'segment/with separator',
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(session), { status: 200 }),
+    )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'link', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizePathHandlingResult(exitCode, calls.map(request), stderr, stdout),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname:
+            '/api/agent-sessions/by-session/claude_code/segment%2Fwith%20separator',
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'POST',
+          pathname: '/api/tasks/42/agent-sessions',
+          query: {},
+          body: { agentSessionId: 'agent-session-1' },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(session, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects dot path segments in the current session id', async () => {
+    vi.stubEnv('TQ_SESSION_ID', '..')
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response(JSON.stringify({ id: 'agent-session-1' }), {
+          status: 200,
+        }),
+    )
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'link', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizePathHandlingResult(exitCode, calls.map(request), stderr, stdout),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [['Error: sessionId: Session ID must be a valid path segment\n']],
+      stdout: [],
+    })
+  })
+
   it('fails before making any fetch call when no agent session id is set', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 200 }),
@@ -131,6 +221,24 @@ describe('link', () => {
     expect(stderr.mock.calls).toEqual([
       ['Error: Agent session not found (HTTP 404)\n'],
     ])
+  })
+
+  it('reports a missing API URL before a missing agent session ID', async () => {
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(['link', '42'], fetchStub, fakeStdin(true))
+
+    expect(summarizeCliResult(exitCode, stderr)).toEqual({
+      exitCode: 1,
+      stderr: [
+        [
+          'Error: API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.\n',
+        ],
+      ],
+    })
   })
 })
 

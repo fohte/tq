@@ -324,37 +324,6 @@ export async function hydrateTaskListRows(
   }))
 }
 
-export type TaskListItemWithChildren<
-  T extends { id: string; parentId: string | null },
-> = T & { children: TaskListItemWithChildren<T>[] }
-
-// Nests a flat list-item response array into a tree by parentId. A row
-// whose parent isn't present in the input (e.g. filtered out, or excluded by
-// a `descendantOf` query) surfaces as a root instead of being dropped.
-export function nestTaskListRows<
-  T extends { id: string; parentId: string | null },
->(rows: T[]): Array<TaskListItemWithChildren<T>> {
-  const nodeMap = new Map<string, TaskListItemWithChildren<T>>()
-  for (const row of rows) {
-    nodeMap.set(row.id, { ...row, children: [] })
-  }
-
-  const roots: Array<TaskListItemWithChildren<T>> = []
-  for (const row of rows) {
-    const node = nodeMap.get(row.id)
-    if (node == null) continue
-
-    const parent = row.parentId != null ? nodeMap.get(row.parentId) : undefined
-    if (parent != null) {
-      parent.children.push(node)
-    } else {
-      roots.push(node)
-    }
-  }
-
-  return roots
-}
-
 export type TaskEnv = {
   Variables: {
     task: typeof tasks.$inferSelect
@@ -392,7 +361,7 @@ export async function resolveParentId(
 
 // Batch counterpart of `findTaskByIdOrNumber`; unmatched inputs are simply
 // absent from the returned map.
-export async function findTasksByIdsOrNumbers(
+async function findTasksByIdsOrNumbers(
   params: string[],
 ): Promise<Map<string, typeof tasks.$inferSelect>> {
   if (params.length === 0) return new Map()
@@ -429,6 +398,12 @@ export async function findTasksByIdsOrNumbers(
     if (row) result.set(param, row)
   }
   return result
+}
+
+export async function resolveTasksByIdsOrNumbers(params: string[]) {
+  const byParam = await findTasksByIdsOrNumbers(params)
+  const ids = [...new Set([...byParam.values()].map((task) => task.id))]
+  return { byParam, ids }
 }
 
 const factory = createFactory<TaskEnv, '/:id'>()

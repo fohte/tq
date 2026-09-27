@@ -3,7 +3,8 @@ import {
   type CallToolResult,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { okAsync } from 'neverthrow'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
@@ -11,16 +12,20 @@ import { operations } from '#operations/index'
 import {
   callMcpTool,
   connectMcpClient,
+  expectedPathSegmentValidationError as expectedMcpPathSegmentValidationError,
   parseToolData,
 } from '#routes/mcp/testing'
+import { operationToolName } from '#routes/mcp/tools/operation-tools'
 import {
   createComment,
   createLabel,
   createTask,
   TEST_UUID,
 } from '#routes/tasks/testing'
-import { jsonBody, setupTestDb } from '#testing'
+import * as r2 from '#services/r2'
+import { jsonBody, makeFile, setupTestDb } from '#testing'
 
+vi.mock('#services/r2')
 setupTestDb()
 
 async function createProject(title: string): Promise<{ id: string }> {
@@ -28,6 +33,16 @@ async function createProject(title: string): Promise<{ id: string }> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
+  })
+  return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+async function createAsset(): Promise<{ id: string }> {
+  const form = new FormData()
+  form.set('file', makeFile('sample.png', 'image/png', 1))
+  const response = await app.request('/api/assets', {
+    method: 'POST',
+    body: form,
   })
   return jsonBody(response, z.object({ id: z.uuid() }))
 }
@@ -42,9 +57,28 @@ function summarizeTraversal(result: CallToolResult, projectTitle: string) {
   return { result, projectTitle }
 }
 
+function summarizeSessionDeleteTraversal(
+  result: CallToolResult,
+  taskStatus: number,
+  task: { title: string },
+) {
+  return { result, task: { status: taskStatus, body: task } }
+}
+
+function summarizeAssetDelete(result: CallToolResult, assetStatus: number) {
+  return { result: parseToolData(result, ['id']), assetStatus }
+}
+
 let client: Client
 
 beforeEach(async () => {
+  vi.mocked(r2.putObject).mockReset().mockReturnValue(okAsync(undefined))
+  vi.mocked(r2.getObjectSignedUrl)
+    .mockReset()
+    .mockReturnValue(okAsync('https://signed.example/assets/test'))
+  vi.mocked(r2.deleteObjectByKey)
+    .mockReset()
+    .mockReturnValue(okAsync(undefined))
   client = await connectMcpClient()
 })
 
@@ -77,21 +111,9 @@ function expectedPathSegmentValidationError(
   label: string,
   value: string,
 ) {
-  const issue =
-    value === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : `${label} must be a valid path segment`
   return {
     kind: 'result',
-    result: {
-      isError: true,
-      content: [
-        {
-          type: 'text',
-          text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
-        },
-      ],
-    },
+    result: expectedMcpPathSegmentValidationError(name, field, label, value),
   }
 }
 
@@ -144,6 +166,66 @@ describe('comment_create tool', () => {
     expect(result).toEqual({
       isError: true,
       content: [{ type: 'text', text: 'Task not found' }],
+    })
+  })
+})
+
+describe('session_delete tool', () => {
+  it('rejects empty, dot, and dot-dot provider and session ids', async () => {
+    const invalidSegments = ['', '.', '..']
+    const cases = [
+      ...invalidSegments.map((value) => ({
+        field: 'provider',
+        label: 'Provider',
+        value,
+      })),
+      ...invalidSegments.map((value) => ({
+        field: 'sessionId',
+        label: 'Session ID',
+        value,
+      })),
+    ]
+    const outcomes = await Promise.all(
+      cases.map(({ field, value }) =>
+        summarizeToolCallOutcome('session_delete', {
+          provider: field === 'provider' ? value : 'claude_code',
+          sessionId: field === 'sessionId' ? value : 'session-id',
+        }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      cases.map(({ field, label, value }) =>
+        expectedPathSegmentValidationError(
+          'session_delete',
+          field,
+          label,
+          value,
+        ),
+      ),
+    )
+  })
+
+  it('does not route an encoded session id to a task deletion', async () => {
+    const task = await createTask('Protected test task')
+    const result = await callMcpTool(client, 'session_delete', {
+      provider: 'claude_code',
+      sessionId: `../../../tasks/${task.id}`,
+    })
+    const taskResponse = await app.request(`/api/tasks/${task.id}`)
+    const currentTask = await jsonBody(
+      taskResponse,
+      z.object({ title: z.string() }),
+    )
+
+    expect(
+      summarizeSessionDeleteTraversal(result, taskResponse.status, currentTask),
+    ).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Agent session not found' }],
+      },
+      task: { status: 200, body: { title: 'Protected test task' } },
     })
   })
 })
@@ -355,6 +437,48 @@ describe('comment_delete tool', () => {
   })
 })
 
+describe('github_unlink tool', () => {
+  it('rejects empty and dot link ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['', '.', '..'].map((linkId) =>
+        summarizeToolCallOutcome('github_unlink', {
+          taskId: TEST_UUID,
+          linkId,
+        }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['', '.', '..'].map((linkId) =>
+        expectedPathSegmentValidationError(
+          'github_unlink',
+          'linkId',
+          'GitHub link ID',
+          linkId,
+        ),
+      ),
+    )
+  })
+
+  it('does not route a traversal link id to a project deletion', async () => {
+    const project = await createProject('Original project')
+    const task = await createTask('Has GitHub links')
+
+    const result = await callMcpTool(client, 'github_unlink', {
+      taskId: task.id,
+      linkId: `../../../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'GitHub link not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
 describe('label_update tool', () => {
   it('rejects empty and dot ids before tool execution', async () => {
     const outcomes = await Promise.all(
@@ -452,12 +576,58 @@ describe('label_delete tool', () => {
   })
 })
 
+describe('asset_delete tool', () => {
+  it('returns a confirmation after deleting an asset', async () => {
+    const asset = await createAsset()
+    const result = await callMcpTool(client, 'asset_delete', { id: asset.id })
+    const assetResponse = await app.request(`/api/assets/${asset.id}`)
+
+    expect(summarizeAssetDelete(result, assetResponse.status)).toEqual({
+      result: { deleted: true, id: asset.id },
+      assetStatus: 404,
+    })
+  })
+
+  it('rejects empty and dot ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['', '.', '..'].map((id) =>
+        summarizeToolCallOutcome('asset_delete', { id }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['', '.', '..'].map((id) =>
+        expectedPathSegmentValidationError(
+          'asset_delete',
+          'id',
+          'Asset ID',
+          id,
+        ),
+      ),
+    )
+  })
+
+  it('does not route a traversal asset id to a project deletion', async () => {
+    const project = await createProject('Original project')
+
+    const result = await callMcpTool(client, 'asset_delete', {
+      id: `../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Asset not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
 describe('operation tool input schemas', () => {
   it('exposes agent only for operations that support attribution', async () => {
     const tools = await client.listTools()
-    const operationToolNames = operations.map((operation) =>
-      operation.path.join('_'),
-    )
+    const operationToolNames = operations.map(operationToolName)
     const agentArguments = Object.fromEntries(
       tools.tools
         .filter((tool) => operationToolNames.includes(tool.name))
@@ -468,13 +638,26 @@ describe('operation tool input schemas', () => {
     )
 
     expect(agentArguments).toEqual({
+      asset_delete: false,
+      calendar_events: false,
       comment_create: true,
       comment_delete: false,
       comment_list: false,
       comment_update: true,
+      github_link: true,
+      github_resolve: false,
+      github_sync: false,
+      github_unlink: true,
+      health: false,
       label_delete: false,
       label_list: false,
       label_update: false,
+      page_create: true,
+      page_delete: false,
+      page_get: false,
+      page_list: false,
+      page_search: false,
+      page_update: true,
       project_create: false,
       project_delete: false,
       project_get: false,
@@ -484,8 +667,24 @@ describe('operation tool input schemas', () => {
       task_complete: true,
       task_create: true,
       task_delete: false,
-      'task_from-github': false,
+      task_from_github: false,
+      queue_get: false,
+      queue_list: false,
+      queue_set: false,
+      saved_view_create: false,
+      saved_view_delete: false,
+      saved_view_get: false,
+      saved_view_list: false,
+      saved_view_update: false,
+      session_delete: false,
+      session_list: false,
+      slack_resolve: false,
+      task_activity: false,
+      task_get: false,
+      task_list: false,
       task_parent: false,
+      task_search: false,
+      task_sessions: false,
       task_status: true,
       task_update: true,
     })
@@ -495,16 +694,9 @@ describe('operation tool input schemas', () => {
 describe('operation tool annotations', () => {
   it('maps operation kinds to MCP annotations', async () => {
     const tools = await client.listTools()
-    const annotations = Object.fromEntries(
-      tools.tools
-        .filter(
-          (tool) =>
-            tool.name.startsWith('comment_') || tool.name.startsWith('label_'),
-        )
-        .map((tool) => [tool.name, tool.annotations ?? null]),
-    )
-
-    expect(annotations).toEqual({
+    const expectedAnnotations = {
+      asset_delete: { readOnlyHint: false, destructiveHint: true },
+      calendar_events: { readOnlyHint: true },
       comment_create: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -518,6 +710,20 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      github_link: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      github_resolve: { readOnlyHint: true },
+      github_sync: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      github_unlink: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
+      health: { readOnlyHint: true },
       label_delete: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -527,6 +733,14 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
-    })
+      slack_resolve: { readOnlyHint: true },
+    }
+    const annotations = Object.fromEntries(
+      tools.tools
+        .filter((tool) => Object.hasOwn(expectedAnnotations, tool.name))
+        .map((tool) => [tool.name, tool.annotations ?? null]),
+    )
+
+    expect(annotations).toEqual(expectedAnnotations)
   })
 })

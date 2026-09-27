@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { errAsync, ResultAsync } from 'neverthrow'
 
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from '#constants/assets'
+import { ALLOWED_CONTENT_TYPES } from '#constants/assets'
 import { db } from '#db/connection'
 import { assets } from '#db/schema'
+import { ASSET_MAX_SIZE_BYTES } from '#env'
 import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
 import {
   deleteObjectByKey,
@@ -12,8 +13,6 @@ import {
   type R2ConfigError,
   type R2OperationError,
 } from '#services/r2'
-
-export { MAX_SIZE_BYTES }
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 60
 
@@ -28,7 +27,9 @@ export class InvalidAssetTypeError extends Error {
 
 export class AssetTooLargeError extends Error {
   constructor() {
-    super(`File too large. Maximum size is ${String(MAX_SIZE_BYTES)} bytes`)
+    super(
+      `File too large. Maximum size is ${String(ASSET_MAX_SIZE_BYTES)} bytes`,
+    )
     this.name = 'AssetTooLargeError'
   }
 }
@@ -53,7 +54,7 @@ export function uploadAsset(
   if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
     return errAsync(new InvalidAssetTypeError())
   }
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > ASSET_MAX_SIZE_BYTES) {
     return errAsync(new AssetTooLargeError())
   }
 
@@ -80,12 +81,17 @@ export function uploadAsset(
 
 export function getAssetSignedUrl(
   id: string,
-): ResultAsync<string, AssetNotFoundError | R2ConfigError | R2OperationError> {
+): ResultAsync<
+  { url: string; contentType: string },
+  AssetNotFoundError | R2ConfigError | R2OperationError
+> {
   return ResultAsync.fromSafePromise(
     db.query.assets.findFirst({ where: eq(assets.id, id) }),
   ).andThen((asset) => {
     if (!asset) return errAsync(new AssetNotFoundError())
-    return getObjectSignedUrl(asset.r2Key, SIGNED_URL_EXPIRES_IN_SECONDS)
+    return getObjectSignedUrl(asset.r2Key, SIGNED_URL_EXPIRES_IN_SECONDS).map(
+      (url) => ({ url, contentType: asset.contentType }),
+    )
   })
 }
 

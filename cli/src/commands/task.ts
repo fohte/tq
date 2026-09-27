@@ -1,17 +1,21 @@
-import { taskWriteOperations } from 'api/operations'
+import { taskReadOperations, taskWriteOperations } from 'api/operations'
 import type { Command } from 'commander'
 
-import {
-  registerTaskActivityCommand,
-  registerTaskGetCommand,
-  registerTaskListCommand,
-  registerTaskSearchCommand,
-  registerTaskSessionsCommand,
-  registerTaskUrlCommand,
-} from '#commands/task-read'
 import type { ReadableStdin } from '#input'
-import { registerOperations } from '#operation-adapter'
+import { registerOperationsInGroup } from '#operation-adapter'
 
+const taskReadOperationsBeforeWrite = taskReadOperations.filter(
+  (operation) =>
+    operation.path[1] === 'list' ||
+    operation.path[1] === 'get' ||
+    operation.path[1] === 'url',
+)
+const taskReadOperationsAfterWrite = taskReadOperations.filter(
+  (operation) =>
+    operation.path[1] === 'activity' ||
+    operation.path[1] === 'search' ||
+    operation.path[1] === 'sessions',
+)
 const taskWriteOperationsBeforeActivity = taskWriteOperations.filter(
   (operation) => operation.path[1] !== 'from-github',
 )
@@ -26,26 +30,27 @@ export function registerTaskCommands(
 ): void {
   const task = program.command('task').description('Manage tasks')
 
-  registerTaskListCommand(task, fetchImpl)
-  registerTaskGetCommand(task, fetchImpl)
-  registerTaskUrlCommand(task)
-
-  registerOperations(
-    program,
-    taskWriteOperationsBeforeActivity,
-    'Manage tasks',
+  registerOperationsInGroup(
+    task,
+    taskReadOperationsBeforeWrite,
     fetchImpl,
     stdin,
   )
-
-  registerTaskActivityCommand(task, fetchImpl)
-  registerTaskSearchCommand(task, fetchImpl)
-  registerTaskSessionsCommand(task, fetchImpl)
-
-  registerOperations(
-    program,
+  registerOperationsInGroup(
+    task,
+    taskWriteOperationsBeforeActivity,
+    fetchImpl,
+    stdin,
+  )
+  registerOperationsInGroup(
+    task,
+    taskReadOperationsAfterWrite,
+    fetchImpl,
+    stdin,
+  )
+  registerOperationsInGroup(
+    task,
     taskWriteOperationsAfterActivity,
-    'Manage tasks',
     fetchImpl,
     stdin,
   )

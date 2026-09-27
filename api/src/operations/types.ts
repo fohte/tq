@@ -1,6 +1,6 @@
 import type { hc } from 'hono/client'
 import type { Result } from 'neverthrow'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import type { AppType } from '#app'
@@ -19,6 +19,32 @@ export type OperationError =
   | { kind: 'input'; message: string }
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
+
+export function omitKeyRecursively(value: unknown, key: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => omitKeyRecursively(item, key))
+  }
+  if (typeof value !== 'object' || value === null) return value
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([field]) => field !== key)
+      .map(([field, nested]) => [field, omitKeyRecursively(nested, key)]),
+  )
+}
+
+export function parseResponse<Schema extends z.ZodType>(
+  schema: Schema,
+  value: unknown,
+) {
+  const parsed = schema.safeParse(value)
+  return parsed.success
+    ? okAsync(parsed.data)
+    : errAsync({
+        kind: 'request',
+        error: parsed.error,
+      } satisfies OperationError)
+}
 
 export function formatInputIssues(error: z.ZodError): string {
   return error.issues
@@ -44,6 +70,7 @@ export type CliFileOutput =
     }
 
 export type CliOutput =
+  | { kind: 'none' }
   | {
       kind: 'json'
       fields?: readonly string[]
@@ -55,12 +82,18 @@ export type CliOutput =
       omitKey: string
       fullOption?: '--full'
       fullDescription?: string
+      fullField?: string
     }
   | { kind: 'web-url'; path: string }
 
 export type PositionalArgument<Key extends string = string> =
   | Key
-  | { name: Key; optional?: boolean; variadic?: boolean }
+  | {
+      name: Key
+      field?: undefined
+      optional?: boolean
+      variadic?: boolean
+    }
   | {
       name: string
       field: Key
@@ -78,8 +111,15 @@ export type CliContentInput = {
   required?: boolean
 }
 
+export type CliFileInput = {
+  field: string
+  pathField: string
+  contentTypes: Readonly<Record<string, string>>
+  allowedContentTypes: readonly string[]
+}
+
 export interface OperationDefinition {
-  path: readonly [group: string, command: string, ...nestedPath: string[]]
+  path: readonly [rootCommand: string, ...subcommandPath: string[]]
   description: string
   inputSchema: z.ZodObject
   mcpInputSchema?: z.ZodObject
@@ -90,8 +130,11 @@ export interface OperationDefinition {
   surface?: OperationSurface
   cli: {
     description?: string
+    path?: readonly string[]
+    hiddenFields?: readonly string[]
     contentInput?: CliContentInput
     excludeFields?: readonly string[]
+    fileInput?: CliFileInput
     envDefaults?: Readonly<Record<string, string>>
     commaSeparatedOptions?: readonly string[]
     optionNames?: Readonly<Record<string, string>>
@@ -102,6 +145,8 @@ export interface OperationDefinition {
       input: Record<string, unknown>,
       options: Record<string, unknown>,
     ) => Result<Record<string, unknown>, Error>
+    repeatableOptions?: readonly string[]
+    optionDefaults?: Readonly<Record<string, string>>
     output: CliOutput
   }
   run: (

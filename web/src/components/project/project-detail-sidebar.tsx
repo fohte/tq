@@ -1,4 +1,3 @@
-import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import {
   Select,
@@ -9,6 +8,7 @@ import {
 } from '@fohte/ui/select'
 import { Timer } from 'lucide-react'
 
+import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
 import {
   formatDate,
   getDaysRemaining,
@@ -296,32 +296,15 @@ function ColorSwatches({
   const updateProject = useUpdateProject()
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {PROJECT_COLOR_PRESETS.map((preset) => (
-        <Button
-          key={preset.hex}
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            updateProject.mutate({
-              id: projectId,
-              input: { color: preset.hex },
-            })
-          }}
-          className={cn(
-            'size-5 shrink-0 rounded-none border-0 bg-(--project-color) bg-clip-border p-0 transition-all hover:bg-(--project-color) active:translate-y-0',
-            color === preset.hex
-              ? 'ring-2 ring-foreground ring-offset-2 ring-offset-background'
-              : 'hover:scale-110',
-          )}
-          style={
-            { '--project-color': preset.hex } as React.CSSProperties & {
-              '--project-color': string
-            }
-          }
-          title={preset.name}
-        />
-      ))}
-    </div>
+    <ColorSwatchRadioGroup
+      options={PROJECT_COLOR_PRESETS}
+      value={color ?? ''}
+      onValueChange={(nextColor) => {
+        updateProject.mutate({
+          id: projectId,
+          input: { color: nextColor },
+        })
+      }}
+    />
   )
 }

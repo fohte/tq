@@ -5,22 +5,14 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
+import { putQueueItemsSchema, queueDateSchema } from '#schemas/queue'
 import {
   getQueueByKeyOrRespond,
   resolvePeriodStart,
   type TaskQueue,
 } from '#services/task-queues'
 
-const dateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
-
-const itemsQuerySchema = z.object({ date: dateSchema })
-
-const putItemsSchema = z.object({
-  taskIds: z.array(z.uuid()),
-  date: dateSchema,
-})
+const itemsQuerySchema = z.object({ date: queueDateSchema })
 
 function queueToResponse(queue: TaskQueue) {
   return {
@@ -77,7 +69,7 @@ export const queuesApp = new Hono()
 
     return c.json(rows.map(itemToResponse), 200)
   })
-  .put('/:key/items', zValidator('json', putItemsSchema), async (c) => {
+  .put('/:key/items', zValidator('json', putQueueItemsSchema), async (c) => {
     const key = c.req.param('key')
     const { taskIds, date } = c.req.valid('json')
     const uniqueTaskIds = [...new Set(taskIds)]

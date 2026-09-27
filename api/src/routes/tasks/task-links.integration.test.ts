@@ -421,14 +421,14 @@ describe('task mention links', () => {
     })
   })
 
-  it('is visible through the MCP get_task tool, matching REST', async () => {
+  it('is visible through the MCP task_get tool, matching REST', async () => {
     const source = await createTask('Source')
     const target = await createTask('Target')
     await patchTask(source.id, { description: `See #${String(target.number)}` })
 
     const client = await connectMcpClient()
     try {
-      const result = await callMcpTool(client, 'get_task', {
+      const result = await callMcpTool(client, 'task_get', {
         taskId: source.id,
       })
       const data = passthroughSchema<TaskResponse>().parse(

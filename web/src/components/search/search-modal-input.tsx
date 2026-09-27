@@ -17,6 +17,7 @@ interface SearchModalInputProps {
   onInputValueChange: (value: string) => void
   onRemoveContext: () => void
   onRemoveScopeToken: (index: number) => void
+  onClose: () => void
   inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
@@ -30,10 +31,11 @@ export function SearchModalInput({
   onInputValueChange,
   onRemoveContext,
   onRemoveScopeToken,
+  onClose,
   inputRef,
 }: SearchModalInputProps) {
   return (
-    <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
+    <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 md:gap-3 md:px-4">
       <span
         className="font-mono text-sm font-bold text-primary"
         data-testid="search-mode-indicator"
@@ -76,7 +78,18 @@ export function SearchModalInput({
           data-testid="search-loading"
         />
       )}
-      <KeybindHint variant="boxed">Esc</KeybindHint>
+      <KeybindHint variant="boxed" className="hidden md:inline-flex">
+        Esc
+      </KeybindHint>
+      <Button
+        type="button"
+        variant="ghost"
+        aria-label="Close search"
+        className="size-9 shrink-0 rounded-none p-0 md:hidden"
+        onClick={onClose}
+      >
+        <X className="size-4" aria-hidden="true" />
+      </Button>
     </div>
   )
 }

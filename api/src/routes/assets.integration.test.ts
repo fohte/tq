@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { app } from '#app'
 import { db } from '#db/connection'
 import { assets } from '#db/schema'
-import { MAX_SIZE_BYTES } from '#services/assets'
+import { ASSET_MAX_SIZE_BYTES } from '#env'
 import * as r2 from '#services/r2'
 import { jsonBody, makeFile, setupTestDb } from '#testing'
 
@@ -50,6 +50,10 @@ async function uploadAsset(file: File) {
   return jsonBody<AssetResponse>(res)
 }
 
+async function responseSnapshot(res: Response) {
+  return { status: res.status, body: await jsonBody(res) }
+}
+
 describe('POST /api/assets', () => {
   it('uploads an asset and returns its metadata with a signed URL', async () => {
     const file = makeFile('photo.png', 'image/png', 1234)
@@ -78,10 +82,17 @@ describe('POST /api/assets', () => {
 
   it('returns 413 for a file exceeding the size limit', async () => {
     const res = await uploadAssetRequest(
-      makeFile('big.png', 'image/png', MAX_SIZE_BYTES + 1),
+      makeFile('big.png', 'image/png', ASSET_MAX_SIZE_BYTES + 128 * 1024),
     )
 
-    expect(res.status).toBe(413)
+    const expected = {
+      status: 413,
+      body: {
+        error: `File too large. Maximum size is ${String(ASSET_MAX_SIZE_BYTES)} bytes`,
+      },
+    }
+
+    expect(await responseSnapshot(res)).toEqual(expected)
   })
 })
 
@@ -92,7 +103,10 @@ describe('GET /api/assets/:id', () => {
     const res = await app.request(`/api/assets/${asset.id}`)
 
     expect(res.status).toBe(200)
-    expect(await jsonBody(res)).toEqual({ url: SIGNED_URL })
+    expect(await jsonBody(res)).toEqual({
+      url: SIGNED_URL,
+      contentType: asset.contentType,
+    })
   })
 
   it('returns 404 for a non-existent asset', async () => {

@@ -11,14 +11,12 @@ import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-query'
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
 import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
-import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
+import {
+  getVisualViewportStyle,
+  useVisualViewportInsets,
+} from '#hooks/use-visual-viewport-insets'
 import { getSearchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
-
-interface VisualViewportStyle extends React.CSSProperties {
-  '--visual-viewport-top': string
-  '--visual-viewport-height': string
-}
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -29,6 +27,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   )
   const copiedUrl = useUrlCopiedToast()
   const defaultSearchQuery = useSearchModalDefaultQuery()
+  const openSearch = useCallback(() => {
+    setSearchOpen(true)
+  }, [])
   const openNewTask = useCallback(() => {
     setNewTaskOpen(true)
   }, [])
@@ -59,14 +60,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           ? cn('top-0', isViewportPinned ? 'h-dvh' : 'min-h-dvh')
           : 'inset-x-0 top-(--visual-viewport-top) h-(--visual-viewport-height)',
       )}
-      style={
-        insets === null
-          ? undefined
-          : ({
-              '--visual-viewport-top': `${String(insets.top)}px`,
-              '--visual-viewport-height': `${String(insets.height)}px`,
-            } as VisualViewportStyle)
-      }
+      style={getVisualViewportStyle(insets)}
     >
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -76,7 +70,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </SearchModalOpenContext.Provider>
         </main>
         <StatusLine searchKeybinding={searchKeybinding} />
-        <BottomTabBar />
+        <BottomTabBar onSearch={openSearch} onNewTask={openNewTask} />
       </div>
       <SearchModal
         open={searchOpen}

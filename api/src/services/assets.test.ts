@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
 import { assets } from '#db/schema'
+import { ASSET_MAX_SIZE_BYTES } from '#env'
 import {
   AssetNotFoundError,
   AssetTooLargeError,
   deleteAsset,
   getAssetSignedUrl,
   InvalidAssetTypeError,
-  MAX_SIZE_BYTES,
   uploadAsset,
 } from '#services/assets'
 import * as r2 from '#services/r2'
@@ -70,7 +70,7 @@ describe('uploadAsset', () => {
   })
 
   it('rejects files larger than the size limit', async () => {
-    const file = makeFile('big.png', 'image/png', MAX_SIZE_BYTES + 1)
+    const file = makeFile('big.png', 'image/png', ASSET_MAX_SIZE_BYTES + 1)
 
     const error = (await uploadAsset(file))._unsafeUnwrapErr()
 
@@ -85,9 +85,9 @@ describe('getAssetSignedUrl', () => {
       await uploadAsset(makeFile('photo.png', 'image/png', 10))
     )._unsafeUnwrap()
 
-    const url = (await getAssetSignedUrl(asset.id))._unsafeUnwrap()
+    const resolved = (await getAssetSignedUrl(asset.id))._unsafeUnwrap()
 
-    expect(url).toBe(SIGNED_URL)
+    expect(resolved).toEqual({ url: SIGNED_URL, contentType: 'image/png' })
     expect(vi.mocked(r2.getObjectSignedUrl).mock.calls).toEqual([
       [asset.r2Key, 3600],
     ])

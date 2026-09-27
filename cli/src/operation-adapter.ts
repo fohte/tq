@@ -1,11 +1,17 @@
-import { formatInputIssues, type OperationDefinition } from 'api/operations'
+import { basename, extname } from 'node:path'
+
+import {
+  formatInputIssues,
+  type OperationClient,
+  type OperationDefinition,
+} from 'api/operations'
 import { Command } from 'commander'
-import { ok } from 'neverthrow'
+import { err, ok, type Result } from 'neverthrow'
 
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
 import type { ReadableStdin } from '#input'
-import { readContentInput } from '#input'
+import { readBinaryFile, readContentInput } from '#input'
 import { printOperationOutput } from '#operation-output'
 import { fail } from '#result'
 import {
@@ -13,6 +19,21 @@ import {
   pickSchemaFields,
   toKebabCase,
 } from '#schema-options'
+
+export type OperationCommandContext = {
+  options: Record<string, unknown>
+  input: Record<string, unknown>
+  stdin: ReadableStdin
+  execute: (
+    input:
+      Record<string, unknown> | (() => Result<Record<string, unknown>, Error>),
+    options?: { ignoreErrors?: boolean },
+  ) => Promise<void>
+}
+
+export type OperationCommandHandler = (
+  context: OperationCommandContext,
+) => Promise<void>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -23,9 +44,7 @@ function positionalName(
 ) {
   return typeof argument === 'string'
     ? argument
-    : 'field' in argument
-      ? argument.field
-      : argument.name
+    : (argument.field ?? argument.name)
 }
 
 function positionalSyntax(
@@ -41,7 +60,7 @@ function mapCliInput(
   operation: OperationDefinition,
   input: Record<string, unknown>,
   options: Record<string, unknown>,
-) {
+): Result<Record<string, unknown>, Error> {
   return operation.cli.mapInput?.(input, options) ?? ok(input)
 }
 
@@ -71,21 +90,37 @@ function operationInputError(
   return new Error(formatInputIssues(parsed.error))
 }
 
+function reportError(
+  actionCommand: Command,
+  error: Error,
+  ignoreErrors: boolean,
+): void {
+  if (!ignoreErrors) fail(actionCommand, error)
+}
+
 function collectInput(
   operation: OperationDefinition,
   actionArgs: unknown[],
   options: Record<string, unknown>,
   excluded: readonly string[],
 ) {
+  const input = collectPositionals(operation, actionArgs)
+
+  return pickSchemaFields(operation.inputSchema, options, excluded).map(
+    (fields) => Object.assign(input, fields),
+  )
+}
+
+function collectPositionals(
+  operation: OperationDefinition,
+  actionArgs: readonly unknown[],
+): Record<string, unknown> {
   const input: Record<string, unknown> = {}
   operation.positionalArgs.forEach((argument, index) => {
     const value = actionArgs[index]
     if (value !== undefined) input[positionalName(argument)] = value
   })
-
-  return pickSchemaFields(operation.inputSchema, options, excluded).map(
-    (fields) => Object.assign(input, fields),
-  )
+  return input
 }
 
 function renderWebPath(
@@ -110,19 +145,171 @@ function printWebUrl(
   actionCommand: Command,
   output: Extract<OperationDefinition['cli']['output'], { kind: 'web-url' }>,
   input: Record<string, unknown>,
-): void {
+): Result<void, Error> {
   const path = renderWebPath(output.path, input)
   if (path == null) {
-    return fail(
-      actionCommand,
-      new Error('Web URL path refers to a missing input field.'),
-    )
+    return err(new Error('Web URL path refers to a missing input field.'))
   }
-  const webUrl = resolveWebUrl(actionCommand).match(
-    (value) => value,
-    (error) => fail(actionCommand, error),
+  return resolveWebUrl(actionCommand).map((webUrl) => {
+    process.stdout.write(`${webUrl}${path}\n`)
+  })
+}
+
+type OperationInput =
+  Record<string, unknown> | (() => Result<Record<string, unknown>, Error>)
+
+async function executeOperation(
+  operation: OperationDefinition,
+  output: Exclude<OperationDefinition['cli']['output'], { kind: 'web-url' }>,
+  actionCommand: Command,
+  options: Record<string, unknown>,
+  client: OperationClient,
+  input: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+  ignoreErrors: boolean,
+): Promise<void> {
+  const result = await operation.run(client, input)
+  if (result.isErr()) {
+    const operationError = result.error
+    const error =
+      operationError.kind === 'input'
+        ? new Error(operationError.message)
+        : operationError.kind === 'http'
+          ? await toApiError(operationError.response)
+          : operationError.error
+    reportError(actionCommand, error, ignoreErrors)
+    return
+  }
+
+  const printed = await printOperationOutput(
+    output,
+    result.value,
+    options,
+    fetchImpl,
   )
-  process.stdout.write(`${webUrl}${path}\n`)
+  if (printed.isErr()) reportError(actionCommand, printed.error, ignoreErrors)
+}
+
+async function executeCommandOperation(
+  operation: OperationDefinition,
+  actionCommand: Command,
+  options: Record<string, unknown>,
+  fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
+  input: OperationInput,
+  { ignoreErrors = false }: { ignoreErrors?: boolean } = {},
+): Promise<void> {
+  const resolveInput = () => {
+    const collected = typeof input === 'function' ? input() : ok(input)
+    return collected.andThen((value) => mapCliInput(operation, value, options))
+  }
+  const output = operation.cli.output
+
+  if (output.kind === 'web-url') {
+    const collected = resolveInput()
+    if (collected.isErr()) {
+      reportError(actionCommand, collected.error, ignoreErrors)
+      return
+    }
+    const inputError = operationInputError(operation, collected.value)
+    if (inputError != null) {
+      reportError(actionCommand, inputError, ignoreErrors)
+      return
+    }
+    const printed = printWebUrl(actionCommand, output, collected.value)
+    if (printed.isErr()) reportError(actionCommand, printed.error, ignoreErrors)
+    return
+  }
+
+  const clientResult = buildClient(actionCommand, fetchImpl)
+  if (clientResult.isErr()) {
+    reportError(actionCommand, clientResult.error, ignoreErrors)
+    return
+  }
+
+  const collected = resolveInput()
+  if (collected.isErr()) {
+    reportError(actionCommand, collected.error, ignoreErrors)
+    return
+  }
+  const inputValue = collected.value
+
+  const listOutput = output.kind === 'list' ? output : undefined
+  if (listOutput?.fullField != null && options['full'] === true) {
+    inputValue[listOutput.fullField] = true
+  }
+
+  const contentInput = operation.cli.contentInput
+  if (contentInput != null) {
+    const filePath =
+      'file' in options && typeof options['file'] === 'string'
+        ? options['file']
+        : undefined
+    const content = await readContentInput(filePath, stdin)
+    if (content.isErr()) {
+      reportError(actionCommand, content.error, ignoreErrors)
+      return
+    }
+    if (content.value === undefined && contentInput.required !== false) {
+      reportError(
+        actionCommand,
+        new Error(
+          'Content is required. Provide --file <path> or pipe content via stdin.',
+        ),
+        ignoreErrors,
+      )
+      return
+    }
+    if (content.value !== undefined) {
+      inputValue[contentInput.field] = content.value
+    }
+  }
+
+  const fileInput = operation.cli.fileInput
+  if (fileInput != null) {
+    const filePath: unknown = inputValue[fileInput.pathField]
+    if (typeof filePath !== 'string') {
+      reportError(
+        actionCommand,
+        new Error('File input path refers to a missing input field.'),
+        ignoreErrors,
+      )
+      return
+    }
+
+    const data = await readBinaryFile(filePath)
+    if (data.isErr()) {
+      reportError(actionCommand, data.error, ignoreErrors)
+      return
+    }
+
+    const contentType = fileInput.contentTypes[extname(filePath).toLowerCase()]
+    if (contentType == null) {
+      reportError(
+        actionCommand,
+        new Error(
+          `Unsupported file extension for ${filePath}. Allowed types: ${fileInput.allowedContentTypes.join(', ')}`,
+        ),
+        ignoreErrors,
+      )
+      return
+    }
+
+    inputValue[fileInput.field] = new File([data.value], basename(filePath), {
+      type: contentType,
+    })
+  }
+
+  await executeOperation(
+    operation,
+    output,
+    actionCommand,
+    options,
+    clientResult.value,
+    inputValue,
+    fetchImpl,
+    ignoreErrors,
+  )
 }
 
 export function registerOperations(
@@ -131,41 +318,63 @@ export function registerOperations(
   groupDescription: string,
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
+  handler?: OperationCommandHandler,
 ): void {
   const cliOperations = operations.filter(
     (operation) => operation.surface?.only !== 'mcp',
   )
-  const groupName = cliOperations[0]?.path[0]
+  const groupName = (cliOperations[0]?.cli.path ?? cliOperations[0]?.path)?.[0]
   if (groupName === undefined) return
-  if (cliOperations.some((operation) => operation.path[0] !== groupName)) {
+  const group = program.command(groupName).description(groupDescription)
+
+  registerOperationsInGroup(group, operations, fetchImpl, stdin, handler)
+}
+
+export function registerOperationsInGroup(
+  group: Command,
+  operations: readonly OperationDefinition[],
+  fetchImpl: typeof fetch,
+  stdin: ReadableStdin,
+  handler?: OperationCommandHandler,
+): void {
+  const cliOperations = operations.filter(
+    (operation) => operation.surface?.only !== 'mcp',
+  )
+  if (
+    cliOperations.some(
+      (operation) => (operation.cli.path ?? operation.path)[0] !== group.name(),
+    )
+  ) {
     return fail(
-      program,
+      group,
       new Error('An operation group must contain a single root command.'),
     )
   }
-  const group =
-    program.commands.find((command) => command.name() === groupName) ??
-    program.command(groupName).description(groupDescription)
 
   for (const operation of cliOperations) {
-    const commandPath = operation.path.slice(1)
-    const commandName = commandPath.at(-1)
-    if (commandName === undefined) continue
-
-    let parent = group
-    for (const part of commandPath.slice(0, -1)) {
-      const existing = parent.commands.find(
-        (command) => command.name() === part,
-      )
-      parent = existing ?? parent.command(part)
-    }
-
+    const commandPath = (operation.cli.path ?? operation.path).slice(1)
     const positionals = operation.positionalArgs.map(positionalSyntax).join(' ')
-    let command = parent
-      .command(
-        `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
-      )
-      .description(operation.cli.description ?? operation.description)
+    let command = group
+    if (commandPath.length === 0) {
+      for (const positional of operation.positionalArgs) {
+        command = command.argument(positionalSyntax(positional))
+      }
+      command.description(operation.cli.description ?? operation.description)
+    } else {
+      const commandName = commandPath.at(-1)
+      if (commandName === undefined) continue
+      for (const part of commandPath.slice(0, -1)) {
+        const existing = command.commands.find(
+          (candidate) => candidate.name() === part,
+        )
+        command = existing ?? command.command(part)
+      }
+      command = command
+        .command(
+          `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
+        )
+        .description(operation.cli.description ?? operation.description)
+    }
 
     const contentInput = operation.cli.contentInput
     if (contentInput != null) {
@@ -201,8 +410,13 @@ export function registerOperations(
 
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
+      ...(operation.cli.hiddenFields ?? []),
       ...(contentInput == null ? [] : [contentInput.field]),
       ...(operation.cli.excludeFields ?? []),
+      ...(listOutput?.fullField == null ? [] : [listOutput.fullField]),
+      ...(operation.cli.fileInput == null
+        ? []
+        : [operation.cli.fileInput.field]),
     ]
     addSchemaOptions(command, operation.inputSchema, {
       exclude: excluded,
@@ -212,6 +426,12 @@ export function registerOperations(
       ...(operation.cli.commaSeparatedOptions == null
         ? {}
         : { commaSeparatedOptions: operation.cli.commaSeparatedOptions }),
+      ...(operation.cli.repeatableOptions == null
+        ? {}
+        : { repeatableOptions: operation.cli.repeatableOptions }),
+      ...(operation.cli.optionDefaults == null
+        ? {}
+        : { optionDefaults: operation.cli.optionDefaults }),
       ...(operation.cli.optionNames == null
         ? {}
         : { optionNames: operation.cli.optionNames }),
@@ -231,92 +451,40 @@ export function registerOperations(
       if (!(commandValue instanceof Command)) return
       const actionCommand = commandValue
       const optionsValue = actionArgs[operation.positionalArgs.length]
-      const rawOptions = isRecord(optionsValue) ? optionsValue : {}
-      const options = normalizeOptionNames(operation, rawOptions)
+      const options = normalizeOptionNames(
+        operation,
+        isRecord(optionsValue) ? optionsValue : {},
+      )
+      const collected = collectInput(operation, actionArgs, options, excluded)
 
-      if (operation.cli.output.kind === 'web-url') {
-        const collectedInput = collectInput(
-          operation,
-          actionArgs,
+      if (handler != null) {
+        await handler({
           options,
-          excluded,
-        ).match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        const input = mapCliInput(operation, collectedInput, options).match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        const inputError = operationInputError(operation, input)
-        if (inputError != null) return fail(actionCommand, inputError)
-        printWebUrl(actionCommand, operation.cli.output, input)
+          input: collected.isOk()
+            ? collected.value
+            : collectPositionals(operation, actionArgs),
+          stdin,
+          execute: (input, runOptions) =>
+            executeCommandOperation(
+              operation,
+              actionCommand,
+              options,
+              fetchImpl,
+              stdin,
+              input,
+              runOptions,
+            ),
+        })
         return
       }
 
-      const client = buildClient(actionCommand, fetchImpl).match(
-        (value) => value,
-        (error) => fail(actionCommand, error),
-      )
-
-      const collectedInput = collectInput(
+      await executeCommandOperation(
         operation,
-        actionArgs,
-        options,
-        excluded,
-      ).match(
-        (value) => value,
-        (error) => fail(actionCommand, error),
-      )
-
-      if (contentInput != null) {
-        const filePath =
-          'file' in options && typeof options['file'] === 'string'
-            ? options['file']
-            : undefined
-        const content = await readContentInput(filePath, stdin).match(
-          (value) => value,
-          (error) => fail(actionCommand, error),
-        )
-        if (content === undefined && contentInput.required !== false) {
-          return fail(
-            actionCommand,
-            new Error(
-              'Content is required. Provide --file <path> or pipe content via stdin.',
-            ),
-          )
-        }
-        if (content !== undefined) {
-          collectedInput[contentInput.field] = content
-        }
-      }
-
-      const mappedInput = mapCliInput(operation, collectedInput, options).match(
-        (value) => value,
-        (error) => fail(actionCommand, error),
-      )
-
-      const result = await operation.run(client, mappedInput)
-      if (result.isErr()) {
-        switch (result.error.kind) {
-          case 'input':
-            return fail(actionCommand, new Error(result.error.message))
-          case 'http':
-            return fail(actionCommand, await toApiError(result.error.response))
-          case 'request':
-            return fail(actionCommand, result.error.error)
-        }
-      }
-
-      const printed = await printOperationOutput(
-        operation.cli.output,
-        result.value,
+        actionCommand,
         options,
         fetchImpl,
-      )
-      printed.match(
-        () => undefined,
-        (error) => fail(actionCommand, error),
+        stdin,
+        () => collected,
       )
     })
   }

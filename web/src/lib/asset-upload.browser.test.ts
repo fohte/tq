@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  AssetTooLargeError,
   handleAssetLoadError,
   parseAssetId,
   resolveAssetSrc,
@@ -48,6 +47,13 @@ function makeFile(name: string, type: string, sizeBytes: number): File {
   return new File([new Uint8Array(sizeBytes)], name, { type })
 }
 
+function signedAssetResponse(url: string, contentType = 'image/png') {
+  return {
+    ok: true,
+    json: () => Promise.resolve({ url, contentType }),
+  }
+}
+
 describe('parseAssetId', () => {
   it('extracts the id from an /api/assets/:id path', () => {
     expect(parseAssetId('/api/assets/abc-123')).toBe('abc-123')
@@ -86,24 +92,35 @@ describe('uploadAssetFile', () => {
     expect(mocks['mockPost']).not.toHaveBeenCalled()
   })
 
-  it('rejects files exceeding the size limit without calling the API', async () => {
+  it('defers file size validation to the API', async () => {
     const mocks = await getMocks()
+    assertDefined(mocks['mockPost']).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 'server-accepted' }),
+    })
 
     const result = await uploadAssetFile(
       makeFile('big.png', 'image/png', 10 * 1024 * 1024 + 1),
     )
 
-    expect(result._unsafeUnwrapErr()).toEqual(new AssetTooLargeError())
-    expect(mocks['mockPost']).not.toHaveBeenCalled()
+    expect(result._unsafeUnwrap()).toBe('/api/assets/server-accepted')
   })
 
-  it('fails when the upload request fails', async () => {
+  it('returns the API error when an upload is rejected', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockPost']).mockResolvedValue({ ok: false })
+    assertDefined(mocks['mockPost']).mockResolvedValue({
+      ok: false,
+      json: () =>
+        Promise.resolve({
+          error: 'File too large. Maximum size is 2048 bytes',
+        }),
+    })
 
     const result = await uploadAssetFile(makeFile('photo.png', 'image/png', 10))
 
-    expect(result._unsafeUnwrapErr().message).toBe('Failed to upload image')
+    expect(result._unsafeUnwrapErr().message).toBe(
+      'File too large. Maximum size is 2048 bytes',
+    )
   })
 })
 
@@ -166,7 +183,7 @@ describe('uploadAssetFiles', () => {
 })
 
 // resolveAssetSrc/handleAssetLoadError share module-level cache state, so
-// each test below uses its own image id rather than resetting the cache.
+// each test below uses its own asset id rather than resetting the cache.
 describe('resolveAssetSrc', () => {
   it('passes through URLs that are not /api/assets/:id paths', async () => {
     const mocks = await getMocks()
@@ -179,10 +196,9 @@ describe('resolveAssetSrc', () => {
 
   it('fetches and caches the signed URL for a matching path', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockGet']).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ url: 'https://signed.example.com/a' }),
-    })
+    assertDefined(mocks['mockGet']).mockResolvedValue(
+      signedAssetResponse('https://signed.example.com/a'),
+    )
 
     const first = await resolveAssetSrc('/api/assets/cache-test-1')
     const second = await resolveAssetSrc('/api/assets/cache-test-1')
@@ -197,16 +213,12 @@ describe('resolveAssetSrc', () => {
     try {
       const mocks = await getMocks()
       assertDefined(mocks['mockGet'])
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({ url: 'https://signed.example.com/first' }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({ url: 'https://signed.example.com/second' }),
-        })
+        .mockResolvedValueOnce(
+          signedAssetResponse('https://signed.example.com/first'),
+        )
+        .mockResolvedValueOnce(
+          signedAssetResponse('https://signed.example.com/second'),
+        )
 
       const first = await resolveAssetSrc('/api/assets/cache-test-2')
       vi.advanceTimersByTime(56 * 60 * 1000)
@@ -227,7 +239,7 @@ describe('resolveAssetSrc', () => {
     const result = await resolveAssetSrc('/api/assets/cache-test-3')
 
     expect(result._unsafeUnwrapErr().message).toBe(
-      'Failed to fetch signed image URL',
+      'Failed to fetch signed asset URL',
     )
   })
 })
@@ -239,7 +251,7 @@ function makeErrorEvent(target: EventTarget | null): Event {
 }
 
 describe('handleAssetLoadError', () => {
-  it('does nothing when the event target is not an image element', async () => {
+  it('does nothing when the event target is neither an image nor video', async () => {
     const mocks = await getMocks()
 
     await handleAssetLoadError(makeErrorEvent(null))
@@ -247,7 +259,7 @@ describe('handleAssetLoadError', () => {
     expect(mocks['mockGet']).not.toHaveBeenCalled()
   })
 
-  it('does nothing when the failed src was never resolved from an image id', async () => {
+  it('does nothing when the failed src was never resolved from an asset id', async () => {
     const mocks = await getMocks()
     const img = document.createElement('img')
     img.src = 'https://unrelated.example.com/x.png'
@@ -260,16 +272,12 @@ describe('handleAssetLoadError', () => {
   it('refreshes the signed URL and swaps the failed <img> src', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockGet'])
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({ url: 'https://signed.example.com/stale' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({ url: 'https://signed.example.com/fresh' }),
-      })
+      .mockResolvedValueOnce(
+        signedAssetResponse('https://signed.example.com/stale'),
+      )
+      .mockResolvedValueOnce(
+        signedAssetResponse('https://signed.example.com/fresh'),
+      )
 
     const resolved = await resolveAssetSrc('/api/assets/error-test')
     const img = document.createElement('img')
