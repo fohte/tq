@@ -4,10 +4,26 @@ import { runCli } from '#cli'
 import {
   apiUrl,
   captureFetch,
-  commandOutcome,
   fakeStdin,
+  request,
   spyStdout,
 } from '#commands/test-support'
+
+async function runCalendarCli(args: string[], response: Response) {
+  const { fetchStub, calls } = captureFetch(() => response)
+  const write = spyStdout()
+  const exitCode = await runCli(
+    ['--api-url', apiUrl, ...args],
+    fetchStub,
+    fakeStdin(true),
+  )
+
+  return {
+    exitCode,
+    requests: calls.map(request),
+    stdout: write.mock.calls,
+  }
+}
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -16,31 +32,21 @@ afterEach(() => {
 describe('calendar events', () => {
   it('requests events between timeMin and timeMax and prints the response array', async () => {
     const events = [{ id: 'ev1', summary: 'Standup' }]
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(events), { status: 200 }),
-    )
-    const write = spyStdout()
+    const timeMin = '2026-08-06T00:00:00.000Z'
+    const timeMax = '2026-08-07T00:00:00.000Z'
 
-    const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'calendar',
-        'events',
-        '2026-08-06T00:00:00.000Z',
-        '2026-08-07T00:00:00.000Z',
-      ],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(commandOutcome(exitCode, calls, write.mock.calls)).toEqual({
+    expect(
+      await runCalendarCli(
+        ['calendar', 'events', timeMin, timeMax],
+        new Response(JSON.stringify(events), { status: 200 }),
+      ),
+    ).toEqual({
       exitCode: 0,
-      calls: [
+      requests: [
         {
           method: 'GET',
-          url: `${apiUrl}/api/calendar/events?timeMin=2026-08-06T00%3A00%3A00.000Z&timeMax=2026-08-07T00%3A00%3A00.000Z`,
-          headers: {},
+          pathname: '/api/calendar/events',
+          query: { timeMin, timeMax },
           body: undefined,
         },
       ],
