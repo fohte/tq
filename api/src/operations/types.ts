@@ -65,8 +65,15 @@ export type CliContentInput = {
   required?: boolean
 }
 
+export type CliFileInput = {
+  field: string
+  pathField: string
+  contentTypes: Readonly<Record<string, string>>
+  allowedContentTypes: readonly string[]
+}
+
 export interface OperationDefinition {
-  path: readonly [group: string, command: string, ...nestedPath: string[]]
+  path: readonly [rootCommand: string, ...subcommandPath: string[]]
   description: string
   inputSchema: z.ZodObject
   positionalArgs: readonly PositionalArgument[]
@@ -76,6 +83,7 @@ export interface OperationDefinition {
   surface?: OperationSurface
   cli: {
     contentInput?: CliContentInput
+    fileInput?: CliFileInput
     envDefaults?: Readonly<Record<string, string>>
     commaSeparatedOptions?: readonly string[]
     output: CliOutput
