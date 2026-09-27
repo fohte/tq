@@ -13,6 +13,7 @@ const meta = {
     onInputValueChange: () => undefined,
     onRemoveContext: () => undefined,
     onRemoveScopeToken: () => undefined,
+    onClose: () => undefined,
   },
   parameters: { layout: 'centered' },
   decorators: [
