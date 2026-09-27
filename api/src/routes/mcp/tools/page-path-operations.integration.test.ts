@@ -3,28 +3,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
-import { callMcpTool, connectMcpClient } from '#routes/mcp/testing'
+import {
+  callMcpTool,
+  connectMcpClient,
+  expectedPathSegmentValidationError,
+} from '#routes/mcp/testing'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
-
-function expectedPageIdValidationError(name: string, pageId: string) {
-  const issue =
-    pageId === ''
-      ? 'Too small: expected string to have >=1 characters'
-      : 'Page ID must be a valid path segment'
-
-  return {
-    isError: true,
-    content: [
-      {
-        type: 'text',
-        text: `Input validation error: Invalid arguments for tool ${name}: pageId: ${issue}`,
-      },
-    ],
-  }
-}
 
 async function createProject(title: string) {
   const response = await app.request('/api/projects', {
@@ -78,7 +65,7 @@ describe('page path operations', () => {
     expect(outcomes).toEqual(
       toolNames.flatMap((name) =>
         invalidPageIds.map((pageId) =>
-          expectedPageIdValidationError(name, pageId),
+          expectedPathSegmentValidationError(name, 'pageId', 'Page ID', pageId),
         ),
       ),
     )

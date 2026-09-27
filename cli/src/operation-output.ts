@@ -126,6 +126,10 @@ export async function printOperationOutput(
     case 'json-with-link-sync':
       return printOperationJsonWithLinkSync(value)
     case 'list':
+      if (output.fullField != null) {
+        printJson(value)
+        return ok(undefined)
+      }
       printJsonList(value, output.omitKey, { full: options['full'] === true })
       return ok(undefined)
   }
