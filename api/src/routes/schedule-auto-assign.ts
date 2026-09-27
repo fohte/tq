@@ -14,6 +14,7 @@ import { localDateBoundsToUtc, localNaiveDateTimeToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
 import { loadSchedulesWithRules } from '#routes/schedule-shared'
 import { timeBlockToResponse } from '#routes/tasks/shared'
+import { queueDateSchema } from '#schemas/queue'
 import {
   autoAssign,
   calculateFreeSlots,
@@ -25,12 +26,8 @@ import {
 import { getSchedulingSettings } from '#services/scheduling-settings'
 import { getDayQueueOrRespond } from '#services/task-queues'
 
-const dateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
-
 const autoAssignSchema = z.object({
-  date: dateSchema,
+  date: queueDateSchema,
   tzOffset: z.coerce.number().int().optional(),
 })
 

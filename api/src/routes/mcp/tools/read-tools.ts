@@ -4,7 +4,6 @@ import {
   registerGetPageTool,
   registerSearchPagesTool,
 } from '#routes/mcp/tools/page-read-tools'
-import { registerGetTodayTasksTool } from '#routes/mcp/tools/queue-read-tools'
 import {
   registerGetTaskTool,
   registerListTasksTool,
@@ -18,5 +17,4 @@ export function registerReadTools(server: McpServer): void {
   registerGetPageTool(server)
   registerSearchTasksTool(server)
   registerSearchPagesTool(server)
-  registerGetTodayTasksTool(server)
 }
