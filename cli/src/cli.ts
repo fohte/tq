@@ -45,10 +45,14 @@ function buildProgram(
     .addOption(
       new Option(
         '-H, --header <name:value>',
-        'Extra header to send with each request (repeatable)',
+        'Extra header to send with each request (repeatable; use TQ_HEADERS_JSON for secret values)',
       )
         .argParser(collectHeader)
         .default({}),
+    )
+    .addHelpText(
+      'after',
+      '\nSet TQ_HEADERS_JSON to a JSON object of header names and string values. Use it for secrets because -H values may be visible in process listings.\n',
     )
 
   registerPageCommands(program, fetchImpl, stdin)
