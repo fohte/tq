@@ -57,15 +57,15 @@ function buildProgram(
   registerProjectCommands(program, fetchImpl, stdin)
   registerSavedViewCommands(program, fetchImpl)
   registerLabelCommands(program, fetchImpl, stdin)
-  registerAssetCommands(program, fetchImpl)
+  registerAssetCommands(program, fetchImpl, stdin)
   registerGithubCommands(program, fetchImpl, stdin)
-  registerQueueCommands(program, fetchImpl)
+  registerQueueCommands(program, fetchImpl, stdin)
   registerCalendarCommands(program, fetchImpl, stdin)
   registerSlackCommands(program, fetchImpl, stdin)
-  registerHealthCommand(program, fetchImpl)
+  registerHealthCommand(program, fetchImpl, stdin)
   registerHookCommands(program, fetchImpl, stdin)
-  registerLinkCommands(program, fetchImpl)
-  registerSessionCommands(program, fetchImpl)
+  registerLinkCommands(program, fetchImpl, stdin)
+  registerSessionCommands(program, fetchImpl, stdin)
 
   return program
 }

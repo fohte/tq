@@ -13,6 +13,13 @@ function spyStderr() {
   return vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 }
 
+function summarizeCliResult(
+  exitCode: number,
+  stderr: ReturnType<typeof spyStderr>,
+) {
+  return { exitCode, stderr: stderr.mock.calls }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
@@ -131,6 +138,24 @@ describe('link', () => {
     expect(stderr.mock.calls).toEqual([
       ['Error: Agent session not found (HTTP 404)\n'],
     ])
+  })
+
+  it('reports a missing API URL before a missing agent session ID', async () => {
+    const { fetchStub } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 200 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(['link', '42'], fetchStub, fakeStdin(true))
+
+    expect(summarizeCliResult(exitCode, stderr)).toEqual({
+      exitCode: 1,
+      stderr: [
+        [
+          'Error: API URL is not set. Pass --api-url or set the TQ_API_URL environment variable.\n',
+        ],
+      ],
+    })
   })
 })
 

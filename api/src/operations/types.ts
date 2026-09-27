@@ -1,5 +1,5 @@
 import type { hc } from 'hono/client'
-import { errAsync, ResultAsync } from 'neverthrow'
+import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import type { AppType } from '#app'
@@ -18,6 +18,19 @@ export type OperationError =
   | { kind: 'input'; message: string }
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
+
+export function parseResponse<Schema extends z.ZodType>(
+  schema: Schema,
+  value: unknown,
+) {
+  const parsed = schema.safeParse(value)
+  return parsed.success
+    ? okAsync(parsed.data)
+    : errAsync({
+        kind: 'request',
+        error: parsed.error,
+      } satisfies OperationError)
+}
 
 export function formatInputIssues(error: z.ZodError): string {
   return error.issues
@@ -43,6 +56,7 @@ export type CliFileOutput =
     }
 
 export type CliOutput =
+  | { kind: 'none' }
   | {
       kind: 'json'
       fields?: readonly string[]
@@ -54,6 +68,7 @@ export type CliOutput =
       omitKey: string
       fullOption?: '--full'
       fullDescription?: string
+      fullField?: string
     }
   | { kind: 'web-url'; path: string }
 
@@ -77,8 +92,15 @@ export type CliContentInput = {
   required?: boolean
 }
 
+export type CliFileInput = {
+  field: string
+  pathField: string
+  contentTypes: Readonly<Record<string, string>>
+  allowedContentTypes: readonly string[]
+}
+
 export interface OperationDefinition {
-  path: readonly [group: string, command: string, ...nestedPath: string[]]
+  path: readonly [rootCommand: string, ...subcommandPath: string[]]
   description: string
   inputSchema: z.ZodObject
   positionalArgs: readonly PositionalArgument[]
@@ -87,9 +109,14 @@ export interface OperationDefinition {
   routes: readonly AllRoutes[]
   surface?: OperationSurface
   cli: {
+    path?: readonly string[]
+    hiddenFields?: readonly string[]
     contentInput?: CliContentInput
+    fileInput?: CliFileInput
     envDefaults?: Readonly<Record<string, string>>
     commaSeparatedOptions?: readonly string[]
+    repeatableOptions?: readonly string[]
+    optionDefaults?: Readonly<Record<string, string>>
     output: CliOutput
   }
   run: (
