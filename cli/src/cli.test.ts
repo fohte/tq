@@ -84,6 +84,7 @@ describe('runCli', () => {
   })
 
   it.each([
+    ['an empty string', '', 'TQ_HEADERS_JSON must contain valid JSON.'],
     [
       'malformed JSON',
       '{"X-Example":"secret',
@@ -116,6 +117,26 @@ describe('runCli', () => {
       })
     },
   )
+
+  it('rejects CR/LF in TQ_AUTHOR before sending a request', async () => {
+    vi.stubEnv('TQ_AUTHOR', 'name\r\ninjected')
+    const fetchStub = vi.fn()
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', 'http://api.test', 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(),
+    )
+
+    expect(
+      makeCliResult(exitCode, fetchStub.mock.calls, stderr.mock.calls),
+    ).toEqual({
+      exitCode: 1,
+      fetchCalls: [],
+      stderr: [['Error: Invalid value for HTTP header "X-Author".\n']],
+    })
+  })
 
   it.each([
     [

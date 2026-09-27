@@ -482,6 +482,34 @@ describe('global options', () => {
     })
   })
 
+  it('uses the last -H value when repeated names differ only by casing', async () => {
+    vi.stubEnv('TQ_HEADERS_JSON', '{"X-Example":"environment-value"}')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        '--header',
+        'x-example: earlier-command-value',
+        '--header',
+        'X-Example: final-command-value',
+        'page',
+        'list',
+        '42',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makeHeaderOutput(exitCode, calls[0]?.headers)).toEqual({
+      exitCode: 0,
+      headers: { 'x-example': 'final-command-value' },
+    })
+  })
+
   it('omits X-Author when --author is not given', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify([]), { status: 200 }),

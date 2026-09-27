@@ -46,6 +46,7 @@ describe('parseHeadersJson', () => {
   })
 
   it.each([
+    ['an empty string', '', 'TQ_HEADERS_JSON must contain valid JSON.'],
     [
       'invalid JSON',
       '{"X-Example":"secret',

@@ -65,6 +65,8 @@ export function mergeHeaders(
 
   return validation.map(() => {
     const merged = new Map<string, string>()
+    // An overwritten key keeps its object position, which can reverse priority
+    // when a differently cased duplicate was added between writes.
     for (const [name, value] of entries) {
       merged.set(name.toLowerCase(), value)
     }
