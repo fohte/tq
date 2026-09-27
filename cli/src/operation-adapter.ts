@@ -12,13 +12,17 @@ import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
 import type { ReadableStdin } from '#input'
 import { readBinaryFile, readContentInput } from '#input'
+import {
+  collectInput,
+  collectPositionals,
+  normalizeOptionNames,
+  positionalName,
+  positionalSyntax,
+} from '#operation-input'
+import { getOrderedOperationGroups } from '#operation-order'
 import { printOperationOutput } from '#operation-output'
 import { fail } from '#result'
-import {
-  addSchemaOptions,
-  pickSchemaFields,
-  toKebabCase,
-} from '#schema-options'
+import { addSchemaOptions, toKebabCase } from '#schema-options'
 
 export type OperationCommandContext = {
   options: Record<string, unknown>
@@ -43,46 +47,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function positionalName(
-  argument: OperationDefinition['positionalArgs'][number],
-) {
-  return typeof argument === 'string'
-    ? argument
-    : (argument.field ?? argument.name)
-}
-
-function positionalSyntax(
-  argument: OperationDefinition['positionalArgs'][number],
-) {
-  if (typeof argument === 'string') return `<${argument}>`
-
-  const name = `${argument.name}${argument.variadic === true ? '...' : ''}`
-  return argument.optional === true ? `[${name}]` : `<${name}>`
-}
-
 function mapCliInput(
   operation: OperationDefinition,
   input: Record<string, unknown>,
   options: Record<string, unknown>,
 ): Result<Record<string, unknown>, Error> {
   return operation.cli.mapInput?.(input, options) ?? ok(input)
-}
-
-function normalizeOptionNames(
-  operation: OperationDefinition,
-  options: Record<string, unknown>,
-): Record<string, unknown> {
-  const normalized = { ...options }
-  for (const [field, optionName] of Object.entries(
-    operation.cli.optionNames ?? {},
-  )) {
-    const optionKey = optionName.replace(
-      /-([a-z])/g,
-      (_match, letter: string) => letter.toUpperCase(),
-    )
-    if (options[optionKey] !== undefined) normalized[field] = options[optionKey]
-  }
-  return normalized
 }
 
 function operationInputError(
@@ -100,31 +70,6 @@ function reportError(
   ignoreErrors: boolean,
 ): void {
   if (!ignoreErrors) fail(actionCommand, error)
-}
-
-function collectInput(
-  operation: OperationDefinition,
-  actionArgs: unknown[],
-  options: Record<string, unknown>,
-  excluded: readonly string[],
-) {
-  const input = collectPositionals(operation, actionArgs)
-
-  return pickSchemaFields(operation.inputSchema, options, excluded).map(
-    (fields) => Object.assign(input, fields),
-  )
-}
-
-function collectPositionals(
-  operation: OperationDefinition,
-  actionArgs: readonly unknown[],
-): Record<string, unknown> {
-  const input: Record<string, unknown> = {}
-  operation.positionalArgs.forEach((argument, index) => {
-    const value = actionArgs[index]
-    if (value !== undefined) input[positionalName(argument)] = value
-  })
-  return input
 }
 
 function renderWebPath(
@@ -323,46 +268,11 @@ export function registerOperations(
   stdin: ReadableStdin,
   handlers: OperationCommandHandlers = {},
 ): void {
-  const cliOperations = operations.filter(
-    (operation) => operation.surface?.only !== 'mcp',
-  )
-  const groups = new Map<
-    string,
-    { firstIndex: number; operations: OperationDefinition[] }
-  >()
-
-  cliOperations.forEach((operation, index) => {
-    const groupName = (operation.cli.path ?? operation.path)[0]
-    if (groupName === undefined) return
-    const group = groups.get(groupName)
-    if (group == null) {
-      groups.set(groupName, { firstIndex: index, operations: [operation] })
-      return
-    }
-    group.operations.push(operation)
-  })
-
-  const orderedGroups = [...groups.entries()].sort(
-    ([, left], [, right]) =>
-      (left.operations[0]?.cli.group?.order ?? left.firstIndex) -
-      (right.operations[0]?.cli.group?.order ?? right.firstIndex),
-  )
-
-  for (const [groupName, groupDefinition] of orderedGroups) {
-    const groupOperations = groupDefinition.operations
-      .map((operation, index) => ({ operation, index }))
-      .sort(
-        (left, right) =>
-          (left.operation.cli.commandOrder ?? left.index) -
-          (right.operation.cli.commandOrder ?? right.index),
-      )
-      .map(({ operation }) => operation)
-    const groupDescription =
-      groupOperations.find(
-        (operation) => operation.cli.group?.description != null,
-      )?.cli.group?.description ??
-      groupOperations[0]?.cli.description ??
-      groupOperations[0]?.description
+  for (const {
+    groupName,
+    groupOperations,
+    groupDescription,
+  } of getOrderedOperationGroups(operations)) {
     if (groupDescription == null) continue
 
     const group = program.command(groupName).description(groupDescription)
