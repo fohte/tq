@@ -28,12 +28,12 @@ describe('runCli', () => {
     expect(fetchStub.mock.calls).toEqual([])
   })
 
-  it('returns a non-zero exit code for an unknown subcommand', async () => {
+  it('does not keep the renamed image command as an alias', async () => {
     const fetchStub = vi.fn()
 
-    const exitCode = await runCli(['no-such-command'], fetchStub, fakeStdin())
+    const exitCode = await runCli(['image'], fetchStub, fakeStdin())
 
-    expect(exitCode).not.toBe(0)
+    expect(exitCode).toEqual(1)
   })
 
   it('returns exit code 1 and reports the HTTP status when the server responds with an error', async () => {

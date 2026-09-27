@@ -4,7 +4,7 @@
   "type": "module",
   "exports": {
     "./types": "./src/app.ts",
-    "./constants/images": "./src/constants/images.ts",
+    "./constants/assets": "./src/constants/assets.ts",
     "./constants/mention-pattern": "./src/constants/mention-pattern.ts",
     "./lib/app-url": "./src/lib/app-url.ts",
     "./lib/markdown-parser": "./src/lib/markdown-parser.ts",

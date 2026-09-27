@@ -282,8 +282,8 @@ export const taskEvents = pgTable(
   ],
 )
 
-export const images = pgTable(
-  'images',
+export const assets = pgTable(
+  'assets',
   {
     id: text('id')
       .primaryKey()
@@ -295,5 +295,5 @@ export const images = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index('idx_images_r2_key').on(table.r2Key)],
+  (table) => [index('idx_assets_r2_key').on(table.r2Key)],
 )

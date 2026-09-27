@@ -4,7 +4,7 @@
 
 | Name                                                                                | Columns | Comment | Type       |
 | ----------------------------------------------------------------------------------- | ------- | ------- | ---------- |
-| [public.images](public.images.md)                                                   | 5       |         | BASE TABLE |
+| [public.assets](public.assets.md)                                                   | 5       |         | BASE TABLE |
 | [public.labels](public.labels.md)                                                   | 5       |         | BASE TABLE |
 | [public.oauth_tokens](public.oauth_tokens.md)                                       | 9       |         | BASE TABLE |
 | [public.projects](public.projects.md)                                               | 11      |         | BASE TABLE |
@@ -106,7 +106,7 @@ erDiagram
 "public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 
-"public.images" {
+"public.assets" {
   text id
   text r2_key
   text content_type

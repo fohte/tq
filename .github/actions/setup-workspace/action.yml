@@ -32,7 +32,7 @@ runs:
         restore-keys: ${{ runner.os }}-pnpm-store-
 
     # Install the full workspace: web imports from api's source at both
-    # type-check and runtime (e.g. `api/constants/images`), so a `--filter
+    # type-check and runtime (e.g. `api/constants/assets`), so a `--filter
     # ./web...` install would leave those unresolvable.
     - shell: bash
       run: pnpm install --frozen-lockfile

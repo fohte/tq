@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 import { errAsync, ResultAsync } from 'neverthrow'
 
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from '#constants/images'
+import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from '#constants/assets'
 import { db } from '#db/connection'
-import { images } from '#db/schema'
+import { assets } from '#db/schema'
 import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
 import {
   deleteObjectByKey,
@@ -17,55 +17,55 @@ export { MAX_SIZE_BYTES }
 
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 60
 
-export class InvalidImageTypeError extends Error {
+export class InvalidAssetTypeError extends Error {
   constructor() {
     super(
       `Unsupported content type. Allowed types: ${ALLOWED_CONTENT_TYPES.join(', ')}`,
     )
-    this.name = 'InvalidImageTypeError'
+    this.name = 'InvalidAssetTypeError'
   }
 }
 
-export class ImageTooLargeError extends Error {
+export class AssetTooLargeError extends Error {
   constructor() {
     super(`File too large. Maximum size is ${String(MAX_SIZE_BYTES)} bytes`)
-    this.name = 'ImageTooLargeError'
+    this.name = 'AssetTooLargeError'
   }
 }
 
-export class ImageNotFoundError extends Error {
+export class AssetNotFoundError extends Error {
   constructor() {
-    super('Image not found')
-    this.name = 'ImageNotFoundError'
+    super('Asset not found')
+    this.name = 'AssetNotFoundError'
   }
 }
 
-export function uploadImage(
+export function uploadAsset(
   file: File,
 ): ResultAsync<
-  typeof images.$inferSelect,
-  | InvalidImageTypeError
-  | ImageTooLargeError
+  typeof assets.$inferSelect,
+  | InvalidAssetTypeError
+  | AssetTooLargeError
   | R2ConfigError
   | R2OperationError
   | RowNotFoundError
 > {
   if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
-    return errAsync(new InvalidImageTypeError())
+    return errAsync(new InvalidAssetTypeError())
   }
   if (file.size > MAX_SIZE_BYTES) {
-    return errAsync(new ImageTooLargeError())
+    return errAsync(new AssetTooLargeError())
   }
 
   const id = crypto.randomUUID()
-  const r2Key = `images/${id}`
+  const r2Key = `assets/${id}`
 
   return ResultAsync.fromSafePromise(file.arrayBuffer())
     .andThen((buffer) => putObject(r2Key, Buffer.from(buffer), file.type))
     .andThen(() =>
       ResultAsync.fromSafePromise(
         db
-          .insert(images)
+          .insert(assets)
           .values({
             id,
             r2Key,
@@ -78,30 +78,30 @@ export function uploadImage(
     .andThen((rows) => firstOrErr(rows))
 }
 
-export function getImageSignedUrl(
+export function getAssetSignedUrl(
   id: string,
-): ResultAsync<string, ImageNotFoundError | R2ConfigError | R2OperationError> {
+): ResultAsync<string, AssetNotFoundError | R2ConfigError | R2OperationError> {
   return ResultAsync.fromSafePromise(
-    db.query.images.findFirst({ where: eq(images.id, id) }),
-  ).andThen((image) => {
-    if (!image) return errAsync(new ImageNotFoundError())
-    return getObjectSignedUrl(image.r2Key, SIGNED_URL_EXPIRES_IN_SECONDS)
+    db.query.assets.findFirst({ where: eq(assets.id, id) }),
+  ).andThen((asset) => {
+    if (!asset) return errAsync(new AssetNotFoundError())
+    return getObjectSignedUrl(asset.r2Key, SIGNED_URL_EXPIRES_IN_SECONDS)
   })
 }
 
-export function deleteImage(
+export function deleteAsset(
   id: string,
-): ResultAsync<void, ImageNotFoundError | R2ConfigError | R2OperationError> {
+): ResultAsync<void, AssetNotFoundError | R2ConfigError | R2OperationError> {
   return ResultAsync.fromSafePromise(
-    db.query.images.findFirst({ where: eq(images.id, id) }),
-  ).andThen((image) => {
-    if (!image) return errAsync(new ImageNotFoundError())
+    db.query.assets.findFirst({ where: eq(assets.id, id) }),
+  ).andThen((asset) => {
+    if (!asset) return errAsync(new AssetNotFoundError())
 
     // Delete the DB row first: if deleteObjectByKey fails afterward, the
     // orphan is just an unreferenced R2 object, not a DB row pointing at a
-    // now-missing one (which would render as a permanently broken image).
+    // now-missing one (which would render as a permanently broken asset).
     return ResultAsync.fromSafePromise(
-      db.delete(images).where(eq(images.id, id)),
-    ).andThen(() => deleteObjectByKey(image.r2Key))
+      db.delete(assets).where(eq(assets.id, id)),
+    ).andThen(() => deleteObjectByKey(asset.r2Key))
   })
 }

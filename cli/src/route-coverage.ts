@@ -11,10 +11,10 @@ export const COVERED_ROUTES = [
 
   'GET /health',
 
-  // image
-  'POST /api/images',
-  'GET /api/images/:id',
-  'DELETE /api/images/:id',
+  // asset
+  'POST /api/assets',
+  'GET /api/assets/:id',
+  'DELETE /api/assets/:id',
 
   // github
   'POST /api/tasks/:taskId/github-link',
