@@ -53,7 +53,7 @@ function buildMatchCount(content: SQL, words: string[]) {
   return sql<number>`(${sql.join(occurrenceCounts, sql` + `)})::integer`
 }
 
-function buildSnippet(content: SQL, words: string[]) {
+export function buildSnippet(content: SQL, words: string[]) {
   return sql<string>`substring(
     ${content}
     from greatest(

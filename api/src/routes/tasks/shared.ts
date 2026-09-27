@@ -225,6 +225,11 @@ async function getChildCompletionCountsByTaskId(
 // `taskListItemToResponse`.
 export const parentTasks = alias(tasks, 'parent_task')
 
+export type TaskSearchMatch =
+  | { field: 'title'; snippet: string }
+  | { field: 'description'; snippet: string }
+  | { field: 'page'; pageTitle: string; snippet: string }
+
 // Shared response shape for the list-returning endpoint (`/api/tasks`).
 function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
