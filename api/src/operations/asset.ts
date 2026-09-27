@@ -1,14 +1,15 @@
-import { ALLOWED_CONTENT_TYPES } from 'api/constants/assets'
 import { errAsync, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
+import { ALLOWED_CONTENT_TYPES } from '#constants/assets'
+import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
   requestJson,
   requestNoContent,
 } from '#operations/types'
 
-const assetIdSchema = z.object({ id: z.string() })
+const assetIdSchema = z.object({ id: pathSegmentSchema('Asset ID') })
 const assetUploadSchema = z.object({
   filePath: z.string(),
   file: z.instanceof(File),
@@ -99,18 +100,20 @@ export const assetOperations = [
       },
     },
     run: (client, { id }) =>
-      requestJson(client.api.assets[':id'].$get({ param: { id } })).andThen(
-        (response) => {
-          const asset = assetGetResponseSchema.safeParse(response)
-          if (!asset.success) {
-            return errAsync({
-              kind: 'request' as const,
-              error: new Error('Invalid asset get response.'),
-            })
-          }
-          return okAsync({ ...asset.data, id })
-        },
-      ),
+      requestJson(
+        client.api.assets[':id'].$get({
+          param: { id: encodePathSegment(id) },
+        }),
+      ).andThen((response) => {
+        const asset = assetGetResponseSchema.safeParse(response)
+        if (!asset.success) {
+          return errAsync({
+            kind: 'request' as const,
+            error: new Error('Invalid asset get response.'),
+          })
+        }
+        return okAsync({ ...asset.data, id })
+      }),
   }),
   defineOperation(assetIdSchema, {
     path: ['asset', 'delete'],
@@ -120,8 +123,10 @@ export const assetOperations = [
     routes: ['DELETE /api/assets/:id'],
     cli: { output: { kind: 'json' } },
     run: (client, { id }) =>
-      requestNoContent(client.api.assets[':id'].$delete({ param: { id } })).map(
-        () => ({ deleted: true, id }),
-      ),
+      requestNoContent(
+        client.api.assets[':id'].$delete({
+          param: { id: encodePathSegment(id) },
+        }),
+      ).map(() => ({ deleted: true, id })),
   }),
 ] as const

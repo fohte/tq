@@ -3,7 +3,8 @@ import {
   type CallToolResult,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { okAsync } from 'neverthrow'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
@@ -19,8 +20,10 @@ import {
   createTask,
   TEST_UUID,
 } from '#routes/tasks/testing'
-import { jsonBody, setupTestDb } from '#testing'
+import * as r2 from '#services/r2'
+import { jsonBody, makeFile, setupTestDb } from '#testing'
 
+vi.mock('#services/r2')
 setupTestDb()
 
 async function createProject(title: string): Promise<{ id: string }> {
@@ -28,6 +31,16 @@ async function createProject(title: string): Promise<{ id: string }> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
+  })
+  return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+async function createAsset(): Promise<{ id: string }> {
+  const form = new FormData()
+  form.set('file', makeFile('sample.png', 'image/png', 1))
+  const response = await app.request('/api/assets', {
+    method: 'POST',
+    body: form,
   })
   return jsonBody(response, z.object({ id: z.uuid() }))
 }
@@ -42,9 +55,20 @@ function summarizeTraversal(result: CallToolResult, projectTitle: string) {
   return { result, projectTitle }
 }
 
+function summarizeAssetDelete(result: CallToolResult, assetStatus: number) {
+  return { result: parseToolData(result, ['id']), assetStatus }
+}
+
 let client: Client
 
 beforeEach(async () => {
+  vi.mocked(r2.putObject).mockReset().mockReturnValue(okAsync(undefined))
+  vi.mocked(r2.getObjectSignedUrl)
+    .mockReset()
+    .mockReturnValue(okAsync('https://signed.example/assets/test'))
+  vi.mocked(r2.deleteObjectByKey)
+    .mockReset()
+    .mockReturnValue(okAsync(undefined))
   client = await connectMcpClient()
 })
 
@@ -446,6 +470,54 @@ describe('label_delete tool', () => {
       result: {
         isError: true,
         content: [{ type: 'text', text: 'Label not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
+describe('asset_delete tool', () => {
+  it('returns a confirmation after deleting an asset', async () => {
+    const asset = await createAsset()
+    const result = await callMcpTool(client, 'asset_delete', { id: asset.id })
+    const assetResponse = await app.request(`/api/assets/${asset.id}`)
+
+    expect(summarizeAssetDelete(result, assetResponse.status)).toEqual({
+      result: { deleted: true, id: asset.id },
+      assetStatus: 404,
+    })
+  })
+
+  it('rejects empty and dot ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['', '.', '..'].map((id) =>
+        summarizeToolCallOutcome('asset_delete', { id }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['', '.', '..'].map((id) =>
+        expectedPathSegmentValidationError(
+          'asset_delete',
+          'id',
+          'Asset ID',
+          id,
+        ),
+      ),
+    )
+  })
+
+  it('does not route a traversal asset id to a project deletion', async () => {
+    const project = await createProject('Original project')
+
+    const result = await callMcpTool(client, 'asset_delete', {
+      id: `../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Asset not found' }],
       },
       projectTitle: 'Original project',
     })
