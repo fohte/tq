@@ -58,7 +58,7 @@ export const queueOperations = [
       'date',
       { name: 'taskIds', optional: true, variadic: true },
     ],
-    kind: 'write',
+    kind: 'delete',
     routes: ['PUT /api/queues/:key/items'],
     cli: { output: { kind: 'json' } },
     run: (client, { key, date, taskIds }) =>

@@ -13,6 +13,39 @@ import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+async function putDayQueueItems(taskIds: string[], date: string) {
+  const response = await app.request('/api/queues/day/items', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskIds, date }),
+  })
+  return jsonBody<Record<string, unknown>[]>(response)
+}
+
+function expectedToolValidationError(
+  name: string,
+  field: string,
+  issue: string,
+) {
+  return {
+    isError: true,
+    content: [
+      {
+        type: 'text',
+        text: `Input validation error: Invalid arguments for tool ${name}: ${field}: ${issue}`,
+      },
+    ],
+  }
+}
+
+function expectedPathSegmentValidationError(name: string, value: string) {
+  const issue =
+    value === ''
+      ? 'Too small: expected string to have >=1 characters'
+      : 'Queue key must be a valid path segment'
+  return expectedToolValidationError(name, 'key', issue)
+}
+
 let client: Client
 
 beforeEach(async () => {
@@ -37,7 +70,7 @@ describe('queue operation tools', () => {
       { name: 'queue_list', annotations: { readOnlyHint: true } },
       {
         name: 'queue_set',
-        annotations: { readOnlyHint: false, destructiveHint: false },
+        annotations: { readOnlyHint: false, destructiveHint: true },
       },
     ])
   })
@@ -55,7 +88,13 @@ describe('queue operation tools', () => {
       date: 'not-a-date',
     })
 
-    expect(result.isError).toEqual(true)
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'queue_get',
+        'date',
+        'Invalid date format (YYYY-MM-DD)',
+      ),
+    )
   })
 
   it('rejects malformed queue keys before making a request', async () => {
@@ -71,16 +110,12 @@ describe('queue operation tools', () => {
       ]),
     )
 
-    expect(results.map(({ isError }) => isError)).toEqual([
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-    ])
+    expect(results).toEqual(
+      invalidKeys.flatMap((key) => [
+        expectedPathSegmentValidationError('queue_get', key),
+        expectedPathSegmentValidationError('queue_set', key),
+      ]),
+    )
   })
 
   it('rejects invalid dates and task UUIDs when setting a queue', async () => {
@@ -97,17 +132,19 @@ describe('queue operation tools', () => {
       }),
     ])
 
-    expect(results.map(({ isError }) => isError)).toEqual([true, true])
+    expect(results).toEqual([
+      expectedToolValidationError(
+        'queue_set',
+        'date',
+        'Invalid date format (YYYY-MM-DD)',
+      ),
+      expectedToolValidationError('queue_set', 'taskIds.0', 'Invalid UUID'),
+    ])
   })
 
   it('returns the selected queue for an explicit date', async () => {
     const task = await createTask('Queued item')
-    const putRes = await app.request('/api/queues/day/items', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskIds: [task.id], date: '2026-08-06' }),
-    })
-    const expected = await jsonBody<Record<string, unknown>[]>(putRes)
+    const expected = await putDayQueueItems([task.id], '2026-08-06')
 
     const result = await callMcpTool(client, 'queue_get', {
       key: 'day',
@@ -120,12 +157,7 @@ describe('queue operation tools', () => {
   it('uses the current UTC date when date is omitted', async () => {
     const today = new Date().toISOString().slice(0, 10)
     const task = await createTask('Today item')
-    const putRes = await app.request('/api/queues/day/items', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskIds: [task.id], date: today }),
-    })
-    const expected = await jsonBody<Record<string, unknown>[]>(putRes)
+    const expected = await putDayQueueItems([task.id], today)
 
     const result = await callMcpTool(client, 'queue_get', { key: 'day' })
 
