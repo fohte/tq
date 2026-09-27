@@ -9,6 +9,7 @@ import {
 } from '@fohte/ui/select'
 import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
+import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
 import {
   contextLabels,
@@ -25,7 +26,6 @@ import {
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
 import { ExpandableFieldChip } from '#components/ui/modal-field'
 import { selectValueHandler } from '#lib/form-utils'
-import { cn } from '#lib/utils'
 
 export function ScheduleModalMobilePanel({
   schedule,
@@ -194,30 +194,12 @@ export function ScheduleModalMobilePanel({
           {/* Color picker */}
           <div className="flex items-center gap-2">
             <Palette className="size-3.5 text-muted-foreground" />
-            <div className="flex gap-1.5">
-              {presetColors.map((c) => (
-                <Button
-                  key={c}
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => {
-                    setColor(color === c ? '' : c)
-                  }}
-                  className={cn(
-                    'rounded-none border-2 bg-(--schedule-color) bg-clip-border p-0 font-normal shadow-none transition-all hover:bg-(--schedule-color) active:translate-y-0',
-                    color === c
-                      ? 'border-foreground scale-110'
-                      : 'border-transparent hover:scale-110',
-                  )}
-                  style={
-                    { '--schedule-color': c } as React.CSSProperties & {
-                      '--schedule-color': string
-                    }
-                  }
-                />
-              ))}
-            </div>
+            <ColorSwatchRadioGroup
+              options={presetColors}
+              value={color}
+              onValueChange={setColor}
+              clearOnReselect
+            />
           </div>
 
           {/* Submit row */}

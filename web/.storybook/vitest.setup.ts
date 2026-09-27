@@ -1,5 +1,5 @@
 import { screenshot } from '@storycap-testrun/browser'
-import { afterEach, beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 // Pin the clock so stories that read the current time (calendar "now"
@@ -49,7 +49,24 @@ async function waitForPaint(): Promise<void> {
   })
 }
 
+async function waitForMarkdownEditors(): Promise<void> {
+  await vi.waitFor(
+    () => {
+      const wrappers = document.querySelectorAll('.milkdown-wrapper')
+      // ProseMirror creates this node only after Milkdown initializes its view.
+      expect(
+        Array.from(wrappers).every(
+          (wrapper) => wrapper.querySelector('.ProseMirror') != null,
+        ),
+        'Markdown editor did not initialize: a .milkdown-wrapper has no .ProseMirror node',
+      ).toBe(true)
+    },
+    { timeout: 8_000 },
+  )
+}
+
 afterEach(async (context) => {
+  await waitForMarkdownEditors()
   await waitForPaint()
   await screenshot(page, context)
 })
