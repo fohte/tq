@@ -56,6 +56,31 @@ function positionalSyntax(
   return argument.optional === true ? `[${name}]` : `<${name}>`
 }
 
+function mapCliInput(
+  operation: OperationDefinition,
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  return operation.cli.mapInput?.(input, options) ?? ok(input)
+}
+
+function normalizeOptionNames(
+  operation: OperationDefinition,
+  options: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalized = { ...options }
+  for (const [field, optionName] of Object.entries(
+    operation.cli.optionNames ?? {},
+  )) {
+    const optionKey = optionName.replace(
+      /-([a-z])/g,
+      (_match, letter: string) => letter.toUpperCase(),
+    )
+    if (options[optionKey] !== undefined) normalized[field] = options[optionKey]
+  }
+  return normalized
+}
+
 function operationInputError(
   operation: OperationDefinition,
   input: Record<string, unknown>,
@@ -174,7 +199,10 @@ async function executeCommandOperation(
   input: OperationInput,
   { ignoreErrors = false }: { ignoreErrors?: boolean } = {},
 ): Promise<void> {
-  const resolveInput = () => (typeof input === 'function' ? input() : ok(input))
+  const resolveInput = () => {
+    const collected = typeof input === 'function' ? input() : ok(input)
+    return collected.andThen((value) => mapCliInput(operation, value, options))
+  }
   const output = operation.cli.output
 
   if (output.kind === 'web-url') {
@@ -331,7 +359,7 @@ export function registerOperationsInGroup(
       for (const positional of operation.positionalArgs) {
         command = command.argument(positionalSyntax(positional))
       }
-      command.description(operation.description)
+      command.description(operation.cli.description ?? operation.description)
     } else {
       const commandName = commandPath.at(-1)
       if (commandName === undefined) continue
@@ -345,7 +373,7 @@ export function registerOperationsInGroup(
         .command(
           `${commandName}${positionals.length > 0 ? ` ${positionals}` : ''}`,
         )
-        .description(operation.description)
+        .description(operation.cli.description ?? operation.description)
     }
 
     const contentInput = operation.cli.contentInput
@@ -376,26 +404,44 @@ export function registerOperationsInGroup(
       )
     }
 
+    for (const option of operation.cli.customOptions ?? []) {
+      command = command.option(option.flags, option.description)
+    }
+
     const excluded = [
       ...operation.positionalArgs.map(positionalName),
       ...(operation.cli.hiddenFields ?? []),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(operation.cli.excludeFields ?? []),
       ...(listOutput?.fullField == null ? [] : [listOutput.fullField]),
       ...(operation.cli.fileInput == null
         ? []
         : [operation.cli.fileInput.field]),
     ]
-    addSchemaOptions(
-      command,
-      operation.inputSchema,
-      excluded,
-      operation.cli.envDefaults,
-      {
-        commaSeparated: operation.cli.commaSeparatedOptions ?? [],
-        repeatable: operation.cli.repeatableOptions ?? [],
-        defaults: operation.cli.optionDefaults ?? {},
-      },
-    ).match(
+    addSchemaOptions(command, operation.inputSchema, {
+      exclude: excluded,
+      ...(operation.cli.envDefaults == null
+        ? {}
+        : { envDefaults: operation.cli.envDefaults }),
+      ...(operation.cli.commaSeparatedOptions == null
+        ? {}
+        : { commaSeparatedOptions: operation.cli.commaSeparatedOptions }),
+      ...(operation.cli.repeatableOptions == null
+        ? {}
+        : { repeatableOptions: operation.cli.repeatableOptions }),
+      ...(operation.cli.optionDefaults == null
+        ? {}
+        : { optionDefaults: operation.cli.optionDefaults }),
+      ...(operation.cli.optionNames == null
+        ? {}
+        : { optionNames: operation.cli.optionNames }),
+      ...(operation.cli.optionDescriptions == null
+        ? {}
+        : { optionDescriptions: operation.cli.optionDescriptions }),
+      ...(operation.cli.optionMetavars == null
+        ? {}
+        : { optionMetavars: operation.cli.optionMetavars }),
+    }).match(
       () => undefined,
       (error) => fail(group, error),
     )
@@ -405,7 +451,10 @@ export function registerOperationsInGroup(
       if (!(commandValue instanceof Command)) return
       const actionCommand = commandValue
       const optionsValue = actionArgs[operation.positionalArgs.length]
-      const options = isRecord(optionsValue) ? optionsValue : {}
+      const options = normalizeOptionNames(
+        operation,
+        isRecord(optionsValue) ? optionsValue : {},
+      )
       const collected = collectInput(operation, actionArgs, options, excluded)
 
       if (handler != null) {

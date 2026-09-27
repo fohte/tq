@@ -32,8 +32,8 @@ afterEach(async () => {
 })
 
 describe('REST/MCP parity', () => {
-  it('a task created via create_task is visible through GET /api/tasks/:id', async () => {
-    const created = await callMcpTool(client, 'create_task', {
+  it('a task created via task_create is visible through GET /api/tasks/:id', async () => {
+    const created = await callMcpTool(client, 'task_create', {
       title: 'Write and read back',
       context: 'work',
     })
@@ -59,8 +59,8 @@ describe('REST/MCP parity', () => {
     })
   })
 
-  it('a task created via create_task with an explicit agent is attributed to that agent through GET /api/tasks/:id', async () => {
-    const created = await callMcpTool(client, 'create_task', {
+  it('a task created via task_create with an explicit agent is attributed to that agent through GET /api/tasks/:id', async () => {
+    const created = await callMcpTool(client, 'task_create', {
       title: 'Attributed via MCP',
       agent: 'claude-opus-5',
     })
@@ -86,8 +86,8 @@ describe('REST/MCP parity', () => {
     })
   })
 
-  it('a task created via create_task is visible through GET /api/tasks (list)', async () => {
-    const created = await callMcpTool(client, 'create_task', {
+  it('a task created via task_create is visible through GET /api/tasks (list)', async () => {
+    const created = await callMcpTool(client, 'task_create', {
       title: 'Listed via MCP',
       context: 'work',
     })
@@ -108,10 +108,10 @@ describe('REST/MCP parity', () => {
     ])
   })
 
-  it('a title updated via update_task is visible through GET /api/tasks/:id', async () => {
+  it('a title updated via task_update is visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Original title')
 
-    const updated = await callMcpTool(client, 'update_task', {
+    const updated = await callMcpTool(client, 'task_update', {
       taskId: task.id,
       title: 'Updated via MCP',
     })
@@ -137,10 +137,10 @@ describe('REST/MCP parity', () => {
     })
   })
 
-  it('labels replaced via update_task, including newly created ones, are visible through GET /api/tasks/:id', async () => {
+  it('labels replaced via task_update, including newly created ones, are visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Needs a label', { labels: ['urgent'] })
 
-    const updated = await callMcpTool(client, 'update_task', {
+    const updated = await callMcpTool(client, 'task_update', {
       taskId: task.id,
       labels: ['urgent', 'new-label'],
     })
@@ -169,12 +169,11 @@ describe('REST/MCP parity', () => {
     })
   })
 
-  it('setting a task to completed via update_task_status is visible through GET /api/tasks/:id', async () => {
+  it('setting a task to completed via task_complete is visible through GET /api/tasks/:id', async () => {
     const task = await createTask('Complete via MCP')
 
-    const completed = await callMcpTool(client, 'update_task_status', {
+    const completed = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
-      status: 'completed',
     })
     const data = passthroughSchema<TaskResponse>().parse(
       parseToolJson(completed),

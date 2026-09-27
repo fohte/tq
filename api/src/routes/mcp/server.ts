@@ -1,7 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/server'
 
 import { registerOperationTools } from '#routes/mcp/tools/operation-tools'
-import { registerWriteTools } from '#routes/mcp/tools/write-tools'
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
@@ -22,7 +21,6 @@ export function createMcpServer(): McpServer {
     .remove()
 
   registerOperationTools(server)
-  registerWriteTools(server)
 
   return server
 }

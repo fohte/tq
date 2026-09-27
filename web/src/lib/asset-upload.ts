@@ -18,6 +18,8 @@ export const ASSET_FILE_ACCEPT = [
 
 // Refresh signed URLs before the server-issued 1-hour expiry actually lapses.
 const SIGNED_URL_CACHE_TTL_MS = 55 * 60 * 1000
+// Keep stale reverse lookups only while the server-issued URL can still work.
+const SIGNED_URL_EXPIRES_IN_MS = 60 * 60 * 1000
 
 export class UnsupportedAssetTypeError extends Error {
   constructor() {
@@ -118,13 +120,45 @@ const cacheById = new Map<string, CacheEntry>()
 const pendingById = new Map<string, ResultAsync<ResolvedAsset, Error>>()
 // Reverse lookup so a failed media load (which only exposes the resolved
 // signed URL, not the original /api/assets/:id path) can find its asset id.
-const idBySignedUrl = new Map<string, string>()
+// Multiple media nodes can still use an older URL after another node refreshes.
+interface SignedUrlEntry {
+  id: string
+  expiresAt: number
+  expirationTimer: ReturnType<typeof setTimeout>
+}
+
+const idBySignedUrl = new Map<string, SignedUrlEntry>()
 // Broken media sources can emit repeated errors even after a fresh signed URL.
 const lastRefreshByElement = new WeakMap<
   HTMLImageElement | HTMLVideoElement,
   number
 >()
 const ASSET_REFRESH_COOLDOWN_MS = 10_000
+
+function rememberSignedUrl(url: string, id: string): void {
+  const previous = idBySignedUrl.get(url)
+  if (previous) clearTimeout(previous.expirationTimer)
+
+  const entry: SignedUrlEntry = {
+    id,
+    expiresAt: Date.now() + SIGNED_URL_EXPIRES_IN_MS,
+    expirationTimer: setTimeout(() => {
+      if (idBySignedUrl.get(url) === entry) idBySignedUrl.delete(url)
+    }, SIGNED_URL_EXPIRES_IN_MS),
+  }
+  idBySignedUrl.set(url, entry)
+}
+
+function findAssetIdBySignedUrl(url: string): string | null {
+  const entry = idBySignedUrl.get(url)
+  if (entry == null) return null
+  if (entry.expiresAt <= Date.now()) {
+    clearTimeout(entry.expirationTimer)
+    idBySignedUrl.delete(url)
+    return null
+  }
+  return entry.id
+}
 
 function getAssetDetails(id: string): ResultAsync<ResolvedAsset, Error> {
   const cached = cacheById.get(id)
@@ -149,7 +183,7 @@ function getAssetDetails(id: string): ResultAsync<ResolvedAsset, Error> {
         asset,
         expiresAt: Date.now() + SIGNED_URL_CACHE_TTL_MS,
       })
-      idBySignedUrl.set(url, id)
+      rememberSignedUrl(url, id)
       return asset
     })
   })
@@ -183,7 +217,7 @@ export async function handleAssetLoadError(event: Event): Promise<void> {
     target instanceof HTMLVideoElement
       ? target.currentSrc || target.src
       : target.src
-  const id = idBySignedUrl.get(failedSrc)
+  const id = findAssetIdBySignedUrl(failedSrc)
   if (id == null) return
 
   const now = Date.now()

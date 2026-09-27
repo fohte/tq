@@ -1,17 +1,27 @@
-import { taskReadOperations } from 'api/operations'
+import { taskReadOperations, taskWriteOperations } from 'api/operations'
 import type { Command } from 'commander'
 
-import {
-  registerTaskCompleteCommand,
-  registerTaskCreateCommand,
-  registerTaskDeleteCommand,
-  registerTaskFromGithubCommand,
-  registerTaskParentCommand,
-  registerTaskStatusCommand,
-  registerTaskUpdateCommand,
-} from '#commands/task-write'
 import type { ReadableStdin } from '#input'
 import { registerOperationsInGroup } from '#operation-adapter'
+
+const taskReadOperationsBeforeWrite = taskReadOperations.filter(
+  (operation) =>
+    operation.path[1] === 'list' ||
+    operation.path[1] === 'get' ||
+    operation.path[1] === 'url',
+)
+const taskReadOperationsAfterWrite = taskReadOperations.filter(
+  (operation) =>
+    operation.path[1] === 'activity' ||
+    operation.path[1] === 'search' ||
+    operation.path[1] === 'sessions',
+)
+const taskWriteOperationsBeforeActivity = taskWriteOperations.filter(
+  (operation) => operation.path[1] !== 'from-github',
+)
+const taskWriteOperationsAfterActivity = taskWriteOperations.filter(
+  (operation) => operation.path[1] === 'from-github',
+)
 
 export function registerTaskCommands(
   program: Command,
@@ -20,12 +30,28 @@ export function registerTaskCommands(
 ): void {
   const task = program.command('task').description('Manage tasks')
 
-  registerOperationsInGroup(task, taskReadOperations, fetchImpl, stdin)
-  registerTaskCreateCommand(task, fetchImpl)
-  registerTaskUpdateCommand(task, fetchImpl)
-  registerTaskDeleteCommand(task, fetchImpl)
-  registerTaskStatusCommand(task, fetchImpl)
-  registerTaskParentCommand(task, fetchImpl)
-  registerTaskCompleteCommand(task, fetchImpl)
-  registerTaskFromGithubCommand(task, fetchImpl)
+  registerOperationsInGroup(
+    task,
+    taskReadOperationsBeforeWrite,
+    fetchImpl,
+    stdin,
+  )
+  registerOperationsInGroup(
+    task,
+    taskWriteOperationsBeforeActivity,
+    fetchImpl,
+    stdin,
+  )
+  registerOperationsInGroup(
+    task,
+    taskReadOperationsAfterWrite,
+    fetchImpl,
+    stdin,
+  )
+  registerOperationsInGroup(
+    task,
+    taskWriteOperationsAfterActivity,
+    fetchImpl,
+    stdin,
+  )
 }

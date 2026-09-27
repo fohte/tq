@@ -1,11 +1,21 @@
+import { splitCommaList } from 'api/lib/split-comma-list'
 import { Command, InvalidArgumentError, Option } from 'commander'
 import { err, ok, Result } from 'neverthrow'
 import { z } from 'zod'
 
-import { splitCommaList } from '#split-comma-list'
-
 export function toKebabCase(key: string): string {
   return key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)
+}
+
+export interface AddSchemaOptionsConfig {
+  exclude?: readonly string[]
+  envDefaults?: Readonly<Record<string, string>>
+  commaSeparatedOptions?: readonly string[]
+  repeatableOptions?: readonly string[]
+  optionDefaults?: Readonly<Record<string, string>>
+  optionNames?: Readonly<Record<string, string>>
+  optionDescriptions?: Readonly<Record<string, string>>
+  optionMetavars?: Readonly<Record<string, string>>
 }
 
 function toLabel(key: string): string {
@@ -30,12 +40,6 @@ function schemaDescription(field: unknown): string | undefined {
 }
 
 type SupportedLeaf = z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber
-
-export type SchemaOptionModes = {
-  commaSeparated?: readonly string[]
-  repeatable?: readonly string[]
-  defaults?: Readonly<Record<string, string>>
-}
 
 type ArrayOptionMode = 'comma-separated' | 'repeatable'
 
@@ -167,10 +171,10 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
  * overwriting an existing value the caller never asked to change. Array
  * environment defaults use the same comma-separated parsing as their flags.
  *
- * `arrayOptions.commaSeparated` opts array fields into a single
- * comma-separated flag. `arrayOptions.repeatable` opts array fields into a
- * flag that may be repeated once per value. Every array field must be listed
- * in exactly one of those options.
+ * `commaSeparatedOptions` opts array fields into a single comma-separated
+ * flag. `repeatableOptions` opts array fields into a flag that may be
+ * repeated once per value. Every array field must be listed in exactly one
+ * of those options.
  *
  * `optionDefaults` supplies a static fallback for optional flags.
  * `envDefaults` takes precedence when its environment variable has a value.
@@ -178,47 +182,59 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
   schema: z.ZodObject<Shape>,
-  exclude: readonly string[] = [],
-  envDefaults: Readonly<Record<string, string>> = {},
-  arrayOptions: SchemaOptionModes = {},
+  config: AddSchemaOptionsConfig = {},
 ): Result<Command, Error> {
+  const {
+    exclude = [],
+    envDefaults = {},
+    commaSeparatedOptions = [],
+    repeatableOptions = [],
+    optionDefaults = {},
+    optionNames = {},
+    optionDescriptions = {},
+    optionMetavars = {},
+  }: AddSchemaOptionsConfig = config
+  const commaSeparated = new Set(commaSeparatedOptions)
+  const repeatable = new Set(repeatableOptions)
+  const defaults = optionDefaults
+
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
     const inner = unwrapOptional(field)
     if (inner === undefined) continue
 
     const isArray = inner instanceof z.ZodArray
-    const commaSeparated = arrayOptions.commaSeparated?.includes(key) ?? false
-    const repeatable = arrayOptions.repeatable?.includes(key) ?? false
-    if (commaSeparated && repeatable) {
+    const isCommaSeparated = commaSeparated.has(key)
+    const isRepeatable = repeatable.has(key)
+    if (isCommaSeparated && isRepeatable) {
       return err(
         new Error(
           `addSchemaOptions: field "${key}" cannot be both comma-separated and repeatable`,
         ),
       )
     }
-    if (!isArray && commaSeparated) {
+    if (!isArray && isCommaSeparated) {
       return err(
         new Error(
           `addSchemaOptions: comma-separated field "${key}" must be an array`,
         ),
       )
     }
-    if (!isArray && repeatable) {
+    if (!isArray && isRepeatable) {
       return err(
         new Error(
           `addSchemaOptions: repeatable field "${key}" must be an array`,
         ),
       )
     }
-    if (isArray && !commaSeparated && !repeatable) {
+    if (isArray && !isCommaSeparated && !isRepeatable) {
       return err(unsupportedSchemaType(key))
     }
 
     const valueType: unknown = isArray ? inner.element : inner
-    const arrayMode: ArrayOptionMode | undefined = commaSeparated
+    const arrayMode: ArrayOptionMode | undefined = isCommaSeparated
       ? 'comma-separated'
-      : repeatable
+      : isRepeatable
         ? 'repeatable'
         : undefined
     const parser = resolveOptionParser(valueType, key, isArray, arrayMode)
@@ -230,22 +246,28 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       schemaDescription(inner) ??
       (leafType == null ? undefined : schemaDescription(leafType)) ??
       toLabel(key)
-    const fieldDescription = commaSeparated
+    const fieldDescription = isCommaSeparated
       ? `${baseDescription} (comma-separated)`
-      : repeatable
+      : isRepeatable
         ? `${baseDescription} (repeatable)`
         : baseDescription
-    const description =
+    const generatedDescription =
       envVar != null
         ? `${fieldDescription} (or set ${envVar})`
         : fieldDescription
-    const option = new Option(`--${toKebabCase(key)} <value>`, description)
+    const optionName = optionNames[key] ?? key
+    const description = optionDescriptions[key] ?? generatedDescription
+    const metavar = optionMetavars[key] ?? 'value'
+    const option = new Option(
+      `--${toKebabCase(optionName)} <${metavar}>`,
+      description,
+    )
     if (!isArray && inner instanceof z.ZodEnum) {
       option.choices(inner.options.map(String))
     }
 
     option.argParser(parseOptionValue)
-    const defaultValue = arrayOptions.defaults?.[key]
+    const defaultValue = defaults[key]
     if (defaultValue != null) option.default(defaultValue)
     if (envVar != null) {
       const envValue = process.env[envVar]

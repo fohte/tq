@@ -16,7 +16,6 @@ const REGISTERED_TOOL_NAMES = [
   'comment_delete',
   'comment_list',
   'comment_update',
-  'create_task',
   'github_link',
   'github_resolve',
   'github_sync',
@@ -49,12 +48,17 @@ const REGISTERED_TOOL_NAMES = [
   'session_list',
   'slack_resolve',
   'task_activity',
+  'task_complete',
+  'task_create',
+  'task_delete',
+  'task_from_github',
   'task_get',
   'task_list',
+  'task_parent',
   'task_search',
   'task_sessions',
-  'update_task',
-  'update_task_status',
+  'task_status',
+  'task_update',
 ]
 
 function summarizeTools(

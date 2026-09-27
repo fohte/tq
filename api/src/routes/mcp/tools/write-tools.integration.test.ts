@@ -664,6 +664,10 @@ describe('operation tool input schemas', () => {
       project_list: false,
       project_tasks: false,
       project_update: false,
+      task_complete: true,
+      task_create: true,
+      task_delete: false,
+      task_from_github: false,
       queue_get: false,
       queue_list: false,
       queue_set: false,
@@ -678,8 +682,11 @@ describe('operation tool input schemas', () => {
       task_activity: false,
       task_get: false,
       task_list: false,
+      task_parent: false,
       task_search: false,
       task_sessions: false,
+      task_status: true,
+      task_update: true,
     })
   })
 })

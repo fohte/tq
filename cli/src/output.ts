@@ -96,17 +96,6 @@ export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
   process.stderr.write(`${lines.join('\n')}\n`)
 }
 
-// Every task/page/comment write action prints its JSON body to stdout and
-// then, if the write triggered a task_links resync, the linkSync summary to
-// stderr — combined here so a future write endpoint can't add the former
-// while forgetting the latter.
-export function printJsonWithLinkSync(data: {
-  linkSync?: LinkSyncSummary | undefined
-}): void {
-  printJson(data)
-  printLinkSync(data.linkSync)
-}
-
 export function printOperationJsonWithLinkSync(data: unknown) {
   const result = linkSyncDataSchema.safeParse(data)
   if (!result.success) {

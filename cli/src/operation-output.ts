@@ -127,6 +127,7 @@ export async function printOperationOutput(
       return printOperationJsonWithLinkSync(value)
     case 'list':
       if (output.fullField != null) {
+        // The operation is responsible for returning the requested response shape.
         printJson(value)
         return ok(undefined)
       }
