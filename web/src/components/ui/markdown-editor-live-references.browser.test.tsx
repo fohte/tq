@@ -51,8 +51,9 @@ function getChipClickState(
   return { ...getViewModeAndChanges(wrapper, editingChanges), chipVisible }
 }
 
-function getUnsafeLinkClickState(
+function getLinkClickState(
   wrapper: Element,
+  link: HTMLElement,
   dispatchResult: boolean,
   defaultPrevented: boolean,
 ) {
@@ -60,6 +61,7 @@ function getUnsafeLinkClickState(
     dispatchResult,
     defaultPrevented,
     mode: wrapper.getAttribute('data-view-mode'),
+    linkIsContentEditable: link.isContentEditable,
   }
 }
 
@@ -238,13 +240,20 @@ describe('MarkdownEditor live references', () => {
       container.querySelector('.milkdown-wrapper'),
       'MarkdownEditor always renders its wrapper',
     )
-    fireEvent.mouseUp(link, { button: 0 })
+    let defaultPrevented = false
+    link.addEventListener('click', (event) => {
+      defaultPrevented = event.defaultPrevented
+    })
+    const dispatchResult = fireEvent.click(link)
 
-    expect(wrapper).toHaveAttribute('data-view-mode', 'view')
-    expect(link.isContentEditable).toBe(false)
-
-    fireEvent.mouseUp(screen.getByText(OUTSIDE_CARD_TEXT), { button: 0 })
-    expect(wrapper).toHaveAttribute('data-view-mode', 'view')
+    expect(
+      getLinkClickState(wrapper, link, dispatchResult, defaultPrevented),
+    ).toEqual({
+      dispatchResult: true,
+      defaultPrevented: false,
+      mode: 'view',
+      linkIsContentEditable: false,
+    })
   })
 
   it('navigates through an inline task chip while editing is controlled', async () => {
@@ -307,11 +316,12 @@ describe('MarkdownEditor live references', () => {
     const dispatchResult = fireEvent.click(link)
 
     expect(
-      getUnsafeLinkClickState(wrapper, dispatchResult, defaultPrevented),
+      getLinkClickState(wrapper, link, dispatchResult, defaultPrevented),
     ).toEqual({
       dispatchResult: false,
       defaultPrevented: true,
       mode: 'view',
+      linkIsContentEditable: false,
     })
   })
 })

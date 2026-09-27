@@ -91,7 +91,7 @@ export function MarkdownEditor({
       )}
       data-view-mode={isControlled ? mode : undefined}
       onClickCapture={
-        editing === false
+        mode === 'view'
           ? (event) => {
               const link =
                 event.target instanceof Element
