@@ -58,6 +58,7 @@ async function waitForMarkdownEditors(): Promise<void> {
         Array.from(wrappers).every(
           (wrapper) => wrapper.querySelector('.ProseMirror') != null,
         ),
+        'Markdown editor did not initialize: a .milkdown-wrapper has no .ProseMirror node',
       ).toBe(true)
     },
     { timeout: 8_000 },
