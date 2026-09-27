@@ -25,15 +25,11 @@ function DescriptionStory({
       )}
       <EditableMarkdownDescription
         defaultValue={defaultValue}
+        surface={surface}
         placeholder="Add description..."
         editButtonLabel={`Edit ${surface} description`}
         onChange={fn()}
         onExitEditMode={fn()}
-        className={
-          isProject
-            ? 'px-1 pb-1 pt-3 focus-within:border-primary/50'
-            : 'p-4 focus-within:border-ring'
-        }
         {...(initiallyEditing != null ? { initiallyEditing } : {})}
       />
     </div>

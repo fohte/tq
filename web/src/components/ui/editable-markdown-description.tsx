@@ -6,20 +6,20 @@ import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { cn } from '#lib/utils'
 
 export function EditableMarkdownDescription({
+  surface,
   defaultValue,
   placeholder,
   editButtonLabel,
   onChange,
   onExitEditMode,
-  className,
   initiallyEditing = false,
 }: {
+  surface: 'task' | 'project'
   defaultValue: string | null
   placeholder: string
   editButtonLabel: string
   onChange: (markdown: string) => void
   onExitEditMode: () => void
-  className?: string
   initiallyEditing?: boolean
 }) {
   const [isEditing, setIsEditing] = useState(initiallyEditing)
@@ -29,7 +29,9 @@ export function EditableMarkdownDescription({
     <div
       className={cn(
         'relative border border-border text-sm leading-relaxed',
-        className,
+        surface === 'task'
+          ? 'p-4 focus-within:border-ring'
+          : 'px-1 pb-1 pt-3 focus-within:border-primary/50',
       )}
       onClick={(event) => {
         if (

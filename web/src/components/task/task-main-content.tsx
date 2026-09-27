@@ -348,15 +348,15 @@ function TaskDescription({
   })
 
   return (
-    <div className="flex flex-col items-start gap-1.5">
+    <div className="flex flex-col gap-1.5">
       <LlmAuthorLabel author={author} />
       <EditableMarkdownDescription
         defaultValue={defaultValue}
+        surface="task"
         placeholder="Add description..."
         editButtonLabel="Edit task description"
         onChange={onChange}
         onExitEditMode={flush}
-        className="p-4 focus-within:border-ring"
       />
     </div>
   )

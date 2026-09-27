@@ -15,7 +15,7 @@ export function LlmAuthorLabel({
   if (author?.kind !== 'llm') return null
 
   return (
-    <Chip size="sm" className="shrink-0">
+    <Chip size="sm" className="shrink-0 self-start">
       {author.agent}
     </Chip>
   )

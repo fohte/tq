@@ -9,11 +9,11 @@ function renderDescription(defaultValue: string | null) {
   return render(
     <EditableMarkdownDescription
       defaultValue={defaultValue}
+      surface="task"
       placeholder="Add description..."
       editButtonLabel="Edit description"
       onChange={() => {}}
       onExitEditMode={() => {}}
-      className="p-4"
     />,
   )
 }

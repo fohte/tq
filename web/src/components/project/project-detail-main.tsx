@@ -201,11 +201,11 @@ function ProjectDescription({
       <span className="text-xs text-muted-foreground">Description</span>
       <EditableMarkdownDescription
         defaultValue={defaultValue}
+        surface="project"
         placeholder="Add description..."
         editButtonLabel="Edit project description"
         onChange={onChange}
         onExitEditMode={flush}
-        className="px-1 pb-1 pt-3 focus-within:border-primary/50"
       />
     </div>
   )
