@@ -1,4 +1,4 @@
-import { ALLOWED_CONTENT_TYPES, MAX_SIZE_BYTES } from 'api/constants/assets'
+import { ALLOWED_CONTENT_TYPES } from 'api/constants/assets'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { api } from '#lib/api'
@@ -28,28 +28,40 @@ export class UnsupportedAssetTypeError extends Error {
   }
 }
 
-export class AssetTooLargeError extends Error {
-  constructor() {
-    super(`Asset too large. Maximum size is ${String(MAX_SIZE_BYTES)} bytes`)
-    this.name = 'AssetTooLargeError'
+function readApiErrorMessage(body: unknown): string | null {
+  if (
+    typeof body !== 'object' ||
+    body == null ||
+    !('error' in body) ||
+    typeof body.error !== 'string'
+  ) {
+    return null
   }
+  return body.error
 }
 
 export function uploadAssetFile(
   file: File,
-): ResultAsync<string, UnsupportedAssetTypeError | AssetTooLargeError | Error> {
+): ResultAsync<string, UnsupportedAssetTypeError | Error> {
   if (!(ALLOWED_CONTENT_TYPES as readonly string[]).includes(file.type)) {
     return errAsync(new UnsupportedAssetTypeError())
   }
-  if (file.size > MAX_SIZE_BYTES) {
-    return errAsync(new AssetTooLargeError())
-  }
-
   return ResultAsync.fromPromise(
     api.api.assets.$post({ form: { file } }),
     (cause) => new Error('Failed to upload asset', { cause }),
   ).andThen((res) => {
-    if (!res.ok) return errAsync(new Error('Failed to upload asset'))
+    if (!res.ok) {
+      return ResultAsync.fromPromise(
+        res.json(),
+        (cause) => new Error('Failed to upload asset', { cause }),
+      ).andThen((body) => {
+        const errorMessage = readApiErrorMessage(body)
+        if (errorMessage != null) return errAsync(new Error(errorMessage))
+        return errAsync(
+          new Error(`Failed to upload asset (status ${String(res.status)})`),
+        )
+      })
+    }
     return ResultAsync.fromPromise(
       res.json(),
       (cause) => new Error('Failed to upload asset', { cause }),
