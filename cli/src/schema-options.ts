@@ -31,6 +31,14 @@ function schemaDescription(field: unknown): string | undefined {
 
 type SupportedLeaf = z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber
 
+export type SchemaOptionModes = {
+  commaSeparated?: readonly string[]
+  repeatable?: readonly string[]
+  defaults?: Readonly<Record<string, string>>
+}
+
+type ArrayOptionMode = 'comma-separated' | 'repeatable'
+
 function parseValue(inner: SupportedLeaf, raw: string): unknown {
   const value = inner instanceof z.ZodNumber ? Number(raw) : raw
   const result = inner.safeParse(value)
@@ -57,7 +65,14 @@ function parseDefaultValue(
 
 type OptionParser = {
   leafType?: SupportedLeaf
-  parse: (raw: string) => unknown
+  parse: (raw: string, previous: unknown) => unknown
+}
+
+function appendValue(previous: unknown, value: unknown): unknown[] {
+  const previousValues: readonly unknown[] = Array.isArray(previous)
+    ? previous
+    : []
+  return [...previousValues, value]
 }
 
 function unsupportedSchemaType(key: string): Error {
@@ -70,9 +85,17 @@ function resolveOptionParser(
   valueType: unknown,
   key: string,
   isArray: boolean,
+  arrayMode: ArrayOptionMode | undefined,
 ): Result<OptionParser, Error> {
   if (isArray) {
     if (isSupportedLeaf(valueType)) {
+      if (arrayMode === 'repeatable') {
+        return ok({
+          leafType: valueType,
+          parse: (raw, previous) =>
+            appendValue(previous, parseValue(valueType, raw)),
+        })
+      }
       return ok({
         leafType: valueType,
         parse: (raw) =>
@@ -80,6 +103,11 @@ function resolveOptionParser(
       })
     }
     if (valueType instanceof z.ZodUnion) {
+      if (arrayMode === 'repeatable') {
+        return ok({
+          parse: (raw, previous) => appendValue(previous, raw),
+        })
+      }
       return ok({ parse: splitCommaList })
     }
     return err(unsupportedSchemaType(key))
@@ -136,18 +164,23 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
  * caller-supplied per call site, like `exclude`, rather than inferred from
  * the field name — a mutating command (e.g. `task update`) can share the
  * same schema field without silently picking up the env default and
- * overwriting an existing value the caller never asked to change.
+ * overwriting an existing value the caller never asked to change. Array
+ * environment defaults use the same comma-separated parsing as their flags.
  *
  * `commaSeparatedOptions` opts array fields into a single comma-separated
- * flag and applies the same split to their environment variable defaults.
- * Every listed field must be an array, and every array field must be listed.
+ * flag. `repeatableOptions` opts array fields into a flag that may be repeated
+ * once per value. Every array field must be listed in exactly one of those
+ * options.
+ *
+ * `optionDefaults` supplies a static fallback for optional flags.
+ * `envDefaults` takes precedence when its environment variable has a value.
  */
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
   schema: z.ZodObject<Shape>,
   exclude: readonly string[] = [],
   envDefaults: Readonly<Record<string, string>> = {},
-  commaSeparatedOptions: readonly string[] = [],
+  arrayOptions: SchemaOptionModes = {},
 ): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue
@@ -155,19 +188,40 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     if (inner === undefined) continue
 
     const isArray = inner instanceof z.ZodArray
-    const commaSeparated = commaSeparatedOptions.includes(key)
-    if (isArray !== commaSeparated) {
+    const commaSeparated = arrayOptions.commaSeparated?.includes(key) ?? false
+    const repeatable = arrayOptions.repeatable?.includes(key) ?? false
+    if (commaSeparated && repeatable) {
       return err(
         new Error(
-          commaSeparated
-            ? `addSchemaOptions: comma-separated field "${key}" must be an array`
-            : `addSchemaOptions: unsupported schema type for field "${key}"`,
+          `addSchemaOptions: field "${key}" cannot be both comma-separated and repeatable`,
         ),
       )
     }
+    if (!isArray && commaSeparated) {
+      return err(
+        new Error(
+          `addSchemaOptions: comma-separated field "${key}" must be an array`,
+        ),
+      )
+    }
+    if (!isArray && repeatable) {
+      return err(
+        new Error(
+          `addSchemaOptions: repeatable field "${key}" must be an array`,
+        ),
+      )
+    }
+    if (isArray && !commaSeparated && !repeatable) {
+      return err(unsupportedSchemaType(key))
+    }
 
     const valueType: unknown = isArray ? inner.element : inner
-    const parser = resolveOptionParser(valueType, key, isArray)
+    const arrayMode: ArrayOptionMode | undefined = commaSeparated
+      ? 'comma-separated'
+      : repeatable
+        ? 'repeatable'
+        : undefined
+    const parser = resolveOptionParser(valueType, key, isArray, arrayMode)
     if (parser.isErr()) return err(parser.error)
     const { leafType, parse: parseOptionValue } = parser.value
 
@@ -176,9 +230,11 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       schemaDescription(inner) ??
       (leafType == null ? undefined : schemaDescription(leafType)) ??
       toLabel(key)
-    const fieldDescription = isArray
+    const fieldDescription = commaSeparated
       ? `${baseDescription} (comma-separated)`
-      : baseDescription
+      : repeatable
+        ? `${baseDescription} (repeatable)`
+        : baseDescription
     const description =
       envVar != null
         ? `${fieldDescription} (or set ${envVar})`
@@ -189,13 +245,16 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     }
 
     option.argParser(parseOptionValue)
+    const defaultValue = arrayOptions.defaults?.[key]
+    if (defaultValue != null) option.default(defaultValue)
     if (envVar != null) {
       const envValue = process.env[envVar]
       // Left unvalidated here (unlike an explicit flag, which goes through
       // parseValue above): pickSchemaFields re-validates the full options
       // object against the schema before it reaches the API, so an invalid
       // env value is still rejected by the CLI rather than sent.
-      option.default(parseDefaultValue(envValue, isArray))
+      const parsedEnvValue = parseDefaultValue(envValue, isArray)
+      if (parsedEnvValue != null) option.default(parsedEnvValue)
     }
     command.addOption(option)
   }

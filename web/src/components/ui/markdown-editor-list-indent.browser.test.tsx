@@ -8,6 +8,21 @@ import { assertDefined, waitForFocus } from '#lib/test-utils'
 const TWO_ITEM_LIST = '- First item\n- Second item'
 const NESTED_LIST = '- First item\n  - Nested item'
 
+async function renderMarkdownEditor(defaultValue: string) {
+  const rendered = render(
+    <MarkdownEditor defaultValue={defaultValue} viewEditToggle={{}} />,
+  )
+  await waitFor(
+    () =>
+      assertDefined(
+        rendered.container.querySelector('.milkdown .ProseMirror'),
+        'MarkdownEditor is ready after Milkdown initializes',
+      ),
+    { timeout: 8_000 },
+  )
+  return rendered
+}
+
 // Puts the caret at the start of `element`'s text. Click-count based
 // selection (`tripleClick`) can't: the browser only groups clicks into a
 // triple click when they arrive close enough together, and otherwise
@@ -71,9 +86,7 @@ async function placeCaretAtStart(
 
 describe('MarkdownEditor list indent keymap', () => {
   it('indents the second item when Space is pressed at its start', async () => {
-    const { container } = render(
-      <MarkdownEditor defaultValue={TWO_ITEM_LIST} viewEditToggle={{}} />,
-    )
+    const { container } = await renderMarkdownEditor(TWO_ITEM_LIST)
     const user = userEvent.setup()
     const secondItem = await screen.findByText('Second item')
     await placeCaretAtStart(secondItem, user)
@@ -93,9 +106,7 @@ describe('MarkdownEditor list indent keymap', () => {
   // sinkListItem can't indent it — Space must fall through to a normal space
   // character instead of being swallowed.
   it('types a space at the first list item start instead of indenting', async () => {
-    const { container } = render(
-      <MarkdownEditor defaultValue={TWO_ITEM_LIST} viewEditToggle={{}} />,
-    )
+    const { container } = await renderMarkdownEditor(TWO_ITEM_LIST)
     const user = userEvent.setup()
     const firstItem = await screen.findByText('First item')
     await placeCaretAtStart(firstItem, user)
@@ -113,9 +124,7 @@ describe('MarkdownEditor list indent keymap', () => {
   })
 
   it('outdents a nested list item when Backspace is pressed at its start', async () => {
-    const { container } = render(
-      <MarkdownEditor defaultValue={NESTED_LIST} viewEditToggle={{}} />,
-    )
+    const { container } = await renderMarkdownEditor(NESTED_LIST)
     const user = userEvent.setup()
     const nestedItem = await screen.findByText('Nested item')
     await placeCaretAtStart(nestedItem, user)
@@ -130,9 +139,7 @@ describe('MarkdownEditor list indent keymap', () => {
   // A top-level item has no outer list to outdent into, so Backspace keeps
   // joining with the previous item instead.
   it('joins a top-level list item with the previous item on Backspace', async () => {
-    const { container } = render(
-      <MarkdownEditor defaultValue={TWO_ITEM_LIST} viewEditToggle={{}} />,
-    )
+    const { container } = await renderMarkdownEditor(TWO_ITEM_LIST)
     const user = userEvent.setup()
     const secondItem = await screen.findByText('Second item')
     await placeCaretAtStart(secondItem, user)

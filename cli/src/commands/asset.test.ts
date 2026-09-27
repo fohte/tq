@@ -9,6 +9,7 @@ import {
   apiUrl,
   captureFetch,
   fakeStdin,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -20,6 +21,15 @@ function requestUrl(input: string | URL | Request): string {
   if (input instanceof URL) return input.toString()
   if (input instanceof Request) return input.url
   return input
+}
+
+function summarizeUnsupportedExtensionOutcome(
+  exitCode: number,
+  stdout: unknown,
+  stderr: unknown,
+  requests: unknown,
+) {
+  return { exitCode, stdout, stderr, requests }
 }
 
 interface CapturedFormRequest {
@@ -137,6 +147,40 @@ describe('asset upload', () => {
       fileName: 'photo.jpg',
       fileType: 'image/jpeg',
       fileBytes: jpgBytes,
+    })
+  })
+
+  it('rejects unsupported file extensions without sending a request', async () => {
+    const { fetchStub, calls } = captureFetch(() => new Response())
+    const stdout = spyStdout()
+    const stderr = spyStderr()
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-asset-upload-'))
+    const filePath = join(tmpDir, 'notes.txt')
+    await writeFile(filePath, 'not an image')
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'asset', 'upload', filePath],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizeUnsupportedExtensionOutcome(
+        exitCode,
+        stdout.mock.calls,
+        stderr.mock.calls,
+        calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      stdout: [],
+      stderr: [
+        [
+          `Error: Unsupported file extension for ${filePath}. Allowed types: image/jpeg, image/png, image/gif, image/webp\n`,
+        ],
+      ],
+      requests: [],
     })
   })
 })
