@@ -122,6 +122,9 @@ export function registerOperations(
     let command: Command
     if (commandPath.length === 0) {
       command = group.description(operation.description)
+      for (const argument of operation.positionalArgs) {
+        command = command.argument(positionalSyntax(argument))
+      }
     } else {
       const commandName = commandPath.at(-1)
       if (commandName === undefined) continue
