@@ -51,7 +51,10 @@ describe('BottomTabBar', () => {
     await renderBottomTabBar()
     const nav = screen.getByRole('navigation', { hidden: true })
 
-    const visibility = Array.of(nav.checkVisibility(), nav.className)
+    const visibility = Array.of<string | boolean>(
+      nav.checkVisibility(),
+      nav.className,
+    )
 
     expect(visibility).toEqual([
       false,
