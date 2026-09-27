@@ -85,7 +85,6 @@ function Story({
                   placeholder="Write something..."
                   editing={editing}
                   onEditingChange={onEditingChange}
-                  viewEditToggle={{}}
                   size="compact"
                 />
               </div>

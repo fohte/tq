@@ -1,36 +1,13 @@
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 
 import { cn } from '#lib/utils'
 
-interface ViewEditToggleOptions {
-  /**
-   * Mode the editor starts in. Defaults to 'view'; pass 'edit' for a route
-   * where editing is the primary action (e.g. a dedicated page editor).
-   */
-  defaultMode?: 'view' | 'edit'
-  /** Called right before the editor returns to view mode (blur or Escape); hook up a debounced save's `flush` here. */
-  onExitEditMode?: () => void
-}
-
-interface MarkdownEditorProps {
+interface MarkdownEditorCommonProps {
   defaultValue?: string
-  /** Controls whether the editor is in edit mode. When set, body clicks do not enter edit mode. */
-  editing?: boolean
-  /** Reports a request to leave edit mode; the caller updates `editing`. */
-  onEditingChange?: (editing: boolean) => void
   onChange?: (markdown: string) => void
   /** Reports the focused editor after a document change so callers can read its current Markdown. */
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
-  /**
-   * Enables the internal view/edit toggle: read-only by default with inline
-   * reference chips; a click enters edit mode at the click position, except
-   * on a link or chip/card, which navigates/interacts with it instead. When
-   * `editing` is set, the caller controls transitions instead. Blur or
-   * Escape returns to read-only. Omit for an always-editable editor with no
-   * chips (e.g. CommentInput, create-task-modal).
-   */
-  viewEditToggle?: ViewEditToggleOptions
   /**
    * Default min-height: 'default' (400px) for a primary/full editing
    * surface, 'compact' (120px) for a few-lines inline editor.
@@ -38,11 +15,27 @@ interface MarkdownEditorProps {
   size?: 'default' | 'compact'
 }
 
-// Schemes a rendered Markdown link may click through to in view mode without
-// first entering edit mode. Excludes `javascript:` and other executable
-// schemes, since Milkdown's link mark copies the raw Markdown href onto the
-// <a> with no filtering.
-const NAVIGABLE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+// Milkdown copies Markdown link destinations directly to `href` without
+// filtering them, so executable schemes must stay inert in read-only mode.
+const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+
+type MarkdownEditorProps = MarkdownEditorCommonProps &
+  (
+    | {
+        /** Controls whether the editor is in edit mode. */
+        editing: boolean
+        /** Reports a request to leave edit mode; the caller updates `editing`. */
+        onEditingChange: (editing: boolean) => void
+        /** Called before leaving edit mode (blur or Escape), e.g. to flush autosave. */
+        onExitEditMode?: () => void
+      }
+    | {
+        /** Editors that are always editable do not support an editing toggle. */
+        editing?: never
+        onEditingChange?: never
+        onExitEditMode?: never
+      }
+  )
 
 // Loaded on demand: pulls in milkdown/ProseMirror/micromark, which are only
 // needed on routes that actually render an editor.
@@ -73,28 +66,20 @@ function isEventTargetInsideEditorUi(
 }
 
 export function MarkdownEditor({
-  viewEditToggle,
   editing,
   onEditingChange,
+  onExitEditMode,
   size = 'default',
   ...editorProps
 }: MarkdownEditorProps) {
-  const isControlled = editing != null
-  const isToggleEnabled = viewEditToggle != null || isControlled
-  const [uncontrolledMode, setUncontrolledMode] = useState<'view' | 'edit'>(
-    viewEditToggle?.defaultMode ?? 'view',
-  )
-  const mode = isControlled ? (editing ? 'edit' : 'view') : uncontrolledMode
+  const isControlled = editing !== undefined
+  const mode = isControlled ? (editing ? 'edit' : 'view') : 'edit'
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const exitEditMode = () => {
-    if (mode !== 'edit') return
-    viewEditToggle?.onExitEditMode?.()
-    if (isControlled) {
-      onEditingChange?.(false)
-    } else {
-      setUncontrolledMode('view')
-    }
+    if (mode !== 'edit' || editing === undefined) return
+    onExitEditMode?.()
+    onEditingChange(false)
   }
 
   return (
@@ -104,28 +89,21 @@ export function MarkdownEditor({
         'milkdown-wrapper',
         size === 'compact' ? 'min-h-30' : 'min-h-100',
       )}
-      data-view-mode={isToggleEnabled ? mode : undefined}
-      onMouseUp={
-        !isControlled && viewEditToggle != null && mode === 'view'
+      data-view-mode={isControlled ? mode : undefined}
+      onClickCapture={
+        mode === 'view'
           ? (event) => {
-              // Left click only: a right/middle click opening a context
-              // menu or auto-scroll shouldn't also switch to edit mode.
-              if (event.button !== 0) return
-              // readonly must stay true past this handler, or the click
-              // that follows hits a contenteditable <a> and loses the
-              // browser's default navigation.
               const link =
                 event.target instanceof Element
                   ? event.target.closest('a')
                   : null
-              if (link != null && NAVIGABLE_LINK_PROTOCOLS.has(link.protocol))
-                return
-              setUncontrolledMode('edit')
+              if (link != null && !SAFE_LINK_PROTOCOLS.has(link.protocol))
+                event.preventDefault()
             }
           : undefined
       }
       onBlur={
-        isToggleEnabled
+        isControlled
           ? (event) => {
               if (
                 wrapperRef.current != null &&
@@ -140,7 +118,7 @@ export function MarkdownEditor({
           : undefined
       }
       onKeyDown={
-        isToggleEnabled
+        isControlled
           ? (event) => {
               if (event.key === 'Escape') exitEditMode()
             }
@@ -150,9 +128,9 @@ export function MarkdownEditor({
       <Suspense fallback={null}>
         <CrepeEditorRoot
           {...editorProps}
-          mode={isToggleEnabled ? mode : 'edit'}
+          mode={mode}
           focusOnEdit={isControlled}
-          skipNoopChanges={isToggleEnabled}
+          skipNoopChanges={isControlled}
         />
       </Suspense>
     </div>

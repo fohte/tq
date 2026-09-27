@@ -249,7 +249,7 @@ export function CommentRow({
             editing={editing}
             onEditingChange={setEditing}
             onChange={onChange}
-            viewEditToggle={{ onExitEditMode: flush }}
+            onExitEditMode={flush}
             size="compact"
           />
         </div>

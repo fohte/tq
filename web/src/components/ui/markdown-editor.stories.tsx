@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
-import type { ComponentProps, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -15,7 +15,7 @@ import { StoryRouter } from '#storybook-config/story-router'
 
 const meta = {
   title: 'UI/MarkdownEditor',
-  component: MarkdownEditor,
+  component: MarkdownEditorStory,
   parameters: {
     layout: 'padded',
   },
@@ -29,10 +29,35 @@ const meta = {
   args: {
     onChange: fn(),
   },
-} satisfies Meta<typeof MarkdownEditor>
+} satisfies Meta<typeof MarkdownEditorStory>
 
 export default meta
-type Story = StoryObj<typeof meta>
+type Story = StoryObj<MarkdownEditorStoryArgs>
+
+interface MarkdownEditorStoryArgs {
+  defaultValue?: string
+  editing?: boolean
+  onChange?: (markdown: string) => void
+  onEditingChange?: (editing: boolean) => void
+  placeholder?: string
+  size?: 'default' | 'compact'
+}
+
+function MarkdownEditorStory({
+  editing,
+  onEditingChange,
+  ...editorProps
+}: MarkdownEditorStoryArgs) {
+  if (editing === undefined) return <MarkdownEditor {...editorProps} />
+
+  return (
+    <MarkdownEditor
+      {...editorProps}
+      editing={editing}
+      onEditingChange={onEditingChange ?? (() => {})}
+    />
+  )
+}
 
 const VIDEO_ASSET_ID = 'a1111111-1111-4111-8111-111111111111'
 const VIDEO_FIXTURE_URL = new URL(
@@ -87,11 +112,11 @@ function LiveReferencesProviders({ children }: { children: ReactNode }) {
   )
 }
 
-function renderWithLiveReferences(args: ComponentProps<typeof MarkdownEditor>) {
+function renderWithLiveReferences(args: MarkdownEditorStoryArgs) {
   seedLiveReferenceFixtures(queryClient)
   return (
     <LiveReferencesProviders>
-      <MarkdownEditor {...args} />
+      <MarkdownEditorStory {...args} />
     </LiveReferencesProviders>
   )
 }
@@ -99,16 +124,15 @@ function renderWithLiveReferences(args: ComponentProps<typeof MarkdownEditor>) {
 // Exercises the real Crepe editor end to end (not just the plugin mechanism
 // or an isolated Chip component): markdown parsing, both InlineReference
 // providers scanning the same textblock, and their chips coexisting without
-// interfering with each other. `viewEditToggle` is required for chips to
-// render at all — an always-editable editor (no `viewEditToggle`, e.g.
-// CommentInput) stays in 'edit' mode and only ever shows raw Markdown
-// source (see markdown-editor-crepe.tsx's CrepeEditorProps.mode comment).
+// interfering with each other. Chips render in view mode, so these stories
+// provide controlled editing state.
 export const WithLiveReferences: Story = {
   name: 'renders a task mention and GitHub URL as live chips',
   render: renderWithLiveReferences,
   args: {
     defaultValue: `See #${String(MENTION_FIXTURE_NUMBER)} and ${GITHUB_URL_FIXTURE} for details.`,
-    viewEditToggle: {},
+    editing: false,
+    onEditingChange: fn(),
   },
 }
 
@@ -148,7 +172,8 @@ export const AllMarkdownElementsViewMode: Story = {
   render: renderWithLiveReferences,
   args: {
     defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
-    viewEditToggle: {},
+    editing: false,
+    onEditingChange: fn(),
   },
 }
 
@@ -157,7 +182,8 @@ export const AllMarkdownElementsEditMode: Story = {
   render: renderWithLiveReferences,
   args: {
     defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
-    viewEditToggle: { defaultMode: 'edit' },
+    editing: true,
+    onEditingChange: fn(),
   },
 }
 
@@ -166,7 +192,6 @@ export const ControlledViewMode: Story = {
   render: renderWithLiveReferences,
   args: {
     defaultValue: `The caller keeps this editor in view mode with #${String(MENTION_FIXTURE_NUMBER)} as a chip.`,
-    viewEditToggle: {},
     editing: false,
     onEditingChange: fn(),
   },
@@ -176,8 +201,7 @@ export const ControlledEditMode: Story = {
   name: 'shows editable Markdown when the caller opens the editor',
   render: renderWithLiveReferences,
   args: {
-    defaultValue: ALL_MARKDOWN_ELEMENTS_CONTENT,
-    viewEditToggle: {},
+    defaultValue: 'This short note is open for changes.',
     editing: true,
     onEditingChange: fn(),
   },
@@ -188,7 +212,8 @@ export const BlockVideoAsset: Story = {
   render: renderWithLiveReferences,
   args: {
     defaultValue: `![A short comparison clip](/api/assets/${VIDEO_ASSET_ID})`,
-    viewEditToggle: {},
+    editing: false,
+    onEditingChange: fn(),
   },
   parameters: {
     msw: { handlers: [videoAssetHandler] },
@@ -200,7 +225,8 @@ export const InlineVideoAsset: Story = {
   render: renderWithLiveReferences,
   args: {
     defaultValue: `Use ![a short comparison clip](/api/assets/${VIDEO_ASSET_ID}) to compare the movement.`,
-    viewEditToggle: {},
+    editing: false,
+    onEditingChange: fn(),
   },
   parameters: {
     msw: { handlers: [videoAssetHandler] },

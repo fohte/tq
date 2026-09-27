@@ -22,9 +22,6 @@ export interface HtmlPageEditorProps {
   size?: 'default' | 'fill'
 }
 
-// HTML pages can't reuse MarkdownEditor's click-to-edit view/edit toggle:
-// clicks inside the sandboxed iframe (a separate document) never bubble to
-// this component, so switching modes needs an explicit control instead.
 export function HtmlPageEditor({
   defaultValue = '',
   onChange,

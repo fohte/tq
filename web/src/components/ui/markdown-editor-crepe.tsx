@@ -344,8 +344,8 @@ function CrepeEditor({
   // Milkdown's built-in `trailing` plugin (@milkdown/plugin-trailing) uses
   // that hook to insert an empty paragraph whenever the document doesn't
   // already end in one, independent of what triggered the transaction. That
-  // turned "click into edit mode" / "click out again" into a real,
-  // content-changing edit with zero typing. `crepe.setReadonly()` already
+  // turned entering and exiting edit mode into a real, content-changing edit
+  // with zero typing. `crepe.setReadonly()` already
   // calls `view.setProps()` below, which alone is enough to make
   // ProseMirror recompute decorations against the store's new value (see
   // view-mode.ts).

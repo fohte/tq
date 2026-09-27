@@ -171,7 +171,7 @@ export function PageEditorInner({
           editing={isContentEditing}
           onEditingChange={setIsContentEditing}
           onChange={handleContentChange}
-          viewEditToggle={{ onExitEditMode: flushContent }}
+          onExitEditMode={flushContent}
         />
       </div>
     </div>

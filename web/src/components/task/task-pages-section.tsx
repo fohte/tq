@@ -373,7 +373,7 @@ function PageInlineEditor({
         editing={editing}
         onEditingChange={onEditingChange}
         onChange={onChange}
-        viewEditToggle={{ onExitEditMode: flush }}
+        onExitEditMode={flush}
         size="compact"
       />
     </div>
