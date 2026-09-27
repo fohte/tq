@@ -418,3 +418,12 @@ export const SearchEverywhere: Story = {
     defaultQuery: `${projectScopeQuery}nothing-matches`,
   },
 }
+
+export const MobileFullscreen: Story = {
+  name: 'the mobile search modal fills the screen and keeps its results visible',
+  tags: ['mobile-only'],
+  args: {
+    defaultContext: 'work',
+    defaultQuery: `#${keyboardQuery}`,
+  },
+}

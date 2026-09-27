@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { SearchModalFooter } from '#components/search/search-modal-footer'
 import { useSearchModalHelp } from '#components/search/search-modal-help'
 import { SearchModalInput } from '#components/search/search-modal-input'
+import { SearchModalModeSwitcher } from '#components/search/search-modal-mode-switcher'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
   removeLastSearchScopeToken,
@@ -36,10 +37,12 @@ import {
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
 import { useTask } from '#hooks/use-tasks'
+import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
 } from '#lib/recent-search-items'
+import { cn } from '#lib/utils'
 
 interface SearchModalProps {
   open: boolean
@@ -68,6 +71,7 @@ export function SearchModal({
   const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
     defaultRecentItems ?? [],
   )
+  const visualViewportInsets = useVisualViewportInsets()
   const inputRef = useRef<HTMLInputElement>(null)
   const helpBackButtonRef = useRef<HTMLButtonElement>(null)
   const {
@@ -300,6 +304,11 @@ export function SearchModal({
     [items],
   )
 
+  const handleModeChange = (prefix: string | undefined) => {
+    setQuery(`${prefix ?? ''}${searchQuery}`)
+    inputRef.current?.focus()
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return
     if (handleHelpKeyDown(e, searchInputValue)) return
@@ -365,7 +374,23 @@ export function SearchModal({
     <>
       {/* Backdrop + Modal wrapper (single layer to avoid z-index stacking issues) */}
       <div
-        className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 modal-top-offset"
+        className={cn(
+          'fixed inset-x-0 z-50 flex items-start justify-center bg-black/50 md:inset-0 md:modal-top-offset md:h-auto',
+          visualViewportInsets === null
+            ? 'inset-y-0'
+            : 'top-(--visual-viewport-top) h-(--visual-viewport-height)',
+        )}
+        style={
+          visualViewportInsets === null
+            ? undefined
+            : ({
+                '--visual-viewport-top': `${String(visualViewportInsets.top)}px`,
+                '--visual-viewport-height': `${String(visualViewportInsets.height)}px`,
+              } as React.CSSProperties & {
+                '--visual-viewport-top': string
+                '--visual-viewport-height': string
+              })
+        }
         data-testid="search-overlay"
         onKeyDown={handleKeyDown}
         onClick={(e) => {
@@ -375,7 +400,7 @@ export function SearchModal({
         }}
       >
         <div
-          className="flex max-h-120 w-full max-w-160 flex-col overflow-hidden border border-border bg-popover text-popover-foreground"
+          className="flex h-full max-h-full w-full max-w-none flex-col overflow-hidden border-0 bg-popover text-popover-foreground md:h-auto md:max-h-120 md:max-w-160 md:border"
           role="dialog"
           aria-modal="true"
           aria-label="Search"
@@ -388,12 +413,20 @@ export function SearchModal({
             searchTarget={searchTarget}
             isFetching={isFetching}
             inputRef={inputRef}
+            onClose={() => {
+              onOpenChange(false)
+            }}
             onRemoveContext={handleRemoveContext}
             onRemoveScopeToken={handleRemoveScopeToken}
             onInputValueChange={(value) => {
               closeHelp()
               updateInputValue(value)
             }}
+          />
+
+          <SearchModalModeSwitcher
+            modePrefix={modePrefix}
+            onModeChange={handleModeChange}
           />
 
           {isHelpOpen ? (
@@ -414,12 +447,14 @@ export function SearchModal({
             />
           )}
 
-          <SearchModalFooter
-            canClearContext={canClearContext}
-            canPopScope={canPopScope}
-            canOpenHelp={searchInputValue.length === 0}
-            isHelpOpen={isHelpOpen}
-          />
+          <div className="hidden md:block">
+            <SearchModalFooter
+              canClearContext={canClearContext}
+              canPopScope={canPopScope}
+              canOpenHelp={searchInputValue.length === 0}
+              isHelpOpen={isHelpOpen}
+            />
+          </div>
         </div>
       </div>
     </>,
