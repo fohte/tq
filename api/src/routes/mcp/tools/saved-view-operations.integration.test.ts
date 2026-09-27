@@ -1,5 +1,8 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import {
+  type CallToolResult,
+  McpError,
+} from '@modelcontextprotocol/sdk/types.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
@@ -45,9 +48,76 @@ async function seedSavedView(input: {
   return jsonBody(response, z.object({ id: z.uuid() }))
 }
 
+async function seedProject(title: string): Promise<{ id: string }> {
+  const response = await app.request('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+async function projectState(projectId: string) {
+  const response = await app.request(`/api/projects/${projectId}`)
+  if (response.status === 200) {
+    return {
+      status: response.status,
+      ...(await jsonBody(response, z.object({ title: z.string() }))),
+    }
+  }
+  return {
+    status: response.status,
+    ...(await jsonBody(response, z.object({ error: z.string() }))),
+  }
+}
+
+function summarizeTraversal(
+  updateResult: CallToolResult,
+  updateProject: Awaited<ReturnType<typeof projectState>>,
+  deleteResult: CallToolResult,
+  deleteProject: Awaited<ReturnType<typeof projectState>>,
+) {
+  return { updateResult, updateProject, deleteResult, deleteProject }
+}
+
+async function summarizeToolCallOutcome(
+  name: string,
+  args: Record<string, unknown>,
+) {
+  try {
+    return { kind: 'result' as const, result: await callTool(name, args) }
+  } catch (error) {
+    return error instanceof McpError
+      ? { kind: 'mcp-error' as const, code: error.code }
+      : {
+          kind: 'unexpected-error' as const,
+          message: error instanceof Error ? error.message : String(error),
+        }
+  }
+}
+
+function expectedPathSegmentValidationError(name: string, value: string) {
+  const issue =
+    value === ''
+      ? 'Too small: expected string to have >=1 characters'
+      : 'Saved view ID must be a valid path segment'
+  return {
+    kind: 'result',
+    result: {
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: `Input validation error: Invalid arguments for tool ${name}: id: ${issue}`,
+        },
+      ],
+    },
+  }
+}
+
 function summarizeDeletion(result: CallToolResult, lookupStatus: number) {
   return {
-    result: normalizeDynamicValues(parseToolJson(result)),
+    result: parseToolJson(result),
     lookupStatus,
   }
 }
@@ -154,6 +224,33 @@ describe('saved view operation tools', () => {
     })
   })
 
+  it('rejects invalid ids for every id-based saved-view tool', async () => {
+    const invalidIds = ['', '.', '..', '\uD800']
+    const toolNames = [
+      'saved_view_get',
+      'saved_view_update',
+      'saved_view_delete',
+    ]
+    const outcomes = await Promise.all(
+      toolNames.flatMap((name) =>
+        invalidIds.map((id) =>
+          summarizeToolCallOutcome(
+            name,
+            name === 'saved_view_update'
+              ? { id, name: 'Changed view' }
+              : { id },
+          ),
+        ),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      toolNames.flatMap((name) =>
+        invalidIds.map((id) => expectedPathSegmentValidationError(name, id)),
+      ),
+    )
+  })
+
   it('updates only the fields passed to saved_view_update', async () => {
     const savedView = await seedSavedView({
       name: 'Orchid draft',
@@ -187,8 +284,45 @@ describe('saved view operation tools', () => {
     const lookup = await app.request(`/api/saved-views/${savedView.id}`)
 
     expect(summarizeDeletion(result, lookup.status)).toEqual({
-      result: { deleted: true, id: '<uuid>' },
+      result: { deleted: true, id: savedView.id },
       lookupStatus: 404,
+    })
+  })
+
+  it('does not route traversal ids to project update or deletion', async () => {
+    const updateProject = await seedProject('Original update project')
+    const deleteProject = await seedProject('Original deletion project')
+    const updateResult = await callTool('saved_view_update', {
+      id: `../projects/${updateProject.id}`,
+      name: 'Changed project',
+    })
+    const deleteResult = await callTool('saved_view_delete', {
+      id: `../projects/${deleteProject.id}`,
+    })
+
+    const [updateProjectState, deleteProjectState] = await Promise.all([
+      projectState(updateProject.id),
+      projectState(deleteProject.id),
+    ])
+
+    expect(
+      summarizeTraversal(
+        updateResult,
+        updateProjectState,
+        deleteResult,
+        deleteProjectState,
+      ),
+    ).toEqual({
+      updateResult: {
+        isError: true,
+        content: [{ type: 'text', text: 'Saved view not found' }],
+      },
+      updateProject: { status: 200, title: 'Original update project' },
+      deleteResult: {
+        isError: true,
+        content: [{ type: 'text', text: 'Saved view not found' }],
+      },
+      deleteProject: { status: 200, title: 'Original deletion project' },
     })
   })
 })

@@ -12,11 +12,10 @@ import {
   updateSavedViewSchema,
 } from '#schemas/saved-view'
 
-const savedViewIdSchema = z.object({
-  id: pathSegmentSchema('Saved view ID'),
-})
+const savedViewId = pathSegmentSchema('Saved view ID')
+const savedViewIdSchema = z.object({ id: savedViewId })
 const updateSavedViewInputSchema = updateSavedViewSchema.extend({
-  id: pathSegmentSchema('Saved view ID'),
+  id: savedViewId,
 })
 
 export const savedViewOperations = [

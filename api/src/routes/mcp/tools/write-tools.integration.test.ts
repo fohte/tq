@@ -13,6 +13,7 @@ import {
   connectMcpClient,
   parseToolData,
 } from '#routes/mcp/testing'
+import { operationToolName } from '#routes/mcp/tools/operation-tools'
 import {
   createComment,
   createLabel,
@@ -455,9 +456,7 @@ describe('label_delete tool', () => {
 describe('operation tool input schemas', () => {
   it('exposes agent only for operations that support attribution', async () => {
     const tools = await client.listTools()
-    const operationToolNames = operations.map((operation) =>
-      operation.path.map((segment) => segment.replaceAll('-', '_')).join('_'),
-    )
+    const operationToolNames = operations.map(operationToolName)
     const agentArguments = Object.fromEntries(
       tools.tools
         .filter((tool) => operationToolNames.includes(tool.name))

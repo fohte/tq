@@ -45,7 +45,7 @@ function annotationsFor(operation: OperationDefinition) {
   }
 }
 
-function operationToolName(operation: OperationDefinition): string {
+export function operationToolName(operation: OperationDefinition): string {
   return operation.path.map((segment) => segment.replaceAll('-', '_')).join('_')
 }
 
