@@ -1,10 +1,10 @@
-import { errAsync, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { ALLOWED_CONTENT_TYPES } from '#constants/assets'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
+  parseResponse,
   requestJson,
   requestNoContent,
 } from '#operations/types'
@@ -55,19 +55,13 @@ export const assetOperations = [
     },
     run: (client, { file }) =>
       requestJson(client.api.assets.$post({ form: { file } })).andThen(
-        (response) => {
-          const uploaded = assetUploadResponseSchema.safeParse(response)
-          if (!uploaded.success) {
-            return errAsync({
-              kind: 'request' as const,
-              error: new Error('Invalid asset upload response.'),
-            })
-          }
-          return okAsync({
-            ...uploaded.data,
-            markdown: `![${escapeMarkdownAlt(file.name)}](/api/assets/${uploaded.data.id})`,
-          })
-        },
+        (response) =>
+          parseResponse(assetUploadResponseSchema, response).map(
+            (uploaded) => ({
+              ...uploaded,
+              markdown: `![${escapeMarkdownAlt(file.name)}](/api/assets/${uploaded.id})`,
+            }),
+          ),
       ),
   }),
   defineOperation(assetIdSchema, {
@@ -104,16 +98,12 @@ export const assetOperations = [
         client.api.assets[':id'].$get({
           param: { id: encodePathSegment(id) },
         }),
-      ).andThen((response) => {
-        const asset = assetGetResponseSchema.safeParse(response)
-        if (!asset.success) {
-          return errAsync({
-            kind: 'request' as const,
-            error: new Error('Invalid asset get response.'),
-          })
-        }
-        return okAsync({ ...asset.data, id })
-      }),
+      ).andThen((response) =>
+        parseResponse(assetGetResponseSchema, response).map((asset) => ({
+          ...asset,
+          id,
+        })),
+      ),
   }),
   defineOperation(assetIdSchema, {
     path: ['asset', 'delete'],
