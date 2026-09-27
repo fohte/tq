@@ -104,11 +104,6 @@ export type PositionalArgument<Key extends string = string> =
       variadic?: boolean
     }
 
-export type CliCustomOption = {
-  flags: string
-  description: string
-}
-
 export type CliContentInput = {
   field: string
   required?: boolean
@@ -143,7 +138,7 @@ export interface OperationDefinition {
     optionNames?: Readonly<Record<string, string>>
     optionDescriptions?: Readonly<Record<string, string>>
     optionMetavars?: Readonly<Record<string, string>>
-    customOptions?: readonly CliCustomOption[]
+    customOptions?: readonly { flags: string; description: string }[]
     mapInput?: (
       input: Record<string, unknown>,
       options: Record<string, unknown>,
