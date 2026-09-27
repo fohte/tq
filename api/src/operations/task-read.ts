@@ -2,13 +2,13 @@ import { errAsync, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { nestTaskListRows } from '#lib/task-tree'
 import {
   defineOperation,
   type OperationClient,
   type OperationError,
   requestJson,
 } from '#operations/types'
-import { nestTaskListRows } from '#routes/tasks/shared'
 import { contextEnum, listTasksQuerySchema } from '#schemas/task'
 
 type TaskDetail = Record<string, unknown> & {
