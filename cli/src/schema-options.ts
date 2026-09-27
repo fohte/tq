@@ -18,12 +18,6 @@ export interface AddSchemaOptionsConfig {
   optionMetavars?: Readonly<Record<string, string>>
 }
 
-function isAddSchemaOptionsConfig(
-  configOrExclude: AddSchemaOptionsConfig | readonly string[],
-): configOrExclude is AddSchemaOptionsConfig {
-  return !Array.isArray(configOrExclude)
-}
-
 function toLabel(key: string): string {
   const words = toKebabCase(key).split('-')
   return words
@@ -46,12 +40,6 @@ function schemaDescription(field: unknown): string | undefined {
 }
 
 type SupportedLeaf = z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber
-
-export type SchemaOptionModes = {
-  commaSeparated?: readonly string[]
-  repeatable?: readonly string[]
-  defaults?: Readonly<Record<string, string>>
-}
 
 type ArrayOptionMode = 'comma-separated' | 'repeatable'
 
@@ -194,21 +182,7 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
   schema: z.ZodObject<Shape>,
-  config?: AddSchemaOptionsConfig,
-): Result<Command, Error>
-export function addSchemaOptions<Shape extends z.core.$ZodShape>(
-  command: Command,
-  schema: z.ZodObject<Shape>,
-  exclude?: readonly string[],
-  envDefaults?: Readonly<Record<string, string>>,
-  arrayOptions?: SchemaOptionModes,
-): Result<Command, Error>
-export function addSchemaOptions<Shape extends z.core.$ZodShape>(
-  command: Command,
-  schema: z.ZodObject<Shape>,
-  configOrExclude: AddSchemaOptionsConfig | readonly string[] = {},
-  positionalEnvDefaults: Readonly<Record<string, string>> = {},
-  positionalArrayOptions: SchemaOptionModes = {},
+  config: AddSchemaOptionsConfig = {},
 ): Result<Command, Error> {
   const {
     exclude = [],
@@ -219,21 +193,7 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
     optionNames = {},
     optionDescriptions = {},
     optionMetavars = {},
-  }: AddSchemaOptionsConfig = isAddSchemaOptionsConfig(configOrExclude)
-    ? configOrExclude
-    : {
-        exclude: configOrExclude,
-        envDefaults: positionalEnvDefaults,
-        ...(positionalArrayOptions.commaSeparated == null
-          ? {}
-          : { commaSeparatedOptions: positionalArrayOptions.commaSeparated }),
-        ...(positionalArrayOptions.repeatable == null
-          ? {}
-          : { repeatableOptions: positionalArrayOptions.repeatable }),
-        ...(positionalArrayOptions.defaults == null
-          ? {}
-          : { optionDefaults: positionalArrayOptions.defaults }),
-      }
+  }: AddSchemaOptionsConfig = config
   const commaSeparated = new Set(commaSeparatedOptions)
   const repeatable = new Set(repeatableOptions)
   const defaults = optionDefaults
