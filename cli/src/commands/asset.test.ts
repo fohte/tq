@@ -82,7 +82,7 @@ describe('asset upload', () => {
     const write = spyStdout()
 
     tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-asset-upload-'))
-    const filePath = join(tmpDir, 'photo.png')
+    const filePath = join(tmpDir, 'photo].png')
     const pngBytes = new Uint8Array([
       0x89, 0x50, 0x4e, 0x47, 0x00, 0xff, 0x10, 0x7f,
     ])
@@ -98,14 +98,14 @@ describe('asset upload', () => {
     await expect(calls[0]).resolves.toEqual({
       method: 'POST',
       url: `${apiUrl}/api/assets`,
-      fileName: 'photo.png',
+      fileName: 'photo].png',
       fileType: 'image/png',
       fileBytes: pngBytes,
     })
     expect(write.mock.calls).toEqual([
       [
         `${JSON.stringify(
-          { ...uploaded, markdown: '![photo.png](/api/assets/img1)' },
+          { ...uploaded, markdown: '![photo\\].png](/api/assets/img1)' },
           null,
           2,
         )}\n`,
