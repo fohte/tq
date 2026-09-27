@@ -3,12 +3,13 @@ import { err, ok, Result } from 'neverthrow'
 
 import type { Client } from '#client'
 import { createClient } from '#client'
+import { mergeHeaders, parseHeadersJson } from '#headers'
 
 interface GlobalOptions {
   apiUrl?: string
   webUrl?: string
   author?: string
-  header: Record<string, string>
+  header?: Record<string, string>
 }
 
 function resolveApiUrl(command: Command): Result<string, Error> {
@@ -35,11 +36,18 @@ export function resolveWebUrl(command: Command): Result<string, Error> {
   return resolveApiUrl(command)
 }
 
-function resolveHeaders(options: GlobalOptions): Record<string, string> {
-  if (options.author == null || options.author.length === 0) {
-    return options.header
-  }
-  return { 'X-Author': `llm:${options.author}`, ...options.header }
+function resolveHeaders(
+  options: GlobalOptions,
+): Result<Record<string, string>, Error> {
+  const authorHeaders =
+    options.author == null || options.author.length === 0
+      ? {}
+      : { 'X-Author': `llm:${options.author}` }
+
+  return parseHeadersJson(process.env['TQ_HEADERS_JSON']).andThen(
+    (envHeaders) =>
+      mergeHeaders(authorHeaders, envHeaders, options.header ?? {}),
+  )
 }
 
 export function buildClient(
@@ -47,7 +55,9 @@ export function buildClient(
   fetchImpl: typeof fetch,
 ): Result<Client, Error> {
   const options = command.optsWithGlobals<GlobalOptions>()
-  return resolveApiUrl(command).map((apiUrl) =>
-    createClient({ apiUrl, headers: resolveHeaders(options) }, fetchImpl),
+  return resolveApiUrl(command).andThen((apiUrl) =>
+    resolveHeaders(options).map((headers) =>
+      createClient({ apiUrl, headers }, fetchImpl),
+    ),
   )
 }

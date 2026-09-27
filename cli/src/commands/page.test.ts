@@ -26,8 +26,16 @@ function makePageSearchOutput(
   }
 }
 
+function makeHeaderOutput(
+  exitCode: number,
+  headers: Record<string, string> | undefined,
+) {
+  return { exitCode, headers }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe('page list', () => {
@@ -410,6 +418,68 @@ describe('global options', () => {
 
     expect(exitCode).toBe(0)
     expect(calls[0]?.headers).toEqual({ 'x-author': 'llm:claude-opus-5' })
+  })
+
+  it('sends TQ_HEADERS_JSON headers with the request', async () => {
+    vi.stubEnv('TQ_HEADERS_JSON', '{"X-Example":"environment-value"}')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makeHeaderOutput(exitCode, calls[0]?.headers)).toEqual({
+      exitCode: 0,
+      headers: { 'x-example': 'environment-value' },
+    })
+  })
+
+  it('lets TQ_HEADERS_JSON override X-Author from --author', async () => {
+    vi.stubEnv('TQ_HEADERS_JSON', '{"x-author":"environment-value"}')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, '--author', 'default-value', 'page', 'list', '42'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makeHeaderOutput(exitCode, calls[0]?.headers)).toEqual({
+      exitCode: 0,
+      headers: { 'x-author': 'environment-value' },
+    })
+  })
+
+  it('lets -H override TQ_HEADERS_JSON case-insensitively', async () => {
+    vi.stubEnv('TQ_HEADERS_JSON', '{"X-Example":"environment-value"}')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        '--header',
+        'x-example: command-value',
+        'page',
+        'list',
+        '42',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(makeHeaderOutput(exitCode, calls[0]?.headers)).toEqual({
+      exitCode: 0,
+      headers: { 'x-example': 'command-value' },
+    })
   })
 
   it('omits X-Author when --author is not given', async () => {
