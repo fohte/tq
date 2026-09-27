@@ -272,6 +272,7 @@
 
 .markdown-asset-node-view.markdown-asset-video > .markdown-asset-video-player {
   display: block;
+  height: auto;
   max-height: 80vh;
   max-width: 100%;
   width: 100%;

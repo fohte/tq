@@ -35,10 +35,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const VIDEO_ASSET_ID = 'a1111111-1111-4111-8111-111111111111'
+const VIDEO_FIXTURE_URL = new URL(
+  './markdown-editor-video-fixture.webm',
+  import.meta.url,
+).href
 
 const videoAssetHandler = http.get(`/api/assets/${VIDEO_ASSET_ID}`, () =>
   HttpResponse.json({
-    url: 'data:video/webm;base64,',
+    url: VIDEO_FIXTURE_URL,
     contentType: 'video/webm',
   }),
 )
