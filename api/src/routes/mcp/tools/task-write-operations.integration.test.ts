@@ -7,6 +7,7 @@ import { labels } from '#db/schema'
 import {
   callMcpTool,
   connectMcpClient,
+  normalizeDynamicValues,
   parseToolData,
   parseToolJson,
 } from '#routes/mcp/testing'
@@ -17,8 +18,21 @@ setupTestDb()
 
 let client: Client
 
-function summarizeDuplicateTarget(duplicateOfNumber: number | null) {
-  return { duplicateOfNumber }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function sortTaskLabels(value: unknown): unknown {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value['labels']) ||
+    !value['labels'].every(
+      (label): label is string => typeof label === 'string',
+    )
+  ) {
+    return value
+  }
+  return { ...value, labels: [...value['labels']].sort() }
 }
 
 function summarizeTaskDeletion(
@@ -78,7 +92,7 @@ describe('task_create tool', () => {
       labels: ['urgent', 'new-label'],
     })
 
-    expect(parseToolData(result)).toEqual({
+    expect(sortTaskLabels(parseToolData(result))).toEqual({
       id: '<uuid>',
       number: '<number>',
       title: 'Labeled task',
@@ -87,7 +101,7 @@ describe('task_create tool', () => {
       statusReason: null,
       context: 'personal',
       commitment: 'inbox',
-      labels: ['urgent', 'new-label'],
+      labels: ['new-label', 'urgent'],
       startDate: null,
       dueDate: null,
       estimatedMinutes: null,
@@ -307,43 +321,6 @@ describe('task_complete tool', () => {
     })
   })
 
-  it('reopens a completed task by moving it back to todo', async () => {
-    const task = await createTask('Reopen me')
-    await callMcpTool(client, 'task_complete', {
-      taskId: task.id,
-    })
-
-    const result = await callMcpTool(client, 'task_status', {
-      taskId: task.id,
-      status: 'todo',
-    })
-
-    expect(parseToolData(result)).toEqual({
-      id: '<uuid>',
-      number: '<number>',
-      title: 'Reopen me',
-      description: null,
-      status: 'todo',
-      statusReason: null,
-      context: 'personal',
-      commitment: 'inbox',
-      labels: [],
-      startDate: null,
-      dueDate: null,
-      estimatedMinutes: null,
-      remindAt: null,
-      parentId: null,
-      projectId: null,
-      recurrenceRuleId: null,
-      recurrenceRule: null,
-      templateId: null,
-      occurrenceDate: null,
-      githubLinks: [],
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
-  })
-
   it('closes a task as a duplicate and records the target', async () => {
     const target = await createTask('Target')
     const task = await createTask('Duplicate me')
@@ -383,12 +360,120 @@ describe('task_complete tool', () => {
     // field (see TaskResponse) — the detail endpoint is the only way to
     // confirm `duplicateOfTaskId` actually reached the request body.
     const detailRes = await app.request(`/api/tasks/${task.id}`)
-    const detailBody = await jsonBody<{ duplicateOfNumber: number | null }>(
-      detailRes,
-    )
-    expect(summarizeDuplicateTarget(detailBody.duplicateOfNumber)).toEqual({
+    const detailBody = await jsonBody<Record<string, unknown>>(detailRes)
+    expect(normalizeDynamicValues(detailBody, { taskNumbers: true })).toEqual({
+      id: '<uuid>',
+      number: -1,
+      title: 'Duplicate me',
+      description: null,
+      status: 'completed',
+      statusReason: 'duplicate',
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+      titleAuthor: { kind: 'human', agent: null },
+      descriptionAuthor: { kind: 'human', agent: null },
+      parentNumber: null,
+      childCompletionCount: { total: 0, completed: 0 },
+      pages: [],
+      timeBlocks: [],
+      links: { outgoing: [], incoming: [] },
       duplicateOfNumber: target.number,
+      duplicateOfTask: {
+        id: '<uuid>',
+        number: -1,
+        title: 'Target',
+        description: null,
+        status: 'todo',
+        statusReason: null,
+        context: 'personal',
+        commitment: 'inbox',
+        labels: [],
+        startDate: null,
+        dueDate: null,
+        estimatedMinutes: null,
+        remindAt: null,
+        parentId: null,
+        projectId: null,
+        recurrenceRuleId: null,
+        recurrenceRule: null,
+        templateId: null,
+        occurrenceDate: null,
+        githubLinks: [],
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        childCompletionCount: { completed: 0, total: 0 },
+      },
+      blockedBy: [],
+      blocking: [],
     })
+  })
+})
+
+describe('task_status tool', () => {
+  it('reopens a completed task by moving it back to todo', async () => {
+    const task = await createTask('Reopen me')
+    await callMcpTool(client, 'task_complete', {
+      taskId: task.id,
+    })
+
+    const result = await callMcpTool(client, 'task_status', {
+      taskId: task.id,
+      status: 'todo',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      id: '<uuid>',
+      number: '<number>',
+      title: 'Reopen me',
+      description: null,
+      status: 'todo',
+      statusReason: null,
+      context: 'personal',
+      commitment: 'inbox',
+      labels: [],
+      startDate: null,
+      dueDate: null,
+      estimatedMinutes: null,
+      remindAt: null,
+      parentId: null,
+      projectId: null,
+      recurrenceRuleId: null,
+      recurrenceRule: null,
+      templateId: null,
+      occurrenceDate: null,
+      githubLinks: [],
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
+    })
+  })
+
+  it('rejects completed status because completion has its own tool', async () => {
+    const task = await createTask('Reopen me')
+    const result = await callMcpTool(client, 'task_status', {
+      taskId: task.id,
+      status: 'completed',
+    })
+    const detailResponse = await app.request(`/api/tasks/${task.id}`)
+    const detail = await jsonBody<{ status: string }>(detailResponse)
+
+    expect(`${String(result.isError)}:${detail.status}`).toBe('true:todo')
   })
 })
 

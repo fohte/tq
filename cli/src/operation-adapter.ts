@@ -204,16 +204,24 @@ export function registerOperations(
       ...(contentInput == null ? [] : [contentInput.field]),
       ...(operation.cli.excludeFields ?? []),
     ]
-    addSchemaOptions(
-      command,
-      operation.inputSchema,
-      excluded,
-      operation.cli.envDefaults,
-      operation.cli.commaSeparatedOptions,
-      operation.cli.optionNames,
-      operation.cli.optionDescriptions,
-      operation.cli.optionMetavars,
-    ).match(
+    addSchemaOptions(command, operation.inputSchema, {
+      exclude: excluded,
+      ...(operation.cli.envDefaults == null
+        ? {}
+        : { envDefaults: operation.cli.envDefaults }),
+      ...(operation.cli.commaSeparatedOptions == null
+        ? {}
+        : { commaSeparatedOptions: operation.cli.commaSeparatedOptions }),
+      ...(operation.cli.optionNames == null
+        ? {}
+        : { optionNames: operation.cli.optionNames }),
+      ...(operation.cli.optionDescriptions == null
+        ? {}
+        : { optionDescriptions: operation.cli.optionDescriptions }),
+      ...(operation.cli.optionMetavars == null
+        ? {}
+        : { optionMetavars: operation.cli.optionMetavars }),
+    }).match(
       () => undefined,
       (error) => fail(group, error),
     )
@@ -261,8 +269,6 @@ export function registerOperations(
         (error) => fail(actionCommand, error),
       )
 
-      const input = collectedInput
-
       if (contentInput != null) {
         const filePath =
           'file' in options && typeof options['file'] === 'string'
@@ -280,10 +286,12 @@ export function registerOperations(
             ),
           )
         }
-        if (content !== undefined) input[contentInput.field] = content
+        if (content !== undefined) {
+          collectedInput[contentInput.field] = content
+        }
       }
 
-      const mappedInput = mapCliInput(operation, input, options).match(
+      const mappedInput = mapCliInput(operation, collectedInput, options).match(
         (value) => value,
         (error) => fail(actionCommand, error),
       )

@@ -12,11 +12,9 @@ const testSchema = z.object({
 })
 
 function buildCommand(exclude: string[] = []): Command {
-  return addSchemaOptions(
-    new Command('test').exitOverride(),
-    testSchema,
+  return addSchemaOptions(new Command('test').exitOverride(), testSchema, {
     exclude,
-  )._unsafeUnwrap()
+  })._unsafeUnwrap()
 }
 
 function captureError(run: () => void): Error {
@@ -43,6 +41,41 @@ Options:
   --priority <value>  Priority
   --note <value>      Note
   -h, --help          display help for command
+`,
+    )
+  })
+
+  it('uses configured flag names, descriptions, and metavars', () => {
+    const schema = z.object({
+      statusReason: z.string().optional(),
+      duplicateOfTaskId: z.string().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      {
+        optionNames: {
+          statusReason: 'reason',
+          duplicateOfTaskId: 'duplicate-of',
+        },
+        optionDescriptions: {
+          statusReason: 'Why the task is being closed',
+          duplicateOfTaskId: 'Task this task duplicates',
+        },
+        optionMetavars: {
+          statusReason: 'reason',
+          duplicateOfTaskId: 'taskId',
+        },
+      },
+    )._unsafeUnwrap()
+
+    expect(command.helpInformation()).toBe(
+      `Usage: test [options]
+
+Options:
+  --reason <reason>        Why the task is being closed
+  --duplicate-of <taskId>  Task this task duplicates
+  -h, --help               display help for command
 `,
     )
   })
@@ -101,9 +134,7 @@ Options:
     const result = addSchemaOptions(
       new Command(),
       z.object({ labels: z.string().optional() }),
-      [],
-      {},
-      ['labels'],
+      { commaSeparatedOptions: ['labels'] },
     )
 
     expect(result._unsafeUnwrapErr().message).toBe(
@@ -127,9 +158,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      ['labels'],
+      { commaSeparatedOptions: ['labels'] },
     )._unsafeUnwrap()
 
     command.parse(['--labels', 'alpha, beta,,gamma'], { from: 'user' })
@@ -142,9 +171,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      ['values'],
+      { commaSeparatedOptions: ['values'] },
     )._unsafeUnwrap()
 
     command.parse(['--values', '3,5'], { from: 'user' })
@@ -157,9 +184,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      ['values'],
+      { commaSeparatedOptions: ['values'] },
     )._unsafeUnwrap()
     const error = captureError(() =>
       command.parse(['--values', '3,nope'], { from: 'user' }),
@@ -177,9 +202,7 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      {},
-      ['labels'],
+      { commaSeparatedOptions: ['labels'] },
     )._unsafeUnwrap()
 
     expect(command.helpInformation()).toBe(
@@ -200,9 +223,10 @@ Options:
     const command = addSchemaOptions(
       new Command('test').exitOverride(),
       schema,
-      [],
-      { labels: 'TQ_LABELS' },
-      ['labels'],
+      {
+        envDefaults: { labels: 'TQ_LABELS' },
+        commaSeparatedOptions: ['labels'],
+      },
     )._unsafeUnwrap()
 
     command.parse([], { from: 'user' })
@@ -337,12 +361,9 @@ describe('a field defaulted from an env var via envDefaults', () => {
   })
 
   function buildContextCommand(): Command {
-    return addSchemaOptions(
-      new Command('test').exitOverride(),
-      contextSchema,
-      [],
-      { context: 'TQ_CONTEXT' },
-    )._unsafeUnwrap()
+    return addSchemaOptions(new Command('test').exitOverride(), contextSchema, {
+      envDefaults: { context: 'TQ_CONTEXT' },
+    })._unsafeUnwrap()
   }
 
   afterEach(() => {

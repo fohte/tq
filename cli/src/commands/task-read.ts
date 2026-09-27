@@ -36,8 +36,10 @@ export function registerTaskListCommand(
     // true/false validation (any string round-trips through the
     // 'v === "true"' transform silently, e.g. a typo'd value becomes false).
     // Excluded until that gets its own stricter boolean flag type.
-    ['hasEstimate', 'hasDue', 'includeAncestors'],
-    { context: 'TQ_CONTEXT' },
+    {
+      exclude: ['hasEstimate', 'hasDue', 'includeAncestors'],
+      envDefaults: { context: 'TQ_CONTEXT' },
+    },
   )
     .match(
       (command) => command,
@@ -137,8 +139,10 @@ export function registerTaskSearchCommand(
     // 'v === "true"' transform silently). Excluded until that gets its own
     // stricter boolean flag type. `q` is excluded since it's handled via the
     // positional query argument below.
-    ['q', 'hasEstimate', 'hasDue', 'includeAncestors'],
-    { context: 'TQ_CONTEXT' },
+    {
+      exclude: ['q', 'hasEstimate', 'hasDue', 'includeAncestors'],
+      envDefaults: { context: 'TQ_CONTEXT' },
+    },
   )
     .match(
       (command) => command,

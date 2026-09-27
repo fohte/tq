@@ -1,11 +1,19 @@
+import { splitCommaList } from 'api/lib/split-comma-list'
 import { Command, InvalidArgumentError, Option } from 'commander'
 import { err, ok, Result } from 'neverthrow'
 import { z } from 'zod'
 
-import { splitCommaList } from '#split-comma-list'
-
 export function toKebabCase(key: string): string {
   return key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)
+}
+
+export interface AddSchemaOptionsConfig {
+  exclude?: readonly string[]
+  envDefaults?: Readonly<Record<string, string>>
+  commaSeparatedOptions?: readonly string[]
+  optionNames?: Readonly<Record<string, string>>
+  optionDescriptions?: Readonly<Record<string, string>>
+  optionMetavars?: Readonly<Record<string, string>>
 }
 
 function toLabel(key: string): string {
@@ -145,12 +153,14 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
 export function addSchemaOptions<Shape extends z.core.$ZodShape>(
   command: Command,
   schema: z.ZodObject<Shape>,
-  exclude: readonly string[] = [],
-  envDefaults: Readonly<Record<string, string>> = {},
-  commaSeparatedOptions: readonly string[] = [],
-  optionNames: Readonly<Record<string, string>> = {},
-  optionDescriptions: Readonly<Record<string, string>> = {},
-  optionMetavars: Readonly<Record<string, string>> = {},
+  {
+    exclude = [],
+    envDefaults = {},
+    commaSeparatedOptions = [],
+    optionNames = {},
+    optionDescriptions = {},
+    optionMetavars = {},
+  }: AddSchemaOptionsConfig = {},
 ): Result<Command, Error> {
   for (const [key, field] of Object.entries(schema.shape)) {
     if (exclude.includes(key)) continue

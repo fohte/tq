@@ -682,6 +682,32 @@ describe('task parent', () => {
 })
 
 describe('task complete', () => {
+  it('shows the configured reason and duplicate target options in help', async () => {
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['task', 'complete', '--help'],
+      fetch,
+      fakeStdin(true),
+    )
+
+    expect(`${String(exitCode)}\n${String(write.mock.calls[0]?.[0])}`).toBe(
+      `0
+Usage: tq task complete [options] <id>
+
+Complete a task
+
+Options:
+  --reason <reason>        Why the task is being closed (completed, not_planned,
+                           duplicate); defaults to completed (choices:
+                           "completed", "not_planned", "duplicate")
+  --duplicate-of <taskId>  Task id this task is a duplicate of (only used when
+                           --reason duplicate)
+  -h, --help               display help for command
+`,
+    )
+  })
+
   it('sends an empty body and prints the whole response', async () => {
     const completed = {
       id: 't1',

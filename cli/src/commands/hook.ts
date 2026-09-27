@@ -81,8 +81,13 @@ export function registerHookCommands(
           .default('claude_code'),
       ),
     upsertAgentSessionSchema,
-    HOOK_MANAGED_FIELDS,
-    { context: 'TQ_CONTEXT', parentSessionId: 'TQ_PARENT_SESSION_ID' },
+    {
+      exclude: HOOK_MANAGED_FIELDS,
+      envDefaults: {
+        context: 'TQ_CONTEXT',
+        parentSessionId: 'TQ_PARENT_SESSION_ID',
+      },
+    },
   ).match(
     (command) => command,
     (error) => fail(program, error),

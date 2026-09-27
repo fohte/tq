@@ -2,6 +2,7 @@ import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { splitCommaList } from '#lib/split-comma-list'
 import { encodePathSegment } from '#operations/path-segment'
 import {
   defineOperation,
@@ -81,13 +82,6 @@ function optionString(
   return typeof value === 'string' ? value : undefined
 }
 
-function splitCommaList(value: string): string[] {
-  return value
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0)
-}
-
 function recurrenceRuleFromCli(
   options: Record<string, unknown>,
 ): Result<RecurrenceRule | undefined, Error> {
@@ -162,9 +156,14 @@ export const taskWriteOperations = [
   defineOperation(createTaskInputSchema, {
     path: ['task', 'create'],
     description:
-      'Create a task. Labels that do not exist are created automatically. ' +
-      'Use recurrenceRule to make the task recur and blockedBy to list tasks ' +
-      'that must complete first.',
+      'Create a task. `labels` that do not match an existing label are ' +
+      "created automatically, inheriting this task's context; an existing " +
+      "label's context is unchanged. `recurrenceRule` makes the task recur: " +
+      '`type` is daily/weekly/monthly/custom, `interval` is the repeat ' +
+      'count (for example, 2 with weekly means every 2 weeks), `daysOfWeek` ' +
+      'uses 0=Sunday through 6=Saturday for weekly rules, and `dayOfMonth` ' +
+      'uses 1-31 for monthly rules. `blockedBy` lists task ids or numbers ' +
+      'that must complete first; unknown tasks return 404.',
     positionalArgs: ['title'],
     kind: 'write',
     attribution: 'agent',
@@ -196,9 +195,13 @@ export const taskWriteOperations = [
   defineOperation(updateTaskInputSchema, {
     path: ['task', 'update'],
     description:
-      'Partially update a task. Only provided fields are changed. Nullable ' +
-      'fields can be cleared with null; labels and blockedBy replace their ' +
-      'full sets.',
+      'Partially update a task by id or number. Only provided fields change; ' +
+      'omit a field to leave it as-is. Nullable fields can be cleared with ' +
+      'null. `labels` replaces the full set; an empty array clears it, and ' +
+      "new labels inherit the task's possibly updated context while existing " +
+      'label contexts stay unchanged. `blockedBy` also replaces the full ' +
+      'set; an empty array clears every blocker. `recurrenceRule` has the ' +
+      'same shape as task_create, or null to remove recurrence.',
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'write',
     attribution: 'agent',
@@ -250,7 +253,9 @@ export const taskWriteOperations = [
   }),
   defineOperation(taskStatusInputSchema, {
     path: ['task', 'status'],
-    description: 'Update a task status.',
+    description:
+      'Reopen a task by setting its status to todo. To complete a task, use ' +
+      'task_complete.',
     positionalArgs: [{ name: 'id', field: 'taskId' }, 'status'],
     kind: 'write',
     attribution: 'agent',
@@ -296,7 +301,8 @@ export const taskWriteOperations = [
     path: ['task', 'complete'],
     description:
       'Complete a task, optionally recording why it was closed and which ' +
-      'task it duplicates.',
+      'task it duplicates. `duplicateOfTaskId` is used only when ' +
+      '`statusReason` is duplicate.',
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'write',
     attribution: 'agent',

@@ -12,6 +12,13 @@ import {
 import type { ReadableStdin } from '#input'
 import { registerOperations } from '#operation-adapter'
 
+const taskWriteOperationsBeforeActivity = taskWriteOperations.filter(
+  (operation) => operation.path[1] !== 'from-github',
+)
+const taskWriteOperationsAfterActivity = taskWriteOperations.filter(
+  (operation) => operation.path[1] === 'from-github',
+)
+
 export function registerTaskCommands(
   program: Command,
   fetchImpl: typeof fetch,
@@ -25,7 +32,7 @@ export function registerTaskCommands(
 
   registerOperations(
     program,
-    taskWriteOperations.slice(0, 6),
+    taskWriteOperationsBeforeActivity,
     'Manage tasks',
     fetchImpl,
     stdin,
@@ -37,7 +44,7 @@ export function registerTaskCommands(
 
   registerOperations(
     program,
-    taskWriteOperations.slice(6),
+    taskWriteOperationsAfterActivity,
     'Manage tasks',
     fetchImpl,
     stdin,

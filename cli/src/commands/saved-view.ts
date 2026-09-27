@@ -36,8 +36,7 @@ export function registerSavedViewCommands(
   addSchemaOptions(
     savedView.command('list').description('List saved views'),
     listSavedViewsQuerySchema,
-    [],
-    { context: 'TQ_CONTEXT' },
+    { envDefaults: { context: 'TQ_CONTEXT' } },
   )
     .match(
       (cmd) => cmd,
@@ -81,8 +80,10 @@ export function registerSavedViewCommands(
       .command('create <name> <query>')
       .description('Create a saved view'),
     createSavedViewSchema,
-    ['name', 'query'],
-    { context: 'TQ_CONTEXT' },
+    {
+      exclude: ['name', 'query'],
+      envDefaults: { context: 'TQ_CONTEXT' },
+    },
   )
     .match(
       (cmd) => cmd,

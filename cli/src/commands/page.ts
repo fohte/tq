@@ -128,7 +128,7 @@ export function registerPageCommands(
       .description('Create a page')
       .option('--file <path>', 'Read content from a file instead of stdin'),
     createPageSchema,
-    ['content'],
+    { exclude: ['content'] },
   )
     .match(
       (cmd) => cmd,
@@ -174,7 +174,7 @@ export function registerPageCommands(
       .description('Update a page')
       .option('--file <path>', 'Read content from a file instead of stdin'),
     updatePageSchema,
-    ['content'],
+    { exclude: ['content'] },
   )
     .match(
       (cmd) => cmd,
