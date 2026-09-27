@@ -3,7 +3,8 @@ import {
   type CallToolResult,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { okAsync } from 'neverthrow'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
@@ -19,8 +20,10 @@ import {
   createTask,
   TEST_UUID,
 } from '#routes/tasks/testing'
-import { jsonBody, setupTestDb } from '#testing'
+import * as r2 from '#services/r2'
+import { jsonBody, makeFile, setupTestDb } from '#testing'
 
+vi.mock('#services/r2')
 setupTestDb()
 
 async function createProject(title: string): Promise<{ id: string }> {
@@ -28,6 +31,16 @@ async function createProject(title: string): Promise<{ id: string }> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
+  })
+  return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+async function createAsset(): Promise<{ id: string }> {
+  const form = new FormData()
+  form.set('file', makeFile('sample.png', 'image/png', 1))
+  const response = await app.request('/api/assets', {
+    method: 'POST',
+    body: form,
   })
   return jsonBody(response, z.object({ id: z.uuid() }))
 }
@@ -50,9 +63,20 @@ function summarizeSessionDeleteTraversal(
   return { result, task: { status: taskStatus, body: task } }
 }
 
+function summarizeAssetDelete(result: CallToolResult, assetStatus: number) {
+  return { result: parseToolData(result, ['id']), assetStatus }
+}
+
 let client: Client
 
 beforeEach(async () => {
+  vi.mocked(r2.putObject).mockReset().mockReturnValue(okAsync(undefined))
+  vi.mocked(r2.getObjectSignedUrl)
+    .mockReset()
+    .mockReturnValue(okAsync('https://signed.example/assets/test'))
+  vi.mocked(r2.deleteObjectByKey)
+    .mockReset()
+    .mockReturnValue(okAsync(undefined))
   client = await connectMcpClient()
 })
 
@@ -562,6 +586,54 @@ describe('label_delete tool', () => {
   })
 })
 
+describe('asset_delete tool', () => {
+  it('returns a confirmation after deleting an asset', async () => {
+    const asset = await createAsset()
+    const result = await callMcpTool(client, 'asset_delete', { id: asset.id })
+    const assetResponse = await app.request(`/api/assets/${asset.id}`)
+
+    expect(summarizeAssetDelete(result, assetResponse.status)).toEqual({
+      result: { deleted: true, id: asset.id },
+      assetStatus: 404,
+    })
+  })
+
+  it('rejects empty and dot ids before tool execution', async () => {
+    const outcomes = await Promise.all(
+      ['', '.', '..'].map((id) =>
+        summarizeToolCallOutcome('asset_delete', { id }),
+      ),
+    )
+
+    expect(outcomes).toEqual(
+      ['', '.', '..'].map((id) =>
+        expectedPathSegmentValidationError(
+          'asset_delete',
+          'id',
+          'Asset ID',
+          id,
+        ),
+      ),
+    )
+  })
+
+  it('does not route a traversal asset id to a project deletion', async () => {
+    const project = await createProject('Original project')
+
+    const result = await callMcpTool(client, 'asset_delete', {
+      id: `../projects/${project.id}`,
+    })
+
+    expect(summarizeTraversal(result, await projectTitle(project.id))).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Asset not found' }],
+      },
+      projectTitle: 'Original project',
+    })
+  })
+})
+
 describe('operation tool input schemas', () => {
   it('exposes agent only for operations that support attribution', async () => {
     const tools = await client.listTools()
@@ -578,6 +650,7 @@ describe('operation tool input schemas', () => {
     )
 
     expect(agentArguments).toEqual({
+      asset_delete: false,
       calendar_events: false,
       comment_create: true,
       comment_delete: false,
@@ -587,15 +660,25 @@ describe('operation tool input schemas', () => {
       github_resolve: false,
       github_sync: false,
       github_unlink: true,
+      health: false,
       label_delete: false,
       label_list: false,
       label_update: false,
+      page_create: true,
+      page_delete: false,
+      page_get: false,
+      page_list: false,
+      page_search: false,
+      page_update: true,
       project_create: false,
       project_delete: false,
       project_get: false,
       project_list: false,
       project_tasks: false,
       project_update: false,
+      queue_get: false,
+      queue_list: false,
+      queue_set: false,
       slack_resolve: false,
       session_delete: false,
       session_list: false,
@@ -606,20 +689,9 @@ describe('operation tool input schemas', () => {
 describe('operation tool annotations', () => {
   it('maps operation kinds to MCP annotations', async () => {
     const tools = await client.listTools()
-    const annotations = Object.fromEntries(
-      tools.tools
-        .filter(
-          (tool) =>
-            tool.name.startsWith('comment_') ||
-            tool.name.startsWith('github_') ||
-            tool.name.startsWith('label_') ||
-            tool.name.startsWith('slack_') ||
-            tool.name.startsWith('calendar_'),
-        )
-        .map((tool) => [tool.name, tool.annotations ?? null]),
-    )
-
-    expect(annotations).toEqual({
+    const expectedAnnotations = {
+      asset_delete: { readOnlyHint: false, destructiveHint: true },
+      calendar_events: { readOnlyHint: true },
       comment_create: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -633,7 +705,6 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
-      calendar_events: { readOnlyHint: true },
       github_link: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -647,6 +718,7 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: true,
       },
+      health: { readOnlyHint: true },
       label_delete: {
         readOnlyHint: false,
         destructiveHint: true,
@@ -657,6 +729,13 @@ describe('operation tool annotations', () => {
         destructiveHint: false,
       },
       slack_resolve: { readOnlyHint: true },
-    })
+    }
+    const annotations = Object.fromEntries(
+      tools.tools
+        .filter((tool) => Object.hasOwn(expectedAnnotations, tool.name))
+        .map((tool) => [tool.name, tool.annotations ?? null]),
+    )
+
+    expect(annotations).toEqual(expectedAnnotations)
   })
 })

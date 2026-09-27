@@ -138,6 +138,7 @@ export function MarkdownEditor({
         <CrepeEditorRoot
           {...editorProps}
           mode={isToggleEnabled ? mode : 'edit'}
+          skipNoopChanges={isToggleEnabled}
         />
       </Suspense>
     </div>

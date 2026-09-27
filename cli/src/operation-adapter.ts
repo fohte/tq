@@ -1,3 +1,5 @@
+import { basename, extname } from 'node:path'
+
 import {
   formatInputIssues,
   type OperationClient,
@@ -9,7 +11,7 @@ import { err, ok, type Result } from 'neverthrow'
 import { toApiError } from '#client'
 import { buildClient, resolveWebUrl } from '#command-context'
 import type { ReadableStdin } from '#input'
-import { readContentInput } from '#input'
+import { readBinaryFile, readContentInput } from '#input'
 import { printOperationOutput } from '#operation-output'
 import { fail } from '#result'
 import {
@@ -202,6 +204,12 @@ async function executeCommandOperation(
   }
   const inputValue = collected.value
 
+  const listOutput =
+    operation.cli.output.kind === 'list' ? operation.cli.output : undefined
+  if (listOutput?.fullField != null && options['full'] === true) {
+    inputValue[listOutput.fullField] = true
+  }
+
   const contentInput = operation.cli.contentInput
   if (contentInput != null) {
     const filePath =
@@ -227,6 +235,43 @@ async function executeCommandOperation(
     if (content.value !== undefined) {
       inputValue[contentInput.field] = content.value
     }
+  }
+
+  const fileInput = operation.cli.fileInput
+  if (fileInput != null) {
+    const filePath: unknown = inputValue[fileInput.pathField]
+    if (typeof filePath !== 'string') {
+      if (!ignoreErrors) {
+        fail(
+          actionCommand,
+          new Error('File input path refers to a missing input field.'),
+        )
+      }
+      return
+    }
+
+    const data = await readBinaryFile(filePath)
+    if (data.isErr()) {
+      if (!ignoreErrors) fail(actionCommand, data.error)
+      return
+    }
+
+    const contentType = fileInput.contentTypes[extname(filePath).toLowerCase()]
+    if (contentType == null) {
+      if (!ignoreErrors) {
+        fail(
+          actionCommand,
+          new Error(
+            `Unsupported file extension for ${filePath}. Allowed types: ${fileInput.allowedContentTypes.join(', ')}`,
+          ),
+        )
+      }
+      return
+    }
+
+    inputValue[fileInput.field] = new File([data.value], basename(filePath), {
+      type: contentType,
+    })
   }
 
   await executeOperation(
@@ -322,6 +367,10 @@ export function registerOperations(
       ...operation.positionalArgs.map(positionalName),
       ...(operation.cli.hiddenFields ?? []),
       ...(contentInput == null ? [] : [contentInput.field]),
+      ...(listOutput?.fullField == null ? [] : [listOutput.fullField]),
+      ...(operation.cli.fileInput == null
+        ? []
+        : [operation.cli.fileInput.field]),
     ]
     addSchemaOptions(
       command,
