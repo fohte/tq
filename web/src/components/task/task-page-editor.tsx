@@ -1,5 +1,6 @@
+import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Pencil } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { BackLink } from '#components/ui/back-header-bar'
@@ -56,15 +57,20 @@ export function PageEditorInner({
   defaultTitle,
   defaultContent,
   format,
+  defaultContentEditing = false,
 }: {
   taskId: string
   pageId: string
   defaultTitle: string
   defaultContent: string
   format: TaskPage['format']
+  defaultContentEditing?: boolean
 }) {
   const updatePage = useUpdateTaskPage(taskId)
   const [title, setTitle] = useState(defaultTitle)
+  const [isContentEditing, setIsContentEditing] = useState(
+    defaultContentEditing,
+  )
   const titleSavingRef = useRef(false)
 
   useEffect(() => {
@@ -143,6 +149,18 @@ export function PageEditorInner({
         <span>MARKDOWN</span>
         <span className="text-border">|</span>
         <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="ml-auto h-5 px-1 text-2xs"
+          onClick={() => {
+            setIsContentEditing(true)
+          }}
+        >
+          <Pencil className="size-3" />
+          edit
+        </Button>
       </div>
 
       {/* Content editor */}
@@ -150,6 +168,8 @@ export function PageEditorInner({
         <MarkdownEditor
           defaultValue={defaultContent}
           placeholder="Write something..."
+          editing={isContentEditing}
+          onEditingChange={setIsContentEditing}
           onChange={handleContentChange}
           viewEditToggle={{ onExitEditMode: flushContent }}
         />

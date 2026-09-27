@@ -30,12 +30,14 @@ function Story({
   defaultTitle,
   defaultContent,
   format,
+  defaultContentEditing,
 }: {
   taskId: string
   pageId: string
   defaultTitle: string
   defaultContent: string
   format: TaskPage['format']
+  defaultContentEditing?: boolean
 }) {
   return (
     <Providers>
@@ -47,6 +49,9 @@ function Story({
             defaultTitle={defaultTitle}
             defaultContent={defaultContent}
             format={format}
+            {...(defaultContentEditing === undefined
+              ? {}
+              : { defaultContentEditing })}
           />
         </SubpageViewPresentation>
       </div>
@@ -87,6 +92,15 @@ export const Empty: SubpageStory = {
     defaultContent: '',
     format: 'markdown',
   },
+}
+
+export const Editing: SubpageStory = {
+  name: 'the populated page is open for editing',
+  args: {
+    ...Default.args,
+    defaultContentEditing: true,
+  },
+  tags: ['desktop-only'],
 }
 
 export const DefaultSP: SubpageStory = {
