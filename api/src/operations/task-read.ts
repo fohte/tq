@@ -52,14 +52,24 @@ function invalidResponse(message: string): OperationError {
   return { kind: 'request', error: new Error(message) }
 }
 
+const booleanOption = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((value) => value === true || value === 'true')
+
 const taskListInputSchema = listTasksQuerySchema
   .omit({
-    q: true,
     hasEstimate: true,
     hasDue: true,
     includeAncestors: true,
+    includeMatch: true,
   })
   .extend({
+    includeMatch: booleanOption
+      .optional()
+      .describe('Include the matched text in results.'),
+    q: listTasksQuerySchema.shape.q.describe(
+      'Free-text query, optionally containing prefixed filter tokens.',
+    ),
     status: listTasksQuerySchema.shape.status.describe(
       'Only return tasks in this status.',
     ),
@@ -77,13 +87,17 @@ const taskListInputSchema = listTasksQuerySchema
       .describe('Only return tasks in this context.'),
   })
 
-const booleanOption = z
-  .union([z.boolean(), z.enum(['true', 'false'])])
-  .transform((value) => value === true || value === 'true')
-
 const taskSearchInputSchema = listTasksQuerySchema
-  .omit({ hasEstimate: true, hasDue: true, includeAncestors: true })
+  .omit({
+    hasEstimate: true,
+    hasDue: true,
+    includeAncestors: true,
+    includeMatch: true,
+  })
   .extend({
+    includeMatch: booleanOption
+      .optional()
+      .describe('Include the matched text in results.'),
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
@@ -174,7 +188,7 @@ export const taskReadOperations = [
   defineOperation(taskListInputSchema, {
     path: ['task', 'list'],
     description:
-      'List tasks by status, project, parent, context, or other supported filters. Use task_search for free-text search.',
+      'List tasks by status, project, parent, context, or other supported filters, including an optional free-text query.',
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/tasks'],
@@ -193,7 +207,7 @@ export const taskReadOperations = [
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
     description:
-      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content. Pass its id and this task's id to get_page to read the page content.",
+      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content.",
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id', 'GET /api/tasks'],

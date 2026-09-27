@@ -5,6 +5,8 @@ import { app } from '#app'
 import {
   callMcpTool,
   connectMcpClient,
+  normalizeDynamicValues,
+  parseToolData,
   parseToolJson,
 } from '#routes/mcp/testing'
 import {
@@ -18,6 +20,19 @@ import { jsonBody, setupTestDb } from '#testing'
 setupTestDb()
 
 let client: Client
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function normalizeActivities(value: unknown): unknown {
+  if (!Array.isArray(value)) return value
+  return value.map((activity: unknown) =>
+    isRecord(activity)
+      ? { ...activity, id: '<activity-id>', createdAt: '<timestamp>' }
+      : activity,
+  )
+}
 
 beforeEach(async () => {
   client = await connectMcpClient()
@@ -160,56 +175,44 @@ describe('task_get', () => {
 
   it('returns page metadata without content', async () => {
     const task = await createTask('Task with notes')
-    const created = await createPage(
-      task.id,
-      'Investigation notes',
-      'note body',
-    )
-    const pageRes = await app.request(
-      `/api/tasks/${task.id}/pages/${created.id}`,
-    )
-    const page = await jsonBody<{
-      id: string
-      taskId: string
-      title: string
-      format: string
-      sortOrder: number
-      createdAt: string
-      updatedAt: string
-      author: unknown
-    }>(pageRes)
+    await createPage(task.id, 'Investigation notes', 'note body')
 
     const toolResult = await callMcpTool(client, 'task_get', {
       taskId: task.id,
     })
 
-    expect(parseToolJson(toolResult)).toEqual({
-      ...withoutLinkSync(task),
-      titleAuthor: { kind: 'human', agent: null },
-      descriptionAuthor: { kind: 'human', agent: null },
-      childCompletionCount: { total: 0, completed: 0 },
-      pages: [
+    expect(parseToolData(toolResult)).toEqual(
+      normalizeDynamicValues(
         {
-          id: page.id,
-          taskId: page.taskId,
-          title: page.title,
-          format: page.format,
-          sortOrder: page.sortOrder,
-          createdAt: page.createdAt,
-          updatedAt: page.updatedAt,
-          author: page.author,
+          ...withoutLinkSync(task),
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          pages: [
+            {
+              id: '<uuid>',
+              taskId: '<uuid>',
+              title: 'Investigation notes',
+              format: 'markdown',
+              sortOrder: 0,
+              createdAt: '<timestamp>',
+              updatedAt: '<timestamp>',
+              author: { kind: 'human', agent: null },
+            },
+          ],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          labels: [],
+          parentNumber: null,
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          blockedBy: [],
+          blocking: [],
+          subtasks: [],
         },
-      ],
-      timeBlocks: [],
-      links: { outgoing: [], incoming: [] },
-      labels: [],
-      parentNumber: null,
-      duplicateOfNumber: null,
-      duplicateOfTask: null,
-      blockedBy: [],
-      blocking: [],
-      subtasks: [],
-    })
+        { numberPlaceholder: true },
+      ),
+    )
   })
 })
 
@@ -283,14 +286,18 @@ describe('task_search', () => {
 describe('task_activity', () => {
   it('returns the task activity response', async () => {
     const task = await createTask('Activity task')
-    const response = await app.request(`/api/tasks/${task.id}/activity`)
-    const expected = await jsonBody(response)
-
     const toolResult = await callMcpTool(client, 'task_activity', {
       taskId: task.number,
     })
 
-    expect(parseToolJson(toolResult)).toEqual(expected)
+    expect(normalizeActivities(parseToolJson(toolResult))).toEqual([
+      {
+        id: '<activity-id>',
+        type: 'created',
+        createdAt: '<timestamp>',
+        author: { kind: 'human', agent: null },
+      },
+    ])
   })
 })
 
@@ -314,13 +321,25 @@ describe('task_sessions', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agentSessionId: session.id }),
     })
-    const response = await app.request(`/api/tasks/${task.id}/agent-sessions`)
-    const expected = await jsonBody(response)
-
     const toolResult = await callMcpTool(client, 'task_sessions', {
       taskId: task.id,
     })
 
-    expect(parseToolJson(toolResult)).toEqual(expected)
+    expect(parseToolData(toolResult)).toEqual([
+      {
+        id: '<uuid>',
+        provider: 'codex',
+        sessionId: 'session-example',
+        parentSessionId: null,
+        context: 'personal',
+        cwd: '/tmp/task-read',
+        label: null,
+        lastMessage: null,
+        customLabel: null,
+        startedAt: '<timestamp>',
+        lastActiveAt: '<timestamp>',
+        endedAt: null,
+      },
+    ])
   })
 })

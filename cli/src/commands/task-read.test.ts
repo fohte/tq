@@ -56,6 +56,41 @@ describe('task list', () => {
     })
   })
 
+  it('keeps the query and matched-text options', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'list',
+        '--q',
+        'planning',
+        '--include-match',
+        'true',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { q: 'planning', includeMatch: 'true' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
   it('omits descriptions by default', async () => {
     const tasks = [
       {
@@ -339,6 +374,33 @@ describe('task activity', () => {
 })
 
 describe('task search', () => {
+  it('uses TQ_CONTEXT when --context is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'search'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { context: 'work', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
   it('maps the query positional and schema flags into the REST request', async () => {
     const results = [{ id: 'task-example', number: 1, title: 'Match' }]
     const { fetchStub, calls } = captureFetch(
@@ -394,6 +456,40 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: { hasEstimate: 'false', hasDue: 'true', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('converts includeMatch to a REST query string', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'search',
+        'planning',
+        '--include-match',
+        'true',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { q: 'planning', includeMatch: 'true', limit: '20' },
           body: undefined,
         },
       ],

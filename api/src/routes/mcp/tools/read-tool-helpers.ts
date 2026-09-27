@@ -3,7 +3,7 @@ import type { Hono } from 'hono'
 
 import { callInternalRoute } from '#routes/mcp/route-bridge'
 
-export async function resolveApp(): Promise<Hono> {
+async function resolveApp(): Promise<Hono> {
   // `#app` imports `mcpApp` through the read tool modules that use this
   // helper, so importing it at module scope here would form an import cycle.
   // Resolving it lazily inside each handler breaks the cycle: by the time a

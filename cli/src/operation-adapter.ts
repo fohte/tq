@@ -104,20 +104,13 @@ export function registerOperations(
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
 ): void {
-  const cliOperations = operations.filter(
+  const groupName = operations.find(
     (operation) => operation.surface?.only !== 'mcp',
-  )
-  const groupName = cliOperations[0]?.path[0]
+  )?.path[0]
   if (groupName === undefined) return
-  if (cliOperations.some((operation) => operation.path[0] !== groupName)) {
-    return fail(
-      program,
-      new Error('An operation group must contain a single root command.'),
-    )
-  }
   const group = program.command(groupName).description(groupDescription)
 
-  registerOperationsInGroup(group, cliOperations, fetchImpl, stdin)
+  registerOperationsInGroup(group, operations, fetchImpl, stdin)
 }
 
 export function registerOperationsInGroup(

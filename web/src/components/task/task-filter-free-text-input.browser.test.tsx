@@ -55,13 +55,6 @@ function renderInput(
   }
 }
 
-function getFocusState(suggestion: HTMLElement, input: HTMLElement) {
-  return {
-    suggestionTag: suggestion.tagName,
-    inputFocused: document.activeElement === input,
-  }
-}
-
 describe('TaskFilterFreeTextInput', () => {
   beforeEach(() => {
     mockSuggestionData = []
@@ -75,10 +68,9 @@ describe('TaskFilterFreeTextInput', () => {
     const input = screen.getByRole('textbox', { name: 'Filter query' })
     await user.type(input, 'is:')
 
-    const suggestion = screen.getByRole('button', { name: 'is:todo Todo' })
-    const expectedFocusState = { suggestionTag: 'BUTTON', inputFocused: true }
+    await screen.findByRole('button', { name: 'is:todo Todo' })
 
-    expect(getFocusState(suggestion, input)).toEqual(expectedFocusState)
+    expect(document.activeElement).toBe(input)
   })
 
   it('applies the highlighted suggestion on Tab', async () => {

@@ -60,8 +60,14 @@ export type CliOutput =
 export type PositionalArgument<Key extends string = string> =
   | Key
   | {
+      name: Key
+      field?: undefined
+      optional?: boolean
+      variadic?: boolean
+    }
+  | {
       name: string
-      field?: Key
+      field: Key
       optional?: boolean
       variadic?: boolean
     }
