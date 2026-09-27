@@ -1,3 +1,4 @@
+import { screen } from '@testing-library/react'
 import type { UserEvent } from '@testing-library/user-event'
 import { atIndex } from 'api/lib/test-utils'
 import { expect, waitFor } from 'storybook/test'
@@ -11,6 +12,13 @@ export { defined as assertDefined, atIndex } from 'api/lib/test-utils'
  */
 export function findVisible<T extends Element>(elements: T[]): T | undefined {
   return elements.find((el) => el.checkVisibility())
+}
+
+/**
+ * Waits for Milkdown's lazy editor to mount before resolving text queries.
+ */
+export function findEditorText(text: string | RegExp) {
+  return screen.findByText(text, {}, { timeout: 10_000 })
 }
 
 /**

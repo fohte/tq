@@ -220,7 +220,8 @@ function CrepeEditor({
 
   // Follows `mode` after the initial render: the Crepe instance itself is
   // only ever created once (see the initial-mode comment above), so later
-  // changes have to be pushed onto it imperatively.
+  // changes have to be pushed onto it imperatively. Controlled mode also
+  // waits for lazy initialization before applying a pending mode and focus.
   //
   // This deliberately never dispatches a ProseMirror transaction. Any
   // dispatched transaction — even one that changes no document content —
@@ -233,10 +234,22 @@ function CrepeEditor({
   // calls `view.setProps()` below, which alone is enough to make
   // ProseMirror recompute decorations against the store's new value (see
   // view-mode.ts).
+  const canFocusOnEdit = focusOnEdit && !loading
   useEffect(() => {
     viewModeStoreRef.current?.setMode(mode)
-    crepeRef.current?.setReadonly(mode === 'view')
-  }, [mode])
+    const crepe = crepeRef.current
+    if (crepe == null) return
+    const shouldBeReadonly = mode === 'view'
+    if (crepe.readonly !== shouldBeReadonly) crepe.setReadonly(shouldBeReadonly)
+    if (
+      canFocusOnEdit &&
+      mode === 'edit' &&
+      crepe.editor.status === EditorStatus.Created
+    )
+      crepe.editor.action((ctx) => {
+        ctx.get(editorViewCtx).focus()
+      })
+  }, [canFocusOnEdit, mode])
 
   // Syncs a `defaultValue` that changed externally while in view mode;
   // skipped during editing so a live cursor isn't overwritten, and diffed
@@ -262,18 +275,6 @@ function CrepeEditor({
       crepe.editor.action(replaceAll(incoming, true))
     })
   }, [defaultValue, mode])
-
-  useEffect(() => {
-    if (!focusOnEdit || loading) return
-    const crepe = crepeRef.current
-    if (crepe == null || crepe.editor.status !== EditorStatus.Created) return
-    const shouldBeReadonly = mode === 'view'
-    if (crepe.readonly !== shouldBeReadonly) crepe.setReadonly(shouldBeReadonly)
-    if (mode === 'edit')
-      crepe.editor.action((ctx) => {
-        ctx.get(editorViewCtx).focus()
-      })
-  }, [focusOnEdit, loading, mode])
 
   return <Milkdown />
 }

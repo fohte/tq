@@ -4,18 +4,13 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { assertDefined } from '#lib/test-utils'
+import { assertDefined, findEditorText } from '#lib/test-utils'
 
 // Must end in a blockquote, not a list: a list's own mount-time selection-sync
 // transaction already masks the bug this fixture is meant to expose
 // (@milkdown/plugin-trailing appending a paragraph on any transaction).
 const TRAILING_BLOCKQUOTE_CONTENT =
   'Some intro text.\n\n> A blockquote at the very end.'
-
-// Milkdown loads lazily; allow extra time for its first browser mount.
-function findEditorText(text: string | RegExp) {
-  return screen.findByText(text, {}, { timeout: 10_000 })
-}
 
 describe('MarkdownEditor size', () => {
   // Regression check: 'compact' (a few-lines inline editor, e.g. a

@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
@@ -11,24 +12,28 @@ import {
   GITHUB_URL_FIXTURE,
   GITHUB_URL_FIXTURE_TITLE,
   MENTION_FIXTURE_NUMBER,
+  MENTION_FIXTURE_TASK_ID,
   MENTION_FIXTURE_TITLE,
   seedLiveReferenceFixtures,
 } from '#components/ui/markdown-editor-live-references-test-fixtures'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
-import { assertDefined } from '#lib/test-utils'
-import { StoryRouter } from '#storybook-config/story-router'
+import { assertDefined, findEditorText } from '#lib/test-utils'
+import { createStoryRouter } from '#storybook-config/story-router'
 
 const LINKED_GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9104'
 const LINKED_TASK_LINK_TEXT = 'Linked to a TQ task →'
 const OUTSIDE_CARD_TEXT = 'A plain paragraph outside any card.'
 
-// Milkdown loads lazily; allow extra time for its first browser mount.
-function findEditorText(text: string | RegExp) {
-  return screen.findByText(text, {}, { timeout: 10_000 })
-}
-
-function getModeAndEditingChanges(wrapper: Element, editingChanges: string[]) {
-  return { mode: wrapper.getAttribute('data-view-mode'), editingChanges }
+function getControlledNavigationState(
+  wrapper: Element,
+  editingChanges: string[],
+  pathname: string,
+) {
+  return {
+    mode: wrapper.getAttribute('data-view-mode'),
+    editingChanges,
+    pathname,
+  }
 }
 
 // Seeds a GitHub URL preview already linked to a TQ task, so GithubUrlCard
@@ -70,11 +75,18 @@ function renderWithProviders(
   })
   seed?.(queryClient)
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <StoryRouter component={() => <>{ui}</>} paths={['/tasks/$taskId']} />
-    </QueryClientProvider>,
-  )
+  const router = createStoryRouter({
+    component: () => <>{ui}</>,
+    paths: ['/tasks/$taskId'],
+  })
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+    router,
+  }
 }
 
 describe('MarkdownEditor live references', () => {
@@ -206,11 +218,11 @@ describe('MarkdownEditor live references', () => {
     expect(wrapper).toHaveAttribute('data-view-mode', 'edit')
   })
 
-  it('keeps chips and links clickable while editing is controlled', async () => {
+  it('navigates through an inline task chip while editing is controlled', async () => {
     const editingChanges: string[] = []
-    const { container } = renderWithProviders(
+    const { container, router } = renderWithProviders(
       <MarkdownEditor
-        defaultValue={`#${String(MENTION_FIXTURE_NUMBER)}\n\n[${MARKDOWN_LINK_TEXT}](${MARKDOWN_LINK_HASH})\n\n${OUTSIDE_CARD_TEXT}`}
+        defaultValue={`See #${String(MENTION_FIXTURE_NUMBER)} for details.`}
         viewEditToggle={{}}
         editing={false}
         onEditingChange={(editing) => editingChanges.push(String(editing))}
@@ -219,18 +231,26 @@ describe('MarkdownEditor live references', () => {
     )
 
     await findEditorText(MENTION_FIXTURE_TITLE)
+    const user = userEvent.setup()
+    const chip = screen.getByText(MENTION_FIXTURE_TITLE)
+    await user.hover(chip)
+    const taskLink = await screen.findByRole('link')
     const wrapper = assertDefined(
       container.querySelector('.milkdown-wrapper'),
       'MarkdownEditor always renders its wrapper',
     )
-    const user = userEvent.setup()
-    await user.click(screen.getByText(MENTION_FIXTURE_TITLE))
-    await user.click(screen.getByRole('link', { name: MARKDOWN_LINK_TEXT }))
-    await user.click(screen.getByText(OUTSIDE_CARD_TEXT))
+    await user.click(taskLink)
 
-    expect(getModeAndEditingChanges(wrapper, editingChanges)).toEqual({
+    expect(
+      getControlledNavigationState(
+        wrapper,
+        editingChanges,
+        router.state.location.pathname,
+      ),
+    ).toEqual({
       mode: 'view',
       editingChanges: [],
+      pathname: `/tasks/${MENTION_FIXTURE_TASK_ID}`,
     })
   })
 
