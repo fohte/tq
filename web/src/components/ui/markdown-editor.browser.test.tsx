@@ -142,6 +142,35 @@ describe('MarkdownEditor mode toggle', () => {
     expect(onChange.mock.calls).toEqual([[`${TRAILING_BLOCKQUOTE_CONTENT}!\n`]])
   })
 
+  it('reports empty Markdown after removing the only paragraph content', async () => {
+    const onChange = vi.fn<(markdown: string) => void>()
+    const { container } = render(
+      <MarkdownEditor
+        defaultValue=""
+        viewEditToggle={{}}
+        onChange={onChange}
+      />,
+    )
+    await waitFor(() => {
+      expect(container.querySelector('.milkdown .ProseMirror p')).not.toBeNull()
+    })
+
+    const paragraph = assertDefined(
+      container.querySelector('.milkdown .ProseMirror p'),
+      'an empty document renders its paragraph',
+    )
+    const user = userEvent.setup()
+    await user.click(paragraph)
+    await user.click(paragraph)
+    await user.keyboard('x')
+    await findEditorText('x')
+    await waitForMarkdownUpdateNotifications()
+    await user.keyboard('{Backspace}')
+    await waitForMarkdownUpdateNotifications()
+
+    expect(onChange.mock.calls).toEqual([['x\n'], ['']])
+  })
+
   it('autosaves a change that is reverted before exiting edit mode', async () => {
     const onChange = vi.fn<(markdown: string) => void>()
     const { container } = render(
