@@ -119,6 +119,12 @@ const pendingById = new Map<string, ResultAsync<ResolvedAsset, Error>>()
 // Reverse lookup so a failed media load (which only exposes the resolved
 // signed URL, not the original /api/assets/:id path) can find its asset id.
 const idBySignedUrl = new Map<string, string>()
+// Broken media sources can emit repeated errors even after a fresh signed URL.
+const lastRefreshByElement = new WeakMap<
+  HTMLImageElement | HTMLVideoElement,
+  number
+>()
+const ASSET_REFRESH_COOLDOWN_MS = 10_000
 
 function getAssetDetails(id: string): ResultAsync<ResolvedAsset, Error> {
   const cached = cacheById.get(id)
@@ -179,6 +185,16 @@ export async function handleAssetLoadError(event: Event): Promise<void> {
       : target.src
   const id = idBySignedUrl.get(failedSrc)
   if (id == null) return
+
+  const now = Date.now()
+  const lastRefreshAt = lastRefreshByElement.get(target)
+  if (
+    lastRefreshAt != null &&
+    now - lastRefreshAt < ASSET_REFRESH_COOLDOWN_MS
+  ) {
+    return
+  }
+  lastRefreshByElement.set(target, now)
 
   cacheById.delete(id)
   const result = await getAssetDetails(id)
