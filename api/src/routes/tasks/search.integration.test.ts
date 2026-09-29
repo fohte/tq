@@ -80,6 +80,7 @@ describe('tasks search API', () => {
       number: number
       title: string
       status: string
+      statusReason: string | null
     }
 
     function toMentionSummary(
@@ -90,6 +91,7 @@ describe('tasks search API', () => {
         number: task.number,
         title: task.title,
         status: task.status,
+        statusReason: task.statusReason ?? null,
       }
     }
 
