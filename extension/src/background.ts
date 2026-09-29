@@ -18,8 +18,23 @@ export interface CreateMessage {
   url: string
 }
 
-export type LookupResult = { ok: true; task: LinkedTask | null } | { ok: false }
+export type LookupResult =
+  | { ok: true; task: LinkedTask | null }
+  | { ok: false; reason?: 'authentication-required' }
 export type CreateResult = { ok: true; task: LinkedTask } | { ok: false }
+
+class AuthenticationRequiredError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = new.target.name
+  }
+}
+
+function errorForStatus(status: number, message: string): Error {
+  return status === 401 || status === 403
+    ? new AuthenticationRequiredError(message)
+    : new Error(message)
+}
 
 function hasTypeAndUrl<T extends string>(
   message: unknown,
@@ -49,21 +64,55 @@ interface CreateResponseBody {
   task: LinkedTask
 }
 
+function fetchLookupResponse(
+  url: string,
+  fetchImpl: typeof fetch,
+): ResultAsync<Response, Error> {
+  const endpoint = `${TQ_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`
+
+  // A manual retry exposes Access redirects as opaque responses without
+  // treating ordinary network failures as authentication failures.
+  return ResultAsync.fromPromise(
+    fetchImpl(endpoint, { credentials: 'include' }),
+    (cause) => new Error('tq lookup request failed', { cause }),
+  ).orElse((error) =>
+    ResultAsync.fromPromise(
+      fetchImpl(endpoint, { credentials: 'include', redirect: 'manual' }),
+      () => error,
+    ).andThen((res) => {
+      if (res.type === 'opaqueredirect') {
+        return errAsync(
+          new AuthenticationRequiredError(
+            'tq lookup redirected to Cloudflare Access',
+          ),
+        )
+      }
+
+      return res.status === 401 || res.status === 403
+        ? errAsync(
+            errorForStatus(
+              res.status,
+              `tq lookup returned status ${String(res.status)}`,
+            ),
+          )
+        : errAsync(error)
+    }),
+  )
+}
+
 export function lookupTask(
   url: string,
   fetchImpl: typeof fetch = fetch,
 ): ResultAsync<LinkedTask | null, Error> {
-  return ResultAsync.fromPromise(
-    fetchImpl(`${TQ_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`, {
-      credentials: 'include',
-    }),
-    (cause) => new Error('tq lookup request failed', { cause }),
-  )
+  return fetchLookupResponse(url, fetchImpl)
     .andThen((res) =>
       res.ok
         ? okAsync(res)
         : errAsync(
-            new Error(`tq lookup returned status ${String(res.status)}`),
+            errorForStatus(
+              res.status,
+              `tq lookup returned status ${String(res.status)}`,
+            ),
           ),
     )
     .andThen((res) =>
@@ -95,7 +144,10 @@ export function createTask(
       res.ok
         ? okAsync(res)
         : errAsync(
-            new Error(`tq create returned status ${String(res.status)}`),
+            errorForStatus(
+              res.status,
+              `tq create returned status ${String(res.status)}`,
+            ),
           ),
     )
     .andThen((res) =>
@@ -117,7 +169,14 @@ chrome.runtime.onMessage.addListener(
         },
         (error) => {
           console.warn('tq: lookup failed', error)
-          sendResponse({ ok: false } satisfies LookupResult)
+          sendResponse(
+            error instanceof AuthenticationRequiredError
+              ? ({
+                  ok: false,
+                  reason: 'authentication-required',
+                } satisfies LookupResult)
+              : ({ ok: false } satisfies LookupResult),
+          )
         },
       )
       return true
