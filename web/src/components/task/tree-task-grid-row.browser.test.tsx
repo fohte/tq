@@ -33,11 +33,8 @@ const mockLinkOnTouchStart = vi.fn()
 const mockLinkOnClick = vi.fn()
 const mockUseProject = vi.fn()
 
-// LinkExistingTaskMenu/MoveUnderTaskMenu/SetProjectMenu/DeleteTaskDialog
-// (rendered unconditionally by every row, controlled via their own `open`
-// prop) also pull from this module. task-row-shared imports
-// useHandleStatusChange for the task detail screen, so its hooks also need to
-// exist even though TaskRowAppearance no longer uses them.
+// Row subcomponents and task-row-shared import these hooks, so their exports
+// must exist in this mock.
 vi.mock('#hooks/use-tasks', () => ({
   useTaskList: () => ({ categorized: { all: [] } }),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
