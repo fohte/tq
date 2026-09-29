@@ -30,6 +30,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   name: 'the desktop row actions trigger stays hidden before the row is hovered',
+  tags: ['desktop-only'],
 }
 
 export const DesktopMenuOpen: Story = {
