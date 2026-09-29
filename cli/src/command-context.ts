@@ -27,7 +27,7 @@ function resolveApiUrl(command: Command): Result<string, Error> {
 // Separate from the API base URL because they differ outside the production
 // deployment (e.g. the API and Vite dev servers run on different ports in
 // development), even though the production nginx config serves both from
-// the same origin — see README.md's "Web (nginx runtime)" section.
+// the same origin — see README.md's "Web container runtime" section.
 export function resolveWebUrl(command: Command): Result<string, Error> {
   const options = command.optsWithGlobals<GlobalOptions>()
   if (options.webUrl != null && options.webUrl.length > 0) {
