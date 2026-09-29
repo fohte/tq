@@ -55,7 +55,36 @@ export const Completed: Story = {
   name: 'the card previews a completed task reference',
   args: {
     raw: `#${String(baseTask.number)}`,
-    task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'completed',
+      title: 'Set up CI pipeline',
+    },
+  },
+}
+
+export const NotPlanned: Story = {
+  name: 'the card previews a task closed as not planned',
+  args: {
+    raw: `#${String(baseTask.number)}`,
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'not_planned',
+    },
+  },
+}
+
+export const Duplicate: Story = {
+  name: 'the card previews a duplicate task',
+  args: {
+    raw: `#${String(baseTask.number)}`,
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'duplicate',
+    },
   },
 }
 

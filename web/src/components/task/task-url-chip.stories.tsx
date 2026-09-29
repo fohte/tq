@@ -89,7 +89,12 @@ export const Completed: Story = {
   args: {
     id: TASK_ID,
     raw: TASK_URL,
-    task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'completed',
+      title: 'Set up CI pipeline',
+    },
   },
 }
 

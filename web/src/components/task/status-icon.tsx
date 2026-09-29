@@ -9,6 +9,34 @@ export const CLOSE_REASON_GLYPH = {
   duplicate: Equal,
 }
 
+export function TaskStatusGlyph({
+  status,
+  statusReason,
+}: {
+  status: Task['status']
+  statusReason: Task['statusReason']
+}) {
+  if (status !== 'completed') return null
+
+  const reason = statusReason ?? 'completed'
+  const Glyph = CLOSE_REASON_GLYPH[reason]
+
+  return (
+    <span
+      role="img"
+      aria-label={reason === 'not_planned' ? 'not planned' : reason}
+      className={cn(
+        'flex size-3 shrink-0 items-center justify-center',
+        reason === 'completed'
+          ? 'text-status-completed'
+          : 'text-muted-foreground',
+      )}
+    >
+      <Glyph className="size-3" aria-hidden="true" />
+    </span>
+  )
+}
+
 export function StatusIcon({
   status,
   statusReason,

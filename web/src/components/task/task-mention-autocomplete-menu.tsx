@@ -48,9 +48,9 @@ export function TaskMentionAutocompleteMenuAppearance({
             >
               <TaskMentionSummary
                 status={item.status}
+                statusReason={item.statusReason ?? null}
                 number={item.number}
                 title={item.title}
-                ignoreAncestorSvgSizing
               />
             </Button>
           </li>

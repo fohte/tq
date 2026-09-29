@@ -95,7 +95,12 @@ export const Completed: Story = {
   args: {
     number: baseTask.number,
     raw: `#${String(baseTask.number)}`,
-    task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'completed',
+      title: 'Set up CI pipeline',
+    },
   },
 }
 

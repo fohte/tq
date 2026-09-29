@@ -31,8 +31,29 @@ export const Completed: Story = {
   name: 'the summary shows a completed task mention',
   args: {
     status: 'completed',
+    statusReason: 'completed',
     number: 1,
     title: 'Set up CI pipeline',
+  },
+}
+
+export const NotPlanned: Story = {
+  name: 'the summary shows a task closed as not planned',
+  args: {
+    status: 'completed',
+    statusReason: 'not_planned',
+    number: 2,
+    title: 'Example task closed as not planned',
+  },
+}
+
+export const Duplicate: Story = {
+  name: 'the summary shows a duplicate task',
+  args: {
+    status: 'completed',
+    statusReason: 'duplicate',
+    number: 3,
+    title: 'Duplicate example task',
   },
 }
 

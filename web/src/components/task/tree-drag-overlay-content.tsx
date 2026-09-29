@@ -1,4 +1,4 @@
-import { StatusIcon } from '#components/task/status-icon'
+import { TaskStatusGlyph } from '#components/task/status-icon'
 import {
   ROW_INDENT_CLASS_NAME,
   rowIndentValue,
@@ -40,7 +40,10 @@ export function TreeDragOverlayContent({
           } as React.CSSProperties & { '--row-indent': string }
         }
       >
-        <StatusIcon status={node.status} statusReason={node.statusReason} />
+        <TaskStatusGlyph
+          status={node.status}
+          statusReason={node.statusReason}
+        />
         <TaskNumberLabel number={node.number} />
         <span className="truncate text-sm">{node.title}</span>
       </div>

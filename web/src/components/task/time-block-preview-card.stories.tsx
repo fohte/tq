@@ -48,6 +48,12 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const task = makeTask({ number: 12, title: 'Write onboarding doc' })
+const closedTask = makeTask({
+  number: 13,
+  title: 'Example task closed as not planned',
+  status: 'completed',
+  statusReason: 'not_planned',
+})
 
 export const Manual: Story = {
   name: 'a manual time block previews its linked task',
@@ -62,6 +68,15 @@ export const Auto: Story = {
   name: 'an auto-scheduled time block previews its linked task',
   args: {
     task,
+    block: makeTimeBlock({ isAutoScheduled: true }),
+    onDelete: () => {},
+  },
+}
+
+export const ClosedTask: Story = {
+  name: 'an auto-scheduled time block previews a task closed as not planned',
+  args: {
+    task: closedTask,
     block: makeTimeBlock({ isAutoScheduled: true }),
     onDelete: () => {},
   },

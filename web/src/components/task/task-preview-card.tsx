@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 
 import { preventClickWhileSelecting } from '#components/task/prevent-click-while-selecting'
-import { StatusIcon } from '#components/task/status-icon'
+import { TaskStatusGlyph } from '#components/task/status-icon'
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
 import { Badge } from '#components/ui/badge'
 
@@ -31,7 +31,10 @@ export function TaskPreviewCard({
       className="flex flex-col gap-1.5 border border-border bg-card p-3"
     >
       <div className="flex items-center gap-2">
-        <StatusIcon status={task.status} statusReason={null} />
+        <TaskStatusGlyph
+          status={task.status}
+          statusReason={task.statusReason ?? null}
+        />
         <span className="shrink-0 font-mono text-muted-foreground">
           #{task.number}
         </span>

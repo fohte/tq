@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
-import { CLOSE_REASON_GLYPH } from '#components/task/status-icon'
+import { TaskStatusGlyph } from '#components/task/status-icon'
 import {
   BlockedByLabel,
   CloseReasonLabel,
@@ -63,8 +63,6 @@ export function TaskRowAppearance({
   const completedReason = isCompleted
     ? (task.statusReason ?? 'completed')
     : null
-  const CloseReasonGlyph =
-    completedReason != null ? CLOSE_REASON_GLYPH[completedReason] : null
   const closeReason =
     completedReason != null && completedReason !== 'completed'
       ? completedReason
@@ -149,24 +147,10 @@ export function TaskRowAppearance({
 
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-baseline gap-2">
-              {completedReason != null && CloseReasonGlyph != null && (
-                <span
-                  role="img"
-                  aria-label={
-                    completedReason === 'not_planned'
-                      ? 'not planned'
-                      : completedReason
-                  }
-                  className={cn(
-                    'flex size-3 shrink-0 items-center justify-center',
-                    completedReason === 'completed'
-                      ? 'text-status-completed'
-                      : 'text-muted-foreground',
-                  )}
-                >
-                  <CloseReasonGlyph className="size-3" aria-hidden="true" />
-                </span>
-              )}
+              <TaskStatusGlyph
+                status={task.status}
+                statusReason={task.statusReason}
+              />
               <TaskNumberLabel number={task.number} />
               <span className={cn(rowTitleClassName(isCompleted), 'min-w-16')}>
                 {titleContent ?? task.title}
