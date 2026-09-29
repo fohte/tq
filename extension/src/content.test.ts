@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeLinkedTask } from '#background-test-fixtures'
-import { TQ_ORIGIN } from '#config'
+import { TQ_OPEN_IN_BROWSER_QUERY, TQ_ORIGIN } from '#config'
 
 // Wrapped in its own container per label, matching the real page: the
 // header and sticky-header state labels sit in separate subtrees, not as
@@ -107,6 +107,25 @@ describe('content script', () => {
     await response
 
     expect(document.body.innerHTML).toBe(LABEL_ONLY)
+  })
+
+  it('inserts a sign-in chip when the lookup requires authentication', async () => {
+    document.body.innerHTML = LABEL_ONLY
+    vi.stubGlobal('location', {
+      href: 'https://github.com/example/project/issues/42',
+    })
+    const response = Promise.resolve({
+      ok: false,
+      reason: 'authentication-required' as const,
+    })
+    sendMessage.mockReturnValue(response)
+
+    await import('#content')
+    await response
+
+    expect(document.body.innerHTML).toBe(
+      `<div><div data-component="StateLabel">Open</div><a data-tq-chip="sign-in" href="${TQ_ORIGIN}/?${TQ_OPEN_IN_BROWSER_QUERY}">tq: sign in</a></div>`,
+    )
   })
 
   it('does not insert a chip when the message itself rejects', async () => {

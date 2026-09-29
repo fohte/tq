@@ -11,6 +11,8 @@ function jsonResponse(body: unknown, status = 200): Response {
   })
 }
 
+const GITHUB_ISSUE_URL = 'https://github.com/example/project/issues/42'
+
 // background.ts registers a chrome.runtime.onMessage listener at import
 // time, so `chrome` must be stubbed before each dynamic import.
 beforeEach(() => {
@@ -80,6 +82,25 @@ describe('lookupTask', () => {
 
     expect(result._unsafeUnwrapErr()).toEqual(
       new Error('tq lookup returned status 500'),
+    )
+  })
+
+  it('recognizes an opaque Access redirect after the browser fetch rejects', async () => {
+    const { lookupTask } = await import('#background')
+    const opaqueRedirect = new Response(null)
+    Object.defineProperty(opaqueRedirect, 'type', { value: 'opaqueredirect' })
+    const fetchImpl = vi.fn(
+      (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
+        init?.redirect === 'manual'
+          ? Promise.resolve(opaqueRedirect)
+          : Promise.reject(new TypeError('Failed to fetch')),
+    )
+
+    const result = await lookupTask(GITHUB_ISSUE_URL, fetchImpl)
+    const error = result._unsafeUnwrapErr()
+
+    expect(`${error.name}: ${error.message}`).toBe(
+      'AuthenticationRequiredError: tq lookup redirected to Cloudflare Access',
     )
   })
 
@@ -218,7 +239,7 @@ describe('onMessage listener', () => {
     const sendResponse = vi.fn()
 
     const handled = listener(
-      { type: 'lookup', url: 'https://github.com/fohte/tq/issues/42' },
+      { type: 'lookup', url: GITHUB_ISSUE_URL },
       {},
       sendResponse,
     )
@@ -245,6 +266,24 @@ describe('onMessage listener', () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({ ok: false })
+    })
+  })
+
+  it('identifies an authentication-required lookup response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({}, 401)))
+    const listener = await importAndCaptureListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      { type: 'lookup', url: 'https://github.com/fohte/tq/issues/42' },
+      {},
+      sendResponse,
+    )
+
+    await vi.waitFor(() => {
+      expect(sendResponse.mock.calls).toEqual([
+        [{ ok: false, reason: 'authentication-required' }],
+      ])
     })
   })
 

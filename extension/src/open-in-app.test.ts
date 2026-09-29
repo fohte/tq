@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { TQ_ORIGIN } from '#config'
+import { TQ_OPEN_IN_BROWSER_QUERY, TQ_ORIGIN } from '#config'
 import { openTqLinkInApp } from '#open-in-app'
 import { makeTab } from '#tab-test-fixtures'
 import { makeWebNavigationDetails } from '#web-navigation-test-fixtures'
@@ -77,6 +77,30 @@ describe('openTqLinkInApp', () => {
       error: null,
       calls: [['tabs.get', 9]],
     })
+  })
+
+  it('keeps Cloudflare Access URLs in the browser', async () => {
+    stubChrome({})
+
+    expect(
+      await run(
+        makeWebNavigationDetails({
+          url: `${TQ_ORIGIN}/cdn-cgi/access/authorized?state=placeholder`,
+        }),
+      ),
+    ).toEqual({ error: null, calls: [] })
+  })
+
+  it('keeps tq URLs with the browser marker in the browser', async () => {
+    stubChrome({})
+
+    expect(
+      await run(
+        makeWebNavigationDetails({
+          url: `${TQ_ORIGIN}/tasks/987?${TQ_OPEN_IN_BROWSER_QUERY}`,
+        }),
+      ),
+    ).toEqual({ error: null, calls: [] })
   })
 
   it('ignores subframe navigations', async () => {
