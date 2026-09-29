@@ -396,12 +396,13 @@ that tracked which screen wrote them rather than a deliberate choice. Each
 component now takes a `size` prop and owns its default height directly, so
 callers no longer wrap it in a sizing `<div>`:
 
-- `MarkdownEditor`'s `size` is `'default'` (`min-h-100`, 400px) or
-  `'compact'` (`min-h-30`, 120px). `'default'` is a primary/full editing
-  surface (a task page's own editor). `'compact'` is a few-lines inline
-  editor (task/project description, a comment, an inline/expanded page
-  card, the create-task-modal composer) — this collapsed what used to be
-  three separate values (80/120/160px) for the same role.
+- `MarkdownEditor`'s `size` is `'default'` (`min-h-100`, 400px), `'compact'`
+  (`min-h-30`, 120px), or `'fit'` (no minimum height). `'default'` is a
+  primary/full editing surface (a task page's own editor). `'compact'` is a
+  few-lines inline editor (task/project description, a comment, an
+  inline/expanded page card, the create-task-modal composer), consolidating
+  three former values (80/120/160px) for the same role. `'fit'` sizes
+  read-only content to its rendered text.
 - `HtmlPageEditor` and `HtmlPageViewer` share a `size` of `'default'`
   (`h-100`, 400px, a fixed height for a standalone editor/viewer) or
   `'fill'` (`min-h-0 flex-1`, stretching to fill a flex-column ancestor that

@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
 import { makeComment } from '#components/task/task-activity-test-fixtures'
+import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
 import { taskMentionKeys } from '#hooks/use-task-mentions'
@@ -145,7 +146,7 @@ export const LlmAuthored: Story = {
         content: 'Applied the suggested fix and re-ran the test suite.',
         createdAt: new Date(Date.now() - 300_000).toISOString(),
         updatedAt: new Date(Date.now() - 300_000).toISOString(),
-        author: { kind: 'llm', agent: 'claude-opus-5' },
+        author: makeAuthorInfo({ kind: 'llm', agent: 'sample-agent' }),
       }),
     ],
     events: [],
@@ -168,7 +169,7 @@ export const MixedTimeline: Story = {
         content: 'Applied the suggested fix and re-ran the test suite.',
         createdAt: new Date(Date.now() - 300_000).toISOString(),
         updatedAt: new Date(Date.now() - 300_000).toISOString(),
-        author: { kind: 'llm', agent: 'claude-opus-5' },
+        author: makeAuthorInfo({ kind: 'llm', agent: 'sample-agent' }),
       }),
     ],
     events: [
@@ -176,13 +177,13 @@ export const MixedTimeline: Story = {
         id: 'event-1',
         type: 'created',
         createdAt: new Date(Date.now() - 3_600_000 * 6).toISOString(),
-        author: { kind: 'human', agent: null },
+        author: makeAuthorInfo(),
       },
       {
         id: 'event-2',
         type: 'github_linked',
         createdAt: new Date(Date.now() - 3_600_000 * 5).toISOString(),
-        author: { kind: 'human', agent: null },
+        author: makeAuthorInfo(),
         owner: 'fohte',
         repo: 'tq',
         number: 212,
@@ -192,7 +193,7 @@ export const MixedTimeline: Story = {
         id: 'event-3',
         type: 'status_changed',
         createdAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
-        author: { kind: 'human', agent: null },
+        author: makeAuthorInfo(),
         fromStatus: 'todo',
         toStatus: 'in_progress',
         toStatusReason: null,

@@ -9,11 +9,11 @@ function renderDescription(defaultValue: string | null) {
   return render(
     <EditableMarkdownDescription
       defaultValue={defaultValue}
+      className="p-4"
       placeholder="Add description..."
       editButtonLabel="Edit description"
       onChange={() => {}}
       onExitEditMode={() => {}}
-      className="p-4"
     />,
   )
 }
@@ -27,7 +27,7 @@ function getEditorMode(container: HTMLElement) {
 }
 
 describe('EditableMarkdownDescription', () => {
-  it('opens a populated description from the pencil button', async () => {
+  it('opens a populated description from the edit button', async () => {
     const user = userEvent.setup()
     const { container } = renderDescription('A sample description.')
     await findEditorText('A sample description.')

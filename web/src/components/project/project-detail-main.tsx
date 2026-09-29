@@ -197,17 +197,17 @@ function ProjectDescription({
   })
 
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">Description</span>
-      <EditableMarkdownDescription
-        defaultValue={defaultValue}
-        placeholder="Add description..."
-        editButtonLabel="Edit project description"
-        onChange={onChange}
-        onExitEditMode={flush}
-        className="p-1 focus-within:border-primary/50"
-      />
-    </div>
+    <EditableMarkdownDescription
+      defaultValue={defaultValue}
+      header={
+        <span className="text-xs text-muted-foreground">Description</span>
+      }
+      className="px-1 pb-1 pt-3 focus-within:border-primary/50"
+      placeholder="Add description..."
+      editButtonLabel="Edit project description"
+      onChange={onChange}
+      onExitEditMode={flush}
+    />
   )
 }
 
