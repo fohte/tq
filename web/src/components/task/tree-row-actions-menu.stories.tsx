@@ -40,10 +40,7 @@ export const DesktopMenuOpen: Story = {
   },
 }
 
-export const MobileActionSheetOpen: Story = {
-  name: 'the mobile row actions appear in an open sheet',
+export const MobileActionsHidden: Story = {
+  name: 'the mobile tree row has no actions menu',
   tags: ['mobile-only'],
-  args: {
-    defaultOpen: 'mobile',
-  },
 }

@@ -22,6 +22,7 @@ export function TreeRowActionsMenu({
       aria-label="Task actions"
       desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
       defaultOpen={defaultOpen}
+      mobileItems={[]}
       items={[
         {
           icon: <Plus className="h-4 w-4" />,
