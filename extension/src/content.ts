@@ -46,7 +46,11 @@ function insertChips(): number {
 }
 
 function toChipState(result: LookupResult): ChipState {
-  if (!result.ok) return { kind: 'error' }
+  if (!result.ok) {
+    return result.reason === 'authentication-required'
+      ? { kind: 'sign-in' }
+      : { kind: 'error' }
+  }
   if (!result.task) return { kind: 'unlinked' }
   return {
     kind: 'linked',

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { chipAppearance, type ChipState, syncChipNextTo } from '#chip'
-import { TQ_ORIGIN } from '#config'
+import { TQ_OPEN_IN_BROWSER_QUERY, TQ_ORIGIN } from '#config'
 
 describe('chipAppearance', () => {
   it('renders a linked task', () => {
@@ -25,6 +25,16 @@ describe('chipAppearance', () => {
       text: '+ tq',
       href: null,
       variant: 'empty',
+    })
+  })
+
+  it('renders a sign-in link that stays in the browser', () => {
+    const state: ChipState = { kind: 'sign-in' }
+
+    expect(chipAppearance(state)).toEqual({
+      text: 'tq: sign in',
+      href: `${TQ_ORIGIN}/?${TQ_OPEN_IN_BROWSER_QUERY}`,
+      variant: 'sign-in',
     })
   })
 

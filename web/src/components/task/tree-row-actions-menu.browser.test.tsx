@@ -50,20 +50,11 @@ describe('TreeRowActionsMenu', () => {
     expectAllItemsVisible()
   })
 
-  it('opens the action sheet on the mobile trigger click, showing every item', async () => {
+  it('does not render a mobile action trigger', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
-    const user = userEvent.setup()
     const { container } = renderMenu()
-    const trigger = assertDefined(
-      container.querySelector<HTMLElement>(
-        '[data-slot="action-sheet-trigger"]',
-      ),
-      'mobile trigger not found',
-    )
-
-    await user.click(trigger)
-
-    expect(await screen.findByText('add subtask')).toBeInTheDocument()
-    expectAllItemsVisible()
+    expect(
+      container.querySelector('[data-slot="action-sheet-trigger"]'),
+    ).toEqual(null)
   })
 })

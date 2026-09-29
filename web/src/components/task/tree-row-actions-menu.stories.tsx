@@ -30,6 +30,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   name: 'the desktop row actions trigger stays hidden before the row is hovered',
+  tags: ['desktop-only'],
 }
 
 export const DesktopMenuOpen: Story = {
@@ -40,10 +41,7 @@ export const DesktopMenuOpen: Story = {
   },
 }
 
-export const MobileActionSheetOpen: Story = {
-  name: 'the mobile row actions appear in an open sheet',
+export const MobileActionsHidden: Story = {
+  name: 'the mobile tree row has no actions menu',
   tags: ['mobile-only'],
-  args: {
-    defaultOpen: 'mobile',
-  },
 }

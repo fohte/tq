@@ -74,7 +74,7 @@ export interface DayViewPresentationProps {
   onReorderQueue: (queueKey: string, taskIds: string[]) => void
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
-  /** The candidates section's "+" button always adds to the day queue —
+  /** The kanban candidates' "+" button always adds to the day queue —
    * dragging a candidate onto a different section goes through
    * onInsertCandidate instead. */
   onAddCandidate: (taskId: string) => void
@@ -321,7 +321,6 @@ export function DayViewPresentation({
               onReorderQueue={onReorderQueue}
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
-              onAddCandidate={onAddCandidate}
               onRemoveFromQueue={onRemoveFromQueue}
             />
           )}

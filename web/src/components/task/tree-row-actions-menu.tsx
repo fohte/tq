@@ -15,13 +15,14 @@ export function TreeRowActionsMenu({
   onMoveUnder: () => void
   onSetProject: () => void
   onDelete: () => void
-  defaultOpen?: 'desktop' | 'mobile' | undefined
+  defaultOpen?: 'desktop' | undefined
 }) {
   return (
     <ActionsMenu
       aria-label="Task actions"
       desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
       defaultOpen={defaultOpen}
+      mobileItems={[]}
       items={[
         {
           icon: <Plus className="h-4 w-4" />,

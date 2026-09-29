@@ -10,9 +10,9 @@ import { useState } from 'react'
 // element marked data-no-dnd, following dnd-kit's documented pattern for
 // excluding nested interactive elements from drag activation.
 function shouldHandleDrag(target: EventTarget | null): boolean {
-  let el = target instanceof HTMLElement ? target : null
+  let el = target instanceof Element ? target : null
   while (el != null) {
-    if (el.dataset['noDnd'] != null) return false
+    if (el.getAttribute('data-no-dnd') != null) return false
     el = el.parentElement
   }
   return true
