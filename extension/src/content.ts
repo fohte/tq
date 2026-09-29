@@ -4,7 +4,6 @@ import type {
   LookupMessage,
   LookupResult,
   OpenSignInMessage,
-  RefreshLookupMessage,
 } from '#background'
 import {
   type ChipAppearance,
@@ -13,6 +12,7 @@ import {
   syncChipNextTo,
 } from '#chip'
 import { githubLookupUrl } from '#github-url'
+import { hasMessageType } from '#message-utils'
 
 const STATE_LABEL_SELECTOR = '[data-component="StateLabel"]'
 // Matches chip.ts's private CHIP_ATTR constant; duplicated here rather than
@@ -33,6 +33,7 @@ const CREATE_FAILED_APPEARANCE: ChipAppearance = {
 let currentAppearance: ChipAppearance | null = null
 let lookedUpUrl: string | null = null
 let creating = false
+let signingIn = false
 // Bumped every time refreshLookup starts a new URL context, so an in-flight
 // lookup or create request can tell it's stale even if the user navigates
 // back to the same URL before it resolves (a plain URL-equality check can't
@@ -59,16 +60,6 @@ function toChipState(result: LookupResult): ChipState {
     taskId: result.task.id,
     taskNumber: result.task.number,
   }
-}
-
-function isRefreshLookupMessage(
-  message: unknown,
-): message is RefreshLookupMessage {
-  return (
-    typeof message === 'object' &&
-    message !== null &&
-    (message as { type?: unknown }).type === 'refresh-lookup'
-  )
 }
 
 // GitHub navigates between issue/PR pages via Turbo (same-document DOM
@@ -102,7 +93,7 @@ function refreshLookup(): void {
 }
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
-  if (!isRefreshLookupMessage(message)) return false
+  if (!hasMessageType(message, 'refresh-lookup')) return false
 
   lookedUpUrl = null
   refreshLookup()
@@ -158,18 +149,25 @@ document.addEventListener('click', (event) => {
   const chip = event.target.closest(CHIP_SELECTOR)
   if (chip?.getAttribute('data-tq-chip') === 'sign-in') {
     event.preventDefault()
+    if (signingIn) return
+
+    signingIn = true
     void chrome.runtime
       .sendMessage<OpenSignInMessage, { ok: boolean }>({
         type: 'open-sign-in',
       })
-      .catch((error: unknown) => {
-        console.warn('tq: sign-in failed', error)
-      })
+      .then(
+        () => {
+          signingIn = false
+        },
+        (error: unknown) => {
+          signingIn = false
+          console.warn('tq: sign-in failed', error)
+        },
+      )
     return
   }
 
-  // A linked chip has an href; let it navigate normally instead of creating
-  // a duplicate task.
   if (chip === null || chip.hasAttribute('href')) return
   createTaskAndOpen(lookedUpUrl)
 })

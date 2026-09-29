@@ -1,7 +1,8 @@
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { TQ_OPEN_IN_BROWSER_QUERY, TQ_ORIGIN } from '#config'
-import { openTqLinkInApp } from '#open-in-app'
+import { hasMessageType } from '#message-utils'
+import { isTqPageOutsideAccess, openTqLinkInApp } from '#open-in-app'
 
 export interface LinkedTask {
   id: string
@@ -55,10 +56,9 @@ function hasTypeAndUrl<T extends string>(
   type: T,
 ): message is { type: T; url: string } {
   return (
-    typeof message === 'object' &&
-    message !== null &&
-    (message as { type?: unknown }).type === type &&
-    typeof (message as { url?: unknown }).url === 'string'
+    hasMessageType(message, type) &&
+    'url' in message &&
+    typeof message.url === 'string'
   )
 }
 
@@ -68,14 +68,6 @@ export function isLookupMessage(message: unknown): message is LookupMessage {
 
 export function isCreateMessage(message: unknown): message is CreateMessage {
   return hasTypeAndUrl(message, 'create')
-}
-
-function isOpenSignInMessage(message: unknown): message is OpenSignInMessage {
-  return (
-    typeof message === 'object' &&
-    message !== null &&
-    (message as { type?: unknown }).type === 'open-sign-in'
-  )
 }
 
 function signInTabStorageKey(tabId: number): string {
@@ -93,24 +85,6 @@ function parseSignInFlow(value: unknown): SignInFlow | null {
   }
 
   return { sourceTabId: value.sourceTabId }
-}
-
-function isTqPageOutsideAccess(url: string): boolean {
-  const origin = TQ_ORIGIN.endsWith('/') ? TQ_ORIGIN.slice(0, -1) : TQ_ORIGIN
-  if (!url.startsWith(origin)) return false
-
-  const suffix = url.slice(origin.length)
-  if (
-    suffix !== '' &&
-    !suffix.startsWith('/') &&
-    !suffix.startsWith('?') &&
-    !suffix.startsWith('#')
-  ) {
-    return false
-  }
-
-  const path = suffix.split(/[?#]/u, 1)[0] ?? ''
-  return path !== '/cdn-cgi' && !path.startsWith('/cdn-cgi/')
 }
 
 function openSignInTab(sourceTabId: number): ResultAsync<void, Error> {
@@ -306,7 +280,7 @@ export function createTask(
 
 chrome.runtime.onMessage.addListener(
   (message: unknown, sender, sendResponse) => {
-    if (isOpenSignInMessage(message)) {
+    if (hasMessageType(message, 'open-sign-in')) {
       const sourceTabId = sender.tab?.id
       if (sourceTabId === undefined) return false
 
