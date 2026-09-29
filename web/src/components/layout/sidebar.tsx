@@ -13,15 +13,24 @@ import {
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
+import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useProjects } from '#hooks/use-projects'
+import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTaskList } from '#hooks/use-tasks'
 import { navKeybindings } from '#lib/keybindings'
+import {
+  getSidebarMaxWidth,
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+} from '#lib/resizable-pane-width'
 import { cn } from '#lib/utils'
 
 const MAX_VISIBLE_VIEWS = 5
+const SIDEBAR_WIDTH_STORAGE_KEY = 'tq:sidebar-width'
 
 interface NavItem {
   to: string
@@ -256,8 +265,19 @@ export function SidebarContent() {
 }
 
 export function Sidebar() {
+  const { width, maxWidth, onValueChange, onValueCommit } = useResizableWidth({
+    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    minWidth: SIDEBAR_MIN_WIDTH,
+    maxWidth: SIDEBAR_MAX_WIDTH,
+    responsiveMaxWidth: getSidebarMaxWidth,
+  })
+
   return (
-    <aside className="sticky top-0 hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+    <aside
+      className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar md:flex"
+      style={{ width }}
+    >
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
         <Link to="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>
@@ -271,6 +291,14 @@ export function Sidebar() {
       </div>
 
       <SidebarContent />
+      <ResizablePaneSeparator
+        label="Resize sidebar"
+        value={width}
+        min={SIDEBAR_MIN_WIDTH}
+        max={maxWidth}
+        onValueChange={onValueChange}
+        onValueCommit={onValueCommit}
+      />
     </aside>
   )
 }

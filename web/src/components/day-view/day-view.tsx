@@ -1,8 +1,14 @@
 import { Button } from '@fohte/ui/button'
 import { useNavigate } from '@tanstack/react-router'
 import { CalendarPlus, Kanban, List, Plus } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
@@ -21,23 +27,37 @@ import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
 import { ActionsMenu, type ActionsMenuItem } from '#components/ui/actions-menu'
+import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
+import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import type { QueueCandidate } from '#lib/queue-candidates'
+import {
+  getQueueMaxWidth,
+  QUEUE_DEFAULT_WIDTH,
+  QUEUE_MAX_WIDTH,
+  QUEUE_MIN_WIDTH,
+  QUEUE_WIDE_DEFAULT_WIDTH,
+} from '#lib/resizable-pane-width'
 import { cn } from '#lib/utils'
 
 export type DayViewMode = 'queue' | 'kanban'
 
 type MobileTab = 'calendar' | 'tasks'
 
+interface QueuePaneStyle extends CSSProperties {
+  '--queue-width': string
+}
+
 const MOBILE_TAB_OPTIONS = [
   { value: 'calendar', label: 'calendar' },
   { value: 'tasks', label: 'tasks' },
 ] as const
+const QUEUE_WIDTH_STORAGE_KEY = 'tq:day-view-queue-width'
 
 interface SelectedRange {
   start: Date
@@ -126,6 +146,24 @@ export function DayViewPresentation({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
   )
+  const {
+    width: queueWidth,
+    maxWidth: maxQueueWidth,
+    onValueChange: onQueueWidthChange,
+    onValueCommit: onQueueWidthCommit,
+  } = useResizableWidth({
+    storageKey: QUEUE_WIDTH_STORAGE_KEY,
+    defaultWidth: () =>
+      window.matchMedia('(min-width: 64rem)').matches
+        ? QUEUE_WIDE_DEFAULT_WIDTH
+        : QUEUE_DEFAULT_WIDTH,
+    minWidth: QUEUE_MIN_WIDTH,
+    maxWidth: QUEUE_MAX_WIDTH,
+    responsiveMaxWidth: getQueueMaxWidth,
+  })
+  const queuePaneStyle: QueuePaneStyle = {
+    '--queue-width': `${String(queueWidth)}px`,
+  }
 
   const openCreateModal = useCallback((range: SelectedRange | null) => {
     setPendingRange(range)
@@ -288,12 +326,13 @@ export function DayViewPresentation({
         <div
           ref={taskListRef}
           className={cn(
-            'flex w-full flex-col',
+            'relative flex w-full flex-col md:flex-none',
             viewMode === 'kanban'
               ? 'md:w-full'
-              : 'border-r border-border md:w-80 lg:w-96',
+              : 'border-r border-border md:w-(--queue-width)',
             mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
           )}
+          style={queuePaneStyle}
         >
           {viewMode === 'kanban' && kanbanFilterRow}
 
@@ -324,12 +363,22 @@ export function DayViewPresentation({
               onRemoveFromQueue={onRemoveFromQueue}
             />
           )}
+          {viewMode === 'queue' && (
+            <ResizablePaneSeparator
+              label="Resize queue pane"
+              value={queueWidth}
+              min={QUEUE_MIN_WIDTH}
+              max={maxQueueWidth}
+              onValueChange={onQueueWidthChange}
+              onValueCommit={onQueueWidthCommit}
+            />
+          )}
         </div>
 
         {/* Right panel: Calendar */}
         <div
           className={cn(
-            'flex-1',
+            'min-w-0 flex-1',
             mobileTab === 'tasks' ? 'hidden' : 'flex',
             viewMode === 'kanban' ? 'md:hidden' : 'md:flex',
           )}
