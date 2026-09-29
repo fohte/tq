@@ -13,8 +13,10 @@ import {
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
 import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
+import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useProjects } from '#hooks/use-projects'
+import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTaskList } from '#hooks/use-tasks'
@@ -22,6 +24,9 @@ import { navKeybindings } from '#lib/keybindings'
 import { cn } from '#lib/utils'
 
 const MAX_VISIBLE_VIEWS = 5
+const SIDEBAR_WIDTH_STORAGE_KEY = 'tq:sidebar-width'
+const MIN_SIDEBAR_WIDTH = 160
+const MAX_SIDEBAR_WIDTH = 400
 
 interface NavItem {
   to: string
@@ -256,8 +261,18 @@ export function SidebarContent() {
 }
 
 export function Sidebar() {
+  const [width, setWidth] = useResizableWidth({
+    storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
+    defaultWidth: 200,
+    minWidth: MIN_SIDEBAR_WIDTH,
+    maxWidth: MAX_SIDEBAR_WIDTH,
+  })
+
   return (
-    <aside className="sticky top-0 hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+    <aside
+      className="sticky top-0 hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex"
+      style={{ width }}
+    >
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
         <Link to="/" className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>
@@ -271,6 +286,13 @@ export function Sidebar() {
       </div>
 
       <SidebarContent />
+      <ResizablePaneSeparator
+        label="Resize sidebar"
+        value={width}
+        min={MIN_SIDEBAR_WIDTH}
+        max={MAX_SIDEBAR_WIDTH}
+        onValueChange={setWidth}
+      />
     </aside>
   )
 }
