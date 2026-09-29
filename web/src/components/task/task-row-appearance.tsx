@@ -30,10 +30,11 @@ export interface TaskRowAppearanceProps {
   sessions?: TaskAgentSession[]
   depth?: number
   selected?: boolean
-  leading?: React.ReactNode
   trailing?: React.ReactNode
   titleContent?: React.ReactNode
   belowMetadata?: React.ReactNode
+  metadataLeading?: React.ReactNode
+  showChildCompletionCount?: boolean
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
@@ -44,17 +45,18 @@ export interface TaskRowAppearanceProps {
 
 // Shared row body: status glyph + number/title line + a dot-separated
 // metadata line. Used as-is by flat lists (project open-tasks panel,
-// today's queue) and wrapped with caret/indent/dnd by TreeTaskGridRow for
-// the /tasks tree.
+// today's queue) and wrapped with indent/dnd by TreeTaskGridRow, which
+// injects its expand toggle at the start of the metadata line.
 export function TaskRowAppearance({
   task,
   sessions = [],
   depth = 0,
   selected = false,
-  leading,
   trailing,
   titleContent,
   belowMetadata,
+  metadataLeading,
+  showChildCompletionCount = true,
   onClick,
   draggable = false,
   secondLineExtras = [],
@@ -145,8 +147,6 @@ export function TaskRowAppearance({
         }
       >
         <div className="flex items-start gap-2" onClick={onClick}>
-          {leading}
-
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-baseline gap-2">
               {completedReason != null && CloseReasonGlyph != null && (
@@ -171,19 +171,21 @@ export function TaskRowAppearance({
               <span className={cn(rowTitleClassName(isCompleted), 'min-w-16')}>
                 {titleContent ?? task.title}
               </span>
-              {task.childCompletionCount.total > 0 && (
-                <span
-                  className="shrink-0 font-mono text-xs text-muted-foreground"
-                  data-testid="child-completion"
-                >
-                  {task.childCompletionCount.completed}/
-                  {task.childCompletionCount.total}
-                </span>
-              )}
+              {showChildCompletionCount &&
+                task.childCompletionCount.total > 0 && (
+                  <span
+                    className="shrink-0 font-mono text-xs text-muted-foreground"
+                    data-testid="child-completion"
+                  >
+                    {task.childCompletionCount.completed}/
+                    {task.childCompletionCount.total}
+                  </span>
+                )}
               <SessionIndicator sessions={sessions} />
             </div>
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {metadataLeading}
               <DotSeparatedList items={secondLineItems} />
             </div>
             {belowMetadata}

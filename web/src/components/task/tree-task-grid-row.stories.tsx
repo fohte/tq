@@ -282,7 +282,7 @@ export const WithActiveSessions: Story = {
 }
 
 export const WithCompletionCount: Story = {
-  name: 'a parent row summarizes progress across its children',
+  name: 'an expanded parent shows its child count at the start of metadata',
   args: {
     node: {
       ...baseTreeNode,
@@ -311,6 +311,31 @@ export const WithCompletionCount: Story = {
         },
       ],
       childCompletionCount: { completed: 2, total: 3 },
+    },
+  },
+}
+
+export const CollapsedWithCompletionCount: Story = {
+  name: 'a collapsed parent shows an expand chip before its metadata',
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Read a technical book',
+      childCompletionCount: { completed: 0, total: 3 },
+    },
+  },
+  render: ({ node }) => (
+    <StaticTreeTaskGridRow node={node} hasChildren isExpanded={() => false} />
+  ),
+}
+
+export const FilteredWithCompletionCount: Story = {
+  name: 'a filtered parent shows its child count without a toggle',
+  args: {
+    node: {
+      ...baseTreeNode,
+      title: 'Update the project plan',
+      childCompletionCount: { completed: 1, total: 3 },
     },
   },
 }
