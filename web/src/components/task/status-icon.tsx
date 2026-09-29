@@ -3,7 +3,7 @@ import { Check, Equal, X } from 'lucide-react'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 
-const CLOSE_REASON_GLYPH = {
+export const CLOSE_REASON_GLYPH = {
   completed: Check,
   not_planned: X,
   duplicate: Equal,

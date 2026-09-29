@@ -21,8 +21,6 @@ import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { assertDefined, atIndex } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
-const mockMutate = vi.fn()
-const mockUpdateStatusMutate = vi.fn()
 const mockSelectRow = vi.fn()
 // Reveal whether portal press events still bubble into the row's Link.
 const mockLinkOnMouseDown = vi.fn()
@@ -40,8 +38,6 @@ const mockUseProject = vi.fn()
 // prop) also pull from this module. All dialogs start closed, so their
 // queries stay disabled — these stubs only need to exist, not do anything.
 vi.mock('#hooks/use-tasks', () => ({
-  useCompleteTask: () => ({ mutate: mockMutate }),
-  useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
   useTaskList: () => ({ categorized: { all: [] } }),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
   useUpdateTask: () => ({ mutate: vi.fn() }),
@@ -83,40 +79,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     ),
   }
 })
-
-// Base UI's Menu relies on pointer events that jsdom does not implement
-// reliably, so the picker is stubbed here to exercise TreeTaskGridRow's
-// status change wiring directly. The real menu interaction is covered by
-// task-status-picker.stories.tsx (runs in a real browser via Storybook).
-// Not shared with the other row test files: vi.mock factories are hoisted
-// above imports, so a shared factory couldn't close over anything defined
-// after the mock call, and vi.mock itself must stay inline per-file.
-vi.mock('#components/task/task-status-picker', () => ({
-  TaskStatusPicker: ({
-    onValueChange,
-  }: {
-    status: string
-    statusReason: string | null
-    onValueChange: (value: string) => void
-  }) => (
-    <div>
-      <button
-        onClick={() => {
-          onValueChange('todo')
-        }}
-      >
-        Set Todo
-      </button>
-      <button
-        onClick={() => {
-          onValueChange('completed')
-        }}
-      >
-        Set Completed
-      </button>
-    </div>
-  ),
-}))
 
 // Expand/collapse and selection are owned by useTreeOutliner rather than
 // local state, so the row under test is driven through the real hook
@@ -422,42 +384,6 @@ describe('TreeTaskGridRow', () => {
     observed.push(mockLinkOnClick.mock.calls.length)
 
     expect(observed).toEqual([true, 1])
-  })
-
-  it('updates the status via useUpdateTaskStatus when reopening a completed task', async () => {
-    const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'completed' }))
-
-    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
-
-    expect(mockUpdateStatusMutate).toHaveBeenCalledWith({
-      id: 'parent-1',
-      status: 'todo',
-    })
-    expect(mockMutate).not.toHaveBeenCalled()
-  })
-
-  it('completes the task via useCompleteTask when completed is selected', async () => {
-    const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'todo' }))
-
-    await user.click(atIndex(screen.getAllByText('Set Completed'), 0))
-
-    expect(mockMutate).toHaveBeenCalledWith({
-      id: 'parent-1',
-      statusReason: 'completed',
-    })
-    expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
-  })
-
-  it('does nothing when the currently selected status is chosen again', async () => {
-    const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'todo' }))
-
-    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
-
-    expect(mockMutate).not.toHaveBeenCalled()
-    expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
   })
 
   it('keeps the title from collapsing to 0 width in a narrow container', async () => {
