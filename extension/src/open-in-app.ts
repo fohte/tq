@@ -42,41 +42,6 @@ function isEmptyTabUrl(url: string | undefined): boolean {
   )
 }
 
-function waitForTqHandoff(
-  tabId: number,
-  deepLink: string,
-): { promise: Promise<void>; cancel: () => void } {
-  type NavigationErrorListener = (
-    details: chrome.webNavigation.WebNavigationFramedErrorCallbackDetails,
-  ) => void
-
-  let listener: NavigationErrorListener | undefined
-
-  const cancel = () => {
-    if (listener === undefined) return
-    chrome.webNavigation.onErrorOccurred.removeListener(listener)
-    listener = undefined
-  }
-
-  const promise = new Promise<void>((resolvePromise) => {
-    listener = (details) => {
-      if (
-        details.tabId !== tabId ||
-        details.frameId !== 0 ||
-        details.url !== deepLink
-      ) {
-        return
-      }
-
-      cancel()
-      resolvePromise()
-    }
-    chrome.webNavigation.onErrorOccurred.addListener(listener)
-  })
-
-  return { promise, cancel }
-}
-
 export function openTqLinkInApp(
   details: chrome.webNavigation.WebNavigationBaseCallbackDetails,
 ): ResultAsync<void, Error> {
@@ -86,33 +51,20 @@ export function openTqLinkInApp(
   if (deepLink === undefined) return okAsync(undefined)
 
   return wrap(chrome.tabs.get(details.tabId)).andThen((tab) => {
-    const closeTabAfterHandoff = isEmptyTabUrl(tab.url)
+    const isEmptyTab = isEmptyTabUrl(tab.url)
     if (isTqUrl(tab.url)) return okAsync(undefined)
 
     const openerTabResult: ResultAsync<chrome.tabs.Tab | undefined, Error> =
-      closeTabAfterHandoff && tab.openerTabId !== undefined
+      isEmptyTab && tab.openerTabId !== undefined
         ? wrap<chrome.tabs.Tab | undefined>(chrome.tabs.get(tab.openerTabId))
         : okAsync<chrome.tabs.Tab | undefined>(undefined)
 
     return openerTabResult.andThen((openerTab) => {
       if (isTqUrl(openerTab?.url)) return okAsync(undefined)
 
-      const handoff = closeTabAfterHandoff
-        ? waitForTqHandoff(details.tabId, deepLink)
-        : undefined
-
-      return wrap(chrome.tabs.update(details.tabId, { url: deepLink }))
-        .andThen(() =>
-          handoff === undefined
-            ? okAsync(undefined)
-            : wrap(handoff.promise).andThen(() =>
-                wrap(chrome.tabs.remove(details.tabId)).map(() => undefined),
-              ),
-        )
-        .mapErr((error) => {
-          handoff?.cancel()
-          return error
-        })
+      return wrap(chrome.tabs.update(details.tabId, { url: deepLink })).map(
+        () => undefined,
+      )
     })
   })
 }
