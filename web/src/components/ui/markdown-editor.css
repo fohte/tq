@@ -50,8 +50,28 @@
   line-height: 1.4;
 }
 
-.milkdown-wrapper .milkdown .ProseMirror > :first-child {
+/* ProseMirror injects zero-height decoration divs (widget, virtual cursor) as
+   the real first child, so `:first-child` alone misses the first content block
+   and its top margin (e.g. h2's 1.5em) renders as blank space. */
+.milkdown-wrapper .milkdown .ProseMirror > :first-child,
+.milkdown-wrapper
+  .milkdown
+  .ProseMirror
+  > :is(.ProseMirror-widget, .prosemirror-virtual-cursor):first-child
+  + * {
   margin-top: 0;
+}
+
+/* @milkdown/plugin-trailing keeps an empty paragraph at the end of the doc so
+   the cursor can land below a final list/table. In view mode it only adds a
+   blank line. A doc that is just the empty paragraph (placeholder) is kept. */
+.milkdown-wrapper[data-view-mode='view']
+  .milkdown
+  .ProseMirror
+  > p:last-child:not(:only-of-type):has(
+    > .ProseMirror-trailingBreak:only-child
+  ) {
+  display: none;
 }
 
 .milkdown-wrapper .milkdown .ProseMirror h1 {

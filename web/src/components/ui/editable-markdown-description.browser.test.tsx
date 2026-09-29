@@ -9,7 +9,6 @@ function renderDescription(defaultValue: string | null) {
   return render(
     <EditableMarkdownDescription
       defaultValue={defaultValue}
-      surface="task"
       placeholder="Add description..."
       editButtonLabel="Edit description"
       onChange={() => {}}
@@ -27,7 +26,7 @@ function getEditorMode(container: HTMLElement) {
 }
 
 describe('EditableMarkdownDescription', () => {
-  it('opens a populated description from the pencil button', async () => {
+  it('opens a populated description from the edit button', async () => {
     const user = userEvent.setup()
     const { container } = renderDescription('A sample description.')
     await findEditorText('A sample description.')

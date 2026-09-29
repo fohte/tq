@@ -10,9 +10,10 @@ interface MarkdownEditorCommonProps {
   placeholder?: string
   /**
    * Default min-height: 'default' (400px) for a primary/full editing
-   * surface, 'compact' (120px) for a few-lines inline editor.
+   * surface, 'compact' (120px) for a few-lines inline editor, 'fit' for no
+   * minimum (read-only content sized to its text).
    */
-  size?: 'default' | 'compact'
+  size?: 'default' | 'compact' | 'fit'
 }
 
 // Milkdown copies Markdown link destinations directly to `href` without
@@ -87,7 +88,8 @@ export function MarkdownEditor({
       ref={wrapperRef}
       className={cn(
         'milkdown-wrapper',
-        size === 'compact' ? 'min-h-30' : 'min-h-100',
+        size === 'compact' && 'min-h-30',
+        size === 'default' && 'min-h-100',
       )}
       data-view-mode={isControlled ? mode : undefined}
       onClickCapture={

@@ -1,107 +1,71 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
+import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
-
-type DescriptionSurface = 'task' | 'project'
-
-type DescriptionStoryProps = {
-  surface: DescriptionSurface
-  defaultValue: string | null
-  initiallyEditing?: boolean
-}
-
-function DescriptionStory({
-  surface,
-  defaultValue,
-  initiallyEditing,
-}: DescriptionStoryProps) {
-  const isProject = surface === 'project'
-
-  return (
-    <div className="max-w-2xl">
-      {isProject && (
-        <div className="mb-1 text-xs text-muted-foreground">Description</div>
-      )}
-      <EditableMarkdownDescription
-        defaultValue={defaultValue}
-        surface={surface}
-        placeholder="Add description..."
-        editButtonLabel={`Edit ${surface} description`}
-        onChange={fn()}
-        onExitEditMode={fn()}
-        {...(initiallyEditing != null ? { initiallyEditing } : {})}
-      />
-    </div>
-  )
-}
 
 const meta = {
   title: 'Task and Project/EditableMarkdownDescription',
-  component: DescriptionStory,
+  component: EditableMarkdownDescription,
   parameters: {
     layout: 'padded',
   },
+  decorators: [
+    (Story) => (
+      <div className="max-w-2xl">
+        <Story />
+      </div>
+    ),
+  ],
   args: {
-    surface: 'task',
     defaultValue:
       '## Notes\n\nKeep the initial checklist short.\n\n- Review the draft\n- Share the result',
+    placeholder: 'Add description...',
+    editButtonLabel: 'Edit description',
+    onChange: fn(),
+    onExitEditMode: fn(),
   },
-} satisfies Meta<typeof DescriptionStory>
+} satisfies Meta<typeof EditableMarkdownDescription>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-const taskDescription =
-  '## Notes\n\nKeep the initial checklist short.\n\n- Review the draft\n- Share the result'
+const llmHeader = <LlmAuthorLabel author={{ kind: 'llm', agent: 'claude' }} />
+const projectHeader = (
+  <span className="text-xs text-muted-foreground">Description</span>
+)
 const projectDescription =
   '## Goal\n\nTrack a small project from planning to delivery.'
 
 export const TaskWithContent: Story = {
-  name: 'the task description stays in view mode with its pencil button',
-  args: {
-    surface: 'task',
-    defaultValue: taskDescription,
-  },
+  name: 'the task description shows the LLM author chip and an edit button above the box',
+  args: { header: llmHeader },
 }
 
 export const EmptyTask: Story = {
-  name: 'an empty task description shows its placeholder and pencil button',
-  args: {
-    surface: 'task',
-    defaultValue: null,
-  },
+  name: 'an empty task description shows its placeholder and an edit button',
+  args: { defaultValue: null },
 }
 
 export const EditingTask: Story = {
-  name: 'the task description is open in edit mode',
-  args: {
-    surface: 'task',
-    defaultValue: taskDescription,
-    initiallyEditing: true,
-  },
+  name: 'the task description is open in edit mode without the edit button',
+  args: { header: llmHeader, initiallyEditing: true },
 }
 
 export const ProjectWithContent: Story = {
-  name: 'the project description stays in view mode with its pencil button',
-  args: {
-    surface: 'project',
-    defaultValue: projectDescription,
-  },
+  name: 'the project description shows its label and an edit button above the box',
+  args: { header: projectHeader, defaultValue: projectDescription },
 }
 
 export const EmptyProject: Story = {
-  name: 'an empty project description shows its placeholder and pencil button',
-  args: {
-    surface: 'project',
-    defaultValue: null,
-  },
+  name: 'an empty project description shows its placeholder and an edit button',
+  args: { header: projectHeader, defaultValue: null },
 }
 
 export const EditingProject: Story = {
-  name: 'the project description is open in edit mode',
+  name: 'the project description is open in edit mode without the edit button',
   args: {
-    surface: 'project',
+    header: projectHeader,
     defaultValue: projectDescription,
     initiallyEditing: true,
   },

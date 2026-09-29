@@ -1,12 +1,12 @@
 import { Button } from '@fohte/ui/button'
 import { Pencil } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { cn } from '#lib/utils'
 
 export function EditableMarkdownDescription({
-  surface,
+  header,
   defaultValue,
   placeholder,
   editButtonLabel,
@@ -14,7 +14,7 @@ export function EditableMarkdownDescription({
   onExitEditMode,
   initiallyEditing = false,
 }: {
-  surface: 'task' | 'project'
+  header?: ReactNode
   defaultValue: string | null
   placeholder: string
   editButtonLabel: string
@@ -26,47 +26,50 @@ export function EditableMarkdownDescription({
   const isEmpty = defaultValue == null || defaultValue.trim() === ''
 
   return (
-    <div
-      className={cn(
-        'relative border border-border text-sm leading-relaxed',
-        surface === 'task'
-          ? 'p-4 focus-within:border-ring'
-          : 'px-1 pb-1 pt-3 focus-within:border-primary/50',
+    <div className="flex flex-col gap-1.5">
+      {(header != null || !isEditing) && (
+        <div className="flex items-center gap-2">
+          {header}
+          {!isEditing && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              aria-label={editButtonLabel}
+              className="ml-auto max-md:h-8 max-md:px-3"
+              onClick={() => {
+                setIsEditing(true)
+              }}
+            >
+              <Pencil className="size-3" />
+              edit
+            </Button>
+          )}
+        </div>
       )}
-      onClick={(event) => {
-        if (
-          !isEditing &&
-          isEmpty &&
-          event.target instanceof Element &&
-          event.target.closest('.milkdown-wrapper') != null
-        ) {
-          setIsEditing(true)
-        }
-      }}
-    >
-      {!isEditing && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={editButtonLabel}
-          onClick={() => {
+      <div
+        className="border border-border p-1 text-sm leading-relaxed focus-within:border-ring"
+        onClick={(event) => {
+          if (
+            !isEditing &&
+            isEmpty &&
+            event.target instanceof Element &&
+            event.target.closest('.milkdown-wrapper') != null
+          ) {
             setIsEditing(true)
-          }}
-          className="absolute -top-6 right-0 flex h-11 w-11 items-end justify-end p-1 opacity-100 transition-opacity hover:bg-transparent active:translate-y-0 md:top-0 md:h-5 md:w-7 md:opacity-40 md:hover:opacity-100 md:focus-visible:opacity-100"
-        >
-          <Pencil className="size-4" />
-        </Button>
-      )}
-      <MarkdownEditor
-        defaultValue={defaultValue ?? ''}
-        placeholder={placeholder}
-        onChange={onChange}
-        editing={isEditing}
-        onEditingChange={setIsEditing}
-        onExitEditMode={onExitEditMode}
-        size="compact"
-      />
+          }
+        }}
+      >
+        <MarkdownEditor
+          defaultValue={defaultValue ?? ''}
+          placeholder={placeholder}
+          onChange={onChange}
+          editing={isEditing}
+          onEditingChange={setIsEditing}
+          onExitEditMode={onExitEditMode}
+          size={isEditing || isEmpty ? 'compact' : 'fit'}
+        />
+      </div>
     </div>
   )
 }
