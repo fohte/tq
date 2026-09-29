@@ -1,7 +1,6 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@fohte/ui/button'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
@@ -88,24 +87,33 @@ export function TreeTaskGridRow({
     onAddSubtask(node)
   }
 
-  const expandToggle = hasChildren ? (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={handleExpand}
-      data-no-dnd=""
-      className="min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex size-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
-      aria-label={expanded ? 'Collapse' : 'Expand'}
-    >
-      {expanded ? (
-        <ChevronDown className="size-3.5" />
-      ) : (
-        <ChevronRight className="size-3.5" />
-      )}
-    </Button>
-  ) : (
-    <span className="w-5 shrink-0" />
-  )
+  const childCount = node.childCompletionCount
+  const childCountText = `${String(childCount.completed)}/${String(childCount.total)}`
+  const childCompletion =
+    childCount.total === 0 ? null : hasChildren ? (
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={handleExpand}
+        data-no-dnd=""
+        data-testid="child-completion"
+        className="h-10 min-h-10 min-w-10 shrink-0 rounded-sm border-0 bg-transparent px-1.5 py-0 font-mono text-xs font-normal text-muted-foreground shadow-none transition-none hover:bg-transparent hover:text-foreground active:translate-y-0"
+        aria-label={`${expanded ? 'Collapse' : 'Expand'} child tasks, ${childCountText} completed`}
+        aria-expanded={expanded}
+      >
+        <span className="pointer-events-none inline-flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+          <span>{childCountText}</span>
+        </span>
+      </Button>
+    ) : (
+      <span
+        className="inline-flex items-center rounded-sm border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
+        data-testid="child-completion"
+      >
+        {childCountText}
+      </span>
+    )
 
   return (
     <>
@@ -121,7 +129,8 @@ export function TreeTaskGridRow({
           sessions={sessions}
           depth={depth}
           selected={isSelected || isOver}
-          leading={expandToggle}
+          metadataLeading={childCompletion}
+          showChildCompletionCount={false}
           trailing={
             <TreeRowActionsMenu
               onAddSubtask={handleAddSubtask}
