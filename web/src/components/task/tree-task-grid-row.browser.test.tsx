@@ -24,10 +24,6 @@ import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 const mockMutate = vi.fn()
 const mockUpdateStatusMutate = vi.fn()
 const mockSelectRow = vi.fn()
-// Reveal whether portal press events still bubble into the row's Link.
-const mockLinkOnMouseDown = vi.fn()
-const mockLinkOnPointerDown = vi.fn()
-const mockLinkOnTouchStart = vi.fn()
 // Fires when a click bubbles up to the row's Link. A tag token's onClick
 // calls stopPropagation, so this spy lets tests confirm that click never
 // reaches the Link (i.e. no navigation), without relying on jsdom's <a> not
@@ -57,8 +53,8 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
-// Only Link is stubbed so its synthetic click and press events can be observed
-// without navigating. Router-building exports stay real for tag navigation.
+// Only Link is stubbed so its synthetic click can be observed without
+// navigating. Router-building exports stay real for tag navigation.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
@@ -69,9 +65,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     }: { children: React.ReactNode } & Record<string, unknown>) => (
       <a
         href={typeof props['to'] === 'string' ? props['to'] : '#'}
-        onMouseDown={mockLinkOnMouseDown}
-        onPointerDown={mockLinkOnPointerDown}
-        onTouchStart={mockLinkOnTouchStart}
         onClick={(event: React.MouseEvent) => {
           // Stop the real navigation a browser would follow on this href.
           event.preventDefault()

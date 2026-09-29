@@ -15,7 +15,7 @@ export function TreeRowActionsMenu({
   onMoveUnder: () => void
   onSetProject: () => void
   onDelete: () => void
-  defaultOpen?: 'desktop' | 'mobile' | undefined
+  defaultOpen?: 'desktop' | undefined
 }) {
   return (
     <ActionsMenu
