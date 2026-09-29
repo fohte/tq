@@ -35,13 +35,16 @@ const mockUseProject = vi.fn()
 
 // LinkExistingTaskMenu/MoveUnderTaskMenu/SetProjectMenu/DeleteTaskDialog
 // (rendered unconditionally by every row, controlled via their own `open`
-// prop) also pull from this module. All dialogs start closed, so their
-// queries stay disabled — these stubs only need to exist, not do anything.
+// prop) also pull from this module. task-row-shared imports
+// useHandleStatusChange for the task detail screen, so its hooks also need to
+// exist even though TaskRowAppearance no longer uses them.
 vi.mock('#hooks/use-tasks', () => ({
   useTaskList: () => ({ categorized: { all: [] } }),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
+  useCompleteTask: () => ({ mutate: vi.fn() }),
+  useUpdateTaskStatus: () => ({ mutate: vi.fn() }),
 }))
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
