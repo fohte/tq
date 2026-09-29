@@ -111,9 +111,6 @@ describe('content script', () => {
 
   it('inserts a sign-in chip when the lookup requires authentication', async () => {
     document.body.innerHTML = LABEL_ONLY
-    vi.stubGlobal('location', {
-      href: 'https://github.com/example/project/issues/42',
-    })
     const response = Promise.resolve({
       ok: false,
       reason: 'authentication-required' as const,

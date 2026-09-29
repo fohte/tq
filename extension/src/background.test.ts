@@ -97,11 +97,10 @@ describe('lookupTask', () => {
     )
 
     const result = await lookupTask(GITHUB_ISSUE_URL, fetchImpl)
-    const error = result._unsafeUnwrapErr()
+    const expectedError = new Error('tq lookup redirected to Cloudflare Access')
+    expectedError.name = 'AuthenticationRequiredError'
 
-    expect(`${error.name}: ${error.message}`).toBe(
-      'AuthenticationRequiredError: tq lookup redirected to Cloudflare Access',
-    )
+    expect(result._unsafeUnwrapErr()).toEqual(expectedError)
   })
 
   it('errs when the fetch itself rejects', async () => {
@@ -258,11 +257,7 @@ describe('onMessage listener', () => {
     const listener = await importAndCaptureListener()
     const sendResponse = vi.fn()
 
-    listener(
-      { type: 'lookup', url: 'https://github.com/fohte/tq/issues/42' },
-      {},
-      sendResponse,
-    )
+    listener({ type: 'lookup', url: GITHUB_ISSUE_URL }, {}, sendResponse)
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({ ok: false })
@@ -274,11 +269,7 @@ describe('onMessage listener', () => {
     const listener = await importAndCaptureListener()
     const sendResponse = vi.fn()
 
-    listener(
-      { type: 'lookup', url: 'https://github.com/fohte/tq/issues/42' },
-      {},
-      sendResponse,
-    )
+    listener({ type: 'lookup', url: GITHUB_ISSUE_URL }, {}, sendResponse)
 
     await vi.waitFor(() => {
       expect(sendResponse.mock.calls).toEqual([
