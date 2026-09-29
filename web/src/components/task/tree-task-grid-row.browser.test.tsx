@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -24,10 +24,6 @@ import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 const mockMutate = vi.fn()
 const mockUpdateStatusMutate = vi.fn()
 const mockSelectRow = vi.fn()
-// Reveal whether portal press events still bubble into the row's Link.
-const mockLinkOnMouseDown = vi.fn()
-const mockLinkOnPointerDown = vi.fn()
-const mockLinkOnTouchStart = vi.fn()
 // Fires when a click bubbles up to the row's Link. A tag token's onClick
 // calls stopPropagation, so this spy lets tests confirm that click never
 // reaches the Link (i.e. no navigation), without relying on jsdom's <a> not
@@ -57,8 +53,8 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
   }
 })
 
-// Only Link is stubbed so its synthetic click and press events can be observed
-// without navigating. Router-building exports stay real for tag navigation.
+// Only Link is stubbed so its synthetic click can be observed without
+// navigating. Router-building exports stay real for tag navigation.
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
@@ -69,9 +65,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     }: { children: React.ReactNode } & Record<string, unknown>) => (
       <a
         href={typeof props['to'] === 'string' ? props['to'] : '#'}
-        onMouseDown={mockLinkOnMouseDown}
-        onPointerDown={mockLinkOnPointerDown}
-        onTouchStart={mockLinkOnTouchStart}
         onClick={(event: React.MouseEvent) => {
           // Stop the real navigation a browser would follow on this href.
           event.preventDefault()
@@ -213,54 +206,21 @@ describe('TreeTaskGridRow', () => {
     expect(screen.getByText('Parent Task')).toBeInTheDocument()
   })
 
-  it('renders a row-actions trigger for the ⋯ menu', async () => {
-    await renderTree(makeNode())
-    // ActionsMenu itself renders one trigger per layout (desktop dropdown +
-    // mobile action sheet), and the row mounts TreeRowActionsMenu once.
-    expect(screen.getAllByLabelText('Task actions')).toHaveLength(2)
+  it('renders only the desktop row-actions trigger', async () => {
+    const { container } = await renderTree(makeNode())
+    expect(
+      [...container.querySelectorAll('[aria-label="Task actions"]')].map(
+        (trigger) => trigger.getAttribute('data-slot'),
+      ),
+    ).toEqual(['dropdown-menu-trigger'])
   })
 
-  it('closes the mobile action sheet without selecting the row when its backdrop is tapped', async () => {
+  it('does not render a mobile row-actions trigger', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
-    const user = userEvent.setup()
     const { container } = await renderTree(makeNode())
-    const trigger = assertDefined(
-      container.querySelector<HTMLElement>(
-        '[data-slot="action-sheet-trigger"]',
-      ),
-      'mobile action trigger not found',
-    )
-
-    await user.click(trigger)
-
-    const overlay = assertDefined(
-      document.querySelector<HTMLElement>('[data-slot="dialog-overlay"]'),
-      'action sheet backdrop not found',
-    )
-    fireEvent.touchStart(overlay)
-    await user.click(overlay)
-
-    function getInteractionResult() {
-      return [
-        ['actionSheetOpen', screen.queryByText('add subtask') != null],
-        ['rowSelectCalls', mockSelectRow.mock.calls.length],
-        ['linkClickCalls', mockLinkOnClick.mock.calls.length],
-        ['linkMouseDownCalls', mockLinkOnMouseDown.mock.calls.length],
-        ['linkPointerDownCalls', mockLinkOnPointerDown.mock.calls.length],
-        ['linkTouchStartCalls', mockLinkOnTouchStart.mock.calls.length],
-      ]
-    }
-
-    await waitFor(() => {
-      expect(getInteractionResult()).toEqual([
-        ['actionSheetOpen', false],
-        ['rowSelectCalls', 0],
-        ['linkClickCalls', 0],
-        ['linkMouseDownCalls', 0],
-        ['linkPointerDownCalls', 0],
-        ['linkTouchStartCalls', 0],
-      ])
-    })
+    expect(
+      container.querySelector('[data-slot="action-sheet-trigger"]'),
+    ).toEqual(null)
   })
 
   it('renders the task number', async () => {
