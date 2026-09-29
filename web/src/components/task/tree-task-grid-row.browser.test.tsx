@@ -387,8 +387,7 @@ describe('TreeTaskGridRow', () => {
   })
 
   it('keeps the title from collapsing to 0 width in a narrow container', async () => {
-    // The title `<span>` has a `min-w-16` (64px) floor, not `min-w-0` (see
-    // task-row-appearance.tsx).
+    // Keep a 64px minimum width so the title remains visible in a narrow row.
     await renderTree(
       makeNode({ title: 'Todo task (personal)' }),
       new Map(),
