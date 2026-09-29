@@ -21,12 +21,16 @@ import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTaskList } from '#hooks/use-tasks'
 import { navKeybindings } from '#lib/keybindings'
+import {
+  getSidebarMaxWidth,
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+} from '#lib/resizable-pane-width'
 import { cn } from '#lib/utils'
 
 const MAX_VISIBLE_VIEWS = 5
 const SIDEBAR_WIDTH_STORAGE_KEY = 'tq:sidebar-width'
-const MIN_SIDEBAR_WIDTH = 160
-const MAX_SIDEBAR_WIDTH = 400
 
 interface NavItem {
   to: string
@@ -261,16 +265,17 @@ export function SidebarContent() {
 }
 
 export function Sidebar() {
-  const [width, setWidth] = useResizableWidth({
+  const { width, maxWidth, onValueChange, onValueCommit } = useResizableWidth({
     storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
-    defaultWidth: 200,
-    minWidth: MIN_SIDEBAR_WIDTH,
-    maxWidth: MAX_SIDEBAR_WIDTH,
+    defaultWidth: SIDEBAR_DEFAULT_WIDTH,
+    minWidth: SIDEBAR_MIN_WIDTH,
+    maxWidth: SIDEBAR_MAX_WIDTH,
+    responsiveMaxWidth: getSidebarMaxWidth,
   })
 
   return (
     <aside
-      className="sticky top-0 hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex"
+      className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar md:flex"
       style={{ width }}
     >
       <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
@@ -289,9 +294,10 @@ export function Sidebar() {
       <ResizablePaneSeparator
         label="Resize sidebar"
         value={width}
-        min={MIN_SIDEBAR_WIDTH}
-        max={MAX_SIDEBAR_WIDTH}
-        onValueChange={setWidth}
+        min={SIDEBAR_MIN_WIDTH}
+        max={maxWidth}
+        onValueChange={onValueChange}
+        onValueCommit={onValueCommit}
       />
     </aside>
   )

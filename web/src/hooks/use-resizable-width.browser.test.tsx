@@ -21,7 +21,7 @@ describe('useResizableWidth', () => {
     )
 
     act(() => {
-      result.current[1](555)
+      result.current.onValueCommit(555)
     })
 
     const { result: reloaded } = renderHook(() =>
@@ -34,9 +34,9 @@ describe('useResizableWidth', () => {
     )
 
     const getWidthState = () => ({
-      width: result.current[0],
+      width: result.current.width,
       persistedWidth: localStorage.getItem(STORAGE_KEY),
-      reloadedWidth: reloaded.current[0],
+      reloadedWidth: reloaded.current.width,
     })
     expect(getWidthState()).toEqual({
       width: 500,
@@ -57,6 +57,59 @@ describe('useResizableWidth', () => {
       }),
     )
 
-    expect(result.current[0]).toEqual(240)
+    expect(result.current.width).toEqual(240)
+  })
+
+  it('falls back when the stored width is malformed', () => {
+    localStorage.setItem(STORAGE_KEY, 'not-a-width')
+
+    const { result } = renderHook(() =>
+      useResizableWidth({
+        storageKey: STORAGE_KEY,
+        defaultWidth: 320,
+        minWidth: 240,
+        maxWidth: 500,
+      }),
+    )
+
+    expect(result.current.width).toEqual(320)
+  })
+
+  it('resolves a function default width on first mount', () => {
+    const { result } = renderHook(() =>
+      useResizableWidth({
+        storageKey: STORAGE_KEY,
+        defaultWidth: () => 400,
+        minWidth: 240,
+        maxWidth: 500,
+      }),
+    )
+
+    expect(result.current.width).toEqual(400)
+  })
+
+  it('limits the displayed width without overwriting the saved preference', () => {
+    localStorage.setItem(STORAGE_KEY, '400')
+
+    const { result } = renderHook(() =>
+      useResizableWidth({
+        storageKey: STORAGE_KEY,
+        defaultWidth: 320,
+        minWidth: 240,
+        maxWidth: 500,
+        responsiveMaxWidth: () => 300,
+      }),
+    )
+
+    const getWidthState = () => ({
+      width: result.current.width,
+      maxWidth: result.current.maxWidth,
+      persistedWidth: localStorage.getItem(STORAGE_KEY),
+    })
+    expect(getWidthState()).toEqual({
+      width: 300,
+      maxWidth: 300,
+      persistedWidth: '400',
+    })
   })
 })

@@ -117,7 +117,7 @@ describe('Sidebar', () => {
   it('is hidden below the md breakpoint', async () => {
     await renderSidebar()
     expect(screen.getByRole('complementary').className).toBe(
-      'sticky top-0 hidden h-screen w-50 shrink-0 flex-col border-r border-border bg-sidebar md:flex',
+      'sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar md:flex',
     )
   })
 

@@ -1,11 +1,14 @@
 import { useRef } from 'react'
 
+import { clampPaneWidth } from '#lib/resizable-pane-width'
+
 interface ResizablePaneSeparatorProps {
   label: string
   value: number
   min: number
   max: number
   onValueChange: (value: number) => void
+  onValueCommit: (value: number) => void
 }
 
 export function ResizablePaneSeparator({
@@ -14,15 +17,20 @@ export function ResizablePaneSeparator({
   min,
   max,
   onValueChange,
+  onValueCommit,
 }: ResizablePaneSeparatorProps) {
   const drag = useRef<{
     pointerId: number
     startX: number
     startValue: number
+    lastValue: number
   } | null>(null)
 
-  const updateValue = (nextValue: number) => {
-    onValueChange(Math.min(max, Math.max(min, Math.round(nextValue))))
+  const updateValue = (nextValue: number, commit = false) => {
+    const next = clampPaneWidth(nextValue, min, max)
+    onValueChange(next)
+    if (commit) onValueCommit(next)
+    return next
   }
 
   return (
@@ -38,24 +46,27 @@ export function ResizablePaneSeparator({
         switch (event.key) {
           case 'ArrowLeft':
             event.preventDefault()
-            updateValue(value - step)
+            updateValue(value - step, true)
             break
           case 'ArrowRight':
             event.preventDefault()
-            updateValue(value + step)
+            updateValue(value + step, true)
             break
           case 'Home':
             event.preventDefault()
-            updateValue(min)
+            updateValue(min, true)
             break
           case 'End':
             event.preventDefault()
-            updateValue(max)
+            updateValue(max, true)
             break
         }
       }}
       onPointerCancel={(event) => {
-        if (drag.current?.pointerId === event.pointerId) drag.current = null
+        const currentDrag = drag.current
+        if (currentDrag?.pointerId !== event.pointerId) return
+        onValueCommit(currentDrag.lastValue)
+        drag.current = null
       }}
       onPointerDown={(event) => {
         if (event.button !== 0) return
@@ -64,16 +75,25 @@ export function ResizablePaneSeparator({
           pointerId: event.pointerId,
           startX: event.clientX,
           startValue: value,
+          lastValue: value,
         }
         event.currentTarget.setPointerCapture(event.pointerId)
       }}
       onPointerMove={(event) => {
         const currentDrag = drag.current
         if (currentDrag?.pointerId !== event.pointerId) return
-        updateValue(currentDrag.startValue + event.clientX - currentDrag.startX)
+        currentDrag.lastValue = updateValue(
+          currentDrag.startValue + event.clientX - currentDrag.startX,
+        )
       }}
       onPointerUp={(event) => {
-        if (drag.current?.pointerId === event.pointerId) drag.current = null
+        const currentDrag = drag.current
+        if (currentDrag?.pointerId !== event.pointerId) return
+        updateValue(
+          currentDrag.startValue + event.clientX - currentDrag.startX,
+          true,
+        )
+        drag.current = null
       }}
       role="separator"
       tabIndex={0}

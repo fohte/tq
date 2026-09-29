@@ -7,8 +7,10 @@ import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 
 function ResizablePaneFixture({
   initialWidth = 300,
+  onValueCommit = () => {},
 }: {
   initialWidth?: number
+  onValueCommit?: (value: number) => void
 }) {
   const [width, setWidth] = useState(initialWidth)
 
@@ -20,6 +22,7 @@ function ResizablePaneFixture({
         min={240}
         max={500}
         onValueChange={setWidth}
+        onValueCommit={onValueCommit}
       />
     </div>
   )
@@ -35,7 +38,8 @@ describe('ResizablePaneSeparator', () => {
       () => {},
     )
 
-    render(<ResizablePaneFixture />)
+    const onValueCommit = vi.fn()
+    render(<ResizablePaneFixture onValueCommit={onValueCommit} />)
     const separator = screen.getByRole('separator', { name: 'Resize pane' })
     fireEvent.pointerDown(separator, {
       button: 0,
@@ -43,9 +47,19 @@ describe('ResizablePaneSeparator', () => {
       pointerId: 1,
     })
     fireEvent.pointerMove(separator, { clientX: 145, pointerId: 1 })
-    fireEvent.pointerUp(separator, { pointerId: 1 })
+    fireEvent.pointerUp(separator, {
+      clientX: 145,
+      pointerId: 1,
+    })
 
-    expect(separator.getAttribute('aria-valuenow')).toEqual('345')
+    const getResult = () => ({
+      value: separator.getAttribute('aria-valuenow'),
+      commits: onValueCommit.mock.calls,
+    })
+    expect(getResult()).toEqual({
+      value: '345',
+      commits: [[345]],
+    })
   })
 
   it('changes the pane width with the arrow keys', async () => {
@@ -68,5 +82,35 @@ describe('ResizablePaneSeparator', () => {
     await user.keyboard('{Home}')
 
     expect(separator.getAttribute('aria-valuenow')).toEqual('240')
+  })
+
+  it('moves to the maximum width with the End key', async () => {
+    const user = userEvent.setup()
+    render(<ResizablePaneFixture />)
+    const separator = screen.getByRole('separator', { name: 'Resize pane' })
+    separator.focus()
+
+    await user.keyboard('{End}')
+
+    expect(separator.getAttribute('aria-valuenow')).toEqual('500')
+  })
+
+  it('uses a larger step with Shift and commits keyboard changes', async () => {
+    const user = userEvent.setup()
+    const onValueCommit = vi.fn()
+    render(<ResizablePaneFixture onValueCommit={onValueCommit} />)
+    const separator = screen.getByRole('separator', { name: 'Resize pane' })
+    separator.focus()
+
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}')
+
+    const getResult = () => ({
+      value: separator.getAttribute('aria-valuenow'),
+      commits: onValueCommit.mock.calls,
+    })
+    expect(getResult()).toEqual({
+      value: '350',
+      commits: [[350]],
+    })
   })
 })

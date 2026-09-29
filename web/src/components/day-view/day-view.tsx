@@ -36,6 +36,13 @@ import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import type { QueueCandidate } from '#lib/queue-candidates'
+import {
+  getQueueMaxWidth,
+  QUEUE_DEFAULT_WIDTH,
+  QUEUE_MAX_WIDTH,
+  QUEUE_MIN_WIDTH,
+  QUEUE_WIDE_DEFAULT_WIDTH,
+} from '#lib/resizable-pane-width'
 import { cn } from '#lib/utils'
 
 export type DayViewMode = 'queue' | 'kanban'
@@ -51,8 +58,6 @@ const MOBILE_TAB_OPTIONS = [
   { value: 'tasks', label: 'tasks' },
 ] as const
 const QUEUE_WIDTH_STORAGE_KEY = 'tq:day-view-queue-width'
-const MIN_QUEUE_WIDTH = 240
-const MAX_QUEUE_WIDTH = 640
 
 interface SelectedRange {
   start: Date
@@ -141,12 +146,20 @@ export function DayViewPresentation({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
   )
-  const [queueWidth, setQueueWidth] = useResizableWidth({
+  const {
+    width: queueWidth,
+    maxWidth: maxQueueWidth,
+    onValueChange: onQueueWidthChange,
+    onValueCommit: onQueueWidthCommit,
+  } = useResizableWidth({
     storageKey: QUEUE_WIDTH_STORAGE_KEY,
     defaultWidth: () =>
-      window.matchMedia('(min-width: 64rem)').matches ? 384 : 320,
-    minWidth: MIN_QUEUE_WIDTH,
-    maxWidth: MAX_QUEUE_WIDTH,
+      window.matchMedia('(min-width: 64rem)').matches
+        ? QUEUE_WIDE_DEFAULT_WIDTH
+        : QUEUE_DEFAULT_WIDTH,
+    minWidth: QUEUE_MIN_WIDTH,
+    maxWidth: QUEUE_MAX_WIDTH,
+    responsiveMaxWidth: getQueueMaxWidth,
   })
   const queuePaneStyle: QueuePaneStyle = {
     '--queue-width': `${String(queueWidth)}px`,
@@ -354,9 +367,10 @@ export function DayViewPresentation({
             <ResizablePaneSeparator
               label="Resize queue pane"
               value={queueWidth}
-              min={MIN_QUEUE_WIDTH}
-              max={MAX_QUEUE_WIDTH}
-              onValueChange={setQueueWidth}
+              min={QUEUE_MIN_WIDTH}
+              max={maxQueueWidth}
+              onValueChange={onQueueWidthChange}
+              onValueCommit={onQueueWidthCommit}
             />
           )}
         </div>
@@ -364,7 +378,7 @@ export function DayViewPresentation({
         {/* Right panel: Calendar */}
         <div
           className={cn(
-            'flex-1',
+            'min-w-0 flex-1',
             mobileTab === 'tasks' ? 'hidden' : 'flex',
             viewMode === 'kanban' ? 'md:hidden' : 'md:flex',
           )}

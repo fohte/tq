@@ -19,6 +19,7 @@ export const BetweenPanes: Story = {
     min: 160,
     max: 400,
     onValueChange: () => {},
+    onValueCommit: () => {},
   },
   render: (args) => (
     <div className="flex h-64 w-full overflow-hidden rounded border border-border text-sm">
