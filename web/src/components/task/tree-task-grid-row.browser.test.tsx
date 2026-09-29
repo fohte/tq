@@ -6,7 +6,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -342,15 +348,19 @@ describe('TreeTaskGridRow', () => {
 
   it('does not render tag tokens when there are no labels', async () => {
     await renderTree(makeNode({ labels: [] }))
-    // Tag tokens render as buttons; the task number label (a <span>) also
-    // starts with "#", so scope the query to buttons to avoid a false match.
-    expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
+    const link = screen.getByRole('link')
+    // The draggable row's accessible name also starts with "#".
+    expect(
+      within(link).queryByRole('button', { name: /^#/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders a token per label', async () => {
     await renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
     expect(
-      screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
+      within(screen.getByRole('link'))
+        .getAllByRole('button', { name: /^#/ })
+        .map((el) => el.textContent),
     ).toEqual(['#dev:tq', '#chore'])
   })
 
