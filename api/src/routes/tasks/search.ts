@@ -56,6 +56,7 @@ export const tasksSearchApp = new Hono()
         number: r.task.number,
         title: r.task.title,
         status: r.task.status,
+        statusReason: r.task.statusReason,
       })),
       200,
     )

@@ -8,6 +8,7 @@ export function makeMentionSuggestion(
     number: 12,
     title: 'Deploy to production',
     status: 'todo',
+    statusReason: null,
     ...overrides,
   }
 }

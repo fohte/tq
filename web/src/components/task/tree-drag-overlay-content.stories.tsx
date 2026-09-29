@@ -56,3 +56,17 @@ export const SiblingTarget: Story = {
     target: { node: targetNode, depth: 0, mode: 'sibling' },
   },
 }
+
+export const ClosedTask: Story = {
+  name: 'the dragged task shows its close reason glyph',
+  args: {
+    node: makeNode({
+      id: 'dragged-closed',
+      number: 35,
+      title: 'Example duplicate task',
+      status: 'completed',
+      statusReason: 'duplicate',
+    }),
+    target: null,
+  },
+}

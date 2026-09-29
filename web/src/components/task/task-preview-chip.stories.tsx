@@ -62,7 +62,12 @@ export const Completed: Story = {
   name: 'the chip represents a completed task reference',
   args: {
     raw: `#${String(baseTask.number)}`,
-    task: { ...baseTask, status: 'completed', title: 'Set up CI pipeline' },
+    task: {
+      ...baseTask,
+      status: 'completed',
+      statusReason: 'completed',
+      title: 'Set up CI pipeline',
+    },
   },
 }
 

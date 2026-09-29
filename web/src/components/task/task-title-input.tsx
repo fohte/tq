@@ -195,9 +195,9 @@ export function TaskTitleInput({
               >
                 <TaskMentionSummary
                   status={item.status}
+                  statusReason={item.statusReason ?? null}
                   number={item.number}
                   title={item.title}
-                  ignoreAncestorSvgSizing
                 />
               </Button>
             ))

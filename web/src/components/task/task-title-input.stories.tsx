@@ -24,7 +24,13 @@ labelsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
 
 const parentSuggestions: MentionSuggestion[] = [
   makeMentionSuggestion(),
-  makeMentionSuggestion({ id: '2', number: 34, title: 'Fix login bug' }),
+  makeMentionSuggestion({
+    id: '2',
+    number: 34,
+    title: 'Fix login bug',
+    status: 'completed',
+    statusReason: 'not_planned',
+  }),
 ]
 
 // Seeds useTaskMentionSuggestions's cache directly (rather than relying on

@@ -12,6 +12,7 @@ const sampleItems = [
     number: 123,
     title: 'Deprecate old API',
     status: 'completed',
+    statusReason: 'duplicate',
   }),
 ]
 
