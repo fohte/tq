@@ -9,6 +9,7 @@ import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
+import { Chip } from '#components/ui/chip'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 
@@ -89,6 +90,7 @@ export function TreeTaskGridRow({
 
   const childCount = node.childCompletionCount
   const childCountText = `${String(childCount.completed)}/${String(childCount.total)}`
+  const childCountDescriptionId = `child-count-description-${node.id}`
   const childCompletion =
     childCount.total === 0 ? null : hasChildren ? (
       <Button
@@ -97,22 +99,23 @@ export function TreeTaskGridRow({
         onClick={handleExpand}
         data-no-dnd=""
         data-testid="child-completion"
-        className="h-10 min-h-10 min-w-10 shrink-0 rounded-sm border-0 bg-transparent px-1.5 py-0 font-mono text-xs font-normal text-muted-foreground shadow-none transition-none hover:bg-transparent hover:text-foreground active:translate-y-0"
-        aria-label={`${expanded ? 'Collapse' : 'Expand'} child tasks, ${childCountText} completed`}
+        className="h-10 min-h-10 min-w-10 shrink-0 rounded-sm border-0 bg-transparent px-1.5 py-0 font-normal text-muted-foreground shadow-none transition-none hover:bg-transparent active:translate-y-0"
+        aria-label={expanded ? 'Collapse' : 'Expand'}
+        aria-describedby={childCountDescriptionId}
         aria-expanded={expanded}
       >
-        <span className="pointer-events-none inline-flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+        <Chip size="md" className="pointer-events-none text-xs">
           <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
-          <span>{childCountText}</span>
+          {childCountText}
+        </Chip>
+        <span id={childCountDescriptionId} className="sr-only">
+          {childCount.completed} of {childCount.total} child tasks completed
         </span>
       </Button>
     ) : (
-      <span
-        className="inline-flex items-center rounded-sm border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
-        data-testid="child-completion"
-      >
+      <Chip size="md" className="text-xs" data-testid="child-completion">
         {childCountText}
-      </span>
+      </Chip>
     )
 
   return (

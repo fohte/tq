@@ -45,8 +45,8 @@ export interface TaskRowAppearanceProps {
 
 // Shared row body: status glyph + number/title line + a dot-separated
 // metadata line. Used as-is by flat lists (project open-tasks panel,
-// today's queue) and wrapped with caret/indent/dnd by TreeTaskGridRow for
-// the /tasks tree.
+// today's queue) and wrapped with indent/dnd by TreeTaskGridRow, which
+// injects its expand toggle at the start of the metadata line.
 export function TaskRowAppearance({
   task,
   sessions = [],
