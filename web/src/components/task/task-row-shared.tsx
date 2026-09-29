@@ -307,7 +307,7 @@ export function rowWrapperClassName(isCompleted: boolean) {
 
 export function rowTitleClassName(isCompleted: boolean) {
   return cn(
-    'truncate text-sm font-normal',
+    'whitespace-normal break-words text-sm font-normal',
     isCompleted && 'text-muted-foreground line-through',
   )
 }

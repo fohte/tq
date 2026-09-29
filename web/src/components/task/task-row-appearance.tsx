@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
+import { CLOSE_REASON_GLYPH } from '#components/task/status-icon'
 import {
   BlockedByLabel,
   CloseReasonLabel,
@@ -18,9 +19,7 @@ import {
   TaskContextLabel,
   TaskNumberLabel,
   TaskProjectLabel,
-  useHandleStatusChange,
 } from '#components/task/task-row-shared'
-import { TaskStatusPicker } from '#components/task/task-status-picker'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task } from '#hooks/use-tasks'
@@ -43,7 +42,7 @@ export interface TaskRowAppearanceProps {
   secondLineExtras?: React.ReactNode[]
 }
 
-// Shared row body: status picker + number/title line + a dot-separated
+// Shared row body: status glyph + number/title line + a dot-separated
 // metadata line. Used as-is by flat lists (project open-tasks panel,
 // today's queue) and wrapped with caret/indent/dnd by TreeTaskGridRow for
 // the /tasks tree.
@@ -60,17 +59,15 @@ export function TaskRowAppearance({
   draggable = false,
   secondLineExtras = [],
 }: TaskRowAppearanceProps) {
-  const { handleValueChange, duplicatePicker } = useHandleStatusChange(
-    task.id,
-    task.status,
-    task.statusReason,
-  )
   const isCompleted = task.status === 'completed'
+  const completedReason = isCompleted
+    ? (task.statusReason ?? 'completed')
+    : null
+  const CloseReasonGlyph =
+    completedReason != null ? CLOSE_REASON_GLYPH[completedReason] : null
   const closeReason =
-    isCompleted &&
-    task.statusReason != null &&
-    task.statusReason !== 'completed'
-      ? task.statusReason
+    completedReason != null && completedReason !== 'completed'
+      ? completedReason
       : null
 
   const secondLineItems: React.ReactNode[] = [
@@ -117,86 +114,86 @@ export function TaskRowAppearance({
   ]
 
   return (
-    <>
-      <Link
-        to="/tasks/$taskId"
-        params={{ taskId: task.id }}
-        className={cn(
-          'block',
-          draggable && 'cursor-grab active:cursor-grabbing',
-        )}
-        {...(draggable
-          ? {
-              'data-task-id': task.id,
-              'data-task-title': task.title,
-              ...(task.estimatedMinutes != null
-                ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
-                : {}),
-            }
-          : {})}
-      >
-        <div
-          className={cn(
-            'group',
-            rowWrapperClassName(isCompleted),
-            // Must come after rowWrapperClassName: twMerge keeps
-            // both px-* and a later pl-* (CSS cascade lets pl-* win),
-            // but drops pl-* if it precedes the conflicting px-*.
-            ROW_INDENT_CLASS_NAME,
-            selected && 'ring-1 ring-inset ring-border-strong',
-          )}
-          style={
-            {
-              '--row-indent': rowIndentValue(depth),
-            } as React.CSSProperties & { '--row-indent': string }
+    <Link
+      to="/tasks/$taskId"
+      params={{ taskId: task.id }}
+      className={cn('block', draggable && 'cursor-grab active:cursor-grabbing')}
+      {...(draggable
+        ? {
+            'data-task-id': task.id,
+            'data-task-title': task.title,
+            ...(task.estimatedMinutes != null
+              ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
+              : {}),
           }
-        >
-          <div className="flex items-start gap-2" onClick={onClick}>
-            {leading}
-            <TaskStatusPicker
-              status={task.status}
-              statusReason={task.statusReason}
-              onValueChange={handleValueChange}
-            />
+        : {})}
+    >
+      <div
+        className={cn(
+          'group',
+          rowWrapperClassName(isCompleted),
+          // Must come after rowWrapperClassName: twMerge keeps
+          // both px-* and a later pl-* (CSS cascade lets pl-* win),
+          // but drops pl-* if it precedes the conflicting px-*.
+          ROW_INDENT_CLASS_NAME,
+          selected && 'ring-1 ring-inset ring-border-strong',
+        )}
+        style={
+          {
+            '--row-indent': rowIndentValue(depth),
+          } as React.CSSProperties & { '--row-indent': string }
+        }
+      >
+        <div className="flex items-start gap-2" onClick={onClick}>
+          {leading}
 
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <TaskNumberLabel number={task.number} />
-                {/* min-w-16 (64px): without a floor, this flex item's
-                default min-width would shrink to 0 once its siblings
-                need more room than the row has, hiding the title
-                entirely instead of truncating it or letting the row
-                overflow. */}
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-baseline gap-2">
+              {completedReason != null && CloseReasonGlyph != null && (
                 <span
-                  className={cn(rowTitleClassName(isCompleted), 'min-w-16')}
+                  role="img"
+                  aria-label={
+                    completedReason === 'not_planned'
+                      ? 'not planned'
+                      : completedReason
+                  }
+                  className={cn(
+                    'flex size-3 shrink-0 items-center justify-center',
+                    completedReason === 'completed'
+                      ? 'text-status-completed'
+                      : 'text-muted-foreground',
+                  )}
                 >
-                  {titleContent ?? task.title}
+                  <CloseReasonGlyph className="size-3" aria-hidden="true" />
                 </span>
-                {task.childCompletionCount.total > 0 && (
-                  <span
-                    className="shrink-0 font-mono text-xs text-muted-foreground"
-                    data-testid="child-completion"
-                  >
-                    {task.childCompletionCount.completed}/
-                    {task.childCompletionCount.total}
-                  </span>
-                )}
-                <SessionIndicator sessions={sessions} />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <DotSeparatedList items={secondLineItems} />
-              </div>
-              {belowMetadata}
+              )}
+              <TaskNumberLabel number={task.number} />
+              <span className={cn(rowTitleClassName(isCompleted), 'min-w-16')}>
+                {titleContent ?? task.title}
+              </span>
+              {task.childCompletionCount.total > 0 && (
+                <span
+                  className="shrink-0 font-mono text-xs text-muted-foreground"
+                  data-testid="child-completion"
+                >
+                  {task.childCompletionCount.completed}/
+                  {task.childCompletionCount.total}
+                </span>
+              )}
+              <SessionIndicator sessions={sessions} />
             </div>
 
-            {trailing != null && (
-              <div className="shrink-0 self-center">{trailing}</div>
-            )}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <DotSeparatedList items={secondLineItems} />
+            </div>
+            {belowMetadata}
           </div>
+
+          {trailing != null && (
+            <div className="shrink-0 self-center">{trailing}</div>
+          )}
         </div>
-      </Link>
-      {duplicatePicker}
-    </>
+      </div>
+    </Link>
   )
 }

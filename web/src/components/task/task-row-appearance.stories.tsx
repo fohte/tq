@@ -40,6 +40,16 @@ function TaskRowAppearanceWithProviders({ task }: { task: Task }) {
   )
 }
 
+function TaskRowAppearanceNarrow({ task }: { task: Task }) {
+  return (
+    <Providers>
+      <div className="w-full max-w-48">
+        <TaskRowAppearance task={task} />
+      </div>
+    </Providers>
+  )
+}
+
 function TaskRowAppearanceSearchMatch({ task }: { task: Task }) {
   return (
     <Providers>
@@ -95,6 +105,17 @@ export const SearchMatch: Story = {
     task: { ...baseTask, title: 'Review the deployment notes' },
   },
   render: ({ task }) => <TaskRowAppearanceSearchMatch task={task} />,
+}
+
+export const WrappedTitle: Story = {
+  name: 'the row wraps the full title at a narrow width',
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Review the scheduler configuration before deployment',
+    },
+  },
+  render: ({ task }) => <TaskRowAppearanceNarrow task={task} />,
 }
 
 export const Completed: Story = {

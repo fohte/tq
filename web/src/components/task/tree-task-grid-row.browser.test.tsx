@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -21,8 +21,6 @@ import { useTreeOutliner } from '#hooks/use-tree-outliner'
 import { assertDefined, atIndex } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
-const mockMutate = vi.fn()
-const mockUpdateStatusMutate = vi.fn()
 const mockSelectRow = vi.fn()
 // Fires when a click bubbles up to the row's Link. A tag token's onClick
 // calls stopPropagation, so this spy lets tests confirm that click never
@@ -31,17 +29,15 @@ const mockSelectRow = vi.fn()
 const mockLinkOnClick = vi.fn()
 const mockUseProject = vi.fn()
 
-// LinkExistingTaskMenu/MoveUnderTaskMenu/SetProjectMenu/DeleteTaskDialog
-// (rendered unconditionally by every row, controlled via their own `open`
-// prop) also pull from this module. All dialogs start closed, so their
-// queries stay disabled — these stubs only need to exist, not do anything.
+// Row subcomponents and task-row-shared import these hooks, so their exports
+// must exist in this mock.
 vi.mock('#hooks/use-tasks', () => ({
-  useCompleteTask: () => ({ mutate: mockMutate }),
-  useUpdateTaskStatus: () => ({ mutate: mockUpdateStatusMutate }),
   useTaskList: () => ({ categorized: { all: [] } }),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
+  useCompleteTask: () => ({ mutate: vi.fn() }),
+  useUpdateTaskStatus: () => ({ mutate: vi.fn() }),
 }))
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
@@ -76,40 +72,6 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     ),
   }
 })
-
-// Base UI's Menu relies on pointer events that jsdom does not implement
-// reliably, so the picker is stubbed here to exercise TreeTaskGridRow's
-// status change wiring directly. The real menu interaction is covered by
-// task-status-picker.stories.tsx (runs in a real browser via Storybook).
-// Not shared with the other row test files: vi.mock factories are hoisted
-// above imports, so a shared factory couldn't close over anything defined
-// after the mock call, and vi.mock itself must stay inline per-file.
-vi.mock('#components/task/task-status-picker', () => ({
-  TaskStatusPicker: ({
-    onValueChange,
-  }: {
-    status: string
-    statusReason: string | null
-    onValueChange: (value: string) => void
-  }) => (
-    <div>
-      <button
-        onClick={() => {
-          onValueChange('todo')
-        }}
-      >
-        Set Todo
-      </button>
-      <button
-        onClick={() => {
-          onValueChange('completed')
-        }}
-      >
-        Set Completed
-      </button>
-    </div>
-  ),
-}))
 
 // Expand/collapse and selection are owned by useTreeOutliner rather than
 // local state, so the row under test is driven through the real hook
@@ -340,15 +302,19 @@ describe('TreeTaskGridRow', () => {
 
   it('does not render tag tokens when there are no labels', async () => {
     await renderTree(makeNode({ labels: [] }))
-    // Tag tokens render as buttons; the task number label (a <span>) also
-    // starts with "#", so scope the query to buttons to avoid a false match.
-    expect(screen.queryByRole('button', { name: /^#/ })).not.toBeInTheDocument()
+    const link = screen.getByRole('link')
+    // The draggable row's accessible name also starts with "#".
+    expect(
+      within(link).queryByRole('button', { name: /^#/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders a token per label', async () => {
     await renderTree(makeNode({ labels: ['dev:tq', 'chore'] }))
     expect(
-      screen.getAllByRole('button', { name: /^#/ }).map((el) => el.textContent),
+      within(screen.getByRole('link'))
+        .getAllByRole('button', { name: /^#/ })
+        .map((el) => el.textContent),
     ).toEqual(['#dev:tq', '#chore'])
   })
 
@@ -384,45 +350,8 @@ describe('TreeTaskGridRow', () => {
     expect(observed).toEqual([true, 1])
   })
 
-  it('updates the status via useUpdateTaskStatus when reopening a completed task', async () => {
-    const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'completed' }))
-
-    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
-
-    expect(mockUpdateStatusMutate).toHaveBeenCalledWith({
-      id: 'parent-1',
-      status: 'todo',
-    })
-    expect(mockMutate).not.toHaveBeenCalled()
-  })
-
-  it('completes the task via useCompleteTask when completed is selected', async () => {
-    const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'todo' }))
-
-    await user.click(atIndex(screen.getAllByText('Set Completed'), 0))
-
-    expect(mockMutate).toHaveBeenCalledWith({
-      id: 'parent-1',
-      statusReason: 'completed',
-    })
-    expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
-  })
-
-  it('does nothing when the currently selected status is chosen again', async () => {
-    const user = userEvent.setup()
-    await renderTree(makeNode({ status: 'todo' }))
-
-    await user.click(atIndex(screen.getAllByText('Set Todo'), 0))
-
-    expect(mockMutate).not.toHaveBeenCalled()
-    expect(mockUpdateStatusMutate).not.toHaveBeenCalled()
-  })
-
   it('keeps the title from collapsing to 0 width in a narrow container', async () => {
-    // The title `<span>` has a `min-w-16` (64px) floor, not `min-w-0` (see
-    // task-row-appearance.tsx).
+    // Keep a 64px minimum width so the title remains visible in a narrow row.
     await renderTree(
       makeNode({ title: 'Todo task (personal)' }),
       new Map(),
