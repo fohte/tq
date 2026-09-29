@@ -1,6 +1,6 @@
 import { okAsync, ResultAsync } from 'neverthrow'
 
-import { TQ_ORIGIN } from '#config'
+import { TQ_OPEN_IN_BROWSER_QUERY, TQ_ORIGIN } from '#config'
 
 function wrap<T>(promise: Promise<T>): ResultAsync<T, Error> {
   return ResultAsync.fromPromise(
@@ -25,8 +25,18 @@ function isTqUrl(url: string | undefined): url is string {
   )
 }
 
+function shouldKeepTqUrlInBrowser(url: string): boolean {
+  const tqUrl = new URL(url)
+
+  return (
+    tqUrl.pathname === '/cdn-cgi' ||
+    tqUrl.pathname.startsWith('/cdn-cgi/') ||
+    tqUrl.searchParams.has(TQ_OPEN_IN_BROWSER_QUERY)
+  )
+}
+
 function toTqDeepLink(url: string): string | undefined {
-  if (!isTqUrl(url)) return undefined
+  if (!isTqUrl(url) || shouldKeepTqUrlInBrowser(url)) return undefined
   return url.replace(/^https?:/, 'tq:')
 }
 

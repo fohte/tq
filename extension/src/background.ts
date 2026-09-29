@@ -18,8 +18,12 @@ export interface CreateMessage {
   url: string
 }
 
-export type LookupResult = { ok: true; task: LinkedTask | null } | { ok: false }
+export type LookupResult =
+  | { ok: true; task: LinkedTask | null }
+  | { ok: false; reason?: 'authentication-required' }
 export type CreateResult = { ok: true; task: LinkedTask } | { ok: false }
+
+class AuthenticationRequiredError extends Error {}
 
 function hasTypeAndUrl<T extends string>(
   message: unknown,
@@ -57,13 +61,19 @@ export function lookupTask(
     fetchImpl(`${TQ_ORIGIN}/api/github/link?url=${encodeURIComponent(url)}`, {
       credentials: 'include',
     }),
-    (cause) => new Error('tq lookup request failed', { cause }),
+    // Access's cross-origin login redirect surfaces as a fetch rejection.
+    (cause) =>
+      new AuthenticationRequiredError('tq lookup request failed', { cause }),
   )
     .andThen((res) =>
       res.ok
         ? okAsync(res)
         : errAsync(
-            new Error(`tq lookup returned status ${String(res.status)}`),
+            res.status === 401 || res.status === 403
+              ? new AuthenticationRequiredError(
+                  `tq lookup returned status ${String(res.status)}`,
+                )
+              : new Error(`tq lookup returned status ${String(res.status)}`),
           ),
     )
     .andThen((res) =>
@@ -117,7 +127,14 @@ chrome.runtime.onMessage.addListener(
         },
         (error) => {
           console.warn('tq: lookup failed', error)
-          sendResponse({ ok: false } satisfies LookupResult)
+          sendResponse(
+            error instanceof AuthenticationRequiredError
+              ? ({
+                  ok: false,
+                  reason: 'authentication-required',
+                } satisfies LookupResult)
+              : ({ ok: false } satisfies LookupResult),
+          )
         },
       )
       return true

@@ -1,14 +1,15 @@
-import { TQ_ORIGIN } from '#config'
+import { TQ_OPEN_IN_BROWSER_QUERY, TQ_ORIGIN } from '#config'
 
 export type ChipState =
   | { kind: 'linked'; taskId: string; taskNumber: number }
   | { kind: 'unlinked' }
+  | { kind: 'sign-in' }
   | { kind: 'error' }
 
 export interface ChipAppearance {
   text: string
   href: string | null
-  variant: 'linked' | 'empty'
+  variant: 'linked' | 'empty' | 'sign-in'
 }
 
 export function chipAppearance(state: ChipState): ChipAppearance | null {
@@ -21,6 +22,12 @@ export function chipAppearance(state: ChipState): ChipAppearance | null {
       }
     case 'unlinked':
       return { text: '+ tq', href: null, variant: 'empty' }
+    case 'sign-in':
+      return {
+        text: 'tq: sign in',
+        href: `${TQ_ORIGIN}/?${TQ_OPEN_IN_BROWSER_QUERY}`,
+        variant: 'sign-in',
+      }
     case 'error':
       return null
   }
@@ -57,6 +64,9 @@ function ensureStylesInjected(): void {
     }
     [${CHIP_ATTR}="empty"] {
       color: var(--fgColor-muted);
+    }
+    [${CHIP_ATTR}="sign-in"] {
+      color: var(--fgColor-accent);
     }
   `
   document.head.append(style)

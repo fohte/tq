@@ -12,3 +12,4 @@ if (!/^https?:\/\//.test(explicitOrigin)) {
 }
 
 export const TQ_ORIGIN: string = explicitOrigin
+export const TQ_OPEN_IN_BROWSER_QUERY = 'tq-open-in-browser'
