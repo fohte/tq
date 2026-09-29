@@ -8,12 +8,14 @@ const item1: MentionSuggestion = {
   number: 1,
   title: 'First',
   status: 'todo',
+  statusReason: null,
 }
 const item2: MentionSuggestion = {
   id: '2',
   number: 2,
   title: 'Second',
   status: 'todo',
+  statusReason: null,
 }
 
 describe('createMentionAutocompleteStore', () => {

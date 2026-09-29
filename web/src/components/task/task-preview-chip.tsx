@@ -41,7 +41,7 @@ export function TaskPreviewChip({
       >
         <TaskMentionSummary
           status={task.status}
-          statusReason={task.statusReason}
+          statusReason={task.statusReason ?? null}
           number={task.number}
           title={task.title}
           titleClassName="max-w-48"
@@ -58,7 +58,7 @@ export function TaskPreviewChip({
               <div className="flex items-center gap-2 text-sm font-medium">
                 <TaskMentionSummary
                   status={task.status}
-                  statusReason={task.statusReason}
+                  statusReason={task.statusReason ?? null}
                   number={task.number}
                   title={task.title}
                 />
