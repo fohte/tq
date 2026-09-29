@@ -8,8 +8,8 @@ import { assertDefined, findEditorText } from '#lib/test-utils'
 function renderDescription(defaultValue: string | null) {
   return render(
     <EditableMarkdownDescription
-      surface="task"
       defaultValue={defaultValue}
+      className="p-4"
       placeholder="Add description..."
       editButtonLabel="Edit description"
       onChange={() => {}}

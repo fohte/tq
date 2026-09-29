@@ -79,6 +79,61 @@ describe('MarkdownEditor size', () => {
     expect(height).toBeGreaterThanOrEqual(120)
     expect(height).toBeLessThan(200)
   })
+
+  it('lets the fit size follow its rendered content height', async () => {
+    const { container } = render(
+      <MarkdownEditor defaultValue="A short preview." size="fit" />,
+    )
+    await findEditorText('A short preview.')
+
+    const wrapper = assertDefined(
+      container.querySelector('.milkdown-wrapper'),
+      'MarkdownEditor always renders its wrapper',
+    )
+    expect(wrapper.getBoundingClientRect().height).toBeLessThan(120)
+  })
+})
+
+describe('MarkdownEditor view mode spacing', () => {
+  it('hides the trailing empty paragraph after a final list', async () => {
+    const { container } = render(
+      <MarkdownEditor
+        defaultValue={'## Checklist\n\n- First item'}
+        editing={false}
+        onEditingChange={() => {}}
+        size="fit"
+      />,
+    )
+    await findEditorText('First item')
+
+    const trailingParagraph = assertDefined(
+      container.querySelector('.ProseMirror > p:last-child'),
+      'a final list is followed by the editor trailing paragraph',
+    )
+    expect(window.getComputedStyle(trailingParagraph).display).toEqual('none')
+  })
+
+  it('keeps the empty placeholder paragraph visible', async () => {
+    const { container } = render(
+      <MarkdownEditor
+        defaultValue=""
+        editing={false}
+        onEditingChange={() => {}}
+        placeholder="Add description..."
+        size="fit"
+      />,
+    )
+
+    const placeholderParagraph = await waitFor(() =>
+      assertDefined(
+        container.querySelector('.ProseMirror > p:last-child'),
+        'the empty editor renders its placeholder paragraph',
+      ),
+    )
+    expect(window.getComputedStyle(placeholderParagraph).display).toEqual(
+      'block',
+    )
+  })
 })
 
 function ControlledEditingHarness({

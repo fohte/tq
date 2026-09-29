@@ -349,9 +349,9 @@ function TaskDescription({
 
   return (
     <EditableMarkdownDescription
-      surface="task"
       defaultValue={defaultValue}
       header={<LlmAuthorLabel author={author} />}
+      className="p-4 focus-within:border-ring"
       placeholder="Add description..."
       editButtonLabel="Edit task description"
       onChange={onChange}

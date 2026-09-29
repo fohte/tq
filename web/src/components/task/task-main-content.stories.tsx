@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
+import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import {
   TaskMainContent,
   TaskSidebar,
@@ -285,8 +286,8 @@ export const LlmAuthored: Story = {
     task: {
       ...baseTask,
       title: 'Refactor the auth middleware',
-      titleAuthor: { kind: 'llm', agent: 'claude-opus-5' },
-      descriptionAuthor: { kind: 'llm', agent: 'claude-opus-5' },
+      titleAuthor: makeAuthorInfo({ kind: 'llm', agent: 'sample-agent' }),
+      descriptionAuthor: makeAuthorInfo({ kind: 'llm', agent: 'sample-agent' }),
     },
     pages: [],
     subtasks: [],

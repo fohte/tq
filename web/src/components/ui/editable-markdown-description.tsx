@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import { Pencil } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -6,8 +7,8 @@ import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { cn } from '#lib/utils'
 
 export function EditableMarkdownDescription({
-  surface,
   header,
+  className,
   defaultValue,
   placeholder,
   editButtonLabel,
@@ -15,8 +16,8 @@ export function EditableMarkdownDescription({
   onExitEditMode,
   initiallyEditing = false,
 }: {
-  surface: 'task' | 'project'
   header?: ReactNode
+  className?: string
   defaultValue: string | null
   placeholder: string
   editButtonLabel: string
@@ -29,13 +30,29 @@ export function EditableMarkdownDescription({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {header}
+      {(header != null || !isEditing) && (
+        <div className="flex items-center gap-2">
+          {header}
+          {!isEditing && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={editButtonLabel}
+              className="ml-auto h-11 w-11 shrink-0 p-0 text-muted-foreground hover:bg-transparent hover:text-foreground active:translate-y-0 md:h-5 md:w-5"
+              onClick={() => {
+                setIsEditing(true)
+              }}
+            >
+              <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
+            </Button>
+          )}
+        </div>
+      )}
       <div
         className={cn(
-          'relative border border-border text-sm leading-relaxed',
-          surface === 'task'
-            ? 'p-4 focus-within:border-ring'
-            : 'px-1 pb-1 pt-3 focus-within:border-primary/50',
+          'border border-border text-sm leading-relaxed',
+          className,
         )}
         onClick={(event) => {
           if (
@@ -48,18 +65,6 @@ export function EditableMarkdownDescription({
           }
         }}
       >
-        {!isEditing && (
-          <button
-            type="button"
-            aria-label={editButtonLabel}
-            className="absolute -top-6 right-0 flex h-11 w-11 items-end justify-end p-1 text-muted-foreground outline-none hover:text-foreground md:top-0 md:h-5 md:w-5 md:items-center md:justify-center md:p-0"
-            onClick={() => {
-              setIsEditing(true)
-            }}
-          >
-            <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
-          </button>
-        )}
         <MarkdownEditor
           defaultValue={defaultValue ?? ''}
           placeholder={placeholder}

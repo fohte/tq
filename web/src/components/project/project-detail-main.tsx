@@ -198,11 +198,11 @@ function ProjectDescription({
 
   return (
     <EditableMarkdownDescription
-      surface="project"
       defaultValue={defaultValue}
       header={
         <span className="text-xs text-muted-foreground">Description</span>
       }
+      className="px-1 pb-1 pt-3 focus-within:border-primary/50"
       placeholder="Add description..."
       editButtonLabel="Edit project description"
       onChange={onChange}

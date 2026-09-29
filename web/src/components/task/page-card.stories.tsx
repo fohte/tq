@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import { makeTaskPage } from '#components/task/task-page-test-fixtures'
 import { PageCardPresentation } from '#components/task/task-pages-section'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
@@ -209,7 +210,10 @@ export const EmptyContent: CardStory = {
 export const LlmAuthored: CardStory = {
   name: 'the collapsed card marks the page as AI-authored',
   args: {
-    page: { ...samplePage, author: { kind: 'llm', agent: 'claude-opus-5' } },
+    page: {
+      ...samplePage,
+      author: makeAuthorInfo({ kind: 'llm', agent: 'sample-agent' }),
+    },
     isExpanded: false,
     defaultEditing: false,
     deleteDialogOpen: false,
