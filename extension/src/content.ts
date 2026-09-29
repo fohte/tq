@@ -3,6 +3,8 @@ import type {
   CreateResult,
   LookupMessage,
   LookupResult,
+  OpenSignInMessage,
+  RefreshLookupMessage,
 } from '#background'
 import {
   type ChipAppearance,
@@ -59,6 +61,16 @@ function toChipState(result: LookupResult): ChipState {
   }
 }
 
+function isRefreshLookupMessage(
+  message: unknown,
+): message is RefreshLookupMessage {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    (message as { type?: unknown }).type === 'refresh-lookup'
+  )
+}
+
 // GitHub navigates between issue/PR pages via Turbo (same-document DOM
 // morphing, no script reload), so a fresh lookup must be triggered whenever
 // the URL changes under us instead of only once at content-script load.
@@ -88,6 +100,14 @@ function refreshLookup(): void {
       insertChips()
     })
 }
+
+chrome.runtime.onMessage.addListener((message: unknown) => {
+  if (!isRefreshLookupMessage(message)) return false
+
+  lookedUpUrl = null
+  refreshLookup()
+  return false
+})
 
 // Clicking the "+ tq" chip creates a task for the current issue/PR and opens
 // it. A chip already showing a linked task has its own `href` and navigates
@@ -136,8 +156,20 @@ document.addEventListener('click', (event) => {
   if (creating || lookedUpUrl === null) return
   if (!(event.target instanceof Element)) return
   const chip = event.target.closest(CHIP_SELECTOR)
-  // A chip with an href is already linked; let it navigate normally instead
-  // of creating a duplicate task.
+  if (chip?.getAttribute('data-tq-chip') === 'sign-in') {
+    event.preventDefault()
+    void chrome.runtime
+      .sendMessage<OpenSignInMessage, { ok: boolean }>({
+        type: 'open-sign-in',
+      })
+      .catch((error: unknown) => {
+        console.warn('tq: sign-in failed', error)
+      })
+    return
+  }
+
+  // A linked chip has an href; let it navigate normally instead of creating
+  // a duplicate task.
   if (chip === null || chip.hasAttribute('href')) return
   createTaskAndOpen(lookedUpUrl)
 })

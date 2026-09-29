@@ -30,7 +30,12 @@ beforeEach(() => {
   vi.stubGlobal('MutationObserver', TrackingMutationObserver)
   vi.stubGlobal('location', { href: LOOKUP_URL })
   sendMessage = vi.fn()
-  vi.stubGlobal('chrome', { runtime: { sendMessage } })
+  vi.stubGlobal('chrome', {
+    runtime: {
+      sendMessage,
+      onMessage: { addListener: vi.fn() },
+    },
+  })
 })
 
 afterEach(() => {

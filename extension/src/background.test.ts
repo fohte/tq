@@ -19,7 +19,10 @@ beforeEach(() => {
   vi.resetModules()
   vi.stubGlobal('chrome', {
     runtime: { onMessage: { addListener: vi.fn() } },
-    webNavigation: { onBeforeNavigate: { addListener: vi.fn() } },
+    webNavigation: {
+      onBeforeNavigate: { addListener: vi.fn() },
+      onCommitted: { addListener: vi.fn() },
+    },
     tabs: {},
   })
 })
@@ -207,7 +210,10 @@ async function importAndCaptureListener(): Promise<MessageListener> {
   const addListener = vi.fn<(listener: MessageListener) => void>()
   vi.stubGlobal('chrome', {
     runtime: { onMessage: { addListener } },
-    webNavigation: { onBeforeNavigate: { addListener: vi.fn() } },
+    webNavigation: {
+      onBeforeNavigate: { addListener: vi.fn() },
+      onCommitted: { addListener: vi.fn() },
+    },
     tabs: {},
   })
   await import('#background')
@@ -340,7 +346,10 @@ describe('webNavigation.onBeforeNavigate listener', () => {
       >()
     vi.stubGlobal('chrome', {
       runtime: { onMessage: { addListener: vi.fn() } },
-      webNavigation: { onBeforeNavigate: { addListener } },
+      webNavigation: {
+        onBeforeNavigate: { addListener },
+        onCommitted: { addListener: vi.fn() },
+      },
       tabs,
     })
     await import('#background')
