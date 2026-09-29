@@ -25,12 +25,19 @@ function isTqUrl(url: string | undefined): url is string {
   )
 }
 
+function isCloudflareAccessPath(pathname: string): boolean {
+  return pathname === '/cdn-cgi' || pathname.startsWith('/cdn-cgi/')
+}
+
+export function isTqPageOutsideAccess(url: string): boolean {
+  return isTqUrl(url) && !isCloudflareAccessPath(new URL(url).pathname)
+}
+
 function shouldKeepTqUrlInBrowser(url: string): boolean {
   const tqUrl = new URL(url)
 
   return (
-    tqUrl.pathname === '/cdn-cgi' ||
-    tqUrl.pathname.startsWith('/cdn-cgi/') ||
+    isCloudflareAccessPath(tqUrl.pathname) ||
     tqUrl.searchParams.has(TQ_OPEN_IN_BROWSER_QUERY)
   )
 }
