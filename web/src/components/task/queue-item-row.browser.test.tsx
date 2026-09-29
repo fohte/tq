@@ -1,4 +1,4 @@
-import { DndContext } from '@dnd-kit/core'
+import { DndContext, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext } from '@dnd-kit/sortable'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
@@ -9,6 +9,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { QueueItemRow } from '#components/task/queue-item-row'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { useUpdateTask } from '#hooks/use-tasks'
+import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
 import { formatMinutes } from '#lib/format'
 import { partialMutation } from '#lib/test-utils'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -35,11 +36,17 @@ function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  const sensors = useSensors(
+    useSensor(NoDndMouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(NoDndTouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
+  )
 
   return (
     <QueryClientProvider client={queryClient}>
       <MemoizedStoryRouter paths={['/tasks/$taskId']}>
-        <DndContext>
+        <DndContext sensors={sensors}>
           <SortableContext items={[task.id]}>{children}</SortableContext>
         </DndContext>
       </MemoizedStoryRouter>

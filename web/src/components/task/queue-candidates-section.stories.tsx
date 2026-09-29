@@ -2,7 +2,6 @@ import { DndContext } from '@dnd-kit/core'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
-import { fn } from 'storybook/test'
 
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import {
@@ -47,9 +46,6 @@ const meta = {
       </Providers>
     ),
   ],
-  args: {
-    onAdd: fn(),
-  },
 } satisfies Meta<typeof QueueCandidatesSection>
 
 export default meta

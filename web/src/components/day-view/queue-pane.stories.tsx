@@ -60,7 +60,6 @@ const meta = {
     onReorderQueue: fn(),
     onMoveTask: fn(),
     onInsertCandidate: fn(),
-    onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
   },
 } satisfies Meta<typeof QueuePane>
