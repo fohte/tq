@@ -48,6 +48,8 @@ pnpm --filter web exec playwright install --with-deps chromium
 pnpm --filter web run test
 ```
 
+Run Storybook tests separately:
+
 ```sh
 pnpm --filter web run test:storybook
 ```
