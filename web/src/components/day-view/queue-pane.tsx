@@ -2,7 +2,6 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
-  PointerSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -12,6 +11,7 @@ import { QueueCandidatesSection } from '#components/task/queue-candidates-sectio
 import type { QueueTaskDragData } from '#components/task/queue-item-row'
 import { QueueSection } from '#components/task/queue-section'
 import type { Task } from '#hooks/use-tasks'
+import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
 import { isCandidateDragData, type QueueCandidate } from '#lib/queue-candidates'
 
 export interface QueueSectionData {
@@ -49,7 +49,6 @@ export interface QueuePaneProps {
   onReorderQueue: (queueKey: string, taskIds: string[]) => void
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
-  onAddCandidate: (taskId: string) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
 }
 
@@ -60,11 +59,14 @@ export function QueuePane({
   onReorderQueue,
   onMoveTask,
   onInsertCandidate,
-  onAddCandidate,
   onRemoveFromQueue,
 }: QueuePaneProps) {
+  // Delayed touch activation keeps scrolling available and lets short taps navigate.
   const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(NoDndMouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(NoDndTouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -141,10 +143,7 @@ export function QueuePane({
             />
           ))}
 
-          <QueueCandidatesSection
-            candidates={queueCandidates}
-            onAdd={onAddCandidate}
-          />
+          <QueueCandidatesSection candidates={queueCandidates} />
         </DndContext>
       )}
     </div>

@@ -5,10 +5,8 @@ import type { QueueCandidate } from '#lib/queue-candidates'
 
 export function QueueCandidatesSection({
   candidates,
-  onAdd,
 }: {
   candidates: QueueCandidate<Task>[]
-  onAdd: (taskId: string) => void
 }) {
   if (candidates.length === 0) return null
 
@@ -21,14 +19,7 @@ export function QueueCandidatesSection({
 
       <div>
         {candidates.map(({ task, reason }) => (
-          <QueueCandidateRow
-            key={task.id}
-            task={task}
-            reason={reason}
-            onAdd={() => {
-              onAdd(task.id)
-            }}
-          />
+          <QueueCandidateRow key={task.id} task={task} reason={reason} />
         ))}
       </div>
     </div>

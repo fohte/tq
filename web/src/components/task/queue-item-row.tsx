@@ -12,7 +12,6 @@ import { useRef, useState } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
-import { DragHandle } from '#components/ui/drag-handle'
 import type { Task } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
@@ -59,6 +58,7 @@ export function QueueItemRowAppearance({
     task.estimatedMinutes != null ? null : isEditingEstimate ? (
       <Input
         autoFocus
+        data-no-dnd=""
         value={estimateInput}
         onChange={(e) => {
           onEstimateInputChange(e.target.value)
@@ -84,6 +84,7 @@ export function QueueItemRowAppearance({
           e.stopPropagation()
           onStartEditingEstimate()
         }}
+        data-no-dnd=""
         title="No estimate set — excluded from auto-scheduling"
         className="shrink-0 whitespace-nowrap border-destructive text-destructive"
       >
@@ -95,17 +96,13 @@ export function QueueItemRowAppearance({
     <div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
-        'flex items-center gap-1 border-b border-border',
+        'flex cursor-grab items-center gap-1 border-b border-border active:cursor-grabbing',
         isDragging && 'opacity-50',
       )}
     >
-      <DragHandle
-        attributes={attributes}
-        listeners={listeners}
-        aria-label="Reorder task"
-      />
-
       <div className="min-w-0 flex-1">
         <TaskRowAppearance
           task={task}
@@ -119,6 +116,7 @@ export function QueueItemRowAppearance({
         size="icon-xs"
         onClick={onRemove}
         aria-label="Remove from queue"
+        data-no-dnd=""
         className="shrink-0 text-muted-foreground hover:text-destructive"
       >
         <X className="h-4 w-4" />
