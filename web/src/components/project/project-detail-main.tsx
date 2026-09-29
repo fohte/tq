@@ -198,6 +198,7 @@ function ProjectDescription({
 
   return (
     <EditableMarkdownDescription
+      surface="project"
       defaultValue={defaultValue}
       header={
         <span className="text-xs text-muted-foreground">Description</span>

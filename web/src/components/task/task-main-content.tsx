@@ -349,6 +349,7 @@ function TaskDescription({
 
   return (
     <EditableMarkdownDescription
+      surface="task"
       defaultValue={defaultValue}
       header={<LlmAuthorLabel author={author} />}
       placeholder="Add description..."
