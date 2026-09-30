@@ -30,6 +30,7 @@ cleanup_on_exit() {
       current_database=''
     else
       cleanup_status=$?
+      echo "Error: failed to remove temporary database '${current_database}'" >&2
       if ((exit_code == 0)); then
         exit_code=$cleanup_status
       fi
