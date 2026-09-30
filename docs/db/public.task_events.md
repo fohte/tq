@@ -1,22 +1,26 @@
 # public.task_events
 
+## Description
+
+Task status changes and GitHub link or unlink events shown in the activity timeline.
+
 ## Columns
 
-| Name             | Type                     | Default | Nullable | Children | Parents                         | Comment |
-| ---------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------- |
-| id               | bigint                   |         | false    |          |                                 |         |
-| task_id          | text                     |         | false    |          | [public.tasks](public.tasks.md) |         |
-| type             | text                     |         | false    |          |                                 |         |
-| from_status      | text                     |         | true     |          |                                 |         |
-| to_status        | text                     |         | true     |          |                                 |         |
-| github_owner     | text                     |         | true     |          |                                 |         |
-| github_repo      | text                     |         | true     |          |                                 |         |
-| github_number    | integer                  |         | true     |          |                                 |         |
-| github_kind      | text                     |         | true     |          |                                 |         |
-| author_kind      | text                     |         | false    |          |                                 |         |
-| author_agent     | text                     |         | true     |          |                                 |         |
-| created_at       | timestamp with time zone | now()   | false    |          |                                 |         |
-| to_status_reason | text                     |         | true     |          |                                 |         |
+| Name             | Type                     | Default | Nullable | Children | Parents                         | Comment                                                                              |
+| ---------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------------------------------------------------------------------------------------ |
+| id               | bigint                   |         | false    |          |                                 |                                                                                      |
+| task_id          | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task associated with this event.                                                     |
+| type             | text                     |         | false    |          |                                 | Event category: status_changed, github_linked, or github_unlinked.                   |
+| from_status      | text                     |         | true     |          |                                 | Previous status for a status_changed event: todo, in_progress, or completed.         |
+| to_status        | text                     |         | true     |          |                                 | New status for a status_changed event: todo, in_progress, or completed.              |
+| github_owner     | text                     |         | true     |          |                                 | Owner of the linked GitHub repository.                                               |
+| github_repo      | text                     |         | true     |          |                                 | Name of the linked GitHub repository.                                                |
+| github_number    | integer                  |         | true     |          |                                 | Number of the linked GitHub issue or pull request.                                   |
+| github_kind      | text                     |         | true     |          |                                 | Linked GitHub item type: issue or pull_request.                                      |
+| author_kind      | text                     |         | false    |          |                                 | Author category: human, llm, or system.                                              |
+| author_agent     | text                     |         | true     |          |                                 | Agent identifier for llm-authored events; null for other author categories.          |
+| created_at       | timestamp with time zone | now()   | false    |          |                                 |                                                                                      |
+| to_status_reason | text                     |         | true     |          |                                 | Reason recorded for a transition to completed: completed, not_planned, or duplicate. |
 
 ## Constraints
 

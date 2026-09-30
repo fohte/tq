@@ -1,16 +1,20 @@
 # public.time_blocks
 
+## Description
+
+Scheduled time intervals assigned to tasks.
+
 ## Columns
 
-| Name              | Type                     | Default | Nullable | Children | Parents                         | Comment |
-| ----------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------- |
-| id                | text                     |         | false    |          |                                 |         |
-| task_id           | text                     |         | false    |          | [public.tasks](public.tasks.md) |         |
-| start_time        | timestamp with time zone |         | false    |          |                                 |         |
-| end_time          | timestamp with time zone |         | false    |          |                                 |         |
-| is_auto_scheduled | boolean                  | false   | false    |          |                                 |         |
-| created_at        | timestamp with time zone | now()   | false    |          |                                 |         |
-| updated_at        | timestamp with time zone | now()   | false    |          |                                 |         |
+| Name              | Type                     | Default | Nullable | Children | Parents                         | Comment                                                     |
+| ----------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ----------------------------------------------------------- |
+| id                | text                     |         | false    |          |                                 |                                                             |
+| task_id           | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task assigned to this time block.                           |
+| start_time        | timestamp with time zone |         | false    |          |                                 | Start instant of the scheduled time interval.               |
+| end_time          | timestamp with time zone |         | false    |          |                                 | End instant of the scheduled time interval.                 |
+| is_auto_scheduled | boolean                  | false   | false    |          |                                 | Whether the time block was created by automatic scheduling. |
+| created_at        | timestamp with time zone | now()   | false    |          |                                 |                                                             |
+| updated_at        | timestamp with time zone | now()   | false    |          |                                 |                                                             |
 
 ## Constraints
 

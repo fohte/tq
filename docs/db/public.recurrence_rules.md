@@ -1,16 +1,20 @@
 # public.recurrence_rules
 
+## Description
+
+Recurrence definitions referenced by tasks, schedules, and recurring task templates.
+
 ## Columns
 
-| Name         | Type                     | Default | Nullable | Children                                                                                                                                      | Parents | Comment |
-| ------------ | ------------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------- |
-| id           | text                     |         | false    | [public.schedules](public.schedules.md) [public.tasks](public.tasks.md) [public.recurring_task_templates](public.recurring_task_templates.md) |         |         |
-| type         | text                     |         | false    |                                                                                                                                               |         |         |
-| interval     | integer                  | 1       | false    |                                                                                                                                               |         |         |
-| days_of_week | integer[]                |         | true     |                                                                                                                                               |         |         |
-| day_of_month | integer                  |         | true     |                                                                                                                                               |         |         |
-| created_at   | timestamp with time zone | now()   | false    |                                                                                                                                               |         |         |
-| updated_at   | timestamp with time zone | now()   | false    |                                                                                                                                               |         |         |
+| Name         | Type                     | Default | Nullable | Children                                                                                                                                      | Parents | Comment                                                                         |
+| ------------ | ------------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| id           | text                     |         | false    | [public.schedules](public.schedules.md) [public.tasks](public.tasks.md) [public.recurring_task_templates](public.recurring_task_templates.md) |         |                                                                                 |
+| type         | text                     |         | false    |                                                                                                                                               |         | Recurrence unit or pattern: daily, weekly, monthly, or custom.                  |
+| interval     | integer                  | 1       | false    |                                                                                                                                               |         | Number of recurrence units between occurrences.                                 |
+| days_of_week | integer[]                |         | true     |                                                                                                                                               |         | Days selected for weekly recurrence, using 0 for Sunday through 6 for Saturday. |
+| day_of_month | integer                  |         | true     |                                                                                                                                               |         | Calendar day selected for monthly recurrence, from 1 through 31.                |
+| created_at   | timestamp with time zone | now()   | false    |                                                                                                                                               |         |                                                                                 |
+| updated_at   | timestamp with time zone | now()   | false    |                                                                                                                                               |         |                                                                                 |
 
 ## Constraints
 

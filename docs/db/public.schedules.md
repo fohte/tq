@@ -1,18 +1,22 @@
 # public.schedules
 
+## Description
+
+Recurring calendar schedules with a local time range and optional recurrence rule.
+
 ## Columns
 
-| Name               | Type                     | Default          | Nullable | Children | Parents                                               | Comment |
-| ------------------ | ------------------------ | ---------------- | -------- | -------- | ----------------------------------------------------- | ------- |
-| id                 | text                     |                  | false    |          |                                                       |         |
-| title              | text                     |                  | false    |          |                                                       |         |
-| start_time         | text                     |                  | false    |          |                                                       |         |
-| end_time           | text                     |                  | false    |          |                                                       |         |
-| recurrence_rule_id | text                     |                  | true     |          | [public.recurrence_rules](public.recurrence_rules.md) |         |
-| context            | text                     | 'personal'::text | false    |          |                                                       |         |
-| color              | text                     |                  | true     |          |                                                       |         |
-| created_at         | timestamp with time zone | now()            | false    |          |                                                       |         |
-| updated_at         | timestamp with time zone | now()            | false    |          |                                                       |         |
+| Name               | Type                     | Default          | Nullable | Children | Parents                                               | Comment                                                                     |
+| ------------------ | ------------------------ | ---------------- | -------- | -------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| id                 | text                     |                  | false    |          |                                                       |                                                                             |
+| title              | text                     |                  | false    |          |                                                       | Human-readable schedule title.                                              |
+| start_time         | text                     |                  | false    |          |                                                       | Local start time of the schedule in 24-hour HH:MM format.                   |
+| end_time           | text                     |                  | false    |          |                                                       | Local end time of the schedule in 24-hour HH:MM format.                     |
+| recurrence_rule_id | text                     |                  | true     |          | [public.recurrence_rules](public.recurrence_rules.md) | Recurrence rule associated with the schedule; null for a one-time schedule. |
+| context            | text                     | 'personal'::text | false    |          |                                                       | Whether the schedule belongs to the work or personal context.               |
+| color              | text                     |                  | true     |          |                                                       | Optional color value associated with the schedule.                          |
+| created_at         | timestamp with time zone | now()            | false    |          |                                                       |                                                                             |
+| updated_at         | timestamp with time zone | now()            | false    |          |                                                       |                                                                             |
 
 ## Constraints
 

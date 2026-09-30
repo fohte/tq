@@ -1,12 +1,16 @@
 # public.task_links
 
+## Description
+
+Directed task links derived from task descriptions, page content, and comments.
+
 ## Columns
 
-| Name           | Type                     | Default | Nullable | Children | Parents                         | Comment |
-| -------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------- |
-| source_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) |         |
-| target_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) |         |
-| created_at     | timestamp with time zone | now()   | false    |          |                                 |         |
+| Name           | Type                     | Default | Nullable | Children | Parents                         | Comment                                                            |
+| -------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------------------------------------------------------------------ |
+| source_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task whose content mentions the target task's human-facing number. |
+| target_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task referenced by the number in the source task's content.        |
+| created_at     | timestamp with time zone | now()   | false    |          |                                 |                                                                    |
 
 ## Constraints
 

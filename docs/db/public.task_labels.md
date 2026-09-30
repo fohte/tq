@@ -1,11 +1,15 @@
 # public.task_labels
 
+## Description
+
+Join table associating tasks with labels.
+
 ## Columns
 
-| Name     | Type | Default | Nullable | Children | Parents                           | Comment |
-| -------- | ---- | ------- | -------- | -------- | --------------------------------- | ------- |
-| task_id  | text |         | false    |          | [public.tasks](public.tasks.md)   |         |
-| label_id | text |         | false    |          | [public.labels](public.labels.md) |         |
+| Name     | Type | Default | Nullable | Children | Parents                           | Comment                     |
+| -------- | ---- | ------- | -------- | -------- | --------------------------------- | --------------------------- |
+| task_id  | text |         | false    |          | [public.tasks](public.tasks.md)   | Task receiving the label.   |
+| label_id | text |         | false    |          | [public.labels](public.labels.md) | Label assigned to the task. |
 
 ## Constraints
 

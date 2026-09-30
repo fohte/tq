@@ -1,17 +1,21 @@
 # public.task_pages
 
+## Description
+
+Formatted content pages attached to tasks.
+
 ## Columns
 
-| Name       | Type                     | Default          | Nullable | Children                        | Parents                         | Comment |
-| ---------- | ------------------------ | ---------------- | -------- | ------------------------------- | ------------------------------- | ------- |
-| id         | text                     |                  | false    | [public.edits](public.edits.md) |                                 |         |
-| task_id    | text                     |                  | false    |                                 | [public.tasks](public.tasks.md) |         |
-| title      | text                     |                  | false    |                                 |                                 |         |
-| content    | text                     | ''::text         | false    |                                 |                                 |         |
-| sort_order | integer                  | 0                | false    |                                 |                                 |         |
-| created_at | timestamp with time zone | now()            | false    |                                 |                                 |         |
-| updated_at | timestamp with time zone | now()            | false    |                                 |                                 |         |
-| format     | text                     | 'markdown'::text | false    |                                 |                                 |         |
+| Name       | Type                     | Default          | Nullable | Children                        | Parents                         | Comment                                                            |
+| ---------- | ------------------------ | ---------------- | -------- | ------------------------------- | ------------------------------- | ------------------------------------------------------------------ |
+| id         | text                     |                  | false    | [public.edits](public.edits.md) |                                 |                                                                    |
+| task_id    | text                     |                  | false    |                                 | [public.tasks](public.tasks.md) | Task that owns this page.                                          |
+| title      | text                     |                  | false    |                                 |                                 | Title shown for this task page.                                    |
+| content    | text                     | ''::text         | false    |                                 |                                 | Page body stored according to format; defaults to an empty string. |
+| sort_order | integer                  | 0                | false    |                                 |                                 | Ordering value for pages belonging to the same task.               |
+| created_at | timestamp with time zone | now()            | false    |                                 |                                 |                                                                    |
+| updated_at | timestamp with time zone | now()            | false    |                                 |                                 |                                                                    |
+| format     | text                     | 'markdown'::text | false    |                                 |                                 | Content format: markdown or html. Defaults to markdown.            |
 
 ## Constraints
 

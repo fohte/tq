@@ -1,18 +1,22 @@
 # public.oauth_tokens
 
+## Description
+
+OAuth credentials identified by provider and account.
+
 ## Columns
 
-| Name          | Type                     | Default                 | Nullable | Children                                                          | Parents | Comment |
-| ------------- | ------------------------ | ----------------------- | -------- | ----------------------------------------------------------------- | ------- | ------- |
-| id            | text                     |                         | false    | [public.calendar_subscriptions](public.calendar_subscriptions.md) |         |         |
-| provider      | text                     | 'google_calendar'::text | false    |                                                                   |         |         |
-| access_token  | text                     |                         | false    |                                                                   |         |         |
-| refresh_token | text                     |                         | true     |                                                                   |         |         |
-| expires_at    | timestamp with time zone |                         | true     |                                                                   |         |         |
-| created_at    | timestamp with time zone | now()                   | false    |                                                                   |         |         |
-| updated_at    | timestamp with time zone | now()                   | false    |                                                                   |         |         |
-| account_id    | text                     |                         | false    |                                                                   |         |         |
-| account_label | text                     |                         | true     |                                                                   |         |         |
+| Name          | Type                     | Default                 | Nullable | Children                                                          | Parents | Comment                                                                                                |
+| ------------- | ------------------------ | ----------------------- | -------- | ----------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| id            | text                     |                         | false    | [public.calendar_subscriptions](public.calendar_subscriptions.md) |         |                                                                                                        |
+| provider      | text                     | 'google_calendar'::text | false    |                                                                   |         | Integration provider associated with these credentials.                                                |
+| access_token  | text                     |                         | false    |                                                                   |         | Credential sent to the provider when making authenticated API requests.                                |
+| refresh_token | text                     |                         | true     |                                                                   |         | OAuth refresh token; null for providers whose access tokens do not expire.                             |
+| expires_at    | timestamp with time zone |                         | true     |                                                                   |         | Access token expiration time; null when the provider supplies no expiration.                           |
+| created_at    | timestamp with time zone | now()                   | false    |                                                                   |         |                                                                                                        |
+| updated_at    | timestamp with time zone | now()                   | false    |                                                                   |         |                                                                                                        |
+| account_id    | text                     |                         | false    |                                                                   |         | Stable provider-specific account identifier; GitHub uses an empty string because it is single-account. |
+| account_label | text                     |                         | true     |                                                                   |         | Human-readable label for the provider account, when available.                                         |
 
 ## Constraints
 

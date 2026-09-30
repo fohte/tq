@@ -1,16 +1,20 @@
 # public.saved_views
 
+## Description
+
+Saved task searches with a display name, query, context, and position.
+
 ## Columns
 
-| Name       | Type                     | Default          | Nullable | Children | Parents | Comment |
-| ---------- | ------------------------ | ---------------- | -------- | -------- | ------- | ------- |
-| id         | text                     |                  | false    |          |         |         |
-| name       | text                     |                  | false    |          |         |         |
-| query      | text                     |                  | false    |          |         |         |
-| position   | integer                  | 0                | false    |          |         |         |
-| context    | text                     | 'personal'::text | false    |          |         |         |
-| created_at | timestamp with time zone | now()            | false    |          |         |         |
-| updated_at | timestamp with time zone | now()            | false    |          |         |         |
+| Name       | Type                     | Default          | Nullable | Children | Parents | Comment                                                         |
+| ---------- | ------------------------ | ---------------- | -------- | -------- | ------- | --------------------------------------------------------------- |
+| id         | text                     |                  | false    |          |         |                                                                 |
+| name       | text                     |                  | false    |          |         | Human-readable name of the saved view.                          |
+| query      | text                     |                  | false    |          |         | Raw search DSL query used by the saved view.                    |
+| position   | integer                  | 0                | false    |          |         | Position used to order saved views.                             |
+| context    | text                     | 'personal'::text | false    |          |         | Whether the saved view belongs to the work or personal context. |
+| created_at | timestamp with time zone | now()            | false    |          |         |                                                                 |
+| updated_at | timestamp with time zone | now()            | false    |          |         |                                                                 |
 
 ## Constraints
 

@@ -1,14 +1,18 @@
 # public.labels
 
+## Description
+
+Reusable labels that can be assigned to tasks and recurring task templates.
+
 ## Columns
 
-| Name       | Type                     | Default          | Nullable | Children                                                                                                                      | Parents | Comment |
-| ---------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | ------- |
-| id         | text                     |                  | false    | [public.task_labels](public.task_labels.md) [public.recurring_task_template_labels](public.recurring_task_template_labels.md) |         |         |
-| name       | text                     |                  | false    |                                                                                                                               |         |         |
-| color      | text                     |                  | true     |                                                                                                                               |         |         |
-| created_at | timestamp with time zone | now()            | false    |                                                                                                                               |         |         |
-| context    | text                     | 'personal'::text | false    |                                                                                                                               |         |         |
+| Name       | Type                     | Default          | Nullable | Children                                                                                                                      | Parents | Comment                                                    |
+| ---------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------- |
+| id         | text                     |                  | false    | [public.task_labels](public.task_labels.md) [public.recurring_task_template_labels](public.recurring_task_template_labels.md) |         |                                                            |
+| name       | text                     |                  | false    |                                                                                                                               |         | Unique label name.                                         |
+| color      | text                     |                  | true     |                                                                                                                               |         | Optional color value associated with the label.            |
+| created_at | timestamp with time zone | now()            | false    |                                                                                                                               |         |                                                            |
+| context    | text                     | 'personal'::text | false    |                                                                                                                               |         | Whether the label belongs to the work or personal context. |
 
 ## Constraints
 

@@ -65,6 +65,11 @@ jobs:
           DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
         run: mise x tbls -- tbls doc --rm-dist
 
+      - name: Lint database comments
+        env:
+          DATABASE_URL: postgresql://tq:tq@localhost:5432/tq_test
+        run: mise x tbls -- tbls lint
+
       # lefthook's `--all-files` resolves `{staged_files}` via `git ls-files --cached`,
       # which skips untracked files. Stage newly generated docs so a schema-adding PR's
       # first CI run formats them here instead of leaving a follow-up commit on main.

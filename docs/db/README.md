@@ -2,36 +2,36 @@
 
 ## Tables
 
-| Name                                                                                | Columns | Comment | Type       |
-| ----------------------------------------------------------------------------------- | ------- | ------- | ---------- |
-| [public.assets](public.assets.md)                                                   | 5       |         | BASE TABLE |
-| [public.labels](public.labels.md)                                                   | 5       |         | BASE TABLE |
-| [public.oauth_tokens](public.oauth_tokens.md)                                       | 9       |         | BASE TABLE |
-| [public.projects](public.projects.md)                                               | 11      |         | BASE TABLE |
-| [public.recurrence_rules](public.recurrence_rules.md)                               | 7       |         | BASE TABLE |
-| [public.schedules](public.schedules.md)                                             | 9       |         | BASE TABLE |
-| [public.task_comments](public.task_comments.md)                                     | 5       |         | BASE TABLE |
-| [public.task_labels](public.task_labels.md)                                         | 2       |         | BASE TABLE |
-| [public.task_pages](public.task_pages.md)                                           | 8       |         | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 19      |         | BASE TABLE |
-| [public.time_blocks](public.time_blocks.md)                                         | 7       |         | BASE TABLE |
-| [public.task_queue_items](public.task_queue_items.md)                               | 7       |         | BASE TABLE |
-| [public.edits](public.edits.md)                                                     | 10      |         | BASE TABLE |
-| [public.task_github_links](public.task_github_links.md)                             | 14      |         | BASE TABLE |
-| [public.task_links](public.task_links.md)                                           | 3       |         | BASE TABLE |
-| [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       |         | BASE TABLE |
-| [public.github_sync_rules](public.github_sync_rules.md)                             | 11      |         | BASE TABLE |
-| [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 8       |         | BASE TABLE |
-| [public.task_events](public.task_events.md)                                         | 13      |         | BASE TABLE |
-| [public.scheduling_settings](public.scheduling_settings.md)                         | 7       |         | BASE TABLE |
-| [public.agent_sessions](public.agent_sessions.md)                                   | 12      |         | BASE TABLE |
-| [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       |         | BASE TABLE |
-| [public.saved_views](public.saved_views.md)                                         | 7       |         | BASE TABLE |
-| [public.task_relations](public.task_relations.md)                                   | 4       |         | BASE TABLE |
-| [public.task_queues](public.task_queues.md)                                         | 7       |         | BASE TABLE |
-| [public.push_subscriptions](public.push_subscriptions.md)                           | 8       |         | BASE TABLE |
-| [public.recurring_task_template_labels](public.recurring_task_template_labels.md)   | 2       |         | BASE TABLE |
-| [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      |         | BASE TABLE |
+| Name                                                                                | Columns | Comment                                                                              | Type       |
+| ----------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------ | ---------- |
+| [public.assets](public.assets.md)                                                   | 5       | Metadata for uploaded assets stored in object storage.                               | BASE TABLE |
+| [public.labels](public.labels.md)                                                   | 5       | Reusable labels that can be assigned to tasks and recurring task templates.          | BASE TABLE |
+| [public.oauth_tokens](public.oauth_tokens.md)                                       | 9       | OAuth credentials identified by provider and account.                                | BASE TABLE |
+| [public.projects](public.projects.md)                                               | 11      | Projects group related tasks and track planning status and dates.                    | BASE TABLE |
+| [public.recurrence_rules](public.recurrence_rules.md)                               | 7       | Recurrence definitions referenced by tasks, schedules, and recurring task templates. | BASE TABLE |
+| [public.schedules](public.schedules.md)                                             | 9       | Recurring calendar schedules with a local time range and optional recurrence rule.   | BASE TABLE |
+| [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
+| [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
+| [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 19      | Tasks with optional parent, project, recurrence, and template relationships.         | BASE TABLE |
+| [public.time_blocks](public.time_blocks.md)                                         | 7       | Scheduled time intervals assigned to tasks.                                          | BASE TABLE |
+| [public.task_queue_items](public.task_queue_items.md)                               | 7       | Tasks placed in a queue, optionally for a specific period.                           | BASE TABLE |
+| [public.edits](public.edits.md)                                                     | 10      | Records for task, page, or comment creation and field updates.                       | BASE TABLE |
+| [public.task_github_links](public.task_github_links.md)                             | 14      | GitHub issues and pull requests linked to tasks.                                     | BASE TABLE |
+| [public.task_links](public.task_links.md)                                           | 3       | Directed task links derived from task descriptions, page content, and comments.      | BASE TABLE |
+| [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       | GitHub issues excluded by a synchronization rule.                                    | BASE TABLE |
+| [public.github_sync_rules](public.github_sync_rules.md)                             | 11      | GitHub synchronization rules associated with a target project.                       | BASE TABLE |
+| [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 8       | Calendars selected for OAuth accounts.                                               | BASE TABLE |
+| [public.task_events](public.task_events.md)                                         | 13      | Task status changes and GitHub link or unlink events shown in the activity timeline. | BASE TABLE |
+| [public.scheduling_settings](public.scheduling_settings.md)                         | 7       | Singleton preferences for task scheduling.                                           | BASE TABLE |
+| [public.agent_sessions](public.agent_sessions.md)                                   | 12      | Sessions reported by coding agent providers.                                         | BASE TABLE |
+| [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       | Associations between tasks and coding agent sessions.                                | BASE TABLE |
+| [public.saved_views](public.saved_views.md)                                         | 7       | Saved task searches with a display name, query, context, and position.               | BASE TABLE |
+| [public.task_relations](public.task_relations.md)                                   | 4       | User-defined directed relationships between tasks.                                   | BASE TABLE |
+| [public.task_queues](public.task_queues.md)                                         | 7       | Named queues that organize tasks, with optional period-based rollover.               | BASE TABLE |
+| [public.push_subscriptions](public.push_subscriptions.md)                           | 8       | Browser push endpoints and encryption credentials registered for notifications.      | BASE TABLE |
+| [public.recurring_task_template_labels](public.recurring_task_template_labels.md)   | 2       | Join table associating recurring task templates with labels.                         | BASE TABLE |
+| [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      | Definitions used by the scheduler to create recurring task instances.                | BASE TABLE |
 
 ## Stored procedures and functions
 

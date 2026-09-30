@@ -1,16 +1,20 @@
 # public.task_queues
 
+## Description
+
+Named queues that organize tasks, with optional period-based rollover.
+
 ## Columns
 
-| Name        | Type                     | Default | Nullable | Children                                              | Parents | Comment |
-| ----------- | ------------------------ | ------- | -------- | ----------------------------------------------------- | ------- | ------- |
-| id          | text                     |         | false    | [public.task_queue_items](public.task_queue_items.md) |         |         |
-| key         | text                     |         | false    |                                                       |         |         |
-| name        | text                     |         | false    |                                                       |         |         |
-| period_unit | text                     |         | true     |                                                       |         |         |
-| position    | integer                  | 0       | false    |                                                       |         |         |
-| created_at  | timestamp with time zone | now()   | false    |                                                       |         |         |
-| updated_at  | timestamp with time zone | now()   | false    |                                                       |         |         |
+| Name        | Type                     | Default | Nullable | Children                                              | Parents | Comment                                                         |
+| ----------- | ------------------------ | ------- | -------- | ----------------------------------------------------- | ------- | --------------------------------------------------------------- |
+| id          | text                     |         | false    | [public.task_queue_items](public.task_queue_items.md) |         |                                                                 |
+| key         | text                     |         | false    |                                                       |         | Stable programmatic identifier, separate from the display name. |
+| name        | text                     |         | false    |                                                       |         | Human-readable queue name.                                      |
+| period_unit | text                     |         | true     |                                                       |         | Rollover period: day, week, or month; null for a static queue.  |
+| position    | integer                  | 0       | false    |                                                       |         | Position used to order queues.                                  |
+| created_at  | timestamp with time zone | now()   | false    |                                                       |         |                                                                 |
+| updated_at  | timestamp with time zone | now()   | false    |                                                       |         |                                                                 |
 
 ## Constraints
 

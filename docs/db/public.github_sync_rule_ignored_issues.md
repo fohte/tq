@@ -1,15 +1,19 @@
 # public.github_sync_rule_ignored_issues
 
+## Description
+
+GitHub issues excluded by a synchronization rule.
+
 ## Columns
 
-| Name       | Type                     | Default | Nullable | Children | Parents                                                 | Comment |
-| ---------- | ------------------------ | ------- | -------- | -------- | ------------------------------------------------------- | ------- |
-| id         | text                     |         | false    |          |                                                         |         |
-| rule_id    | text                     |         | false    |          | [public.github_sync_rules](public.github_sync_rules.md) |         |
-| owner      | text                     |         | false    |          |                                                         |         |
-| repo       | text                     |         | false    |          |                                                         |         |
-| number     | integer                  |         | false    |          |                                                         |         |
-| created_at | timestamp with time zone | now()   | false    |          |                                                         |         |
+| Name       | Type                     | Default | Nullable | Children | Parents                                                 | Comment                                          |
+| ---------- | ------------------------ | ------- | -------- | -------- | ------------------------------------------------------- | ------------------------------------------------ |
+| id         | text                     |         | false    |          |                                                         |                                                  |
+| rule_id    | text                     |         | false    |          | [public.github_sync_rules](public.github_sync_rules.md) | Synchronization rule associated with this issue. |
+| owner      | text                     |         | false    |          |                                                         | Owner of the repository containing this issue.   |
+| repo       | text                     |         | false    |          |                                                         | Repository containing this issue.                |
+| number     | integer                  |         | false    |          |                                                         | GitHub issue number.                             |
+| created_at | timestamp with time zone | now()   | false    |          |                                                         |                                                  |
 
 ## Constraints
 
