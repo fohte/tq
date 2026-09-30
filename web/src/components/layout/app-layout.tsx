@@ -1,11 +1,5 @@
 import { useMatchRoute } from '@tanstack/react-router'
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
@@ -14,6 +8,7 @@ import { UrlCopiedToast } from '#components/layout/url-copied-toast'
 import { FindInPageBar } from '#components/search/find-in-page-bar'
 import { SearchModal } from '#components/search/search-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { useFindInPageOpen } from '#hooks/use-find-in-page-open'
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-query'
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
@@ -27,13 +22,13 @@ import { cn } from '#lib/utils'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
-  const [findInPageOpen, setFindInPageOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const searchKeybinding = useMemo(
     () => getSearchKeybinding(navigator.platform),
     [],
   )
   const copiedUrl = useUrlCopiedToast()
+  const findInPage = useFindInPageOpen()
   const defaultSearchQuery = useSearchModalDefaultQuery()
   const openSearch = useCallback(() => {
     setSearchOpen(true)
@@ -42,16 +37,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     setNewTaskOpen(true)
   }, [])
   const insets = useVisualViewportInsets()
-
-  useEffect(() => {
-    const openFindInPage = () => {
-      setFindInPageOpen(true)
-    }
-    window.addEventListener('tq:find', openFindInPage)
-    return () => {
-      window.removeEventListener('tq:find', openFindInPage)
-    }
-  }, [])
 
   useGlobalKeybindings({
     searchKeybinding,
@@ -99,10 +84,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <CreateTaskModal open={newTaskOpen} onOpenChange={setNewTaskOpen} />
       <UrlCopiedToast url={copiedUrl} />
       <FindInPageBar
-        open={findInPageOpen}
-        onClose={() => {
-          setFindInPageOpen(false)
-        }}
+        open={findInPage.open}
+        requestId={findInPage.requestId}
+        onClose={findInPage.close}
       />
     </div>
   )

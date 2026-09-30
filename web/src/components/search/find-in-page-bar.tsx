@@ -20,9 +20,11 @@ function hasWindowFind(value: Window): value is WindowWithFind {
 
 export function FindInPageBar({
   open,
+  requestId,
   onClose,
 }: {
   open: boolean
+  requestId: number
   onClose: () => void
 }) {
   const [query, setQuery] = useState('')
@@ -33,7 +35,7 @@ export function FindInPageBar({
 
     inputRef.current?.focus()
     inputRef.current?.select()
-  }, [open])
+  }, [open, requestId])
 
   if (!open) return null
 

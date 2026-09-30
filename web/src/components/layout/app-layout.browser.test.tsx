@@ -177,16 +177,24 @@ describe('AppLayout', () => {
     })
 
     const input = await screen.findByRole('textbox', { name: 'Find in page' })
+    const findNextButton = screen.getByRole('button', {
+      name: 'Find next match',
+    })
+    findNextButton.focus()
+
+    act(() => {
+      window.dispatchEvent(new Event('tq:find'))
+    })
 
     const getFindBarState = () => ({
       closedBeforeEvent,
-      inputFocused: document.activeElement === input,
+      inputRefocused: document.activeElement === input,
       inputVisible: input.checkVisibility(),
     })
 
     expect(getFindBarState()).toEqual({
       closedBeforeEvent: true,
-      inputFocused: true,
+      inputRefocused: true,
       inputVisible: true,
     })
   })

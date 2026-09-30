@@ -15,7 +15,7 @@ describe('FindInPageBar', () => {
       <>
         <p id="first-match">silver meadow</p>
         <p id="second-match">silver meadow</p>
-        <FindInPageBar open onClose={() => undefined} />
+        <FindInPageBar open requestId={0} onClose={() => undefined} />
       </>,
     )
     const input = screen.getByRole('textbox', { name: 'Find in page' })
@@ -35,7 +35,7 @@ describe('FindInPageBar', () => {
   it('Escape asks the parent to close the find bar', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    render(<FindInPageBar open onClose={onClose} />)
+    render(<FindInPageBar open requestId={0} onClose={onClose} />)
     const input = screen.getByRole('textbox', { name: 'Find in page' })
 
     await user.type(input, 'meadow')

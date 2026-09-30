@@ -7,6 +7,7 @@ const meta = {
   component: FindInPageBar,
   args: {
     open: true,
+    requestId: 0,
     onClose: () => undefined,
   },
   parameters: { layout: 'fullscreen' },

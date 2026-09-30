@@ -95,7 +95,7 @@ describe('pageItems', () => {
     class FakeCustomEvent {
       constructor(readonly type: string) {}
     }
-    const [find] = pageItems(
+    const find = pageItems(
       fakePage(undefined, (script) => {
         runInNewContext(script, {
           window: {
@@ -109,7 +109,7 @@ describe('pageItems', () => {
         return Promise.resolve('')
       }),
       { writeText: () => {} },
-    )
+    ).find(({ label }) => label === 'Find…')
 
     find?.click()
     await Promise.resolve()
@@ -120,10 +120,10 @@ describe('pageItems', () => {
   it('logs when the page cannot open the find bar', async () => {
     const failure = new Error('renderer unavailable')
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const [find] = pageItems(
+    const find = pageItems(
       fakePage(undefined, () => Promise.reject(failure)),
       { writeText: () => {} },
-    )
+    ).find(({ label }) => label === 'Find…')
 
     find?.click()
     await Promise.resolve()
@@ -212,7 +212,7 @@ describe('pageItems', () => {
 })
 
 describe('buildMenuTemplate', () => {
-  it('includes Copy URL in the Page menu', () => {
+  it('includes the find and Copy URL commands in the Page menu', () => {
     const { history } = fakeHistory({ back: false, forward: false })
     const menu = buildMenuTemplate(history, fakePage(), { writeText: () => {} })
     const pageMenu = menu.find(({ label }) => label === 'Page')
