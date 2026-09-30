@@ -5,8 +5,10 @@ import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
 import { StatusLine } from '#components/layout/status-line'
 import { UrlCopiedToast } from '#components/layout/url-copied-toast'
+import { FindInPageBar } from '#components/search/find-in-page-bar'
 import { SearchModal } from '#components/search/search-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { useFindInPageOpen } from '#hooks/use-find-in-page-open'
 import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-query'
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
@@ -26,6 +28,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     [],
   )
   const copiedUrl = useUrlCopiedToast()
+  const findInPage = useFindInPageOpen()
   const defaultSearchQuery = useSearchModalDefaultQuery()
   const openSearch = useCallback(() => {
     setSearchOpen(true)
@@ -80,6 +83,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
       />
       <CreateTaskModal open={newTaskOpen} onOpenChange={setNewTaskOpen} />
       <UrlCopiedToast url={copiedUrl} />
+      <FindInPageBar
+        open={findInPage.open}
+        requestId={findInPage.requestId}
+        onClose={findInPage.close}
+      />
     </div>
   )
 }
