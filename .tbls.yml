@@ -68,7 +68,7 @@ comments:
       seed_ignore_on_next_sync: 'Whether the first synchronization seeds matching existing issues as ignored instead of creating tasks for them.'
       seq: 'Insertion-order sequence used to break ties between rules created at the same time.'
   - table: labels
-    tableComment: 'Reusable labels that can be assigned to tasks through task_labels.'
+    tableComment: 'Reusable labels that can be assigned to tasks and recurring task templates.'
     columnComments:
       name: 'Unique label name.'
       color: 'Optional color value associated with the label.'
