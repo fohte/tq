@@ -79,25 +79,71 @@ describe('historyItems', () => {
 })
 
 describe('pageItems', () => {
-  it('binds the Copy URL shortcut', () => {
+  it('binds the Page menu shortcuts', () => {
     const items = pageItems(fakePage(), { writeText: () => {} })
 
     expect(
       items.map(({ label, accelerator }) => ({ label, accelerator })),
-    ).toEqual([{ label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' }])
+    ).toEqual([
+      { label: 'Find…', accelerator: 'CmdOrCtrl+F' },
+      { label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' },
+    ])
+  })
+
+  it('opens the in-page find bar', async () => {
+    const events: string[] = []
+    class FakeCustomEvent {
+      constructor(readonly type: string) {}
+    }
+    const [find] = pageItems(
+      fakePage(undefined, (script) => {
+        runInNewContext(script, {
+          window: {
+            dispatchEvent: (event: FakeCustomEvent) => {
+              events.push(event.type)
+              return true
+            },
+          },
+          CustomEvent: FakeCustomEvent,
+        })
+        return Promise.resolve('')
+      }),
+      { writeText: () => {} },
+    )
+
+    find?.click()
+    await Promise.resolve()
+
+    expect(events).toEqual(['tq:find'])
+  })
+
+  it('logs when the page cannot open the find bar', async () => {
+    const failure = new Error('renderer unavailable')
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const [find] = pageItems(
+      fakePage(undefined, () => Promise.reject(failure)),
+      { writeText: () => {} },
+    )
+
+    find?.click()
+    await Promise.resolve()
+    const loggedCalls = errorLog.mock.calls
+    errorLog.mockRestore()
+
+    expect(loggedCalls).toEqual([['failed to open the find bar', failure]])
   })
 
   it('copies the URL the page has at click time', () => {
     let currentUrl = 'https://example.test/tasks/41'
     const copiedUrls: string[] = []
-    const [copyUrl] = pageItems(
+    const copyUrl = pageItems(
       fakePage(() => currentUrl),
       {
         writeText: (url) => {
           copiedUrls.push(url)
         },
       },
-    )
+    ).find(({ label }) => label === 'Copy URL')
 
     currentUrl = 'https://example.test/tasks/42'
     copyUrl?.click()
@@ -124,7 +170,7 @@ describe('pageItems', () => {
         return true
       },
     }
-    const [copyUrl] = pageItems(
+    const copyUrl = pageItems(
       fakePage(
         () => url,
         (script) => {
@@ -136,7 +182,7 @@ describe('pageItems', () => {
         },
       ),
       { writeText: () => {} },
-    )
+    ).find(({ label }) => label === 'Copy URL')
 
     copyUrl?.click()
 
@@ -146,13 +192,13 @@ describe('pageItems', () => {
   it('logs when the page cannot display the copied URL toast', async () => {
     const failure = new Error('renderer unavailable')
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const [copyUrl] = pageItems(
+    const copyUrl = pageItems(
       fakePage(
         () => 'https://example.test/tasks/42',
         () => Promise.reject(failure),
       ),
       { writeText: () => {} },
-    )
+    ).find(({ label }) => label === 'Copy URL')
 
     copyUrl?.click()
     await Promise.resolve()
@@ -178,6 +224,7 @@ describe('buildMenuTemplate', () => {
     }))
 
     expect(items).toEqual([
+      { label: 'Find…', accelerator: 'CmdOrCtrl+F' },
       { label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' },
     ])
   })

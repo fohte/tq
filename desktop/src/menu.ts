@@ -39,6 +39,17 @@ export const pageItems = (
   clipboard: ClipboardWriter,
 ): ShortcutItem[] => [
   {
+    label: 'Find…',
+    accelerator: 'CmdOrCtrl+F',
+    click: () => {
+      void webContents
+        .executeJavaScript(`window.dispatchEvent(new CustomEvent('tq:find'))`)
+        .catch((caughtErr: unknown) => {
+          console.error('failed to open the find bar', caughtErr)
+        })
+    },
+  },
+  {
     label: 'Copy URL',
     accelerator: 'CmdOrCtrl+Shift+C',
     click: () => {

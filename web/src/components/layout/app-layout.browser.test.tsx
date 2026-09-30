@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -156,6 +156,39 @@ describe('AppLayout', () => {
 
   beforeEach(() => {
     queryClient = newQueryClient()
+  })
+
+  it('opens the find bar when the desktop menu event arrives', async () => {
+    await renderWithRouter(
+      queryClient,
+      () => (
+        <AppLayout>
+          <div />
+        </AppLayout>
+      ),
+      { initialPath: '/tasks' },
+    )
+
+    const closedBeforeEvent =
+      screen.queryByRole('textbox', { name: 'Find in page' }) === null
+
+    act(() => {
+      window.dispatchEvent(new Event('tq:find'))
+    })
+
+    const input = await screen.findByRole('textbox', { name: 'Find in page' })
+
+    const getFindBarState = () => ({
+      closedBeforeEvent,
+      inputFocused: document.activeElement === input,
+      inputVisible: input.checkVisibility(),
+    })
+
+    expect(getFindBarState()).toEqual({
+      closedBeforeEvent: true,
+      inputFocused: true,
+      inputVisible: true,
+    })
   })
 
   // Regression check: the visual-viewport insets cap this shell's own height
