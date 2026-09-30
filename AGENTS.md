@@ -33,6 +33,10 @@ The `db` service publishes Postgres on a random host port to avoid clashing with
 
 Migrations are applied automatically by `api/src/global-setup.ts`.
 
+### DB documentation
+
+Run `mise run db:doc` to generate and lint the database documentation. It creates a temporary `tq_doc_<pid>` database in the shared PostgreSQL container, applies migrations, and drops the database on exit. It does not depend on `.env.runtime` or use `tq_dev` / `tq_test`.
+
 ## Error handling rules
 
 ### Return a `Result` instead of throwing
