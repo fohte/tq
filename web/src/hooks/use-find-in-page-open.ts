@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-export const FIND_IN_PAGE_EVENT = 'tq:find'
+const FIND_IN_PAGE_EVENT = 'tq:find'
 
 export function useFindInPageOpen() {
   const [open, setOpen] = useState(false)
