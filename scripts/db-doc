@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+#
+# Generate DB documentation from a disposable database with migrations only.
+#
+# Usage:
+#   mise run db:doc
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
+docker compose up -d --wait db
+
+port_output="$(docker compose port db 5432)"
+port="${port_output##*:}"
+if [[ ! "$port" =~ ^[0-9]+$ ]]; then
+  echo "Error: failed to resolve db container port (got: '${port_output}')" >&2
+  exit 1
+fi
+
+current_database="tq_doc_$$"
+
+cleanup_on_exit() {
+  local exit_code=$?
+  local cleanup_status
+  trap - EXIT
+  if [[ -n "$current_database" ]]; then
+    if docker compose exec -T db dropdb --if-exists --force -U tq "$current_database"; then
+      current_database=''
+    else
+      cleanup_status=$?
+      echo "Error: failed to remove temporary database '${current_database}'" >&2
+      if ((exit_code == 0)); then
+        exit_code=$cleanup_status
+      fi
+    fi
+  fi
+  exit "$exit_code"
+}
+trap cleanup_on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+docker compose exec -T db createdb -U tq "$current_database"
+database_url="postgresql://tq:tq@127.0.0.1:${port}/${current_database}"
+
+DATABASE_URL="$database_url" pnpm --filter api run db:migrate
+TBLS_DSN="${database_url}?sslmode=disable" tbls doc --rm-dist -c .tbls.yml
+TBLS_DSN="${database_url}?sslmode=disable" tbls lint -c .tbls.yml

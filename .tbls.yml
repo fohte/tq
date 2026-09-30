@@ -1,5 +1,6 @@
-dsn: ${DATABASE_URL}?sslmode=disable
+name: tq
 docPath: docs/db
+disableOutputSchema: true
 er:
   format: mermaid
 exclude:
