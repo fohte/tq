@@ -4,6 +4,7 @@
     {
       "name": "public.assets",
       "type": "BASE TABLE",
+      "comment": "Metadata for uploaded assets stored in object storage.",
       "columns": [
         {
           "name": "id",
@@ -13,17 +14,20 @@
         {
           "name": "r2_key",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Unique object key used to locate the asset in R2 storage."
         },
         {
           "name": "content_type",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Media type of the asset."
         },
         {
           "name": "size_bytes",
           "type": "integer",
-          "nullable": false
+          "nullable": false,
+          "comment": "Asset size in bytes."
         },
         {
           "name": "created_at",
@@ -74,6 +78,7 @@
     {
       "name": "public.labels",
       "type": "BASE TABLE",
+      "comment": "Reusable labels that can be assigned to tasks and recurring task templates.",
       "columns": [
         {
           "name": "id",
@@ -83,12 +88,14 @@
         {
           "name": "name",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Unique label name."
         },
         {
           "name": "color",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Optional color value associated with the label."
         },
         {
           "name": "created_at",
@@ -100,7 +107,8 @@
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether the label belongs to the work or personal context."
         }
       ],
       "indexes": [
@@ -145,6 +153,7 @@
     {
       "name": "public.oauth_tokens",
       "type": "BASE TABLE",
+      "comment": "OAuth credentials identified by provider and account.",
       "columns": [
         {
           "name": "id",
@@ -155,22 +164,26 @@
           "name": "provider",
           "type": "text",
           "nullable": false,
-          "default": "'google_calendar'::text"
+          "default": "'google_calendar'::text",
+          "comment": "Integration provider associated with these credentials."
         },
         {
           "name": "access_token",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Credential sent to the provider when making authenticated API requests."
         },
         {
           "name": "refresh_token",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "OAuth refresh token; null for providers whose access tokens do not expire."
         },
         {
           "name": "expires_at",
           "type": "timestamp with time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "Access token expiration time; null when the provider supplies no expiration."
         },
         {
           "name": "created_at",
@@ -187,12 +200,14 @@
         {
           "name": "account_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Stable provider-specific account identifier; GitHub uses an empty string because it is single-account."
         },
         {
           "name": "account_label",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Human-readable label for the provider account, when available."
         }
       ],
       "indexes": [
@@ -239,6 +254,7 @@
     {
       "name": "public.projects",
       "type": "BASE TABLE",
+      "comment": "Projects group related tasks and track planning status and dates.",
       "columns": [
         {
           "name": "id",
@@ -248,39 +264,46 @@
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Human-readable project title."
         },
         {
           "name": "description",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Optional description of the project."
         },
         {
           "name": "status",
           "type": "text",
           "nullable": false,
-          "default": "'active'::text"
+          "default": "'active'::text",
+          "comment": "Project lifecycle status: active, paused, completed, or archived."
         },
         {
           "name": "start_date",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Planned start date for the project."
         },
         {
           "name": "target_date",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Target completion date for the project."
         },
         {
           "name": "color",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Optional color value associated with the project."
         },
         {
           "name": "sort_order",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "Position used to order projects."
         },
         {
           "name": "created_at",
@@ -298,7 +321,8 @@
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether the project belongs to the work or personal context."
         }
       ],
       "indexes": [
@@ -341,6 +365,7 @@
     {
       "name": "public.recurrence_rules",
       "type": "BASE TABLE",
+      "comment": "Recurrence definitions referenced by tasks, schedules, and recurring task templates.",
       "columns": [
         {
           "name": "id",
@@ -350,23 +375,27 @@
         {
           "name": "type",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Recurrence unit or pattern: daily, weekly, monthly, or custom."
         },
         {
           "name": "interval",
           "type": "integer",
           "nullable": false,
-          "default": "1"
+          "default": "1",
+          "comment": "Number of recurrence units between occurrences."
         },
         {
           "name": "days_of_week",
           "type": "integer[]",
-          "nullable": true
+          "nullable": true,
+          "comment": "Days selected for weekly recurrence, using 0 for Sunday through 6 for Saturday."
         },
         {
           "name": "day_of_month",
           "type": "integer",
-          "nullable": true
+          "nullable": true,
+          "comment": "Calendar day selected for monthly recurrence, from 1 through 31."
         },
         {
           "name": "created_at",
@@ -403,6 +432,7 @@
     {
       "name": "public.schedules",
       "type": "BASE TABLE",
+      "comment": "Recurring calendar schedules with a local time range and optional recurrence rule.",
       "columns": [
         {
           "name": "id",
@@ -412,33 +442,39 @@
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Human-readable schedule title."
         },
         {
           "name": "start_time",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Local start time of the schedule in 24-hour HH:MM format."
         },
         {
           "name": "end_time",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Local end time of the schedule in 24-hour HH:MM format."
         },
         {
           "name": "recurrence_rule_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Recurrence rule associated with the schedule; null for a one-time schedule."
         },
         {
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether the schedule belongs to the work or personal context."
         },
         {
           "name": "color",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Optional color value associated with the schedule."
         },
         {
           "name": "created_at",
@@ -496,6 +532,7 @@
     {
       "name": "public.task_comments",
       "type": "BASE TABLE",
+      "comment": "Text comments attached to tasks.",
       "columns": [
         {
           "name": "id",
@@ -505,12 +542,14 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task that owns this comment."
         },
         {
           "name": "content",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "User-authored body of the task comment."
         },
         {
           "name": "created_at",
@@ -574,16 +613,19 @@
     {
       "name": "public.task_labels",
       "type": "BASE TABLE",
+      "comment": "Join table associating tasks with labels.",
       "columns": [
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task receiving the label."
         },
         {
           "name": "label_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Label assigned to the task."
         }
       ],
       "indexes": [
@@ -638,6 +680,7 @@
     {
       "name": "public.task_pages",
       "type": "BASE TABLE",
+      "comment": "Formatted content pages attached to tasks.",
       "columns": [
         {
           "name": "id",
@@ -647,24 +690,28 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task that owns this page."
         },
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Title shown for this task page."
         },
         {
           "name": "content",
           "type": "text",
           "nullable": false,
-          "default": "''::text"
+          "default": "''::text",
+          "comment": "Page body stored according to format; defaults to an empty string."
         },
         {
           "name": "sort_order",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "Ordering value for pages belonging to the same task."
         },
         {
           "name": "created_at",
@@ -682,7 +729,8 @@
           "name": "format",
           "type": "text",
           "nullable": false,
-          "default": "'markdown'::text"
+          "default": "'markdown'::text",
+          "comment": "Content format: markdown or html. Defaults to markdown."
         }
       ],
       "indexes": [
@@ -728,6 +776,7 @@
     {
       "name": "public.tasks",
       "type": "BASE TABLE",
+      "comment": "Tasks with optional parent, project, recurrence, and template relationships.",
       "columns": [
         {
           "name": "id",
@@ -737,54 +786,64 @@
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Human-readable task title."
         },
         {
           "name": "description",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Optional task details."
         },
         {
           "name": "status",
           "type": "text",
           "nullable": false,
-          "default": "'todo'::text"
+          "default": "'todo'::text",
+          "comment": "Task status: todo or completed."
         },
         {
           "name": "start_date",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Date when work on the task is planned to start."
         },
         {
           "name": "due_date",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Task deadline date."
         },
         {
           "name": "estimated_minutes",
           "type": "integer",
-          "nullable": true
+          "nullable": true,
+          "comment": "Estimated task effort, in minutes."
         },
         {
           "name": "parent_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Parent task in the task hierarchy."
         },
         {
           "name": "project_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Project associated with the task."
         },
         {
           "name": "recurrence_rule_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Recurrence rule associated with the task."
         },
         {
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether the task belongs to the work or personal context."
         },
         {
           "name": "created_at",
@@ -801,33 +860,39 @@
         {
           "name": "number",
           "type": "integer",
-          "nullable": false
+          "nullable": false,
+          "comment": "Globally unique, human-facing sequential task number."
         },
         {
           "name": "commitment",
           "type": "text",
           "nullable": false,
-          "default": "'inbox'::text"
+          "default": "'inbox'::text",
+          "comment": "Triage state: inbox for untriaged, active for committed, or someday for deferred."
         },
         {
           "name": "status_reason",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Reason for the completed status: completed, not_planned, or duplicate."
         },
         {
           "name": "remind_at",
           "type": "timestamp with time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "Time when a reminder is due; cleared when claimed for delivery."
         },
         {
           "name": "template_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Recurring task template that generated this task; null for tasks created independently."
         },
         {
           "name": "occurrence_date",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Date represented by this generated task occurrence; set together with template_id."
         }
       ],
       "indexes": [
@@ -990,6 +1055,7 @@
     {
       "name": "public.time_blocks",
       "type": "BASE TABLE",
+      "comment": "Scheduled time intervals assigned to tasks.",
       "columns": [
         {
           "name": "id",
@@ -999,23 +1065,27 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task assigned to this time block."
         },
         {
           "name": "start_time",
           "type": "timestamp with time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "Start instant of the scheduled time interval."
         },
         {
           "name": "end_time",
           "type": "timestamp with time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "End instant of the scheduled time interval."
         },
         {
           "name": "is_auto_scheduled",
           "type": "boolean",
           "nullable": false,
-          "default": "false"
+          "default": "false",
+          "comment": "Whether the time block was created by automatic scheduling."
         },
         {
           "name": "created_at",
@@ -1073,6 +1143,7 @@
     {
       "name": "public.task_queue_items",
       "type": "BASE TABLE",
+      "comment": "Tasks placed in a queue, optionally for a specific period.",
       "columns": [
         {
           "name": "id",
@@ -1082,18 +1153,21 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task placed in the queue."
         },
         {
           "name": "period_start",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Period start date: the date for a daily queue, Monday for a weekly queue, or the first of the month; null for a static queue."
         },
         {
           "name": "sort_order",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "Position of the task within the queue period."
         },
         {
           "name": "created_at",
@@ -1110,7 +1184,8 @@
         {
           "name": "queue_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Queue containing the task."
         }
       ],
       "indexes": [
@@ -1179,6 +1254,7 @@
     {
       "name": "public.edits",
       "type": "BASE TABLE",
+      "comment": "Records for task, page, or comment creation and field updates.",
       "columns": [
         {
           "name": "id",
@@ -1188,37 +1264,44 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task associated with the edited record."
         },
         {
           "name": "page_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Edited page, when the edit targets a page."
         },
         {
           "name": "comment_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Edited comment, when the edit targets a comment."
         },
         {
           "name": "action",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Edit operation: create or update."
         },
         {
           "name": "field",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Updated field: title, description, or content; valid values depend on the edited record type. Null for create actions."
         },
         {
           "name": "author_kind",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Author category: human, llm, or system."
         },
         {
           "name": "author_agent",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Agent identifier for llm-authored edits; null for other author categories."
         },
         {
           "name": "created_at",
@@ -1348,6 +1431,7 @@
     {
       "name": "public.task_github_links",
       "type": "BASE TABLE",
+      "comment": "GitHub issues and pull requests linked to tasks.",
       "columns": [
         {
           "name": "id",
@@ -1357,48 +1441,57 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task linked to this GitHub item."
         },
         {
           "name": "owner",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Owner of the repository containing this item."
         },
         {
           "name": "repo",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Repository containing this item."
         },
         {
           "name": "number",
           "type": "integer",
-          "nullable": false
+          "nullable": false,
+          "comment": "GitHub issue or pull request number."
         },
         {
           "name": "kind",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "GitHub item type: issue or pull_request."
         },
         {
           "name": "url",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "URL of the linked GitHub item."
         },
         {
           "name": "state",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Cached item state: open, closed, or merged."
         },
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Cached title of the linked GitHub item."
         },
         {
           "name": "last_synced_at",
           "type": "timestamp with time zone",
           "nullable": false,
-          "default": "now()"
+          "default": "now()",
+          "comment": "Time when the linked item's state and title were last synchronized."
         },
         {
           "name": "created_at",
@@ -1415,12 +1508,14 @@
         {
           "name": "etag",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "ETag from the latest GitHub response, used for conditional synchronization."
         },
         {
           "name": "seq",
           "type": "bigint",
-          "nullable": false
+          "nullable": false,
+          "comment": "Insertion-order sequence used to break ties between links created at the same time."
         }
       ],
       "indexes": [
@@ -1482,16 +1577,19 @@
     {
       "name": "public.task_links",
       "type": "BASE TABLE",
+      "comment": "Directed task links derived from task descriptions, page content, and comments.",
       "columns": [
         {
           "name": "source_task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task whose content mentions the target task's human-facing number."
         },
         {
           "name": "target_task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task referenced by the number in the source task's content."
         },
         {
           "name": "created_at",
@@ -1554,6 +1652,7 @@
     {
       "name": "public.github_sync_rule_ignored_issues",
       "type": "BASE TABLE",
+      "comment": "GitHub issues excluded by a synchronization rule.",
       "columns": [
         {
           "name": "id",
@@ -1563,22 +1662,26 @@
         {
           "name": "rule_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Synchronization rule associated with this issue."
         },
         {
           "name": "owner",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Owner of the repository containing this issue."
         },
         {
           "name": "repo",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Repository containing this issue."
         },
         {
           "name": "number",
           "type": "integer",
-          "nullable": false
+          "nullable": false,
+          "comment": "GitHub issue number."
         },
         {
           "name": "created_at",
@@ -1632,6 +1735,7 @@
     {
       "name": "public.github_sync_rules",
       "type": "BASE TABLE",
+      "comment": "GitHub synchronization rules associated with a target project.",
       "columns": [
         {
           "name": "id",
@@ -1641,40 +1745,47 @@
         {
           "name": "scope",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Repositories covered by the rule: all, org, or repo."
         },
         {
           "name": "org",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Organization covered by the rule when scope is org or repo."
         },
         {
           "name": "repo",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Repository covered by the rule when scope is repo."
         },
         {
           "name": "trigger",
           "type": "text",
           "nullable": false,
-          "default": "'assigned'::text"
+          "default": "'assigned'::text",
+          "comment": "Synchronization trigger value: assigned."
         },
         {
           "name": "target_project_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Project associated with the rule."
         },
         {
           "name": "enabled",
           "type": "boolean",
           "nullable": false,
-          "default": "true"
+          "default": "true",
+          "comment": "Whether the rule is enabled."
         },
         {
           "name": "seed_ignore_on_next_sync",
           "type": "boolean",
           "nullable": false,
-          "default": "false"
+          "default": "false",
+          "comment": "Whether the first synchronization seeds matching existing issues as ignored instead of creating tasks for them."
         },
         {
           "name": "created_at",
@@ -1691,7 +1802,8 @@
         {
           "name": "seq",
           "type": "bigint",
-          "nullable": false
+          "nullable": false,
+          "comment": "Insertion-order sequence used to break ties between rules created at the same time."
         }
       ],
       "indexes": [
@@ -1745,6 +1857,7 @@
     {
       "name": "public.calendar_subscriptions",
       "type": "BASE TABLE",
+      "comment": "Calendars selected for OAuth accounts.",
       "columns": [
         {
           "name": "id",
@@ -1754,22 +1867,26 @@
         {
           "name": "oauth_token_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "OAuth credentials associated with this calendar."
         },
         {
           "name": "calendar_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Provider identifier for the selected calendar."
         },
         {
           "name": "display_name",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Cached display name of the calendar."
         },
         {
           "name": "color",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Cached calendar color value."
         },
         {
           "name": "created_at",
@@ -1786,7 +1903,8 @@
         {
           "name": "context",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Context where events show full details; they appear as busy time in the other context. Null shows full details everywhere."
         }
       ],
       "indexes": [
@@ -1834,6 +1952,7 @@
     {
       "name": "public.task_events",
       "type": "BASE TABLE",
+      "comment": "Task status changes and GitHub link or unlink events shown in the activity timeline.",
       "columns": [
         {
           "name": "id",
@@ -1843,52 +1962,62 @@
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task associated with this event."
         },
         {
           "name": "type",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Event category: status_changed, github_linked, or github_unlinked."
         },
         {
           "name": "from_status",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Previous status for a status_changed event: todo, in_progress, or completed."
         },
         {
           "name": "to_status",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "New status for a status_changed event: todo, in_progress, or completed."
         },
         {
           "name": "github_owner",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Owner of the linked GitHub repository."
         },
         {
           "name": "github_repo",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Name of the linked GitHub repository."
         },
         {
           "name": "github_number",
           "type": "integer",
-          "nullable": true
+          "nullable": true,
+          "comment": "Number of the linked GitHub issue or pull request."
         },
         {
           "name": "github_kind",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Linked GitHub item type: issue or pull_request."
         },
         {
           "name": "author_kind",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Author category: human, llm, or system."
         },
         {
           "name": "author_agent",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Agent identifier for llm-authored events; null for other author categories."
         },
         {
           "name": "created_at",
@@ -1899,7 +2028,8 @@
         {
           "name": "to_status_reason",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Reason recorded for a transition to completed: completed, not_planned, or duplicate."
         }
       ],
       "indexes": [
@@ -1980,6 +2110,7 @@
     {
       "name": "public.scheduling_settings",
       "type": "BASE TABLE",
+      "comment": "Singleton preferences for task scheduling.",
       "columns": [
         {
           "name": "id",
@@ -1991,25 +2122,29 @@
           "name": "working_hours_start",
           "type": "text",
           "nullable": false,
-          "default": "'09:00'::text"
+          "default": "'09:00'::text",
+          "comment": "Start of the working-hours window in local 24-hour HH:MM format."
         },
         {
           "name": "working_hours_end",
           "type": "text",
           "nullable": false,
-          "default": "'19:00'::text"
+          "default": "'19:00'::text",
+          "comment": "End of the working-hours window in local 24-hour HH:MM format."
         },
         {
           "name": "minimum_block_minutes",
           "type": "integer",
           "nullable": false,
-          "default": "30"
+          "default": "30",
+          "comment": "Minimum scheduling block length, in minutes."
         },
         {
           "name": "auto_reschedule_on_gcal_change",
           "type": "boolean",
           "nullable": false,
-          "default": "true"
+          "default": "true",
+          "comment": "Whether task blocks are automatically rescheduled when Google Calendar changes."
         },
         {
           "name": "created_at",
@@ -2078,6 +2213,7 @@
     {
       "name": "public.agent_sessions",
       "type": "BASE TABLE",
+      "comment": "Sessions reported by coding agent providers.",
       "columns": [
         {
           "name": "id",
@@ -2087,60 +2223,71 @@
         {
           "name": "provider",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Coding agent provider: claude_code or codex."
         },
         {
           "name": "session_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Session identifier assigned by the provider."
         },
         {
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether the session belongs to the work or personal context."
         },
         {
           "name": "cwd",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Working directory associated with the session."
         },
         {
           "name": "label",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Session label reported by the provider integration."
         },
         {
           "name": "last_message",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Most recent message extracted from the session transcript."
         },
         {
           "name": "custom_label",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Human-assigned session name that is kept separately from the reported label."
         },
         {
           "name": "started_at",
           "type": "timestamp with time zone",
           "nullable": false,
-          "default": "now()"
+          "default": "now()",
+          "comment": "Time when the session was first recorded."
         },
         {
           "name": "last_active_at",
           "type": "timestamp with time zone",
           "nullable": false,
-          "default": "now()"
+          "default": "now()",
+          "comment": "Time of the most recent activity report for the session."
         },
         {
           "name": "ended_at",
           "type": "timestamp with time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "Time the integration last reported the session as ended; cleared by a later activity report."
         },
         {
           "name": "parent_session_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Raw parent session ID reported by the provider; it may be recorded before the parent session."
         }
       ],
       "indexes": [
@@ -2185,16 +2332,19 @@
     {
       "name": "public.task_agent_sessions",
       "type": "BASE TABLE",
+      "comment": "Associations between tasks and coding agent sessions.",
       "columns": [
         {
           "name": "task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task associated with the agent session."
         },
         {
           "name": "agent_session_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Agent session associated with the task."
         }
       ],
       "indexes": [
@@ -2249,6 +2399,7 @@
     {
       "name": "public.saved_views",
       "type": "BASE TABLE",
+      "comment": "Saved task searches with a display name, query, context, and position.",
       "columns": [
         {
           "name": "id",
@@ -2258,24 +2409,28 @@
         {
           "name": "name",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Human-readable name of the saved view."
         },
         {
           "name": "query",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Raw search DSL query used by the saved view."
         },
         {
           "name": "position",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "Position used to order saved views."
         },
         {
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether the saved view belongs to the work or personal context."
         },
         {
           "name": "created_at",
@@ -2324,21 +2479,25 @@
     {
       "name": "public.task_relations",
       "type": "BASE TABLE",
+      "comment": "User-defined directed relationships between tasks.",
       "columns": [
         {
           "name": "source_task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task whose relationship is described; read the relation from source to target."
         },
         {
           "name": "target_task_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Task at the target end of the directed relationship."
         },
         {
           "name": "type",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Relation read as source type target: duplicate_of or blocked_by."
         },
         {
           "name": "created_at",
@@ -2401,6 +2560,7 @@
     {
       "name": "public.task_queues",
       "type": "BASE TABLE",
+      "comment": "Named queues that organize tasks, with optional period-based rollover.",
       "columns": [
         {
           "name": "id",
@@ -2410,23 +2570,27 @@
         {
           "name": "key",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Stable programmatic identifier, separate from the display name."
         },
         {
           "name": "name",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Human-readable queue name."
         },
         {
           "name": "period_unit",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Rollover period: day, week, or month; null for a static queue."
         },
         {
           "name": "position",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "Position used to order queues."
         },
         {
           "name": "created_at",
@@ -2485,6 +2649,7 @@
     {
       "name": "public.push_subscriptions",
       "type": "BASE TABLE",
+      "comment": "Browser push endpoints and encryption credentials registered for notifications.",
       "columns": [
         {
           "name": "id",
@@ -2494,27 +2659,32 @@
         {
           "name": "endpoint",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Push service URL identifying the browser subscription."
         },
         {
           "name": "p256dh",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Public key used to encrypt notification payloads for this endpoint."
         },
         {
           "name": "auth",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Authentication secret used with this push endpoint."
         },
         {
           "name": "label",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Device name derived from the browser's User-Agent."
         },
         {
           "name": "context",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Work or personal context targeted by notifications for this device."
         },
         {
           "name": "created_at",
@@ -2525,7 +2695,8 @@
         {
           "name": "last_success_at",
           "type": "timestamp with time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "Time of the most recent successful notification delivery; null before the first success."
         }
       ],
       "indexes": [
@@ -2564,16 +2735,19 @@
     {
       "name": "public.recurring_task_template_labels",
       "type": "BASE TABLE",
+      "comment": "Join table associating recurring task templates with labels.",
       "columns": [
         {
           "name": "template_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Recurring task template receiving the label."
         },
         {
           "name": "label_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Label assigned to the recurring task template."
         }
       ],
       "indexes": [
@@ -2628,6 +2802,7 @@
     {
       "name": "public.recurring_task_templates",
       "type": "BASE TABLE",
+      "comment": "Definitions used by the scheduler to create recurring task instances.",
       "columns": [
         {
           "name": "id",
@@ -2637,59 +2812,70 @@
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Title copied to each generated task."
         },
         {
           "name": "description",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Optional task details copied to generated tasks."
         },
         {
           "name": "estimated_minutes",
           "type": "integer",
-          "nullable": true
+          "nullable": true,
+          "comment": "Estimated effort for each generated task, in minutes."
         },
         {
           "name": "project_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Project associated with generated tasks."
         },
         {
           "name": "parent_id",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "Task under which each generated task is nested."
         },
         {
           "name": "context",
           "type": "text",
           "nullable": false,
-          "default": "'personal'::text"
+          "default": "'personal'::text",
+          "comment": "Whether generated tasks belong to the work or personal context."
         },
         {
           "name": "recurrence_rule_id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Recurrence rule used to determine occurrence dates; each rule belongs to one template."
         },
         {
           "name": "start_offset_days",
           "type": "integer",
-          "nullable": true
+          "nullable": true,
+          "comment": "Days before the due date to set a generated task's start date; null leaves the start date unset."
         },
         {
           "name": "anchor_date",
           "type": "date",
-          "nullable": false
+          "nullable": false,
+          "comment": "Base date used to calculate the first occurrence."
         },
         {
           "name": "last_generated_date",
           "type": "date",
-          "nullable": true
+          "nullable": true,
+          "comment": "Date of the most recent occurrence generated by the scheduler."
         },
         {
           "name": "enabled",
           "type": "boolean",
           "nullable": false,
-          "default": "true"
+          "default": "true",
+          "comment": "Whether the scheduler may generate future occurrences from this template."
         },
         {
           "name": "created_at",

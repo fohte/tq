@@ -1,16 +1,20 @@
 # public.scheduling_settings
 
+## Description
+
+Singleton preferences for task scheduling.
+
 ## Columns
 
-| Name                           | Type                     | Default           | Nullable | Children | Parents | Comment |
-| ------------------------------ | ------------------------ | ----------------- | -------- | -------- | ------- | ------- |
-| id                             | text                     | 'singleton'::text | false    |          |         |         |
-| working_hours_start            | text                     | '09:00'::text     | false    |          |         |         |
-| working_hours_end              | text                     | '19:00'::text     | false    |          |         |         |
-| minimum_block_minutes          | integer                  | 30                | false    |          |         |         |
-| auto_reschedule_on_gcal_change | boolean                  | true              | false    |          |         |         |
-| created_at                     | timestamp with time zone | now()             | false    |          |         |         |
-| updated_at                     | timestamp with time zone | now()             | false    |          |         |         |
+| Name                           | Type                     | Default           | Nullable | Children | Parents | Comment                                                                         |
+| ------------------------------ | ------------------------ | ----------------- | -------- | -------- | ------- | ------------------------------------------------------------------------------- |
+| id                             | text                     | 'singleton'::text | false    |          |         |                                                                                 |
+| working_hours_start            | text                     | '09:00'::text     | false    |          |         | Start of the working-hours window in local 24-hour HH:MM format.                |
+| working_hours_end              | text                     | '19:00'::text     | false    |          |         | End of the working-hours window in local 24-hour HH:MM format.                  |
+| minimum_block_minutes          | integer                  | 30                | false    |          |         | Minimum scheduling block length, in minutes.                                    |
+| auto_reschedule_on_gcal_change | boolean                  | true              | false    |          |         | Whether task blocks are automatically rescheduled when Google Calendar changes. |
+| created_at                     | timestamp with time zone | now()             | false    |          |         |                                                                                 |
+| updated_at                     | timestamp with time zone | now()             | false    |          |         |                                                                                 |
 
 ## Constraints
 

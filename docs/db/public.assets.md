@@ -1,14 +1,18 @@
 # public.assets
 
+## Description
+
+Metadata for uploaded assets stored in object storage.
+
 ## Columns
 
-| Name         | Type                     | Default | Nullable | Children | Parents | Comment |
-| ------------ | ------------------------ | ------- | -------- | -------- | ------- | ------- |
-| id           | text                     |         | false    |          |         |         |
-| r2_key       | text                     |         | false    |          |         |         |
-| content_type | text                     |         | false    |          |         |         |
-| size_bytes   | integer                  |         | false    |          |         |         |
-| created_at   | timestamp with time zone | now()   | false    |          |         |         |
+| Name         | Type                     | Default | Nullable | Children | Parents | Comment                                                   |
+| ------------ | ------------------------ | ------- | -------- | -------- | ------- | --------------------------------------------------------- |
+| id           | text                     |         | false    |          |         |                                                           |
+| r2_key       | text                     |         | false    |          |         | Unique object key used to locate the asset in R2 storage. |
+| content_type | text                     |         | false    |          |         | Media type of the asset.                                  |
+| size_bytes   | integer                  |         | false    |          |         | Asset size in bytes.                                      |
+| created_at   | timestamp with time zone | now()   | false    |          |         |                                                           |
 
 ## Constraints
 

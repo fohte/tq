@@ -1,16 +1,20 @@
 # public.task_queue_items
 
+## Description
+
+Tasks placed in a queue, optionally for a specific period.
+
 ## Columns
 
-| Name         | Type                     | Default | Nullable | Children | Parents                                     | Comment |
-| ------------ | ------------------------ | ------- | -------- | -------- | ------------------------------------------- | ------- |
-| id           | text                     |         | false    |          |                                             |         |
-| task_id      | text                     |         | false    |          | [public.tasks](public.tasks.md)             |         |
-| period_start | date                     |         | true     |          |                                             |         |
-| sort_order   | integer                  | 0       | false    |          |                                             |         |
-| created_at   | timestamp with time zone | now()   | false    |          |                                             |         |
-| updated_at   | timestamp with time zone | now()   | false    |          |                                             |         |
-| queue_id     | text                     |         | false    |          | [public.task_queues](public.task_queues.md) |         |
+| Name         | Type                     | Default | Nullable | Children | Parents                                     | Comment                                                                                                                       |
+| ------------ | ------------------------ | ------- | -------- | -------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| id           | text                     |         | false    |          |                                             |                                                                                                                               |
+| task_id      | text                     |         | false    |          | [public.tasks](public.tasks.md)             | Task placed in the queue.                                                                                                     |
+| period_start | date                     |         | true     |          |                                             | Period start date: the date for a daily queue, Monday for a weekly queue, or the first of the month; null for a static queue. |
+| sort_order   | integer                  | 0       | false    |          |                                             | Position of the task within the queue period.                                                                                 |
+| created_at   | timestamp with time zone | now()   | false    |          |                                             |                                                                                                                               |
+| updated_at   | timestamp with time zone | now()   | false    |          |                                             |                                                                                                                               |
+| queue_id     | text                     |         | false    |          | [public.task_queues](public.task_queues.md) | Queue containing the task.                                                                                                    |
 
 ## Constraints
 

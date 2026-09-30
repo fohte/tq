@@ -1,17 +1,21 @@
 # public.push_subscriptions
 
+## Description
+
+Browser push endpoints and encryption credentials registered for notifications.
+
 ## Columns
 
-| Name            | Type                     | Default | Nullable | Children | Parents | Comment |
-| --------------- | ------------------------ | ------- | -------- | -------- | ------- | ------- |
-| id              | text                     |         | false    |          |         |         |
-| endpoint        | text                     |         | false    |          |         |         |
-| p256dh          | text                     |         | false    |          |         |         |
-| auth            | text                     |         | false    |          |         |         |
-| label           | text                     |         | true     |          |         |         |
-| context         | text                     |         | false    |          |         |         |
-| created_at      | timestamp with time zone | now()   | false    |          |         |         |
-| last_success_at | timestamp with time zone |         | true     |          |         |         |
+| Name            | Type                     | Default | Nullable | Children | Parents | Comment                                                                                  |
+| --------------- | ------------------------ | ------- | -------- | -------- | ------- | ---------------------------------------------------------------------------------------- |
+| id              | text                     |         | false    |          |         |                                                                                          |
+| endpoint        | text                     |         | false    |          |         | Push service URL identifying the browser subscription.                                   |
+| p256dh          | text                     |         | false    |          |         | Public key used to encrypt notification payloads for this endpoint.                      |
+| auth            | text                     |         | false    |          |         | Authentication secret used with this push endpoint.                                      |
+| label           | text                     |         | true     |          |         | Device name derived from the browser's User-Agent.                                       |
+| context         | text                     |         | false    |          |         | Work or personal context targeted by notifications for this device.                      |
+| created_at      | timestamp with time zone | now()   | false    |          |         |                                                                                          |
+| last_success_at | timestamp with time zone |         | true     |          |         | Time of the most recent successful notification delivery; null before the first success. |
 
 ## Constraints
 

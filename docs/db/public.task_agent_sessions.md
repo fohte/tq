@@ -1,11 +1,15 @@
 # public.task_agent_sessions
 
+## Description
+
+Associations between tasks and coding agent sessions.
+
 ## Columns
 
-| Name             | Type | Default | Nullable | Children | Parents                                           | Comment |
-| ---------------- | ---- | ------- | -------- | -------- | ------------------------------------------------- | ------- |
-| task_id          | text |         | false    |          | [public.tasks](public.tasks.md)                   |         |
-| agent_session_id | text |         | false    |          | [public.agent_sessions](public.agent_sessions.md) |         |
+| Name             | Type | Default | Nullable | Children | Parents                                           | Comment                                 |
+| ---------------- | ---- | ------- | -------- | -------- | ------------------------------------------------- | --------------------------------------- |
+| task_id          | text |         | false    |          | [public.tasks](public.tasks.md)                   | Task associated with the agent session. |
+| agent_session_id | text |         | false    |          | [public.agent_sessions](public.agent_sessions.md) | Agent session associated with the task. |
 
 ## Constraints
 

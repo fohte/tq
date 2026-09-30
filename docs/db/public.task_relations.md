@@ -1,13 +1,17 @@
 # public.task_relations
 
+## Description
+
+User-defined directed relationships between tasks.
+
 ## Columns
 
-| Name           | Type                     | Default | Nullable | Children | Parents                         | Comment |
-| -------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------- |
-| source_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) |         |
-| target_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) |         |
-| type           | text                     |         | false    |          |                                 |         |
-| created_at     | timestamp with time zone | now()   | false    |          |                                 |         |
+| Name           | Type                     | Default | Nullable | Children | Parents                         | Comment                                                                        |
+| -------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | ------------------------------------------------------------------------------ |
+| source_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task whose relationship is described; read the relation from source to target. |
+| target_task_id | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task at the target end of the directed relationship.                           |
+| type           | text                     |         | false    |          |                                 | Relation read as source type target: duplicate_of or blocked_by.               |
+| created_at     | timestamp with time zone | now()   | false    |          |                                 |                                                                                |
 
 ## Constraints
 

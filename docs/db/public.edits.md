@@ -1,19 +1,23 @@
 # public.edits
 
+## Description
+
+Records for task, page, or comment creation and field updates.
+
 ## Columns
 
-| Name         | Type                     | Default | Nullable | Children | Parents                                         | Comment |
-| ------------ | ------------------------ | ------- | -------- | -------- | ----------------------------------------------- | ------- |
-| id           | bigint                   |         | false    |          |                                                 |         |
-| task_id      | text                     |         | false    |          | [public.tasks](public.tasks.md)                 |         |
-| page_id      | text                     |         | true     |          | [public.task_pages](public.task_pages.md)       |         |
-| comment_id   | text                     |         | true     |          | [public.task_comments](public.task_comments.md) |         |
-| action       | text                     |         | false    |          |                                                 |         |
-| field        | text                     |         | true     |          |                                                 |         |
-| author_kind  | text                     |         | false    |          |                                                 |         |
-| author_agent | text                     |         | true     |          |                                                 |         |
-| created_at   | timestamp with time zone | now()   | false    |          |                                                 |         |
-| updated_at   | timestamp with time zone | now()   | false    |          |                                                 |         |
+| Name         | Type                     | Default | Nullable | Children | Parents                                         | Comment                                                                                                                |
+| ------------ | ------------------------ | ------- | -------- | -------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| id           | bigint                   |         | false    |          |                                                 |                                                                                                                        |
+| task_id      | text                     |         | false    |          | [public.tasks](public.tasks.md)                 | Task associated with the edited record.                                                                                |
+| page_id      | text                     |         | true     |          | [public.task_pages](public.task_pages.md)       | Edited page, when the edit targets a page.                                                                             |
+| comment_id   | text                     |         | true     |          | [public.task_comments](public.task_comments.md) | Edited comment, when the edit targets a comment.                                                                       |
+| action       | text                     |         | false    |          |                                                 | Edit operation: create or update.                                                                                      |
+| field        | text                     |         | true     |          |                                                 | Updated field: title, description, or content; valid values depend on the edited record type. Null for create actions. |
+| author_kind  | text                     |         | false    |          |                                                 | Author category: human, llm, or system.                                                                                |
+| author_agent | text                     |         | true     |          |                                                 | Agent identifier for llm-authored edits; null for other author categories.                                             |
+| created_at   | timestamp with time zone | now()   | false    |          |                                                 |                                                                                                                        |
+| updated_at   | timestamp with time zone | now()   | false    |          |                                                 |                                                                                                                        |
 
 ## Constraints
 

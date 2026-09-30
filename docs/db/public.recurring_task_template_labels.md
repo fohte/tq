@@ -1,11 +1,15 @@
 # public.recurring_task_template_labels
 
+## Description
+
+Join table associating recurring task templates with labels.
+
 ## Columns
 
-| Name        | Type | Default | Nullable | Children | Parents                                                               | Comment |
-| ----------- | ---- | ------- | -------- | -------- | --------------------------------------------------------------------- | ------- |
-| template_id | text |         | false    |          | [public.recurring_task_templates](public.recurring_task_templates.md) |         |
-| label_id    | text |         | false    |          | [public.labels](public.labels.md)                                     |         |
+| Name        | Type | Default | Nullable | Children | Parents                                                               | Comment                                        |
+| ----------- | ---- | ------- | -------- | -------- | --------------------------------------------------------------------- | ---------------------------------------------- |
+| template_id | text |         | false    |          | [public.recurring_task_templates](public.recurring_task_templates.md) | Recurring task template receiving the label.   |
+| label_id    | text |         | false    |          | [public.labels](public.labels.md)                                     | Label assigned to the recurring task template. |
 
 ## Constraints
 

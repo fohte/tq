@@ -1,20 +1,24 @@
 # public.github_sync_rules
 
+## Description
+
+GitHub synchronization rules associated with a target project.
+
 ## Columns
 
-| Name                     | Type                     | Default          | Nullable | Children                                                                            | Parents                               | Comment |
-| ------------------------ | ------------------------ | ---------------- | -------- | ----------------------------------------------------------------------------------- | ------------------------------------- | ------- |
-| id                       | text                     |                  | false    | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) |                                       |         |
-| scope                    | text                     |                  | false    |                                                                                     |                                       |         |
-| org                      | text                     |                  | true     |                                                                                     |                                       |         |
-| repo                     | text                     |                  | true     |                                                                                     |                                       |         |
-| trigger                  | text                     | 'assigned'::text | false    |                                                                                     |                                       |         |
-| target_project_id        | text                     |                  | false    |                                                                                     | [public.projects](public.projects.md) |         |
-| enabled                  | boolean                  | true             | false    |                                                                                     |                                       |         |
-| seed_ignore_on_next_sync | boolean                  | false            | false    |                                                                                     |                                       |         |
-| created_at               | timestamp with time zone | now()            | false    |                                                                                     |                                       |         |
-| updated_at               | timestamp with time zone | now()            | false    |                                                                                     |                                       |         |
-| seq                      | bigint                   |                  | false    |                                                                                     |                                       |         |
+| Name                     | Type                     | Default          | Nullable | Children                                                                            | Parents                               | Comment                                                                                                         |
+| ------------------------ | ------------------------ | ---------------- | -------- | ----------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| id                       | text                     |                  | false    | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) |                                       |                                                                                                                 |
+| scope                    | text                     |                  | false    |                                                                                     |                                       | Repositories covered by the rule: all, org, or repo.                                                            |
+| org                      | text                     |                  | true     |                                                                                     |                                       | Organization covered by the rule when scope is org or repo.                                                     |
+| repo                     | text                     |                  | true     |                                                                                     |                                       | Repository covered by the rule when scope is repo.                                                              |
+| trigger                  | text                     | 'assigned'::text | false    |                                                                                     |                                       | Synchronization trigger value: assigned.                                                                        |
+| target_project_id        | text                     |                  | false    |                                                                                     | [public.projects](public.projects.md) | Project associated with the rule.                                                                               |
+| enabled                  | boolean                  | true             | false    |                                                                                     |                                       | Whether the rule is enabled.                                                                                    |
+| seed_ignore_on_next_sync | boolean                  | false            | false    |                                                                                     |                                       | Whether the first synchronization seeds matching existing issues as ignored instead of creating tasks for them. |
+| created_at               | timestamp with time zone | now()            | false    |                                                                                     |                                       |                                                                                                                 |
+| updated_at               | timestamp with time zone | now()            | false    |                                                                                     |                                       |                                                                                                                 |
+| seq                      | bigint                   |                  | false    |                                                                                     |                                       | Insertion-order sequence used to break ties between rules created at the same time.                             |
 
 ## Constraints
 

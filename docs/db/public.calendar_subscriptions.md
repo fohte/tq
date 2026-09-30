@@ -1,17 +1,21 @@
 # public.calendar_subscriptions
 
+## Description
+
+Calendars selected for OAuth accounts.
+
 ## Columns
 
-| Name           | Type                     | Default | Nullable | Children | Parents                                       | Comment |
-| -------------- | ------------------------ | ------- | -------- | -------- | --------------------------------------------- | ------- |
-| id             | text                     |         | false    |          |                                               |         |
-| oauth_token_id | text                     |         | false    |          | [public.oauth_tokens](public.oauth_tokens.md) |         |
-| calendar_id    | text                     |         | false    |          |                                               |         |
-| display_name   | text                     |         | true     |          |                                               |         |
-| color          | text                     |         | true     |          |                                               |         |
-| created_at     | timestamp with time zone | now()   | false    |          |                                               |         |
-| updated_at     | timestamp with time zone | now()   | false    |          |                                               |         |
-| context        | text                     |         | true     |          |                                               |         |
+| Name           | Type                     | Default | Nullable | Children | Parents                                       | Comment                                                                                                                    |
+| -------------- | ------------------------ | ------- | -------- | -------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| id             | text                     |         | false    |          |                                               |                                                                                                                            |
+| oauth_token_id | text                     |         | false    |          | [public.oauth_tokens](public.oauth_tokens.md) | OAuth credentials associated with this calendar.                                                                           |
+| calendar_id    | text                     |         | false    |          |                                               | Provider identifier for the selected calendar.                                                                             |
+| display_name   | text                     |         | true     |          |                                               | Cached display name of the calendar.                                                                                       |
+| color          | text                     |         | true     |          |                                               | Cached calendar color value.                                                                                               |
+| created_at     | timestamp with time zone | now()   | false    |          |                                               |                                                                                                                            |
+| updated_at     | timestamp with time zone | now()   | false    |          |                                               |                                                                                                                            |
+| context        | text                     |         | true     |          |                                               | Context where events show full details; they appear as busy time in the other context. Null shows full details everywhere. |
 
 ## Constraints
 

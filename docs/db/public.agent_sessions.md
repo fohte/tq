@@ -1,21 +1,25 @@
 # public.agent_sessions
 
+## Description
+
+Sessions reported by coding agent providers.
+
 ## Columns
 
-| Name              | Type                     | Default          | Nullable | Children                                                    | Parents | Comment |
-| ----------------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------- | ------- | ------- |
-| id                | text                     |                  | false    | [public.task_agent_sessions](public.task_agent_sessions.md) |         |         |
-| provider          | text                     |                  | false    |                                                             |         |         |
-| session_id        | text                     |                  | false    |                                                             |         |         |
-| context           | text                     | 'personal'::text | false    |                                                             |         |         |
-| cwd               | text                     |                  | false    |                                                             |         |         |
-| label             | text                     |                  | true     |                                                             |         |         |
-| last_message      | text                     |                  | true     |                                                             |         |         |
-| custom_label      | text                     |                  | true     |                                                             |         |         |
-| started_at        | timestamp with time zone | now()            | false    |                                                             |         |         |
-| last_active_at    | timestamp with time zone | now()            | false    |                                                             |         |         |
-| ended_at          | timestamp with time zone |                  | true     |                                                             |         |         |
-| parent_session_id | text                     |                  | true     |                                                             |         |         |
+| Name              | Type                     | Default          | Nullable | Children                                                    | Parents | Comment                                                                                       |
+| ----------------- | ------------------------ | ---------------- | -------- | ----------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| id                | text                     |                  | false    | [public.task_agent_sessions](public.task_agent_sessions.md) |         |                                                                                               |
+| provider          | text                     |                  | false    |                                                             |         | Coding agent provider: claude_code or codex.                                                  |
+| session_id        | text                     |                  | false    |                                                             |         | Session identifier assigned by the provider.                                                  |
+| context           | text                     | 'personal'::text | false    |                                                             |         | Whether the session belongs to the work or personal context.                                  |
+| cwd               | text                     |                  | false    |                                                             |         | Working directory associated with the session.                                                |
+| label             | text                     |                  | true     |                                                             |         | Session label reported by the provider integration.                                           |
+| last_message      | text                     |                  | true     |                                                             |         | Most recent message extracted from the session transcript.                                    |
+| custom_label      | text                     |                  | true     |                                                             |         | Human-assigned session name that is kept separately from the reported label.                  |
+| started_at        | timestamp with time zone | now()            | false    |                                                             |         | Time when the session was first recorded.                                                     |
+| last_active_at    | timestamp with time zone | now()            | false    |                                                             |         | Time of the most recent activity report for the session.                                      |
+| ended_at          | timestamp with time zone |                  | true     |                                                             |         | Time the integration last reported the session as ended; cleared by a later activity report.  |
+| parent_session_id | text                     |                  | true     |                                                             |         | Raw parent session ID reported by the provider; it may be recorded before the parent session. |
 
 ## Constraints
 
