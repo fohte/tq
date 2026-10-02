@@ -78,7 +78,7 @@
     "@storybook/addon-docs": "10.6.0",
     "@storybook/addon-vitest": "10.6.0",
     "@storybook/react-vite": "10.6.0",
-    "@storycap-testrun/browser": "3.1.0",
+    "@storycap-testrun/browser": "3.1.1",
     "@tanstack/router-plugin": "1.166.14",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.3",
