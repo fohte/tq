@@ -15,12 +15,34 @@ const originOf = (url: string): string | undefined =>
     () => undefined,
   )
 
+const pathOf = (url: string): string | undefined =>
+  parseUrl(url).match(
+    (parsed) => parsed.pathname,
+    () => undefined,
+  )
+
 // Compare origins for equality, never by prefix: a prefix match lets
 // `https://tq.example.com.evil.test` through. `origin` may carry a path or
 // trailing slash; only its origin part counts.
 const isInternal = (url: string, origin: string): boolean => {
   const urlOrigin = originOf(url)
   return urlOrigin !== undefined && urlOrigin === originOf(origin)
+}
+
+export const shouldOpenSideNavigationInMain = (
+  targetUrl: string,
+  sideWindowUrl: string,
+  origin: string,
+): boolean => {
+  if (!isInternal(targetUrl, origin)) return false
+
+  const targetPath = pathOf(targetUrl)
+  const sideWindowPath = pathOf(sideWindowUrl)
+  return (
+    targetPath !== undefined &&
+    sideWindowPath !== undefined &&
+    targetPath !== sideWindowPath
+  )
 }
 
 // Keep in sync with `mac.protocols.schemes` in electron-builder.yml.
@@ -77,11 +99,10 @@ export const classifyNavigation = (
   externalSchemes: readonly string[] = [],
   source: NavigationSource = 'main',
 ): NavigationAction => {
-  if (source === 'side' && isInternal(targetUrl, origin)) return 'open-main'
-
   // Leave pages outside tq (e.g. the Cloudflare Access / IdP login) alone;
   // otherwise the first sign-in can never complete inside the app.
   if (!isInternal(currentUrl, origin)) return 'allow'
+  if (source === 'side' && isInternal(targetUrl, origin)) return 'open-main'
   if (isInternal(targetUrl, origin)) return 'allow'
   // `shell.openExternal` launches whatever handler is registered for the
   // scheme, so only hand it schemes known to be safe to open.

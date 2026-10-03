@@ -4,6 +4,7 @@ import {
   classifyNavigation,
   type NavigationAction,
   resolveDeepLink,
+  shouldOpenSideNavigationInMain,
 } from '#navigation'
 
 const ORIGIN = 'https://tq.example.com'
@@ -75,6 +76,38 @@ describe('classifyNavigation', () => {
         'side',
       ),
     ).toBe('open-main')
+  })
+
+  it('leaves side-window query and hash changes on the compact page', () => {
+    expect(
+      shouldOpenSideNavigationInMain(
+        `${ORIGIN}/?layout=compact&filter=today#now`,
+        `${ORIGIN}/?layout=compact`,
+        ORIGIN,
+      ),
+    ).toBe(false)
+  })
+
+  it('routes side-window links to another tq path to the main window', () => {
+    expect(
+      shouldOpenSideNavigationInMain(
+        `${ORIGIN}/tasks/2`,
+        `${ORIGIN}/?layout=compact`,
+        ORIGIN,
+      ),
+    ).toBe(true)
+  })
+
+  it('keeps external sign-in redirects in the side window', () => {
+    expect(
+      classifyNavigation(
+        'https://team.access.example/login',
+        `${ORIGIN}/auth/callback`,
+        ORIGIN,
+        [],
+        'side',
+      ),
+    ).toBe('allow')
   })
 
   it('continues opening external links from the side window in the default browser', () => {

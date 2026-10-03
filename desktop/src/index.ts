@@ -10,9 +10,11 @@ import {
   classifyNavigation,
   DEEP_LINK_SCHEME,
   resolveDeepLink,
+  shouldOpenSideNavigationInMain,
 } from '#navigation'
 import {
   clampWindowBounds,
+  createDebouncedAction,
   createWindowBoundsStore,
   initialWindowBounds,
   type WindowBoundsStore,
@@ -116,7 +118,6 @@ const createSideWindow = (): BrowserWindow => {
   })
   sideWindow = win
 
-  let saveTimeout: ReturnType<typeof setTimeout> | undefined
   const saveBounds = () => {
     if (win.isDestroyed()) return
     boundsStore.save(win.getNormalBounds()).match(
@@ -126,26 +127,15 @@ const createSideWindow = (): BrowserWindow => {
       },
     )
   }
-  const flushBounds = () => {
-    if (saveTimeout !== undefined) clearTimeout(saveTimeout)
-    saveTimeout = undefined
-    saveBounds()
-  }
-  const scheduleBoundsSave = () => {
-    if (saveTimeout !== undefined) clearTimeout(saveTimeout)
-    saveTimeout = setTimeout(() => {
-      saveTimeout = undefined
-      saveBounds()
-    }, 200)
-  }
+  const boundsSaver = createDebouncedAction(saveBounds, 200)
 
-  flushSideWindowBounds = flushBounds
-  win.on('move', scheduleBoundsSave)
-  win.on('resize', scheduleBoundsSave)
+  flushSideWindowBounds = boundsSaver.flush
+  win.on('move', boundsSaver.schedule)
+  win.on('resize', boundsSaver.schedule)
   win.on('closed', () => {
     sideWindow = undefined
   })
-  hideOnCloseUnlessQuitting(win, flushBounds)
+  hideOnCloseUnlessQuitting(win, boundsSaver.flush)
 
   void logRejection(win.loadURL(SIDE_WINDOW_URL), 'failed to load side window')
   showWindow(win)
@@ -219,15 +209,7 @@ app.on('web-contents-created', (_event, contents) => {
 
   contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
     if (!isMainFrame || navigationSource() !== 'side') return
-
-    const action = classifyNavigation(
-      url,
-      url,
-      TQ_ORIGIN,
-      EXTERNAL_SCHEMES,
-      'side',
-    )
-    if (action !== 'open-main') return
+    if (!shouldOpenSideNavigationInMain(url, SIDE_WINDOW_URL, TQ_ORIGIN)) return
 
     openMainWindow(url)
     void logRejection(

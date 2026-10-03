@@ -12,6 +12,39 @@ export type WindowBoundsStore = {
   save: (bounds: WindowBounds) => Result<void, unknown>
 }
 
+type TimerApi = {
+  setTimeout: typeof setTimeout
+  clearTimeout: typeof clearTimeout
+}
+
+export const createDebouncedAction = (
+  action: () => void,
+  delayMs: number,
+  timers: TimerApi = { setTimeout, clearTimeout },
+): { schedule: () => void; flush: () => void } => {
+  let timeout: ReturnType<typeof setTimeout> | undefined
+
+  const cancel = () => {
+    if (timeout === undefined) return
+    timers.clearTimeout(timeout)
+    timeout = undefined
+  }
+
+  return {
+    schedule: () => {
+      cancel()
+      timeout = timers.setTimeout(() => {
+        timeout = undefined
+        action()
+      }, delayMs)
+    },
+    flush: () => {
+      cancel()
+      action()
+    },
+  }
+}
+
 type WindowBoundsStorage = {
   read: () => string
   write: (serialized: string) => void

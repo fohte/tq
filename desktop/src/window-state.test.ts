@@ -1,11 +1,33 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   clampWindowBounds,
+  createDebouncedAction,
   createWindowBoundsStore,
   initialWindowBounds,
   parseWindowBounds,
 } from '#window-state'
+
+afterEach(() => vi.useRealTimers())
+
+describe('createDebouncedAction', () => {
+  it('coalesces scheduled actions and flushes a pending action immediately', () => {
+    vi.useFakeTimers()
+    const action = vi.fn()
+    const debouncedAction = createDebouncedAction(action, 200)
+
+    debouncedAction.schedule()
+    vi.advanceTimersByTime(199)
+    debouncedAction.schedule()
+    vi.advanceTimersByTime(199)
+    vi.advanceTimersByTime(1)
+    debouncedAction.schedule()
+    debouncedAction.flush()
+    vi.advanceTimersByTime(200)
+
+    expect(action.mock.calls).toEqual([[], []])
+  })
+})
 
 describe('window bounds storage', () => {
   it('saves bounds as JSON', () => {

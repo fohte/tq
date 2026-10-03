@@ -276,6 +276,9 @@ describe('buildMenuTemplate', () => {
     const openSideWindowItem = submenu.find(
       ({ label }) => label === 'Open Side Window',
     )
-    expect(openSideWindowItem?.click).toBe(openSideWindow)
+    if (openSideWindowItem?.click !== undefined) {
+      Reflect.apply(openSideWindowItem.click, undefined, [])
+    }
+    expect(openSideWindow.mock.calls).toEqual([[]])
   })
 })
