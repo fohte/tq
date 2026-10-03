@@ -5,11 +5,7 @@ import { sendNotification } from 'web-push'
 import { db } from '#db/connection'
 import { pushSubscriptions, taskGithubLinks, tasks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
-import {
-  mockGithubIssueResponse,
-  mockGithubNotModifiedResponse,
-  upsertGithubToken,
-} from '#integrations/github/testing'
+import { upsertGithubToken } from '#integrations/github/testing'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { createTask } from '#routes/tasks/testing'
 import {
@@ -33,6 +29,38 @@ vi.mock('web-push', async (importOriginal) => {
 setupTestDb()
 
 beforeEach(() => {
+  queuedResponses.clear()
+  vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    const path = url.pathname
+    if (path === '/user') {
+      return Promise.resolve(
+        new Response(JSON.stringify({ login: AUTHENTICATED_GITHUB_LOGIN }), {
+          status: 200,
+        }),
+      )
+    }
+    if (/\/issues\/\d+\/timeline$/.test(path)) {
+      return Promise.resolve(
+        takeGithubResponse(path) ??
+          new Response(JSON.stringify(defaultTimelineEvents()), {
+            status: 200,
+          }),
+      )
+    }
+    if (/\/pulls\/\d+$/.test(path)) {
+      return Promise.resolve(
+        takeGithubResponse('/pulls') ??
+          new Response(JSON.stringify({ merged: false }), { status: 200 }),
+      )
+    }
+    if (/\/issues\/\d+$/.test(path)) {
+      return Promise.resolve(
+        takeGithubResponse('/issues') ?? new Response('{}', { status: 404 }),
+      )
+    }
+    return Promise.resolve(new Response('{}', { status: 404 }))
+  })
   vi.mocked(sendNotification).mockReset().mockResolvedValue({
     statusCode: 201,
     body: '',
@@ -47,6 +75,89 @@ afterEach(() => {
 const ref = { owner: 'example-org', repo: 'example-repo', number: 42 }
 const PERSONAL_ENDPOINT = 'https://push.example.com/personal-device'
 const WORK_ENDPOINT = 'https://push.example.com/work-device'
+const AUTHENTICATED_GITHUB_LOGIN = 'authenticated-user'
+
+const queuedResponses = new Map<string, Response[]>()
+
+function queueGithubResponse(path: string, response: Response) {
+  queuedResponses.set(path, [...(queuedResponses.get(path) ?? []), response])
+}
+
+function takeGithubResponse(path: string): Response | undefined {
+  const [response, ...remaining] = queuedResponses.get(path) ?? []
+  if (remaining.length === 0) {
+    queuedResponses.delete(path)
+  } else {
+    queuedResponses.set(path, remaining)
+  }
+  return response
+}
+
+function mockGithubIssueResponse(
+  overrides: Partial<Record<string, unknown>> = {},
+  responseInit: ResponseInit = {},
+) {
+  queueGithubResponse(
+    '/issues',
+    new Response(
+      JSON.stringify({
+        title: 'Bug: something broke',
+        body: 'Steps to reproduce...',
+        state: 'open',
+        comments: 2,
+        updated_at: '2024-08-12T09:30:00Z',
+        state_reason: null,
+        html_url: `https://github.com/${ref.owner}/${ref.repo}/issues/${String(ref.number)}`,
+        ...overrides,
+      }),
+      { status: 200, ...responseInit },
+    ),
+  )
+}
+
+function mockGithubNotModifiedResponse() {
+  queueGithubResponse('/issues', new Response(null, { status: 304 }))
+}
+
+function mockGithubTimelineResponse(
+  events: Array<Record<string, unknown>>,
+  githubRef: typeof ref = ref,
+) {
+  queueGithubResponse(
+    `/repos/${githubRef.owner}/${githubRef.repo}/issues/${String(githubRef.number)}/timeline`,
+    new Response(JSON.stringify(events), { status: 200 }),
+  )
+}
+
+function timelineEvent(
+  event: string,
+  login: string | null,
+  timestamp = '2024-08-13T09:30:00Z',
+) {
+  return {
+    event,
+    ...(login === null ? {} : { actor: { login } }),
+    created_at: timestamp,
+  }
+}
+
+function defaultTimelineEvents() {
+  return [
+    timelineEvent('closed', 'another-user'),
+    timelineEvent('merged', 'another-user'),
+    timelineEvent('reopened', 'another-user'),
+    {
+      ...timelineEvent('commented', 'another-user'),
+      user: { login: 'another-user' },
+    },
+    {
+      ...timelineEvent('commented', 'another-user'),
+      id: 2,
+      user: { login: 'another-user' },
+    },
+    timelineEvent('labeled', 'another-user'),
+  ]
+}
 
 async function loadTask(id: string) {
   return firstOrThrow(await db.select().from(tasks).where(eq(tasks.id, id)))
@@ -141,7 +252,8 @@ function expectedNotification(
 }
 
 function mockGithubPullResponse(merged: boolean) {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+  queueGithubResponse(
+    '/pulls',
     new Response(JSON.stringify({ merged }), { status: 200 }),
   )
 }
@@ -311,6 +423,18 @@ describe('syncLinkFromGithub', () => {
       updated_at: '2024-08-13T09:30:00Z',
       state_reason: 'completed',
     })
+    mockGithubTimelineResponse([
+      timelineEvent('closed', 'another-user'),
+      {
+        ...timelineEvent('commented', 'another-user'),
+        user: { login: 'another-user' },
+      },
+      {
+        ...timelineEvent('commented', 'another-user'),
+        user: { login: 'another-user' },
+      },
+      timelineEvent('labeled', 'another-user'),
+    ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -319,6 +443,61 @@ describe('syncLinkFromGithub', () => {
         task,
       ),
     )
+  })
+
+  it('does not notify when the authenticated user closes an issue', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+
+    mockGithubIssueResponse({ state: 'closed' })
+    mockGithubTimelineResponse([
+      timelineEvent('closed', AUTHENTICATED_GITHUB_LOGIN),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it('does not notify for a close event older than the stored GitHub timestamp', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+    const previouslySyncedLink = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({ githubUpdatedAt: new Date('2024-08-13T10:00:00Z') })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+
+    mockGithubIssueResponse({
+      state: 'closed',
+      updated_at: '2024-08-14T09:30:00Z',
+    })
+    mockGithubTimelineResponse([
+      timelineEvent('closed', 'another-user', '2024-08-13T09:30:00Z'),
+    ])
+    ;(await syncLinkFromGithub(previouslySyncedLink))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it('suppresses self actions for blocker links as well as subject links', async () => {
+    await upsertGithubToken('valid-token')
+    const link = await createScheduledLink(
+      'blocker',
+      56,
+      new Date(Date.now() - 2 * 60 * 60 * 1000),
+    )
+    await registerPush('personal')
+
+    mockGithubIssueResponse({ state: 'closed' })
+    mockGithubTimelineResponse(
+      [timelineEvent('closed', AUTHENTICATED_GITHUB_LOGIN)],
+      { ...ref, number: 56 },
+    )
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
   })
 
   it('sends a change notification only once when syncs overlap', async () => {
@@ -334,7 +513,21 @@ describe('syncLinkFromGithub', () => {
       releaseRequests = resolve
     })
     let requestCount = 0
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(input instanceof Request ? input.url : String(input))
+      if (url.pathname === '/user') {
+        return new Response(
+          JSON.stringify({ login: AUTHENTICATED_GITHUB_LOGIN }),
+          { status: 200 },
+        )
+      }
+      if (/\/issues\/\d+\/timeline$/.test(url.pathname)) {
+        return new Response(
+          JSON.stringify([timelineEvent('closed', 'another-user')]),
+          { status: 200 },
+        )
+      }
+
       requestCount += 1
       if (requestCount === 2) {
         resolveBothRequests()
@@ -393,6 +586,7 @@ describe('syncLinkFromGithub', () => {
 
     mockGithubIssueResponse({ state: 'closed', pull_request: {} })
     mockGithubPullResponse(true)
+    mockGithubTimelineResponse([timelineEvent('merged', 'another-user')])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -403,12 +597,27 @@ describe('syncLinkFromGithub', () => {
     )
   })
 
+  it('does not notify when the authenticated user merges a pull request', async () => {
+    const { link } = await createLinkedTask(ref, true)
+    await registerPush('personal')
+
+    mockGithubIssueResponse({ state: 'closed', pull_request: {} })
+    mockGithubPullResponse(true)
+    mockGithubTimelineResponse([
+      timelineEvent('merged', AUTHENTICATED_GITHUB_LOGIN),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
   it('uses the unmerged title when a pull request closes without merging', async () => {
     const { task, link } = await createLinkedTask(ref, true)
     await registerPush('personal')
 
     mockGithubIssueResponse({ state: 'closed', pull_request: {} })
     mockGithubPullResponse(false)
+    mockGithubTimelineResponse([timelineEvent('closed', 'another-user')])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -424,6 +633,7 @@ describe('syncLinkFromGithub', () => {
     await registerPush('personal')
 
     mockGithubIssueResponse({ state: 'closed', state_reason: 'not_planned' })
+    mockGithubTimelineResponse([timelineEvent('closed', 'another-user')])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -446,6 +656,7 @@ describe('syncLinkFromGithub', () => {
     )
 
     mockGithubIssueResponse({ state: 'open' })
+    mockGithubTimelineResponse([timelineEvent('reopened', 'another-user')])
     ;(await syncLinkFromGithub(closedLink))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -456,6 +667,26 @@ describe('syncLinkFromGithub', () => {
     )
   })
 
+  it('does not notify when the authenticated user reopens an issue', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+    const closedLink = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({ state: 'closed' })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+
+    mockGithubIssueResponse({ state: 'open' })
+    mockGithubTimelineResponse([
+      timelineEvent('reopened', AUTHENTICATED_GITHUB_LOGIN),
+    ])
+    ;(await syncLinkFromGithub(closedLink))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
   it('reports only the comment count increase when comments and activity changed', async () => {
     const { task, link } = await createLinkedTask()
     await registerPush('personal')
@@ -464,6 +695,18 @@ describe('syncLinkFromGithub', () => {
       comments: 4,
       updated_at: '2024-08-13T09:30:00Z',
     })
+    mockGithubTimelineResponse([
+      {
+        ...timelineEvent('commented', 'another-user'),
+        user: { login: 'another-user' },
+      },
+      {
+        ...timelineEvent('commented', 'another-user'),
+        id: 2,
+        user: { login: 'another-user' },
+      },
+      timelineEvent('labeled', 'another-user'),
+    ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -474,11 +717,69 @@ describe('syncLinkFromGithub', () => {
     )
   })
 
+  it('counts only comments written by other users', async () => {
+    const { task, link } = await createLinkedTask()
+    await registerPush('personal')
+
+    mockGithubIssueResponse({
+      comments: 4,
+      updated_at: '2024-08-13T09:30:00Z',
+    })
+    mockGithubTimelineResponse([
+      {
+        event: 'commented',
+        user: { login: AUTHENTICATED_GITHUB_LOGIN },
+        created_at: '2024-08-13T09:30:00Z',
+      },
+      {
+        event: 'commented',
+        actor: { login: 'another-user' },
+        user: { login: 'another-user' },
+        created_at: '2024-08-13T09:31:00Z',
+      },
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual(
+      expectedNotification(
+        `${ref.owner}/${ref.repo}#${String(ref.number)}: 1 new comment`,
+        task,
+      ),
+    )
+  })
+
+  it('does not notify when the authenticated user is the only commenter', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+
+    mockGithubIssueResponse({
+      comments: 3,
+      updated_at: '2024-08-13T09:30:00Z',
+    })
+    mockGithubTimelineResponse([
+      {
+        event: 'commented',
+        user: { login: AUTHENTICATED_GITHUB_LOGIN },
+        created_at: '2024-08-13T09:30:00Z',
+      },
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
   it('notifies when only the GitHub updated timestamp changes', async () => {
     const { task, link } = await createLinkedTask()
     await registerPush('personal')
 
     mockGithubIssueResponse({ updated_at: '2024-08-13T09:30:00Z' })
+    mockGithubTimelineResponse([
+      {
+        event: 'reviewed',
+        user: { login: 'another-user' },
+        submitted_at: '2024-08-13T09:30:00Z',
+      },
+    ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
     expect(sentNotifications()).toEqual(
@@ -487,6 +788,34 @@ describe('syncLinkFromGithub', () => {
         task,
       ),
     )
+  })
+
+  it('does not notify about other activity performed by the authenticated user', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+
+    mockGithubIssueResponse({ updated_at: '2024-08-13T09:30:00Z' })
+    mockGithubTimelineResponse([
+      {
+        event: 'reviewed',
+        user: { login: AUTHENTICATED_GITHUB_LOGIN },
+        submitted_at: '2024-08-13T09:30:00Z',
+      },
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it('does not notify for a commit event without a GitHub login', async () => {
+    const { link } = await createLinkedTask(ref, true)
+    await registerPush('personal')
+
+    mockGithubIssueResponse({ updated_at: '2024-08-13T09:30:00Z' })
+    mockGithubTimelineResponse([timelineEvent('committed', null)])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
   })
 
   it('does not notify when the detected event is not selected', async () => {
