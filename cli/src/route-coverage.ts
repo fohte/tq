@@ -42,6 +42,11 @@ export const EXCLUDED_ROUTES = {
   'GET /api/recurring-task-templates/:id': 'settings covered by the web UI',
   'PATCH /api/recurring-task-templates/:id': 'settings covered by the web UI',
   'DELETE /api/recurring-task-templates/:id': 'settings covered by the web UI',
+  'POST /api/description-templates': 'template management is a web UI action',
+  'PATCH /api/description-templates/:name':
+    'template management is a web UI action',
+  'DELETE /api/description-templates/:name':
+    'template management is a web UI action',
 
   // Time blocks and recurring schedules are calendar-UI operations: faster
   // to drag/resize directly than to drive through a CLI.

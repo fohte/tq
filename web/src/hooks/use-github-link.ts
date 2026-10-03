@@ -124,12 +124,10 @@ export function useUpdateGithubLinkNotifyEvents(taskId: string) {
   })
 }
 
-// There is no server-side background schedule (see api's github-sync
-// service) — GitHub sync only happens while a client triggers it. Mounted
-// once at the app root, this covers "on open" and "on window focus regain"
-// via React Query's refetchOnMount/refetchOnWindowFocus defaults, and
-// "periodically while focused" via refetchInterval, which React Query
-// automatically pauses while the tab isn't visible.
+// Mounted once at the app root, this client sync covers "on open" and "on
+// window focus regain" via React Query's defaults, and "periodically while
+// focused" via refetchInterval, which pauses while the tab isn't visible.
+// The server scheduler also syncs due links when no client is active.
 const GITHUB_SYNC_INTERVAL_MS = 60_000
 
 export function useGithubSync() {

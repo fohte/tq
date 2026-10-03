@@ -330,6 +330,13 @@
       "when": 1791031983311,
       "tag": "0046_colorful_dracula",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1791037918697,
+      "tag": "0047_description-templates",
+      "breakpoints": true
     }
   ]
 }
