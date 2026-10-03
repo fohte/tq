@@ -12,7 +12,7 @@ export const descriptionTemplateOperations = [
     kind: 'read',
     routes: ['GET /api/description-templates'],
     cli: {
-      group: { description: 'Manage description templates', order: 16 },
+      group: { description: 'Browse description templates', order: 16 },
       output: { kind: 'json' },
     },
     run: (client) => requestJson(client.api['description-templates'].$get()),

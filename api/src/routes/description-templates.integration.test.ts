@@ -63,7 +63,42 @@ describe('description templates API', () => {
         }),
       })
 
-      expect(res.status).toBe(400)
+      expect(await responseSnapshot(res)).toEqual({
+        status: 400,
+        body: {
+          success: false,
+          error: {
+            name: 'ZodError',
+            message:
+              '[\n  {\n    "origin": "string",\n    "code": "too_small",\n    "minimum": 1,\n    "inclusive": true,\n    "path": [\n      "name"\n    ],\n    "message": "Too small: expected string to have >=1 characters"\n  }\n]',
+          },
+        },
+      })
+    })
+
+    it('rejects names that are not valid path segments', async () => {
+      const res = await app.request('/api/description-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: '..',
+          whenToUse: 'Use for planning',
+          body: '## Context',
+          guide: 'Explain the context',
+        }),
+      })
+
+      expect(await responseSnapshot(res)).toEqual({
+        status: 400,
+        body: {
+          success: false,
+          error: {
+            name: 'ZodError',
+            message:
+              '[\n  {\n    "code": "custom",\n    "path": [\n      "name"\n    ],\n    "message": "Description template name must be a valid path segment"\n  }\n]',
+          },
+        },
+      })
     })
 
     it('rejects a body longer than task descriptions allow', async () => {
@@ -78,7 +113,17 @@ describe('description templates API', () => {
         }),
       })
 
-      expect(res.status).toBe(400)
+      expect(await responseSnapshot(res)).toEqual({
+        status: 400,
+        body: {
+          success: false,
+          error: {
+            name: 'ZodError',
+            message:
+              '[\n  {\n    "origin": "string",\n    "code": "too_big",\n    "maximum": 100000,\n    "inclusive": true,\n    "path": [\n      "body"\n    ],\n    "message": "Too big: expected string to have <=100000 characters"\n  }\n]',
+          },
+        },
+      })
     })
 
     it('rejects a duplicate template name', async () => {
@@ -95,7 +140,10 @@ describe('description templates API', () => {
         }),
       })
 
-      expect(res.status).toBe(409)
+      expect(await responseSnapshot(res)).toEqual({
+        status: 409,
+        body: { error: 'A description template with this name already exists' },
+      })
     })
 
     it('makes a new template the default when requested', async () => {
@@ -186,7 +234,10 @@ describe('description templates API', () => {
     it('returns 404 when the name does not exist', async () => {
       const res = await app.request('/api/description-templates/Missing')
 
-      expect(res.status).toBe(404)
+      expect(await responseSnapshot(res)).toEqual({
+        status: 404,
+        body: { error: 'Description template not found' },
+      })
     })
   })
 
@@ -239,7 +290,10 @@ describe('description templates API', () => {
         body: JSON.stringify({}),
       })
 
-      expect(res.status).toBe(400)
+      expect(await responseSnapshot(res)).toEqual({
+        status: 400,
+        body: { error: 'At least one field must be provided' },
+      })
     })
 
     it('returns 404 when the name does not exist', async () => {
@@ -249,7 +303,60 @@ describe('description templates API', () => {
         body: JSON.stringify({ name: 'Updated' }),
       })
 
-      expect(res.status).toBe(404)
+      expect(await responseSnapshot(res)).toEqual({
+        status: 404,
+        body: { error: 'Description template not found' },
+      })
+    })
+
+    it('rejects a rename to a name already in use without changing either template', async () => {
+      await createTemplate('Original name')
+      await createTemplate('Other name')
+
+      const res = await app.request('/api/description-templates/Other%20name', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Original name' }),
+      })
+
+      expect(
+        await duplicateRenameSnapshot(res, 'Original name', 'Other name'),
+      ).toEqual({
+        response: {
+          status: 409,
+          body: {
+            error: 'A description template with this name already exists',
+          },
+        },
+        templates: [
+          {
+            status: 200,
+            body: {
+              id: 'ID',
+              name: 'Original name',
+              whenToUse: 'Use for planning',
+              body: '## Context',
+              guide: 'Explain the context',
+              isDefault: false,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+            },
+          },
+          {
+            status: 200,
+            body: {
+              id: 'ID',
+              name: 'Other name',
+              whenToUse: 'Use for planning',
+              body: '## Context',
+              guide: 'Explain the context',
+              isDefault: false,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+            },
+          },
+        ],
+      })
     })
   })
 
@@ -263,7 +370,13 @@ describe('description templates API', () => {
       )
       const getRes = await app.request('/api/description-templates/To%20delete')
 
-      expect(responseStatuses(deleteRes, getRes)).toEqual([204, 404])
+      expect(await deleteSnapshot(deleteRes, getRes)).toEqual({
+        delete: { status: 204, body: null },
+        get: {
+          status: 404,
+          body: { error: 'Description template not found' },
+        },
+      })
     })
   })
 })
@@ -294,6 +407,13 @@ async function templateSnapshot(res: Response) {
   }
 }
 
+async function responseSnapshot(res: Response) {
+  return {
+    status: res.status,
+    body: res.status === 204 ? null : await jsonBody<unknown>(res),
+  }
+}
+
 async function templateListSnapshot(res: Response) {
   return {
     status: res.status,
@@ -315,6 +435,30 @@ function templateSnapshotWithDefaults(
   }
 }
 
-function responseStatuses(...responses: Response[]) {
-  return responses.map((response) => response.status)
+async function duplicateRenameSnapshot(
+  res: Response,
+  firstName: string,
+  secondName: string,
+) {
+  const templates = await Promise.all(
+    [firstName, secondName].map(async (name) =>
+      templateSnapshot(
+        await app.request(
+          `/api/description-templates/${encodeURIComponent(name)}`,
+        ),
+      ),
+    ),
+  )
+
+  return {
+    response: await responseSnapshot(res),
+    templates,
+  }
+}
+
+async function deleteSnapshot(deleteRes: Response, getRes: Response) {
+  return {
+    delete: await responseSnapshot(deleteRes),
+    get: await responseSnapshot(getRes),
+  }
 }

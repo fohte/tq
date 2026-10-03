@@ -32,7 +32,7 @@
 | [public.push_subscriptions](public.push_subscriptions.md)                           | 8       | Browser push endpoints and encryption credentials registered for notifications.      | BASE TABLE |
 | [public.recurring_task_template_labels](public.recurring_task_template_labels.md)   | 2       | Join table associating recurring task templates with labels.                         | BASE TABLE |
 | [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      | Definitions used by the scheduler to create recurring task instances.                | BASE TABLE |
-| [public.task_description_templates](public.task_description_templates.md)           | 8       | Reusable Markdown structures and writing guidance for task descriptions.             | BASE TABLE |
+| [public.task_description_templates](public.task_description_templates.md)           | 8       | Templates for structuring task descriptions.                                         | BASE TABLE |
 
 ## Stored procedures and functions
 

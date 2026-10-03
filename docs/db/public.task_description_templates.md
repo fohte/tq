@@ -2,16 +2,16 @@
 
 ## Description
 
-Reusable Markdown structures and writing guidance for task descriptions.
+Templates for structuring task descriptions.
 
 ## Columns
 
 | Name        | Type                     | Default           | Nullable | Children | Parents | Comment                                                                           |
 | ----------- | ------------------------ | ----------------- | -------- | -------- | ------- | --------------------------------------------------------------------------------- |
 | id          | uuid                     | gen_random_uuid() | false    |          |         |                                                                                   |
-| name        | text                     |                   | false    |          |         | Unique template name used by the web UI and task creation tools.                  |
+| name        | text                     |                   | false    |          |         | Unique name used to look up a description template.                               |
 | when_to_use | text                     |                   | false    |          |         | Type of work for which the template should be selected.                           |
-| body        | text                     |                   | false    |          |         | Markdown skeleton populated as a task description.                                |
+| body        | text                     |                   | false    |          |         | Markdown skeleton intended for a task description.                                |
 | guide       | text                     |                   | false    |          |         | Writing instructions for completing each section of the body.                     |
 | is_default  | boolean                  | false             | false    |          |         | Whether the template is selected by default; at most one template may be default. |
 | created_at  | timestamp with time zone | now()             | false    |          |         |                                                                                   |
