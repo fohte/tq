@@ -64,6 +64,30 @@ describe('classifyNavigation', () => {
       ),
     ).toBe('allow')
   })
+
+  it('routes internal navigation from the side window to the main window', () => {
+    expect(
+      classifyNavigation(
+        `${ORIGIN}/?layout=compact`,
+        `${ORIGIN}/tasks/2`,
+        ORIGIN,
+        [],
+        'side',
+      ),
+    ).toBe('open-main')
+  })
+
+  it('continues opening external links from the side window in the default browser', () => {
+    expect(
+      classifyNavigation(
+        `${ORIGIN}/?layout=compact`,
+        'https://github.com/example/repo',
+        ORIGIN,
+        [],
+        'side',
+      ),
+    ).toBe('open-external')
+  })
 })
 
 describe('resolveDeepLink', () => {

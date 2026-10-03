@@ -214,7 +214,12 @@ describe('pageItems', () => {
 describe('buildMenuTemplate', () => {
   it('includes the find and Copy URL commands in the Page menu', () => {
     const { history } = fakeHistory({ back: false, forward: false })
-    const menu = buildMenuTemplate(history, fakePage(), { writeText: () => {} })
+    const menu = buildMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      () => {},
+    )
     const pageMenu = menu.find(({ label }) => label === 'Page')
     const pageSubmenu =
       pageMenu && Array.isArray(pageMenu.submenu) ? pageMenu.submenu : []
@@ -227,5 +232,50 @@ describe('buildMenuTemplate', () => {
       { label: 'Find…', accelerator: 'CmdOrCtrl+F' },
       { label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' },
     ])
+  })
+
+  it('includes a command to open the side window in the Window menu', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const menu = buildMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      () => {},
+    )
+    const windowMenu = menu.find(({ label }) => label === 'Window')
+    const submenu =
+      windowMenu && Array.isArray(windowMenu.submenu) ? windowMenu.submenu : []
+
+    expect(
+      submenu.map(({ label, role, type }) => label ?? role ?? type),
+    ).toEqual([
+      'Open Side Window',
+      'separator',
+      'minimize',
+      'zoom',
+      'separator',
+      'front',
+      'separator',
+      'window',
+    ])
+  })
+
+  it('calls the side-window action when the menu command is selected', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const openSideWindow = vi.fn()
+    const menu = buildMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      openSideWindow,
+    )
+    const windowMenu = menu.find(({ label }) => label === 'Window')
+    const submenu =
+      windowMenu && Array.isArray(windowMenu.submenu) ? windowMenu.submenu : []
+
+    const openSideWindowItem = submenu.find(
+      ({ label }) => label === 'Open Side Window',
+    )
+    expect(openSideWindowItem?.click).toBe(openSideWindow)
   })
 })

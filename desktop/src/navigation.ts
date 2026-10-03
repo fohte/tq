@@ -1,6 +1,8 @@
 import { Result } from 'neverthrow'
 
-export type NavigationAction = 'allow' | 'open-external' | 'deny'
+export type NavigationAction = 'allow' | 'open-main' | 'open-external' | 'deny'
+
+export type NavigationSource = 'main' | 'side'
 
 const parseUrl = Result.fromThrowable(
   (url: string) => new URL(url),
@@ -73,7 +75,10 @@ export const classifyNavigation = (
   targetUrl: string,
   origin: string,
   externalSchemes: readonly string[] = [],
+  source: NavigationSource = 'main',
 ): NavigationAction => {
+  if (source === 'side' && isInternal(targetUrl, origin)) return 'open-main'
+
   // Leave pages outside tq (e.g. the Cloudflare Access / IdP login) alone;
   // otherwise the first sign-in can never complete inside the app.
   if (!isInternal(currentUrl, origin)) return 'allow'
