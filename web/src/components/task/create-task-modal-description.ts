@@ -1,21 +1,23 @@
 import { useCallback, useRef } from 'react'
 
-export const DEFAULT_TASK_DESCRIPTION = '## Why\n\n## What'
-
-function getTaskDescription(
-  readMarkdown: (() => string) | null,
-  fallbackMarkdown: string,
-  defaultDescription?: string,
-): string {
-  const markdown = readMarkdown?.() ?? fallbackMarkdown
-  const initialDescription = defaultDescription ?? DEFAULT_TASK_DESCRIPTION
-
-  return markdown.trim() === initialDescription.trim() ? '' : markdown
+function getTaskDescription(markdown: string, templateBody: string): string {
+  return markdown.trim() === templateBody.trim() ? '' : markdown
 }
 
-export function useTaskDescriptionDraft(defaultDescription?: string) {
-  const fallbackMarkdownRef = useRef('')
+export function useTaskDescriptionDraft(templateBody: string) {
+  const fallbackMarkdownRef = useRef(templateBody)
   const focusedMarkdownReaderRef = useRef<(() => string) | null>(null)
+  const templateBodyRef = useRef(templateBody)
+
+  if (templateBodyRef.current !== templateBody) {
+    if (
+      focusedMarkdownReaderRef.current === null &&
+      fallbackMarkdownRef.current.trim() === templateBodyRef.current.trim()
+    ) {
+      fallbackMarkdownRef.current = templateBody
+    }
+    templateBodyRef.current = templateBody
+  }
 
   const onChange = useCallback((markdown: string) => {
     fallbackMarkdownRef.current = markdown
@@ -25,20 +27,26 @@ export function useTaskDescriptionDraft(defaultDescription?: string) {
     focusedMarkdownReaderRef.current = readMarkdown
   }, [])
 
-  const reset = useCallback(() => {
-    fallbackMarkdownRef.current = ''
+  const getMarkdown = useCallback(
+    () => focusedMarkdownReaderRef.current?.() ?? fallbackMarkdownRef.current,
+    [],
+  )
+
+  const reset = useCallback((markdown: string) => {
+    fallbackMarkdownRef.current = markdown
     focusedMarkdownReaderRef.current = null
   }, [])
 
   const getDescription = useCallback(
-    () =>
-      getTaskDescription(
-        focusedMarkdownReaderRef.current,
-        fallbackMarkdownRef.current,
-        defaultDescription,
-      ),
-    [defaultDescription],
+    () => getTaskDescription(getMarkdown(), templateBody),
+    [getMarkdown, templateBody],
   )
 
-  return { getDescription, onChange, onFocusedDocumentChange, reset }
+  return {
+    getDescription,
+    getMarkdown,
+    onChange,
+    onFocusedDocumentChange,
+    reset,
+  }
 }

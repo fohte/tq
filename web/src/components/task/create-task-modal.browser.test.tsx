@@ -4,6 +4,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
+import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import {
   makeGithubLink,
@@ -14,6 +15,8 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import type { DescriptionTemplate } from '#hooks/use-description-templates'
+import { useDescriptionTemplates } from '#hooks/use-description-templates'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
@@ -36,8 +39,8 @@ import {
 
 // Mutation hooks are mocked (see the module-level vi.mock calls below) so a
 // test can assert on their call args directly instead of round-tripping
-// through a real network layer; the query hooks below stay real, fed via
-// setQueryData on a per-test QueryClient instead.
+// through a real network layer; queue and mention query hooks stay real,
+// fed via setQueryData on a per-test QueryClient instead.
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-tasks')>()
   return { ...original, useCreateTask: vi.fn() }
@@ -47,6 +50,11 @@ vi.mock('#hooks/use-github-link', async (importOriginal) => {
     await importOriginal<typeof import('#hooks/use-github-link')>()
   return { ...original, useLinkTaskToGithub: vi.fn() }
 })
+vi.mock('#hooks/use-description-templates', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('#hooks/use-description-templates')>()
+  return { ...original, useDescriptionTemplates: vi.fn() }
+})
 vi.mock('#hooks/use-queues', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-queues')>()
   return { ...original, useSetQueueItems: vi.fn() }
@@ -55,6 +63,7 @@ vi.mock('#hooks/use-queues', async (importOriginal) => {
 const mockUseCreateTask = vi.mocked(useCreateTask)
 const mockUseLinkTaskToGithub = vi.mocked(useLinkTaskToGithub)
 const mockUseSetQueueItems = vi.mocked(useSetQueueItems)
+const mockUseDescriptionTemplates = vi.mocked(useDescriptionTemplates)
 
 const githubIssueUrl = 'https://github.com/fohte/tq/issues/123'
 
@@ -116,6 +125,73 @@ function titleInputValue() {
   return input instanceof HTMLInputElement ? input.value : null
 }
 
+function setDescriptionTemplates(
+  templates: DescriptionTemplate[] = [makeDescriptionTemplate()],
+) {
+  mockUseDescriptionTemplates.mockReturnValue(
+    partialMutation<ReturnType<typeof useDescriptionTemplates>>({
+      data: templates,
+      isSuccess: true,
+    }),
+  )
+}
+
+function selectedTemplateLabel() {
+  const button = findVisible(
+    Array.from(
+      document.querySelectorAll(
+        '[data-description-template-field] button[aria-pressed="true"]',
+      ),
+    ),
+  )
+  return button?.textContent ?? null
+}
+
+function descriptionEditorText() {
+  return (
+    findVisible(Array.from(document.querySelectorAll('.milkdown .ProseMirror')))
+      ?.textContent ?? null
+  )
+}
+
+function templateSelectorTabIndices() {
+  return Array.from(
+    document.querySelectorAll<HTMLButtonElement>(
+      '[data-description-template-field] button',
+    ),
+  ).map((button) => button.tabIndex)
+}
+
+function descriptionTemplateState() {
+  return {
+    selectedTemplate: selectedTemplateLabel(),
+    description: descriptionEditorText(),
+  }
+}
+
+function descriptionTemplateChangeState() {
+  return {
+    ...descriptionTemplateState(),
+    confirmationOpen:
+      screen.queryByRole('dialog', { name: 'Replace description?' }) !== null,
+  }
+}
+
+function descriptionTemplateTabFocusState() {
+  return {
+    activeArea:
+      document.activeElement?.closest('.milkdown-wrapper') != null
+        ? 'description'
+        : 'other',
+    templateButtonTabIndices: templateSelectorTabIndices(),
+  }
+}
+
+async function enterDescription(user: UserEvent, text: string) {
+  await focusDescriptionEditor(user, document.body, { timeout: 10_000 })
+  await user.keyboard(text)
+}
+
 function isDiscardConfirmationOpen() {
   return screen.queryByRole('dialog', { name: 'Discard task draft?' }) !== null
 }
@@ -143,6 +219,7 @@ function closeState(
 
 describe('CreateTaskModal', () => {
   beforeEach(() => {
+    setDescriptionTemplates()
     mockUseCreateTask.mockReturnValue(
       partialMutation<ReturnType<typeof useCreateTask>>({
         mutate: vi.fn(),
@@ -192,6 +269,147 @@ describe('CreateTaskModal', () => {
     })
   })
 
+  it('selects the default template and fills the description body', async () => {
+    renderControlledModal(CreateTaskModal, {})
+
+    await waitFor(() => {
+      expect(descriptionTemplateState()).toEqual({
+        selectedTemplate: 'General task',
+        description: 'WhyWhat',
+      })
+    })
+  })
+
+  it('starts with no template and an empty description when no default exists', async () => {
+    setDescriptionTemplates([makeDescriptionTemplate({ isDefault: false })])
+    renderControlledModal(CreateTaskModal, {})
+
+    await waitFor(() => {
+      expect(descriptionTemplateState()).toEqual({
+        selectedTemplate: '—',
+        description: '',
+      })
+    })
+  })
+
+  it('replaces an untouched template body immediately after another template is selected', async () => {
+    const user = userEvent.setup()
+    const nextTemplate = makeDescriptionTemplate({
+      id: 'description-template-2',
+      name: 'Quick note',
+      body: '## Summary',
+      isDefault: false,
+    })
+    setDescriptionTemplates([makeDescriptionTemplate(), nextTemplate])
+    renderControlledModal(CreateTaskModal, {})
+
+    const button = findVisible(
+      screen.getAllByRole('button', { name: 'Quick note' }),
+    )
+    await user.click(assertDefined(button))
+
+    await waitFor(() => {
+      expect(descriptionTemplateChangeState()).toEqual({
+        selectedTemplate: 'Quick note',
+        description: 'Summary',
+        confirmationOpen: false,
+      })
+    })
+  })
+
+  it('keeps an edited description when the template change is canceled', async () => {
+    const user = userEvent.setup()
+    const nextTemplate = makeDescriptionTemplate({
+      id: 'description-template-2',
+      name: 'Quick note',
+      body: '## Summary',
+      isDefault: false,
+    })
+    setDescriptionTemplates([
+      makeDescriptionTemplate({ body: '' }),
+      nextTemplate,
+    ])
+    renderControlledModal(CreateTaskModal, {})
+    await enterDescription(user, 'Handwritten draft')
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Quick note' })),
+      ),
+    )
+
+    const confirmation = await screen.findByRole('dialog', {
+      name: 'Replace description?',
+    })
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Cancel' }),
+    )
+
+    await waitFor(() => {
+      expect(descriptionTemplateChangeState()).toEqual({
+        selectedTemplate: 'General task',
+        description: 'Handwritten draft',
+        confirmationOpen: false,
+      })
+    })
+  })
+
+  it('replaces an edited description after the template change is confirmed', async () => {
+    const user = userEvent.setup()
+    const nextTemplate = makeDescriptionTemplate({
+      id: 'description-template-2',
+      name: 'Quick note',
+      body: '## Summary',
+      isDefault: false,
+    })
+    setDescriptionTemplates([
+      makeDescriptionTemplate({ body: '' }),
+      nextTemplate,
+    ])
+    renderControlledModal(CreateTaskModal, {})
+    await enterDescription(user, 'Handwritten draft')
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Quick note' })),
+      ),
+    )
+
+    const confirmation = await screen.findByRole('dialog', {
+      name: 'Replace description?',
+    })
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Replace' }),
+    )
+
+    await waitFor(() => {
+      expect(descriptionTemplateState()).toEqual({
+        selectedTemplate: 'Quick note',
+        description: 'Summary',
+      })
+    })
+  })
+
+  it('skips template buttons when tabbing from the title to the description', async () => {
+    const user = userEvent.setup()
+    renderControlledModal(CreateTaskModal, {})
+
+    await waitFor(() => {
+      expect(descriptionEditorText()).toBe('WhyWhat')
+    })
+
+    const titleInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+    )
+    await user.click(titleInput)
+    await user.keyboard('{Tab}')
+
+    await waitFor(() => {
+      expect(descriptionTemplateTabFocusState()).toEqual({
+        activeArea: 'description',
+        templateButtonTabIndices: [-1, -1, -1, -1],
+      })
+    })
+  })
+
   it('keeps a title draft when closing is canceled', async () => {
     const user = userEvent.setup()
     const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
@@ -220,9 +438,8 @@ describe('CreateTaskModal', () => {
 
   it('asks before closing when the description has content', async () => {
     const user = userEvent.setup()
-    const { onOpenChange } = renderControlledModal(CreateTaskModal, {
-      defaultDescription: '',
-    })
+    setDescriptionTemplates([])
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {})
 
     const editor = await focusDescriptionEditor(user, document.body, {
       timeout: 10_000,
@@ -569,6 +786,44 @@ describe('CreateTaskModal', () => {
   })
 
   describe('submitting with Cmd+Enter', () => {
+    it('omits the description when the selected template body is untouched', async () => {
+      const user = userEvent.setup()
+      const mutate = mockCreateTaskSuccess(makeTask())
+      renderControlledModal(CreateTaskModal, { defaultContext: 'personal' })
+
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+      )
+      await user.type(titleInput, 'Untouched template')
+      await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+      expect(mutate.mock.calls.map(([input]) => input)).toEqual([
+        { title: 'Untouched template', context: 'personal' },
+      ])
+    })
+
+    it('submits an edited description instead of the selected template body', async () => {
+      const user = userEvent.setup()
+      const mutate = mockCreateTaskSuccess(makeTask())
+      setDescriptionTemplates([makeDescriptionTemplate({ body: '' })])
+      renderControlledModal(CreateTaskModal, { defaultContext: 'personal' })
+
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+      )
+      await user.type(titleInput, 'Edited template')
+      await enterDescription(user, 'Handwritten description')
+      await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+      expect(mutate.mock.calls.map(([input]) => input)).toEqual([
+        {
+          title: 'Edited template',
+          description: 'Handwritten description',
+          context: 'personal',
+        },
+      ])
+    })
+
     it('closes the modal on Cmd+Enter from the title field', async () => {
       const user = userEvent.setup()
       mockCreateTaskSuccess(makeTask())

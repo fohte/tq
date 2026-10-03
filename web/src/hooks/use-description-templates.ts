@@ -30,9 +30,12 @@ export const descriptionTemplateKeys = {
   detail: (name: string) => [...descriptionTemplateKeys.details, name] as const,
 }
 
-export function useDescriptionTemplates() {
+export function useDescriptionTemplates({
+  enabled = true,
+}: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: descriptionTemplateKeys.list(),
+    enabled,
     queryFn: async () => {
       const res = await api.api['description-templates'].$get()
       return unwrapOrThrow(assertOk(res)).json()

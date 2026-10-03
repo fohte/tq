@@ -8,10 +8,9 @@ import {
 import { X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import {
-  DEFAULT_TASK_DESCRIPTION,
-  useTaskDescriptionDraft,
-} from '#components/task/create-task-modal-description'
+import { CreateTaskModalDescriptionTemplateConfirmDialog } from '#components/task/create-task-modal-description-template-confirm-dialog'
+import { CreateTaskModalDescriptionTemplateSelector } from '#components/task/create-task-modal-description-template-selector'
+import { useCreateTaskModalDescriptionTemplate } from '#components/task/create-task-modal-description-template-state'
 import { CreateTaskModalDesktop } from '#components/task/create-task-modal-desktop'
 import type {
   CommitmentValue,
@@ -51,7 +50,6 @@ interface CreateTaskModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultStartDate?: string
-  defaultDescription?: string
   defaultContext?: ContextValue
   defaultLabels?: string[]
   defaultEstimateMinutes?: number
@@ -70,7 +68,6 @@ export function CreateTaskModal({
   open,
   onOpenChange,
   defaultStartDate,
-  defaultDescription,
   defaultContext,
   defaultLabels,
   defaultEstimateMinutes,
@@ -83,18 +80,12 @@ export function CreateTaskModal({
 }: CreateTaskModalProps) {
   const currentContext = useCurrentContext()
   const effectiveDefaultContext = defaultContext ?? currentContext
+  const descriptionTemplate = useCreateTaskModalDescriptionTemplate(open)
 
   const [title, setTitle] = useState('')
   const [discardConfirmationOpen, setDiscardConfirmationOpen] = useState(
     defaultDiscardConfirmationOpen,
   )
-  const {
-    getDescription,
-    onChange: onDescriptionChange,
-    onFocusedDocumentChange,
-    reset: resetDescription,
-  } = useTaskDescriptionDraft(defaultDescription)
-  const [editorKey, setEditorKey] = useState(0)
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
   const [estimateInput, setEstimateInput] = useState(
@@ -194,8 +185,7 @@ export function CreateTaskModal({
 
   const resetForm = useCallback(() => {
     setTitle('')
-    resetDescription()
-    setEditorKey((k) => k + 1)
+    descriptionTemplate.reset()
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
     setEstimateInput(estimateInputFor(defaultEstimateMinutes))
@@ -211,13 +201,13 @@ export function CreateTaskModal({
     effectiveDefaultContext,
     defaultLabels,
     defaultEstimateMinutes,
-    resetDescription,
+    descriptionTemplate.reset,
   ])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
-        const description = getDescription()
+        const description = descriptionTemplate.getDescription()
         if (title.trim() !== '' || description.trim() !== '') {
           setDiscardConfirmationOpen(true)
           return
@@ -226,7 +216,7 @@ export function CreateTaskModal({
       }
       onOpenChange(nextOpen)
     },
-    [getDescription, onOpenChange, resetForm, title],
+    [descriptionTemplate.getDescription, onOpenChange, resetForm, title],
   )
 
   const discardDraft = () => {
@@ -273,7 +263,7 @@ export function CreateTaskModal({
   const handleSubmit = () => {
     if (!canSubmit) return
 
-    const desc = getDescription().trim()
+    const desc = descriptionTemplate.getDescription().trim()
     const input: CreateTaskInput = {
       title: title.trim(),
       ...(desc ? { description: desc } : {}),
@@ -398,13 +388,21 @@ export function CreateTaskModal({
     </span>
   )
 
-  const descriptionEditor = (
+  const descriptionTemplateSelector = (
+    <CreateTaskModalDescriptionTemplateSelector
+      templates={descriptionTemplate.templates}
+      selectedTemplateName={descriptionTemplate.selectedTemplateName}
+      onChange={descriptionTemplate.selectTemplate}
+    />
+  )
+
+  const descriptionEditor = descriptionTemplate.ready && (
     <MarkdownEditor
-      key={editorKey}
-      defaultValue={defaultDescription ?? DEFAULT_TASK_DESCRIPTION}
+      key={descriptionTemplate.editorKey}
+      defaultValue={descriptionTemplate.templateBody}
       placeholder="Add description..."
-      onChange={onDescriptionChange}
-      onFocusedDocumentChange={onFocusedDocumentChange}
+      onChange={descriptionTemplate.onChange}
+      onFocusedDocumentChange={descriptionTemplate.onFocusedDocumentChange}
       size="compact"
     />
   )
@@ -419,6 +417,7 @@ export function CreateTaskModal({
           <CreateTaskModalDesktop
             parentIndicator={parentIndicator}
             githubIndicator={githubIndicator}
+            descriptionTemplateSelector={descriptionTemplateSelector}
             descriptionEditor={descriptionEditor}
             title={title}
             setTitle={handleTitleChange}
@@ -443,6 +442,7 @@ export function CreateTaskModal({
           <CreateTaskModalMobile
             parentIndicator={parentIndicator}
             githubIndicator={githubIndicator}
+            descriptionTemplateSelector={descriptionTemplateSelector}
             descriptionEditor={descriptionEditor}
             title={title}
             setTitle={handleTitleChange}
@@ -475,6 +475,13 @@ export function CreateTaskModal({
         onConfirm={discardDraft}
         open={open && discardConfirmationOpen}
         onOpenChange={setDiscardConfirmationOpen}
+      />
+      <CreateTaskModalDescriptionTemplateConfirmDialog
+        open={descriptionTemplate.pendingTemplateName !== undefined}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) descriptionTemplate.cancelTemplateChange()
+        }}
+        onConfirm={descriptionTemplate.confirmTemplateChange}
       />
     </Dialog>
   )
