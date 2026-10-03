@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 
 import { AppLayout } from '#components/layout/app-layout'
 import { useGithubSync } from '#hooks/use-github-link'
@@ -13,6 +13,20 @@ function RootComponent() {
   useGithubSync()
   useServiceWorkerUpdate()
   usePushResubscribe()
+
+  const isCompactLayout = useRouterState({
+    select: (state) =>
+      state.location.pathname === '/' &&
+      state.location.search.layout === 'compact',
+  })
+
+  if (isCompactLayout) {
+    return (
+      <div className="h-dvh w-full overflow-hidden">
+        <Outlet />
+      </div>
+    )
+  }
 
   return (
     <AppLayout>

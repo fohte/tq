@@ -48,10 +48,12 @@ import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
 
 const dayViewSearchDefaults = { view: 'queue', q: '' } as const
+const COMPACT_REFRESH_INTERVAL_MS = 60_000
 
 interface DayViewSearch {
   view?: DayViewMode
   q?: string
+  layout?: 'compact'
 }
 
 function validateSearch(search: Record<string, unknown>): DayViewSearch {
@@ -60,6 +62,7 @@ function validateSearch(search: Record<string, unknown>): DayViewSearch {
   return {
     view: search['view'] === 'kanban' ? 'kanban' : 'queue',
     ...(q == null || q === '' ? {} : { q }),
+    ...(search['layout'] === 'compact' ? { layout: 'compact' } : {}),
   }
 }
 
@@ -75,7 +78,13 @@ function DayView() {
   const baseFilter = useBaseFilter(true)
   const { isLoading, categorized } = useTaskList(baseFilter)
 
-  const { view: viewMode = 'queue', q = '' } = Route.useSearch()
+  const {
+    view: requestedViewMode = 'queue',
+    q = '',
+    layout,
+  } = Route.useSearch()
+  const isCompactLayout = layout === 'compact'
+  const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
   const filteredTasksQuery = useTaskList(
     { ...baseFilter, ...(q === '' ? {} : { q }) },
@@ -136,10 +145,12 @@ function DayView() {
   const { data: timeBlocksData } = useTimeBlocks(
     visibleRange.startDate,
     visibleRange.endDate,
+    isCompactLayout ? COMPACT_REFRESH_INTERVAL_MS : undefined,
   )
   const { data: schedulesData } = useScheduleList(
     visibleRange.startDate,
     visibleRange.endDate,
+    isCompactLayout ? COMPACT_REFRESH_INTERVAL_MS : undefined,
   )
   const { data: queuesData } = useQueues()
   const queueItemsResults = useQueueItemsForQueues(queuesData, selectedDateStr)
@@ -433,6 +444,7 @@ function DayView() {
   return (
     <>
       <DayViewPresentation
+        layout={isCompactLayout ? 'compact' : 'default'}
         isLoading={
           isLoading || (isKanbanFiltering && filteredTasksQuery.isLoading)
         }

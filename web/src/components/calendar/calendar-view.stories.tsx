@@ -229,6 +229,22 @@ export const WithEvents: Story = {
   },
 }
 
+export const CompactDay: Story = {
+  name: 'the compact calendar keeps a daily timeline without a view switcher',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-screen w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    events: sampleEvents,
+    showViewSwitcher: false,
+  },
+}
+
 export const ManualOnly: Story = {
   name: 'the daily calendar shows manually scheduled tasks without other events',
   args: {
