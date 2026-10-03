@@ -180,51 +180,36 @@ describe('description templates API', () => {
         defaults: [
           { name: 'Planning default', isDefault: true },
           { name: 'Before default', isDefault: false },
-          { name: '実装', isDefault: false },
         ],
       })
     })
   })
 
   describe('GET /api/description-templates', () => {
-    it('returns the seeded default template', async () => {
+    it('returns an empty list when no templates exist', async () => {
       const res = await app.request('/api/description-templates')
 
       expect(await templateListSnapshot(res)).toEqual({
         status: 200,
-        body: [
-          {
-            id: 'ID',
-            name: '実装',
-            whenToUse: 'コードや設定の変更を伴い、PR が出る作業',
-            body: '## Why\n\n## What',
-            guide:
-              'Why: この作業が必要な理由と、解決する問題を書く。\nWhat: 変更する対象と内容を書く。',
-            isDefault: true,
-            createdAt: 'DATE',
-            updatedAt: 'DATE',
-          },
-        ],
+        body: [],
       })
     })
   })
 
   describe('GET /api/description-templates/:name', () => {
     it('returns a template by name', async () => {
-      const res = await app.request(
-        '/api/description-templates/%E5%AE%9F%E8%A3%85',
-      )
+      await createTemplate('Weekly plan')
+      const res = await app.request('/api/description-templates/Weekly%20plan')
 
       expect(await templateSnapshot(res)).toEqual({
         status: 200,
         body: {
           id: 'ID',
-          name: '実装',
-          whenToUse: 'コードや設定の変更を伴い、PR が出る作業',
-          body: '## Why\n\n## What',
-          guide:
-            'Why: この作業が必要な理由と、解決する問題を書く。\nWhat: 変更する対象と内容を書く。',
-          isDefault: true,
+          name: 'Weekly plan',
+          whenToUse: 'Use for planning',
+          body: '## Context',
+          guide: 'Explain the context',
+          isDefault: false,
           createdAt: 'DATE',
           updatedAt: 'DATE',
         },
@@ -274,10 +259,7 @@ describe('description templates API', () => {
           createdAt: 'DATE',
           updatedAt: 'DATE',
         },
-        defaults: [
-          { name: 'Planning checklist', isDefault: true },
-          { name: '実装', isDefault: false },
-        ],
+        defaults: [{ name: 'Planning checklist', isDefault: true }],
       })
     })
 

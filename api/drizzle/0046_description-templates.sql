@@ -12,13 +12,3 @@ CREATE TABLE "task_description_templates" (
 --> statement-breakpoint
 CREATE UNIQUE INDEX "task_description_templates_default_unique" ON "task_description_templates" USING btree ("is_default") WHERE "task_description_templates"."is_default" = true;
 --> statement-breakpoint
-INSERT INTO "task_description_templates" (
-	"id", "name", "when_to_use", "body", "guide", "is_default"
-) VALUES (
-	'00000000-0000-4000-8000-000000000001',
-	'実装',
-	'コードや設定の変更を伴い、PR が出る作業',
-	E'## Why\n\n## What',
-	E'Why: この作業が必要な理由と、解決する問題を書く。\nWhat: 変更する対象と内容を書く。',
-	true
-);
