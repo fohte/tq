@@ -21,6 +21,8 @@ import { assertDefined, findEditorText } from '#lib/test-utils'
 import { createStoryRouter } from '#storybook-config/story-router'
 
 const LINKED_GITHUB_URL_FIXTURE = 'https://github.com/fohte/tq/issues/9104'
+const UNSUPPORTED_SERVICE_URL =
+  'https://example.slack.com/archives/CTEST1234/p1234567890123456'
 const LINKED_TASK_LINK_TEXT = 'Linked to a TQ task →'
 const OUTSIDE_CARD_TEXT = 'A plain paragraph outside any card.'
 
@@ -62,6 +64,15 @@ function getLinkClickState(
     defaultPrevented,
     mode: wrapper.getAttribute('data-view-mode'),
     linkIsContentEditable: link.isContentEditable,
+  }
+}
+
+function getPlainLinkRendering(container: HTMLElement, link: HTMLElement) {
+  return {
+    inlineReferenceCount: container.querySelectorAll('.inline-reference-chip')
+      .length,
+    href: link.getAttribute('href'),
+    label: link.textContent,
   }
 }
 
@@ -253,6 +264,26 @@ describe('MarkdownEditor live references', () => {
       defaultPrevented: false,
       mode: 'view',
       linkIsContentEditable: false,
+    })
+  })
+
+  it('renders an unsupported service permalink as a plain link', async () => {
+    const { container } = renderWithProviders(
+      <MarkdownEditor
+        defaultValue={UNSUPPORTED_SERVICE_URL}
+        editing={false}
+        onEditingChange={() => {}}
+      />,
+    )
+
+    const link = await screen.findByRole('link', {
+      name: UNSUPPORTED_SERVICE_URL,
+    })
+
+    expect(getPlainLinkRendering(container, link)).toEqual({
+      inlineReferenceCount: 0,
+      href: UNSUPPORTED_SERVICE_URL,
+      label: UNSUPPORTED_SERVICE_URL,
     })
   })
 

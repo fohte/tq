@@ -27,7 +27,6 @@ import { createImageSourceRevealPlugin } from '#lib/image-source-reveal/plugin'
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
 import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
 import { projectUrlProvider } from '#lib/inline-reference/providers/project-url'
-import { slackPermalinkProvider } from '#lib/inline-reference/providers/slack-permalink'
 import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
 import { taskUrlProvider } from '#lib/inline-reference/providers/task-url'
@@ -220,13 +219,6 @@ function CrepeEditor({
       .use(
         createInlineReferencePlugin(
           githubUrlProvider,
-          widgetViewFactory,
-          viewModeStore,
-        ),
-      )
-      .use(
-        createInlineReferencePlugin(
-          slackPermalinkProvider,
           widgetViewFactory,
           viewModeStore,
         ),

@@ -167,9 +167,8 @@ export const oauthTokens = pgTable(
     provider: text('provider').notNull().default('google_calendar'),
     // Identifies which account a row belongs to for providers that support
     // multiple connected accounts (google_calendar, keyed by the stable
-    // `sub` from Google's UserInfo endpoint; slack, keyed by the workspace's
-    // `team_id` from auth.test; see IntegrationOAuth.identifyAccount in
-    // integrations/types.ts). GitHub has no such identity and is
+    // `sub` from Google's UserInfo endpoint; see IntegrationOAuth.identifyAccount
+    // in integrations/types.ts). GitHub has no such identity and is
     // intentionally kept single-account: its rows use '' as a sentinel so
     // the unique constraint below still caps it at one row per provider.
     accountId: text('account_id').notNull(),
@@ -195,11 +194,10 @@ export const oauthTokens = pgTable(
     ),
     // Exempts providers with no `oauth.refresh` in api/src/integrations/
     // (tokens that never expire, so refresh metadata is meaningless):
-    // currently 'github' and 'slack'. Add another such provider's id to this
-    // OR clause too.
+    // currently 'github'. Add another such provider's id to this OR clause too.
     check(
       'oauth_tokens_refresh_metadata_required',
-      sql`${table.provider} = 'github' OR ${table.provider} = 'slack' OR (${table.refreshToken} IS NOT NULL AND ${table.expiresAt} IS NOT NULL)`,
+      sql`${table.provider} = 'github' OR (${table.refreshToken} IS NOT NULL AND ${table.expiresAt} IS NOT NULL)`,
     ),
   ],
 )

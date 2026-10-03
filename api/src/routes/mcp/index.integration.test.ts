@@ -46,7 +46,6 @@ const REGISTERED_TOOL_NAMES = [
   'saved_view_update',
   'session_delete',
   'session_list',
-  'slack_resolve',
   'task_activity',
   'task_complete',
   'task_create',

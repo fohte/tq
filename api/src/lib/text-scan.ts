@@ -43,8 +43,8 @@ function maskedLinkHref(
 // Code content (NodeSpec.code / MarkSpec.code) is never a reference. A
 // labeled link's display text describes wherever the link points, not a tq
 // resource — except a GFM autolink literal, whose display text is the URL
-// itself (href === text), which the taskUrl/projectUrl/githubUrl/
-// slackPermalink providers still need to see.
+// itself (href === text), which the taskUrl/projectUrl/githubUrl providers
+// still need to see.
 function isNonReferenceText(
   marks: readonly Mark[],
   text: string,

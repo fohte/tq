@@ -20,7 +20,6 @@ import { recurringTaskTemplatesApp } from '#routes/recurring-task-templates'
 import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
 import { schedulingSettingsApp } from '#routes/scheduling-settings'
-import { slackApp } from '#routes/slack'
 import { taskAgentSessionsApp } from '#routes/task-agent-sessions'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
@@ -74,7 +73,6 @@ const app = new Hono()
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
   .route('/api/scheduling-settings', schedulingSettingsApp)
-  .route('/api/slack', slackApp)
   .route('/api/mcp', mcpApp)
   .onError(onError)
 
