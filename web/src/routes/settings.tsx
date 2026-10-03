@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Calendar, Puzzle } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { DescriptionTemplateList } from '#components/settings/description-template-list'
 import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
@@ -83,6 +84,10 @@ function Settings() {
 
           <div className="mt-8">
             <GithubSyncRuleList />
+          </div>
+
+          <div className="mt-8">
+            <DescriptionTemplateList />
           </div>
 
           <div className="mt-8">
