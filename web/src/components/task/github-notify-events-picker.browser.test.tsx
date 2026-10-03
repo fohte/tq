@@ -34,12 +34,19 @@ describe('GitHubNotifyEventsPicker', () => {
 
     await user.click(screen.getByRole('button', { name: 'Notify on: off' }))
     await user.click(
+      await screen.findByRole('menuitemcheckbox', { name: 'new comments' }),
+    )
+    await user.click(
       await screen.findByRole('menuitemcheckbox', { name: 'closed / merged' }),
     )
     await user.click(
-      await screen.findByRole('menuitemcheckbox', { name: 'new comments' }),
+      await screen.findByRole('menuitemcheckbox', { name: 'closed / merged' }),
     )
 
-    expect(changes).toEqual([['closed'], ['closed', 'comments']])
+    expect(changes).toEqual([
+      ['comments'],
+      ['closed', 'comments'],
+      ['comments'],
+    ])
   })
 })
