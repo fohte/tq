@@ -51,4 +51,28 @@ describe('DescriptionTemplateRow', () => {
 
     expect(mutate.mock.calls).toEqual([['Sample template']])
   })
+
+  it('shows an error after deletion fails', () => {
+    mockUseDeleteDescriptionTemplate.mockReturnValue(
+      partialMutation<ReturnType<typeof useDeleteDescriptionTemplate>>({
+        mutate: vi.fn(),
+        isPending: false,
+        isError: true,
+      }),
+    )
+    render(
+      <DescriptionTemplateRow
+        template={makeDescriptionTemplate({
+          id: 'template-id-1',
+          name: 'Sample template',
+        })}
+        onEdit={vi.fn()}
+      />,
+    )
+
+    const result = () => ({ error: screen.getByRole('alert').textContent })
+    expect(result()).toEqual({
+      error: 'テンプレートの削除に失敗しました',
+    })
+  })
 })

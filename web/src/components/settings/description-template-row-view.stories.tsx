@@ -1,43 +1,32 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ComponentProps } from 'react'
 import { fn } from 'storybook/test'
 
-import { DescriptionTemplateRow } from '#components/settings/description-template-row'
+import { DescriptionTemplateRowView } from '#components/settings/description-template-row'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 
-function Providers({ children }: { children: React.ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-
-  return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  )
-}
-
-function WrappedDescriptionTemplateRow(
-  props: ComponentProps<typeof DescriptionTemplateRow>,
+function WrappedDescriptionTemplateRowView(
+  props: ComponentProps<typeof DescriptionTemplateRowView>,
 ) {
   return (
-    <Providers>
-      <div className="w-full max-w-3xl">
-        <DescriptionTemplateRow {...props} />
-      </div>
-    </Providers>
+    <div className="w-full max-w-3xl">
+      <DescriptionTemplateRowView {...props} />
+    </div>
   )
 }
 
 const meta = {
-  title: 'Settings/DescriptionTemplateRow',
-  component: WrappedDescriptionTemplateRow,
+  title: 'Settings/DescriptionTemplateRowView',
+  component: WrappedDescriptionTemplateRowView,
   parameters: {
     layout: 'centered',
   },
   args: {
     onEdit: fn(),
+    onDelete: fn(),
+    isDeletePending: false,
   },
-} satisfies Meta<typeof WrappedDescriptionTemplateRow>
+} satisfies Meta<typeof WrappedDescriptionTemplateRowView>
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -63,5 +52,16 @@ export const NonDefault: Story = {
       body: '## Scope\n\n## Findings',
       isDefault: false,
     }),
+  },
+}
+
+export const DeleteFailed: Story = {
+  name: 'a template shows an error after deletion fails',
+  args: {
+    template: makeDescriptionTemplate({
+      id: 'template-id-3',
+      name: 'Failed template',
+    }),
+    deleteError: 'テンプレートの削除に失敗しました',
   },
 }

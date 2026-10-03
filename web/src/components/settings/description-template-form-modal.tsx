@@ -39,16 +39,7 @@ export function DescriptionTemplateFormModal({
   const updateTemplate = useUpdateDescriptionTemplate()
   const isPending = createTemplate.isPending || updateTemplate.isPending
 
-  const resetForm = () => {
-    setName(template?.name ?? '')
-    setWhenToUse(template?.whenToUse ?? '')
-    setBody(template?.body ?? '')
-    setGuide(template?.guide ?? '')
-    setIsDefault(template?.isDefault ?? false)
-  }
-
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) resetForm()
     onOpenChange(nextOpen)
   }
 
@@ -124,7 +115,6 @@ export function DescriptionTemplateFormModal({
           <FieldRow label="本文" align="start">
             <div className="min-w-0 flex-1 rounded-lg border border-border p-1 text-sm">
               <MarkdownEditor
-                key={`body:${template?.id ?? 'new'}`}
                 defaultValue={body}
                 onChange={setBody}
                 placeholder="本文を入力してください"
@@ -136,7 +126,6 @@ export function DescriptionTemplateFormModal({
           <FieldRow label="書き方" align="start">
             <div className="min-w-0 flex-1 rounded-lg border border-border p-1 text-sm">
               <MarkdownEditor
-                key={`guide:${template?.id ?? 'new'}`}
                 defaultValue={guide}
                 onChange={setGuide}
                 placeholder="各節の書き方を入力してください"
