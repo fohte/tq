@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import type { Task, TreeNode } from '#hooks/use-tasks'
@@ -149,17 +150,12 @@ export const WithSecondLine: Story = {
         // Far future so this story never flips to overdue.
         dueDate: '2099-06-15',
         githubLinks: [
-          {
-            id: 'link-1',
-            owner: 'fohte',
-            repo: 'tq',
-            number: 42,
+          makeGithubLink({
             kind: 'pull_request',
             url: 'https://github.com/fohte/tq/pull/42',
             state: 'merged',
             title: 'Fix flaky test',
-            lastSyncedAt: '2026-03-20T00:00:00.000Z',
-          },
+          }),
         ],
       },
     ],

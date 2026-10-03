@@ -171,6 +171,11 @@ erDiagram
   timestamp_with_time_zone updated_at
   text etag
   bigint seq
+  text role
+  text__ notify_events
+  integer comments_count
+  timestamp_with_time_zone github_updated_at
+  text state_reason
 }
 "public.task_links" {
   text source_task_id FK

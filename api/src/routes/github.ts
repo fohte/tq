@@ -54,7 +54,22 @@ export const githubApp = new Hono()
               },
               200,
             )
-          : c.json({ linked: false, preview: resolved.preview }, 200),
+          : c.json(
+              {
+                linked: false,
+                preview: {
+                  owner: resolved.preview.owner,
+                  repo: resolved.preview.repo,
+                  number: resolved.preview.number,
+                  kind: resolved.preview.kind,
+                  url: resolved.preview.url,
+                  title: resolved.preview.title,
+                  body: resolved.preview.body,
+                  state: resolved.preview.state,
+                },
+              },
+              200,
+            ),
       (error) => githubLinkErrorResponse(c, error, 'github.resolve'),
     )
   })
