@@ -1,14 +1,11 @@
 import { MutationCache, QueryClient } from '@tanstack/react-query'
 
+import { isRecord } from '#lib/type-guards'
+
 const QUERY_SYNC_CHANNEL = 'tq:query-sync'
 
 function isInvalidateMessage(value: unknown): boolean {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    value.type === 'invalidate'
-  )
+  return isRecord(value) && value['type'] === 'invalidate'
 }
 
 export function createSyncedQueryClient(channelName = QUERY_SYNC_CHANNEL) {
@@ -17,10 +14,12 @@ export function createSyncedQueryClient(channelName = QUERY_SYNC_CHANNEL) {
       ? new BroadcastChannel(channelName)
       : null
 
+  let hasPendingInvalidation = false
+  const mutationCache = new MutationCache({
+    onSuccess: () => channel?.postMessage({ type: 'invalidate' }),
+  })
   const queryClient = new QueryClient({
-    mutationCache: new MutationCache({
-      onSuccess: () => channel?.postMessage({ type: 'invalidate' }),
-    }),
+    mutationCache,
     defaultOptions: {
       queries: {
         staleTime: 1000 * 60,
@@ -29,9 +28,20 @@ export function createSyncedQueryClient(channelName = QUERY_SYNC_CHANNEL) {
     },
   })
 
+  const unsubscribeFromMutations = mutationCache.subscribe(() => {
+    if (hasPendingInvalidation && queryClient.isMutating() === 0) {
+      hasPendingInvalidation = false
+      void queryClient.invalidateQueries()
+    }
+  })
+
   const handleMessage = (event: MessageEvent<unknown>) => {
     if (isInvalidateMessage(event.data)) {
-      void queryClient.invalidateQueries()
+      if (queryClient.isMutating() > 0) {
+        hasPendingInvalidation = true
+      } else {
+        void queryClient.invalidateQueries()
+      }
     }
   }
   channel?.addEventListener('message', handleMessage)
@@ -39,6 +49,7 @@ export function createSyncedQueryClient(channelName = QUERY_SYNC_CHANNEL) {
   return {
     queryClient,
     disconnect: () => {
+      unsubscribeFromMutations()
       channel?.removeEventListener('message', handleMessage)
       channel?.close()
     },

@@ -131,4 +131,33 @@ describe('useSessionOpenSettings', () => {
 
     expect(result.current[0]).toEqual(nextSettings)
   })
+
+  it('resets to defaults when another window clears storage', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        localContext: 'work',
+        focusUrlTemplate: null,
+        resumeUrlTemplate: null,
+      }),
+    )
+    const { result } = renderHook(() => useSessionOpenSettings())
+
+    localStorage.clear()
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: null,
+          newValue: null,
+          storageArea: localStorage,
+        }),
+      )
+    })
+
+    expect(result.current[0]).toEqual({
+      localContext: 'personal',
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    })
+  })
 })
