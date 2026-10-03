@@ -2,11 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
 import { projectKeys } from '#hooks/use-projects'
-import type {
-  LinkedTaskSummary,
-  Task,
-  TaskDetail,
-} from '#hooks/use-task-queries'
+import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
@@ -274,74 +270,6 @@ export function useUpdateTask() {
   })
 }
 
-export function useUpdateTaskParent() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      parentId,
-    }: {
-      id: string
-      parentId: string | null
-    }) => {
-      const res = await api.api.tasks[':id'].parent.$patch({
-        param: { id },
-        json: { parentId },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
-    onMutate: async ({ id, parentId }) => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
-
-      const previousDetail = queryClient.getQueryData<TaskDetail>(
-        taskKeys.detail(id),
-      )
-      const previousLists = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists,
-      })
-
-      if (previousDetail) {
-        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
-          ...previousDetail,
-          parentId,
-          updatedAt: new Date().toISOString(),
-        })
-      }
-
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: taskKeys.lists },
-        (old) => {
-          if (!old) return old
-          return old.map((task) =>
-            task.id === id
-              ? { ...task, parentId, updatedAt: new Date().toISOString() }
-              : task,
-          )
-        },
-      )
-
-      return { previousDetail, previousLists }
-    },
-    onError: (_err, { id }, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
-      }
-      if (context?.previousLists) {
-        for (const [key, data] of context.previousLists) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-    },
-    onSettled: (_data, _err, { id }) => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
-      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
-    },
-  })
-}
-
 export function useUpdateTaskRecurrenceRule() {
   const queryClient = useQueryClient()
 
@@ -408,51 +336,10 @@ export function useUpdateTaskRecurrenceRule() {
   })
 }
 
-// Callers pass full LinkedTaskSummary objects (not just ids) since the PATCH
-// response never echoes blockedBy/blocking back for the optimistic update.
-export function useUpdateTaskBlockedBy() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      blockedBy,
-    }: {
-      id: string
-      blockedBy: LinkedTaskSummary[]
-    }) => {
-      const res = await api.api.tasks[':id'].$patch({
-        param: { id },
-        json: { blockedBy: blockedBy.map((task) => task.id) },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
-    onMutate: async ({ id, blockedBy }) => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
-
-      const previousDetail = queryClient.getQueryData<TaskDetail>(
-        taskKeys.detail(id),
-      )
-
-      if (previousDetail) {
-        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
-          ...previousDetail,
-          blockedBy,
-        })
-      }
-
-      return { previousDetail }
-    },
-    onError: (_err, { id }, context) => {
-      if (context?.previousDetail) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
-      }
-    },
-    onSettled: (_data, _err, { id }) => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-    },
-  })
-}
+export {
+  useUpdateTaskBlockedBy,
+  useUpdateTaskParent,
+} from '#hooks/use-task-relation-mutations'
 
 export function useCompleteTask() {
   const queryClient = useQueryClient()
