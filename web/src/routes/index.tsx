@@ -12,6 +12,7 @@ import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { buildQueueSections } from '#components/day-view/queue-sections'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
+import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
@@ -39,13 +40,16 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
+import {
+  getCompactRefetchInterval,
+  isCompactDayLayoutSearch,
+} from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
 
 const dayViewSearchDefaults = { view: 'queue', q: '' } as const
-const COMPACT_REFRESH_INTERVAL_MS = 60_000
 
 interface DayViewSearch {
   view?: DayViewMode
@@ -59,7 +63,7 @@ function validateSearch(search: Record<string, unknown>): DayViewSearch {
   return {
     view: search['view'] === 'kanban' ? 'kanban' : 'queue',
     ...(q == null || q === '' ? {} : { q }),
-    ...(search['layout'] === 'compact' ? { layout: 'compact' } : {}),
+    ...(isCompactDayLayoutSearch(search) ? { layout: 'compact' } : {}),
   }
 }
 
@@ -73,14 +77,17 @@ export const Route = createFileRoute('/')({
 
 function DayView() {
   const baseFilter = useBaseFilter(true)
-  const { isLoading, categorized } = useTaskList(baseFilter)
-
   const {
     view: requestedViewMode = 'queue',
     q = '',
     layout,
   } = Route.useSearch()
   const isCompactLayout = layout === 'compact'
+  const refetchInterval = getCompactRefetchInterval(isCompactLayout)
+  const { isLoading, categorized } = useTaskList(
+    baseFilter,
+    refetchInterval === undefined ? undefined : { refetchInterval },
+  )
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
   const filteredTasksQuery = useTaskList(
@@ -139,18 +146,29 @@ function DayView() {
         : { startDate: selectedDateStr, endDate: selectedDateStr },
     )
   }, [selectedDateStr])
-  const { data: timeBlocksData } = useTimeBlocks(
+  const timeBlocksQuery = useTimeBlocks(
     visibleRange.startDate,
     visibleRange.endDate,
-    isCompactLayout ? COMPACT_REFRESH_INTERVAL_MS : undefined,
+    refetchInterval,
   )
-  const { data: schedulesData } = useScheduleList(
+  const { data: timeBlocksData } = timeBlocksQuery
+  const schedulesQuery = useScheduleList(
     visibleRange.startDate,
     visibleRange.endDate,
-    isCompactLayout ? COMPACT_REFRESH_INTERVAL_MS : undefined,
+    refetchInterval,
   )
-  const { data: queuesData } = useQueues()
-  const queueItemsResults = useQueueItemsForQueues(queuesData, selectedDateStr)
+  const { data: schedulesData } = schedulesQuery
+  useCompactRefreshErrorLogging(
+    isCompactLayout,
+    timeBlocksQuery.error,
+    schedulesQuery.error,
+  )
+  const { data: queuesData } = useQueues(refetchInterval)
+  const queueItemsResults = useQueueItemsForQueues(
+    queuesData,
+    selectedDateStr,
+    refetchInterval,
+  )
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()

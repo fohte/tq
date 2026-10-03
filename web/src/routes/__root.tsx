@@ -1,9 +1,11 @@
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 
 import { AppLayout } from '#components/layout/app-layout'
+import { CompactLayoutFrame } from '#components/layout/compact-layout-frame'
 import { useGithubSync } from '#hooks/use-github-link'
 import { usePushResubscribe } from '#hooks/use-push-notifications'
 import { useServiceWorkerUpdate } from '#hooks/use-service-worker-update'
+import { isCompactDayLayoutSearch } from '#lib/compact-layout'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -16,15 +18,17 @@ function RootComponent() {
 
   const isCompactLayout = useRouterState({
     select: (state) =>
-      state.location.pathname === '/' &&
-      state.location.search.layout === 'compact',
+      state.matches.some(
+        (match) =>
+          match.routeId === '/' && isCompactDayLayoutSearch(match.search),
+      ),
   })
 
   if (isCompactLayout) {
     return (
-      <div className="h-dvh w-full overflow-hidden">
+      <CompactLayoutFrame>
         <Outlet />
-      </div>
+      </CompactLayoutFrame>
     )
   }
 
