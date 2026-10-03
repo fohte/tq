@@ -15,6 +15,8 @@ Join table associating tasks with labels.
 
 | Name                              | Type        | Definition                                                     |
 | --------------------------------- | ----------- | -------------------------------------------------------------- |
+| task_labels_label_id_not_null     | n           | NOT NULL label_id                                              |
+| task_labels_task_id_not_null      | n           | NOT NULL task_id                                               |
 | task_labels_label_id_labels_id_fk | FOREIGN KEY | FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE |
 | task_labels_task_id_label_id_pk   | PRIMARY KEY | PRIMARY KEY (task_id, label_id)                                |
 | task_labels_task_id_tasks_id_fk   | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE   |

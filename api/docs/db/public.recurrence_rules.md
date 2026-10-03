@@ -18,9 +18,14 @@ Recurrence definitions referenced by tasks, schedules, and recurring task templa
 
 ## Constraints
 
-| Name                  | Type        | Definition       |
-| --------------------- | ----------- | ---------------- |
-| recurrence_rules_pkey | PRIMARY KEY | PRIMARY KEY (id) |
+| Name                                 | Type        | Definition          |
+| ------------------------------------ | ----------- | ------------------- |
+| recurrence_rules_created_at_not_null | n           | NOT NULL created_at |
+| recurrence_rules_id_not_null         | n           | NOT NULL id         |
+| recurrence_rules_interval_not_null   | n           | NOT NULL "interval" |
+| recurrence_rules_type_not_null       | n           | NOT NULL type       |
+| recurrence_rules_updated_at_not_null | n           | NOT NULL updated_at |
+| recurrence_rules_pkey                | PRIMARY KEY | PRIMARY KEY (id)    |
 
 ## Indexes
 

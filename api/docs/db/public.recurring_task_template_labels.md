@@ -15,6 +15,8 @@ Join table associating recurring task templates with labels.
 
 | Name                                                            | Type        | Definition                                                                          |
 | --------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| recurring_task_template_labels_label_id_not_null                | n           | NOT NULL label_id                                                                   |
+| recurring_task_template_labels_template_id_not_null             | n           | NOT NULL template_id                                                                |
 | recurring_task_template_labels_label_id_labels_id_fk            | FOREIGN KEY | FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE                      |
 | recurring_task_template_labels_template_id_label_id_pk          | PRIMARY KEY | PRIMARY KEY (template_id, label_id)                                                 |
 | recurring_task_template_labels_template_id_recurring_task_templ | FOREIGN KEY | FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE CASCADE |

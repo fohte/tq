@@ -18,13 +18,20 @@ Singleton preferences for task scheduling.
 
 ## Constraints
 
-| Name                                                     | Type        | Definition                                        |
-| -------------------------------------------------------- | ----------- | ------------------------------------------------- |
-| scheduling_settings_minimum_block_minutes_positive_check | CHECK       | CHECK ((minimum_block_minutes > 0))               |
-| scheduling_settings_singleton_check                      | CHECK       | CHECK ((id = 'singleton'::text))                  |
-| scheduling_settings_working_hours_format_check           | CHECK       | CHECK (((working_hours_start ~ '^([01][0-9]       | 2[0-3]):[0-5][0-9]$'::text) AND (working_hours_end ~ '^([01][0-9] | 2[0-3]):[0-5][0-9]$'::text))) |
-| scheduling_settings_working_hours_order_check            | CHECK       | CHECK ((working_hours_start < working_hours_end)) |
-| scheduling_settings_pkey                                 | PRIMARY KEY | PRIMARY KEY (id)                                  |
+| Name                                                        | Type        | Definition                                        |
+| ----------------------------------------------------------- | ----------- | ------------------------------------------------- |
+| scheduling_settings_auto_reschedule_on_gcal_change_not_null | n           | NOT NULL auto_reschedule_on_gcal_change           |
+| scheduling_settings_created_at_not_null                     | n           | NOT NULL created_at                               |
+| scheduling_settings_id_not_null                             | n           | NOT NULL id                                       |
+| scheduling_settings_minimum_block_minutes_not_null          | n           | NOT NULL minimum_block_minutes                    |
+| scheduling_settings_minimum_block_minutes_positive_check    | CHECK       | CHECK ((minimum_block_minutes > 0))               |
+| scheduling_settings_singleton_check                         | CHECK       | CHECK ((id = 'singleton'::text))                  |
+| scheduling_settings_updated_at_not_null                     | n           | NOT NULL updated_at                               |
+| scheduling_settings_working_hours_end_not_null              | n           | NOT NULL working_hours_end                        |
+| scheduling_settings_working_hours_format_check              | CHECK       | CHECK (((working_hours_start ~ '^([01][0-9]       | 2[0-3]):[0-5][0-9]$'::text) AND (working_hours_end ~ '^([01][0-9] | 2[0-3]):[0-5][0-9]$'::text))) |
+| scheduling_settings_working_hours_order_check               | CHECK       | CHECK ((working_hours_start < working_hours_end)) |
+| scheduling_settings_working_hours_start_not_null            | n           | NOT NULL working_hours_start                      |
+| scheduling_settings_pkey                                    | PRIMARY KEY | PRIMARY KEY (id)                                  |
 
 ## Indexes
 

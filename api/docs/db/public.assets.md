@@ -16,10 +16,15 @@ Metadata for uploaded assets stored in object storage.
 
 ## Constraints
 
-| Name                 | Type        | Definition       |
-| -------------------- | ----------- | ---------------- |
-| assets_pkey          | PRIMARY KEY | PRIMARY KEY (id) |
-| assets_r2_key_unique | UNIQUE      | UNIQUE (r2_key)  |
+| Name                         | Type        | Definition            |
+| ---------------------------- | ----------- | --------------------- |
+| images_content_type_not_null | n           | NOT NULL content_type |
+| images_created_at_not_null   | n           | NOT NULL created_at   |
+| images_id_not_null           | n           | NOT NULL id           |
+| images_r2_key_not_null       | n           | NOT NULL r2_key       |
+| images_size_bytes_not_null   | n           | NOT NULL size_bytes   |
+| assets_pkey                  | PRIMARY KEY | PRIMARY KEY (id)      |
+| assets_r2_key_unique         | UNIQUE      | UNIQUE (r2_key)       |
 
 ## Indexes
 

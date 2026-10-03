@@ -18,10 +18,17 @@ Scheduled time intervals assigned to tasks.
 
 ## Constraints
 
-| Name                            | Type        | Definition                                                   |
-| ------------------------------- | ----------- | ------------------------------------------------------------ |
-| time_blocks_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE |
-| time_blocks_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                             |
+| Name                                   | Type        | Definition                                                   |
+| -------------------------------------- | ----------- | ------------------------------------------------------------ |
+| time_blocks_created_at_not_null        | n           | NOT NULL created_at                                          |
+| time_blocks_end_time_not_null          | n           | NOT NULL end_time                                            |
+| time_blocks_id_not_null                | n           | NOT NULL id                                                  |
+| time_blocks_is_auto_scheduled_not_null | n           | NOT NULL is_auto_scheduled                                   |
+| time_blocks_start_time_not_null        | n           | NOT NULL start_time                                          |
+| time_blocks_task_id_not_null           | n           | NOT NULL task_id                                             |
+| time_blocks_updated_at_not_null        | n           | NOT NULL updated_at                                          |
+| time_blocks_task_id_tasks_id_fk        | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE |
+| time_blocks_pkey                       | PRIMARY KEY | PRIMARY KEY (id)                                             |
 
 ## Indexes
 

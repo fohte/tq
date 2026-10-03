@@ -22,6 +22,13 @@ Recurring calendar schedules with a local time range and optional recurrence rul
 
 | Name                                                | Type        | Definition                                                                          |
 | --------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| schedules_context_not_null                          | n           | NOT NULL context                                                                    |
+| schedules_created_at_not_null                       | n           | NOT NULL created_at                                                                 |
+| schedules_end_time_not_null                         | n           | NOT NULL end_time                                                                   |
+| schedules_id_not_null                               | n           | NOT NULL id                                                                         |
+| schedules_start_time_not_null                       | n           | NOT NULL start_time                                                                 |
+| schedules_title_not_null                            | n           | NOT NULL title                                                                      |
+| schedules_updated_at_not_null                       | n           | NOT NULL updated_at                                                                 |
 | schedules_recurrence_rule_id_recurrence_rules_id_fk | FOREIGN KEY | FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL |
 | schedules_pkey                                      | PRIMARY KEY | PRIMARY KEY (id)                                                                    |
 

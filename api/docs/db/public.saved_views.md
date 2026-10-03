@@ -18,9 +18,16 @@ Saved task searches with a display name, query, context, and position.
 
 ## Constraints
 
-| Name             | Type        | Definition       |
-| ---------------- | ----------- | ---------------- |
-| saved_views_pkey | PRIMARY KEY | PRIMARY KEY (id) |
+| Name                            | Type        | Definition          |
+| ------------------------------- | ----------- | ------------------- |
+| saved_views_context_not_null    | n           | NOT NULL context    |
+| saved_views_created_at_not_null | n           | NOT NULL created_at |
+| saved_views_id_not_null         | n           | NOT NULL id         |
+| saved_views_name_not_null       | n           | NOT NULL name       |
+| saved_views_position_not_null   | n           | NOT NULL "position" |
+| saved_views_query_not_null      | n           | NOT NULL query      |
+| saved_views_updated_at_not_null | n           | NOT NULL updated_at |
+| saved_views_pkey                | PRIMARY KEY | PRIMARY KEY (id)    |
 
 ## Indexes
 

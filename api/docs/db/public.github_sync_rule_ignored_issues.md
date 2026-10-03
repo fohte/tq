@@ -19,6 +19,12 @@ GitHub issues excluded by a synchronization rule.
 
 | Name                                                            | Type        | Definition                                                               |
 | --------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| github_sync_rule_ignored_issues_created_at_not_null             | n           | NOT NULL created_at                                                      |
+| github_sync_rule_ignored_issues_id_not_null                     | n           | NOT NULL id                                                              |
+| github_sync_rule_ignored_issues_number_not_null                 | n           | NOT NULL number                                                          |
+| github_sync_rule_ignored_issues_owner_not_null                  | n           | NOT NULL owner                                                           |
+| github_sync_rule_ignored_issues_repo_not_null                   | n           | NOT NULL repo                                                            |
+| github_sync_rule_ignored_issues_rule_id_not_null                | n           | NOT NULL rule_id                                                         |
 | github_sync_rule_ignored_issues_pkey                            | PRIMARY KEY | PRIMARY KEY (id)                                                         |
 | uq_github_sync_rule_ignored_issues                              | UNIQUE      | UNIQUE (rule_id, owner, repo, number)                                    |
 | github_sync_rule_ignored_issues_rule_id_github_sync_rules_id_fk | FOREIGN KEY | FOREIGN KEY (rule_id) REFERENCES github_sync_rules(id) ON DELETE CASCADE |

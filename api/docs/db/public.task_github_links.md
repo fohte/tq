@@ -30,13 +30,28 @@ GitHub issues and pull requests linked to tasks.
 
 ## Constraints
 
-| Name                                  | Type        | Definition                                                                                          |
-| ------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
-| task_github_links_notify_events_check | CHECK       | CHECK ((notify_events <@ ARRAY['closed'::text, 'reopened'::text, 'comments'::text, 'other'::text])) |
-| task_github_links_role_check          | CHECK       | CHECK ((role = ANY (ARRAY['subject'::text, 'blocker'::text])))                                      |
-| task_github_links_state_kind_check    | CHECK       | CHECK (((kind = 'pull_request'::text) OR (state <> 'merged'::text)))                                |
-| task_github_links_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE                                        |
-| task_github_links_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                                                                    |
+| Name                                      | Type        | Definition                                                                                          |
+| ----------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------- |
+| task_github_links_created_at_not_null     | n           | NOT NULL created_at                                                                                 |
+| task_github_links_id_not_null             | n           | NOT NULL id                                                                                         |
+| task_github_links_kind_not_null           | n           | NOT NULL kind                                                                                       |
+| task_github_links_last_synced_at_not_null | n           | NOT NULL last_synced_at                                                                             |
+| task_github_links_notify_events_check     | CHECK       | CHECK ((notify_events <@ ARRAY['closed'::text, 'reopened'::text, 'comments'::text, 'other'::text])) |
+| task_github_links_notify_events_not_null  | n           | NOT NULL notify_events                                                                              |
+| task_github_links_number_not_null         | n           | NOT NULL number                                                                                     |
+| task_github_links_owner_not_null          | n           | NOT NULL owner                                                                                      |
+| task_github_links_repo_not_null           | n           | NOT NULL repo                                                                                       |
+| task_github_links_role_check              | CHECK       | CHECK ((role = ANY (ARRAY['subject'::text, 'blocker'::text])))                                      |
+| task_github_links_role_not_null           | n           | NOT NULL role                                                                                       |
+| task_github_links_seq_not_null            | n           | NOT NULL seq                                                                                        |
+| task_github_links_state_kind_check        | CHECK       | CHECK (((kind = 'pull_request'::text) OR (state <> 'merged'::text)))                                |
+| task_github_links_state_not_null          | n           | NOT NULL state                                                                                      |
+| task_github_links_task_id_not_null        | n           | NOT NULL task_id                                                                                    |
+| task_github_links_title_not_null          | n           | NOT NULL title                                                                                      |
+| task_github_links_updated_at_not_null     | n           | NOT NULL updated_at                                                                                 |
+| task_github_links_url_not_null            | n           | NOT NULL url                                                                                        |
+| task_github_links_task_id_tasks_id_fk     | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE                                        |
+| task_github_links_pkey                    | PRIMARY KEY | PRIMARY KEY (id)                                                                                    |
 
 ## Indexes
 

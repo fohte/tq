@@ -20,22 +20,15 @@ pnpm --filter web run test # web only
 
 ### API integration tests — database setup
 
-API integration tests require PostgreSQL running via Docker.
+API integration tests require PostgreSQL running via Docker. `mise run db:up` starts PostgreSQL and creates `tq_api_dev` and `tq_api_test`.
 
-```sh
-mise run db:up                                  # skip if already running
-docker compose exec db createdb -U tq tq_test   # first time only
-```
-
-The Compose file uses a fixed project name (`tq-infra`), so the same PostgreSQL container is shared across all worktrees. Running `mise run db:up` from any worktree is safe and will not create duplicate containers — skip if already running for development.
-
-The `db` service publishes Postgres on a random host port to avoid clashing with other projects. `mise run db:up` resolves the assigned port and writes it to `.env.runtime` as both `DATABASE_URL` (`tq_dev`) and `TEST_DATABASE_URL` (`tq_test`); mise loads both automatically and `api`'s test runs prefer `TEST_DATABASE_URL`. Do not point `DATABASE_URL` at `tq_dev` for tests — existing data there causes test failures.
+The Compose project name is `tq-infra`, so worktrees share one PostgreSQL container. The database URL scripts resolve the published port on each mise invocation; `DATABASE_URL` and `TEST_DATABASE_URL` select the API dev and test databases. API tests prefer `TEST_DATABASE_URL` when `DATABASE_URL` is the mise-provided dev URL.
 
 Migrations are applied automatically by `api/src/global-setup.ts`.
 
 ### DB documentation
 
-Run `mise run db:doc` to generate and lint the database documentation. It creates a temporary `tq_doc_<pid>` database in the shared PostgreSQL container, applies migrations, and drops the database on exit. It does not depend on `.env.runtime` or use `tq_dev` / `tq_test`.
+Run `mise run db:doc` to regenerate and lint `api/docs/db` from API migrations. It creates a temporary database and drops it when the command exits. Keep table and column descriptions in `api/.tbls.yml` under `comments:`; `tbls lint` requires descriptions except for `id`, `created_at`, and `updated_at`.
 
 ## Error handling rules
 

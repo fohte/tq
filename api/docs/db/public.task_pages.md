@@ -21,6 +21,14 @@ Formatted content pages attached to tasks.
 
 | Name                           | Type        | Definition                                                   |
 | ------------------------------ | ----------- | ------------------------------------------------------------ |
+| task_pages_content_not_null    | n           | NOT NULL content                                             |
+| task_pages_created_at_not_null | n           | NOT NULL created_at                                          |
+| task_pages_format_not_null     | n           | NOT NULL format                                              |
+| task_pages_id_not_null         | n           | NOT NULL id                                                  |
+| task_pages_sort_order_not_null | n           | NOT NULL sort_order                                          |
+| task_pages_task_id_not_null    | n           | NOT NULL task_id                                             |
+| task_pages_title_not_null      | n           | NOT NULL title                                               |
+| task_pages_updated_at_not_null | n           | NOT NULL updated_at                                          |
 | task_pages_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                             |
 | task_pages_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 

@@ -32,8 +32,16 @@ Tasks with optional parent, project, recurrence, and template relationships.
 
 | Name                                             | Type        | Definition                                                                           |
 | ------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------ |
+| tasks_commitment_not_null                        | n           | NOT NULL commitment                                                                  |
+| tasks_context_not_null                           | n           | NOT NULL context                                                                     |
+| tasks_created_at_not_null                        | n           | NOT NULL created_at                                                                  |
+| tasks_id_not_null                                | n           | NOT NULL id                                                                          |
+| tasks_number_not_null                            | n           | NOT NULL number                                                                      |
+| tasks_status_not_null                            | n           | NOT NULL status                                                                      |
 | tasks_status_reason_check                        | CHECK       | CHECK (((status = 'completed'::text) OR (status_reason IS NULL)))                    |
 | tasks_template_occurrence_paired_check           | CHECK       | CHECK (((template_id IS NULL) = (occurrence_date IS NULL)))                          |
+| tasks_title_not_null                             | n           | NOT NULL title                                                                       |
+| tasks_updated_at_not_null                        | n           | NOT NULL updated_at                                                                  |
 | tasks_project_id_projects_id_fk                  | FOREIGN KEY | FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL                  |
 | tasks_recurrence_rule_id_recurrence_rules_id_fk  | FOREIGN KEY | FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL  |
 | tasks_parent_id_tasks_id_fk                      | FOREIGN KEY | FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL                      |

@@ -20,6 +20,12 @@ Tasks placed in a queue, optionally for a specific period.
 
 | Name                                        | Type        | Definition                                                          |
 | ------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| task_queue_items_queue_id_not_null          | n           | NOT NULL queue_id                                                   |
+| today_tasks_created_at_not_null             | n           | NOT NULL created_at                                                 |
+| today_tasks_id_not_null                     | n           | NOT NULL id                                                         |
+| today_tasks_sort_order_not_null             | n           | NOT NULL sort_order                                                 |
+| today_tasks_task_id_not_null                | n           | NOT NULL task_id                                                    |
+| today_tasks_updated_at_not_null             | n           | NOT NULL updated_at                                                 |
 | task_queue_items_task_id_tasks_id_fk        | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE        |
 | task_queue_items_pkey                       | PRIMARY KEY | PRIMARY KEY (id)                                                    |
 | task_queue_items_queue_id_task_queues_id_fk | FOREIGN KEY | FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE |

@@ -15,6 +15,8 @@ Associations between tasks and coding agent sessions.
 
 | Name                                                      | Type        | Definition                                                                     |
 | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| task_agent_sessions_agent_session_id_not_null             | n           | NOT NULL agent_session_id                                                      |
+| task_agent_sessions_task_id_not_null                      | n           | NOT NULL task_id                                                               |
 | task_agent_sessions_task_id_tasks_id_fk                   | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE                   |
 | task_agent_sessions_agent_session_id_agent_sessions_id_fk | FOREIGN KEY | FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE |
 | task_agent_sessions_task_id_agent_session_id_pk           | PRIMARY KEY | PRIMARY KEY (task_id, agent_session_id)                                        |

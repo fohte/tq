@@ -23,10 +23,17 @@ Sessions reported by coding agent providers.
 
 ## Constraints
 
-| Name                                  | Type        | Definition                    |
-| ------------------------------------- | ----------- | ----------------------------- |
-| agent_sessions_pkey                   | PRIMARY KEY | PRIMARY KEY (id)              |
-| uq_agent_sessions_provider_session_id | UNIQUE      | UNIQUE (provider, session_id) |
+| Name                                   | Type        | Definition                    |
+| -------------------------------------- | ----------- | ----------------------------- |
+| agent_sessions_context_not_null        | n           | NOT NULL context              |
+| agent_sessions_cwd_not_null            | n           | NOT NULL cwd                  |
+| agent_sessions_id_not_null             | n           | NOT NULL id                   |
+| agent_sessions_last_active_at_not_null | n           | NOT NULL last_active_at       |
+| agent_sessions_provider_not_null       | n           | NOT NULL provider             |
+| agent_sessions_session_id_not_null     | n           | NOT NULL session_id           |
+| agent_sessions_started_at_not_null     | n           | NOT NULL started_at           |
+| agent_sessions_pkey                    | PRIMARY KEY | PRIMARY KEY (id)              |
+| uq_agent_sessions_provider_session_id  | UNIQUE      | UNIQUE (provider, session_id) |
 
 ## Indexes
 

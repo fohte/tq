@@ -18,6 +18,11 @@ Text comments attached to tasks.
 
 | Name                              | Type        | Definition                                                   |
 | --------------------------------- | ----------- | ------------------------------------------------------------ |
+| task_comments_content_not_null    | n           | NOT NULL content                                             |
+| task_comments_created_at_not_null | n           | NOT NULL created_at                                          |
+| task_comments_id_not_null         | n           | NOT NULL id                                                  |
+| task_comments_task_id_not_null    | n           | NOT NULL task_id                                             |
+| task_comments_updated_at_not_null | n           | NOT NULL updated_at                                          |
 | task_comments_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                             |
 | task_comments_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 

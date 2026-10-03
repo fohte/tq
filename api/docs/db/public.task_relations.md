@@ -17,7 +17,11 @@ User-defined directed relationships between tasks.
 
 | Name                                                 | Type        | Definition                                                          |
 | ---------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| task_relations_created_at_not_null                   | n           | NOT NULL created_at                                                 |
 | task_relations_no_self_relation                      | CHECK       | CHECK ((source_task_id <> target_task_id))                          |
+| task_relations_source_task_id_not_null               | n           | NOT NULL source_task_id                                             |
+| task_relations_target_task_id_not_null               | n           | NOT NULL target_task_id                                             |
+| task_relations_type_not_null                         | n           | NOT NULL type                                                       |
 | task_relations_source_task_id_tasks_id_fk            | FOREIGN KEY | FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 | task_relations_target_task_id_tasks_id_fk            | FOREIGN KEY | FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 | task_relations_source_task_id_target_task_id_type_pk | PRIMARY KEY | PRIMARY KEY (source_task_id, target_task_id, type)                  |

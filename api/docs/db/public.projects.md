@@ -22,9 +22,16 @@ Projects group related tasks and track planning status and dates.
 
 ## Constraints
 
-| Name          | Type        | Definition       |
-| ------------- | ----------- | ---------------- |
-| projects_pkey | PRIMARY KEY | PRIMARY KEY (id) |
+| Name                         | Type        | Definition          |
+| ---------------------------- | ----------- | ------------------- |
+| projects_context_not_null    | n           | NOT NULL context    |
+| projects_created_at_not_null | n           | NOT NULL created_at |
+| projects_id_not_null         | n           | NOT NULL id         |
+| projects_sort_order_not_null | n           | NOT NULL sort_order |
+| projects_status_not_null     | n           | NOT NULL status     |
+| projects_title_not_null      | n           | NOT NULL title      |
+| projects_updated_at_not_null | n           | NOT NULL updated_at |
+| projects_pkey                | PRIMARY KEY | PRIMARY KEY (id)    |
 
 ## Indexes
 

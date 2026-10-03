@@ -19,10 +19,16 @@ Browser push endpoints and encryption credentials registered for notifications.
 
 ## Constraints
 
-| Name                               | Type        | Definition        |
-| ---------------------------------- | ----------- | ----------------- |
-| push_subscriptions_pkey            | PRIMARY KEY | PRIMARY KEY (id)  |
-| push_subscriptions_endpoint_unique | UNIQUE      | UNIQUE (endpoint) |
+| Name                                   | Type        | Definition          |
+| -------------------------------------- | ----------- | ------------------- |
+| push_subscriptions_auth_not_null       | n           | NOT NULL auth       |
+| push_subscriptions_context_not_null    | n           | NOT NULL context    |
+| push_subscriptions_created_at_not_null | n           | NOT NULL created_at |
+| push_subscriptions_endpoint_not_null   | n           | NOT NULL endpoint   |
+| push_subscriptions_id_not_null         | n           | NOT NULL id         |
+| push_subscriptions_p256dh_not_null     | n           | NOT NULL p256dh     |
+| push_subscriptions_pkey                | PRIMARY KEY | PRIMARY KEY (id)    |
+| push_subscriptions_endpoint_unique     | UNIQUE      | UNIQUE (endpoint)   |
 
 ## Indexes
 

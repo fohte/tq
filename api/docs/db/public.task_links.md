@@ -16,7 +16,10 @@ Directed task links derived from task descriptions, page content, and comments.
 
 | Name                                        | Type        | Definition                                                          |
 | ------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| task_links_created_at_not_null              | n           | NOT NULL created_at                                                 |
 | task_links_no_self_link                     | CHECK       | CHECK ((source_task_id <> target_task_id))                          |
+| task_links_source_task_id_not_null          | n           | NOT NULL source_task_id                                             |
+| task_links_target_task_id_not_null          | n           | NOT NULL target_task_id                                             |
 | task_links_source_task_id_tasks_id_fk       | FOREIGN KEY | FOREIGN KEY (source_task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 | task_links_target_task_id_tasks_id_fk       | FOREIGN KEY | FOREIGN KEY (target_task_id) REFERENCES tasks(id) ON DELETE CASCADE |
 | task_links_source_task_id_target_task_id_pk | PRIMARY KEY | PRIMARY KEY (source_task_id, target_task_id)                        |

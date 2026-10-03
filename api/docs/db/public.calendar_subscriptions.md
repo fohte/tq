@@ -21,6 +21,11 @@ Calendars selected for OAuth accounts.
 
 | Name                                                     | Type        | Definition                                                                 |
 | -------------------------------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| calendar_subscriptions_calendar_id_not_null              | n           | NOT NULL calendar_id                                                       |
+| calendar_subscriptions_created_at_not_null               | n           | NOT NULL created_at                                                        |
+| calendar_subscriptions_id_not_null                       | n           | NOT NULL id                                                                |
+| calendar_subscriptions_oauth_token_id_not_null           | n           | NOT NULL oauth_token_id                                                    |
+| calendar_subscriptions_updated_at_not_null               | n           | NOT NULL updated_at                                                        |
 | calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk | FOREIGN KEY | FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE |
 | calendar_subscriptions_pkey                              | PRIMARY KEY | PRIMARY KEY (id)                                                           |
 | uq_calendar_subscriptions_oauth_token_calendar           | UNIQUE      | UNIQUE (oauth_token_id, calendar_id)                                       |

@@ -27,7 +27,15 @@ Definitions used by the scheduler to create recurring task instances.
 
 | Name                                                            | Type        | Definition                                                          |
 | --------------------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| recurring_task_templates_anchor_date_not_null                   | n           | NOT NULL anchor_date                                                |
+| recurring_task_templates_context_not_null                       | n           | NOT NULL context                                                    |
+| recurring_task_templates_created_at_not_null                    | n           | NOT NULL created_at                                                 |
+| recurring_task_templates_enabled_not_null                       | n           | NOT NULL enabled                                                    |
+| recurring_task_templates_id_not_null                            | n           | NOT NULL id                                                         |
+| recurring_task_templates_recurrence_rule_id_not_null            | n           | NOT NULL recurrence_rule_id                                         |
 | recurring_task_templates_start_offset_days_check                | CHECK       | CHECK ((start_offset_days >= 0))                                    |
+| recurring_task_templates_title_not_null                         | n           | NOT NULL title                                                      |
+| recurring_task_templates_updated_at_not_null                    | n           | NOT NULL updated_at                                                 |
 | recurring_task_templates_project_id_projects_id_fk              | FOREIGN KEY | FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL |
 | recurring_task_templates_recurrence_rule_id_recurrence_rules_id | FOREIGN KEY | FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)    |
 | recurring_task_templates_parent_id_tasks_id_fk                  | FOREIGN KEY | FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL     |

@@ -18,11 +18,17 @@ Named queues that organize tasks, with optional period-based rollover.
 
 ## Constraints
 
-| Name                          | Type        | Definition                                                                                               |
-| ----------------------------- | ----------- | -------------------------------------------------------------------------------------------------------- |
-| task_queues_period_unit_check | CHECK       | CHECK (((period_unit IS NULL) OR (period_unit = ANY (ARRAY['day'::text, 'week'::text, 'month'::text])))) |
-| task_queues_pkey              | PRIMARY KEY | PRIMARY KEY (id)                                                                                         |
-| task_queues_key_unique        | UNIQUE      | UNIQUE (key)                                                                                             |
+| Name                            | Type        | Definition                                                                                               |
+| ------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------- |
+| task_queues_created_at_not_null | n           | NOT NULL created_at                                                                                      |
+| task_queues_id_not_null         | n           | NOT NULL id                                                                                              |
+| task_queues_key_not_null        | n           | NOT NULL key                                                                                             |
+| task_queues_name_not_null       | n           | NOT NULL name                                                                                            |
+| task_queues_period_unit_check   | CHECK       | CHECK (((period_unit IS NULL) OR (period_unit = ANY (ARRAY['day'::text, 'week'::text, 'month'::text])))) |
+| task_queues_position_not_null   | n           | NOT NULL "position"                                                                                      |
+| task_queues_updated_at_not_null | n           | NOT NULL updated_at                                                                                      |
+| task_queues_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                                                                         |
+| task_queues_key_unique          | UNIQUE      | UNIQUE (key)                                                                                             |
 
 ## Indexes
 

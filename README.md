@@ -24,16 +24,13 @@ Tests are run with `pnpm run test`, which executes tests across all workspaces.
 
 #### API integration tests
 
-API integration tests require a running PostgreSQL instance and a dedicated test database (`tq_test`).
+API integration tests require PostgreSQL and the API dev/test databases (`tq_api_dev` and `tq_api_test`).
 
 ```sh
-# 1. Start PostgreSQL (skip if already running)
+# Start PostgreSQL and create both API databases
 mise run db:up
 
-# 2. Create the test database (first time only)
-docker compose exec db createdb -U tq tq_test
-
-# 3. Run API tests
+# Run API tests
 pnpm --filter api run test
 ```
 

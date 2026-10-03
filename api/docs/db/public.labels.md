@@ -16,10 +16,14 @@ Reusable labels that can be assigned to tasks and recurring task templates.
 
 ## Constraints
 
-| Name               | Type        | Definition       |
-| ------------------ | ----------- | ---------------- |
-| labels_pkey        | PRIMARY KEY | PRIMARY KEY (id) |
-| labels_name_unique | UNIQUE      | UNIQUE (name)    |
+| Name                       | Type        | Definition          |
+| -------------------------- | ----------- | ------------------- |
+| labels_context_not_null    | n           | NOT NULL context    |
+| labels_created_at_not_null | n           | NOT NULL created_at |
+| labels_id_not_null         | n           | NOT NULL id         |
+| labels_name_not_null       | n           | NOT NULL name       |
+| labels_pkey                | PRIMARY KEY | PRIMARY KEY (id)    |
+| labels_name_unique         | UNIQUE      | UNIQUE (name)       |
 
 ## Indexes
 

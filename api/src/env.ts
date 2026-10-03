@@ -41,9 +41,9 @@ function resolveRequiredInProduction(
 // reports separately below.
 function resolveDatabaseUrl(appEnv: AppEnv): Result<string, string> {
   return resolveRequiredInProduction('DATABASE_URL', appEnv, () => {
-    const dbName = appEnv === 'test' ? 'tq_test' : 'tq_dev'
+    const dbName = appEnv === 'test' ? 'tq_api_test' : 'tq_api_dev'
     return err(
-      `DATABASE_URL environment variable is required (run \`mise run db:up\` to start Postgres and generate .env.runtime, or set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName} manually)`,
+      `DATABASE_URL environment variable is required (run \`mise run db:up\` to start Postgres and create local databases, or set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName} manually)`,
     )
   })
 }

@@ -1,4 +1,4 @@
-name: tq
+name: tq api
 docPath: docs/db
 disableOutputSchema: true
 er:
