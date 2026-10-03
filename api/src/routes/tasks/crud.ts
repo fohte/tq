@@ -1,8 +1,8 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
-import { db, type DbTransaction } from '#db/connection'
+import { db } from '#db/connection'
 import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
@@ -25,36 +25,11 @@ import {
   listTasksQuerySchema,
   updateTaskSchema,
 } from '#schemas/task'
+import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
 import { syncTaskBlockedBy } from '#services/task-relations'
-
-// Deletes `recurrenceRules` row `ruleId` if no other task still references it
-// directly, so redirecting or clearing a legacy directly-owned rule doesn't
-// leave it orphaned. `excludeTaskId` is the task being updated/deleted itself,
-// whose own row may still carry the stale reference at the time of this check.
-async function deleteRecurrenceRuleIfUnreferenced(
-  tx: DbTransaction,
-  ruleId: string,
-  excludeTaskId?: string,
-) {
-  const [otherRef] = await tx
-    .select({ id: tasks.id })
-    .from(tasks)
-    .where(
-      excludeTaskId != null
-        ? and(
-            eq(tasks.recurrenceRuleId, ruleId),
-            sql`${tasks.id} != ${excludeTaskId}`,
-          )
-        : eq(tasks.recurrenceRuleId, ruleId),
-    )
-    .limit(1)
-  if (!otherRef) {
-    await tx.delete(recurrenceRules).where(eq(recurrenceRules.id, ruleId))
-  }
-}
 
 export const tasksCrudApp = new Hono()
   .post('/', zValidator('json', createTaskSchema), async (c) => {
