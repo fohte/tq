@@ -160,7 +160,7 @@ export async function replaceTaskGithubBlockers(
   tx: DbTransaction,
   taskId: string,
   prepared: PreparedGithubBlockers,
-): Promise<'ok' | 'subject-conflict'> {
+): Promise<'ok' | 'subject-conflict' | 'stale'> {
   await lockTaskGithubLinks(tx, taskId)
 
   const existingLinks = await tx
@@ -184,6 +184,13 @@ export async function replaceTaskGithubBlockers(
       )
       .map(linkRefKey),
   )
+  const preparedKeys = new Set(prepared.newIssues.map(githubRefKey))
+  const hasUnpreparedMissingRef = prepared.refs.some((ref) => {
+    const key = githubRefKey(ref)
+    return !retainedBlockerKeys.has(key) && !preparedKeys.has(key)
+  })
+  if (hasUnpreparedMissingRef) return 'stale'
+
   const removedIds = existingLinks
     .filter(
       (link) => link.role === 'blocker' && !desiredKeys.has(linkRefKey(link)),

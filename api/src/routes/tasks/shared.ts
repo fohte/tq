@@ -178,6 +178,7 @@ export async function getRecurrenceRulesByTemplateIds(
 // ascending; seq breaks ties (see its column comment).
 export async function getGithubLinksByTaskId(
   taskIds: string[],
+  options: { role?: (typeof taskGithubLinks.$inferSelect)['role'] } = {},
 ): Promise<Map<string, (typeof taskGithubLinks.$inferSelect)[]>> {
   if (taskIds.length === 0) return new Map()
 
@@ -185,10 +186,12 @@ export async function getGithubLinksByTaskId(
     .select()
     .from(taskGithubLinks)
     .where(
-      and(
-        inArray(taskGithubLinks.taskId, taskIds),
-        eq(taskGithubLinks.role, 'subject'),
-      ),
+      options.role == null
+        ? inArray(taskGithubLinks.taskId, taskIds)
+        : and(
+            inArray(taskGithubLinks.taskId, taskIds),
+            eq(taskGithubLinks.role, options.role),
+          ),
     )
     .orderBy(taskGithubLinks.createdAt, taskGithubLinks.seq)
 
@@ -308,7 +311,7 @@ export async function hydrateTaskListRows(
   ] = await Promise.all([
     getLabelNamesByTaskId(ids),
     getChildCompletionCountsByTaskId(ids),
-    getGithubLinksByTaskId(ids),
+    getGithubLinksByTaskId(ids, { role: 'subject' }),
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getOpenGithubBlockerRefsByTaskId(ids),

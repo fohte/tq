@@ -268,6 +268,57 @@ describe('DELETE /api/tasks/:taskId/github-link/:linkId', () => {
 })
 
 describe('POST /api/tasks/:taskId/github-link/sync', () => {
+  it('syncs blocker links as well as subject links', async () => {
+    const task = await createTask('Blocked task')
+    const url = 'https://github.com/example-owner/example-repo/issues/17'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: url, title: 'Open blocker' })
+    const patchRes = await app.request(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedBy: [url] }),
+    })
+
+    mockGithubIssueResponse({
+      html_url: url,
+      state: 'closed',
+      title: 'Resolved blocker',
+    })
+    const syncRes = await app.request(
+      `/api/tasks/${task.id}/github-link/sync`,
+      { method: 'POST' },
+    )
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detail = await jsonBody<TaskResponse>(detailRes)
+    const getActual = () => ({
+      patchStatus: patchRes.status,
+      syncStatus: syncRes.status,
+      githubLinks: detail.githubLinks.map(normalizeLink),
+      githubBlockers: (detail.githubBlockers ?? []).map(normalizeLink),
+    })
+
+    expect(getActual()).toEqual({
+      patchStatus: 200,
+      syncStatus: 204,
+      githubLinks: [],
+      githubBlockers: [
+        {
+          id: 'ID',
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 17,
+          kind: 'issue',
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          url,
+          state: 'closed',
+          title: 'Resolved blocker',
+          lastSyncedAt: 'DATE',
+        },
+      ],
+    })
+  })
+
   it('refreshes the link from GitHub, leaving the task untouched', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')

@@ -16,7 +16,10 @@ import {
   taskToResponse,
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
-import { getIncompleteGithubBlockerRefs } from '#services/task-github-blockers'
+import {
+  getIncompleteGithubBlockerRefs,
+  type GithubBlockerRef,
+} from '#services/task-github-blockers'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
 
 const updateStatusSchema = z.object({
@@ -62,12 +65,7 @@ async function checkNotBlocked(
   body: {
     error: string
     blockedByNumbers: number[]
-    blockedByGithubRefs: {
-      owner: string
-      repo: string
-      number: number
-      url: string
-    }[]
+    blockedByGithubRefs: GithubBlockerRef[]
   }
   status: 409
 } | null> {

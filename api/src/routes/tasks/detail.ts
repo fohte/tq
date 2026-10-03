@@ -76,7 +76,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
             where: eq(recurrenceRules.id, task.recurrenceRuleId),
           })
         : Promise.resolve(null),
-    getGithubLinksByTaskId([id]),
+    getGithubLinksByTaskId([id], { role: 'subject' }),
     getTaskLinks(id),
     getTaskFieldAuthors(id),
     getLabelNamesByTaskId([id]),

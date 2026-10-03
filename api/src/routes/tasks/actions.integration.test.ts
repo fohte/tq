@@ -1006,30 +1006,36 @@ describe('tasks actions API', () => {
           method: 'POST',
         })
 
-        expect(res.status).toBe(409)
-        expect(
-          await jsonBody<{
-            error: string
-            blockedByNumbers: number[]
-            blockedByGithubRefs: {
-              owner: string
-              repo: string
-              number: number
-              url: string
-            }[]
-          }>(res),
-        ).toEqual({
-          error: `Task is blocked by unresolved blockers: #${String(blocker.number)}`,
-          blockedByNumbers: [blocker.number],
-          blockedByGithubRefs: [],
-        })
-
+        const body = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(res)
         const [dbTask] = await db
           .select({ status: tasks.status })
           .from(tasks)
           .where(eq(tasks.id, task.id))
         assertDefined(dbTask)
-        expect(dbTask.status).toBe('todo')
+
+        const getActual = () => ({
+          status: res.status,
+          body,
+          taskStatus: dbTask.status,
+        })
+        expect(getActual()).toEqual({
+          status: 409,
+          body: {
+            error: `Task is blocked by unresolved blockers: #${String(blocker.number)}`,
+            blockedByNumbers: [blocker.number],
+            blockedByGithubRefs: [],
+          },
+          taskStatus: 'todo',
+        })
       })
 
       it('lists every incomplete blocker, ordered by number', async () => {
@@ -1042,22 +1048,24 @@ describe('tasks actions API', () => {
           method: 'POST',
         })
 
-        expect(res.status).toBe(409)
-        expect(
-          await jsonBody<{
-            error: string
-            blockedByNumbers: number[]
-            blockedByGithubRefs: {
-              owner: string
-              repo: string
-              number: number
-              url: string
-            }[]
-          }>(res),
-        ).toEqual({
-          error: `Task is blocked by unresolved blockers: #${String(blockerA.number)}, #${String(blockerB.number)}`,
-          blockedByNumbers: [blockerA.number, blockerB.number],
-          blockedByGithubRefs: [],
+        const body = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(res)
+        const getActual = () => ({ status: res.status, body })
+        expect(getActual()).toEqual({
+          status: 409,
+          body: {
+            error: `Task is blocked by unresolved blockers: #${String(blockerA.number)}, #${String(blockerB.number)}`,
+            blockedByNumbers: [blockerA.number, blockerB.number],
+            blockedByGithubRefs: [],
+          },
         })
       })
 
@@ -1105,22 +1113,24 @@ describe('tasks actions API', () => {
 
         const res = await setStatus(task.id, 'completed')
 
-        expect(res.status).toBe(409)
-        expect(
-          await jsonBody<{
-            error: string
-            blockedByNumbers: number[]
-            blockedByGithubRefs: {
-              owner: string
-              repo: string
-              number: number
-              url: string
-            }[]
-          }>(res),
-        ).toEqual({
-          error: `Task is blocked by unresolved blockers: #${String(blocker.number)}`,
-          blockedByNumbers: [blocker.number],
-          blockedByGithubRefs: [],
+        const body = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(res)
+        const getActual = () => ({ status: res.status, body })
+        expect(getActual()).toEqual({
+          status: 409,
+          body: {
+            error: `Task is blocked by unresolved blockers: #${String(blocker.number)}`,
+            blockedByNumbers: [blocker.number],
+            blockedByGithubRefs: [],
+          },
         })
       })
 

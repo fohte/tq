@@ -202,7 +202,8 @@ async function hasBlockedByCycle(
   return z.array(z.object({ id: z.string() })).parse(rows).length > 0
 }
 
-export type SyncBlockedByResult = 'ok' | 'cycle' | 'github-subject-conflict'
+export type SyncBlockedByResult =
+  'ok' | 'cycle' | 'github-subject-conflict' | 'github-stale-blocker'
 
 // Full replacement: an empty array clears every `blocked_by` relation. Owns
 // its own transaction (unlike `syncTaskLabels`) so the cycle re-check and the
@@ -236,6 +237,9 @@ export async function syncTaskBlockedBy(
       )
       if (blockerSync === 'subject-conflict') {
         return 'github-subject-conflict'
+      }
+      if (blockerSync === 'stale') {
+        return 'github-stale-blocker'
       }
     }
 

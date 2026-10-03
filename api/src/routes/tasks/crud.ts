@@ -251,6 +251,15 @@ export const tasksCrudApp = new Hono()
             'tasks.blocked-by',
           )
         }
+        if (syncResult === 'github-stale-blocker') {
+          return c.json(
+            {
+              error:
+                'GitHub blockers changed during this update. Retry the request.',
+            },
+            409,
+          )
+        }
       }
 
       const changedFields = diffFields(existing, taskFields, [
@@ -429,7 +438,7 @@ export const tasksCrudApp = new Hono()
         'description' in taskFields ? await syncTaskLinks(id) : undefined
 
       const [githubLinksByTaskId, labelsByTaskId] = await Promise.all([
-        getGithubLinksByTaskId([id]),
+        getGithubLinksByTaskId([id], { role: 'subject' }),
         getLabelNamesByTaskId([id]),
       ])
 
