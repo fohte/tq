@@ -654,6 +654,8 @@ describe('operation tool input schemas', () => {
       label_delete: false,
       label_list: false,
       label_update: false,
+      memo_get: false,
+      memo_update: false,
       page_create: true,
       page_delete: false,
       page_get: false,
@@ -736,6 +738,8 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      memo_get: { readOnlyHint: true },
+      memo_update: { readOnlyHint: false, destructiveHint: false },
     }
     const annotations = Object.fromEntries(
       tools.tools
