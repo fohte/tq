@@ -8,6 +8,7 @@ import { authorMiddleware } from '#lib/author'
 import { agentSessionsApp } from '#routes/agent-sessions'
 import { assetsApp } from '#routes/assets'
 import { calendarApp } from '#routes/calendar'
+import { descriptionTemplatesApp } from '#routes/description-templates'
 import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
 import { integrationsApp } from '#routes/integrations'
@@ -64,6 +65,7 @@ const app = new Hono()
   .route('/api/push', pushApp)
   .route('/api/queues', queuesApp)
   .route('/api/recurring-task-templates', recurringTaskTemplatesApp)
+  .route('/api/description-templates', descriptionTemplatesApp)
   .route('/api/saved-views', savedViewsApp)
   .route('/api/schedule', schedulesApp)
   .route('/api/calendar', calendarApp)
