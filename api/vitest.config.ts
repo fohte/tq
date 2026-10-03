@@ -13,8 +13,8 @@ process.env['VAPID_PRIVATE_KEY'] = 'test-vapid-private-key'
 // Keep file fixtures independent of ASSET_MAX_SIZE_BYTES in the caller's shell.
 process.env['ASSET_MAX_SIZE_BYTES'] = String(10 * 1024 * 1024)
 
-// mise's [env] loads DATABASE_URL from .env.runtime pointed at tq_dev; tests
-// must use tq_test instead, so prefer TEST_DATABASE_URL when it is set.
+// mise's [env] resolves DATABASE_URL to tq_api_dev; tests must use
+// tq_api_test instead, so prefer TEST_DATABASE_URL when it is set.
 const resolvedDatabaseUrl = resolveTestDatabaseUrl(
   process.env['DATABASE_URL'],
   process.env['TEST_DATABASE_URL'],
