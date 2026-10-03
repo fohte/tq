@@ -147,7 +147,7 @@ describe('description templates API', () => {
     })
 
     it('makes a new template the default when requested', async () => {
-      await createTemplate('Before default')
+      await createTemplate('Before default', true)
 
       const res = await app.request('/api/description-templates', {
         method: 'POST',
@@ -228,6 +228,7 @@ describe('description templates API', () => {
 
   describe('PATCH /api/description-templates/:name', () => {
     it('renames a template and replaces the previous default', async () => {
+      await createTemplate('Previous default', true)
       await createTemplate('Planning')
 
       const res = await app.request('/api/description-templates/Planning', {
@@ -259,7 +260,10 @@ describe('description templates API', () => {
           createdAt: 'DATE',
           updatedAt: 'DATE',
         },
-        defaults: [{ name: 'Planning checklist', isDefault: true }],
+        defaults: [
+          { name: 'Planning checklist', isDefault: true },
+          { name: 'Previous default', isDefault: false },
+        ],
       })
     })
 
@@ -363,7 +367,7 @@ describe('description templates API', () => {
   })
 })
 
-async function createTemplate(name: string) {
+async function createTemplate(name: string, isDefault = false) {
   const res = await app.request('/api/description-templates', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -372,6 +376,7 @@ async function createTemplate(name: string) {
       whenToUse: 'Use for planning',
       body: '## Context',
       guide: 'Explain the context',
+      isDefault,
     }),
   })
   if (res.status !== 201) {

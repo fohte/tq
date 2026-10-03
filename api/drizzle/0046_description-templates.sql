@@ -11,4 +11,3 @@ CREATE TABLE "task_description_templates" (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX "task_description_templates_default_unique" ON "task_description_templates" USING btree ("is_default") WHERE "task_description_templates"."is_default" = true;
---> statement-breakpoint
