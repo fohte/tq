@@ -53,6 +53,8 @@ export interface GithubLinkResponse {
   repo: string
   number: number
   kind: 'issue' | 'pull_request'
+  role: 'subject' | 'blocker'
+  notifyEvents: ('closed' | 'reopened' | 'comments' | 'other')[]
   url: string
   state: 'open' | 'closed' | 'merged'
   title: string
@@ -253,6 +255,8 @@ const githubLinkResponseSchema = z.object({
   repo: z.string(),
   number: z.number(),
   kind: z.enum(['issue', 'pull_request']),
+  role: z.enum(['subject', 'blocker']),
+  notifyEvents: z.array(z.enum(['closed', 'reopened', 'comments', 'other'])),
   url: z.string(),
   state: z.enum(['open', 'closed', 'merged']),
   title: z.string(),

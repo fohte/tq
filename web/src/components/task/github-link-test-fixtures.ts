@@ -9,6 +9,8 @@ export function makeGithubLink(
     repo: 'tq',
     number: 42,
     kind: 'issue',
+    role: 'subject',
+    notifyEvents: ['closed', 'reopened', 'comments', 'other'],
     url: 'https://github.com/fohte/tq/issues/42',
     state: 'open',
     title: 'Sample issue',

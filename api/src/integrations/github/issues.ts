@@ -58,12 +58,18 @@ export interface GithubIssueData extends GithubResourceRef {
   title: string
   body: string | null
   state: 'open' | 'closed' | 'merged'
+  commentsCount: number
+  githubUpdatedAt: string
+  stateReason: 'completed' | 'not_planned' | 'reopened' | null
 }
 
 const issueResponseSchema = z.object({
   title: z.string(),
   body: z.string().nullable(),
   state: z.enum(['open', 'closed']),
+  comments: z.number(),
+  updated_at: z.iso.datetime(),
+  state_reason: z.enum(['completed', 'not_planned', 'reopened']).nullable(),
   html_url: z.string(),
   // Present only when the issue number actually refers to a pull request.
   pull_request: z.object({}).optional(),
@@ -100,6 +106,9 @@ function resolveIssueState(
       title: issue.title,
       body: issue.body,
       state: issue.state,
+      commentsCount: issue.comments,
+      githubUpdatedAt: issue.updated_at,
+      stateReason: issue.state_reason,
     })
   }
 
@@ -117,6 +126,9 @@ function resolveIssueState(
     title: issue.title,
     body: issue.body,
     state: pull.merged ? ('merged' as const) : issue.state,
+    commentsCount: issue.comments,
+    githubUpdatedAt: issue.updated_at,
+    stateReason: issue.state_reason,
   }))
 }
 
@@ -148,6 +160,9 @@ const assignedIssueResponseSchema = z.object({
   number: z.number(),
   title: z.string(),
   body: z.string().nullable(),
+  comments: z.number(),
+  updated_at: z.iso.datetime(),
+  state_reason: z.enum(['completed', 'not_planned', 'reopened']).nullable(),
   html_url: z.string(),
   pull_request: z.object({}).optional(),
   repository: z.object({
@@ -186,6 +201,9 @@ export function fetchAssignedIssues(): ResultAsync<
         title: issue.title,
         body: issue.body,
         state: 'open',
+        commentsCount: issue.comments,
+        githubUpdatedAt: issue.updated_at,
+        stateReason: issue.state_reason,
       })),
     ),
   )

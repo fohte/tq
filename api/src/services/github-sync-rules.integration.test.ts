@@ -33,6 +33,7 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
     id: 'ID',
     seq: 'SEQ',
     lastSyncedAt: 'DATE',
+    githubUpdatedAt: link.githubUpdatedAt ? 'DATE' : null,
     createdAt: 'DATE',
     updatedAt: 'DATE',
   }
@@ -66,6 +67,7 @@ async function findLink(owner: string, repo: string, number: number) {
       eq(taskGithubLinks.owner, owner),
       eq(taskGithubLinks.repo, repo),
       eq(taskGithubLinks.number, number),
+      eq(taskGithubLinks.role, 'subject'),
     ),
   })
 }
@@ -99,6 +101,11 @@ describe('syncGithubAssignedIssues', () => {
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',
       title: 'Fix bug',
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
+      commentsCount: 1,
+      githubUpdatedAt: 'DATE',
+      stateReason: null,
       etag: null,
       lastSyncedAt: 'DATE',
       createdAt: 'DATE',
@@ -140,6 +147,8 @@ describe('syncGithubAssignedIssues', () => {
       owner: 'fohte',
       repo: 'tq',
       number: 42,
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
       kind: 'issue',
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',
@@ -151,6 +160,60 @@ describe('syncGithubAssignedIssues', () => {
 
     const allTasks = await db.select().from(tasks)
     expect(allTasks).toHaveLength(1)
+  })
+
+  it('creates a subject link when the assigned issue is already linked as a blocker', async () => {
+    const project = await createProject('Inbox')
+    await createRule(project.id)
+    await upsertGithubToken('valid-token')
+    const blockerTask = firstOrThrow(
+      await db
+        .insert(tasks)
+        .values({ title: 'Waiting for another issue' })
+        .returning(),
+    )
+    await db.insert(taskGithubLinks).values({
+      taskId: blockerTask.id,
+      owner: 'example-owner',
+      repo: 'example-repo',
+      number: 17,
+      role: 'blocker',
+      notifyEvents: ['closed'],
+      kind: 'issue',
+      url: 'https://github.com/example-owner/example-repo/issues/17',
+      state: 'open',
+      title: 'Sample blocker',
+    })
+    mockAssignedIssuesResponse([
+      { owner: 'example-owner', repo: 'example-repo', number: 17 },
+    ])
+
+    await syncGithubAssignedIssues()
+
+    const subjectLink = await findLink('example-owner', 'example-repo', 17)
+    assertDefined(subjectLink)
+
+    expect(normalizeLink(subjectLink)).toEqual({
+      id: 'ID',
+      seq: 'SEQ',
+      taskId: subjectLink.taskId,
+      owner: 'example-owner',
+      repo: 'example-repo',
+      number: 17,
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
+      kind: 'issue',
+      url: 'https://github.com/example-owner/example-repo/issues/17',
+      state: 'open',
+      title: 'Assigned issue',
+      commentsCount: 1,
+      githubUpdatedAt: 'DATE',
+      stateReason: null,
+      etag: null,
+      lastSyncedAt: 'DATE',
+      createdAt: 'DATE',
+      updatedAt: 'DATE',
+    })
   })
 
   it('does nothing for a disabled rule', async () => {

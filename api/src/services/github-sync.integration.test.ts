@@ -37,7 +37,13 @@ function normalizeTask(task: typeof tasks.$inferSelect) {
 }
 
 function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
-  return { ...link, lastSyncedAt: 'DATE', createdAt: 'DATE', updatedAt: 'DATE' }
+  return {
+    ...link,
+    githubUpdatedAt: link.githubUpdatedAt ? 'DATE' : null,
+    lastSyncedAt: 'DATE',
+    createdAt: 'DATE',
+    updatedAt: 'DATE',
+  }
 }
 
 async function createLinkedTask(githubRef: typeof ref = ref) {
@@ -68,6 +74,28 @@ describe('syncLinkFromGithub', () => {
     expect(normalizeTask(await loadTask(task.id))).toEqual(normalizeTask(task))
     expect(normalizeLink(await loadLink(link.id))).toEqual(
       normalizeLink({ ...link, state: 'closed' }),
+    )
+  })
+
+  it('stores the GitHub change metadata from a fresh response', async () => {
+    const { link } = await createLinkedTask()
+
+    mockGithubIssueResponse({
+      state: 'closed',
+      comments: 8,
+      updated_at: '2024-08-16T13:40:00Z',
+      state_reason: 'completed',
+    })
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(normalizeLink(await loadLink(link.id))).toEqual(
+      normalizeLink({
+        ...link,
+        state: 'closed',
+        commentsCount: 8,
+        githubUpdatedAt: new Date('2024-08-16T13:40:00Z'),
+        stateReason: 'completed',
+      }),
     )
   })
 
@@ -110,7 +138,12 @@ describe('syncLinkFromGithub', () => {
     const linkWithEtag = firstOrThrow(
       await db
         .update(taskGithubLinks)
-        .set({ etag: '"abc123"' })
+        .set({
+          etag: '"abc123"',
+          commentsCount: 7,
+          githubUpdatedAt: new Date('2024-08-15T11:45:00Z'),
+          stateReason: 'not_planned',
+        })
         .where(eq(taskGithubLinks.id, link.id))
         .returning(),
     )
@@ -148,6 +181,8 @@ describe('syncAllGithubLinks', () => {
       owner: ref.owner,
       repo: ref.repo,
       number: ref.number,
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
       kind: 'issue',
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',

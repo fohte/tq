@@ -6,12 +6,14 @@ import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { firstOrThrow } from '#lib/drizzle-utils'
 import type { EditAuthor } from '#lib/edits'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import {
   createTaskFromGithubUrl,
   createTaskFromIssueData,
   findLinksByTaskId,
+  findTaskByGithubRef,
   GithubLinkNotFoundError,
   GithubResourceAlreadyLinkedError,
   linkTaskToGithubUrl,
@@ -33,13 +35,38 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
     id: 'ID',
     seq: 'SEQ',
     lastSyncedAt: 'DATE',
+    githubUpdatedAt: 'DATE',
     createdAt: 'DATE',
     updatedAt: 'DATE',
   }
 }
 
 const ref = { owner: 'fohte', repo: 'tq', number: 42 }
+const roleRef = { owner: 'example-owner', repo: 'example-repo', number: 17 }
 const author: EditAuthor = { kind: 'human', agent: null }
+
+async function createBlockerLink(taskId: string, linkRef = roleRef) {
+  return firstOrThrow(
+    await db
+      .insert(taskGithubLinks)
+      .values({
+        taskId,
+        owner: linkRef.owner,
+        repo: linkRef.repo,
+        number: linkRef.number,
+        role: 'blocker',
+        notifyEvents: ['closed'],
+        kind: 'issue',
+        url: `https://github.com/${linkRef.owner}/${linkRef.repo}/issues/${String(linkRef.number)}`,
+        state: 'open',
+        title: 'Sample blocker',
+        commentsCount: null,
+        githubUpdatedAt: null,
+        stateReason: null,
+      })
+      .returning(),
+  )
+}
 
 describe('resolveGithubUrl', () => {
   it('returns a preview when the issue is not linked to any task', async () => {
@@ -58,6 +85,9 @@ describe('resolveGithubUrl', () => {
         title: 'Bug: something broke',
         body: 'Steps to reproduce...',
         state: 'open',
+        commentsCount: 2,
+        githubUpdatedAt: '2024-08-12T09:30:00Z',
+        stateReason: null,
       },
     })
   })
@@ -97,6 +127,11 @@ describe('createTaskFromGithubUrl', () => {
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',
       title: 'Bug: something broke',
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
+      commentsCount: 2,
+      githubUpdatedAt: 'DATE',
+      stateReason: null,
       etag: null,
       lastSyncedAt: 'DATE',
       createdAt: 'DATE',
@@ -112,6 +147,70 @@ describe('createTaskFromGithubUrl', () => {
     const second = (await createTaskFromGithubUrl(ref))._unsafeUnwrap()
 
     expect(second).toEqual({ ...first, created: false })
+  })
+})
+
+describe('findTaskByGithubRef', () => {
+  it('ignores a blocker-only link when looking up the task for a GitHub item', async () => {
+    const task = await createTask('Waiting for an issue')
+    await createBlockerLink(task.id)
+
+    const result = (await findTaskByGithubRef(roleRef))._unsafeUnwrap()
+
+    expect(result).toEqual(null)
+  })
+})
+
+describe('role-scoped GitHub link uniqueness', () => {
+  it('allows a subject link when another task tracks the same item as a blocker', async () => {
+    const blockerTask = await createTask('Waiting for the issue')
+    const subjectTask = await createTask('Working on the issue')
+    await createBlockerLink(blockerTask.id)
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/example-owner/example-repo/issues/17',
+    })
+
+    const link = (
+      await linkTaskToGithubUrl(subjectTask.id, roleRef, author)
+    )._unsafeUnwrap()
+
+    expect(normalizeLink(link)).toEqual({
+      id: 'ID',
+      seq: 'SEQ',
+      taskId: subjectTask.id,
+      owner: 'example-owner',
+      repo: 'example-repo',
+      number: 17,
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
+      kind: 'issue',
+      url: 'https://github.com/example-owner/example-repo/issues/17',
+      state: 'open',
+      title: 'Bug: something broke',
+      commentsCount: 2,
+      githubUpdatedAt: 'DATE',
+      stateReason: null,
+      etag: null,
+      lastSyncedAt: 'DATE',
+      createdAt: 'DATE',
+      updatedAt: 'DATE',
+    })
+  })
+
+  it('rejects a second role for the same item on one task', async () => {
+    const task = await createTask('Waiting for the issue')
+    await createBlockerLink(task.id)
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      html_url: 'https://github.com/example-owner/example-repo/issues/17',
+    })
+
+    const error = (
+      await linkTaskToGithubUrl(task.id, roleRef, author)
+    )._unsafeUnwrapErr()
+
+    expect(error).toEqual(new GithubResourceAlreadyLinkedError(task.id))
   })
 })
 
@@ -132,6 +231,9 @@ describe('createTaskFromIssueData', () => {
         title: 'Duplicate issue',
         body: null,
         state: 'open',
+        commentsCount: 2,
+        githubUpdatedAt: '2024-08-12T09:30:00Z',
+        stateReason: null,
       })
     )._unsafeUnwrapErr()
 
@@ -163,6 +265,11 @@ describe('linkTaskToGithubUrl', () => {
       url: 'https://github.com/fohte/tq/issues/42',
       state: 'open',
       title: 'Bug: something broke',
+      role: 'subject',
+      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
+      commentsCount: 2,
+      githubUpdatedAt: 'DATE',
+      stateReason: null,
       etag: null,
       lastSyncedAt: 'DATE',
       createdAt: 'DATE',
