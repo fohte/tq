@@ -22,7 +22,7 @@ type TaskReferenceResolver = (
   references: string[],
 ) => Promise<TaskReferenceResolution>
 
-export function splitBlockedByInputs(blockedBy: (string | number)[]): {
+function splitBlockedByInputs(blockedBy: (string | number)[]): {
   taskReferences: string[]
   githubUrls: string[]
 } {
@@ -43,7 +43,7 @@ export function splitBlockedByInputs(blockedBy: (string | number)[]): {
 
 // Existence is a cheap, non-racy check -- the cycle check needs the
 // transactional lock in `syncTaskBlockedBy` instead.
-export async function resolveBlockedByExistence(
+async function resolveBlockedByExistence(
   blockedBy: string[],
 ): Promise<
   { targetIds: string[] } | { error: { body: { error: string }; status: 404 } }
@@ -66,7 +66,7 @@ export async function resolveBlockedByExistence(
 // Self-reference is checked first, against the raw input, so it never costs a
 // DB round trip and always wins over an existence error when a request
 // combines its own id/number with an unrelated missing blocker.
-export async function resolveBlockedByTargets(
+async function resolveBlockedByTargets(
   task: { id: string; number: number },
   blockedBy: string[],
 ): Promise<
