@@ -109,4 +109,26 @@ describe('useSessionOpenSettings', () => {
 
     expect(result.current.b[0].localContext).toBe('work')
   })
+
+  it('reflects a context change from another window', () => {
+    const nextSettings = {
+      localContext: 'work',
+      focusUrlTemplate: null,
+      resumeUrlTemplate: null,
+    } as const
+    const { result } = renderHook(() => useSessionOpenSettings())
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSettings))
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: STORAGE_KEY,
+          newValue: JSON.stringify(nextSettings),
+          storageArea: localStorage,
+        }),
+      )
+    })
+
+    expect(result.current[0]).toEqual(nextSettings)
+  })
 })
