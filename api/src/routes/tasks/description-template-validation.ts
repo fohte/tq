@@ -58,6 +58,7 @@ function hasSectionContent(section: DescriptionSection): boolean {
 export type TemplateValidationError =
   | {
       kind: 'unknown-template'
+      template: string
       templates: { name: string; whenToUse: string }[]
     }
   | {
@@ -89,6 +90,7 @@ export async function validateTaskDescriptionTemplate(input: {
       ? null
       : {
           kind: 'unknown-template',
+          template: input.template,
           templates: templates.map(({ name, whenToUse }) => ({
             name,
             whenToUse,
@@ -133,33 +135,27 @@ export function taskDescriptionTemplateErrorBody(
       ({ name, whenToUse }) => `- ${name} (use when: ${whenToUse})`,
     )
     return {
-      error: {
-        message: JSON.stringify([
-          {
-            path: ['template'],
-            message: [
-              'Unknown description template. Choose an available template:',
-              ...(choices.length > 0
-                ? choices
-                : ['No description templates are configured.']),
-            ].join('\n'),
-          },
-        ]),
-      },
+      error: [
+        `Unknown description template "${validation.template}".`,
+        ...(choices.length > 0
+          ? ['Available description templates:', ...choices]
+          : ['No description templates are configured.']),
+      ].join('\n'),
       templates: validation.templates,
     }
   }
 
-  const issues = [
-    ...validation.missingSections.map((section) => `${section} is missing.`),
-    ...validation.emptySections.map((section) => `${section} is empty.`),
-  ].map((message) => ({
-    path: ['description'],
-    message: `${message}\nGuide:\n${validation.guide}\nFill the section and call task_create again.`,
-  }))
-
   return {
-    error: { message: JSON.stringify(issues) },
+    error: [
+      ...(validation.missingSections.length > 0
+        ? [`Missing sections: ${validation.missingSections.join(', ')}.`]
+        : []),
+      ...(validation.emptySections.length > 0
+        ? [`Empty sections: ${validation.emptySections.join(', ')}.`]
+        : []),
+      `Guide:\n${validation.guide}`,
+      'Fill the sections and retry task creation.',
+    ].join('\n'),
     missingSections: validation.missingSections,
     emptySections: validation.emptySections,
     guide: validation.guide,

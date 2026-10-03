@@ -72,8 +72,9 @@ describe('task_create tool', () => {
         {
           type: 'text',
           text:
-            'Invalid request: description: ## Goal is empty.\n' +
-            `Guide:\n${guide}\nFill the section and call task_create again.`,
+            'Empty sections: ## Goal.\n' +
+            `Guide:\n${guide}\n` +
+            'Fill the sections and retry task creation.',
         },
       ],
     })
@@ -88,7 +89,11 @@ describe('task_create tool', () => {
       properties: {
         title: { type: 'string', minLength: 1 },
         description: { type: 'string', maxLength: 100000 },
-        template: { type: 'string' },
+        template: {
+          description:
+            'Description template name for LLM-authored tasks. If omitted, the default template is used when configured.',
+          type: 'string',
+        },
         startDate: { type: 'string' },
         dueDate: { type: 'string' },
         estimatedMinutes: {

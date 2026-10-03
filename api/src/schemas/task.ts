@@ -54,7 +54,12 @@ const taskIdsQuerySchema = z
 export const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
-  template: z.string().optional(),
+  template: z
+    .string()
+    .describe(
+      'Description template name for LLM-authored tasks. If omitted, the default template is used when configured.',
+    )
+    .optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
   estimatedMinutes: z.number().int().positive().optional(),

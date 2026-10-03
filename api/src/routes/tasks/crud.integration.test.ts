@@ -243,6 +243,31 @@ describe('tasks CRUD API', () => {
       )
     })
 
+    it('does not use a non-default template when no template is selected', async () => {
+      await insertDescriptionTemplate({
+        name: 'optional-plan',
+        whenToUse: 'Use for optional work',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+      })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Unstructured task',
+          description: 'A short note.',
+        }),
+      })
+
+      expect(await taskResponseSnapshot(res)).toEqual(
+        createdTaskResponse('Unstructured task', 'A short note.'),
+      )
+    })
+
     it('validates an LLM description against the default template', async () => {
       const guide =
         '## Goal\nState why this is needed.\n\n## Steps\nDescribe the changes.\n\n## Result\nExplain how to verify completion.'
@@ -274,18 +299,11 @@ describe('tasks CRUD API', () => {
       ).toEqual({
         status: 400,
         body: {
-          error: {
-            message: JSON.stringify([
-              {
-                path: ['description'],
-                message: `## Result is missing.\nGuide:\n${guide}\nFill the section and call task_create again.`,
-              },
-              {
-                path: ['description'],
-                message: `## Steps is empty.\nGuide:\n${guide}\nFill the section and call task_create again.`,
-              },
-            ]),
-          },
+          error:
+            'Missing sections: ## Result.\n' +
+            'Empty sections: ## Steps.\n' +
+            `Guide:\n${guide}\n` +
+            'Fill the sections and retry task creation.',
           missingSections: ['## Result'],
           emptySections: ['## Steps'],
           guide,
@@ -353,6 +371,48 @@ describe('tasks CRUD API', () => {
       )
     })
 
+    it('does not count headings inside code fences as description sections', async () => {
+      const guide = 'Explain how to verify completion.'
+      await insertDescriptionTemplate({
+        name: 'verification-plan',
+        whenToUse: 'Use when work needs a verification step',
+        body: '## Goal\n\n## Result',
+        guide,
+      })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Fenced heading task',
+          description:
+            '## Goal\nExplain the goal.\n\n```md\n## Result\nComplete.\n```',
+          template: 'verification-plan',
+        }),
+      })
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<Record<string, unknown>>(res),
+        ),
+      ).toEqual({
+        status: 400,
+        body: {
+          error:
+            'Missing sections: ## Result.\n' +
+            `Guide:\n${guide}\n` +
+            'Fill the sections and retry task creation.',
+          missingSections: ['## Result'],
+          emptySections: [],
+          guide,
+        },
+      })
+    })
+
     it('returns available templates when an LLM names an unknown template', async () => {
       await insertDescriptionTemplate({
         name: 'first-plan',
@@ -388,21 +448,44 @@ describe('tasks CRUD API', () => {
       ).toEqual({
         status: 400,
         body: {
-          error: {
-            message: JSON.stringify([
-              {
-                path: ['template'],
-                message:
-                  'Unknown description template. Choose an available template:\n' +
-                  '- second-plan (use when: Use for a follow-up plan)\n' +
-                  '- first-plan (use when: Use for an initial plan)',
-              },
-            ]),
-          },
+          error:
+            'Unknown description template "missing-plan".\n' +
+            'Available description templates:\n' +
+            '- second-plan (use when: Use for a follow-up plan)\n' +
+            '- first-plan (use when: Use for an initial plan)',
           templates: [
             { name: 'second-plan', whenToUse: 'Use for a follow-up plan' },
             { name: 'first-plan', whenToUse: 'Use for an initial plan' },
           ],
+        },
+      })
+    })
+
+    it('explains when no templates are configured for an unknown template', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Unconfigured template task',
+          template: 'missing-plan',
+        }),
+      })
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<Record<string, unknown>>(res),
+        ),
+      ).toEqual({
+        status: 400,
+        body: {
+          error:
+            'Unknown description template "missing-plan".\n' +
+            'No description templates are configured.',
+          templates: [],
         },
       })
     })
