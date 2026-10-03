@@ -87,6 +87,8 @@ export interface TaskResponse {
   templateId: string | null
   occurrenceDate: string | null
   githubLinks: GithubLinkResponse[]
+  // Present only on the single-task detail response.
+  githubBlockers?: GithubLinkResponse[]
   createdAt: string
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
@@ -133,6 +135,12 @@ export interface TaskListItemResponse {
   parentNumber: number | null
   duplicateOfNumber: number | null
   blockedByNumbers: number[]
+  blockedByGithubRefs: {
+    owner: string
+    repo: string
+    number: number
+    url: string
+  }[]
   childCompletionCount?: { completed: number; total: number }
   children?: TaskListItemResponse[]
 }
@@ -180,6 +188,7 @@ export function toListItemResponse(
   opts: {
     childCompletionCount?: { completed: number; total: number }
     blockedByNumbers?: number[]
+    blockedByGithubRefs?: TaskListItemResponse['blockedByGithubRefs']
   } = {},
 ): TaskListItemResponse {
   return {
@@ -208,6 +217,7 @@ export function toListItemResponse(
     parentNumber: null,
     duplicateOfNumber: null,
     blockedByNumbers: opts.blockedByNumbers ?? [],
+    blockedByGithubRefs: opts.blockedByGithubRefs ?? [],
     childCompletionCount: opts.childCompletionCount ?? {
       completed: 0,
       total: 0,
@@ -294,6 +304,14 @@ const taskListItemResponseSchema = z.object({
   parentNumber: z.number().nullable(),
   duplicateOfNumber: z.number().nullable(),
   blockedByNumbers: z.array(z.number()),
+  blockedByGithubRefs: z.array(
+    z.object({
+      owner: z.string(),
+      repo: z.string(),
+      number: z.number(),
+      url: z.string(),
+    }),
+  ),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
@@ -320,6 +338,7 @@ const taskResponseSchema = z.object({
   templateId: z.string().nullable(),
   occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
+  githubBlockers: z.array(githubLinkResponseSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   childCompletionCount: z

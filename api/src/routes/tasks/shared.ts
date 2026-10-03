@@ -1,4 +1,4 @@
-import { count, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 
@@ -14,6 +14,10 @@ import {
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
 import type { TaskSortBy } from '#schemas/task'
+import {
+  getOpenGithubBlockerRefsByTaskId,
+  type GithubBlockerRef,
+} from '#services/task-github-blockers'
 import {
   getBlockedByNumbersByTaskId,
   getDuplicateOfNumbersByTaskId,
@@ -180,7 +184,12 @@ export async function getGithubLinksByTaskId(
   const rows = await db
     .select()
     .from(taskGithubLinks)
-    .where(inArray(taskGithubLinks.taskId, taskIds))
+    .where(
+      and(
+        inArray(taskGithubLinks.taskId, taskIds),
+        eq(taskGithubLinks.role, 'subject'),
+      ),
+    )
     .orderBy(taskGithubLinks.createdAt, taskGithubLinks.seq)
 
   const map = new Map<string, (typeof taskGithubLinks.$inferSelect)[]>()
@@ -241,12 +250,14 @@ function taskListItemToResponse(
   labelNames: string[] = [],
   duplicateOfNumber: number | null = null,
   blockedByNumbers: number[] = [],
+  blockedByGithubRefs: GithubBlockerRef[] = [],
 ) {
   return {
     ...taskCoreToResponse(task, rule, githubLinks, labelNames),
     parentNumber,
     duplicateOfNumber,
     blockedByNumbers,
+    blockedByGithubRefs,
   }
 }
 
@@ -291,6 +302,7 @@ export async function hydrateTaskListRows(
     githubLinksByTaskId,
     duplicateOfNumbersByTaskId,
     blockedByNumbersByTaskId,
+    openGithubBlockerRefsByTaskId,
     recurrenceRulesById,
     recurrenceRulesByTemplateId,
   ] = await Promise.all([
@@ -299,6 +311,7 @@ export async function hydrateTaskListRows(
     getGithubLinksByTaskId(ids),
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
+    getOpenGithubBlockerRefsByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
   ])
@@ -318,6 +331,7 @@ export async function hydrateTaskListRows(
         ? (duplicateOfNumbersByTaskId.get(r.task.id) ?? null)
         : null,
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
+      openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

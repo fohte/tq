@@ -34,6 +34,12 @@ export function mockGithubIssueResponse(
   )
 }
 
+export function mockGithubPullResponse(merged: boolean) {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+    new Response(JSON.stringify({ merged }), { status: 200 }),
+  )
+}
+
 export function mockGithubNotModifiedResponse() {
   vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
     new Response(null, { status: 304 }),

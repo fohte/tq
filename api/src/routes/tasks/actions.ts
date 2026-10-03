@@ -16,6 +16,7 @@ import {
   taskToResponse,
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
+import { getIncompleteGithubBlockerRefs } from '#services/task-github-blockers'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
 
 const updateStatusSchema = z.object({
@@ -58,16 +59,38 @@ async function checkNotBlocked(
   tx: DbTransaction,
   id: string,
 ): Promise<{
-  body: { error: string; blockedByNumbers: number[] }
+  body: {
+    error: string
+    blockedByNumbers: number[]
+    blockedByGithubRefs: {
+      owner: string
+      repo: string
+      number: number
+      url: string
+    }[]
+  }
   status: 409
 } | null> {
-  const blockedByNumbers = await getIncompleteBlockerNumbers(id, tx)
-  if (blockedByNumbers.length === 0) return null
+  const [blockedByNumbers, blockedByGithubRefs] = await Promise.all([
+    getIncompleteBlockerNumbers(id, tx),
+    getIncompleteGithubBlockerRefs(id, tx),
+  ])
+  if (blockedByNumbers.length === 0 && blockedByGithubRefs.length === 0) {
+    return null
+  }
+
+  const blockerNames = [
+    ...blockedByNumbers.map((number) => `#${String(number)}`),
+    ...blockedByGithubRefs.map(
+      ({ owner, repo, number }) => `${owner}/${repo}#${String(number)}`,
+    ),
+  ]
 
   return {
     body: {
-      error: `Task is blocked by incomplete tasks: ${blockedByNumbers.map((n) => `#${String(n)}`).join(', ')}`,
+      error: `Task is blocked by unresolved blockers: ${blockerNames.join(', ')}`,
       blockedByNumbers,
+      blockedByGithubRefs,
     },
     status: 409,
   }

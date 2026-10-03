@@ -8,6 +8,10 @@ import {
   hydrateTaskListRows,
   type TaskListItemResponse,
 } from '#routes/tasks/shared'
+import {
+  type PreparedGithubBlockers,
+  replaceTaskGithubBlockers,
+} from '#services/task-github-blockers'
 
 // Mirrors `LinkedTaskDetail` in task-links.ts: the task-detail page renders
 // a duplicate-of target with the same row appearance as any other linked
@@ -198,7 +202,7 @@ async function hasBlockedByCycle(
   return z.array(z.object({ id: z.string() })).parse(rows).length > 0
 }
 
-export type SyncBlockedByResult = 'ok' | 'cycle'
+export type SyncBlockedByResult = 'ok' | 'cycle' | 'github-subject-conflict'
 
 // Full replacement: an empty array clears every `blocked_by` relation. Owns
 // its own transaction (unlike `syncTaskLabels`) so the cycle re-check and the
@@ -207,11 +211,12 @@ export type SyncBlockedByResult = 'ok' | 'cycle'
 export async function syncTaskBlockedBy(
   taskId: string,
   blockedByIds: string[],
+  githubBlockers?: PreparedGithubBlockers,
 ): Promise<SyncBlockedByResult> {
   const uniqueIds = [...new Set(blockedByIds)]
 
   return db.transaction(async (tx) => {
-    if (uniqueIds.length > 0) {
+    if (uniqueIds.length > 0 || githubBlockers != null) {
       // A cycle can span any two tasks, so a per-task lock key can't rule
       // out two different tasks' transactions racing each other -- this
       // lock is global to all blocked_by writes.
@@ -220,6 +225,17 @@ export async function syncTaskBlockedBy(
       )
       if (await hasBlockedByCycle(tx, taskId, uniqueIds)) {
         return 'cycle'
+      }
+    }
+
+    if (githubBlockers != null) {
+      const blockerSync = await replaceTaskGithubBlockers(
+        tx,
+        taskId,
+        githubBlockers,
+      )
+      if (blockerSync === 'subject-conflict') {
+        return 'github-subject-conflict'
       }
     }
 
