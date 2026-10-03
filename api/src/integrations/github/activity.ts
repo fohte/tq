@@ -1,11 +1,4 @@
-import {
-  err,
-  errAsync,
-  ok,
-  okAsync,
-  type Result,
-  ResultAsync,
-} from 'neverthrow'
+import { err, ok, okAsync, type Result, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import type {
@@ -14,9 +7,12 @@ import type {
   TokenRefreshError,
 } from '#integrations/errors'
 import { GithubApiError, githubProvider } from '#integrations/github/index'
-import type { GithubResourceRef } from '#integrations/github/issues'
+import {
+  githubHeaders,
+  type GithubResourceRef,
+} from '#integrations/github/issues'
 import { getValidAccessToken } from '#integrations/oauth'
-import { errorMessage, fetchJson } from '#lib/fetch-json'
+import { fetchJson, fetchJsonWithHeaders } from '#lib/fetch-json'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
@@ -69,12 +65,7 @@ function getGithubLogin(
 
   const result = fetchJson(
     `${GITHUB_API_BASE}/user`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/vnd.github+json',
-      },
-    },
+    { headers: githubHeaders(accessToken) },
     githubUserSchema,
     (message, cause, rejected) => new GithubApiError(message, cause, rejected),
   )
@@ -117,40 +108,14 @@ function fetchTimelinePage(
   { events: z.infer<typeof githubTimelineSchema>; nextPage: string | null },
   GithubApiError
 > {
-  return ResultAsync.fromPromise(
-    fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/vnd.github+json',
-      },
-    }),
-    (cause) => new GithubApiError(errorMessage(cause), cause),
-  ).andThen((response) => {
-    if (!response.ok) {
-      const rejected = response.status >= 400 && response.status < 500
-      return ResultAsync.fromPromise(
-        response.text(),
-        (cause) => new GithubApiError(errorMessage(cause), cause),
-      ).andThen((message) =>
-        errAsync(new GithubApiError(message, undefined, rejected)),
-      )
-    }
-
-    return ResultAsync.fromPromise(
-      response.json(),
-      (cause) => new GithubApiError(errorMessage(cause), cause),
-    ).andThen((data) => {
-      const parsed = githubTimelineSchema.safeParse(data)
-      if (!parsed.success) {
-        return errAsync(new GithubApiError(parsed.error.message, parsed.error))
-      }
-
-      return nextPageUrl(response.headers.get('link')).map((nextPage) => ({
-        events: parsed.data,
-        nextPage,
-      }))
-    })
-  })
+  return fetchJsonWithHeaders(
+    url,
+    { headers: githubHeaders(accessToken) },
+    githubTimelineSchema,
+    (message, cause, rejected) => new GithubApiError(message, cause, rejected),
+  ).andThen(({ data: events, headers }) =>
+    nextPageUrl(headers.get('link')).map((nextPage) => ({ events, nextPage })),
+  )
 }
 
 function fetchAllTimelineEvents(
