@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { projectKeys } from '#hooks/use-projects'
+import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import {
@@ -62,6 +63,58 @@ export function useUnlinkTaskFromGithub(taskId: string) {
         param: { taskId, linkId },
       })
       await assertOkWithMessageOrThrow(res)
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
+    },
+  })
+}
+
+export function useUpdateGithubLinkNotifyEvents(taskId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      linkId,
+      notifyEvents,
+    }: {
+      linkId: string
+      notifyEvents: GithubLink['notifyEvents']
+    }) => {
+      const res = await api.api.tasks[':taskId']['github-link'][
+        ':linkId'
+      ].$patch({
+        param: { taskId, linkId },
+        json: { notifyEvents },
+      })
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
+    },
+    onMutate: async ({ linkId, notifyEvents }) => {
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(taskId) })
+      const previousDetail = queryClient.getQueryData<TaskDetail>(
+        taskKeys.detail(taskId),
+      )
+
+      if (previousDetail) {
+        queryClient.setQueryData<TaskDetail>(taskKeys.detail(taskId), {
+          ...previousDetail,
+          githubLinks: previousDetail.githubLinks.map((link) =>
+            link.id === linkId ? { ...link, notifyEvents } : link,
+          ),
+        })
+      }
+
+      return { previousDetail }
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousDetail) {
+        queryClient.setQueryData(
+          taskKeys.detail(taskId),
+          context.previousDetail,
+        )
+      }
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) })

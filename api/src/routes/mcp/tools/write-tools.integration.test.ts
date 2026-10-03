@@ -645,6 +645,7 @@ describe('operation tool input schemas', () => {
       comment_list: false,
       comment_update: true,
       github_link: true,
+      github_notify: true,
       github_resolve: false,
       github_sync: false,
       github_unlink: true,
@@ -710,6 +711,10 @@ describe('operation tool annotations', () => {
         destructiveHint: false,
       },
       github_link: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      github_notify: {
         readOnlyHint: false,
         destructiveHint: false,
       },

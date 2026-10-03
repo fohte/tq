@@ -1,6 +1,8 @@
 import { z } from 'zod'
 
+import { GITHUB_NOTIFY_EVENTS } from '#db/schema'
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { splitCommaList } from '#lib/split-comma-list'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
@@ -11,6 +13,7 @@ import {
 const githubLinkSchema = z.object({
   taskId: taskIdOrNumber,
   url: z.string().min(1),
+  notifyEvents: z.array(z.enum(GITHUB_NOTIFY_EVENTS)).optional(),
 })
 const githubUnlinkSchema = z.object({
   taskId: taskIdOrNumber,
@@ -20,24 +23,79 @@ const githubSyncSchema = z.object({
   taskId: taskIdOrNumber.optional(),
 })
 const githubResolveSchema = z.object({ url: z.string().min(1) })
+const githubNotifyEventSchema = z.enum(GITHUB_NOTIFY_EVENTS)
+type GithubNotifyEvent = z.infer<typeof githubNotifyEventSchema>
+const githubNotifyEventsSchema = z
+  .string()
+  .transform((raw, context): GithubNotifyEvent[] => {
+    if (raw === 'off') return []
+
+    const parsed = z
+      .array(githubNotifyEventSchema)
+      .min(1)
+      .safeParse(splitCommaList(raw))
+    if (parsed.success) return parsed.data
+
+    context.addIssue({
+      code: 'custom',
+      message: `Expected comma-separated events (${GITHUB_NOTIFY_EVENTS.join(', ')}) or off`,
+    })
+    return z.NEVER
+  })
+const githubNotifySchema = z.object({
+  taskId: taskIdOrNumber,
+  linkId: pathSegmentSchema('GitHub link ID'),
+  events: githubNotifyEventsSchema,
+})
 
 export const githubOperations = [
   defineOperation(githubLinkSchema, {
     path: ['github', 'link'],
-    description: 'Link a task to a GitHub issue or pull request',
+    description:
+      'Link a task to a GitHub issue or pull request. Notification events default by link role if omitted.',
     positionalArgs: ['taskId', 'url'],
     kind: 'write',
     attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/github-link'],
     cli: {
       group: { description: 'Manage GitHub links', order: 7 },
+      commaSeparatedOptions: ['notifyEvents'],
+      optionNames: { notifyEvents: 'notify' },
+      optionDescriptions: {
+        notifyEvents:
+          'Comma-separated GitHub events to receive notifications for (defaults by link role)',
+      },
+      optionMetavars: { notifyEvents: 'events' },
       output: { kind: 'json' },
     },
-    run: (client, { taskId, url }) =>
+    run: (client, { taskId, url, notifyEvents }) =>
       requestJson(
         client.api.tasks[':taskId']['github-link'].$post({
           param: { taskId: String(taskId) },
-          json: { url },
+          json: {
+            url,
+            ...(notifyEvents === undefined ? {} : { notifyEvents }),
+          },
+        }),
+      ),
+  }),
+  defineOperation(githubNotifySchema, {
+    path: ['github', 'notify'],
+    description:
+      "Set the GitHub notification events for one of a task's links with a comma-separated list of closed, reopened, comments, or other, or off to disable notifications",
+    positionalArgs: ['taskId', 'linkId', 'events'],
+    kind: 'write',
+    attribution: 'agent',
+    routes: ['PATCH /api/tasks/:taskId/github-link/:linkId'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { taskId, linkId, events }) =>
+      requestJson(
+        client.api.tasks[':taskId']['github-link'][':linkId'].$patch({
+          param: {
+            taskId: String(taskId),
+            linkId: encodePathSegment(linkId),
+          },
+          json: { notifyEvents: events },
         }),
       ),
   }),
