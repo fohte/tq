@@ -385,6 +385,16 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }
+"public.task_description_templates" {
+  uuid id
+  text name
+  text when_to_use
+  text body
+  text guide
+  boolean is_default
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
 ```
 
 ---
