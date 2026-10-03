@@ -12,13 +12,13 @@ import { fetchJson, fetchJsonConditional } from '#lib/fetch-json'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
-export const GITHUB_STATE_REASONS = [
+const GITHUB_STATE_REASONS = [
   'completed',
   'not_planned',
   'duplicate',
   'reopened',
 ] as const
-export type GithubStateReason = (typeof GITHUB_STATE_REASONS)[number]
+type GithubStateReason = (typeof GITHUB_STATE_REASONS)[number]
 
 // The issues API also serves pull requests (a PR is an issue under the
 // hood), so both /issues/ and /pull/ URLs resolve through the same
