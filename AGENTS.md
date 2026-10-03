@@ -26,6 +26,18 @@ The Compose project name is `tq-infra`, so worktrees share one PostgreSQL contai
 
 Migrations are applied automatically by `api/src/global-setup.ts`.
 
+### Migrating an existing local database
+
+The previous setup used PostgreSQL 17 with `tq_dev` and `tq_test`; the current setup uses PostgreSQL 18 with `tq_api_dev` and `tq_api_test`. To keep local data, dump it from the old container before the first `mise run db:up`, then restore it after the new databases are created. Keep the old `tq-infra_db_data` volume until the restored data is verified, and do not delete it as part of this migration.
+
+```sh
+docker exec tq-infra-db-1 pg_dump --username=tq --dbname=tq_dev --no-owner > /tmp/tq_dev.sql
+mise run db:up
+docker compose exec -T db psql --username=tq --dbname=tq_api_dev --set ON_ERROR_STOP=1 < /tmp/tq_dev.sql
+```
+
+If `tq_test` contains local data to preserve, dump it before `mise run db:up` and restore it into `tq_api_test` using the same commands with those database names. Update other worktrees to the current Compose config before using their database tasks; older configs share the `tq-infra` project and can recreate its PostgreSQL 17 container.
+
 ### DB documentation
 
 Run `mise run db:doc` to regenerate and lint `api/docs/db` from API migrations. It creates a temporary database and drops it when the command exits. Keep table and column descriptions in `api/.tbls.yml` under `comments:`; `tbls lint` requires descriptions except for `id`, `created_at`, and `updated_at`.

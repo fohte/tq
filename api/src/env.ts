@@ -6,6 +6,8 @@ import {
 } from '@fohte/service-kit/env'
 import { err, ok, type Result } from 'neverthrow'
 
+import { resolveDatabaseUrl } from '#resolve-database-url'
+
 const APP_ENVS = ['development', 'test', 'production'] as const
 type AppEnv = (typeof APP_ENVS)[number]
 
@@ -39,15 +41,6 @@ function resolveRequiredInProduction(
 // `mise run db:up` database name to suggest) — falling back to
 // 'development' here doesn't hide the real APP_ENV issue, which parseEnv
 // reports separately below.
-function resolveDatabaseUrl(appEnv: AppEnv): Result<string, string> {
-  return resolveRequiredInProduction('DATABASE_URL', appEnv, () => {
-    const dbName = appEnv === 'test' ? 'tq_api_test' : 'tq_api_dev'
-    return err(
-      `DATABASE_URL environment variable is required (run \`mise run db:up\` to start Postgres and create local databases, or set DATABASE_URL=postgresql://tq:tq@localhost:<port>/${dbName} manually)`,
-    )
-  })
-}
-
 // Public domain tq is served from (no scheme, e.g. `tq.fohte.net`), used to
 // recognize tq URLs pasted into task text. Required in production, since a
 // missing value there would silently disable URL resolution rather than
@@ -76,7 +69,7 @@ const parsed = parseEnv({
     10 * 1024 * 1024,
     { min: 1 },
   ),
-  DATABASE_URL: resolveDatabaseUrl(appEnv),
+  DATABASE_URL: resolveDatabaseUrl(process.env, appEnv),
   APP_DOMAIN: resolveAppDomain(appEnv),
   VAPID_PUBLIC_KEY: resolveVapid('VAPID_PUBLIC_KEY', appEnv),
   VAPID_PRIVATE_KEY: resolveVapid('VAPID_PRIVATE_KEY', appEnv),
