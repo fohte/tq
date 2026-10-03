@@ -14,7 +14,6 @@ export const EXCLUDED_ROUTES = {
   // OAuth callbacks are a browser/server contract, not something a CLI invokes.
   'GET /api/calendar/oauth-callback': 'oauth callback: browser/server contract',
   'GET /api/github/oauth-callback': 'oauth callback: browser/server contract',
-  'GET /api/slack/oauth-callback': 'oauth callback: browser/server contract',
 
   // Integration connect/disconnect and calendar subscriptions require
   // browser-based OAuth authorization and are one-time setup.

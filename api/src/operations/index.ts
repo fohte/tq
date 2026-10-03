@@ -11,7 +11,6 @@ import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
 import { savedViewOperations } from '#operations/saved-view'
 import { sessionOperations } from '#operations/session'
-import { slackOperations } from '#operations/slack'
 import { taskReadOperations } from '#operations/task-read'
 import { taskWriteOperations } from '#operations/task-write'
 
@@ -29,7 +28,6 @@ export {
   queueOperations,
   savedViewOperations,
   sessionOperations,
-  slackOperations,
   taskReadOperations,
   taskWriteOperations,
 }
@@ -47,7 +45,6 @@ export const operations = [
   ...queueOperations,
   ...savedViewOperations,
   ...sessionOperations,
-  ...slackOperations,
   ...taskReadOperations,
   ...taskWriteOperations,
 ] as const

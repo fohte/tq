@@ -678,7 +678,6 @@ describe('operation tool input schemas', () => {
       saved_view_update: false,
       session_delete: false,
       session_list: false,
-      slack_resolve: false,
       task_activity: false,
       task_get: false,
       task_list: false,
@@ -733,7 +732,6 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
-      slack_resolve: { readOnlyHint: true },
     }
     const annotations = Object.fromEntries(
       tools.tools

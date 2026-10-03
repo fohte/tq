@@ -21,12 +21,6 @@ const GOOGLE_ENV_KEYS = [
   'GOOGLE_REDIRECT_URI',
 ]
 
-const SLACK_ENV_KEYS = [
-  'SLACK_CLIENT_ID',
-  'SLACK_CLIENT_SECRET',
-  'SLACK_REDIRECT_URI',
-]
-
 function setGithubEnv() {
   for (const [key, value] of Object.entries(GITHUB_ENV)) {
     process.env[key] = value
@@ -39,18 +33,11 @@ function clearGithubEnv() {
   }
 }
 
-// Google Calendar and Slack are never configured in this file — their
-// providers are only used here as "the other, unconfigured registry
-// entries" — so their env vars are cleared explicitly rather than relying on
-// them being ambiently unset.
+// Google Calendar is never configured in this file — its provider is only
+// used here as "the other, unconfigured registry entry" — so its env vars are
+// cleared explicitly rather than relying on them being ambiently unset.
 function clearGoogleEnv() {
   for (const key of GOOGLE_ENV_KEYS) {
-    Reflect.deleteProperty(process.env, key)
-  }
-}
-
-function clearSlackEnv() {
-  for (const key of SLACK_ENV_KEYS) {
     Reflect.deleteProperty(process.env, key)
   }
 }
@@ -111,7 +98,6 @@ function normalizeIntegrationEntry(entry: IntegrationEntry) {
 afterEach(() => {
   clearGithubEnv()
   clearGoogleEnv()
-  clearSlackEnv()
   vi.restoreAllMocks()
 })
 
@@ -119,7 +105,6 @@ describe('GET /api/integrations', () => {
   it('lists every registered provider with its connected accounts and config state', async () => {
     setGithubEnv()
     clearGoogleEnv()
-    clearSlackEnv()
     const token = await upsertToken('github', 'valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response(JSON.stringify({ login: 'fohte' }), { status: 200 }),
@@ -143,20 +128,12 @@ describe('GET /api/integrations', () => {
         supportsMultipleAccounts: true,
         accounts: [],
       },
-      {
-        id: 'slack',
-        displayName: 'Slack',
-        configured: false,
-        supportsMultipleAccounts: true,
-        accounts: [],
-      },
     ])
   })
 
   it('degrades a single provider to an empty accounts list instead of failing the whole list', async () => {
     setGithubEnv()
     clearGoogleEnv()
-    clearSlackEnv()
     await upsertToken('github', 'some-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('server error', { status: 500 }),
@@ -180,20 +157,12 @@ describe('GET /api/integrations', () => {
         supportsMultipleAccounts: true,
         accounts: [],
       },
-      {
-        id: 'slack',
-        displayName: 'Slack',
-        configured: false,
-        supportsMultipleAccounts: true,
-        accounts: [],
-      },
     ])
   })
 
   it('lists both accounts for a provider with multiple connected accounts', async () => {
     clearGithubEnv()
     clearGoogleEnv()
-    clearSlackEnv()
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user1@example.com',
@@ -230,13 +199,6 @@ describe('GET /api/integrations', () => {
           { id: 'ID', label: 'user1@example.com' },
           { id: 'ID', label: 'user2@example.com' },
         ],
-      },
-      {
-        id: 'slack',
-        displayName: 'Slack',
-        configured: false,
-        supportsMultipleAccounts: true,
-        accounts: [],
       },
     ])
   })
@@ -357,5 +319,28 @@ describe('DELETE /api/integrations/:id/accounts/:accountId', () => {
       .where(eq(oauthTokens.provider, 'github'))
       .limit(1)
     expect(remaining).toBeDefined()
+  })
+})
+
+describe('oauth_tokens refresh metadata constraint', () => {
+  it('rejects Slack tokens without refresh metadata', async () => {
+    const result = await db
+      .insert(oauthTokens)
+      .values({
+        provider: 'slack',
+        accountId: 'example-workspace',
+        accessToken: 'example-access-token',
+      })
+      .then(
+        () => null,
+        (error: unknown) => {
+          const cause = error instanceof Error ? error.cause : error
+          return cause != null && typeof cause === 'object' && 'code' in cause
+            ? cause.code
+            : null
+        },
+      )
+
+    expect(result).toEqual('23514')
   })
 })
