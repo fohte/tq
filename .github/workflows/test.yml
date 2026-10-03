@@ -32,7 +32,7 @@ jobs:
         if: github.event_name == 'push'
 
       # An auto-format commit pushed straight to main by format.yml has its
-      # own diff be just the formatter's output (e.g. regenerated docs/db),
+      # own diff be just the formatter's output (e.g. regenerated api/docs/db),
       # not the human change that triggered it. Diffing against its
       # grandparent instead unions both, so package detection below (and
       # thus vrt/unit-test-run) doesn't miss a change that already ran once

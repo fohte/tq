@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-#
-# Generate DB documentation from a disposable database with migrations only.
-#
-# Usage:
-#   mise run db:doc
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,39 +6,82 @@ cd "$SCRIPT_DIR/.."
 
 docker compose up -d --wait db
 
-port_output="$(docker compose port db 5432)"
-port="${port_output##*:}"
-if [[ ! "$port" =~ ^[0-9]+$ ]]; then
-  echo "Error: failed to resolve db container port (got: '${port_output}')" >&2
-  exit 1
-fi
+current_database_name=''
 
-current_database="tq_doc_$$"
-
-cleanup_on_exit() {
-  local exit_code=$?
-  local cleanup_status
-  trap - EXIT
-  if [[ -n "$current_database" ]]; then
-    if docker compose exec -T db dropdb --if-exists --force -U tq "$current_database"; then
-      current_database=''
-    else
-      cleanup_status=$?
-      echo "Error: failed to remove temporary database '${current_database}'" >&2
-      if ((exit_code == 0)); then
-        exit_code=$cleanup_status
-      fi
-    fi
+drop_database() {
+  if [[ -z "$current_database_name" ]]; then
+    return 0
   fi
-  exit "$exit_code"
+
+  docker compose exec -T db dropdb \
+    --username "tq" \
+    --if-exists \
+    --force \
+    "$current_database_name"
+  current_database_name=''
 }
-trap cleanup_on_exit EXIT
+
+cleanup() {
+  local exit_code=$?
+  local cleanup_code=0
+  trap - EXIT INT TERM
+
+  drop_database || cleanup_code=$?
+
+  if [[ "$exit_code" -ne 0 ]]; then
+    exit "$exit_code"
+  fi
+  exit "$cleanup_code"
+}
+
+trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-docker compose exec -T db createdb -U tq "$current_database"
-database_url="postgresql://tq:tq@127.0.0.1:${port}/${current_database}"
+run_db_doc() {
+  local package="$1"
+  local package_type="$2"
+  local migration_command
+  migration_command="$(cat)"
 
-DATABASE_URL="$database_url" pnpm --filter api run db:migrate
-TBLS_DSN="${database_url}?sslmode=disable" tbls doc --rm-dist -c .tbls.yml
-TBLS_DSN="${database_url}?sslmode=disable" tbls lint -c .tbls.yml
+  if [[ "$package_type" == 'node' && "$migration_command" == 'pnpm run db:migrate' ]]; then
+    if ! node -e '
+      const { readFileSync } = require("node:fs")
+      const packageJSON = JSON.parse(readFileSync(process.argv[1], "utf8"))
+      process.exit(packageJSON.scripts?.["db:migrate"] ? 0 : 1)
+    ' "$package/package.json"; then
+      printf 'Skipping database documentation for %s: no db:migrate script\n' "$package" >&2
+      return 0
+    fi
+  elif [[ "$package_type" == 'rust' && "$migration_command" == 'cargo run -q -p migration -- up' && ! -f "$package/migration/Cargo.toml" ]]; then
+    printf 'Skipping database documentation for %s: no migration crate\n' "$package" >&2
+    return 0
+  fi
+
+  if [[ "$package" == "." ]]; then
+    current_database_name="tq_doc_$$"
+  else
+    current_database_name="tq_doc_${package}_$$"
+  fi
+
+  docker compose exec -T db createdb \
+    --username "tq" \
+    "$current_database_name"
+
+  local database_url
+  database_url="$(scripts/db-url "$package" dev)"
+  database_url="${database_url%/*}/$current_database_name"
+
+  (
+    cd "$package"
+    DATABASE_URL="$database_url" bash -c "$migration_command"
+    TBLS_DSN="${database_url}?sslmode=disable" tbls doc --rm-dist -c .tbls.yml
+    TBLS_DSN="${database_url}?sslmode=disable" tbls lint -c .tbls.yml
+  )
+
+  drop_database
+}
+
+run_db_doc 'api' 'node' << 'DB_MIGRATE'
+pnpm run db:migrate
+DB_MIGRATE

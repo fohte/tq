@@ -1,0 +1,72 @@
+# public.calendar_subscriptions
+
+## Description
+
+Calendars selected for OAuth accounts.
+
+## Columns
+
+| Name           | Type                     | Default | Nullable | Children | Parents                                       | Comment                                                                                                                    |
+| -------------- | ------------------------ | ------- | -------- | -------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| id             | text                     |         | false    |          |                                               |                                                                                                                            |
+| oauth_token_id | text                     |         | false    |          | [public.oauth_tokens](public.oauth_tokens.md) | OAuth credentials associated with this calendar.                                                                           |
+| calendar_id    | text                     |         | false    |          |                                               | Provider identifier for the selected calendar.                                                                             |
+| display_name   | text                     |         | true     |          |                                               | Cached display name of the calendar.                                                                                       |
+| color          | text                     |         | true     |          |                                               | Cached calendar color value.                                                                                               |
+| created_at     | timestamp with time zone | now()   | false    |          |                                               |                                                                                                                            |
+| updated_at     | timestamp with time zone | now()   | false    |          |                                               |                                                                                                                            |
+| context        | text                     |         | true     |          |                                               | Context where events show full details; they appear as busy time in the other context. Null shows full details everywhere. |
+
+## Constraints
+
+| Name                                                     | Type        | Definition                                                                 |
+| -------------------------------------------------------- | ----------- | -------------------------------------------------------------------------- |
+| calendar_subscriptions_calendar_id_not_null              | n           | NOT NULL calendar_id                                                       |
+| calendar_subscriptions_created_at_not_null               | n           | NOT NULL created_at                                                        |
+| calendar_subscriptions_id_not_null                       | n           | NOT NULL id                                                                |
+| calendar_subscriptions_oauth_token_id_not_null           | n           | NOT NULL oauth_token_id                                                    |
+| calendar_subscriptions_updated_at_not_null               | n           | NOT NULL updated_at                                                        |
+| calendar_subscriptions_oauth_token_id_oauth_tokens_id_fk | FOREIGN KEY | FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE |
+| calendar_subscriptions_pkey                              | PRIMARY KEY | PRIMARY KEY (id)                                                           |
+| uq_calendar_subscriptions_oauth_token_calendar           | UNIQUE      | UNIQUE (oauth_token_id, calendar_id)                                       |
+
+## Indexes
+
+| Name                                           | Definition                                                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| calendar_subscriptions_pkey                    | CREATE UNIQUE INDEX calendar_subscriptions_pkey ON public.calendar_subscriptions USING btree (id)                                             |
+| uq_calendar_subscriptions_oauth_token_calendar | CREATE UNIQUE INDEX uq_calendar_subscriptions_oauth_token_calendar ON public.calendar_subscriptions USING btree (oauth_token_id, calendar_id) |
+
+## Relations
+
+```mermaid
+erDiagram
+
+"public.calendar_subscriptions" }o--|| "public.oauth_tokens" : "FOREIGN KEY (oauth_token_id) REFERENCES oauth_tokens(id) ON DELETE CASCADE"
+
+"public.calendar_subscriptions" {
+  text id
+  text oauth_token_id FK
+  text calendar_id
+  text display_name
+  text color
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  text context
+}
+"public.oauth_tokens" {
+  text id
+  text provider
+  text access_token
+  text refresh_token
+  timestamp_with_time_zone expires_at
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  text account_id
+  text account_label
+}
+```
+
+---
+
+> Generated by [tbls](https://github.com/k1LoW/tbls)

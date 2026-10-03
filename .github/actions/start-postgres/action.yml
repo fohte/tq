@@ -1,8 +1,6 @@
 name: Start PostgreSQL
 description: >-
-  Start the docker-compose.yml PostgreSQL container for integration tests,
-  create the tq_test database, and export DATABASE_URL/TEST_DATABASE_URL
-  from .env.runtime for subsequent steps.
+  Start PostgreSQL and export the API dev/test database URLs for subsequent steps.
 
 runs:
   using: composite
@@ -11,5 +9,7 @@ runs:
       shell: bash
       run: |
         mise run db:up
-        docker compose exec db createdb -U tq tq_test
-        grep -v '^#' .env.runtime >> "$GITHUB_ENV"
+        {
+          echo "DATABASE_URL=$(scripts/db-url api dev)"
+          echo "TEST_DATABASE_URL=$(scripts/db-url api test)"
+        } >> "$GITHUB_ENV"
