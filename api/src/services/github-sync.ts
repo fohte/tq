@@ -1,5 +1,5 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
-import { and, eq, lt, ne, or } from 'drizzle-orm'
+import { and, eq, isNull, lt, ne, or } from 'drizzle-orm'
 import { okAsync, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
@@ -27,12 +27,12 @@ type SyncLinkError =
   | OAuthTokenMissingError
   | IntegrationConfigError
   | TokenRefreshError
-  | GithubLinkSyncError
+  | GithubLinkNotifyError
 
-class GithubLinkSyncError extends Error {
+class GithubLinkNotifyError extends Error {
   constructor(error: unknown) {
     super('Failed to notify about a GitHub link change', { cause: error })
-    this.name = 'GithubLinkSyncError'
+    this.name = 'GithubLinkNotifyError'
   }
 }
 
@@ -81,24 +81,82 @@ function changedEvent(
   return null
 }
 
-function toError(error: unknown): GithubLinkSyncError {
-  return new GithubLinkSyncError(error)
+function toNotifyError(error: unknown): GithubLinkNotifyError {
+  return new GithubLinkNotifyError(error)
 }
 
-// Caches GitHub fields on the link and leaves the task itself untouched.
+function matchesStoredGithubState(link: LinkRow) {
+  return and(
+    eq(taskGithubLinks.id, link.id),
+    eq(taskGithubLinks.state, link.state),
+    link.commentsCount === null
+      ? isNull(taskGithubLinks.commentsCount)
+      : eq(taskGithubLinks.commentsCount, link.commentsCount),
+    link.githubUpdatedAt === null
+      ? isNull(taskGithubLinks.githubUpdatedAt)
+      : eq(taskGithubLinks.githubUpdatedAt, link.githubUpdatedAt),
+  )
+}
+
+function notifyLinkChange(
+  link: LinkRow,
+  notification: NonNullable<ReturnType<typeof changedEvent>>,
+): ResultAsync<void, GithubLinkNotifyError> {
+  if (!link.notifyEvents.includes(notification.event)) {
+    return okAsync(undefined)
+  }
+
+  return ResultAsync.fromPromise(
+    db
+      .select({
+        id: tasks.id,
+        number: tasks.number,
+        title: tasks.title,
+        status: tasks.status,
+        context: tasks.context,
+      })
+      .from(tasks)
+      .where(eq(tasks.id, link.taskId))
+      .then((rows) => rows[0]),
+    toNotifyError,
+  ).andThen((task) => {
+    if (task == null || task.status !== 'todo') {
+      return okAsync(undefined)
+    }
+
+    return ResultAsync.fromPromise(
+      sendPush(
+        { context: task.context },
+        {
+          title: notification.title,
+          body: `#${String(task.number)} ${task.title}`,
+          taskId: task.id,
+          url: `https://${APP_DOMAIN}/tasks/${task.id}`,
+        },
+      ),
+      toNotifyError,
+    ).map(() => undefined)
+  })
+}
+
+// Store the pass start so network latency does not shorten the next scheduler interval.
 export function syncLinkFromGithub(
   link: LinkRow,
+  syncStartedAt = new Date(),
 ): ResultAsync<void, SyncLinkError> {
   if (link.state === 'merged') {
     return okAsync(undefined)
   }
 
+  const lastSyncedAt =
+    syncStartedAt.getTime() < link.lastSyncedAt.getTime()
+      ? link.lastSyncedAt
+      : syncStartedAt
+
   return fetchGithubIssueIfChanged(
     { owner: link.owner, repo: link.repo, number: link.number },
     link.etag,
   ).andThen((result) => {
-    const now = new Date()
-
     if (result.notModified) {
       // GitHub confirmed nothing changed since the stored etag (a bare 304,
       // no primary-rate-limit cost) — nothing to write beyond the check
@@ -106,8 +164,13 @@ export function syncLinkFromGithub(
       return ResultAsync.fromSafePromise(
         db
           .update(taskGithubLinks)
-          .set({ lastSyncedAt: now })
-          .where(eq(taskGithubLinks.id, link.id)),
+          .set({ lastSyncedAt })
+          .where(
+            and(
+              matchesStoredGithubState(link),
+              lt(taskGithubLinks.lastSyncedAt, lastSyncedAt),
+            ),
+          ),
       ).map(() => undefined)
     }
 
@@ -124,51 +187,17 @@ export function syncLinkFromGithub(
           githubUpdatedAt: new Date(issue.githubUpdatedAt),
           stateReason: issue.stateReason,
           etag,
-          lastSyncedAt: now,
+          lastSyncedAt,
         })
-        .where(eq(taskGithubLinks.id, link.id)),
-    )
-      .map(() => undefined)
-      .andThen(() => {
-        if (
-          notification === null ||
-          !link.notifyEvents.includes(notification.event)
-        ) {
-          return okAsync(undefined)
-        }
+        .where(matchesStoredGithubState(link))
+        .returning({ id: taskGithubLinks.id }),
+    ).andThen((updatedLinks) => {
+      if (updatedLinks.length === 0 || notification === null) {
+        return okAsync(undefined)
+      }
 
-        return ResultAsync.fromPromise(
-          db
-            .select({
-              id: tasks.id,
-              number: tasks.number,
-              title: tasks.title,
-              status: tasks.status,
-              context: tasks.context,
-            })
-            .from(tasks)
-            .where(eq(tasks.id, link.taskId))
-            .then((rows) => rows[0]),
-          toError,
-        ).andThen((task) => {
-          if (task == null || task.status !== 'todo') {
-            return okAsync(undefined)
-          }
-
-          return ResultAsync.fromPromise(
-            sendPush(
-              { context: task.context },
-              {
-                title: notification.title,
-                body: `#${String(task.number)} ${task.title}`,
-                taskId: task.id,
-                url: `https://${APP_DOMAIN}/tasks/${task.id}`,
-              },
-            ),
-            toError,
-          ).map(() => undefined)
-        })
-      })
+      return notifyLinkChange(link, notification)
+    })
   })
 }
 
@@ -187,9 +216,12 @@ async function hasGithubAccess(): Promise<boolean> {
   return true
 }
 
-async function syncLinks(links: LinkRow[]): Promise<void> {
+async function syncLinks(
+  links: LinkRow[],
+  syncStartedAt?: Date,
+): Promise<void> {
   for (const link of links) {
-    const result = await syncLinkFromGithub(link)
+    const result = await syncLinkFromGithub(link, syncStartedAt)
     if (result.isErr() && !isQuietProviderError(result.error)) {
       captureWithFingerprint(result.error, 'api.github-sync.sync-link-failed', {
         extras: { linkId: link.id },
@@ -236,7 +268,7 @@ export async function syncDueGithubLinks(): Promise<void> {
     return
   }
 
-  await syncLinks(links)
+  await syncLinks(links, now)
 }
 
 let inFlightSync: Promise<void> | null = null

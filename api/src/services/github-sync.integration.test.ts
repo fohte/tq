@@ -72,6 +72,13 @@ async function taskSyncOutcome(id: string) {
   }
 }
 
+function overlappingSyncOutcome(results: Array<{ isOk: () => boolean }>) {
+  return {
+    successfulSyncs: results.map((result) => result.isOk()),
+    notifications: sentNotifications(),
+  }
+}
+
 function normalizeTask(task: typeof tasks.$inferSelect) {
   return { ...task, createdAt: 'DATE', updatedAt: 'DATE' }
 }
@@ -115,10 +122,14 @@ function sentNotifications() {
     }))
 }
 
-function expectedNotification(title: string, task: typeof tasks.$inferSelect) {
+function expectedNotification(
+  title: string,
+  task: typeof tasks.$inferSelect,
+  endpoint = PERSONAL_ENDPOINT,
+) {
   return [
     {
-      endpoint: PERSONAL_ENDPOINT,
+      endpoint,
       payload: {
         title,
         body: `#${String(task.number)} ${task.title}`,
@@ -306,6 +317,72 @@ describe('syncLinkFromGithub', () => {
       expectedNotification(
         `${ref.owner}/${ref.repo}#${String(ref.number)} was closed`,
         task,
+      ),
+    )
+  })
+
+  it('sends a change notification only once when syncs overlap', async () => {
+    const { task, link } = await createLinkedTask()
+    await registerPush('personal')
+
+    let resolveBothRequests: () => void = () => undefined
+    let releaseRequests: () => void = () => undefined
+    const bothRequestsStarted = new Promise<void>((resolve) => {
+      resolveBothRequests = resolve
+    })
+    const requestsMayResolve = new Promise<void>((resolve) => {
+      releaseRequests = resolve
+    })
+    let requestCount = 0
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      requestCount += 1
+      if (requestCount === 2) {
+        resolveBothRequests()
+      }
+      await requestsMayResolve
+      return new Response(
+        JSON.stringify({
+          title: 'Bug: something broke',
+          body: 'Steps to reproduce...',
+          state: 'closed',
+          comments: 2,
+          updated_at: '2024-08-13T09:30:00Z',
+          state_reason: 'completed',
+          html_url: `https://github.com/${ref.owner}/${ref.repo}/issues/${String(ref.number)}`,
+        }),
+        { status: 200 },
+      )
+    })
+
+    const firstSync = syncLinkFromGithub(link)
+    const secondSync = syncLinkFromGithub(link)
+    await bothRequestsStarted
+    releaseRequests()
+    const results = await Promise.all([firstSync, secondSync])
+
+    expect(overlappingSyncOutcome(results)).toEqual({
+      successfulSyncs: [true, true],
+      notifications: expectedNotification(
+        `${ref.owner}/${ref.repo}#${String(ref.number)} was closed`,
+        task,
+      ),
+    })
+  })
+
+  it('sends a change notification to the linked task context', async () => {
+    const { task, link } = await createLinkedTask()
+    await db.update(tasks).set({ context: 'work' }).where(eq(tasks.id, task.id))
+    await registerPush('personal')
+    await registerPush('work')
+
+    mockGithubIssueResponse({ state: 'closed' })
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual(
+      expectedNotification(
+        `${ref.owner}/${ref.repo}#${String(ref.number)} was closed`,
+        task,
+        WORK_ENDPOINT,
       ),
     )
   })
@@ -528,7 +605,7 @@ describe('syncDueGithubLinks', () => {
     const subjectRecent = await createScheduledLink(
       'subject',
       52,
-      new Date(now - 30 * 60 * 1000),
+      new Date(now - 59 * 60 * 1000),
     )
     const blockerDue = await createScheduledLink(
       'blocker',
@@ -538,7 +615,7 @@ describe('syncDueGithubLinks', () => {
     const blockerRecent = await createScheduledLink(
       'blocker',
       54,
-      new Date(now - 23 * 60 * 60 * 1000),
+      new Date(now - 23 * 60 * 60 * 1000 - 59 * 60 * 1000),
     )
     const mergedSubject = await createScheduledLink(
       'subject',
