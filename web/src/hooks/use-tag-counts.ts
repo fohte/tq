@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useLabels } from '#hooks/use-labels'
 import { useTaskList } from '#hooks/use-tasks'
 import type { TagTreeNode } from '#lib/tag-tree'
-import { buildTagTree } from '#lib/tag-tree'
+import { buildTagTree, flattenLabelTree } from '#lib/tag-tree'
 
 /**
  * Tag counts for the whole task set, independent of the tag filter itself,
@@ -36,14 +36,7 @@ export function useTagCounts(
       labels: task.labels.filter((label) => namesInContext.has(label)),
     }))
     const taskTree = buildTagTree(tasksInContext)
-    const namesInTaskTree = new Set<string>()
-    function collectNames(nodes: TagTreeNode[]) {
-      for (const node of nodes) {
-        namesInTaskTree.add(node.name)
-        collectNames(node.children)
-      }
-    }
-    collectNames(taskTree)
+    const namesInTaskTree = new Set(flattenLabelTree(taskTree))
     const orphanTagNames = labels
       .map((label) => label.name)
       .filter((name) => !namesInTaskTree.has(name))
