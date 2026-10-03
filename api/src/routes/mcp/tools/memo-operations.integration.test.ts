@@ -15,12 +15,14 @@ let client: Client
 
 function memoToolOutput(
   empty: CallToolResult,
+  created: CallToolResult,
   updated: CallToolResult,
   stale: CallToolResult,
   current: CallToolResult,
 ) {
   return {
     empty: parseToolData(empty),
+    created: parseToolData(created),
     updated: parseToolData(updated),
     stale,
     current: parseToolData(current),
@@ -38,29 +40,40 @@ afterEach(async () => {
 describe('memo MCP tools', () => {
   it('reads and updates a memo with revision conflict protection', async () => {
     const empty = await callMcpTool(client, 'memo_get', { context: 'work' })
-    const updated = await callMcpTool(client, 'memo_update', {
+    const created = await callMcpTool(client, 'memo_update', {
       context: 'work',
       content: 'Captured through MCP',
       revision: 0,
     })
+    const updated = await callMcpTool(client, 'memo_update', {
+      context: 'work',
+      content: 'Revised through MCP',
+      revision: 1,
+    })
     const stale = await callMcpTool(client, 'memo_update', {
       context: 'work',
       content: 'Stale replacement',
-      revision: 0,
+      revision: 1,
     })
     const current = await callMcpTool(client, 'memo_get', { context: 'work' })
 
-    expect(memoToolOutput(empty, updated, stale, current)).toEqual({
+    expect(memoToolOutput(empty, created, updated, stale, current)).toEqual({
       empty: {
         context: 'work',
         content: '',
         revision: 0,
         updatedAt: null,
       },
-      updated: {
+      created: {
         context: 'work',
         content: 'Captured through MCP',
         revision: 1,
+        updatedAt: '<timestamp>',
+      },
+      updated: {
+        context: 'work',
+        content: 'Revised through MCP',
+        revision: 2,
         updatedAt: '<timestamp>',
       },
       stale: {
@@ -74,8 +87,8 @@ describe('memo MCP tools', () => {
       },
       current: {
         context: 'work',
-        content: 'Captured through MCP',
-        revision: 1,
+        content: 'Revised through MCP',
+        revision: 2,
         updatedAt: '<timestamp>',
       },
     })

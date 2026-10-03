@@ -60,6 +60,37 @@ describe('memo get', () => {
       stdout: [[`${JSON.stringify(memo, null, 2)}\n`]],
     })
   })
+
+  it('uses TQ_CONTEXT when --context is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const memo = {
+      context: 'work',
+      content: 'An idea to revisit',
+      revision: 3,
+      updatedAt: '2025-01-02T03:04:05.000Z',
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(memo), { status: 200 }),
+    )
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'memo', 'get'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(commandOutcome(exitCode, calls, stdout)).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'GET',
+        pathname: '/api/memos/work',
+        query: {},
+        body: undefined,
+      },
+      stdout: [[`${JSON.stringify(memo, null, 2)}\n`]],
+    })
+  })
 })
 
 describe('memo update', () => {
@@ -96,6 +127,50 @@ describe('memo update', () => {
         'update',
         '--context',
         'personal',
+        '--revision',
+        '3',
+        '--file',
+        filePath,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(commandOutcome(exitCode, calls, stdout)).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'PUT',
+        pathname: '/api/memos/personal',
+        query: {},
+        body: { content: 'Keep for later', revision: 3 },
+      },
+      stdout: [[`${JSON.stringify(memo, null, 2)}\n`]],
+    })
+  })
+
+  it('uses TQ_CONTEXT when --context is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'personal')
+    const memo = {
+      context: 'personal',
+      content: 'Keep for later',
+      revision: 4,
+      updatedAt: '2025-01-02T03:04:05.000Z',
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(memo), { status: 200 }),
+    )
+    const stdout = spyStdout()
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'tq-cli-memo-'))
+    const filePath = join(tmpDir, 'content.md')
+    await writeFile(filePath, memo.content, 'utf8')
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'memo',
+        'update',
         '--revision',
         '3',
         '--file',

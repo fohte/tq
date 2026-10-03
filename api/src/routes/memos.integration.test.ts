@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { app } from '#app'
+import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -34,12 +35,20 @@ function updatedContextMemo(update: MemoSummary, personal: MemoSummary) {
   return { update, personal }
 }
 
+function memoUpdatePair(created: MemoSummary, updated: MemoSummary) {
+  return { created, updated }
+}
+
 function memoConflict(
   first: MemoSummary,
   stale: { status: number; body: { error: string } },
   current: MemoSummary,
 ) {
   return { first, stale, current }
+}
+
+function responseWithBody(status: number, body: unknown) {
+  return { status, body }
 }
 
 async function updateMemo(
@@ -113,6 +122,36 @@ describe('memos API', () => {
     })
   })
 
+  it('updates a memo using its current nonzero revision', async () => {
+    const created = await memoResponse(
+      await updateMemo('work', 'Initial note', 0),
+    )
+    const updated = await memoResponse(
+      await updateMemo('work', 'Revised note', 1),
+    )
+
+    expect(memoUpdatePair(created, updated)).toEqual({
+      created: {
+        status: 200,
+        body: {
+          context: 'work',
+          content: 'Initial note',
+          revision: 1,
+          updatedAt: '<timestamp>',
+        },
+      },
+      updated: {
+        status: 200,
+        body: {
+          context: 'work',
+          content: 'Revised note',
+          revision: 2,
+          updatedAt: '<timestamp>',
+        },
+      },
+    })
+  })
+
   it('rejects a stale revision without replacing the current memo', async () => {
     const first = await memoResponse(
       await updateMemo('work', 'Current note', 0),
@@ -153,8 +192,41 @@ describe('memos API', () => {
   })
 
   it('rejects content beyond the markdown length limit', async () => {
-    const response = await updateMemo('work', 'a'.repeat(100_001), 0)
+    const response = await updateMemo(
+      'work',
+      'a'.repeat(MAX_MARKDOWN_CONTENT_LENGTH + 1),
+      0,
+    )
+    const body = await jsonBody(
+      response,
+      z.object({
+        success: z.literal(false),
+        error: z.object({ name: z.string(), message: z.string() }),
+      }),
+    )
 
-    expect(response.status).toEqual(400)
+    expect(responseWithBody(response.status, body)).toEqual({
+      status: 400,
+      body: {
+        success: false,
+        error: {
+          name: 'ZodError',
+          message: JSON.stringify(
+            [
+              {
+                origin: 'string',
+                code: 'too_big',
+                maximum: MAX_MARKDOWN_CONTENT_LENGTH,
+                inclusive: true,
+                path: ['content'],
+                message: `Too big: expected string to have <=${String(MAX_MARKDOWN_CONTENT_LENGTH)} characters`,
+              },
+            ],
+            null,
+            2,
+          ),
+        },
+      },
+    })
   })
 })
