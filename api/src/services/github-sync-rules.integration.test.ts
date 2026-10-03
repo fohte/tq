@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
 import {
+  defaultGithubNotifyEvents,
   githubSyncRuleIgnoredIssues,
   githubSyncRules,
   projects,
@@ -33,7 +34,6 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
     id: 'ID',
     seq: 'SEQ',
     lastSyncedAt: 'DATE',
-    githubUpdatedAt: link.githubUpdatedAt ? 'DATE' : null,
     createdAt: 'DATE',
     updatedAt: 'DATE',
   }
@@ -78,7 +78,15 @@ describe('syncGithubAssignedIssues', () => {
     await createRule(project.id)
     await upsertGithubToken('valid-token')
     mockAssignedIssuesResponse([
-      { owner: 'fohte', repo: 'tq', number: 42, title: 'Fix bug' },
+      {
+        owner: 'fohte',
+        repo: 'tq',
+        number: 42,
+        title: 'Fix bug',
+        comments: 8,
+        updatedAt: '2024-08-16T13:40:00Z',
+        stateReason: 'reopened',
+      },
     ])
 
     await syncGithubAssignedIssues()
@@ -103,9 +111,9 @@ describe('syncGithubAssignedIssues', () => {
       title: 'Fix bug',
       role: 'subject',
       notifyEvents: ['closed', 'reopened', 'comments', 'other'],
-      commentsCount: 1,
-      githubUpdatedAt: 'DATE',
-      stateReason: null,
+      commentsCount: 8,
+      githubUpdatedAt: new Date('2024-08-16T13:40:00Z'),
+      stateReason: 'reopened',
       etag: null,
       lastSyncedAt: 'DATE',
       createdAt: 'DATE',
@@ -178,42 +186,89 @@ describe('syncGithubAssignedIssues', () => {
       repo: 'example-repo',
       number: 17,
       role: 'blocker',
-      notifyEvents: ['closed'],
+      notifyEvents: defaultGithubNotifyEvents('blocker'),
       kind: 'issue',
       url: 'https://github.com/example-owner/example-repo/issues/17',
       state: 'open',
       title: 'Sample blocker',
     })
     mockAssignedIssuesResponse([
-      { owner: 'example-owner', repo: 'example-repo', number: 17 },
+      {
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 17,
+        comments: 5,
+        updatedAt: '2024-08-17T14:50:00Z',
+        stateReason: 'future_reason',
+      },
     ])
 
     await syncGithubAssignedIssues()
 
-    const subjectLink = await findLink('example-owner', 'example-repo', 17)
-    assertDefined(subjectLink)
+    const allLinks = await db
+      .select()
+      .from(taskGithubLinks)
+      .where(
+        and(
+          eq(taskGithubLinks.owner, 'example-owner'),
+          eq(taskGithubLinks.repo, 'example-repo'),
+          eq(taskGithubLinks.number, 17),
+        ),
+      )
+    const normalizedLinks = allLinks
+      .map((link) =>
+        normalizeLink({
+          ...link,
+          taskId:
+            link.taskId === blockerTask.id ? 'blocker-task' : 'subject-task',
+        }),
+      )
+      .sort((left, right) => left.role.localeCompare(right.role))
 
-    expect(normalizeLink(subjectLink)).toEqual({
-      id: 'ID',
-      seq: 'SEQ',
-      taskId: subjectLink.taskId,
-      owner: 'example-owner',
-      repo: 'example-repo',
-      number: 17,
-      role: 'subject',
-      notifyEvents: ['closed', 'reopened', 'comments', 'other'],
-      kind: 'issue',
-      url: 'https://github.com/example-owner/example-repo/issues/17',
-      state: 'open',
-      title: 'Assigned issue',
-      commentsCount: 1,
-      githubUpdatedAt: 'DATE',
-      stateReason: null,
-      etag: null,
-      lastSyncedAt: 'DATE',
-      createdAt: 'DATE',
-      updatedAt: 'DATE',
-    })
+    expect(normalizedLinks).toEqual([
+      {
+        id: 'ID',
+        seq: 'SEQ',
+        taskId: 'blocker-task',
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 17,
+        role: 'blocker',
+        notifyEvents: ['closed'],
+        kind: 'issue',
+        url: 'https://github.com/example-owner/example-repo/issues/17',
+        state: 'open',
+        title: 'Sample blocker',
+        commentsCount: null,
+        githubUpdatedAt: null,
+        stateReason: null,
+        etag: null,
+        lastSyncedAt: 'DATE',
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+      {
+        id: 'ID',
+        seq: 'SEQ',
+        taskId: 'subject-task',
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 17,
+        role: 'subject',
+        notifyEvents: ['closed', 'reopened', 'comments', 'other'],
+        kind: 'issue',
+        url: 'https://github.com/example-owner/example-repo/issues/17',
+        state: 'open',
+        title: 'Assigned issue',
+        commentsCount: 5,
+        githubUpdatedAt: new Date('2024-08-17T14:50:00Z'),
+        stateReason: null,
+        etag: null,
+        lastSyncedAt: 'DATE',
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+      },
+    ])
   })
 
   it('does nothing for a disabled rule', async () => {

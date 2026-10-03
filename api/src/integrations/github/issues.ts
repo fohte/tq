@@ -12,6 +12,14 @@ import { fetchJson, fetchJsonConditional } from '#lib/fetch-json'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
+export const GITHUB_STATE_REASONS = [
+  'completed',
+  'not_planned',
+  'duplicate',
+  'reopened',
+] as const
+export type GithubStateReason = (typeof GITHUB_STATE_REASONS)[number]
+
 // The issues API also serves pull requests (a PR is an issue under the
 // hood), so both /issues/ and /pull/ URLs resolve through the same
 // endpoint; the URL's path segment is only used to validate the link, not
@@ -60,7 +68,7 @@ export interface GithubIssueData extends GithubResourceRef {
   state: 'open' | 'closed' | 'merged'
   commentsCount: number
   githubUpdatedAt: string
-  stateReason: 'completed' | 'not_planned' | 'reopened' | null
+  stateReason: GithubStateReason | null
 }
 
 const issueResponseSchema = z.object({
@@ -69,7 +77,7 @@ const issueResponseSchema = z.object({
   state: z.enum(['open', 'closed']),
   comments: z.number(),
   updated_at: z.iso.datetime(),
-  state_reason: z.enum(['completed', 'not_planned', 'reopened']).nullable(),
+  state_reason: z.enum(GITHUB_STATE_REASONS).nullable().catch(null),
   html_url: z.string(),
   // Present only when the issue number actually refers to a pull request.
   pull_request: z.object({}).optional(),
@@ -162,7 +170,7 @@ const assignedIssueResponseSchema = z.object({
   body: z.string().nullable(),
   comments: z.number(),
   updated_at: z.iso.datetime(),
-  state_reason: z.enum(['completed', 'not_planned', 'reopened']).nullable(),
+  state_reason: z.enum(GITHUB_STATE_REASONS).nullable().catch(null),
   html_url: z.string(),
   pull_request: z.object({}).optional(),
   repository: z.object({

@@ -14,6 +14,25 @@ import {
 
 import { projects, tasks } from '#db/schema/core'
 
+export const GITHUB_LINK_ROLES = ['subject', 'blocker'] as const
+export type GithubLinkRole = (typeof GITHUB_LINK_ROLES)[number]
+
+export const GITHUB_NOTIFY_EVENTS = [
+  'closed',
+  'reopened',
+  'comments',
+  'other',
+] as const
+export type GithubNotifyEvent = (typeof GITHUB_NOTIFY_EVENTS)[number]
+
+export function defaultGithubNotifyEvents(
+  role: GithubLinkRole,
+): GithubNotifyEvent[] {
+  return role === 'subject'
+    ? [...GITHUB_NOTIFY_EVENTS]
+    : GITHUB_NOTIFY_EVENTS.filter((event) => event === 'closed')
+}
+
 export const taskGithubLinks = pgTable(
   'task_github_links',
   {
@@ -26,8 +45,10 @@ export const taskGithubLinks = pgTable(
     owner: text('owner').notNull(),
     repo: text('repo').notNull(),
     number: integer('number').notNull(),
-    role: text('role', { enum: ['subject', 'blocker'] }).notNull(),
-    notifyEvents: text('notify_events').array().notNull(),
+    role: text('role', { enum: GITHUB_LINK_ROLES }).notNull(),
+    notifyEvents: text('notify_events', { enum: GITHUB_NOTIFY_EVENTS })
+      .array()
+      .notNull(),
     kind: text('kind', { enum: ['issue', 'pull_request'] }).notNull(),
     url: text('url').notNull(),
     // Caches the linked GitHub issue/PR's current state and title.
@@ -79,7 +100,9 @@ export const taskGithubLinks = pgTable(
     ),
     check(
       'task_github_links_notify_events_check',
-      sql`${table.notifyEvents} <@ ARRAY['closed', 'reopened', 'comments', 'other']::text[]`,
+      sql`${table.notifyEvents} <@ ${sql.raw(
+        `ARRAY[${GITHUB_NOTIFY_EVENTS.map((event) => `'${event}'`).join(', ')}]::text[]`,
+      )}`,
     ),
     // Only a pull request can be merged; a plain issue's state is always
     // open or closed.

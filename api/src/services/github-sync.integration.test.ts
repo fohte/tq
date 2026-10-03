@@ -39,7 +39,6 @@ function normalizeTask(task: typeof tasks.$inferSelect) {
 function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
   return {
     ...link,
-    githubUpdatedAt: link.githubUpdatedAt ? 'DATE' : null,
     lastSyncedAt: 'DATE',
     createdAt: 'DATE',
     updatedAt: 'DATE',

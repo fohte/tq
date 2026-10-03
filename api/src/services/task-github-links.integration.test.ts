@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
-import { taskGithubLinks, tasks } from '#db/schema'
+import { defaultGithubNotifyEvents, taskGithubLinks, tasks } from '#db/schema'
 import {
   mockGithubIssueResponse,
   upsertGithubToken,
@@ -35,7 +35,7 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
     id: 'ID',
     seq: 'SEQ',
     lastSyncedAt: 'DATE',
-    githubUpdatedAt: 'DATE',
+    githubUpdatedAt: link.githubUpdatedAt,
     createdAt: 'DATE',
     updatedAt: 'DATE',
   }
@@ -55,7 +55,7 @@ async function createBlockerLink(taskId: string, linkRef = roleRef) {
         repo: linkRef.repo,
         number: linkRef.number,
         role: 'blocker',
-        notifyEvents: ['closed'],
+        notifyEvents: defaultGithubNotifyEvents('blocker'),
         kind: 'issue',
         url: `https://github.com/${linkRef.owner}/${linkRef.repo}/issues/${String(linkRef.number)}`,
         state: 'open',
@@ -130,7 +130,7 @@ describe('createTaskFromGithubUrl', () => {
       role: 'subject',
       notifyEvents: ['closed', 'reopened', 'comments', 'other'],
       commentsCount: 2,
-      githubUpdatedAt: 'DATE',
+      githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
       stateReason: null,
       etag: null,
       lastSyncedAt: 'DATE',
@@ -189,7 +189,7 @@ describe('role-scoped GitHub link uniqueness', () => {
       state: 'open',
       title: 'Bug: something broke',
       commentsCount: 2,
-      githubUpdatedAt: 'DATE',
+      githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
       stateReason: null,
       etag: null,
       lastSyncedAt: 'DATE',
@@ -268,7 +268,7 @@ describe('linkTaskToGithubUrl', () => {
       role: 'subject',
       notifyEvents: ['closed', 'reopened', 'comments', 'other'],
       commentsCount: 2,
-      githubUpdatedAt: 'DATE',
+      githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
       stateReason: null,
       etag: null,
       lastSyncedAt: 'DATE',

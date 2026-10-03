@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { err, errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
 import { db, type DbTransaction } from '#db/connection'
-import { taskGithubLinks, tasks } from '#db/schema'
+import { defaultGithubNotifyEvents, taskGithubLinks, tasks } from '#db/schema'
 import type {
   IntegrationConfigError,
   OAuthTokenMissingError,
@@ -54,24 +54,18 @@ export class GithubLinkConsistencyError extends Error {
 type TaskRow = typeof tasks.$inferSelect
 type LinkRow = typeof taskGithubLinks.$inferSelect
 
-function defaultNotifyEvents(role: LinkRow['role']): string[] {
-  return role === 'subject'
-    ? ['closed', 'reopened', 'comments', 'other']
-    : ['closed']
-}
-
 function linkInsertValues(
   taskId: string,
   issue: GithubIssueData,
-  role: LinkRow['role'] = 'subject',
 ): typeof taskGithubLinks.$inferInsert {
+  const role = 'subject'
   return {
     taskId,
     owner: issue.owner,
     repo: issue.repo,
     number: issue.number,
     role,
-    notifyEvents: defaultNotifyEvents(role),
+    notifyEvents: defaultGithubNotifyEvents(role),
     kind: issue.kind,
     url: issue.url,
     state: issue.state,
@@ -142,7 +136,7 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
   )
 }
 
-// Accepted by insertLink/unlinkTask so they can run standalone (against
+// Accepted by unlinkTask so it can run standalone (against
 // `db`) or as part of a larger transaction (against the `tx` handed to
 // `db.transaction`). createTaskFromIssueData needs the latter to make its
 // task insert and link insert atomic; linkTaskToGithubUrl/unlinkTask need it
@@ -297,7 +291,7 @@ export function createTaskFromGithubUrl(
 }
 
 // The link insert and its task_events row must commit or roll back
-// together: a bare insertLink followed by a separate recordGithubLinked
+// together: a link insert followed by a separate recordGithubLinked
 // write would leave the timeline missing an entry if the process crashes (or
 // the write fails) between the two. The GitHub API fetch happens before the
 // transaction opens since it can't participate in it.

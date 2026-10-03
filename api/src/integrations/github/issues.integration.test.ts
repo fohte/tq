@@ -147,6 +147,49 @@ describe('fetchGithubIssue', () => {
     expect(issue.state).toBe('closed')
   })
 
+  it.each([
+    { rawStateReason: 'duplicate', expectedStateReason: 'duplicate' },
+    { rawStateReason: 'future_reason', expectedStateReason: null },
+  ])(
+    'preserves known and ignores unknown state_reason values: $rawStateReason',
+    async ({ rawStateReason, expectedStateReason }) => {
+      const exampleRef = {
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 19,
+      }
+      await upsertGithubToken('valid-token')
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            title: 'Track a sample resource',
+            body: null,
+            state: 'open',
+            comments: 3,
+            updated_at: '2024-08-17T14:50:00Z',
+            state_reason: rawStateReason,
+            html_url: 'https://github.com/example-owner/example-repo/issues/19',
+          }),
+          { status: 200 },
+        ),
+      )
+
+      const issue = (await fetchGithubIssue(exampleRef))._unsafeUnwrap()
+
+      expect(issue).toEqual({
+        ...exampleRef,
+        kind: 'issue',
+        url: 'https://github.com/example-owner/example-repo/issues/19',
+        title: 'Track a sample resource',
+        body: null,
+        state: 'open',
+        commentsCount: 3,
+        githubUpdatedAt: '2024-08-17T14:50:00Z',
+        stateReason: expectedStateReason,
+      })
+    },
+  )
+
   it('returns a rejected GithubApiError when the issue is not found', async () => {
     await upsertGithubToken('valid-token')
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(

@@ -49,7 +49,7 @@ export function mockAssignedIssuesResponse(
     body?: string | null
     comments?: number
     updatedAt?: string
-    stateReason?: 'completed' | 'not_planned' | 'reopened' | null
+    stateReason?: string | null
     isPullRequest?: boolean
   }> = [],
 ) {
