@@ -6,6 +6,7 @@ import { db } from '#db/connection'
 import {
   recurrenceRules,
   recurringTaskTemplates,
+  taskDescriptionTemplates,
   taskRelations,
   tasks,
 } from '#db/schema'
@@ -113,6 +114,51 @@ function responseSnapshot<T>(status: number, body: T) {
   return { status, body }
 }
 
+async function taskResponseSnapshot(res: Response) {
+  return responseSnapshot(
+    res.status,
+    normalizeTask(await jsonBody<TaskResponse>(res)),
+  )
+}
+
+function createdTaskResponse(title: string, description: string) {
+  return responseSnapshot(201, {
+    id: 'ID',
+    number: -1,
+    title,
+    description,
+    status: 'todo',
+    statusReason: null,
+    context: 'personal',
+    commitment: 'inbox',
+    labels: [],
+    startDate: null,
+    dueDate: null,
+    estimatedMinutes: null,
+    remindAt: null,
+    parentId: null,
+    projectId: null,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    templateId: null,
+    occurrenceDate: null,
+    githubLinks: [],
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+    linkSync: { outgoing: [], unresolvedRefs: [] },
+  })
+}
+
+async function insertDescriptionTemplate(template: {
+  name: string
+  whenToUse: string
+  body: string
+  guide: string
+  isDefault?: boolean
+}) {
+  await db.insert(taskDescriptionTemplates).values(template)
+}
+
 // Simulates a legacy task where recurrenceRuleId is owned directly without a template.
 async function attachLegacyRecurrenceRule(
   taskId: string,
@@ -177,6 +223,204 @@ describe('tasks CRUD API', () => {
       expect(body.status).toBe('todo')
       expect(body.context).toBe('personal')
       expect(body.id).toBeDefined()
+    })
+
+    it('creates an LLM task when no description template is configured', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Unstructured task',
+          description: 'A short note.',
+        }),
+      })
+
+      expect(await taskResponseSnapshot(res)).toEqual(
+        createdTaskResponse('Unstructured task', 'A short note.'),
+      )
+    })
+
+    it('validates an LLM description against the default template', async () => {
+      const guide =
+        '## Goal\nState why this is needed.\n\n## Steps\nDescribe the changes.\n\n## Result\nExplain how to verify completion.'
+      await insertDescriptionTemplate({
+        name: 'sample-plan',
+        whenToUse: 'Use for planned work',
+        body: '## Goal\n\n## Steps\n\n## Result',
+        guide,
+        isDefault: true,
+      })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Structured task',
+          description: '## Goal\nExplain the goal.\n\n## Steps\n- [ ]',
+        }),
+      })
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<Record<string, unknown>>(res),
+        ),
+      ).toEqual({
+        status: 400,
+        body: {
+          error: {
+            message: JSON.stringify([
+              {
+                path: ['description'],
+                message: `## Result is missing.\nGuide:\n${guide}\nFill the section and call task_create again.`,
+              },
+              {
+                path: ['description'],
+                message: `## Steps is empty.\nGuide:\n${guide}\nFill the section and call task_create again.`,
+              },
+            ]),
+          },
+          missingSections: ['## Result'],
+          emptySections: ['## Steps'],
+          guide,
+        },
+      })
+    })
+
+    it('uses an explicitly selected template instead of the default', async () => {
+      await insertDescriptionTemplate({
+        name: 'default-plan',
+        whenToUse: 'Use for default work',
+        body: '## Default',
+        guide: 'Describe the default section.',
+        isDefault: true,
+      })
+      await insertDescriptionTemplate({
+        name: 'focused-plan',
+        whenToUse: 'Use for focused work',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+      })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Focused task',
+          description: '## Goal\n- [ ] Explain the goal',
+          template: 'focused-plan',
+        }),
+      })
+
+      expect(await taskResponseSnapshot(res)).toEqual(
+        createdTaskResponse('Focused task', '## Goal\n- [ ] Explain the goal'),
+      )
+    })
+
+    it('accepts code examples as section content', async () => {
+      await insertDescriptionTemplate({
+        name: 'command-plan',
+        whenToUse: 'Use when a task needs a command example',
+        body: '## Verification',
+        guide: 'Include a command that verifies the result.',
+      })
+
+      const description = '## Verification\n\n```sh\ncheck-result\n```'
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Command task',
+          description,
+          template: 'command-plan',
+        }),
+      })
+
+      expect(await taskResponseSnapshot(res)).toEqual(
+        createdTaskResponse('Command task', description),
+      )
+    })
+
+    it('returns available templates when an LLM names an unknown template', async () => {
+      await insertDescriptionTemplate({
+        name: 'first-plan',
+        whenToUse: 'Use for an initial plan',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+      })
+      await insertDescriptionTemplate({
+        name: 'second-plan',
+        whenToUse: 'Use for a follow-up plan',
+        body: '## Result',
+        guide: 'Describe the result.',
+        isDefault: true,
+      })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:agent',
+        },
+        body: JSON.stringify({
+          title: 'Unmatched task',
+          template: 'missing-plan',
+        }),
+      })
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<Record<string, unknown>>(res),
+        ),
+      ).toEqual({
+        status: 400,
+        body: {
+          error: {
+            message: JSON.stringify([
+              {
+                path: ['template'],
+                message:
+                  'Unknown description template. Choose an available template:\n' +
+                  '- second-plan (use when: Use for a follow-up plan)\n' +
+                  '- first-plan (use when: Use for an initial plan)',
+              },
+            ]),
+          },
+          templates: [
+            { name: 'second-plan', whenToUse: 'Use for a follow-up plan' },
+            { name: 'first-plan', whenToUse: 'Use for an initial plan' },
+          ],
+        },
+      })
+    })
+
+    it('does not validate descriptions from human authors', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Human task',
+          description: 'No template sections are present.',
+          template: 'missing-plan',
+        }),
+      })
+
+      expect(await taskResponseSnapshot(res)).toEqual(
+        createdTaskResponse('Human task', 'No template sections are present.'),
+      )
     })
 
     it('creates a task with all optional fields', async () => {

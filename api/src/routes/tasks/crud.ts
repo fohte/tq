@@ -10,6 +10,10 @@ import {
   resolveBlockedByExistence,
   resolveBlockedByTargets,
 } from '#routes/tasks/blocked-by'
+import {
+  taskDescriptionTemplateErrorBody,
+  validateTaskDescriptionTemplate,
+} from '#routes/tasks/description-template-validation'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
   getGithubLinksByTaskId,
@@ -60,6 +64,13 @@ export const tasksCrudApp = new Hono()
   .post('/', zValidator('json', createTaskSchema), async (c) => {
     const input = c.req.valid('json')
     const author = c.get('author')
+
+    if (author.kind === 'llm') {
+      const validation = await validateTaskDescriptionTemplate(input)
+      if (validation !== null) {
+        return c.json(taskDescriptionTemplateErrorBody(validation), 400)
+      }
+    }
 
     let parentId: string | null = null
     if (input.parentId != null) {

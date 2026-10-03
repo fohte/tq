@@ -54,6 +54,7 @@ const taskIdsQuerySchema = z
 export const createTaskSchema = z.object({
   title: z.string().min(1),
   description: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
+  template: z.string().optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
   estimatedMinutes: z.number().int().positive().optional(),

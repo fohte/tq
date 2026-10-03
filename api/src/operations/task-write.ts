@@ -179,8 +179,10 @@ export const taskWriteOperations = [
         labels:
           'Comma-separated label names to attach (unknown names are created)',
         blockedBy: 'Comma-separated ids/numbers of tasks blocking this task',
+        template:
+          'Description template name to validate for LLM-authored tasks',
       },
-      optionMetavars: { labels: 'names', blockedBy: 'ids' },
+      optionMetavars: { labels: 'names', blockedBy: 'ids', template: 'name' },
       customOptions: [
         {
           flags: '--parent-id <id>',

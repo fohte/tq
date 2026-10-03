@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels } from '#db/schema'
+import { labels, taskDescriptionTemplates } from '#db/schema'
 import {
   callMcpTool,
   connectMcpClient,
@@ -51,6 +51,138 @@ afterEach(async () => {
 })
 
 describe('task_create tool', () => {
+  it('returns template guidance when an LLM description has an empty section', async () => {
+    const guide = 'Describe what success looks like.'
+    await db.insert(taskDescriptionTemplates).values({
+      name: 'mcp-plan',
+      whenToUse: 'Use for an MCP-created plan',
+      body: '## Goal',
+      guide,
+    })
+
+    const result = await callMcpTool(client, 'task_create', {
+      title: 'MCP task',
+      description: '## Goal\n- [ ]',
+      template: 'mcp-plan',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text:
+            'Invalid request: description: ## Goal is empty.\n' +
+            `Guide:\n${guide}\nFill the section and call task_create again.`,
+        },
+      ],
+    })
+  })
+
+  it('exposes the complete task creation input schema', async () => {
+    const tools = await client.listTools()
+    const taskCreate = tools.tools.find((tool) => tool.name === 'task_create')
+
+    expect(taskCreate?.inputSchema).toEqual({
+      type: 'object',
+      properties: {
+        title: { type: 'string', minLength: 1 },
+        description: { type: 'string', maxLength: 100000 },
+        template: { type: 'string' },
+        startDate: { type: 'string' },
+        dueDate: { type: 'string' },
+        estimatedMinutes: {
+          type: 'integer',
+          exclusiveMinimum: 0,
+          maximum: 9007199254740991,
+        },
+        parentId: {
+          anyOf: [
+            {
+              type: 'string',
+              format: 'uuid',
+              pattern:
+                '^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$',
+            },
+            { type: 'string', pattern: '^\\d+$' },
+            {
+              type: 'integer',
+              exclusiveMinimum: 0,
+              maximum: 9007199254740991,
+            },
+          ],
+        },
+        projectId: {
+          type: 'string',
+          format: 'uuid',
+          pattern:
+            '^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$',
+        },
+        context: { type: 'string', enum: ['work', 'personal'] },
+        commitment: {
+          type: 'string',
+          enum: ['inbox', 'active', 'someday'],
+        },
+        labels: {
+          type: 'array',
+          items: { type: 'string', minLength: 1 },
+        },
+        recurrenceRule: {
+          type: 'object',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['daily', 'weekly', 'monthly', 'custom'],
+            },
+            interval: {
+              type: 'integer',
+              exclusiveMinimum: 0,
+              maximum: 9007199254740991,
+            },
+            daysOfWeek: {
+              type: 'array',
+              items: { type: 'integer', minimum: 0, maximum: 6 },
+            },
+            dayOfMonth: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 31,
+            },
+          },
+          required: ['type', 'interval'],
+        },
+        blockedBy: {
+          type: 'array',
+          items: {
+            anyOf: [
+              {
+                type: 'string',
+                format: 'uuid',
+                pattern:
+                  '^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$',
+              },
+              { type: 'string', pattern: '^\\d+$' },
+              {
+                type: 'integer',
+                exclusiveMinimum: 0,
+                maximum: 9007199254740991,
+              },
+            ],
+          },
+        },
+        agent: {
+          description:
+            'Your own model name (e.g. "example-model"), so this write is attributed to you specifically in the edit history. Always pass this when you know it.',
+          type: 'string',
+          minLength: 1,
+          pattern: '^[^\\x00-\\x1f\\x7f]+$',
+        },
+      },
+      required: ['title'],
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+    })
+  })
+
   it('creates a task with the given fields', async () => {
     const result = await callMcpTool(client, 'task_create', {
       title: 'Write MCP tools',
