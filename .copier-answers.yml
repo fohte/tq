@@ -15,6 +15,7 @@ subpackages:
 -   name: api
     type: node
     web_app: true
+    db: true
 -   name: cli
     type: node
 -   name: extension
