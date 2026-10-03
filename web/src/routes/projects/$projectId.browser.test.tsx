@@ -19,13 +19,13 @@ import { page } from 'vitest/browser'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import {
   assertDefined,
   atIndex,
   clickSelectOption,
   findVisible,
+  mutateInvokingOnSuccess,
   partialMutation,
 } from '#lib/test-utils'
 // Import after mocks
@@ -571,15 +571,8 @@ describe('ProjectDetailPage task list', () => {
     await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
     vi.useRealTimers()
     const task = makeTask({ id: 'created-task' })
-    const mutate = vi.fn(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double invokes the success callback synchronously
-      ((
-        _input: CreateTaskInput,
-        options?: { onSuccess?: (createdTask: Task) => void },
-      ) => {
-        options?.onSuccess?.(task)
-      }) as ReturnType<typeof useCreateTask>['mutate'],
-    )
+    const mutate =
+      mutateInvokingOnSuccess<ReturnType<typeof useCreateTask>['mutate']>(task)
     mockUseCreateTask.mockReturnValue(
       partialMutation<ReturnType<typeof useCreateTask>>({
         mutate,
