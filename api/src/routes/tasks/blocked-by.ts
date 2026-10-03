@@ -1,8 +1,49 @@
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
+import {
+  type PreparedGithubBlockers,
+  prepareGithubBlockers,
+} from '#services/task-github-blockers'
+
+type TaskBlockerResolution = {
+  targetIds: string[]
+  githubBlockers: PreparedGithubBlockers
+}
+
+type TaskBlockerResolutionError =
+  | { error: { body: { error: string }; status: 400 | 404 } }
+  | { githubError: Error }
+
+type TaskReferenceResolution =
+  | { targetIds: string[] }
+  | { error: { body: { error: string }; status: 400 | 404 } }
+
+type TaskReferenceResolver = (
+  references: string[],
+) => Promise<TaskReferenceResolution>
+
+function splitBlockedByInputs(blockedBy: (string | number)[]): {
+  taskReferences: string[]
+  githubUrls: string[]
+} {
+  const taskReferences: string[] = []
+  const githubUrls: string[] = []
+
+  for (const value of blockedBy) {
+    const raw = String(value)
+    if (taskIdOrNumber.safeParse(value).success) {
+      taskReferences.push(raw)
+    } else {
+      githubUrls.push(raw)
+    }
+  }
+
+  return { taskReferences, githubUrls }
+}
 
 // Existence is a cheap, non-racy check -- the cycle check needs the
 // transactional lock in `syncTaskBlockedBy` instead.
-export async function resolveBlockedByExistence(
+async function resolveBlockedByExistence(
   blockedBy: string[],
 ): Promise<
   { targetIds: string[] } | { error: { body: { error: string }; status: 404 } }
@@ -25,7 +66,7 @@ export async function resolveBlockedByExistence(
 // Self-reference is checked first, against the raw input, so it never costs a
 // DB round trip and always wins over an existence error when a request
 // combines its own id/number with an unrelated missing blocker.
-export async function resolveBlockedByTargets(
+async function resolveBlockedByTargets(
   task: { id: string; number: number },
   blockedBy: string[],
 ): Promise<
@@ -42,4 +83,37 @@ export async function resolveBlockedByTargets(
   }
 
   return resolveBlockedByExistence(blockedBy)
+}
+
+async function resolveBlockedByInputs(
+  blockedBy: (string | number)[],
+  taskId: string | undefined,
+  resolveTaskReferences: TaskReferenceResolver,
+): Promise<TaskBlockerResolution | TaskBlockerResolutionError> {
+  const { taskReferences, githubUrls } = splitBlockedByInputs(blockedBy)
+  const taskResult = await resolveTaskReferences(taskReferences)
+  if ('error' in taskResult) return taskResult
+
+  const githubResult = await prepareGithubBlockers(taskId, githubUrls)
+  if (githubResult.isErr()) return { githubError: githubResult.error }
+
+  return {
+    targetIds: taskResult.targetIds,
+    githubBlockers: githubResult.value,
+  }
+}
+
+export function resolveCreateBlockedByInputs(
+  blockedBy: (string | number)[],
+): Promise<TaskBlockerResolution | TaskBlockerResolutionError> {
+  return resolveBlockedByInputs(blockedBy, undefined, resolveBlockedByExistence)
+}
+
+export function resolveUpdateBlockedByInputs(
+  task: { id: string; number: number },
+  blockedBy: (string | number)[],
+): Promise<TaskBlockerResolution | TaskBlockerResolutionError> {
+  return resolveBlockedByInputs(blockedBy, task.id, (references) =>
+    resolveBlockedByTargets(task, references),
+  )
 }

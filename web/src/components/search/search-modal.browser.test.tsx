@@ -46,6 +46,12 @@ interface MockTask {
   recurrenceRule: null
   githubLinks: []
   blockedByNumbers: number[]
+  blockedByGithubRefs: {
+    owner: string
+    repo: string
+    number: number
+    url: string
+  }[]
   createdAt: string
   updatedAt: string
   childCompletionCount: { completed: number; total: number }
@@ -70,6 +76,7 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
     recurrenceRule: null,
     githubLinks: [],
     blockedByNumbers: [],
+    blockedByGithubRefs: [],
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },

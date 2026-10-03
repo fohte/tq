@@ -6,9 +6,14 @@ import { db } from '#db/connection'
 import {
   recurrenceRules,
   recurringTaskTemplates,
+  taskGithubLinks,
   taskRelations,
   tasks,
 } from '#db/schema'
+import {
+  mockGithubIssueResponse,
+  upsertGithubToken,
+} from '#integrations/github/testing'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   createComment,
@@ -177,6 +182,65 @@ describe('tasks CRUD API', () => {
       expect(body.status).toBe('todo')
       expect(body.context).toBe('personal')
       expect(body.id).toBeDefined()
+    })
+
+    it('creates task and GitHub blockers from mixed ids and URLs', async () => {
+      const blocker = await createTask('Internal blocker')
+      const url = 'https://github.com/example-owner/example-repo/issues/17'
+      await upsertGithubToken('valid-token')
+      mockGithubIssueResponse({
+        title: 'External blocker',
+        html_url: url,
+      })
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Blocked task',
+          blockedBy: [String(blocker.number), url],
+        }),
+      })
+      const body = await jsonBody<TaskResponse>(res)
+      const relations = await db
+        .select({ targetTaskId: taskRelations.targetTaskId })
+        .from(taskRelations)
+        .where(eq(taskRelations.sourceTaskId, body.id))
+      const githubBlockers = await db
+        .select({
+          owner: taskGithubLinks.owner,
+          repo: taskGithubLinks.repo,
+          number: taskGithubLinks.number,
+          role: taskGithubLinks.role,
+          notifyEvents: taskGithubLinks.notifyEvents,
+          state: taskGithubLinks.state,
+          title: taskGithubLinks.title,
+        })
+        .from(taskGithubLinks)
+        .where(eq(taskGithubLinks.taskId, body.id))
+
+      const getActual = () => ({
+        status: res.status,
+        targetTaskIds: relations.map(({ targetTaskId }) => targetTaskId),
+        githubBlockers,
+        responseGithubLinks: body.githubLinks,
+      })
+      expect(getActual()).toEqual({
+        status: 201,
+        targetTaskIds: [blocker.id],
+        githubBlockers: [
+          {
+            owner: 'example-owner',
+            repo: 'example-repo',
+            number: 17,
+            role: 'blocker',
+            notifyEvents: ['closed'],
+            state: 'open',
+            title: 'External blocker',
+          },
+        ],
+        responseGithubLinks: [],
+      })
     })
 
     it('creates a task with all optional fields', async () => {
@@ -505,6 +569,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
+          blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
@@ -512,6 +577,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
+          blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
       ])
@@ -592,6 +658,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
+          blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
@@ -599,6 +666,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
+          blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
         {
@@ -606,6 +674,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
+          blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
         },
       ])
@@ -1421,6 +1490,7 @@ describe('tasks CRUD API', () => {
         parentNumber: null,
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        githubBlockers: [],
         blockedBy: [],
         blocking: [],
       })
@@ -1450,6 +1520,7 @@ describe('tasks CRUD API', () => {
         parentNumber: null,
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        githubBlockers: [],
         blockedBy: [],
         blocking: [],
       })
@@ -1790,6 +1861,111 @@ describe('tasks CRUD API', () => {
     }
 
     describe('PATCH /api/tasks/:id', () => {
+      it('keeps retained GitHub blocker rows and removes omitted ones', async () => {
+        const task = await createTask('Blocked task')
+        const retainedUrl =
+          'https://github.com/example-owner/example-repo/issues/17'
+        const removedUrl =
+          'https://github.com/example-owner/example-repo/issues/18'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ html_url: retainedUrl })
+        mockGithubIssueResponse({
+          html_url: removedUrl,
+          title: 'Removed blocker',
+        })
+        const initialRes = await setBlockedBy(task.id, [
+          retainedUrl,
+          removedUrl,
+        ])
+        const initialLinks = await db
+          .select()
+          .from(taskGithubLinks)
+          .where(eq(taskGithubLinks.taskId, task.id))
+        const retainedLink = initialLinks.find((link) => link.number === 17)
+        assertDefined(retainedLink)
+        await db
+          .update(taskGithubLinks)
+          .set({ notifyEvents: ['closed', 'comments'] })
+          .where(eq(taskGithubLinks.id, retainedLink.id))
+
+        const replaceRes = await setBlockedBy(task.id, [retainedUrl])
+        const retainedRows = await db
+          .select({
+            id: taskGithubLinks.id,
+            owner: taskGithubLinks.owner,
+            repo: taskGithubLinks.repo,
+            number: taskGithubLinks.number,
+            role: taskGithubLinks.role,
+            notifyEvents: taskGithubLinks.notifyEvents,
+          })
+          .from(taskGithubLinks)
+          .where(eq(taskGithubLinks.taskId, task.id))
+        const clearRes = await setBlockedBy(task.id, [])
+        const clearedRows = await db
+          .select({ id: taskGithubLinks.id })
+          .from(taskGithubLinks)
+          .where(eq(taskGithubLinks.taskId, task.id))
+
+        const getActual = () => ({
+          initialStatus: initialRes.status,
+          replaceStatus: replaceRes.status,
+          clearStatus: clearRes.status,
+          retainedRows: retainedRows.map((row) => ({
+            ...row,
+            id: row.id === retainedLink.id ? 'retained' : 'unexpected',
+          })),
+          clearedRows,
+        })
+        expect(getActual()).toEqual({
+          initialStatus: 200,
+          replaceStatus: 200,
+          clearStatus: 200,
+          retainedRows: [
+            {
+              id: 'retained',
+              owner: 'example-owner',
+              repo: 'example-repo',
+              number: 17,
+              role: 'blocker',
+              notifyEvents: ['closed', 'comments'],
+            },
+          ],
+          clearedRows: [],
+        })
+      })
+
+      it('rejects using a same-task subject link as a blocker', async () => {
+        const task = await createTask('Task with a subject link')
+        const url = 'https://github.com/example-owner/example-repo/issues/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ html_url: url })
+        const subjectRes = await app.request(
+          `/api/tasks/${task.id}/github-link`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          },
+        )
+
+        const res = await setBlockedBy(task.id, [url])
+        const body = await jsonBody<{ error: string }>(res)
+
+        const getActual = () => ({
+          subjectStatus: subjectRes.status,
+          status: res.status,
+          body,
+        })
+        expect(getActual()).toEqual({
+          subjectStatus: 201,
+          status: 409,
+          body: {
+            error:
+              'This GitHub issue or pull request is already linked to this task as a subject',
+          },
+        })
+      })
+
       it('persists a task_relations row for a single blocker', async () => {
         const blocker = await createTask('Blocker')
         const task = await createTask('Blocked')
@@ -2110,6 +2286,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
+          githubBlockers: [],
           blockedBy: [blockerA, blockerB].map((t) => toLinkedTaskDetail(t)),
           blocking: [],
         })
@@ -2144,6 +2321,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
+          githubBlockers: [],
           blockedBy: [],
           blocking: [blockedXAfterPatch, blockedYAfterPatch].map((t) =>
             toLinkedTaskDetail(t, [blocker.number]),
@@ -2169,6 +2347,151 @@ describe('tasks CRUD API', () => {
           blockerA.number,
           blockerB.number,
         ])
+      })
+
+      it('returns open GitHub blockers in list filters and all blockers in detail', async () => {
+        const task = await createTask('Waiting on GitHub')
+        const unblockedTask = await createTask('No blockers')
+        const url = 'https://github.com/example-owner/example-repo/issues/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ title: 'External blocker', html_url: url })
+        const patchRes = await setBlockedBy(task.id, [url])
+        const listRes = await app.request('/api/tasks')
+        const list = await jsonBody<TaskListItemResponse[]>(listRes)
+        const listItem = list.find((item) => item.id === task.id)
+        assertDefined(listItem)
+        const hasBlockersRes = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:blockers'),
+        )
+        const hasNoBlockersRes = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:no-blockers'),
+        )
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detail = await jsonBody<TaskResponse>(detailRes)
+        const hasBlockerTasks =
+          await jsonBody<TaskListItemResponse[]>(hasBlockersRes)
+        const hasNoBlockerTasks =
+          await jsonBody<TaskListItemResponse[]>(hasNoBlockersRes)
+
+        const getActual = () => ({
+          patchStatus: patchRes.status,
+          detailGithubLinks: detail.githubLinks,
+          detailGithubBlockers: (detail.githubBlockers ?? []).map((link) => ({
+            id: 'LINK',
+            owner: link.owner,
+            repo: link.repo,
+            number: link.number,
+            kind: link.kind,
+            role: link.role,
+            notifyEvents: link.notifyEvents,
+            url: link.url,
+            state: link.state,
+            title: link.title,
+            lastSyncedAt: 'TIMESTAMP',
+          })),
+          listNumbers: listItem.blockedByNumbers,
+          listGithubRefs: listItem.blockedByGithubRefs,
+          hasBlockerIds: hasBlockerTasks.map(({ id }) => id),
+          hasNoBlockerIds: hasNoBlockerTasks.map(({ id }) => id),
+          unblockedTaskId: unblockedTask.id,
+        })
+        expect(getActual()).toEqual({
+          patchStatus: 200,
+          detailGithubLinks: [],
+          detailGithubBlockers: [
+            {
+              id: 'LINK',
+              owner: 'example-owner',
+              repo: 'example-repo',
+              number: 17,
+              kind: 'issue',
+              role: 'blocker',
+              notifyEvents: ['closed'],
+              url,
+              state: 'open',
+              title: 'External blocker',
+              lastSyncedAt: 'TIMESTAMP',
+            },
+          ],
+          listNumbers: [],
+          listGithubRefs: [
+            {
+              owner: 'example-owner',
+              repo: 'example-repo',
+              number: 17,
+              url,
+            },
+          ],
+          hasBlockerIds: [task.id],
+          hasNoBlockerIds: [unblockedTask.id],
+          unblockedTaskId: unblockedTask.id,
+        })
+      })
+
+      it('keeps a closed GitHub blocker in detail after it resolves', async () => {
+        const task = await createTask('Blocked by a closed issue')
+        const url = 'https://github.com/example-owner/example-repo/issues/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({
+          title: 'Closed blocker',
+          html_url: url,
+          state: 'closed',
+          state_reason: 'not_planned',
+        })
+        const patchRes = await setBlockedBy(task.id, [url])
+        const detailRes = await app.request(`/api/tasks/${task.id}`)
+        const detail = await jsonBody<TaskResponse>(detailRes)
+        const listRes = await app.request('/api/tasks')
+        const list = await jsonBody<TaskListItemResponse[]>(listRes)
+        const item = list.find(({ id }) => id === task.id)
+        assertDefined(item)
+        const hasBlockersRes = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:blockers'),
+        )
+        const hasNoBlockersRes = await app.request(
+          '/api/tasks?q=' + encodeURIComponent('has:no-blockers'),
+        )
+        const hasBlockerTasks =
+          await jsonBody<TaskListItemResponse[]>(hasBlockersRes)
+        const hasNoBlockerTasks =
+          await jsonBody<TaskListItemResponse[]>(hasNoBlockersRes)
+
+        const getActual = () => ({
+          patchStatus: patchRes.status,
+          detailGithubLinks: detail.githubLinks,
+          detailBlockers: (detail.githubBlockers ?? []).map((link) => ({
+            owner: link.owner,
+            repo: link.repo,
+            number: link.number,
+            role: link.role,
+            notifyEvents: link.notifyEvents,
+            state: link.state,
+            title: link.title,
+            url: link.url,
+          })),
+          listGithubRefs: item.blockedByGithubRefs,
+          hasBlockerTitles: hasBlockerTasks.map(({ title }) => title),
+          hasNoBlockerTitles: hasNoBlockerTasks.map(({ title }) => title),
+        })
+        expect(getActual()).toEqual({
+          patchStatus: 200,
+          detailGithubLinks: [],
+          detailBlockers: [
+            {
+              owner: 'example-owner',
+              repo: 'example-repo',
+              number: 17,
+              role: 'blocker',
+              notifyEvents: ['closed'],
+              state: 'closed',
+              title: 'Closed blocker',
+              url,
+            },
+          ],
+          listGithubRefs: [],
+          hasBlockerTitles: [],
+          hasNoBlockerTitles: ['Blocked by a closed issue'],
+        })
       })
     })
   })
@@ -2232,6 +2555,7 @@ describe('tasks CRUD API', () => {
         links: { outgoing: [], incoming: [] },
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        githubBlockers: [],
         blockedBy: [],
         blocking: [],
       })
@@ -2262,6 +2586,7 @@ describe('tasks CRUD API', () => {
         links: { outgoing: [], incoming: [] },
         duplicateOfNumber: null,
         duplicateOfTask: null,
+        githubBlockers: [],
         blockedBy: [],
         blocking: [],
       })
@@ -2620,6 +2945,7 @@ describe('tasks CRUD API', () => {
           parentNumber: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
+          githubBlockers: [],
           blockedBy: [],
           blocking: [],
         })

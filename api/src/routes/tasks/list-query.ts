@@ -19,6 +19,7 @@ import {
   labels,
   projects,
   taskComments,
+  taskGithubLinks,
   taskLabels,
   taskPages,
   taskRelations,
@@ -55,7 +56,7 @@ function freeTextWords(freeText: string | undefined) {
 
 // Extracted so `exists`/`notExists` can both wrap the same predicate for
 // hasBlockers/hasNoBlockers without duplicating the join and where clause.
-function unresolvedBlockerSubquery() {
+function unresolvedTaskBlockerSubquery() {
   return db
     .select({ _: sql`1` })
     .from(taskRelations)
@@ -65,6 +66,19 @@ function unresolvedBlockerSubquery() {
         eq(taskRelations.sourceTaskId, tasks.id),
         eq(taskRelations.type, 'blocked_by'),
         ne(blockerTasks.status, 'completed'),
+      ),
+    )
+}
+
+function unresolvedGithubBlockerSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskGithubLinks)
+    .where(
+      and(
+        eq(taskGithubLinks.taskId, tasks.id),
+        eq(taskGithubLinks.role, 'blocker'),
+        eq(taskGithubLinks.state, 'open'),
       ),
     )
 }
@@ -197,11 +211,21 @@ function buildConditions(
   }
 
   if (parsed?.hasBlockers === true) {
-    conditions.push(exists(unresolvedBlockerSubquery()))
+    conditions.push(
+      or(
+        exists(unresolvedTaskBlockerSubquery()),
+        exists(unresolvedGithubBlockerSubquery()),
+      ),
+    )
   }
 
   if (parsed?.hasNoBlockers === true) {
-    conditions.push(notExists(unresolvedBlockerSubquery()))
+    conditions.push(
+      and(
+        notExists(unresolvedTaskBlockerSubquery()),
+        notExists(unresolvedGithubBlockerSubquery()),
+      ),
+    )
   }
 
   // Unlike the other filters above, an explicit `projectId` param wins over

@@ -1,9 +1,14 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels } from '#db/schema'
+import { labels, taskGithubLinks } from '#db/schema'
+import {
+  mockGithubIssueResponse,
+  upsertGithubToken,
+} from '#integrations/github/testing'
 import {
   callMcpTool,
   connectMcpClient,
@@ -12,7 +17,7 @@ import {
   parseToolJson,
 } from '#routes/mcp/testing'
 import { createLabel, createTask, TEST_UUID } from '#routes/tasks/testing'
-import { jsonBody, setupTestDb } from '#testing'
+import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -84,6 +89,46 @@ describe('task_create tool', () => {
     })
   })
 
+  it('creates a GitHub blocker from a URL', async () => {
+    const url = 'https://github.com/example-owner/example-repo/issues/17'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: url, title: 'External blocker' })
+
+    const result = await callMcpTool(client, 'task_create', {
+      title: 'Blocked by a GitHub issue',
+      blockedBy: [url],
+    })
+    const taskId = passthroughSchema<{ id: string }>().parse(
+      parseToolJson(result),
+    ).id
+    const blockers = await db
+      .select({
+        owner: taskGithubLinks.owner,
+        repo: taskGithubLinks.repo,
+        number: taskGithubLinks.number,
+        role: taskGithubLinks.role,
+        notifyEvents: taskGithubLinks.notifyEvents,
+        title: taskGithubLinks.title,
+      })
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.taskId, taskId))
+
+    const getActual = () => ({ isError: Boolean(result.isError), blockers })
+    expect(getActual()).toEqual({
+      isError: false,
+      blockers: [
+        {
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 17,
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          title: 'External blocker',
+        },
+      ],
+    })
+  })
+
   it('creates any label names that do not exist yet and attaches all of them', async () => {
     await db.insert(labels).values({ name: 'urgent' })
 
@@ -133,6 +178,44 @@ describe('task_create tool', () => {
 })
 
 describe('task_update tool', () => {
+  it('accepts GitHub URLs in blockedBy', async () => {
+    const task = await createTask('Blocked by a GitHub issue')
+    const url = 'https://github.com/example-owner/example-repo/issues/17'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: url, title: 'External blocker' })
+
+    const result = await callMcpTool(client, 'task_update', {
+      taskId: task.id,
+      blockedBy: [url],
+    })
+    const blockers = await db
+      .select({
+        owner: taskGithubLinks.owner,
+        repo: taskGithubLinks.repo,
+        number: taskGithubLinks.number,
+        role: taskGithubLinks.role,
+        notifyEvents: taskGithubLinks.notifyEvents,
+        title: taskGithubLinks.title,
+      })
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.taskId, task.id))
+
+    const getActual = () => ({ isError: Boolean(result.isError), blockers })
+    expect(getActual()).toEqual({
+      isError: false,
+      blockers: [
+        {
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 17,
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          title: 'External blocker',
+        },
+      ],
+    })
+  })
+
   it('partially updates the given fields', async () => {
     const task = await createTask('Original title', {
       description: 'Original description',
@@ -418,8 +501,10 @@ describe('task_complete tool', () => {
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
+        blockedByGithubRefs: [],
         childCompletionCount: { completed: 0, total: 0 },
       },
+      githubBlockers: [],
       blockedBy: [],
       blocking: [],
     })
