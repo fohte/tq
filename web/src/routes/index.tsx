@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
-import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import {
   type DayViewMode,
   DayViewPresentation,
@@ -14,6 +13,7 @@ import { buildQueueSections } from '#components/day-view/queue-sections'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
   GcalAuthRequiredError,
@@ -39,13 +39,10 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
-import { classifyGcalEvent } from '#lib/calendar-utils'
-import { matchesContextFilter } from '#lib/context-filter'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
-import { scheduleColorToEventColor } from '#lib/schedule-color'
 
 const dayViewSearchDefaults = { view: 'queue', q: '' } as const
 const COMPACT_REFRESH_INTERVAL_MS = 60_000
@@ -246,70 +243,13 @@ function DayView() {
     [allQueueCandidates, filterTaskIds],
   )
 
-  const taskEvents: TimeBlockEvent[] = useMemo(() => {
-    if (!timeBlocksData) return []
-    return timeBlocksData.map((block) => {
-      const task = taskMap.get(block.taskId)
-      const parentTask =
-        task?.parentId != null ? taskMap.get(task.parentId) : undefined
-
-      return {
-        id: block.id,
-        title: task?.title ?? 'Unknown task',
-        start: block.startTime,
-        end: block.endTime,
-        type:
-          task?.status === 'completed'
-            ? 'completed'
-            : block.isAutoScheduled
-              ? 'auto'
-              : 'manual',
-        taskId: block.taskId,
-        isAutoScheduled: block.isAutoScheduled,
-        ...(parentTask != null
-          ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
-          : {}),
-        redacted: !matchesContextFilter(task?.context ?? 'personal', context),
-      }
-    })
-  }, [timeBlocksData, taskMap, context])
-
-  const scheduleEvents: TimeBlockEvent[] = useMemo(() => {
-    if (!schedulesData) return []
-    return schedulesData.map((schedule) => {
-      return {
-        id: `schedule-${schedule.scheduleId}-${schedule.start}`,
-        title: schedule.title,
-        start: schedule.start,
-        end: schedule.end,
-        type: 'schedule' as const,
-        color: scheduleColorToEventColor(schedule.color),
-        scheduleId: schedule.scheduleId,
-        redacted: !matchesContextFilter(schedule.context, context),
-      }
-    })
-  }, [schedulesData, context])
-
-  const gcalEvents: TimeBlockEvent[] = useMemo(() => {
-    if (!gcalEventsQuery.data) return []
-    return gcalEventsQuery.data.map((event) => ({
-      id: `gcal-${event.id}`,
-      title: event.summary,
-      start: event.startTime,
-      end: event.endTime,
-      type: classifyGcalEvent(event),
-      gcalEventType: event.eventType,
-      allDay: event.isAllDay,
-      calendarColor: event.calendarColor,
-      responseStatus: event.responseStatus,
-      redacted: event.redacted,
-    }))
-  }, [gcalEventsQuery.data])
-
-  const calendarEvents: TimeBlockEvent[] = useMemo(
-    () => [...taskEvents, ...scheduleEvents, ...gcalEvents],
-    [taskEvents, scheduleEvents, gcalEvents],
-  )
+  const calendarEvents = useDayViewCalendarEvents({
+    timeBlocksData,
+    schedulesData,
+    gcalEventsData: gcalEventsQuery.data,
+    taskMap,
+    context,
+  })
 
   const dndCallbacks: CalendarDndCallbacks = useMemo(
     () => ({
