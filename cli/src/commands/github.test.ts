@@ -6,6 +6,7 @@ import {
   captureFetch,
   fakeStdin,
   request,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -26,25 +27,10 @@ async function runGithubCli(args: string[], response: Response) {
 }
 
 async function runGithubCliWithStderr(args: string[]) {
-  const { fetchStub, calls } = captureFetch(
-    () => new Response('{}', { status: 200 }),
-  )
-  const write = spyStdout()
-  const stderr = vi
-    .spyOn(process.stderr, 'write')
-    .mockImplementation(() => true)
-  const exitCode = await runCli(
-    ['--api-url', apiUrl, ...args],
-    fetchStub,
-    fakeStdin(true),
-  )
+  const stderr = spyStderr()
+  const result = await runGithubCli(args, new Response('{}', { status: 200 }))
 
-  return {
-    exitCode,
-    requests: calls.map(request),
-    stdout: write.mock.calls,
-    stderr: stderr.mock.calls,
-  }
+  return { ...result, stderr: stderr.mock.calls }
 }
 
 afterEach(() => {
