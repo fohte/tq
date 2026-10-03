@@ -7,17 +7,6 @@ function getTaskDescription(markdown: string, templateBody: string): string {
 export function useTaskDescriptionDraft(templateBody: string) {
   const fallbackMarkdownRef = useRef(templateBody)
   const focusedMarkdownReaderRef = useRef<(() => string) | null>(null)
-  const templateBodyRef = useRef(templateBody)
-
-  if (templateBodyRef.current !== templateBody) {
-    if (
-      focusedMarkdownReaderRef.current === null &&
-      fallbackMarkdownRef.current.trim() === templateBodyRef.current.trim()
-    ) {
-      fallbackMarkdownRef.current = templateBody
-    }
-    templateBodyRef.current = templateBody
-  }
 
   const onChange = useCallback((markdown: string) => {
     fallbackMarkdownRef.current = markdown

@@ -117,6 +117,14 @@ function mockCreateTaskPendingSuccess() {
 
 const titleInputPlaceholder = /task title|タスクのタイトル/i
 
+const makeQuickNoteTemplate = () =>
+  makeDescriptionTemplate({
+    id: 'description-template-2',
+    name: 'Quick note',
+    body: '## Summary',
+    isDefault: false,
+  })
+
 function titleInputValue() {
   const input = atIndex(
     screen.getAllByPlaceholderText(titleInputPlaceholder),
@@ -132,6 +140,15 @@ function setDescriptionTemplates(
     partialMutation<ReturnType<typeof useDescriptionTemplates>>({
       data: templates,
       isSuccess: true,
+    }),
+  )
+}
+
+function setDescriptionTemplatesError() {
+  mockUseDescriptionTemplates.mockReturnValue(
+    partialMutation<ReturnType<typeof useDescriptionTemplates>>({
+      isError: true,
+      isSuccess: false,
     }),
   )
 }
@@ -190,6 +207,21 @@ function descriptionTemplateTabFocusState() {
 async function enterDescription(user: UserEvent, text: string) {
   await focusDescriptionEditor(user, document.body, { timeout: 10_000 })
   await user.keyboard(text)
+}
+
+async function openTemplateReplaceConfirmation(user: UserEvent) {
+  setDescriptionTemplates([
+    makeDescriptionTemplate({ body: '' }),
+    makeQuickNoteTemplate(),
+  ])
+  renderControlledModal(CreateTaskModal, {})
+  await enterDescription(user, 'Handwritten draft')
+  await user.click(
+    assertDefined(
+      findVisible(screen.getAllByRole('button', { name: 'Quick note' })),
+    ),
+  )
+  return screen.findByRole('dialog', { name: 'Replace description?' })
 }
 
 function isDiscardConfirmationOpen() {
@@ -294,13 +326,10 @@ describe('CreateTaskModal', () => {
 
   it('replaces an untouched template body immediately after another template is selected', async () => {
     const user = userEvent.setup()
-    const nextTemplate = makeDescriptionTemplate({
-      id: 'description-template-2',
-      name: 'Quick note',
-      body: '## Summary',
-      isDefault: false,
-    })
-    setDescriptionTemplates([makeDescriptionTemplate(), nextTemplate])
+    setDescriptionTemplates([
+      makeDescriptionTemplate(),
+      makeQuickNoteTemplate(),
+    ])
     renderControlledModal(CreateTaskModal, {})
 
     const button = findVisible(
@@ -319,27 +348,7 @@ describe('CreateTaskModal', () => {
 
   it('keeps an edited description when the template change is canceled', async () => {
     const user = userEvent.setup()
-    const nextTemplate = makeDescriptionTemplate({
-      id: 'description-template-2',
-      name: 'Quick note',
-      body: '## Summary',
-      isDefault: false,
-    })
-    setDescriptionTemplates([
-      makeDescriptionTemplate({ body: '' }),
-      nextTemplate,
-    ])
-    renderControlledModal(CreateTaskModal, {})
-    await enterDescription(user, 'Handwritten draft')
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Quick note' })),
-      ),
-    )
-
-    const confirmation = await screen.findByRole('dialog', {
-      name: 'Replace description?',
-    })
+    const confirmation = await openTemplateReplaceConfirmation(user)
     await user.click(
       within(confirmation).getByRole('button', { name: 'Cancel' }),
     )
@@ -355,22 +364,26 @@ describe('CreateTaskModal', () => {
 
   it('replaces an edited description after the template change is confirmed', async () => {
     const user = userEvent.setup()
-    const nextTemplate = makeDescriptionTemplate({
-      id: 'description-template-2',
-      name: 'Quick note',
-      body: '## Summary',
-      isDefault: false,
+    const confirmation = await openTemplateReplaceConfirmation(user)
+    await user.click(
+      within(confirmation).getByRole('button', { name: 'Replace' }),
+    )
+
+    await waitFor(() => {
+      expect(descriptionTemplateState()).toEqual({
+        selectedTemplate: 'Quick note',
+        description: 'Summary',
+      })
     })
-    setDescriptionTemplates([
-      makeDescriptionTemplate({ body: '' }),
-      nextTemplate,
-    ])
+  })
+
+  it('clears the description after confirming template removal from an edited draft', async () => {
+    const user = userEvent.setup()
+    setDescriptionTemplates([makeDescriptionTemplate()])
     renderControlledModal(CreateTaskModal, {})
     await enterDescription(user, 'Handwritten draft')
     await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Quick note' })),
-      ),
+      assertDefined(findVisible(screen.getAllByRole('button', { name: '—' }))),
     )
 
     const confirmation = await screen.findByRole('dialog', {
@@ -382,10 +395,38 @@ describe('CreateTaskModal', () => {
 
     await waitFor(() => {
       expect(descriptionTemplateState()).toEqual({
-        selectedTemplate: 'Quick note',
-        description: 'Summary',
+        selectedTemplate: '—',
+        description: '',
       })
     })
+  })
+
+  it('allows writing and submitting a description when templates cannot load', async () => {
+    const user = userEvent.setup()
+    const mutate = mockCreateTaskSuccess(makeTask())
+    setDescriptionTemplatesError()
+    renderControlledModal(CreateTaskModal, { defaultContext: 'personal' })
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toBe(
+        'Could not load description templates. You can still write a description.',
+      )
+    })
+
+    const titleInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+    )
+    await user.type(titleInput, 'Task without templates')
+    await enterDescription(user, 'Handwritten description')
+    await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+    expect(mutate.mock.calls.map(([input]) => input)).toEqual([
+      {
+        title: 'Task without templates',
+        description: 'Handwritten description',
+        context: 'personal',
+      },
+    ])
   })
 
   it('skips template buttons when tabbing from the title to the description', async () => {

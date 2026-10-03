@@ -4,10 +4,12 @@ import type { DescriptionTemplate } from '#hooks/use-description-templates'
 export function CreateTaskModalDescriptionTemplateSelector({
   templates,
   selectedTemplateName,
+  loadError,
   onChange,
 }: {
   templates: DescriptionTemplate[]
   selectedTemplateName: string | null
+  loadError: boolean
   onChange: (templateName: string | null) => void
 }) {
   return (
@@ -33,6 +35,12 @@ export function CreateTaskModalDescriptionTemplateSelector({
         tabIndex={-1}
         className="max-w-full overflow-x-auto"
       />
+      {loadError && (
+        <p role="alert" className="text-xs text-destructive">
+          Could not load description templates. You can still write a
+          description.
+        </p>
+      )}
     </div>
   )
 }

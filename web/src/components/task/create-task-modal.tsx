@@ -392,6 +392,7 @@ export function CreateTaskModal({
     <CreateTaskModalDescriptionTemplateSelector
       templates={descriptionTemplate.templates}
       selectedTemplateName={descriptionTemplate.selectedTemplateName}
+      loadError={descriptionTemplate.loadError}
       onChange={descriptionTemplate.selectTemplate}
     />
   )

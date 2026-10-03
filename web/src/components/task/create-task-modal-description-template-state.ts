@@ -29,14 +29,16 @@ export function useCreateTaskModalDescriptionTemplate(open: boolean) {
       return
 
     const defaultTemplate = templates.find((template) => template.isDefault)
-    const initialTemplateName =
-      description.getMarkdown().trim() === ''
-        ? (defaultTemplate?.name ?? null)
-        : null
-    setSelectedTemplateName(initialTemplateName)
-    if (initialTemplateName != null) setEditorKey((key) => key + 1)
+    const initialTemplate =
+      description.getMarkdown().trim() === '' ? defaultTemplate : undefined
+    setSelectedTemplateName(initialTemplate?.name ?? null)
+    if (initialTemplate) {
+      description.reset(initialTemplate.body)
+      setEditorKey((key) => key + 1)
+    }
   }, [
     description.getMarkdown,
+    description.reset,
     open,
     selectedTemplateName,
     templates,
@@ -95,6 +97,7 @@ export function useCreateTaskModalDescriptionTemplate(open: boolean) {
   return {
     ready: selectedTemplateName !== undefined || templatesQuery.isError,
     templates,
+    loadError: templatesQuery.isError,
     selectedTemplateName: selectedTemplate?.name ?? null,
     pendingTemplateName,
     templateBody,

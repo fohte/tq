@@ -19,6 +19,7 @@ const meta = {
       }),
     ],
     selectedTemplateName: 'General task',
+    loadError: false,
     onChange: fn(),
   },
 } satisfies Meta<typeof CreateTaskModalDescriptionTemplateSelector>
@@ -35,5 +36,14 @@ export const NoTemplates: Story = {
   args: {
     templates: [],
     selectedTemplateName: null,
+  },
+}
+
+export const TemplatesUnavailable: Story = {
+  name: 'explains that templates could not be loaded',
+  args: {
+    templates: [],
+    selectedTemplateName: null,
+    loadError: true,
   },
 }

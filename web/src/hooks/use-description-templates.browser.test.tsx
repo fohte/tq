@@ -95,6 +95,12 @@ describe('useDescriptionTemplates', () => {
     })
   })
 
+  it('does not request the list while disabled', () => {
+    renderHook(() => useDescriptionTemplates({ enabled: false }), { wrapper })
+
+    expect(mocks.getList.mock.calls).toEqual([])
+  })
+
   it('returns the template for a name', async () => {
     const template = makeDescriptionTemplate()
     mocks.getDetail.mockResolvedValue(jsonResponse(template))
