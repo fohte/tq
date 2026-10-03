@@ -15,9 +15,13 @@ Markdown scratchpads stored once per work or personal context.
 
 ## Constraints
 
-| Name       | Type        | Definition            |
-| ---------- | ----------- | --------------------- |
-| memos_pkey | PRIMARY KEY | PRIMARY KEY (context) |
+| Name                      | Type        | Definition            |
+| ------------------------- | ----------- | --------------------- |
+| memos_content_not_null    | n           | NOT NULL content      |
+| memos_context_not_null    | n           | NOT NULL context      |
+| memos_revision_not_null   | n           | NOT NULL revision     |
+| memos_updated_at_not_null | n           | NOT NULL updated_at   |
+| memos_pkey                | PRIMARY KEY | PRIMARY KEY (context) |
 
 ## Indexes
 
