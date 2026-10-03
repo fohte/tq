@@ -1,6 +1,7 @@
 import { assetOperations } from '#operations/asset'
 import { calendarOperations } from '#operations/calendar'
 import { commentOperations } from '#operations/comment'
+import { descriptionTemplateOperations } from '#operations/description-template'
 import { githubOperations } from '#operations/github'
 import { healthOperations } from '#operations/health'
 import { hookOperations } from '#operations/hook'
@@ -18,6 +19,7 @@ export {
   assetOperations,
   calendarOperations,
   commentOperations,
+  descriptionTemplateOperations,
   githubOperations,
   healthOperations,
   hookOperations,
@@ -35,6 +37,7 @@ export const operations = [
   ...assetOperations,
   ...calendarOperations,
   ...commentOperations,
+  ...descriptionTemplateOperations,
   ...githubOperations,
   ...healthOperations,
   ...hookOperations,

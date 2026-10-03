@@ -136,6 +136,14 @@ comments:
       query: 'Raw search DSL query used by the saved view.'
       position: 'Position used to order saved views.'
       context: 'Whether the saved view belongs to the work or personal context.'
+  - table: task_description_templates
+    tableComment: 'Reusable Markdown structures and writing guidance for task descriptions.'
+    columnComments:
+      name: 'Unique template name used by the web UI and task creation tools.'
+      when_to_use: 'Type of work for which the template should be selected.'
+      body: 'Markdown skeleton populated as a task description.'
+      guide: 'Writing instructions for completing each section of the body.'
+      is_default: 'Whether the template is selected by default; at most one template may be default.'
   - table: schedules
     tableComment: 'Recurring calendar schedules with a local time range and optional recurrence rule.'
     columnComments:
