@@ -3,6 +3,7 @@ import '#bootstrap'
 import { serve } from '@hono/node-server'
 
 import { app } from '#app'
+import { startGithubLinkWatchScheduler } from '#services/github-link-watch-scheduler'
 import { startRecurringTaskScheduler } from '#services/recurring-task-scheduler'
 import { startReminderScheduler } from '#services/task-reminders'
 
@@ -14,12 +15,14 @@ serve({ fetch: app.fetch, port }, (info) => {
 
 const reminderTimer = startReminderScheduler()
 const recurringTaskTimer = startRecurringTaskScheduler()
+const githubLinkWatchTimer = startGithubLinkWatchScheduler()
 
-// Otherwise the two intervals keep the process alive with no way to stop them.
+// Otherwise these intervals keep the process alive with no way to stop them.
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, () => {
     clearInterval(reminderTimer)
     clearInterval(recurringTaskTimer)
+    clearInterval(githubLinkWatchTimer)
     process.exit(0)
   })
 }

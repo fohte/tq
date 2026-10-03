@@ -95,11 +95,8 @@ export const githubApp = new Hono()
       (error) => githubLinkErrorResponse(c, error, 'github.link'),
     )
   })
-  // Triggered by the web client while it's open and focused (mount, window
-  // focus regain, and a periodic interval in between) — there is no
-  // server-side background schedule. Syncs every linked task in one pass,
-  // so `lastSyncedAt` also acts as a catch-up cursor for whatever changed on
-  // GitHub while the client was closed.
+  // The client keeps links fresh while the app is open; the hourly server
+  // scheduler handles links while no client is active.
   .post('/sync', async (c) => {
     await syncAllGithubLinks()
     return c.body(null, 204)
