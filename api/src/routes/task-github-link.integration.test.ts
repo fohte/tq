@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
@@ -411,7 +412,63 @@ describe('PATCH /api/tasks/:taskId/github-link/:linkId', () => {
       body: { error: 'GitHub link not found' },
     })
   })
+
+  it('does not update a link that belongs to another task', async () => {
+    const linkTask = await createTask('Linked task')
+    const requestTask = await createTask('Other task')
+    const link = firstOrThrow(
+      await db
+        .insert(taskGithubLinks)
+        .values({
+          taskId: linkTask.id,
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 7319,
+          role: 'subject',
+          notifyEvents: defaultGithubNotifyEvents('subject'),
+          kind: 'issue',
+          url: exampleGithubIssueUrl,
+          state: 'open',
+          title: 'An example issue',
+        })
+        .returning(),
+    )
+
+    const res = await app.request(
+      `/api/tasks/${requestTask.id}/github-link/${link.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyEvents: ['comments'] }),
+      },
+    )
+    const storedLink = firstOrThrow(
+      await db
+        .select()
+        .from(taskGithubLinks)
+        .where(eq(taskGithubLinks.id, link.id)),
+    )
+
+    expect(await readUpdateAttempt(res, storedLink)).toEqual({
+      status: 404,
+      body: { error: 'GitHub link not found' },
+      taskId: linkTask.id,
+      notifyEvents: defaultGithubNotifyEvents('subject'),
+    })
+  })
 })
+
+async function readUpdateAttempt(
+  response: Response,
+  link: { taskId: string; notifyEvents: string[] },
+) {
+  return {
+    status: response.status,
+    body: await response.json(),
+    taskId: link.taskId,
+    notifyEvents: link.notifyEvents,
+  }
+}
 
 describe('DELETE /api/tasks/:taskId/github-link/:linkId', () => {
   it('removes the link, leaving the task intact', async () => {

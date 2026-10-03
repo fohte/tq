@@ -387,12 +387,13 @@ export function unlinkTask(
 }
 
 export function updateGithubLinkNotifyEvents(
+  executor: Executor,
   taskId: string,
   linkId: string,
   notifyEvents: GithubNotifyEvent[],
 ): ResultAsync<LinkRow, GithubLinkNotFoundError> {
   return ResultAsync.fromSafePromise(
-    db
+    executor
       .update(taskGithubLinks)
       .set({ notifyEvents, updatedAt: new Date() })
       .where(

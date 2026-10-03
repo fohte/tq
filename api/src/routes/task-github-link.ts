@@ -4,9 +4,9 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { GITHUB_NOTIFY_EVENTS } from '#db/schema'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { isQuietProviderError } from '#integrations/quiet-errors'
+import { githubNotifyEventsSchema } from '#lib/github-notify-events'
 import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import {
@@ -24,10 +24,10 @@ import {
 
 const linkSchema = z.object({
   url: z.string().min(1),
-  notifyEvents: z.array(z.enum(GITHUB_NOTIFY_EVENTS)).optional(),
+  notifyEvents: githubNotifyEventsSchema.optional(),
 })
 const updateNotifyEventsSchema = z.object({
-  notifyEvents: z.array(z.enum(GITHUB_NOTIFY_EVENTS)),
+  notifyEvents: githubNotifyEventsSchema,
 })
 
 export const taskGithubLinkApp = new Hono<TaskEnv>()
@@ -68,6 +68,7 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
       const { notifyEvents } = c.req.valid('json')
 
       const result = await updateGithubLinkNotifyEvents(
+        db,
         taskId,
         linkId,
         notifyEvents,

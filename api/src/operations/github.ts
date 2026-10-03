@@ -1,6 +1,10 @@
 import { z } from 'zod'
 
 import { GITHUB_NOTIFY_EVENTS } from '#db/schema'
+import {
+  githubNotifyEventSchema,
+  githubNotifyEventsSchema,
+} from '#lib/github-notify-events'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { splitCommaList } from '#lib/split-comma-list'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
@@ -13,7 +17,7 @@ import {
 const githubLinkSchema = z.object({
   taskId: taskIdOrNumber,
   url: z.string().min(1),
-  notifyEvents: z.array(z.enum(GITHUB_NOTIFY_EVENTS)).optional(),
+  notifyEvents: githubNotifyEventsSchema.optional(),
 })
 const githubUnlinkSchema = z.object({
   taskId: taskIdOrNumber,
@@ -23,15 +27,13 @@ const githubSyncSchema = z.object({
   taskId: taskIdOrNumber.optional(),
 })
 const githubResolveSchema = z.object({ url: z.string().min(1) })
-const githubNotifyEventSchema = z.enum(GITHUB_NOTIFY_EVENTS)
 type GithubNotifyEvent = z.infer<typeof githubNotifyEventSchema>
-const githubNotifyEventsSchema = z
+const githubNotifyEventsInputSchema = z
   .string()
   .transform((raw, context): GithubNotifyEvent[] => {
     if (raw === 'off') return []
 
-    const parsed = z
-      .array(githubNotifyEventSchema)
+    const parsed = githubNotifyEventsSchema
       .min(1)
       .safeParse(splitCommaList(raw))
     if (parsed.success) return parsed.data
@@ -45,7 +47,7 @@ const githubNotifyEventsSchema = z
 const githubNotifySchema = z.object({
   taskId: taskIdOrNumber,
   linkId: pathSegmentSchema('GitHub link ID'),
-  events: githubNotifyEventsSchema,
+  events: githubNotifyEventsInputSchema,
 })
 
 export const githubOperations = [
