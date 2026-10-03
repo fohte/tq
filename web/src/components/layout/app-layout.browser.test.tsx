@@ -12,11 +12,26 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
-import type { Task } from '#hooks/use-tasks'
+import type { CreateTaskInput, Task } from '#hooks/use-tasks'
+import { useCreateTask } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
-import { assertDefined } from '#lib/test-utils'
-import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
+import { assertDefined, findVisible, partialMutation } from '#lib/test-utils'
+import {
+  DESKTOP_VIEWPORT,
+  MOBILE_VIEWPORT,
+} from '#storybook-config/screenshot-viewports'
 import { createStoryRouter } from '#storybook-config/story-router'
+
+const mockUseCreateTask = vi.fn()
+
+vi.mock('#hooks/use-tasks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useCreateTask: () => mockUseCreateTask(),
+  }
+})
 
 // AppLayout always mounts Sidebar/StatusLine/BottomTabBar/SearchModal/
 // CreateTaskModal, each of which fetches on mount; stub every such call so
@@ -101,11 +116,14 @@ async function renderWithRouter(
   const router = createStoryRouter({ component, ...routerOptions })
   await router.load()
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+    router,
+  }
 }
 
 // Composes the real DayViewPresentation (unlike day-view.stories.tsx, which
@@ -156,6 +174,12 @@ describe('AppLayout', () => {
 
   beforeEach(() => {
     queryClient = newQueryClient()
+    mockUseCreateTask.mockReturnValue(
+      partialMutation<ReturnType<typeof useCreateTask>>({
+        mutate: vi.fn(),
+        isPending: false,
+      }),
+    )
   })
 
   it('opens the find bar when the desktop menu event arrives', async () => {
@@ -318,6 +342,49 @@ describe('AppLayout', () => {
     )
 
     expect(titleInputState).toEqual(['タスクのタイトル', true])
+  })
+
+  it('navigates to the created task from the global task modal', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    const task = makeTask({ id: 'created-task' })
+    const mutate = vi.fn(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double invokes the success callback synchronously
+      ((
+        _input: CreateTaskInput,
+        options?: { onSuccess?: (createdTask: Task) => void },
+      ) => {
+        options?.onSuccess?.(task)
+      }) as ReturnType<typeof useCreateTask>['mutate'],
+    )
+    mockUseCreateTask.mockReturnValue(
+      partialMutation<ReturnType<typeof useCreateTask>>({
+        mutate,
+        isPending: false,
+      }),
+    )
+    const user = userEvent.setup()
+    const { router } = await renderWithRouter(
+      queryClient,
+      () => (
+        <AppLayout>
+          <div />
+        </AppLayout>
+      ),
+      { paths: ['/tasks', '/tasks/$taskId'], initialPath: '/tasks' },
+    )
+
+    await user.keyboard('n')
+    const titleInput = assertDefined(
+      findVisible(
+        screen.getAllByPlaceholderText(/task title|タスクのタイトル/i),
+      ),
+    )
+    await user.type(titleInput, 'Created from the global modal')
+    await user.click(screen.getByRole('button', { name: 'Create Task' }))
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toEqual('/tasks/created-task')
+    })
   })
 
   // Regression check: day view's calendar and queue pane must scroll

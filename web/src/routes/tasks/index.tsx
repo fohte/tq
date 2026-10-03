@@ -133,7 +133,13 @@ function TaskList() {
       />
 
       {/* Task create modal */}
-      <CreateTaskModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <CreateTaskModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onCreated={(task) => {
+          void navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
+        }}
+      />
     </div>
   )
 }

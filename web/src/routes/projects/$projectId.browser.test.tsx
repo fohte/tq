@@ -6,14 +6,31 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { makeProject } from '#components/project/project-test-fixtures'
-import { assertDefined, atIndex, clickSelectOption } from '#lib/test-utils'
+import { makeTask } from '#components/task/task-row-test-fixtures'
+import type { CreateTaskInput, Task } from '#hooks/use-tasks'
+import { useCreateTask } from '#hooks/use-tasks'
+import {
+  assertDefined,
+  atIndex,
+  clickSelectOption,
+  findVisible,
+  partialMutation,
+} from '#lib/test-utils'
 // Import after mocks
 import { Route as ProjectDetailRoute } from '#routes/projects/$projectId'
+import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 const mockProject = makeProject({
   id: 'p1',
@@ -51,6 +68,16 @@ const mockUseProjectTaskIds = vi.fn()
 const mockUseProjects = vi.fn()
 const mockUpdateMutate = vi.fn()
 const mockUseFilteredTaskTree = vi.fn()
+const mockUseCreateTask = vi.fn()
+
+vi.mock('#hooks/use-tasks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useCreateTask: () => mockUseCreateTask(),
+  }
+})
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-projects')>()
@@ -174,6 +201,12 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2024-11-15T09:00:00'))
+  mockUseCreateTask.mockReturnValue(
+    partialMutation<ReturnType<typeof useCreateTask>>({
+      mutate: vi.fn(),
+      isPending: false,
+    }),
+  )
   mockUseProject.mockReturnValue({
     data: mockProject,
     isLoading: false,
@@ -532,5 +565,43 @@ describe('ProjectDetailPage task list', () => {
     await user.click(atIndex(screen.getAllByLabelText('Add task'), 0))
 
     expect(screen.getAllByText('New Task').length).toBeGreaterThan(0)
+  })
+
+  it('navigates to the created task from the project task list', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    vi.useRealTimers()
+    const task = makeTask({ id: 'created-task' })
+    const mutate = vi.fn(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double invokes the success callback synchronously
+      ((
+        _input: CreateTaskInput,
+        options?: { onSuccess?: (createdTask: Task) => void },
+      ) => {
+        options?.onSuccess?.(task)
+      }) as ReturnType<typeof useCreateTask>['mutate'],
+    )
+    mockUseCreateTask.mockReturnValue(
+      partialMutation<ReturnType<typeof useCreateTask>>({
+        mutate,
+        isPending: false,
+      }),
+    )
+    const user = userEvent.setup()
+    const { router } = await renderProjectDetailPage()
+
+    await user.click(
+      assertDefined(findVisible(screen.getAllByLabelText('Add task'))),
+    )
+    const titleInput = assertDefined(
+      findVisible(
+        screen.getAllByPlaceholderText(/task title|タスクのタイトル/i),
+      ),
+    )
+    await user.type(titleInput, 'Created from project')
+    await user.click(screen.getByRole('button', { name: 'Create Task' }))
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toEqual('/tasks/created-task')
+    })
   })
 })

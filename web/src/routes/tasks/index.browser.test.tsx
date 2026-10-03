@@ -9,11 +9,27 @@ import {
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
+import { makeTask } from '#components/task/task-row-test-fixtures'
+import type { CreateTaskInput, Task } from '#hooks/use-tasks'
+import { useCreateTask } from '#hooks/use-tasks'
+import { assertDefined, findVisible, partialMutation } from '#lib/test-utils'
 // Import after mocks
 import { Route as TasksRoute } from '#routes/tasks/index'
+import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 const mockUseFilteredTaskTree = vi.fn()
+const mockUseCreateTask = vi.fn()
+
+vi.mock('#hooks/use-tasks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useCreateTask: () => mockUseCreateTask(),
+  }
+})
 
 vi.mock('#hooks/use-filtered-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
@@ -106,6 +122,12 @@ function renderTaskList(initialEntry = '/tasks') {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUseCreateTask.mockReturnValue(
+    partialMutation<ReturnType<typeof useCreateTask>>({
+      mutate: vi.fn(),
+      isPending: false,
+    }),
+  )
   mockUseFilteredTaskTree.mockReturnValue({
     isLoading: false,
     tree: [],
@@ -115,6 +137,43 @@ beforeEach(() => {
   mockUseProjects.mockReturnValue({ data: [] })
   mockUseLabels.mockReturnValue({ data: [] })
   mockUseSearchSuggestions.mockReturnValue({ data: [] })
+})
+
+describe('TaskList task creation', () => {
+  it('navigates to the created task from the new task modal', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    const user = userEvent.setup()
+    const task = makeTask({ id: 'created-task' })
+    const mutate = vi.fn(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double invokes the success callback synchronously
+      ((
+        _input: CreateTaskInput,
+        options?: { onSuccess?: (createdTask: Task) => void },
+      ) => {
+        options?.onSuccess?.(task)
+      }) as ReturnType<typeof useCreateTask>['mutate'],
+    )
+    mockUseCreateTask.mockReturnValue(
+      partialMutation<ReturnType<typeof useCreateTask>>({
+        mutate,
+        isPending: false,
+      }),
+    )
+    const { router } = renderTaskList()
+
+    await user.click(await screen.findByRole('button', { name: /\+ new/ }))
+    const titleInput = assertDefined(
+      findVisible(
+        screen.getAllByPlaceholderText(/task title|タスクのタイトル/i),
+      ),
+    )
+    await user.type(titleInput, 'Created from task list')
+    await user.click(screen.getByRole('button', { name: 'Create Task' }))
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toEqual('/tasks/created-task')
+    })
+  })
 })
 
 describe('TaskList sort selector', () => {

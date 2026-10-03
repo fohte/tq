@@ -1,4 +1,4 @@
-import { useMatchRoute } from '@tanstack/react-router'
+import { useMatchRoute, useNavigate } from '@tanstack/react-router'
 import { type ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
@@ -21,6 +21,7 @@ import { getSearchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const searchKeybinding = useMemo(
@@ -81,7 +82,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
         defaultQuery={defaultSearchQuery}
         onNewTask={openNewTask}
       />
-      <CreateTaskModal open={newTaskOpen} onOpenChange={setNewTaskOpen} />
+      <CreateTaskModal
+        open={newTaskOpen}
+        onOpenChange={setNewTaskOpen}
+        onCreated={(task) => {
+          void navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
+        }}
+      />
       <UrlCopiedToast url={copiedUrl} />
       <FindInPageBar
         open={findInPage.open}

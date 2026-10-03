@@ -1,6 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import type { ParsedQuery } from 'api/search-query-parser'
 import { Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -272,6 +272,7 @@ function ProjectTaskList({
   isFetchNextPageError: boolean
   fetchNextPage: () => void
 }) {
+  const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
 
@@ -333,6 +334,9 @@ function ProjectTaskList({
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         projectId={projectId}
+        onCreated={(task) => {
+          void navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })
+        }}
       />
 
       {/* Link existing task menu */}
