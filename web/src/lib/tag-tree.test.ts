@@ -118,6 +118,23 @@ describe('buildTagTree', () => {
     ])
   })
 
+  it('includes additional labels with a zero count', () => {
+    expect(
+      buildTagTree(
+        [makeTask({ labels: ['active'] })],
+        ['orphan', 'group/child'],
+      ),
+    ).toEqual([
+      { name: 'active', count: 1, children: [] },
+      {
+        name: 'group',
+        count: 0,
+        children: [{ name: 'group/child', count: 0, children: [] }],
+      },
+      { name: 'orphan', count: 0, children: [] },
+    ])
+  })
+
   it('returns an empty array for no tasks', () => {
     expect(buildTagTree([])).toEqual([])
   })

@@ -54,9 +54,12 @@ function insertPaths<T extends { name: string; children: T[] }>(
  * name and one of its descendants counts once, not twice. Sorted by count
  * descending, then name ascending, at every level.
  */
-export function buildTagTree(tasks: TaskLike[]): TagTreeNode[] {
+export function buildTagTree(
+  tasks: TaskLike[],
+  additionalLabelNames: string[] = [],
+): TagTreeNode[] {
   const { nodeByName, roots } = insertPaths(
-    tasks.flatMap((task) => task.labels),
+    [...tasks.flatMap((task) => task.labels), ...additionalLabelNames],
     (name) => ({ name, count: 0, children: [] }),
   )
 
