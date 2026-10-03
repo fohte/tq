@@ -63,6 +63,8 @@ export function githubLinkToResponse(
     repo: link.repo,
     number: link.number,
     kind: link.kind,
+    role: link.role,
+    notifyEvents: link.notifyEvents,
     url: link.url,
     state: link.state,
     title: link.title,

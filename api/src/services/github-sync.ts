@@ -53,6 +53,9 @@ export function syncLinkFromGithub(
         .set({
           title: issue.title,
           state: issue.state,
+          commentsCount: issue.commentsCount,
+          githubUpdatedAt: new Date(issue.githubUpdatedAt),
+          stateReason: issue.stateReason,
           etag,
           lastSyncedAt: now,
         })

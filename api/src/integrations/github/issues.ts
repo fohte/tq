@@ -12,6 +12,14 @@ import { fetchJson, fetchJsonConditional } from '#lib/fetch-json'
 
 const GITHUB_API_BASE = 'https://api.github.com'
 
+const GITHUB_STATE_REASONS = [
+  'completed',
+  'not_planned',
+  'duplicate',
+  'reopened',
+] as const
+type GithubStateReason = (typeof GITHUB_STATE_REASONS)[number]
+
 // The issues API also serves pull requests (a PR is an issue under the
 // hood), so both /issues/ and /pull/ URLs resolve through the same
 // endpoint; the URL's path segment is only used to validate the link, not
@@ -58,12 +66,18 @@ export interface GithubIssueData extends GithubResourceRef {
   title: string
   body: string | null
   state: 'open' | 'closed' | 'merged'
+  commentsCount: number
+  githubUpdatedAt: string
+  stateReason: GithubStateReason | null
 }
 
 const issueResponseSchema = z.object({
   title: z.string(),
   body: z.string().nullable(),
   state: z.enum(['open', 'closed']),
+  comments: z.number(),
+  updated_at: z.iso.datetime(),
+  state_reason: z.enum(GITHUB_STATE_REASONS).nullable().catch(null),
   html_url: z.string(),
   // Present only when the issue number actually refers to a pull request.
   pull_request: z.object({}).optional(),
@@ -100,6 +114,9 @@ function resolveIssueState(
       title: issue.title,
       body: issue.body,
       state: issue.state,
+      commentsCount: issue.comments,
+      githubUpdatedAt: issue.updated_at,
+      stateReason: issue.state_reason,
     })
   }
 
@@ -117,6 +134,9 @@ function resolveIssueState(
     title: issue.title,
     body: issue.body,
     state: pull.merged ? ('merged' as const) : issue.state,
+    commentsCount: issue.comments,
+    githubUpdatedAt: issue.updated_at,
+    stateReason: issue.state_reason,
   }))
 }
 
@@ -148,6 +168,9 @@ const assignedIssueResponseSchema = z.object({
   number: z.number(),
   title: z.string(),
   body: z.string().nullable(),
+  comments: z.number(),
+  updated_at: z.iso.datetime(),
+  state_reason: z.enum(GITHUB_STATE_REASONS).nullable().catch(null),
   html_url: z.string(),
   pull_request: z.object({}).optional(),
   repository: z.object({
@@ -186,6 +209,9 @@ export function fetchAssignedIssues(): ResultAsync<
         title: issue.title,
         body: issue.body,
         state: 'open',
+        commentsCount: issue.comments,
+        githubUpdatedAt: issue.updated_at,
+        stateReason: issue.state_reason,
       })),
     ),
   )

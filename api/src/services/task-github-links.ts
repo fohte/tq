@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { err, errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
 import { db, type DbTransaction } from '#db/connection'
-import { taskGithubLinks, tasks } from '#db/schema'
+import { defaultGithubNotifyEvents, taskGithubLinks, tasks } from '#db/schema'
 import type {
   IntegrationConfigError,
   OAuthTokenMissingError,
@@ -54,6 +54,28 @@ export class GithubLinkConsistencyError extends Error {
 type TaskRow = typeof tasks.$inferSelect
 type LinkRow = typeof taskGithubLinks.$inferSelect
 
+function linkInsertValues(
+  taskId: string,
+  issue: GithubIssueData,
+): typeof taskGithubLinks.$inferInsert {
+  const role = 'subject'
+  return {
+    taskId,
+    owner: issue.owner,
+    repo: issue.repo,
+    number: issue.number,
+    role,
+    notifyEvents: defaultGithubNotifyEvents(role),
+    kind: issue.kind,
+    url: issue.url,
+    state: issue.state,
+    title: issue.title,
+    commentsCount: issue.commentsCount,
+    githubUpdatedAt: new Date(issue.githubUpdatedAt),
+    stateReason: issue.stateReason,
+  }
+}
+
 function findLinkByRef(
   ref: GithubResourceRef,
 ): ResultAsync<LinkRow | null, never> {
@@ -63,6 +85,7 @@ function findLinkByRef(
         eq(taskGithubLinks.owner, ref.owner),
         eq(taskGithubLinks.repo, ref.repo),
         eq(taskGithubLinks.number, ref.number),
+        eq(taskGithubLinks.role, 'subject'),
       ),
     }),
   ).map((link) => link ?? null)
@@ -113,7 +136,7 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
   )
 }
 
-// Accepted by insertLink/unlinkTask so they can run standalone (against
+// Accepted by unlinkTask so it can run standalone (against
 // `db`) or as part of a larger transaction (against the `tx` handed to
 // `db.transaction`). createTaskFromIssueData needs the latter to make its
 // task insert and link insert atomic; linkTaskToGithubUrl/unlinkTask need it
@@ -122,9 +145,9 @@ type Executor = typeof db | DbTransaction
 
 type LinkConflictError = GithubResourceAlreadyLinkedError | RowNotFoundError
 
-// Converts a concurrent insert conflict on uq_task_github_links_repo_number
-// into GithubResourceAlreadyLinkedError; a cause already in LinkConflictError
-// passes through unchanged.
+// Converts a concurrent insert conflict on either GitHub-link uniqueness
+// rule into GithubResourceAlreadyLinkedError; a cause already in
+// LinkConflictError passes through unchanged.
 async function classifyLinkConflict(
   cause: unknown,
   taskId: string,
@@ -136,7 +159,10 @@ async function classifyLinkConflict(
   ) {
     return err(cause)
   }
-  if (isUniqueViolation(cause, 'uq_task_github_links_repo_number')) {
+  if (
+    isUniqueViolation(cause, 'uq_task_github_links_subject_repo_number') ||
+    isUniqueViolation(cause, 'uq_task_github_links_task_repo_number')
+  ) {
     const existing = await findLinkByRef(ref).unwrapOr(null)
     return err(new GithubResourceAlreadyLinkedError(existing?.taskId ?? taskId))
   }
@@ -144,33 +170,6 @@ async function classifyLinkConflict(
   // reports it.
   // eslint-disable-next-line no-restricted-syntax -- interop boundary: caught by this function's Promise-based callers (the try/catch below, or ResultAsync.fromSafePromise in createTaskFromIssueData)
   throw cause
-}
-
-async function insertLink(
-  executor: Executor,
-  taskId: string,
-  ref: GithubResourceRef,
-  issue: GithubIssueData,
-): Promise<Result<LinkRow, LinkConflictError>> {
-  // eslint-disable-next-line no-restricted-syntax -- interop boundary: converts the DB's thrown unique-violation into classifyLinkConflict's Result
-  try {
-    const rows = await executor
-      .insert(taskGithubLinks)
-      .values({
-        taskId,
-        owner: issue.owner,
-        repo: issue.repo,
-        number: issue.number,
-        kind: issue.kind,
-        url: issue.url,
-        state: issue.state,
-        title: issue.title,
-      })
-      .returning()
-    return firstOrErr(rows)
-  } catch (cause) {
-    return classifyLinkConflict(cause, taskId, ref)
-  }
 }
 
 export function resolveGithubUrl(
@@ -210,20 +209,9 @@ export function findTaskByGithubRef(
   })
 }
 
-// The task insert and the link insert must commit or roll back together:
-// without a transaction, a concurrent link created for the same issue
-// between the two inserts (see insertLink's comment) leaves this task
-// inserted with no link pointing at it.
-//
-// The link insert isn't run through insertLink here: classifying its
-// failure (via classifyLinkConflict) can require a follow-up query, and a
-// transaction/savepoint that just failed rejects any further query until it
-// rolls back — which only happens once this callback's returned promise
-// settles. So a raw failure is left uncaught here and thrown as-is (an
-// interop boundary: db.transaction() is a plain-Promise API with no way to
-// signal "roll back" other than a rejection), then classified in `.orElse`
-// below, once the transaction has fully settled and the rollback (if any)
-// has completed.
+// The task insert and link insert must commit or roll back together. A
+// unique conflict is classified after the transaction settles because
+// PostgreSQL rejects follow-up queries while the transaction is aborted.
 export function createTaskFromIssueData(
   issue: GithubIssueData,
   options?: { projectId?: string | null },
@@ -253,16 +241,7 @@ export function createTaskFromIssueData(
       const linkResult = firstOrErr(
         await tx
           .insert(taskGithubLinks)
-          .values({
-            taskId: task.id,
-            owner: issue.owner,
-            repo: issue.repo,
-            number: issue.number,
-            kind: issue.kind,
-            url: issue.url,
-            state: issue.state,
-            title: issue.title,
-          })
+          .values(linkInsertValues(task.id, issue))
           .returning(),
       )
       if (linkResult.isErr()) {
@@ -312,20 +291,16 @@ export function createTaskFromGithubUrl(
 }
 
 // The link insert and its task_events row must commit or roll back
-// together: a bare insertLink followed by a separate recordGithubLinked
+// together: a link insert followed by a separate recordGithubLinked
 // write would leave the timeline missing an entry if the process crashes (or
 // the write fails) between the two. The GitHub API fetch happens before the
 // transaction opens since it can't participate in it.
 //
-// insertLink's own try/catch can't be relied on to keep the transaction
-// alive on conflict: postgres.js marks the whole transaction failed as soon
-// as any query on it rejects, even one the immediate caller catches (see
-// https://github.com/porsager/postgres#transactions — `scope()` tracks each
-// query's rejection independently of the callback's own try/catch and
-// rethrows it once the callback settles). So a conflict is rethrown here to
-// trigger that rollback, then reclassified in `.orElse`, once the
-// transaction has fully settled — the same boundary createTaskFromIssueData
-// uses.
+// postgres.js marks the whole transaction failed as soon as a query rejects,
+// even if the immediate caller catches it (see
+// https://github.com/porsager/postgres#transactions). Let a link conflict
+// reject this callback so the transaction rolls back before `.orElse`
+// reclassifies it.
 export function linkTaskToGithubUrl(
   taskId: string,
   ref: GithubResourceRef,
@@ -355,7 +330,12 @@ export function linkTaskToGithubUrl(
       return fetchGithubIssue(ref).andThen((issue) =>
         ResultAsync.fromPromise<LinkRow, unknown>(
           db.transaction(async (tx) => {
-            const linkResult = await insertLink(tx, taskId, ref, issue)
+            const linkResult = firstOrErr(
+              await tx
+                .insert(taskGithubLinks)
+                .values(linkInsertValues(taskId, issue))
+                .returning(),
+            )
             if (linkResult.isErr()) {
               // eslint-disable-next-line no-restricted-syntax -- interop boundary: see comment above linkTaskToGithubUrl
               throw linkResult.error

@@ -4,7 +4,12 @@ import { z } from 'zod'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels, taskEvents } from '#db/schema'
+import {
+  GITHUB_LINK_ROLES,
+  GITHUB_NOTIFY_EVENTS,
+  labels,
+  taskEvents,
+} from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import type { TaskStatusReason } from '#schemas/task'
 import { taskStatusReason } from '#schemas/task'
@@ -53,6 +58,8 @@ export interface GithubLinkResponse {
   repo: string
   number: number
   kind: 'issue' | 'pull_request'
+  role: (typeof GITHUB_LINK_ROLES)[number]
+  notifyEvents: (typeof GITHUB_NOTIFY_EVENTS)[number][]
   url: string
   state: 'open' | 'closed' | 'merged'
   title: string
@@ -253,6 +260,8 @@ const githubLinkResponseSchema = z.object({
   repo: z.string(),
   number: z.number(),
   kind: z.enum(['issue', 'pull_request']),
+  role: z.enum(GITHUB_LINK_ROLES),
+  notifyEvents: z.array(z.enum(GITHUB_NOTIFY_EVENTS)),
   url: z.string(),
   state: z.enum(['open', 'closed', 'merged']),
   title: z.string(),

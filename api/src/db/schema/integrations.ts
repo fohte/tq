@@ -9,9 +9,29 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 import { projects, tasks } from '#db/schema/core'
+
+export const GITHUB_LINK_ROLES = ['subject', 'blocker'] as const
+export type GithubLinkRole = (typeof GITHUB_LINK_ROLES)[number]
+
+export const GITHUB_NOTIFY_EVENTS = [
+  'closed',
+  'reopened',
+  'comments',
+  'other',
+] as const
+export type GithubNotifyEvent = (typeof GITHUB_NOTIFY_EVENTS)[number]
+
+export function defaultGithubNotifyEvents(
+  role: GithubLinkRole,
+): GithubNotifyEvent[] {
+  return role === 'subject'
+    ? [...GITHUB_NOTIFY_EVENTS]
+    : GITHUB_NOTIFY_EVENTS.filter((event) => event === 'closed')
+}
 
 export const taskGithubLinks = pgTable(
   'task_github_links',
@@ -25,11 +45,18 @@ export const taskGithubLinks = pgTable(
     owner: text('owner').notNull(),
     repo: text('repo').notNull(),
     number: integer('number').notNull(),
+    role: text('role', { enum: GITHUB_LINK_ROLES }).notNull(),
+    notifyEvents: text('notify_events', { enum: GITHUB_NOTIFY_EVENTS })
+      .array()
+      .notNull(),
     kind: text('kind', { enum: ['issue', 'pull_request'] }).notNull(),
     url: text('url').notNull(),
     // Caches the linked GitHub issue/PR's current state and title.
     state: text('state', { enum: ['open', 'closed', 'merged'] }).notNull(),
     title: text('title').notNull(),
+    commentsCount: integer('comments_count'),
+    githubUpdatedAt: timestamp('github_updated_at', { withTimezone: true }),
+    stateReason: text('state_reason'),
     // GitHub's ETag for the last fetch of this issue/PR, sent back as
     // `If-None-Match` on the next sync so an unchanged resource costs a bare
     // 304 instead of a full fetch (and doesn't count against GitHub's
@@ -56,11 +83,26 @@ export const taskGithubLinks = pgTable(
       .defaultNow(),
   },
   (table) => [
-    // At most one task may link to a given issue/PR.
-    unique('uq_task_github_links_repo_number').on(
+    // Subject links identify the task imported from or assigned to a GitHub item.
+    uniqueIndex('uq_task_github_links_subject_repo_number')
+      .on(table.owner, table.repo, table.number)
+      .where(sql`${table.role} = 'subject'`),
+    // A task can keep at most one link for a given GitHub item across roles.
+    uniqueIndex('uq_task_github_links_task_repo_number').on(
+      table.taskId,
       table.owner,
       table.repo,
       table.number,
+    ),
+    check(
+      'task_github_links_role_check',
+      sql`${table.role} IN ('subject', 'blocker')`,
+    ),
+    check(
+      'task_github_links_notify_events_check',
+      sql`${table.notifyEvents} <@ ${sql.raw(
+        `ARRAY[${GITHUB_NOTIFY_EVENTS.map((event) => `'${event}'`).join(', ')}]::text[]`,
+      )}`,
     ),
     // Only a pull request can be merged; a plain issue's state is always
     // open or closed.

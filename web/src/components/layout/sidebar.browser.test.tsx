@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -76,19 +76,33 @@ async function renderSidebar({
   initialEntry = '/',
   savedViews = [],
   labels = [],
+  pendingTaskList = false,
 }: {
   tasks?: Task[]
   projects?: Project[]
   initialEntry?: string
   savedViews?: SavedView[]
   labels?: Label[]
+  pendingTaskList?: boolean
 } = {}) {
   resetSessionOpenSettings({ localContext: 'personal' })
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  let resolveTaskList: (tasks: Task[]) => void = () => {}
+  let pendingTaskListRequest: Promise<Task[]> | undefined
+  if (pendingTaskList) {
+    const request = new Promise<Task[]>((resolve) => {
+      resolveTaskList = resolve
+    })
+    pendingTaskListRequest = queryClient.fetchQuery({
+      queryKey: taskKeys.list(undefined),
+      queryFn: () => request,
+    })
+  } else {
+    queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  }
   queryClient.setQueryData(projectKeys.list({ context: 'personal' }), projects)
   queryClient.setQueryData(
     savedViewKeys.list({ context: 'personal' }),
@@ -106,11 +120,15 @@ async function renderSidebar({
   })
   await router.load()
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
+  return {
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    ),
+    resolveTaskList,
+    pendingTaskListRequest,
+  }
 }
 
 describe('Sidebar', () => {
@@ -222,6 +240,115 @@ describe('Sidebar', () => {
   })
 
   describe('TagsSection', () => {
+    function getTagSectionState() {
+      return {
+        tags: screen
+          .queryAllByRole('link', { name: /^#/ })
+          .map((link) => link.textContent),
+        toggle:
+          screen.queryByRole('button', {
+            name: /See all tags|Hide orphan tags/,
+          })?.textContent ?? null,
+      }
+    }
+
+    function getDeleteDialogState() {
+      return {
+        title: screen.getByRole('heading', { name: 'Delete tag' }).textContent,
+        description: screen.getByText(
+          'Are you sure you want to delete "#orphan"? This action cannot be undone.',
+        ).textContent,
+        buttons: within(screen.getByRole('dialog'))
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      }
+    }
+
+    it('hides orphan tags by default and toggles them into the tree', async () => {
+      const user = userEvent.setup()
+      const labels = [
+        ...labelsForTasksWithTags,
+        makeLabel({ id: '3', name: 'orphan' }),
+      ]
+      await renderSidebar({ tasks: tasksWithTags, labels })
+
+      const states = [getTagSectionState()]
+      await user.click(screen.getByRole('button', { name: 'See all tags' }))
+      states.push(getTagSectionState())
+      await user.click(screen.getByRole('button', { name: 'Hide orphan tags' }))
+      states.push(getTagSectionState())
+
+      expect(states).toEqual([
+        { tags: ['#dev:tq2', '#urgent1'], toggle: 'See all tags' },
+        {
+          tags: ['#dev:tq2', '#urgent1', '#orphan0'],
+          toggle: 'Hide orphan tags',
+        },
+        { tags: ['#dev:tq2', '#urgent1'], toggle: 'See all tags' },
+      ])
+    })
+
+    it('waits for the task list before showing the orphan toggle', async () => {
+      const labels = [
+        makeLabel({ id: '1', name: 'assigned' }),
+        makeLabel({ id: '2', name: 'orphan' }),
+      ]
+      const { resolveTaskList, pendingTaskListRequest } = await renderSidebar({
+        labels,
+        pendingTaskList: true,
+      })
+      const states = [getTagSectionState()]
+
+      await act(async () => {
+        resolveTaskList([makeTask({ id: '1', labels: ['assigned'] })])
+        await assertDefined(pendingTaskListRequest, 'task list request missing')
+      })
+      states.push(getTagSectionState())
+
+      expect(states).toEqual([
+        { tags: [], toggle: null },
+        { tags: ['#assigned1'], toggle: 'See all tags' },
+      ])
+    })
+
+    it('keeps a completed-only tag visible without showing the orphan toggle', async () => {
+      await renderSidebar({
+        tasks: [
+          makeTask({ id: '1', status: 'completed', labels: ['finished'] }),
+        ],
+        labels: [makeLabel({ id: '1', name: 'finished' })],
+      })
+
+      expect(getTagSectionState()).toEqual({
+        tags: ['#finished0'],
+        toggle: null,
+      })
+    })
+
+    it('lets an orphan tag open its existing delete confirmation', async () => {
+      const user = userEvent.setup()
+      const { container } = await renderSidebar({
+        labels: [makeLabel({ id: '3', name: 'orphan' })],
+      })
+      await user.click(screen.getByRole('button', { name: 'See all tags' }))
+      const trigger = assertDefined(
+        container.querySelector<HTMLElement>(
+          '[data-slot="dropdown-menu-trigger"][aria-label="Tag actions"]',
+        ),
+        'desktop trigger not found',
+      )
+
+      await user.click(trigger)
+      await user.click(await screen.findByText('delete…'))
+
+      expect(getDeleteDialogState()).toEqual({
+        title: 'Delete tag',
+        description:
+          'Are you sure you want to delete "#orphan"? This action cannot be undone.',
+        buttons: ['Cancel', 'Delete', 'Close'],
+      })
+    })
+
     it('shows each tag with its name and count', async () => {
       await renderSidebar({
         tasks: tasksWithTags,

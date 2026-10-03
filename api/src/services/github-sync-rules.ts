@@ -109,6 +109,7 @@ export async function syncGithubAssignedIssues(): Promise<void> {
       number: taskGithubLinks.number,
     })
     .from(taskGithubLinks)
+    .where(eq(taskGithubLinks.role, 'subject'))
   const linkedKeys = new Set(
     linkedRows.map((r) => issueKey(r.owner, r.repo, r.number)),
   )

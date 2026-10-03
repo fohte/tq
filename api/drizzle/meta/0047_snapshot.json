@@ -1,6 +1,6 @@
 {
-  "id": "ac2304c1-0fcc-4b2b-9e71-d456e0eb50f2",
-  "prevId": "74a66ff4-603c-4385-8ac7-6ce1522ffbe5",
+  "id": "a6ff804c-bd93-47a7-a86c-018e00d9c160",
+  "prevId": "ac2304c1-0fcc-4b2b-9e71-d456e0eb50f2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1418,6 +1418,94 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.task_description_templates": {
+      "name": "task_description_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "when_to_use": {
+          "name": "when_to_use",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guide": {
+          "name": "guide",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_default": {
+          "name": "is_default",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "task_description_templates_default_unique": {
+          "name": "task_description_templates_default_unique",
+          "columns": [
+            {
+              "expression": "is_default",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"task_description_templates\".\"is_default\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "task_description_templates_name_unique": {
+          "name": "task_description_templates_name_unique",
+          "nullsNotDistinct": false,
+          "columns": ["name"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

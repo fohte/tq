@@ -17,7 +17,7 @@
 | [public.time_blocks](public.time_blocks.md)                                         | 7       | Scheduled time intervals assigned to tasks.                                          | BASE TABLE |
 | [public.task_queue_items](public.task_queue_items.md)                               | 7       | Tasks placed in a queue, optionally for a specific period.                           | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      | Records for task, page, or comment creation and field updates.                       | BASE TABLE |
-| [public.task_github_links](public.task_github_links.md)                             | 14      | GitHub issues and pull requests linked to tasks.                                     | BASE TABLE |
+| [public.task_github_links](public.task_github_links.md)                             | 19      | GitHub issues and pull requests linked to tasks.                                     | BASE TABLE |
 | [public.task_links](public.task_links.md)                                           | 3       | Directed task links derived from task descriptions, page content, and comments.      | BASE TABLE |
 | [public.github_sync_rule_ignored_issues](public.github_sync_rule_ignored_issues.md) | 6       | GitHub issues excluded by a synchronization rule.                                    | BASE TABLE |
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      | GitHub synchronization rules associated with a target project.                       | BASE TABLE |
@@ -252,6 +252,11 @@ erDiagram
   timestamp_with_time_zone updated_at
   text etag
   bigint seq
+  text role
+  text__ notify_events
+  integer comments_count
+  timestamp_with_time_zone github_updated_at
+  text state_reason
 }
 "public.task_links" {
   text source_task_id FK

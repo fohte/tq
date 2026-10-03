@@ -32,6 +32,9 @@ describe('fetchGithubIssue', () => {
           title: 'Bug: something broke',
           body: 'Steps to reproduce...',
           state: 'open',
+          comments: 2,
+          updated_at: '2024-08-12T09:30:00Z',
+          state_reason: null,
           html_url: 'https://github.com/fohte/tq/issues/42',
         }),
         { status: 200 },
@@ -49,6 +52,9 @@ describe('fetchGithubIssue', () => {
       title: 'Bug: something broke',
       body: 'Steps to reproduce...',
       state: 'open',
+      commentsCount: 2,
+      githubUpdatedAt: '2024-08-12T09:30:00Z',
+      stateReason: null,
     })
   })
 
@@ -60,6 +66,9 @@ describe('fetchGithubIssue', () => {
           title: 'Add feature',
           body: null,
           state: 'open',
+          comments: 3,
+          updated_at: '2024-08-13T10:20:00Z',
+          state_reason: null,
           html_url: 'https://github.com/fohte/tq/pull/42',
           pull_request: {},
         }),
@@ -78,6 +87,9 @@ describe('fetchGithubIssue', () => {
       title: 'Add feature',
       body: null,
       state: 'open',
+      commentsCount: 3,
+      githubUpdatedAt: '2024-08-13T10:20:00Z',
+      stateReason: null,
     })
   })
 
@@ -90,6 +102,9 @@ describe('fetchGithubIssue', () => {
             title: 'Add feature',
             body: null,
             state: 'closed',
+            comments: 4,
+            updated_at: '2024-08-14T08:00:00Z',
+            state_reason: 'completed',
             html_url: 'https://github.com/fohte/tq/pull/42',
             pull_request: {},
           }),
@@ -114,6 +129,9 @@ describe('fetchGithubIssue', () => {
             title: 'Add feature',
             body: null,
             state: 'closed',
+            comments: 4,
+            updated_at: '2024-08-14T08:00:00Z',
+            state_reason: 'not_planned',
             html_url: 'https://github.com/fohte/tq/pull/42',
             pull_request: {},
           }),
@@ -128,6 +146,49 @@ describe('fetchGithubIssue', () => {
 
     expect(issue.state).toBe('closed')
   })
+
+  it.each([
+    { rawStateReason: 'duplicate', expectedStateReason: 'duplicate' },
+    { rawStateReason: 'future_reason', expectedStateReason: null },
+  ])(
+    'preserves known and ignores unknown state_reason values: $rawStateReason',
+    async ({ rawStateReason, expectedStateReason }) => {
+      const exampleRef = {
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 19,
+      }
+      await upsertGithubToken('valid-token')
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            title: 'Track a sample resource',
+            body: null,
+            state: 'open',
+            comments: 3,
+            updated_at: '2024-08-17T14:50:00Z',
+            state_reason: rawStateReason,
+            html_url: 'https://github.com/example-owner/example-repo/issues/19',
+          }),
+          { status: 200 },
+        ),
+      )
+
+      const issue = (await fetchGithubIssue(exampleRef))._unsafeUnwrap()
+
+      expect(issue).toEqual({
+        ...exampleRef,
+        kind: 'issue',
+        url: 'https://github.com/example-owner/example-repo/issues/19',
+        title: 'Track a sample resource',
+        body: null,
+        state: 'open',
+        commentsCount: 3,
+        githubUpdatedAt: '2024-08-17T14:50:00Z',
+        stateReason: expectedStateReason,
+      })
+    },
+  )
 
   it('returns a rejected GithubApiError when the issue is not found', async () => {
     await upsertGithubToken('valid-token')
@@ -175,6 +236,9 @@ describe('fetchGithubIssueIfChanged', () => {
           title: 'Bug: something broke',
           body: 'Steps to reproduce...',
           state: 'open',
+          comments: 5,
+          updated_at: '2024-08-15T11:45:00Z',
+          state_reason: null,
           html_url: 'https://github.com/fohte/tq/issues/42',
         }),
         { status: 200, headers: { etag: '"def456"' } },
@@ -196,6 +260,9 @@ describe('fetchGithubIssueIfChanged', () => {
         title: 'Bug: something broke',
         body: 'Steps to reproduce...',
         state: 'open',
+        commentsCount: 5,
+        githubUpdatedAt: '2024-08-15T11:45:00Z',
+        stateReason: null,
       },
       etag: '"def456"',
     })

@@ -71,16 +71,18 @@ export function partialMutation<T>(partial: Partial<T>): T {
 }
 
 /**
- * Mock `mutate` that synchronously invokes the caller's `onSuccess` option.
- * Only fits a `useMutation`-shaped hook whose success handler ignores every
- * argument `mutate` receives.
+ * Mock `mutate` that synchronously invokes the caller's `onSuccess` option,
+ * optionally passing the mutation's result data.
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- TMutate exists so callers can pin the return type to their hook's `mutate` signature; the cast below is inherently unchecked
-export function mutateInvokingOnSuccess<TMutate>(): TMutate {
-  const mock = (_variables: unknown, options?: { onSuccess?: () => void }) => {
-    options?.onSuccess?.()
+export function mutateInvokingOnSuccess<TMutate>(data?: unknown): TMutate {
+  const mock = (
+    _variables: unknown,
+    options?: { onSuccess?: (data?: unknown) => void },
+  ) => {
+    options?.onSuccess?.(data)
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: caller's onSuccess handler ignores every argument, so the exact mutate signature doesn't matter here
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double optionally forwards result data; the exact mutate signature is pinned by TMutate
   return vi.fn(mock) as TMutate
 }
 

@@ -2,7 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
+import {
+  makeGithubLink,
+  makeResolveGithubUrlResult,
+} from '#components/task/github-link-test-fixtures'
 import { GithubUrlCard } from '#components/task/github-url-card'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
@@ -129,17 +132,10 @@ export const LinkedToTask: Story = {
         number: 7,
         title: 'Fix flaky test',
         githubLinks: [
-          {
-            id: 'link-1',
-            owner: 'fohte',
-            repo: 'tq',
-            number: 42,
-            kind: 'issue',
+          makeGithubLink({
             url: LINKED_ISSUE_URL,
-            state: 'open',
             title: 'Fix flaky test',
-            lastSyncedAt: '2026-03-20T00:00:00.000Z',
-          },
+          }),
         ],
       }),
     },

@@ -23,6 +23,9 @@ export function mockGithubIssueResponse(
         title: 'Bug: something broke',
         body: 'Steps to reproduce...',
         state: 'open',
+        comments: 2,
+        updated_at: '2024-08-12T09:30:00Z',
+        state_reason: null,
         html_url: 'https://github.com/fohte/tq/issues/42',
         ...overrides,
       }),
@@ -44,6 +47,9 @@ export function mockAssignedIssuesResponse(
     number?: number
     title?: string
     body?: string | null
+    comments?: number
+    updatedAt?: string
+    stateReason?: string | null
     isPullRequest?: boolean
   }> = [],
 ) {
@@ -54,6 +60,9 @@ export function mockAssignedIssuesResponse(
           number: issue.number ?? 1,
           title: issue.title ?? 'Assigned issue',
           body: issue.body ?? null,
+          comments: issue.comments ?? 1,
+          updated_at: issue.updatedAt ?? '2024-08-12T09:30:00Z',
+          state_reason: issue.stateReason ?? null,
           html_url: `https://github.com/${issue.owner ?? 'fohte'}/${issue.repo ?? 'tq'}/issues/${String(issue.number ?? 1)}`,
           repository: {
             name: issue.repo ?? 'tq',
