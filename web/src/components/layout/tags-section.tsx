@@ -98,9 +98,14 @@ function TagLink({
   )
 }
 
-export function TagsSection() {
+export function TagsSection({
+  defaultShowOrphanTags = false,
+}: {
+  defaultShowOrphanTags?: boolean
+}) {
   const context = useCurrentContext()
-  const { tagTree } = useTagCounts(context)
+  const [showOrphanTags, setShowOrphanTags] = useState(defaultShowOrphanTags)
+  const { tagTree, orphanTagCount } = useTagCounts(context, showOrphanTags)
   const { data: labels } = useLabels({ context })
   // `q` only exists on the /tasks route's search schema, so this reads
   // undefined (no active tag) everywhere else.
@@ -126,6 +131,18 @@ export function TagsSection() {
             activeTag={activeTag}
           />
         ))}
+        {orphanTagCount > 0 && (
+          <button
+            type="button"
+            aria-expanded={showOrphanTags}
+            className="px-3.5 py-1 text-left font-mono text-2xs text-muted-foreground-faint hover:text-muted-foreground-strong"
+            onClick={() => {
+              setShowOrphanTags((show) => !show)
+            }}
+          >
+            {showOrphanTags ? 'Hide orphan tags' : 'See all tags'}
+          </button>
+        )}
       </div>
     </div>
   )
