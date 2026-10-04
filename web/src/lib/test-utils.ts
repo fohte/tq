@@ -26,6 +26,8 @@ export function findEditorText(text: string | RegExp) {
  */
 export async function waitForFocus(element: Element): Promise<void> {
   await waitFor(() => expect(element).toHaveFocus())
+  // ProseMirror may restore its state selection 20 ms after focus.
+  await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
 /**
