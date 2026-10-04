@@ -647,6 +647,7 @@ describe('operation tool input schemas', () => {
       description_template_get: false,
       description_template_list: false,
       github_link: true,
+      github_notify: true,
       github_resolve: false,
       github_sync: false,
       github_unlink: true,
@@ -716,6 +717,10 @@ describe('operation tool annotations', () => {
       description_template_get: { readOnlyHint: true },
       description_template_list: { readOnlyHint: true },
       github_link: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      github_notify: {
         readOnlyHint: false,
         destructiveHint: false,
       },

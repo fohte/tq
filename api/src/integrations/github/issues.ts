@@ -87,7 +87,7 @@ const pullResponseSchema = z.object({
   merged: z.boolean(),
 })
 
-function githubHeaders(accessToken: string) {
+export function githubHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,
     Accept: 'application/vnd.github+json',

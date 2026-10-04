@@ -10,6 +10,11 @@ import {
   OAuthTokenMissingError,
   TokenRefreshError,
 } from '#integrations/errors'
+import {
+  fetchGithubIssueActivity,
+  type GithubIssueActivity,
+  type GithubIssueActivityEvent,
+} from '#integrations/github/activity'
 import { GithubApiError, githubProvider } from '#integrations/github/index'
 import {
   fetchGithubIssueIfChanged,
@@ -21,6 +26,7 @@ import { syncGithubAssignedIssues } from '#services/github-sync-rules'
 import { sendPush } from '#services/push'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
+type NotifyEvent = LinkRow['notifyEvents'][number]
 
 type SyncLinkError =
   | GithubApiError
@@ -39,30 +45,74 @@ class GithubLinkNotifyError extends Error {
 const SUBJECT_SYNC_INTERVAL_MS = 60 * 60 * 1000
 const BLOCKER_SYNC_INTERVAL_MS = 24 * SUBJECT_SYNC_INTERVAL_MS
 
+function candidateEvents(link: LinkRow, issue: GithubIssueData): NotifyEvent[] {
+  const candidates: NotifyEvent[] = []
+  if (link.state === 'open' && issue.state !== 'open') {
+    candidates.push('closed')
+  }
+  if (link.state !== 'open' && issue.state === 'open') {
+    candidates.push('reopened')
+  }
+  if (link.commentsCount !== null && issue.commentsCount > link.commentsCount) {
+    candidates.push('comments')
+  }
+  if (
+    link.githubUpdatedAt !== null &&
+    new Date(issue.githubUpdatedAt).getTime() !== link.githubUpdatedAt.getTime()
+  ) {
+    candidates.push('other')
+  }
+  return candidates
+}
+
 function changedEvent(
   link: LinkRow,
   issue: GithubIssueData,
+  candidates: NotifyEvent[],
+  activity: GithubIssueActivity,
 ): { event: LinkRow['notifyEvents'][number]; title: string } | null {
   const ref = `${link.owner}/${link.repo}#${String(link.number)}`
+  const newerEvents = activity.events.filter(
+    (event) =>
+      event.occurredAt !== null &&
+      (link.githubUpdatedAt === null ||
+        event.occurredAt.getTime() > link.githubUpdatedAt.getTime()),
+  )
+  const wasCausedByOther = (event: GithubIssueActivityEvent) =>
+    event.login !== null &&
+    event.login.toLowerCase() !== activity.authenticatedUserLogin.toLowerCase()
 
-  if (link.state === 'open' && issue.state !== 'open') {
-    const title =
-      issue.state === 'merged'
-        ? `${ref} was merged`
-        : issue.kind === 'pull_request'
-          ? `${ref} was closed without merging`
-          : issue.stateReason === 'not_planned'
-            ? `${ref} was closed as not planned`
-            : `${ref} was closed`
-    return { event: 'closed', title }
+  if (candidates.includes('closed')) {
+    const expectedCloseEvent = issue.state === 'merged' ? 'merged' : 'closed'
+    const hasExternalClose = newerEvents.some(
+      (event) => event.event === expectedCloseEvent && wasCausedByOther(event),
+    )
+    if (hasExternalClose) {
+      const title =
+        issue.state === 'merged'
+          ? `${ref} was merged`
+          : issue.kind === 'pull_request'
+            ? `${ref} was closed without merging`
+            : issue.stateReason === 'not_planned'
+              ? `${ref} was closed as not planned`
+              : `${ref} was closed`
+      return { event: 'closed', title }
+    }
   }
 
-  if (link.state !== 'open' && issue.state === 'open') {
-    return { event: 'reopened', title: `${ref} was reopened` }
+  if (candidates.includes('reopened')) {
+    const hasExternalReopen = newerEvents.some(
+      (event) => event.event === 'reopened' && wasCausedByOther(event),
+    )
+    if (hasExternalReopen) {
+      return { event: 'reopened', title: `${ref} was reopened` }
+    }
   }
 
-  if (link.commentsCount !== null && issue.commentsCount > link.commentsCount) {
-    const newComments = issue.commentsCount - link.commentsCount
+  const newComments = newerEvents.filter(
+    (event) => event.event === 'commented' && wasCausedByOther(event),
+  ).length
+  if (candidates.includes('comments') && newComments > 0) {
     return {
       event: 'comments',
       title: `${ref}: ${String(newComments)} new ${
@@ -71,10 +121,16 @@ function changedEvent(
     }
   }
 
-  if (
-    link.githubUpdatedAt !== null &&
-    new Date(issue.githubUpdatedAt).getTime() !== link.githubUpdatedAt.getTime()
-  ) {
+  if (candidates.includes('other')) {
+    const hasExternalOtherActivity = newerEvents.some(
+      (event) =>
+        !['closed', 'merged', 'reopened', 'commented'].includes(event.event) &&
+        wasCausedByOther(event),
+    )
+    if (!hasExternalOtherActivity) {
+      return null
+    }
+
     return { event: 'other', title: `${ref} has new activity` }
   }
 
@@ -139,6 +195,19 @@ function notifyLinkChange(
   })
 }
 
+function isTaskTodo(
+  link: LinkRow,
+): ResultAsync<boolean, GithubLinkNotifyError> {
+  return ResultAsync.fromPromise(
+    db
+      .select({ status: tasks.status })
+      .from(tasks)
+      .where(eq(tasks.id, link.taskId))
+      .then((rows) => rows[0]?.status === 'todo'),
+    toNotifyError,
+  )
+}
+
 // Store the pass start so network latency does not shorten the next scheduler interval.
 export function syncLinkFromGithub(
   link: LinkRow,
@@ -175,28 +244,50 @@ export function syncLinkFromGithub(
     }
 
     const { issue, etag } = result
-    const notification = changedEvent(link, issue)
+    const updateLink = (
+      notification: NonNullable<ReturnType<typeof changedEvent>> | null,
+    ) =>
+      ResultAsync.fromSafePromise(
+        db
+          .update(taskGithubLinks)
+          .set({
+            title: issue.title,
+            state: issue.state,
+            commentsCount: issue.commentsCount,
+            githubUpdatedAt: new Date(issue.githubUpdatedAt),
+            stateReason: issue.stateReason,
+            etag,
+            lastSyncedAt,
+          })
+          .where(matchesStoredGithubState(link))
+          .returning({ id: taskGithubLinks.id }),
+      ).andThen((updatedLinks) => {
+        if (updatedLinks.length === 0 || notification === null) {
+          return okAsync(undefined)
+        }
 
-    return ResultAsync.fromSafePromise(
-      db
-        .update(taskGithubLinks)
-        .set({
-          title: issue.title,
-          state: issue.state,
-          commentsCount: issue.commentsCount,
-          githubUpdatedAt: new Date(issue.githubUpdatedAt),
-          stateReason: issue.stateReason,
-          etag,
-          lastSyncedAt,
-        })
-        .where(matchesStoredGithubState(link))
-        .returning({ id: taskGithubLinks.id }),
-    ).andThen((updatedLinks) => {
-      if (updatedLinks.length === 0 || notification === null) {
-        return okAsync(undefined)
+        return notifyLinkChange(link, notification)
+      })
+    const candidates = candidateEvents(link, issue)
+    const selectedCandidates = candidates.filter((event) =>
+      link.notifyEvents.includes(event),
+    )
+    if (selectedCandidates.length === 0) {
+      return updateLink(null)
+    }
+
+    return isTaskTodo(link).andThen((isTodo) => {
+      if (!isTodo) {
+        return updateLink(null)
       }
 
-      return notifyLinkChange(link, notification)
+      return fetchGithubIssueActivity({
+        owner: link.owner,
+        repo: link.repo,
+        number: link.number,
+      }).andThen((activity) =>
+        updateLink(changedEvent(link, issue, selectedCandidates, activity)),
+      )
     })
   })
 }

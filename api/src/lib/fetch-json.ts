@@ -76,6 +76,26 @@ export function fetchJson<T, E extends Error>(
   ).andThen((res) => parseJsonResponse(res, schema, wrapError))
 }
 
+/**
+ * Like `fetchJson`, but also returns response headers for APIs that paginate
+ * through a response header.
+ */
+export function fetchJsonWithHeaders<T, E extends Error>(
+  input: string,
+  init: RequestInit,
+  schema: z.ZodType<T>,
+  wrapError: (message: string, cause?: unknown, rejected?: boolean) => E,
+): ResultAsync<{ data: T; headers: Headers }, E> {
+  return ResultAsync.fromPromise(fetchWithRetry(input, init), (cause) =>
+    wrapError(errorMessage(cause), cause),
+  ).andThen((res) =>
+    parseJsonResponse(res, schema, wrapError).map((data) => ({
+      data,
+      headers: res.headers,
+    })),
+  )
+}
+
 export type ConditionalFetchResult<T> =
   { notModified: true } | { notModified: false; data: T; etag: string | null }
 
