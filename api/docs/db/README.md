@@ -34,6 +34,7 @@
 | [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      | Definitions used by the scheduler to create recurring task instances.                | BASE TABLE |
 | [public.task_description_templates](public.task_description_templates.md)           | 8       | Templates for structuring task descriptions.                                         | BASE TABLE |
 | [public.memos](public.memos.md)                                                     | 4       | Markdown scratchpads stored once per work or personal context.                       | BASE TABLE |
+| [public.schedule_overrides](public.schedule_overrides.md)                           | 5       | One-day time changes and skipped schedule occurrences.                               | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -107,6 +108,7 @@ erDiagram
 "public.recurring_task_templates" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 "public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
+"public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
@@ -407,6 +409,13 @@ erDiagram
   text content
   integer revision
   timestamp_with_time_zone updated_at
+}
+"public.schedule_overrides" {
+  text schedule_id FK
+  date occurrence_date
+  text start_time
+  text end_time
+  boolean skipped
 }
 ```
 
