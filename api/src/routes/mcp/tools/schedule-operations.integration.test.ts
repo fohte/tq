@@ -8,6 +8,7 @@ import {
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
+import { makeTimeBlock } from '#routes/schedule-test-fixtures'
 import { createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -140,15 +141,17 @@ describe('schedule operation tools', () => {
       normalizeDynamicValues(parseToolJson(result), {
         skipKeys: ['taskId', 'startTime', 'endTime'],
       }),
-    ).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      startTime: '2026-12-18T08:30:00.000Z',
-      endTime: '2026-12-18T09:15:00.000Z',
-      isAutoScheduled: true,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
+    ).toEqual(
+      normalizeDynamicValues(
+        makeTimeBlock({
+          taskId: task.id,
+          startTime: '2026-12-18T08:30:00.000Z',
+          endTime: '2026-12-18T09:15:00.000Z',
+          isAutoScheduled: true,
+        }),
+        { skipKeys: ['taskId', 'startTime', 'endTime'] },
+      ),
+    )
   })
 
   it('updates the supplied time block fields', async () => {
@@ -169,15 +172,17 @@ describe('schedule operation tools', () => {
       normalizeDynamicValues(parseToolJson(result), {
         skipKeys: ['taskId', 'startTime', 'endTime'],
       }),
-    ).toEqual({
-      id: '<uuid>',
-      taskId: task.id,
-      startTime: '2026-12-18T08:30:00.000Z',
-      endTime: '2026-12-18T09:45:00.000Z',
-      isAutoScheduled: false,
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
+    ).toEqual(
+      normalizeDynamicValues(
+        makeTimeBlock({
+          taskId: task.id,
+          startTime: '2026-12-18T08:30:00.000Z',
+          endTime: '2026-12-18T09:45:00.000Z',
+          isAutoScheduled: false,
+        }),
+        { skipKeys: ['taskId', 'startTime', 'endTime'] },
+      ),
+    )
   })
 
   it('deletes the selected time block', async () => {
@@ -252,6 +257,20 @@ describe('schedule operation tools', () => {
       expectedToolValidationError(
         'schedule_recurring_list',
         'startDate: Invalid input: expected string, received undefined, endDate: Invalid input: expected string, received undefined',
+      ),
+    )
+  })
+
+  it('limits recurring schedule queries to 31 calendar days', async () => {
+    const result = await callMcpTool(client, 'schedule_recurring_list', {
+      startDate: '2026-12-01',
+      endDate: '2027-01-01',
+    })
+
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'schedule_recurring_list',
+        'endDate: Date range must be chronological and no longer than 31 days',
       ),
     )
   })

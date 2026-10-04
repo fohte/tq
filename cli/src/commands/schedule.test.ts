@@ -1,3 +1,4 @@
+import { makeTimeBlock } from 'api/routes/schedule-test-fixtures'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
@@ -86,15 +87,12 @@ describe('schedule time blocks list', () => {
 describe('schedule time blocks create', () => {
   it('creates an auto-scheduled block', async () => {
     const taskId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-    const block = {
-      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    const block = makeTimeBlock({
       taskId,
       startTime: '2026-12-18T08:30:00.000Z',
       endTime: '2026-12-18T09:15:00.000Z',
       isAutoScheduled: true,
-      createdAt: '2026-12-18T00:00:00.000Z',
-      updatedAt: '2026-12-18T00:00:00.000Z',
-    }
+    })
 
     expect(
       await runScheduleCli(
@@ -128,20 +126,44 @@ describe('schedule time blocks create', () => {
       stdout: [[`${JSON.stringify(block, null, 2)}\n`]],
     })
   })
+
+  it('rejects conflicting auto-scheduled and manual flags before sending a request', async () => {
+    const taskId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'time-blocks',
+          'create',
+          taskId,
+          '2026-12-18T08:30:00.000Z',
+          '2026-12-18T09:15:00.000Z',
+          '--auto-scheduled',
+          '--manual',
+        ],
+        new Response('{}', { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [['Error: Use only one of --auto-scheduled or --manual\n']],
+      stdout: [],
+    })
+  })
 })
 
 describe('schedule time blocks update', () => {
   it('updates an end time and marks the block manual', async () => {
     const id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
-    const updated = {
+    const updated = makeTimeBlock({
       id,
       taskId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
       startTime: '2026-12-18T08:30:00.000Z',
       endTime: '2026-12-18T09:45:00.000Z',
       isAutoScheduled: false,
-      createdAt: '2026-12-18T00:00:00.000Z',
       updatedAt: '2026-12-18T00:01:00.000Z',
-    }
+    })
 
     expect(
       await runScheduleCli(

@@ -1,4 +1,4 @@
-import { err, ok, type Result } from 'neverthrow'
+import { err, errAsync, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { encodePathSegment } from '#operations/path-segment'
@@ -47,6 +47,35 @@ const recurringScheduleListInputSchema = z.object({
   startDate: z.iso.date().describe('First date to include, as YYYY-MM-DD.'),
   endDate: z.iso.date().describe('Last date to include, as YYYY-MM-DD.'),
 })
+
+function isRecurringScheduleRangeValid({
+  startDate,
+  endDate,
+}: {
+  startDate: string
+  endDate: string
+}): boolean {
+  const rangeMs =
+    Date.parse(`${endDate}T00:00:00.000Z`) -
+    Date.parse(`${startDate}T00:00:00.000Z`)
+  return rangeMs >= 0 && rangeMs < 31 * 24 * 60 * 60 * 1000
+}
+
+const recurringScheduleMcpInputSchema = recurringScheduleListInputSchema.refine(
+  isRecurringScheduleRangeValid,
+  {
+    message: 'Date range must be chronological and no longer than 31 days',
+    path: ['endDate'],
+  },
+)
+
+const autoScheduleCliOptions = [
+  {
+    flags: '--auto-scheduled',
+    description: 'Mark the time block as auto-scheduled',
+  },
+  { flags: '--manual', description: 'Mark the time block as manual' },
+] as const
 
 function mapCliTimezoneOffset(
   input: Record<string, unknown>,
@@ -109,13 +138,7 @@ export const scheduleOperations = [
     kind: 'write',
     routes: ['POST /api/schedule/time-blocks'],
     cli: {
-      customOptions: [
-        {
-          flags: '--auto-scheduled',
-          description: 'Mark the time block as auto-scheduled',
-        },
-        { flags: '--manual', description: 'Mark the time block as manual' },
-      ],
+      customOptions: autoScheduleCliOptions,
       excludeFields: ['isAutoScheduled'],
       mapInput: mapCliAutoScheduleFlags,
       output: { kind: 'json' },
@@ -131,13 +154,7 @@ export const scheduleOperations = [
     kind: 'write',
     routes: ['PATCH /api/schedule/time-blocks/:id'],
     cli: {
-      customOptions: [
-        {
-          flags: '--auto-scheduled',
-          description: 'Mark the time block as auto-scheduled',
-        },
-        { flags: '--manual', description: 'Mark the time block as manual' },
-      ],
+      customOptions: autoScheduleCliOptions,
       excludeFields: ['isAutoScheduled'],
       mapInput: mapCliAutoScheduleFlags,
       output: { kind: 'json' },
@@ -167,12 +184,19 @@ export const scheduleOperations = [
   defineOperation(recurringScheduleListInputSchema, {
     path: ['schedule', 'recurring', 'list'],
     description:
-      'List expanded recurring schedule instances for an inclusive date range.',
+      'List expanded recurring schedule instances for an inclusive date range of up to 31 calendar days. Split longer ranges into multiple requests.',
     positionalArgs: ['startDate', 'endDate'],
     kind: 'read',
+    mcpInputSchema: recurringScheduleMcpInputSchema,
     routes: ['GET /api/schedule/recurring'],
     cli: { output: { kind: 'json' } },
     run: (client, query) =>
-      requestJson(client.api.schedule.recurring.$get({ query })),
+      isRecurringScheduleRangeValid(query)
+        ? requestJson(client.api.schedule.recurring.$get({ query }))
+        : errAsync({
+            kind: 'input',
+            message:
+              'endDate: Date range must be chronological and no longer than 31 days',
+          }),
   }),
 ] as const
