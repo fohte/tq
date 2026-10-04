@@ -5,7 +5,7 @@ import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
-import { isTqDesktopApp } from '#lib/is-tq-desktop'
+import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import { cn } from '#lib/utils'
 
 export interface NowPanelProps {
@@ -24,7 +24,7 @@ export function NowPanel({
   taskMap,
   isLoading = false,
   now: fixedNow,
-  desktopWindowControls = isTqDesktopApp(),
+  desktopWindowControls = hasTqDesktopWindowControls(),
 }: NowPanelProps) {
   const [clockNow, setClockNow] = useState(() => fixedNow ?? new Date())
 

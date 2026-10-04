@@ -20,7 +20,7 @@ import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTaskList } from '#hooks/use-tasks'
-import { isTqDesktopApp } from '#lib/is-tq-desktop'
+import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import { navKeybindings } from '#lib/keybindings'
 import {
   getSidebarMaxWidth,
@@ -266,7 +266,7 @@ export function SidebarContent() {
 }
 
 export function Sidebar({
-  desktopWindowControls = isTqDesktopApp(),
+  desktopWindowControls = hasTqDesktopWindowControls(),
 }: {
   desktopWindowControls?: boolean | undefined
 }) {

@@ -81,7 +81,11 @@ const openMainWindow = (url: string) => {
 }
 
 const createWindow = (url: string): BrowserWindow => {
-  const win = createDesktopWindow({ webPreferences: { sandbox: true } })
+  const win = createDesktopWindow({
+    // The sidebar provides the main window's titlebar spacing and drag region.
+    ...(isMacOS ? { minWidth: 768 } : {}),
+    webPreferences: { sandbox: true },
+  })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
   // state; `before-quit` lets a real quit through.
