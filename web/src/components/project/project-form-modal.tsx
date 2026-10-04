@@ -268,7 +268,7 @@ export function ProjectFormModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
-        <DialogOverlay className="bg-black/40" />
+        <DialogOverlay />
 
         <DialogPopup onKeyDown={handleKeyDown}>
           {/* PC Modal */}
