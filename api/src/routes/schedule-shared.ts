@@ -49,7 +49,7 @@ export async function loadScheduleOverridesForDateRange(
     )
 }
 
-export function indexScheduleOverridesBySchedule(
+function indexScheduleOverridesBySchedule(
   overrides: Awaited<ReturnType<typeof loadScheduleOverridesForDateRange>>,
 ) {
   const result = new Map<string, Map<string, ScheduleOverrideTimes>>()
