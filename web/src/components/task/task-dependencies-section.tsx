@@ -2,6 +2,7 @@ import { Button } from '@fohte/ui/button'
 import { Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { GithubBlockerUpdateError } from '#components/task/github-blocker-update-error'
 import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-picker'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
@@ -147,7 +148,9 @@ function BlockedByGroup({
                   notifyEvents,
                 })
               }}
-              disabled={updateNotifyEvents.isPending}
+              disabled={
+                updateNotifyEvents.isPending || updateBlockedBy.isPending
+              }
             />
             <Button
               type="button"
@@ -173,6 +176,7 @@ function BlockedByGroup({
         <Button
           type="button"
           variant="ghost"
+          disabled={updateBlockedBy.isPending}
           onClick={() => {
             setDialogOpen(true)
           }}
@@ -182,6 +186,16 @@ function BlockedByGroup({
           add blocker
         </Button>
       </Panel>
+
+      {updateBlockedBy.isError && (
+        <GithubBlockerUpdateError
+          message={
+            updateBlockedBy.error instanceof Error
+              ? updateBlockedBy.error.message
+              : 'Unable to update blockers.'
+          }
+        />
+      )}
 
       <TaskSearchCandidateDialog
         open={dialogOpen}

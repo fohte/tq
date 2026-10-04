@@ -221,4 +221,62 @@ describe('TaskSearchCandidateDialog', () => {
       selectionCalls: [[resolution.preview]],
     })
   })
+
+  it('suppresses URLs that resolve to an existing GitHub blocker', async () => {
+    const githubUrl = 'https://github.com/example-team/sample-project/pull/2048'
+    const pastedUrl = `${githubUrl}#issuecomment-77`
+    const resolution = makeResolveGithubUrlResult({
+      owner: 'example-team',
+      repo: 'sample-project',
+      number: 2048,
+      kind: 'pull_request',
+      url: githubUrl,
+      title: 'Update the build tools',
+    })
+    const resolvedUrls: string[] = []
+    mockSearchResults([])
+    mockUseResolveGithubUrlQuery.mockImplementation((url, enabled) => {
+      if (enabled) resolvedUrls.push(url)
+      return partialMutation<ReturnType<typeof useResolveGithubUrlQuery>>({
+        data: enabled && url === pastedUrl ? resolution : undefined,
+        error: null,
+        isFetching: false,
+      })
+    })
+    const onSelectGithubCandidate = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <TaskSearchCandidateDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Add blocker"
+        excludedTaskIds={new Set()}
+        excludedGithubUrls={[githubUrl]}
+        allowGithubUrls
+        onSelectCandidate={vi.fn()}
+        onSelectGithubCandidate={onSelectGithubCandidate}
+      />,
+    )
+
+    await user.type(
+      screen.getByPlaceholderText(
+        'Search tasks or paste a GitHub issue/PR URL...',
+      ),
+      pastedUrl,
+    )
+    await screen.findByText(`no results for "${pastedUrl}"`)
+
+    const readActual = () => ({
+      candidateTitle:
+        screen.queryByText('Update the build tools')?.textContent ?? null,
+      selectionCalls: onSelectGithubCandidate.mock.calls,
+      resolvedUrls: [...new Set(resolvedUrls)],
+    })
+
+    expect(readActual()).toEqual({
+      candidateTitle: null,
+      selectionCalls: [],
+      resolvedUrls: [pastedUrl],
+    })
+  })
 })

@@ -180,6 +180,68 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
     await assertDefined(mutationPromise)
   })
 
+  it('optimistically updates an ordinary GitHub link while the PATCH is pending', async () => {
+    const mocks = await getMocks()
+    const previousDetail = makeDetail()
+    const nextEvents: GithubLink['notifyEvents'] = ['closed', 'comments']
+    const optimisticDetail = {
+      ...previousDetail,
+      githubLinks: previousDetail.githubLinks.map((link) =>
+        link.id === targetLink.id
+          ? { ...link, notifyEvents: nextEvents }
+          : link,
+      ),
+    }
+    queryClient.setQueryData(taskKeys.detail(taskId), previousDetail)
+
+    let resolvePatch: (value: unknown) => void = () => {
+      throw new Error('resolvePatch called before the PATCH request starts')
+    }
+    const patchResponsePromise = new Promise((resolve) => {
+      resolvePatch = resolve
+    })
+    assertDefined(mocks['mockPatch']).mockReturnValue(patchResponsePromise)
+
+    const { result } = renderHook(
+      () => useUpdateGithubLinkNotifyEvents(taskId),
+      { wrapper },
+    )
+    let mutationPromise: Promise<GithubLink> | undefined
+    act(() => {
+      mutationPromise = result.current.mutateAsync({
+        linkId: targetLink.id,
+        notifyEvents: nextEvents,
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        readPendingMutationState(
+          assertDefined(mocks['mockPatch']),
+          result.current.isPending,
+        ),
+      ).toEqual({
+        cache: optimisticDetail,
+        patchCalls: [
+          [
+            {
+              param: { taskId, linkId: targetLink.id },
+              json: { notifyEvents: nextEvents },
+            },
+          ],
+        ],
+        isPending: true,
+      })
+    })
+
+    resolvePatch({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ ...targetLink, notifyEvents: nextEvents }),
+    })
+    await assertDefined(mutationPromise)
+  })
+
   it('restores the previous task detail when the PATCH fails', async () => {
     const mocks = await getMocks()
     const previousDetail = makeDetail()

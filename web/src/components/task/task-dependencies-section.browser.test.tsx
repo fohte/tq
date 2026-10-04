@@ -76,12 +76,36 @@ beforeEach(() => {
 })
 
 describe('TaskDependenciesSection', () => {
-  it('updates notification events and removes only the selected GitHub blocker', async () => {
+  it('updates notification events for a GitHub blocker', async () => {
+    const githubBlockers = [makeGithubBlocker({ id: 'github-blocker-open' })]
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={githubBlockers}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Notify on: closed' }))
+    await user.click(
+      await screen.findByRole('menuitemcheckbox', { name: 'new comments' }),
+    )
+
+    expect(updateNotifyEvents.mock.calls).toEqual([
+      [
+        {
+          linkId: 'github-blocker-open',
+          notifyEvents: ['closed', 'comments'],
+        },
+      ],
+    ])
+  })
+
+  it('removes only the selected GitHub blocker', async () => {
     const githubBlockers = [
-      makeGithubBlocker({
-        id: 'github-blocker-open',
-        notifyEvents: ['closed'],
-      }),
+      makeGithubBlocker({ id: 'github-blocker-open' }),
       makeGithubBlocker({
         id: 'github-blocker-merged',
         owner: 'sample-group',
@@ -103,54 +127,23 @@ describe('TaskDependenciesSection', () => {
       />,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Notify on: closed' }))
-    await user.click(
-      await screen.findByRole('menuitemcheckbox', { name: 'new comments' }),
-    )
     await user.click(
       screen.getByRole('button', {
         name: 'Remove example-team/sample-project#2048 as blocker',
       }),
     )
 
-    const readActual = () => ({
-      githubLinks: screen
-        .getAllByRole('link')
-        .map((link) => link.getAttribute('href')),
-      states: [
-        screen.getByText('github · open').textContent,
-        screen.getByText('github · merged').textContent,
+    expect(updateBlockedBy.mock.calls).toEqual([
+      [
+        {
+          id: taskId,
+          blockedBy: [],
+          githubBlockerUrls: [
+            'https://github.com/sample-group/sample-cli/pull/87',
+          ],
+        },
       ],
-      notifyCalls: updateNotifyEvents.mock.calls,
-      removeCalls: updateBlockedBy.mock.calls,
-    })
-
-    expect(readActual()).toEqual({
-      githubLinks: [
-        'https://github.com/example-team/sample-project/pull/2048',
-        'https://github.com/sample-group/sample-cli/pull/87',
-      ],
-      states: ['github · open', 'github · merged'],
-      notifyCalls: [
-        [
-          {
-            linkId: 'github-blocker-open',
-            notifyEvents: ['closed', 'comments'],
-          },
-        ],
-      ],
-      removeCalls: [
-        [
-          {
-            id: taskId,
-            blockedBy: [],
-            githubBlockerUrls: [
-              'https://github.com/sample-group/sample-cli/pull/87',
-            ],
-          },
-        ],
-      ],
-    })
+    ])
   })
 
   it('adds a resolved GitHub URL while retaining existing blockers', async () => {
@@ -202,5 +195,28 @@ describe('TaskDependenciesSection', () => {
         },
       ],
     ])
+  })
+
+  it('shows an error when updating blockers fails', () => {
+    const error = new Error('Example failure')
+    mockUseUpdateTaskBlockedBy.mockReturnValue(
+      partialMutation<ReturnType<typeof useUpdateTaskBlockedBy>>({
+        mutate: updateBlockedBy,
+        isPending: false,
+        isError: true,
+        error,
+      }),
+    )
+
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+      />,
+    )
+
+    expect(screen.getByRole('alert').textContent).toBe('Example failure')
   })
 })

@@ -7,7 +7,7 @@ import { TaskSearchCandidateDialog } from '#components/task/task-search-candidat
 import type { StatusPickerValue } from '#components/task/task-status-picker'
 import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
-import type { Task } from '#hooks/use-tasks'
+import type { BlockedByGithubRef, Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes, formatReminderTime } from '#lib/format'
 import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
@@ -274,12 +274,7 @@ export function BlockedByLabel({
   blockedByGithubRefs,
 }: {
   blockedByNumbers: number[]
-  blockedByGithubRefs: {
-    owner: string
-    repo: string
-    number: number
-    url: string
-  }[]
+  blockedByGithubRefs: BlockedByGithubRef[]
 }) {
   const blockerCount = blockedByNumbers.length + blockedByGithubRefs.length
   const soleGithubBlocker =

@@ -9,11 +9,16 @@ import { Input } from '@fohte/ui/input'
 import { type ReactNode, useEffect, useState } from 'react'
 
 import { GithubRefSummary } from '#components/task/github-ref-summary'
+import { useDebounce } from '#hooks/use-debounce'
 import {
   type GithubUrlCandidate,
   useResolveGithubUrlQuery,
 } from '#hooks/use-github-link'
-import { type SearchResult, useSearchTasks } from '#hooks/use-search'
+import {
+  SEARCH_QUERY_DEBOUNCE_MS,
+  type SearchResult,
+  useSearchTasks,
+} from '#hooks/use-search'
 
 const GITHUB_ISSUE_OR_PR_URL_PATTERN =
   /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+\/?(?:[?#].*)?$/i
@@ -270,12 +275,14 @@ function GithubUrlCandidateResolver({
     isResolvingGithubUrl: boolean
   }) => ReactNode
 }) {
+  const debouncedUrl = useDebounce(url, SEARCH_QUERY_DEBOUNCE_MS)
+  const isDebouncing = debouncedUrl !== url
   const shouldResolveGithubUrl =
-    GITHUB_ISSUE_OR_PR_URL_PATTERN.test(url) &&
-    !excludedGithubUrls.includes(url)
+    GITHUB_ISSUE_OR_PR_URL_PATTERN.test(debouncedUrl) &&
+    !excludedGithubUrls.includes(debouncedUrl)
   const githubUrlQuery = useResolveGithubUrlQuery(
-    url,
-    enabled && shouldResolveGithubUrl,
+    debouncedUrl,
+    enabled && !isDebouncing && shouldResolveGithubUrl,
   )
   const resolvedGithub = githubUrlQuery.data
   const githubCandidate =
@@ -285,16 +292,23 @@ function GithubUrlCandidateResolver({
         ? (resolvedGithub.task.githubLinks[0] ?? null)
         : resolvedGithub.preview
   const availableGithubCandidate =
-    githubCandidate != null && !excludedGithubUrls.includes(githubCandidate.url)
+    !isDebouncing &&
+    githubCandidate != null &&
+    !excludedGithubUrls.includes(githubCandidate.url)
       ? githubCandidate
       : null
 
   return children({
-    githubCandidate: shouldResolveGithubUrl ? availableGithubCandidate : null,
+    githubCandidate:
+      shouldResolveGithubUrl && !isDebouncing ? availableGithubCandidate : null,
     githubUrlError:
-      shouldResolveGithubUrl && githubUrlQuery.error instanceof Error
+      shouldResolveGithubUrl &&
+      !isDebouncing &&
+      githubUrlQuery.error instanceof Error
         ? githubUrlQuery.error.message
         : undefined,
-    isResolvingGithubUrl: shouldResolveGithubUrl && githubUrlQuery.isFetching,
+    isResolvingGithubUrl:
+      enabled &&
+      (isDebouncing || (shouldResolveGithubUrl && githubUrlQuery.isFetching)),
   })
 }

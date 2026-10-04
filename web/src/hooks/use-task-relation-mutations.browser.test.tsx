@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +7,7 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import { projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
 import { useUpdateTaskBlockedBy } from '#hooks/use-task-relation-mutations'
+import { assertDefined } from '#lib/test-utils'
 
 const { patchTask } = vi.hoisted(() => ({ patchTask: vi.fn() }))
 
@@ -91,5 +92,54 @@ describe('useUpdateTaskBlockedBy', () => {
     expect(
       invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey),
     ).toEqual([taskKeys.all, projectKeys.all])
+  })
+
+  it('keeps blocker updates pending until cache invalidation finishes', async () => {
+    patchTask.mockResolvedValueOnce(
+      new Response('{}', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    let finishInvalidation: () => void = () => {}
+    const pendingInvalidation = new Promise<void>((resolve) => {
+      finishInvalidation = resolve
+    })
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockImplementation(() => pendingInvalidation)
+    const { result } = renderHook(() => useUpdateTaskBlockedBy(), {
+      wrapper: createWrapper(queryClient),
+    })
+    let mutationPromise: Promise<unknown> | undefined
+
+    act(() => {
+      mutationPromise = result.current.mutateAsync({
+        id: 'blocked-task',
+        blockedBy: [],
+        githubBlockerUrls: [
+          'https://github.com/example-owner/example-repo/issues/17',
+        ],
+      })
+    })
+
+    const readActual = () => ({
+      isPending: result.current.isPending,
+      invalidationKeys: invalidateQueries.mock.calls.map(
+        ([filters]) => filters?.queryKey,
+      ),
+    })
+
+    await waitFor(() => {
+      expect(readActual()).toEqual({
+        isPending: true,
+        invalidationKeys: [taskKeys.all, projectKeys.all],
+      })
+    })
+    finishInvalidation()
+    await act(async () => assertDefined(mutationPromise))
   })
 })

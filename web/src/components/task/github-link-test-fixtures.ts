@@ -1,5 +1,5 @@
 import type { GithubLink, ResolveGithubUrlResult } from '#hooks/use-github-link'
-import type { Task } from '#hooks/use-tasks'
+import type { BlockedByGithubRef } from '#hooks/use-tasks'
 
 export function makeGithubLink(
   overrides: Partial<GithubLink> = {},
@@ -42,8 +42,6 @@ export function makeGithubBlocker(
       `https://github.com/${owner}/${repo}/${kind === 'pull_request' ? 'pull' : 'issues'}/${String(number)}`,
   })
 }
-
-export type BlockedByGithubRef = Task['blockedByGithubRefs'][number]
 
 export function makeBlockedByGithubRef(
   overrides: Partial<BlockedByGithubRef> = {},
