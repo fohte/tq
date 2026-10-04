@@ -11,13 +11,13 @@ import {
 } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
-import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { labelKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask = makeTaskDetail({

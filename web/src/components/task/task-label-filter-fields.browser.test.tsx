@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
-import { labelKeys } from '#hooks/use-labels'
+import { labelKeys } from '#lib/query-keys'
 
 function renderFields(selectedLabel?: string) {
   // useCurrentContext() reads localStorage, which persists across test

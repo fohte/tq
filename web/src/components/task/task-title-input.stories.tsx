@@ -6,9 +6,8 @@ import { useState } from 'react'
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
-import { labelKeys } from '#hooks/use-labels'
 import type { MentionSuggestion } from '#hooks/use-task-mentions'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
+import { labelKeys, taskMentionKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

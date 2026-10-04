@@ -3,6 +3,7 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { commentKeys } from '#lib/query-keys'
 
 type Comment = InferResponseType<
   (typeof api.api.tasks)[':taskId']['comments']['$get'],
@@ -10,10 +11,6 @@ type Comment = InferResponseType<
 >[number]
 
 export type { Comment }
-
-export const commentKeys = {
-  all: (taskId: string) => ['tasks', taskId, 'comments'] as const,
-}
 
 export function useTaskComments(taskId: string) {
   return useQuery({

@@ -1,5 +1,6 @@
-import { STORAGE_KEY } from '#hooks/use-session-open-settings'
 import type { SessionOpenSettings } from '#lib/session-open'
+
+const STORAGE_KEY = 'tq:session-open-settings'
 
 const defaults: SessionOpenSettings = {
   localContext: 'personal',

@@ -4,8 +4,9 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  timeBlockKeys,
   useCreateTimeBlock,
-  useDeleteTimeBlock,
+  useDeleteManualTimeBlock,
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
@@ -459,14 +460,22 @@ describe('useUpdateTimeBlock', () => {
   })
 })
 
-describe('useDeleteTimeBlock', () => {
+describe('useDeleteManualTimeBlock', () => {
   it('deletes a time block with optimistic update', async () => {
     const mocks = await getMocks()
-    assertDefined(mocks['mockGet']).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve([sampleBlock]),
-    })
-    assertDefined(mocks['mockDelete']).mockResolvedValue({ ok: true })
+    const mockGet = assertDefined(mocks['mockGet'])
+    mockGet
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([sampleBlock]),
+      })
+      .mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([]),
+      })
+    const mockDelete = assertDefined(mocks['mockDelete'])
+    mockDelete.mockResolvedValue({ ok: true })
+    const queryKey = timeBlockKeys.list('2026-03-22', '2026-03-22')
 
     // Populate cache
     const { result: queryResult } = renderHook(
@@ -478,14 +487,24 @@ describe('useDeleteTimeBlock', () => {
     })
 
     // Delete
-    const { result } = renderHook(() => useDeleteTimeBlock(), { wrapper })
+    const { result } = renderHook(
+      () => useDeleteManualTimeBlock('task-1', 'block-1'),
+      { wrapper },
+    )
 
     act(() => {
-      result.current.mutate('block-1')
+      result.current.onDelete()
     })
 
+    const getOutput = () => ({
+      cachedBlocks: queryClient.getQueryData(queryKey),
+      deleteCalls: mockDelete.mock.calls,
+    })
     await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true)
+      expect(getOutput()).toEqual({
+        cachedBlocks: [],
+        deleteCalls: [[{ param: { id: 'block-1' } }]],
+      })
     })
   })
 })

@@ -3,7 +3,10 @@ import { Schema } from '@milkdown/kit/prose/model'
 import { EditorState, TextSelection } from '@milkdown/kit/prose/state'
 import { describe, expect, it } from 'vitest'
 
-import { isAtListItemStart, isNestedListItem } from '#lib/list-indent-keymap'
+import {
+  isAtListItemStart,
+  isNestedListItem,
+} from '#lib/list-indent-conditions'
 
 const schema = new Schema({
   nodes: {

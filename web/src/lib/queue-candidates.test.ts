@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   formatCandidateReason,
-  getCandidateReason,
   getQueueCandidates,
 } from '#lib/queue-candidates'
 
@@ -23,6 +22,13 @@ function makeCandidateTask(overrides: {
     commitment: 'someday',
     ...overrides,
   }
+}
+
+function getCandidateReason(
+  task: ReturnType<typeof makeCandidateTask>,
+  now: Date,
+) {
+  return getQueueCandidates([task], new Set(), now)[0]?.reason ?? null
 }
 
 describe('getCandidateReason', () => {

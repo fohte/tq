@@ -8,10 +8,9 @@ import {
 import {
   applySuggestionToQuery,
   extractCurrentPrefix,
-  extractTaskNumber,
   resolveSearchContext,
-  taskDetailToSearchResult,
 } from '#hooks/use-search'
+import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
 
 describe('extractTaskNumber', () => {
   it('accepts a bare number', () => {

@@ -1,10 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import {
-  STORAGE_KEY,
-  useSessionOpenSettings,
-} from '#hooks/use-session-open-settings'
+import { useSessionOpenSettings } from '#hooks/use-session-open-settings'
+
+const STORAGE_KEY = 'tq:session-open-settings'
 
 describe('useSessionOpenSettings', () => {
   it('defaults to personal context and no templates when nothing is stored', () => {

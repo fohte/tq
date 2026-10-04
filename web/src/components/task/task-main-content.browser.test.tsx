@@ -17,15 +17,17 @@ import {
   TaskSidebarMobile,
 } from '#components/task/task-detail'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { labelKeys } from '#hooks/use-labels'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
-import { savedViewKeys } from '#hooks/use-saved-views'
-import { activityKeys } from '#hooks/use-task-activity'
-import { commentKeys } from '#hooks/use-task-comments'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import {
+  activityKeys,
+  commentKeys,
+  labelKeys,
+  savedViewKeys,
+} from '#lib/query-keys'
 import { assertDefined, waitForFocus } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 

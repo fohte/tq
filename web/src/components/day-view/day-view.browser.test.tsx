@@ -14,27 +14,10 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   DayViewPresentation,
   type DayViewPresentationProps,
-  estimateMinutesForRange,
 } from '#components/day-view/day-view'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { assertDefined, findVisible } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
-
-describe('estimateMinutesForRange', () => {
-  it('uses the selected range length when it is at least 30 minutes', () => {
-    const start = new Date('2026-07-20T09:00:00')
-    const end = new Date('2026-07-20T10:00:00')
-
-    expect(estimateMinutesForRange({ start, end })).toBe(60)
-  })
-
-  it('clamps a shorter selection (e.g. a plain click) up to 30 minutes', () => {
-    const start = new Date('2026-07-20T09:00:00')
-    const end = new Date('2026-07-20T09:15:00')
-
-    expect(estimateMinutesForRange({ start, end })).toBe(30)
-  })
-})
 
 let capturedOnSelectRange:
   ((info: { start: Date; end: Date }) => void) | undefined
@@ -125,6 +108,19 @@ async function renderDayView(
 }
 
 describe('DayViewPresentation', () => {
+  it('clamps a short calendar selection to the minimum estimate', async () => {
+    await renderDayView()
+
+    act(() => {
+      capturedOnSelectRange?.({
+        start: new Date('2026-07-20T09:00:00'),
+        end: new Date('2026-07-20T09:15:00'),
+      })
+    })
+
+    expect(capturedModalProps.defaultEstimateMinutes).toBe(30)
+  })
+
   it('prefills the modal from a calendar selection and creates a time block once the task is created', async () => {
     const { onCreateTimeBlock } = await renderDayView()
     const start = new Date('2026-07-20T09:00:00')

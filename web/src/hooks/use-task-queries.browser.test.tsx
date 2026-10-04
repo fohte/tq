@@ -5,10 +5,9 @@ import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import {
-  TASK_LIST_PAGE_SIZE,
-  useInfiniteTaskList,
-} from '#hooks/use-task-queries'
+import { useInfiniteTaskList } from '#hooks/use-task-queries'
+
+const TASK_LIST_PAGE_SIZE = 50
 
 vi.mock('#lib/api', () => {
   const mockGet = vi.fn()

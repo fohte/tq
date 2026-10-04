@@ -16,16 +16,14 @@ import {
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
-import { labelKeys } from '#hooks/use-labels'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
-import { activityKeys } from '#hooks/use-task-activity'
-import { commentKeys } from '#hooks/use-task-comments'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { activityKeys, commentKeys, labelKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const samplePages: TaskPage[] = [

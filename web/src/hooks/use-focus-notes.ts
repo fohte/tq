@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { getStorageItem, setStorageItem } from '#lib/local-storage'
 
-export const PERSIST_DEBOUNCE_MS = 300
+const PERSIST_DEBOUNCE_MS = 300
 
 function storageKey(taskId: string): string {
   return `tq:focus-notes:${taskId}`

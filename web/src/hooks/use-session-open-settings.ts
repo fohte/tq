@@ -4,7 +4,7 @@ import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
 import type { SessionOpenSettings } from '#lib/session-open'
 import { isRecord } from '#lib/type-guards'
 
-export const STORAGE_KEY = 'tq:session-open-settings'
+const STORAGE_KEY = 'tq:session-open-settings'
 
 const DEFAULT_SETTINGS: SessionOpenSettings = {
   localContext: 'personal',

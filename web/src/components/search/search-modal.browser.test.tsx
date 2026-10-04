@@ -25,7 +25,6 @@ import {
   SEARCH_QUERY_DEBOUNCE_MS,
 } from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { getUrlCopiedFromEvent } from '#hooks/use-url-copied-toast'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 interface MockTask {
@@ -987,12 +986,12 @@ describe('SearchModal', () => {
     const clipboardWriteText = vi
       .spyOn(navigator.clipboard, 'writeText')
       .mockResolvedValue(undefined)
-    let copiedUrl: string | null = null
+    let copiedEventDetail: unknown = null
     const copiedEvent = new Promise<void>((resolve) => {
       window.addEventListener(
         'tq:url-copied',
         (event) => {
-          copiedUrl = getUrlCopiedFromEvent(event)
+          copiedEventDetail = event instanceof CustomEvent ? event.detail : null
           resolve()
         },
         { once: true },
@@ -1009,12 +1008,12 @@ describe('SearchModal', () => {
 
     const getOutput = () => ({
       copiedUrls: clipboardWriteText.mock.calls,
-      toastUrl: copiedUrl,
+      toastDetail: copiedEventDetail,
       onOpenChange: onOpenChange.mock.calls,
     })
     expect(getOutput()).toEqual({
       copiedUrls: [[taskUrl]],
-      toastUrl: taskUrl,
+      toastDetail: { url: taskUrl },
       onOpenChange: [[false]],
     })
   })

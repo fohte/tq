@@ -1,5 +1,8 @@
 import type { PageSearchResult, Suggestion } from '#hooks/use-search'
-import type { RecentProject, RecentTask } from '#lib/recent-search-items'
+import type { RecentSearchItem } from '#lib/recent-search-items'
+
+type RecentTask = Extract<RecentSearchItem, { kind: 'task' }>
+type RecentProject = Extract<RecentSearchItem, { kind: 'project' }>
 
 export function makeSuggestion(
   overrides: Partial<Suggestion> = {},

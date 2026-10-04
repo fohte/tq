@@ -34,7 +34,7 @@ export interface TaskListFilter {
   offset?: number
 }
 
-export const TASK_LIST_PAGE_SIZE = 50
+const TASK_LIST_PAGE_SIZE = 50
 
 // infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
 // runs optimistic updates against every `lists`-prefixed cache entry assuming

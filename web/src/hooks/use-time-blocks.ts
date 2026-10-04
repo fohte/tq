@@ -169,7 +169,7 @@ export function useUpdateTimeBlock() {
   })
 }
 
-export function useDeleteTimeBlock() {
+function useDeleteTimeBlock() {
   const queryClient = useQueryClient()
 
   return useMutation({
