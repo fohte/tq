@@ -22,12 +22,31 @@ export type GithubLink = InferResponseType<
   200
 >['githubLinks'][number]
 
+export type GithubBlocker = TaskDetail['githubBlockers'][number]
+
+export type GithubUrlCandidate = Pick<
+  GithubLink,
+  'owner' | 'repo' | 'number' | 'kind' | 'url' | 'state' | 'title'
+>
+
+async function resolveGithubUrl(url: string): Promise<ResolveGithubUrlResult> {
+  const res = await api.api.github.resolve.$post({ json: { url } })
+  return unwrapOrThrow(await assertOkWithMessage(res)).json()
+}
+
 export function useResolveGithubUrl() {
   return useMutation({
-    mutationFn: async (url: string) => {
-      const res = await api.api.github.resolve.$post({ json: { url } })
-      return unwrapOrThrow(await assertOkWithMessage(res)).json()
-    },
+    mutationFn: resolveGithubUrl,
+  })
+}
+
+export function useResolveGithubUrlQuery(url: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['github-url-resolve', url],
+    queryFn: () => resolveGithubUrl(url),
+    enabled: enabled && url !== '',
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -102,6 +121,9 @@ export function useUpdateGithubLinkNotifyEvents(taskId: string) {
           ...previousDetail,
           githubLinks: previousDetail.githubLinks.map((link) =>
             link.id === linkId ? { ...link, notifyEvents } : link,
+          ),
+          githubBlockers: previousDetail.githubBlockers.map((blocker) =>
+            blocker.id === linkId ? { ...blocker, notifyEvents } : blocker,
           ),
         })
       }

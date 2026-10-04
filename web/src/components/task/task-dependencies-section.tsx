@@ -2,10 +2,14 @@ import { Button } from '@fohte/ui/button'
 import { Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-picker'
+import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
+import type { GithubBlocker } from '#hooks/use-github-link'
+import { useUpdateGithubLinkNotifyEvents } from '#hooks/use-github-link'
 import type { SearchResult } from '#hooks/use-search'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 import { useUpdateTaskBlockedBy } from '#hooks/use-tasks'
@@ -14,12 +18,12 @@ export function TaskDependenciesSection({
   taskId,
   blockedBy,
   blocking,
-  githubBlockerUrls,
+  githubBlockers,
 }: {
   taskId: string
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
-  githubBlockerUrls: string[]
+  githubBlockers: GithubBlocker[]
 }) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -29,7 +33,7 @@ export function TaskDependenciesSection({
         <BlockedByGroup
           taskId={taskId}
           blockedBy={blockedBy}
-          githubBlockerUrls={githubBlockerUrls}
+          githubBlockers={githubBlockers}
         />
 
         {blocking.length > 0 && (
@@ -54,14 +58,16 @@ export function TaskDependenciesSection({
 function BlockedByGroup({
   taskId,
   blockedBy,
-  githubBlockerUrls,
+  githubBlockers,
 }: {
   taskId: string
   blockedBy: LinkedTaskSummary[]
-  githubBlockerUrls: string[]
+  githubBlockers: GithubBlocker[]
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const updateBlockedBy = useUpdateTaskBlockedBy()
+  const updateNotifyEvents = useUpdateGithubLinkNotifyEvents(taskId)
+  const githubBlockerUrls = githubBlockers.map(({ url }) => url)
 
   const excludedTaskIds = useMemo(
     () => new Set([taskId, ...blockedBy.map((task) => task.id)]),
@@ -101,6 +107,69 @@ function BlockedByGroup({
             }
           />
         ))}
+        {githubBlockers.map((blocker) => (
+          <div
+            key={blocker.id}
+            className="flex items-center gap-2 border-b border-border px-3 py-2 last:border-b-0"
+          >
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <a
+                href={blocker.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-w-0 items-center gap-2 text-sm hover:underline"
+                title={`${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
+              >
+                <GithubRefSummary
+                  kind={blocker.kind}
+                  state={blocker.state}
+                  owner={blocker.owner}
+                  repo={blocker.repo}
+                  number={blocker.number}
+                  title={blocker.title}
+                  refClassName="min-w-0 shrink truncate"
+                  titleClassName={
+                    blocker.state === 'open'
+                      ? 'min-w-0 flex-1'
+                      : 'min-w-0 flex-1 text-muted-foreground'
+                  }
+                />
+              </a>
+              <span className="font-mono text-2xs text-muted-foreground-faint">
+                github · {blocker.state}
+              </span>
+            </div>
+            <GitHubNotifyEventsPicker
+              value={blocker.notifyEvents}
+              onChange={(notifyEvents) => {
+                updateNotifyEvents.mutate({
+                  linkId: blocker.id,
+                  notifyEvents,
+                })
+              }}
+              disabled={updateNotifyEvents.isPending}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                updateBlockedBy.mutate({
+                  id: taskId,
+                  blockedBy,
+                  githubBlockerUrls: githubBlockerUrls.filter(
+                    (url) => url !== blocker.url,
+                  ),
+                })
+              }}
+              disabled={updateBlockedBy.isPending}
+              aria-label={`Remove ${blocker.owner}/${blocker.repo}#${String(blocker.number)} as blocker`}
+              className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+            >
+              <X className="size-3.5" />
+            </Button>
+          </div>
+        ))}
         <Button
           type="button"
           variant="ghost"
@@ -119,11 +188,21 @@ function BlockedByGroup({
         onOpenChange={setDialogOpen}
         title="Add blocker"
         excludedTaskIds={excludedTaskIds}
+        excludedGithubUrls={githubBlockerUrls}
+        allowGithubUrls
         onSelectCandidate={(candidate: SearchResult) => {
           updateBlockedBy.mutate({
             id: taskId,
             blockedBy: [...blockedBy, candidate],
             githubBlockerUrls,
+          })
+          setDialogOpen(false)
+        }}
+        onSelectGithubCandidate={(candidate) => {
+          updateBlockedBy.mutate({
+            id: taskId,
+            blockedBy,
+            githubBlockerUrls: [...githubBlockerUrls, candidate.url],
           })
           setDialogOpen(false)
         }}

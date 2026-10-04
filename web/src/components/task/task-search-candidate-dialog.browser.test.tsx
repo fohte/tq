@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
+import { useResolveGithubUrlQuery } from '#hooks/use-github-link'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 import { partialMutation } from '#lib/test-utils'
 
@@ -15,7 +17,17 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   }
 })
 
+vi.mock('#hooks/use-github-link', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('#hooks/use-github-link')>()
+  return {
+    ...original,
+    useResolveGithubUrlQuery: vi.fn(),
+  }
+})
+
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
+const mockUseResolveGithubUrlQuery = vi.mocked(useResolveGithubUrlQuery)
 
 type SearchTasksResult = ReturnType<typeof useSearchTasks>
 
@@ -24,6 +36,16 @@ function mockSearchResults(data: SearchResult[], isFetching = false) {
     partialMutation<SearchTasksResult>({ data, isFetching }),
   )
 }
+
+beforeEach(() => {
+  mockUseResolveGithubUrlQuery.mockReturnValue(
+    partialMutation<ReturnType<typeof useResolveGithubUrlQuery>>({
+      data: undefined,
+      error: null,
+      isFetching: false,
+    }),
+  )
+})
 
 const orphanCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000011',
@@ -145,5 +167,58 @@ describe('TaskSearchCandidateDialog', () => {
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
 
     expect(screen.getByText('no results for "Deploy"')).toBeInTheDocument()
+  })
+
+  it('resolves a pasted GitHub URL and selects it as a blocker', async () => {
+    const githubUrl = 'https://github.com/example-team/sample-project/pull/2048'
+    const pastedUrl = `${githubUrl}#issuecomment-77`
+    const resolution = makeResolveGithubUrlResult({
+      owner: 'example-team',
+      repo: 'sample-project',
+      number: 2048,
+      kind: 'pull_request',
+      url: githubUrl,
+      title: 'Update the build tools',
+    })
+    mockSearchResults([])
+    mockUseResolveGithubUrlQuery.mockImplementation((url, enabled) =>
+      partialMutation<ReturnType<typeof useResolveGithubUrlQuery>>({
+        data: enabled && url === pastedUrl ? resolution : undefined,
+        error: null,
+        isFetching: false,
+      }),
+    )
+    const onSelectGithubCandidate = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <TaskSearchCandidateDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Add blocker"
+        excludedTaskIds={new Set()}
+        allowGithubUrls
+        onSelectCandidate={vi.fn()}
+        onSelectGithubCandidate={onSelectGithubCandidate}
+      />,
+    )
+
+    await user.type(
+      screen.getByPlaceholderText(
+        'Search tasks or paste a GitHub issue/PR URL...',
+      ),
+      pastedUrl,
+    )
+    await user.click(await screen.findByText('Update the build tools'))
+
+    const readActual = () => ({
+      reference: screen.getByText('example-team/sample-project#2048')
+        .textContent,
+      selectionCalls: onSelectGithubCandidate.mock.calls,
+    })
+
+    expect(readActual()).toEqual({
+      reference: 'example-team/sample-project#2048',
+      selectionCalls: [[resolution.preview]],
+    })
   })
 })

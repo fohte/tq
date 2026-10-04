@@ -271,17 +271,50 @@ export function CloseReasonLabel({
 
 export function BlockedByLabel({
   blockedByNumbers,
+  blockedByGithubRefs,
 }: {
   blockedByNumbers: number[]
+  blockedByGithubRefs: {
+    owner: string
+    repo: string
+    number: number
+    url: string
+  }[]
 }) {
+  const blockerCount = blockedByNumbers.length + blockedByGithubRefs.length
+  const soleGithubBlocker =
+    blockerCount === 1 ? blockedByGithubRefs[0] : undefined
   const text =
-    blockedByNumbers.length === 1
+    blockerCount === 1 && soleGithubBlocker == null
       ? `blocked by #${String(blockedByNumbers[0])}`
-      : `blocked by ${String(blockedByNumbers.length)}`
+      : `blocked by ${String(blockerCount)}`
 
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground">
-      {text}
+      {soleGithubBlocker == null ? (
+        text
+      ) : (
+        <>
+          blocked by{' '}
+          <button
+            type="button"
+            className="hover:text-foreground hover:underline"
+            aria-label={`Open ${soleGithubBlocker.owner}/${soleGithubBlocker.repo}#${String(soleGithubBlocker.number)} on GitHub`}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              window.open(
+                soleGithubBlocker.url,
+                '_blank',
+                'noopener,noreferrer',
+              )
+            }}
+          >
+            {soleGithubBlocker.owner}/{soleGithubBlocker.repo}#
+            {soleGithubBlocker.number}
+          </button>
+        </>
+      )}
     </span>
   )
 }

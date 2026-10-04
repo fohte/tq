@@ -65,7 +65,8 @@ function makeDetail(): TaskDetail {
   return makeTaskDetail({
     id: taskId,
     title: 'An example task',
-    githubLinks: [targetLink, otherLink],
+    githubLinks: [targetLink],
+    githubBlockers: [otherLink],
   })
 }
 
@@ -117,16 +118,16 @@ afterEach(() => {
 })
 
 describe('useUpdateGithubLinkNotifyEvents', () => {
-  it('optimistically updates only the selected link while the PATCH is pending', async () => {
+  it('optimistically updates the selected blocker while the PATCH is pending', async () => {
     const mocks = await getMocks()
     const previousDetail = makeDetail()
     const nextEvents: GithubLink['notifyEvents'] = ['closed', 'comments']
     const optimisticDetail = {
       ...previousDetail,
-      githubLinks: previousDetail.githubLinks.map((link) =>
-        link.id === targetLink.id
-          ? { ...link, notifyEvents: nextEvents }
-          : link,
+      githubBlockers: previousDetail.githubBlockers.map((blocker) =>
+        blocker.id === otherLink.id
+          ? { ...blocker, notifyEvents: nextEvents }
+          : blocker,
       ),
     }
     queryClient.setQueryData(taskKeys.detail(taskId), previousDetail)
@@ -146,7 +147,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
     let mutationPromise: Promise<GithubLink> | undefined
     act(() => {
       mutationPromise = result.current.mutateAsync({
-        linkId: targetLink.id,
+        linkId: otherLink.id,
         notifyEvents: nextEvents,
       })
     })
@@ -162,7 +163,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
         patchCalls: [
           [
             {
-              param: { taskId, linkId: targetLink.id },
+              param: { taskId, linkId: otherLink.id },
               json: { notifyEvents: nextEvents },
             },
           ],
@@ -174,7 +175,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
     resolvePatch({
       status: 200,
       ok: true,
-      json: () => Promise.resolve({ ...targetLink, notifyEvents: nextEvents }),
+      json: () => Promise.resolve({ ...otherLink, notifyEvents: nextEvents }),
     })
     await assertDefined(mutationPromise)
   })
@@ -197,7 +198,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
     let mutationOutcome: Promise<'resolved' | 'rejected'> | undefined
     act(() => {
       mutationOutcome = result.current
-        .mutateAsync({ linkId: targetLink.id, notifyEvents: nextEvents })
+        .mutateAsync({ linkId: otherLink.id, notifyEvents: nextEvents })
         .then(
           () => 'resolved' as const,
           () => 'rejected' as const,
@@ -213,7 +214,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
       patchCalls: [
         [
           {
-            param: { taskId, linkId: targetLink.id },
+            param: { taskId, linkId: otherLink.id },
             json: { notifyEvents: nextEvents },
           },
         ],
