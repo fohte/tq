@@ -1,6 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { NowPanelProps } from '#components/day-view/now-panel'
+import {
+  buildNowPanelModel,
+  buildNowPanelTaskRowStates,
+  type NowPanelTaskRowState,
+} from '#components/day-view/now-panel-model'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
@@ -19,6 +24,7 @@ interface UseNowPanelDataOptions {
 
 export interface NowPanelData {
   nowPanelProps: NowPanelProps
+  taskRowStates: Map<string, NowPanelTaskRowState>
   gcalAuthRequired: boolean
 }
 
@@ -29,7 +35,19 @@ export function useNowPanelData({
   isTasksLoading,
   refetchInterval,
 }: UseNowPanelDataOptions): NowPanelData {
-  const dateRange = getNowPanelQueryDateRange(new Date())
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    if (!enabled) return
+
+    const intervalId = window.setInterval(() => {
+      setNow(new Date())
+    }, 60_000)
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [enabled])
+
+  const dateRange = getNowPanelQueryDateRange(now)
   const timeBlocksQuery = useTimeBlocks(
     dateRange.startDate,
     dateRange.endDate,
@@ -76,17 +94,36 @@ export function useNowPanelData({
     context,
   })
 
+  const timeBlocks = timeBlocksQuery.data ?? []
+  const model = useMemo(
+    () =>
+      buildNowPanelModel({
+        now,
+        timeBlocks,
+        calendarEvents,
+        tasks: taskMap,
+      }),
+    [now, timeBlocks, calendarEvents, taskMap],
+  )
+  const taskRowStates = useMemo(
+    () => buildNowPanelTaskRowStates({ now, timeBlocks, model }),
+    [now, timeBlocks, model],
+  )
+
   return {
     nowPanelProps: {
-      timeBlocks: timeBlocksQuery.data ?? [],
+      timeBlocks,
       calendarEvents,
       taskMap,
+      now,
+      model,
       isLoading:
         isTasksLoading ||
         timeBlocksQuery.isPending ||
         schedulesQuery.isPending ||
         gcalEventsQuery.isPending,
     },
+    taskRowStates,
     gcalAuthRequired:
       enabled && gcalEventsQuery.error instanceof GcalAuthRequiredError,
   }

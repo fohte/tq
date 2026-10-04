@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
-import { buildNowPanelModel } from '#components/day-view/now-panel-model'
+import {
+  buildNowPanelModel,
+  type NowPanelModel,
+} from '#components/day-view/now-panel-model'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
@@ -10,6 +13,7 @@ export interface NowPanelProps {
   timeBlocks: TimeBlock[]
   calendarEvents: TimeBlockEvent[]
   taskMap: Map<string, Task>
+  model?: NowPanelModel
   isLoading?: boolean
   /** Fixed clock for stories and tests. The live panel updates itself every minute. */
   now?: Date
@@ -19,6 +23,7 @@ export function NowPanel({
   timeBlocks,
   calendarEvents,
   taskMap,
+  model: providedModel,
   isLoading = false,
   now: fixedNow,
 }: NowPanelProps) {
@@ -38,8 +43,9 @@ export function NowPanel({
   const now = fixedNow ?? clockNow
   const model = useMemo(
     () =>
+      providedModel ??
       buildNowPanelModel({ now, timeBlocks, calendarEvents, tasks: taskMap }),
-    [now, timeBlocks, calendarEvents, taskMap],
+    [providedModel, now, timeBlocks, calendarEvents, taskMap],
   )
 
   return (

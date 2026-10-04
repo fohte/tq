@@ -229,6 +229,7 @@ const compactTasks = compactTaskTitles.map((title, index) =>
     ...(index === 0 ? { dueDate: overdueDateStr } : {}),
   }),
 )
+const compactUpcomingTask = compactTasks[1]
 const compactExternalDueTask = makeTask({
   id: 'compact-external-due-task',
   title: 'Confirm the supplier estimate',
@@ -275,6 +276,24 @@ const compactQueueCandidates = getQueueCandidates(
   new Set([...compactTasks, compactWeekTask].map((task) => task.id)),
   today,
 )
+const compactTaskBlock = makeTimeBlock({
+  id: 'compact-task-block',
+  taskId: compactCurrentTaskId,
+  startTime: `${dateStr}T09:00:00`,
+  endTime: `${dateStr}T10:00:00`,
+})
+const compactOverrunTaskBlock = makeTimeBlock({
+  id: 'compact-overrun-task-block',
+  taskId: compactExternalDueTask.id,
+  startTime: `${dateStr}T08:30:00`,
+  endTime: `${dateStr}T09:00:00`,
+})
+const compactUpcomingTaskBlock = makeTimeBlock({
+  id: 'compact-upcoming-task-block',
+  taskId: compactUpcomingTask.id,
+  startTime: `${dateStr}T10:00:00`,
+  endTime: `${dateStr}T10:30:00`,
+})
 const compactEvents: TimeBlockEvent[] = [
   {
     id: 'compact-task-block',
@@ -283,6 +302,22 @@ const compactEvents: TimeBlockEvent[] = [
     end: `${dateStr}T10:00:00`,
     type: 'manual',
     taskId: compactCurrentTaskId,
+  },
+  {
+    id: 'compact-overrun-task-block',
+    title: compactExternalDueTask.title,
+    start: compactOverrunTaskBlock.startTime,
+    end: compactOverrunTaskBlock.endTime,
+    type: 'manual',
+    taskId: compactExternalDueTask.id,
+  },
+  {
+    id: 'compact-upcoming-task-block',
+    title: compactUpcomingTask.title,
+    start: compactUpcomingTaskBlock.startTime,
+    end: compactUpcomingTaskBlock.endTime,
+    type: 'manual',
+    taskId: compactUpcomingTask.id,
   },
   {
     id: 'compact-team-meeting',
@@ -300,12 +335,6 @@ const compactEvents: TimeBlockEvent[] = [
     scheduleId: 'compact-lunch',
   },
 ]
-const compactTaskBlock = makeTimeBlock({
-  id: 'compact-task-block',
-  taskId: compactCurrentTaskId,
-  startTime: `${dateStr}T09:00:00`,
-  endTime: `${dateStr}T10:00:00`,
-})
 const compactSchedules: Schedule[] = [
   makeSchedule({
     scheduleId: 'compact-lunch',
@@ -449,10 +478,37 @@ export const Compact: Story = {
     schedules: compactSchedules,
     nowPanel: {
       now: new Date(`${dateStr}T09:30:00`),
-      timeBlocks: [compactTaskBlock],
+      timeBlocks: [
+        compactOverrunTaskBlock,
+        compactTaskBlock,
+        compactUpcomingTaskBlock,
+      ],
       calendarEvents: compactEvents,
-      taskMap: new Map(compactTasks.map((task) => [task.id, task])),
+      taskMap: new Map(
+        [...compactTasks, compactExternalDueTask].map((task) => [
+          task.id,
+          task,
+        ]),
+      ),
     },
+    taskRowStates: new Map([
+      [
+        compactCurrentTaskId,
+        { timeRanges: ['09:00–10:00'], isCurrentTimeBlock: true },
+      ],
+      [
+        compactExternalDueTask.id,
+        {
+          timeRanges: ['08:30–09:00'],
+          isCurrentTimeBlock: false,
+          blockEndedAt: '09:00',
+        },
+      ],
+      [
+        compactUpcomingTask.id,
+        { timeRanges: ['10:00–10:30'], isCurrentTimeBlock: false },
+      ],
+    ]),
     compactMemo: {
       context: 'work',
       memo: makeMemo({

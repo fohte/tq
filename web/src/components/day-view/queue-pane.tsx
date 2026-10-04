@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
+import type { NowPanelTaskRowState } from '#components/day-view/now-panel-model'
 import { findWritableQueueSection } from '#components/day-view/queue-sections'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import type { QueueTaskDragData } from '#components/task/queue-item-row'
@@ -40,6 +41,7 @@ export interface QueuePaneProps {
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
+  taskRowStates?: ReadonlyMap<string, NowPanelTaskRowState>
   className?: string
 }
 
@@ -51,6 +53,7 @@ export function QueuePane({
   onMoveTask,
   onInsertCandidate,
   onRemoveFromQueue,
+  taskRowStates,
   className,
 }: QueuePaneProps) {
   // Delayed touch activation keeps scrolling available and lets short taps navigate.
@@ -128,6 +131,7 @@ export function QueuePane({
               queueKey={section.key}
               title={section.title}
               items={section.items}
+              {...(taskRowStates == null ? {} : { taskRowStates })}
               {...(section.dateRangeLabel != null
                 ? { dateRangeLabel: section.dateRangeLabel }
                 : {})}

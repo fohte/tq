@@ -95,6 +95,52 @@ export const DueToday: Story = {
         dueDate: todayDate,
       }),
     ],
+    taskRowStates: new Map([
+      [
+        '1',
+        {
+          timeRanges: ['08:30–09:00'],
+          isCurrentTimeBlock: false,
+          blockEndedAt: '09:00',
+        },
+      ],
+    ]),
+  },
+}
+
+export const ScheduledTask: Story = {
+  name: "a queued task shows today's work block time",
+  args: {
+    queueKey: 'day',
+    title: 'today',
+    emptyMessage: "No tasks in today's queue",
+    items: [
+      makeTask({ id: 'scheduled-task', title: 'Prepare the release notes' }),
+    ],
+    taskRowStates: new Map([
+      [
+        'scheduled-task',
+        { timeRanges: ['10:00–10:30'], isCurrentTimeBlock: false },
+      ],
+    ]),
+  },
+}
+
+export const CurrentWorkBlock: Story = {
+  name: 'a queued task has a stronger background during its current work block',
+  args: {
+    queueKey: 'day',
+    title: 'today',
+    emptyMessage: "No tasks in today's queue",
+    items: [
+      makeTask({ id: 'current-task', title: 'Review the handoff notes' }),
+    ],
+    taskRowStates: new Map([
+      [
+        'current-task',
+        { timeRanges: ['09:00–09:30'], isCurrentTimeBlock: true },
+      ],
+    ]),
   },
 }
 

@@ -33,14 +33,23 @@ function Providers({ children }: { children: ReactNode }) {
 function TaskRowAppearanceWithProviders({
   task,
   size = 'default',
+  secondLineExtras = [],
+  isCurrentTimeBlock = false,
 }: {
   task: Task
   size?: 'default' | 'large'
+  secondLineExtras?: ReactNode[]
+  isCurrentTimeBlock?: boolean
 }) {
   return (
     <Providers>
       <div className="w-full max-w-3xl">
-        <TaskRowAppearance task={task} size={size} />
+        <TaskRowAppearance
+          task={task}
+          size={size}
+          secondLineExtras={secondLineExtras}
+          isCurrentTimeBlock={isCurrentTimeBlock}
+        />
       </div>
     </Providers>
   )
@@ -103,6 +112,61 @@ export const Todo: Story = {
   args: {
     task: { ...baseTask },
   },
+}
+
+export const WithTodayBlock: Story = {
+  name: "the row shows today's work block time",
+  args: {
+    task: { ...baseTask },
+  },
+  render: ({ task }) => (
+    <TaskRowAppearanceWithProviders
+      task={task}
+      secondLineExtras={[
+        <span key="time-ranges" className="font-mono text-xs">
+          09:00–09:30
+        </span>,
+      ]}
+    />
+  ),
+}
+
+export const BlockEnded: Story = {
+  name: 'the row shows when an unfinished work block ended',
+  args: {
+    task: { ...baseTask },
+  },
+  render: ({ task }) => (
+    <TaskRowAppearanceWithProviders
+      task={task}
+      secondLineExtras={[
+        <span key="time-ranges" className="font-mono text-xs">
+          09:00–09:30
+        </span>,
+        <span key="block-ended" className="text-destructive">
+          block ended 09:30
+        </span>,
+      ]}
+    />
+  ),
+}
+
+export const CurrentTimeBlock: Story = {
+  name: 'the row has a stronger background during its current work block',
+  args: {
+    task: { ...baseTask },
+  },
+  render: ({ task }) => (
+    <TaskRowAppearanceWithProviders
+      task={task}
+      secondLineExtras={[
+        <span key="time-ranges" className="font-mono text-xs">
+          09:00–09:30
+        </span>,
+      ]}
+      isCurrentTimeBlock
+    />
+  ),
 }
 
 export const Large: Story = {

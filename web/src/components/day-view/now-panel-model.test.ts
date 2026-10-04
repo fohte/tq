@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
-import { buildNowPanelModel } from '#components/day-view/now-panel-model'
+import {
+  buildNowPanelModel,
+  buildNowPanelTaskRowStates,
+} from '#components/day-view/now-panel-model'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
@@ -401,5 +404,97 @@ describe('buildNowPanelModel', () => {
       emptyState: 'no-block-now',
       nextEvent: { title: task.title, minutesUntil: 8, isWarning: false },
     })
+  })
+})
+
+describe('buildNowPanelTaskRowStates', () => {
+  it("shares today's time blocks and current status with compact task rows", () => {
+    const activeTask = makeTask({ id: 'task-active' })
+    const overrunTask = makeTask({ id: 'task-overrun' })
+    const upcomingTask = makeTask({ id: 'task-upcoming' })
+    const completedTask = makeTask({
+      id: 'task-completed',
+      status: 'completed',
+    })
+    const earlierActiveTaskBlock = block(
+      'block-earlier',
+      activeTask.id,
+      localTime(9, 13),
+      localTime(9, 13, 30),
+    )
+    const activeTaskBlock = block(
+      'block-active',
+      activeTask.id,
+      localTime(9, 14, 40),
+      localTime(9, 15, 10),
+    )
+    const overrunTaskBlock = block(
+      'block-overrun',
+      overrunTask.id,
+      localTime(9, 14),
+      localTime(9, 14, 40),
+    )
+    const upcomingTaskBlock = block(
+      'block-upcoming',
+      upcomingTask.id,
+      localTime(9, 15, 10),
+      localTime(9, 15, 40),
+    )
+    const completedTaskBlock = block(
+      'block-completed',
+      completedTask.id,
+      localTime(9, 14, 10),
+      localTime(9, 14, 20),
+    )
+    const timeBlocks = [
+      earlierActiveTaskBlock,
+      activeTaskBlock,
+      overrunTaskBlock,
+      upcomingTaskBlock,
+      completedTaskBlock,
+    ]
+    const tasks = taskMap(activeTask, overrunTask, upcomingTask, completedTask)
+    const model = buildNowPanelModel({
+      now,
+      timeBlocks,
+      calendarEvents: timeBlocks.map((timeBlock) =>
+        blockEvent(timeBlock, timeBlock.taskId),
+      ),
+      tasks,
+    })
+
+    expect(buildNowPanelTaskRowStates({ now, timeBlocks, model })).toEqual(
+      new Map([
+        [
+          activeTask.id,
+          {
+            timeRanges: ['13:00–13:30', '14:40–15:10'],
+            isCurrentTimeBlock: true,
+          },
+        ],
+        [
+          overrunTask.id,
+          {
+            timeRanges: ['14:00–14:40'],
+            isCurrentTimeBlock: false,
+            blockEndedAt: '14:40',
+          },
+        ],
+        [
+          upcomingTask.id,
+          {
+            timeRanges: ['15:10–15:40'],
+            isCurrentTimeBlock: false,
+          },
+        ],
+        [
+          completedTask.id,
+          {
+            timeRanges: ['14:10–14:20'],
+            isCurrentTimeBlock: false,
+          },
+        ],
+      ]),
+    )
   })
 })

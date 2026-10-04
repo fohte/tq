@@ -1,7 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { CSSProperties } from 'react'
-import { useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
 
 import { QueueItemRowAppearance } from '#components/task/queue-item-row-appearance'
 import type { Task } from '#hooks/use-tasks'
@@ -17,6 +16,8 @@ export function QueueItemRow({
   task,
   queueKey,
   onRemove,
+  secondLineExtras = [],
+  isCurrentTimeBlock = false,
 }: {
   task: Task
   /** The queue this row belongs to, carried in drag data so a shared
@@ -24,6 +25,8 @@ export function QueueItemRow({
    * in (needed to detect a cross-section move vs. a same-section reorder). */
   queueKey: string
   onRemove: () => void
+  secondLineExtras?: ReactNode[]
+  isCurrentTimeBlock?: boolean
 }) {
   const {
     attributes,
@@ -61,6 +64,8 @@ export function QueueItemRow({
   return (
     <QueueItemRowAppearance
       task={task}
+      secondLineExtras={secondLineExtras}
+      isCurrentTimeBlock={isCurrentTimeBlock}
       onRemove={onRemove}
       attributes={attributes}
       listeners={listeners}

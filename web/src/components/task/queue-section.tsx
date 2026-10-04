@@ -1,6 +1,8 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import type { ReactNode } from 'react'
 
+import type { NowPanelTaskRowState } from '#components/day-view/now-panel-model'
 import { QueueItemRow } from '#components/task/queue-item-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
@@ -15,6 +17,7 @@ export interface QueueSectionProps {
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
   isReadOnly?: boolean
+  taskRowStates?: ReadonlyMap<string, NowPanelTaskRowState>
   onRemove: (taskId: string) => void
   emptyMessage: string
 }
@@ -25,6 +28,7 @@ export function QueueSection({
   items,
   dateRangeLabel,
   isReadOnly = false,
+  taskRowStates,
   onRemove,
   emptyMessage,
 }: QueueSectionProps) {
@@ -32,6 +36,28 @@ export function QueueSection({
     id: queueKey,
     disabled: isReadOnly,
   })
+
+  const getTaskRowExtras = (
+    state: NowPanelTaskRowState | undefined,
+  ): ReactNode[] => {
+    if (state == null) return []
+    return [
+      ...(state.timeRanges.length > 0
+        ? [
+            <span key="time-ranges" className="font-mono text-xs">
+              {state.timeRanges.join(', ')}
+            </span>,
+          ]
+        : []),
+      ...(state.blockEndedAt == null
+        ? []
+        : [
+            <span key="block-ended" className="text-destructive">
+              block ended {state.blockEndedAt}
+            </span>,
+          ]),
+    ]
+  }
 
   return (
     <div className="border-b border-border">
@@ -56,13 +82,27 @@ export function QueueSection({
             items.map((task) =>
               isReadOnly ? (
                 <div key={task.id} className="border-b border-border">
-                  <TaskRowAppearance task={task} />
+                  <TaskRowAppearance
+                    task={task}
+                    secondLineExtras={getTaskRowExtras(
+                      taskRowStates?.get(task.id),
+                    )}
+                    isCurrentTimeBlock={
+                      taskRowStates?.get(task.id)?.isCurrentTimeBlock ?? false
+                    }
+                  />
                 </div>
               ) : (
                 <QueueItemRow
                   key={task.id}
                   task={task}
                   queueKey={queueKey}
+                  secondLineExtras={getTaskRowExtras(
+                    taskRowStates?.get(task.id),
+                  )}
+                  isCurrentTimeBlock={
+                    taskRowStates?.get(task.id)?.isCurrentTimeBlock ?? false
+                  }
                   onRemove={() => {
                     onRemove(task.id)
                   }}

@@ -17,6 +17,7 @@ import {
 } from '#components/calendar/calendar-view'
 import { CompactMemoPanel } from '#components/day-view/compact-memo-panel'
 import { NowPanel, type NowPanelProps } from '#components/day-view/now-panel'
+import type { NowPanelTaskRowState } from '#components/day-view/now-panel-model'
 import {
   QueuePane,
   type QueueSectionData,
@@ -116,6 +117,7 @@ export interface DayViewPresentationProps {
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
   nowPanel?: NowPanelProps
+  taskRowStates?: ReadonlyMap<string, NowPanelTaskRowState>
   compactMemo?:
     | {
         context: MemoContext
@@ -153,6 +155,7 @@ export function DayViewPresentation({
   initialMobileTab,
   layout = 'default',
   nowPanel,
+  taskRowStates,
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
@@ -400,6 +403,9 @@ export function DayViewPresentation({
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
               onRemoveFromQueue={onRemoveFromQueue}
+              {...(isCompactLayout && taskRowStates != null
+                ? { taskRowStates }
+                : {})}
               {...(isCompactLayout
                 ? { className: 'flex-none overflow-visible' }
                 : {})}
