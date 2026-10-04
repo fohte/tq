@@ -1,5 +1,41 @@
-import { projectKeys } from '#hooks/use-projects'
-import { taskKeys } from '#hooks/use-task-queries'
+import type { LabelFilter } from '#hooks/use-labels'
+import type { ProjectFilter } from '#hooks/use-projects'
+import type { SavedViewFilter } from '#hooks/use-saved-views'
+import type { TaskListFilter } from '#hooks/use-task-queries'
+
+// infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
+// runs optimistic updates against every `lists`-prefixed cache entry assuming
+// each holds a Task[], but an infinite query's cache entry is an InfiniteData
+// object instead, so a shared prefix would make those updates throw.
+export const taskKeys = {
+  all: ['tasks'] as const,
+  lists: ['tasks', 'list'] as const,
+  list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
+  infiniteLists: ['tasks', 'infinite-list'] as const,
+  infiniteList: (filter?: TaskListFilter) =>
+    [...taskKeys.infiniteLists, filter] as const,
+  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
+}
+
+export const projectKeys = {
+  all: ['projects'] as const,
+  lists: ['projects', 'list'] as const,
+  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
+  detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+  taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
+}
+
+export const queueKeys = {
+  all: ['queues'] as const,
+  items: (key: string, date: string) =>
+    [...queueKeys.all, key, 'items', date] as const,
+}
+
+export const timeBlockKeys = {
+  all: ['time-blocks'] as const,
+  list: (startDate: string, endDate: string) =>
+    [...timeBlockKeys.all, 'list', { startDate, endDate }] as const,
+}
 
 export const gcalCalendarsKeys = {
   list: (accountId: string) => ['gcal-calendars', accountId] as const,
@@ -17,8 +53,7 @@ export const githubUrlPreviewKeys = {
 
 export const labelKeys = {
   all: ['labels'] as const,
-  list: (filter?: { context?: 'work' | 'personal' }) =>
-    [...labelKeys.all, filter] as const,
+  list: (filter?: LabelFilter) => [...labelKeys.all, filter] as const,
 }
 
 // A null result must not share the non-null project detail cache.
@@ -34,11 +69,10 @@ export const projectUrlPreviewKeys = {
 export const savedViewKeys = {
   all: ['saved-views'] as const,
   lists: ['saved-views', 'list'] as const,
-  list: (filter?: { q?: string; context?: 'work' | 'personal' }) =>
-    [...savedViewKeys.lists, filter] as const,
+  list: (filter?: SavedViewFilter) => [...savedViewKeys.lists, filter] as const,
 }
 
-type SearchContext = 'work' | 'personal'
+export type SearchContext = 'work' | 'personal'
 
 export const searchKeys = {
   all: ['search'] as const,

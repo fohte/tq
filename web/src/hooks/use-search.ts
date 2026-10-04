@@ -5,6 +5,7 @@ import type { InferResponseType } from 'hono/client'
 import { useDebounce } from '#hooks/use-debounce'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
 import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
 
@@ -18,8 +19,6 @@ type PageSearchResult = InferResponseType<
   (typeof api.api.tasks.search)['pages']['$get'],
   200
 >['results'][number]
-type SearchContext = 'work' | 'personal'
-
 export const SEARCH_QUERY_DEBOUNCE_MS = 200
 
 export type { PageSearchResult, SearchResult, Suggestion }

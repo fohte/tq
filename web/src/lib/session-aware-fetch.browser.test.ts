@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { createSessionAwareFetch } from '#lib/create-session-aware-fetch'
 import { sessionAwareFetch } from '#lib/session-aware-fetch'
-import { createSessionAwareFetch } from '#lib/session-aware-fetch-instance'
-
-const SESSION_RELOAD_MARKER_KEY = 'tq:session-aware-fetch:reload-attempted'
+import { SESSION_RELOAD_MARKER_KEY } from '#lib/storage-keys'
 
 // A real browser doesn't allow redefining any property of `location`
 // (including `reload`), so sessionAwareFetch calls it through this module

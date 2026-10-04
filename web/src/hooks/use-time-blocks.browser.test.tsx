@@ -474,7 +474,11 @@ describe('useDeleteManualTimeBlock', () => {
         json: () => Promise.resolve([]),
       })
     const mockDelete = assertDefined(mocks['mockDelete'])
-    mockDelete.mockResolvedValue({ ok: true })
+    let resolveDelete: ((response: { ok: boolean }) => void) | undefined
+    const pendingDelete = new Promise<{ ok: boolean }>((resolve) => {
+      resolveDelete = resolve
+    })
+    mockDelete.mockReturnValue(pendingDelete)
     const queryKey = timeBlockKeys.list('2026-03-22', '2026-03-22')
 
     // Populate cache
@@ -499,11 +503,26 @@ describe('useDeleteManualTimeBlock', () => {
     const getOutput = () => ({
       cachedBlocks: queryClient.getQueryData(queryKey),
       deleteCalls: mockDelete.mock.calls,
+      isDeleting: result.current.isDeleting,
     })
     await waitFor(() => {
       expect(getOutput()).toEqual({
         cachedBlocks: [],
         deleteCalls: [[{ param: { id: 'block-1' } }]],
+        isDeleting: true,
+      })
+    })
+
+    await act(async () => {
+      assertDefined(resolveDelete)({ ok: true })
+      await pendingDelete
+    })
+
+    await waitFor(() => {
+      expect(getOutput()).toEqual({
+        cachedBlocks: [],
+        deleteCalls: [[{ param: { id: 'block-1' } }]],
+        isDeleting: false,
       })
     })
   })

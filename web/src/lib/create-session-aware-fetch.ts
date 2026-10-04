@@ -1,8 +1,7 @@
 import { Result } from 'neverthrow'
 
 import { reloadPage } from '#lib/reload-page'
-
-const SESSION_RELOAD_MARKER_KEY = 'tq:session-aware-fetch:reload-attempted'
+import { SESSION_RELOAD_MARKER_KEY } from '#lib/storage-keys'
 
 function trySessionStorage<T>(op: () => T, fallback: T): T {
   return Result.fromThrowable(op, (error) => error)()
@@ -86,6 +85,9 @@ export function createSessionAwareFetch() {
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> {
+    // Cloudflare Access redirects expired sessions to a cross-origin login
+    // page without CORS headers. Manual mode exposes the redirect so a full
+    // navigation can rerun the Access session check.
     const res = await fetch(input, { ...init, redirect: 'manual' })
 
     if (res.type !== 'opaqueredirect') {

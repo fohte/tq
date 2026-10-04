@@ -1,6 +1,5 @@
 import type { SessionOpenSettings } from '#lib/session-open'
-
-const STORAGE_KEY = 'tq:session-open-settings'
+import { SESSION_OPEN_SETTINGS_STORAGE_KEY } from '#lib/storage-keys'
 
 const defaults: SessionOpenSettings = {
   localContext: 'personal',
@@ -12,7 +11,7 @@ export function resetSessionOpenSettings(
   overrides: Partial<SessionOpenSettings> = {},
 ): void {
   localStorage.setItem(
-    STORAGE_KEY,
+    SESSION_OPEN_SETTINGS_STORAGE_KEY,
     JSON.stringify({ ...defaults, ...overrides }),
   )
 }

@@ -9,6 +9,9 @@ import type { InferResponseType } from 'hono/client'
 import type { PlanValue } from '#components/task/create-task-modal-fields'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { queueKeys } from '#lib/query-keys'
+
+export { queueKeys }
 
 // Auto-assign and the focus view (/today) depend on this key by name — see
 // api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
@@ -28,12 +31,6 @@ export type QueueItem = InferResponseType<
   (typeof api.api.queues)[':key']['items']['$get'],
   200
 >[number]
-
-export const queueKeys = {
-  all: ['queues'] as const,
-  items: (key: string, date: string) =>
-    [...queueKeys.all, key, 'items', date] as const,
-}
 
 export function useQueues() {
   return useQuery({
