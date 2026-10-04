@@ -186,16 +186,7 @@ export const NoTimeBlocksToday: Story = {
   args: {
     now: new Date(2031, 3, 9, 23, 52),
     timeBlocks: [],
-    calendarEvents: [
-      makeTimeBlockEvent({
-        id: 'schedule-midnight',
-        title: 'Evening routine',
-        start: localTime(10, 0),
-        end: localTime(10, 0, 30),
-        type: 'schedule',
-        scheduleId: 'schedule-midnight',
-      }),
-    ],
+    calendarEvents: [],
     taskMap: taskMap(),
   },
 }

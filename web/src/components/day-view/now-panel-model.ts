@@ -2,7 +2,7 @@ import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
 
-export type NowPanelActivity =
+type NowPanelActivity =
   | {
       kind: 'task'
       key: string
@@ -18,7 +18,7 @@ export type NowPanelActivity =
       isOverrun: boolean
     }
 
-export interface NowPanelNextEvent {
+interface NowPanelNextEvent {
   title: string
   minutesUntil: number
   isWarning: boolean
