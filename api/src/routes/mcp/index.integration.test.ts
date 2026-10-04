@@ -27,6 +27,8 @@ const REGISTERED_TOOL_NAMES = [
   'label_delete',
   'label_list',
   'label_update',
+  'memo_get',
+  'memo_update',
   'page_create',
   'page_delete',
   'page_get',
