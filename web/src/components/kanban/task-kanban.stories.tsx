@@ -150,7 +150,9 @@ export const WithFooter: Story = {
         tasks: activeTasks,
         showCount: false,
         footer: (
-          <span className="text-xs text-muted-foreground">show more</span>
+          <span className="font-mono text-2xs text-muted-foreground hover:text-foreground">
+            see all →
+          </span>
         ),
       },
       {
@@ -159,7 +161,9 @@ export const WithFooter: Story = {
         tasks: someTasks,
         showCount: false,
         footer: (
-          <span className="text-xs text-muted-foreground">show more</span>
+          <span className="font-mono text-2xs text-muted-foreground hover:text-foreground">
+            see all →
+          </span>
         ),
       },
     ],
