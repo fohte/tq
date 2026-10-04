@@ -32,9 +32,10 @@ export type QueueItem = InferResponseType<
   200
 >[number]
 
-export function useQueues() {
+export function useQueues(refetchInterval?: number) {
   return useQuery({
     queryKey: queueKeys.all,
+    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     queryFn: async () => {
       const res = await api.api.queues.$get()
       return unwrapOrThrow(assertOk(res)).json()
@@ -75,10 +76,12 @@ export function useQueueItems(
 export function useQueueItemsForQueues(
   queues: Queue[] | undefined,
   date: string,
+  refetchInterval?: number,
 ) {
   return useQueries({
     queries: (queues ?? []).map((queue) => ({
       queryKey: queueKeys.items(queue.key, date),
+      ...(refetchInterval === undefined ? {} : { refetchInterval }),
       queryFn: async () => {
         const res = await api.api.queues[':key'].items.$get({
           param: { key: queue.key },

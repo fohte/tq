@@ -7,7 +7,7 @@ export const QUEUE_MAX_WIDTH = 640
 export const QUEUE_DEFAULT_WIDTH = 320
 export const QUEUE_WIDE_DEFAULT_WIDTH = 384
 
-export const CALENDAR_MIN_WIDTH = 240
+const CALENDAR_MIN_WIDTH = 240
 
 export function clampPaneWidth(
   width: number,

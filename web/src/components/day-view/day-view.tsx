@@ -31,6 +31,7 @@ import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
+import { DAY_QUEUE_KEY } from '#hooks/use-queues'
 import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
@@ -109,6 +110,7 @@ export interface DayViewPresentationProps {
   kanbanFilterRow?: ReactNode
   /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
   initialMobileTab?: MobileTab
+  layout?: 'default' | 'compact'
 }
 
 export function DayViewPresentation({
@@ -135,7 +137,10 @@ export function DayViewPresentation({
   onViewModeChange,
   kanbanFilterRow,
   initialMobileTab,
+  layout = 'default',
 }: DayViewPresentationProps) {
+  const isCompactLayout = layout === 'compact'
+  const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
     initialMobileTab ?? 'calendar',
@@ -195,10 +200,13 @@ export function DayViewPresentation({
   // affect the queue pane), so the item would be a no-op there — desktop
   // always shows both panes, so it always keeps the entry.
   const mobileLayoutItems = mobileTab === 'calendar' ? [] : layoutItems
+  const visibleQueueSections = isCompactLayout
+    ? queueSections.filter((section) => section.key === DAY_QUEUE_KEY)
+    : queueSections
 
   const kanbanColumns: TaskKanbanColumn[] = useMemo(
     () =>
-      queueSections.map((section) => ({
+      visibleQueueSections.map((section) => ({
         id: section.key,
         title: section.title,
         tasks: section.items,
@@ -207,11 +215,11 @@ export function DayViewPresentation({
           ? { dateRangeLabel: section.dateRangeLabel }
           : {}),
       })),
-    [queueSections, isLoading],
+    [visibleQueueSections, isLoading],
   )
 
   const handleKanbanDrop = (taskId: string, targetQueueKey: string) => {
-    const sourceQueueKey = queueSections.find((section) =>
+    const sourceQueueKey = visibleQueueSections.find((section) =>
       section.items.some((t) => t.id === taskId),
     )?.key
     if (sourceQueueKey == null) return
@@ -237,64 +245,65 @@ export function DayViewPresentation({
   return (
     // Day view keeps its own internal scroll pane rather than scrolling the
     // document — its time-grid layout stays pinned to one viewport, like a
-    // native calendar. AppLayout gives <main> min-h-0 specifically for this
-    // route (see app-layout.tsx) so h-full here resolves to main's actual
-    // flex-allotted share of the viewport instead of overflowing it.
+    // native calendar. Both AppLayout and the compact root provide a definite
+    // height for h-full to resolve against.
     <div className="flex h-full flex-col overflow-hidden">
-      <ScreenHeaderBar>
-        <SectionHeading level={2}>queue</SectionHeading>
+      {!isCompactLayout && (
+        <ScreenHeaderBar>
+          <SectionHeading level={2}>queue</SectionHeading>
 
-        <TabStrip
-          value={mobileTab}
-          options={MOBILE_TAB_OPTIONS}
-          onChange={setMobileTab}
-          className="md:hidden [&>button]:px-1.5"
-        />
+          <TabStrip
+            value={mobileTab}
+            options={MOBILE_TAB_OPTIONS}
+            onChange={setMobileTab}
+            className="md:hidden [&>button]:px-1.5"
+          />
 
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={onAutoAssign}
-          disabled={isAutoAssigning || !canAutoAssign}
-          title={
-            canAutoAssign
-              ? undefined
-              : 'Set an estimate on at least one queued task to auto-schedule'
-          }
-          className="ml-auto"
-        >
-          {isAutoAssigning ? 'scheduling…' : 'auto'}
-        </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={onAutoAssign}
+            disabled={isAutoAssigning || !canAutoAssign}
+            title={
+              canAutoAssign
+                ? undefined
+                : 'Set an estimate on at least one queued task to auto-schedule'
+            }
+            className="ml-auto"
+          >
+            {isAutoAssigning ? 'scheduling…' : 'auto'}
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => {
-            openCreateModal(null)
-          }}
-          aria-label="New task"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => {
+              openCreateModal(null)
+            }}
+            aria-label="New task"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
 
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          onClick={() => {
-            setEditingSchedule(undefined)
-            setIsScheduleModalOpen(true)
-          }}
-          aria-label="New schedule"
-        >
-          <CalendarPlus className="h-3.5 w-3.5" />
-        </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => {
+              setEditingSchedule(undefined)
+              setIsScheduleModalOpen(true)
+            }}
+            aria-label="New schedule"
+          >
+            <CalendarPlus className="h-3.5 w-3.5" />
+          </Button>
 
-        <ActionsMenu
-          aria-label="Layout"
-          items={layoutItems}
-          mobileItems={mobileLayoutItems}
-        />
-      </ScreenHeaderBar>
+          <ActionsMenu
+            aria-label="Layout"
+            items={layoutItems}
+            mobileItems={mobileLayoutItems}
+          />
+        </ScreenHeaderBar>
+      )}
 
       <CreateScheduleModal
         key={editingSchedule?.scheduleId ?? 'new'}
@@ -321,27 +330,35 @@ export function DayViewPresentation({
         }}
       />
 
-      <div className="flex min-h-0 flex-1">
+      <div className={cn('flex min-h-0 flex-1', isCompactLayout && 'flex-col')}>
         {/* Left panel: queue */}
         <div
           ref={taskListRef}
           className={cn(
-            'relative flex w-full flex-col md:flex-none',
-            viewMode === 'kanban'
-              ? 'md:w-full'
-              : 'border-r border-border md:w-(--queue-width)',
-            mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex',
+            'relative flex w-full flex-col',
+            isCompactLayout
+              ? 'shrink-0 overflow-auto border-b border-border'
+              : 'md:flex-none',
+            !isCompactLayout &&
+              (activeViewMode === 'kanban'
+                ? 'md:w-full'
+                : 'border-r border-border md:w-(--queue-width)'),
+            !isCompactLayout &&
+              (mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex'),
           )}
-          style={queuePaneStyle}
+          style={{
+            ...queuePaneStyle,
+            ...(isCompactLayout ? { maxHeight: '40%' } : {}),
+          }}
         >
-          {viewMode === 'kanban' && kanbanFilterRow}
+          {activeViewMode === 'kanban' && kanbanFilterRow}
 
           {/* Summary header (today's queue only) */}
           <div className="border-b border-border py-2.5">
             <TaskListHeader tasks={dayQueueTasks} />
           </div>
 
-          {viewMode === 'kanban' ? (
+          {activeViewMode === 'kanban' ? (
             <div className="min-h-0 flex-1">
               <TaskKanban
                 columns={kanbanColumns}
@@ -355,15 +372,18 @@ export function DayViewPresentation({
           ) : (
             <QueuePane
               isLoading={isLoading}
-              queueSections={queueSections}
-              queueCandidates={queueCandidates}
+              queueSections={visibleQueueSections}
+              queueCandidates={isCompactLayout ? [] : queueCandidates}
               onReorderQueue={onReorderQueue}
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
               onRemoveFromQueue={onRemoveFromQueue}
+              {...(isCompactLayout
+                ? { className: 'flex-none overflow-visible' }
+                : {})}
             />
           )}
-          {viewMode === 'queue' && (
+          {!isCompactLayout && activeViewMode === 'queue' && (
             <ResizablePaneSeparator
               label="Resize queue pane"
               value={queueWidth}
@@ -379,8 +399,13 @@ export function DayViewPresentation({
         <div
           className={cn(
             'min-w-0 flex-1',
-            mobileTab === 'tasks' ? 'hidden' : 'flex',
-            viewMode === 'kanban' ? 'md:hidden' : 'md:flex',
+            isCompactLayout
+              ? 'min-h-0 flex'
+              : mobileTab === 'tasks'
+                ? 'hidden'
+                : 'flex',
+            !isCompactLayout &&
+              (activeViewMode === 'kanban' ? 'md:hidden' : 'md:flex'),
           )}
         >
           <div className="flex h-full w-full flex-col">
@@ -406,6 +431,7 @@ export function DayViewPresentation({
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}
+              showViewSwitcher={!isCompactLayout}
               onScheduleClick={handleScheduleClick}
               onTaskClick={handleTaskClick}
               onSelectRange={openCreateModal}

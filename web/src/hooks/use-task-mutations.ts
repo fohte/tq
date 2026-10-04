@@ -81,6 +81,7 @@ export function useCreateTask() {
         updatedAt: now,
         childCompletionCount: { completed: 0, total: 0 },
         blockedByNumbers: [],
+        blockedByGithubRefs: [],
       }
 
       // Only insert into lists filtered by the same parentId — otherwise a

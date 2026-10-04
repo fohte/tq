@@ -14,9 +14,14 @@ type TimeBlock = InferResponseType<
 
 export type { TimeBlock }
 
-export function useTimeBlocks(startDate: string, endDate: string) {
+export function useTimeBlocks(
+  startDate: string,
+  endDate: string,
+  refetchInterval?: number,
+) {
   return useQuery({
     queryKey: timeBlockKeys.list(startDate, endDate),
+    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     queryFn: async () => {
       const res = await api.api.schedule['time-blocks'].$get({
         query: {

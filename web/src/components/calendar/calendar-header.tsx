@@ -42,6 +42,7 @@ interface CalendarHeaderProps {
   onNext: () => void
   onToday: () => void
   onViewChange: (view: CalendarViewType) => void
+  showViewSwitcher?: boolean
 }
 
 function formatWeekday(date: Date): string {
@@ -55,6 +56,7 @@ export function CalendarHeader({
   onNext,
   onToday,
   onViewChange,
+  showViewSwitcher = true,
 }: CalendarHeaderProps) {
   return (
     <ScreenHeaderBar>
@@ -92,12 +94,14 @@ export function CalendarHeader({
         </Button>
       </div>
 
-      <TabStrip
-        className="ml-auto"
-        value={activeView}
-        options={VIEW_OPTIONS}
-        onChange={onViewChange}
-      />
+      {showViewSwitcher && (
+        <TabStrip
+          className="ml-auto"
+          value={activeView}
+          options={VIEW_OPTIONS}
+          onChange={onViewChange}
+        />
+      )}
     </ScreenHeaderBar>
   )
 }

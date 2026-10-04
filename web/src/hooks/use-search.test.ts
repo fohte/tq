@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { makeSuggestion } from '#components/search/search-test-fixtures'
+import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import {
   makeTask,
   makeTaskDetail,
@@ -39,6 +40,25 @@ describe('taskDetailToSearchResult', () => {
     const task = makeTaskDetail({
       duplicateOfNumber: null,
       blockedBy: [makeTask({ number: 12 }), makeTask({ number: 18 })],
+      githubBlockers: [
+        makeGithubLink({
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 17,
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          url: 'https://github.com/example-owner/example-repo/issues/17',
+        }),
+        makeGithubLink({
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 18,
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          state: 'closed',
+          url: 'https://github.com/example-owner/example-repo/issues/18',
+        }),
+      ],
     })
 
     expect(taskDetailToSearchResult(task)).toEqual({
@@ -68,6 +88,14 @@ describe('taskDetailToSearchResult', () => {
       childCompletionCount: task.childCompletionCount,
       duplicateOfNumber: null,
       blockedByNumbers: [12, 18],
+      blockedByGithubRefs: [
+        {
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 17,
+          url: 'https://github.com/example-owner/example-repo/issues/17',
+        },
+      ],
     })
   })
 })

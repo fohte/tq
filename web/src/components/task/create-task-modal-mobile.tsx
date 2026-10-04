@@ -41,6 +41,7 @@ import { selectValueHandler } from '#lib/form-utils'
 export function CreateTaskModalMobile({
   parentIndicator,
   githubIndicator,
+  descriptionTemplateSelector,
   descriptionEditor,
   title,
   setTitle,
@@ -66,6 +67,7 @@ export function CreateTaskModalMobile({
 }: {
   parentIndicator: ReactNode
   githubIndicator: ReactNode
+  descriptionTemplateSelector: ReactNode
   descriptionEditor: ReactNode
   title: string
   setTitle: (value: string) => void
@@ -125,6 +127,8 @@ export function CreateTaskModalMobile({
             autoFocus
             className="h-auto border-0 bg-transparent p-0 text-lg font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
           />
+
+          {descriptionTemplateSelector}
 
           {/* Description (WYSIWYG) */}
           <div className="max-h-sheet-composer overflow-y-auto text-sm">

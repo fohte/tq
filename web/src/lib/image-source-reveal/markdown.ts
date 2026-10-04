@@ -50,7 +50,7 @@ function parseImageNode(text: string) {
   return node?.type === 'image' ? node : null
 }
 
-export function parseImageText(text: string): ImageAttrs | null {
+function parseImageText(text: string): ImageAttrs | null {
   const node = parseImageNode(text)
   if (node == null) return null
   return { src: node.url, alt: node.alt ?? '', title: node.title ?? '' }
