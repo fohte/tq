@@ -364,11 +364,26 @@ describe('day-view route compact layout', () => {
 
     await waitFor(() => {
       expect(getLoggedErrors()).toEqual([
-        ['Failed to refresh time blocks in compact layout', timeBlocksError],
-        ['Failed to refresh schedules in compact layout', schedulesError],
-        ['Failed to refresh due tasks in compact layout', dueTasksError],
-        ['Failed to refresh time blocks in compact layout', timeBlocksError],
-        ['Failed to refresh schedules in compact layout', schedulesError],
+        [
+          'Failed to refresh day view time blocks in compact layout',
+          timeBlocksError,
+        ],
+        [
+          'Failed to refresh day view schedules in compact layout',
+          schedulesError,
+        ],
+        [
+          'Failed to refresh day view due tasks in compact layout',
+          dueTasksError,
+        ],
+        [
+          'Failed to refresh Now panel time blocks in compact layout',
+          timeBlocksError,
+        ],
+        [
+          'Failed to refresh Now panel schedules in compact layout',
+          schedulesError,
+        ],
       ])
     })
 

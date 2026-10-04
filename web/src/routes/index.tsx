@@ -171,12 +171,11 @@ function DayView() {
     refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
-  useCompactRefreshErrorLogging(
-    isCompactLayout,
-    timeBlocksQuery.error,
-    schedulesQuery.error,
-    dueDateTasksQuery.error,
-  )
+  useCompactRefreshErrorLogging(isCompactLayout, 'day view', {
+    timeBlocks: timeBlocksQuery.error,
+    schedules: schedulesQuery.error,
+    dueTasks: dueDateTasksQuery.error,
+  })
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,

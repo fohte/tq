@@ -49,12 +49,10 @@ export function useNowPanelData({
     enabled,
   )
 
-  useCompactRefreshErrorLogging(
-    enabled,
-    timeBlocksQuery.error,
-    schedulesQuery.error,
-    undefined,
-  )
+  useCompactRefreshErrorLogging(enabled, 'Now panel', {
+    timeBlocks: timeBlocksQuery.error,
+    schedules: schedulesQuery.error,
+  })
 
   useEffect(() => {
     if (

@@ -2,30 +2,35 @@ import { useEffect } from 'react'
 
 export function useCompactRefreshErrorLogging(
   enabled: boolean,
-  timeBlocksError: unknown,
-  schedulesError: unknown,
-  dueTasksError: unknown,
+  source: 'day view' | 'Now panel',
+  errors: {
+    timeBlocks: unknown
+    schedules: unknown
+    dueTasks?: unknown
+  },
 ) {
+  const { timeBlocks, schedules, dueTasks } = errors
+
   useEffect(() => {
     if (!enabled) return
 
-    if (timeBlocksError != null) {
+    if (timeBlocks != null) {
       console.error(
-        'Failed to refresh time blocks in compact layout',
-        timeBlocksError,
+        `Failed to refresh ${source} time blocks in compact layout`,
+        timeBlocks,
       )
     }
-    if (schedulesError != null) {
+    if (schedules != null) {
       console.error(
-        'Failed to refresh schedules in compact layout',
-        schedulesError,
+        `Failed to refresh ${source} schedules in compact layout`,
+        schedules,
       )
     }
-    if (dueTasksError != null) {
+    if (dueTasks != null) {
       console.error(
-        'Failed to refresh due tasks in compact layout',
-        dueTasksError,
+        `Failed to refresh ${source} due tasks in compact layout`,
+        dueTasks,
       )
     }
-  }, [enabled, timeBlocksError, schedulesError, dueTasksError])
+  }, [enabled, source, timeBlocks, schedules, dueTasks])
 }
