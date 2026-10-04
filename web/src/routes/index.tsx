@@ -26,6 +26,7 @@ import {
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
+import { useMemos, useUpdateMemo } from '#hooks/use-memos'
 import { useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
@@ -169,12 +170,6 @@ function DayView() {
     refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
-  useCompactRefreshErrorLogging(
-    isCompactLayout,
-    timeBlocksQuery.error,
-    schedulesQuery.error,
-    dueDateTasksQuery.error,
-  )
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
@@ -184,6 +179,15 @@ function DayView() {
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
+  const memosQuery = useMemos(context, isCompactLayout)
+  const updateMemo = useUpdateMemo()
+  useCompactRefreshErrorLogging(
+    isCompactLayout,
+    timeBlocksQuery.error,
+    schedulesQuery.error,
+    dueDateTasksQuery.error,
+    memosQuery.error,
+  )
   const queryClient = useQueryClient()
   const projects = useProjects()
 
@@ -431,6 +435,17 @@ function DayView() {
     <>
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
+        {...(isCompactLayout
+          ? {
+              compactMemo: {
+                context,
+                memo: memosQuery.data,
+                isLoading: memosQuery.isPending,
+                loadError: memosQuery.data == null && memosQuery.isError,
+                onSave: (input) => updateMemo.mutateAsync({ context, input }),
+              },
+            }
+          : {})}
         isLoading={
           isLoading ||
           (isCompactLayout && dueDateTasksQuery.isLoading) ||
