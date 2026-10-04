@@ -1,8 +1,7 @@
-import { AsyncLocalStorage } from 'node:async_hooks'
-
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 
+import { dbContext } from '#db/context'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
@@ -14,20 +13,7 @@ export type DbTransaction = Parameters<
 >[0] extends (tx: infer T) => unknown
   ? T
   : never
-
-// Lets tests bind a per-test transaction to `db` scoped to that test's async
-// execution context, instead of a shared module variable that would race
-// when multiple test files run in parallel.
-const dbContext = new AsyncLocalStorage<typeof defaultDb | DbTransaction>()
-
-// The only way to bind `current` into `dbContext` — keeps the AsyncLocalStorage
-// instance itself out of reach of production code.
-export function runWithDb<T>(
-  current: typeof defaultDb | DbTransaction,
-  fn: () => T,
-): T {
-  return dbContext.run(current, fn)
-}
+export type DbContextValue = typeof defaultDb | DbTransaction
 
 export const db: typeof defaultDb = new Proxy(defaultDb, {
   get(target, prop) {

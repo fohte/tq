@@ -5,7 +5,8 @@ import { afterAll, aroundEach, expect } from 'vitest'
 import { z, type ZodType } from 'zod'
 
 import { app } from '#app'
-import { runWithDb } from '#db/connection'
+import type { DbContextValue } from '#db/connection'
+import { dbContext } from '#db/context'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
@@ -13,6 +14,10 @@ import { DATABASE_URL } from '#env'
 // a test run on the same underlying Postgres session.
 const testClient = postgres(DATABASE_URL, { max: 1 })
 const testDb = drizzle(testClient, { schema })
+
+function runWithDb<T>(current: DbContextValue, fn: () => T): T {
+  return dbContext.run(current, fn)
+}
 
 export function setupTestDb() {
   // Transaction strategy: wrap each test in a real transaction and roll it
