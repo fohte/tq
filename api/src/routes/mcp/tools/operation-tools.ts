@@ -4,6 +4,7 @@ import { hc } from 'hono/client'
 import { z } from 'zod'
 
 import { app, type AppType } from '#app'
+import type { taskDescriptionTemplates } from '#db/schema'
 import { type OperationDefinition, operations } from '#operations/index'
 import { toErrorResult } from '#routes/mcp/route-bridge'
 import {
@@ -50,6 +51,95 @@ export function operationToolName(operation: OperationDefinition): string {
   return operation.path.map((segment) => segment.replaceAll('-', '_')).join('_')
 }
 
+type DescriptionTemplate = Pick<
+  typeof taskDescriptionTemplates.$inferSelect,
+  'name' | 'whenToUse' | 'body' | 'guide' | 'isDefault'
+>
+
+function sectionHeadings(markdown: string): string[] {
+  const headings: string[] = []
+  let codeFence: { marker: string; length: number } | undefined
+
+  for (const line of markdown.split(/\r?\n/)) {
+    const fenceText = line.match(/^\s{0,3}(`{3,}|~{3,})/)?.[1]
+    const fenceMarker = fenceText?.[0]
+
+    if (codeFence !== undefined) {
+      if (
+        fenceText !== undefined &&
+        fenceMarker === codeFence.marker &&
+        fenceText.length >= codeFence.length
+      ) {
+        codeFence = undefined
+      }
+      continue
+    }
+    if (fenceText !== undefined && fenceMarker !== undefined) {
+      codeFence = { marker: fenceMarker, length: fenceText.length }
+      continue
+    }
+
+    const match = line.match(/^\s{0,3}##[ \t]+(.+?)\s*$/)
+    if (match?.[1] !== undefined) {
+      headings.push(`## ${match[1].replace(/[ \t]+#+$/, '').trim()}`)
+    }
+  }
+
+  return headings
+}
+
+function taskCreateTemplateGuidance(
+  templates: readonly DescriptionTemplate[],
+): string {
+  return [
+    'Current description templates:',
+    'Choose the template that best fits the task, pass its name in `template`, and fill every listed section with substantive content following its guide.',
+    ...templates.map((template) => {
+      const headings = sectionHeadings(template.body)
+      return [
+        `\`${template.name}\`${template.isDefault ? ' (default)' : ''}`,
+        `When to use: ${template.whenToUse}`,
+        'Sections:',
+        headings.length === 0
+          ? '(none)'
+          : headings.map((heading) => `- ${heading}`).join('\n'),
+        'Guide:',
+        template.guide,
+      ].join('\n')
+    }),
+  ].join('\n\n')
+}
+
+function withTaskCreateTemplates(
+  operation: OperationDefinition,
+  templates: readonly DescriptionTemplate[],
+): OperationDefinition {
+  if (
+    operationToolName(operation) !== 'task_create' ||
+    templates.length === 0
+  ) {
+    return operation
+  }
+
+  const schema = operation.mcpInputSchema ?? operation.inputSchema
+  const templateNames = Object.fromEntries(
+    templates.map(({ name }) => [name, name]),
+  )
+
+  return {
+    ...operation,
+    description: `${operation.description}\n\n${taskCreateTemplateGuidance(templates)}`,
+    mcpInputSchema: schema.extend({
+      template: z
+        .enum(templateNames)
+        .describe(
+          'Description template name for LLM-authored tasks. If omitted, the default template is used when configured.',
+        )
+        .optional(),
+    }),
+  }
+}
+
 function requestErrorResult(message: string): CallToolResult {
   return {
     isError: true,
@@ -60,14 +150,19 @@ function requestErrorResult(message: string): CallToolResult {
 export function registerOperationTools(
   server: McpServer,
   definitions: readonly OperationDefinition[] = operations,
+  descriptionTemplates: readonly DescriptionTemplate[] = [],
 ): void {
   for (const operation of definitions) {
     if (operation.surface?.only === 'cli') continue
-    const inputSchema = inputSchemaFor(operation)
+    const registeredOperation = withTaskCreateTemplates(
+      operation,
+      descriptionTemplates,
+    )
+    const inputSchema = inputSchemaFor(registeredOperation)
     server.registerTool(
-      operationToolName(operation),
+      operationToolName(registeredOperation),
       {
-        description: operation.description,
+        description: registeredOperation.description,
         inputSchema,
         annotations: annotationsFor(operation),
       },
@@ -79,8 +174,8 @@ export function registerOperationTools(
           agent = typeof providedAgent === 'string' ? providedAgent : undefined
           operationValues = rest
         }
-        const result = await operation.run(
-          operationClient(operation, agent),
+        const result = await registeredOperation.run(
+          operationClient(registeredOperation, agent),
           operationValues,
         )
 

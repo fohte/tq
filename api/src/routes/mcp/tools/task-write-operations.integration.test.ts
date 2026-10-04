@@ -1,4 +1,5 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
@@ -40,6 +41,21 @@ function summarizeTaskDeletion(
   lookupStatus: number,
 ) {
   return { result: parseToolJson(result), lookupStatus }
+}
+
+function taskCreateTemplateSnapshot(
+  tools: Awaited<ReturnType<Client['listTools']>>['tools'],
+) {
+  const taskCreate = tools.find((tool) => tool.name === 'task_create')
+  if (taskCreate === undefined) return null
+
+  const marker = '\n\nCurrent description templates:'
+  const description = taskCreate.description ?? ''
+  const guidanceStart = description.indexOf(marker)
+  return {
+    guidance: guidanceStart === -1 ? null : description.slice(guidanceStart),
+    templateSchema: taskCreate.inputSchema.properties?.['template'] ?? null,
+  }
 }
 
 beforeEach(async () => {
@@ -186,6 +202,95 @@ describe('task_create tool', () => {
       required: ['title'],
       $schema: 'https://json-schema.org/draft/2020-12/schema',
     })
+  })
+
+  it('does not add guidance when no description templates are configured', async () => {
+    const tools = await client.listTools()
+
+    expect(taskCreateTemplateSnapshot(tools.tools)?.guidance ?? null).toEqual(
+      null,
+    )
+  })
+
+  it('lists the current description templates in the task creation tool', async () => {
+    await db.insert(taskDescriptionTemplates).values({
+      name: 'mcp-plan',
+      whenToUse: 'Use for planning a project with several deliverables',
+      body: '## Goal\n## Steps',
+      guide: 'Describe the outcome before listing the steps.',
+      isDefault: true,
+    })
+
+    const snapshots = [
+      taskCreateTemplateSnapshot((await client.listTools()).tools),
+    ]
+
+    await db
+      .update(taskDescriptionTemplates)
+      .set({
+        name: 'mcp-plan-v2',
+        whenToUse: 'Use for planning a single milestone',
+        body: '## Outcome\n~~~md\n## Not a section\n~~~\n## Validation',
+        guide: 'State one measurable outcome.\nExplain how to verify it.',
+        isDefault: false,
+      })
+      .where(eq(taskDescriptionTemplates.name, 'mcp-plan'))
+    await db.insert(taskDescriptionTemplates).values({
+      name: 'mcp-review',
+      whenToUse: 'Use for reviewing completed work',
+      body: '## Findings\n## Follow-up',
+      guide: 'Record findings and the next action.',
+      isDefault: true,
+    })
+
+    snapshots.push(taskCreateTemplateSnapshot((await client.listTools()).tools))
+
+    expect(snapshots).toEqual([
+      {
+        guidance:
+          '\n\nCurrent description templates:\n' +
+          'Choose the template that best fits the task, pass its name in `template`, and fill every listed section with substantive content following its guide.\n\n' +
+          '`mcp-plan` (default)\n' +
+          'When to use: Use for planning a project with several deliverables\n' +
+          'Sections:\n' +
+          '- ## Goal\n' +
+          '- ## Steps\n' +
+          'Guide:\n' +
+          'Describe the outcome before listing the steps.',
+        templateSchema: {
+          type: 'string',
+          enum: ['mcp-plan'],
+          description:
+            'Description template name for LLM-authored tasks. If omitted, the default template is used when configured.',
+        },
+      },
+      {
+        guidance:
+          '\n\nCurrent description templates:\n' +
+          'Choose the template that best fits the task, pass its name in `template`, and fill every listed section with substantive content following its guide.\n\n' +
+          '`mcp-review` (default)\n' +
+          'When to use: Use for reviewing completed work\n' +
+          'Sections:\n' +
+          '- ## Findings\n' +
+          '- ## Follow-up\n' +
+          'Guide:\n' +
+          'Record findings and the next action.\n\n' +
+          '`mcp-plan-v2`\n' +
+          'When to use: Use for planning a single milestone\n' +
+          'Sections:\n' +
+          '- ## Outcome\n' +
+          '- ## Validation\n' +
+          'Guide:\n' +
+          'State one measurable outcome.\n' +
+          'Explain how to verify it.',
+        templateSchema: {
+          type: 'string',
+          enum: ['mcp-review', 'mcp-plan-v2'],
+          description:
+            'Description template name for LLM-authored tasks. If omitted, the default template is used when configured.',
+        },
+      },
+    ])
   })
 
   it('creates a task with the given fields', async () => {
