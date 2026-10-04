@@ -7,11 +7,11 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
-import type { NowPanelTaskRowState } from '#components/day-view/now-panel-model'
 import { findWritableQueueSection } from '#components/day-view/queue-sections'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import type { QueueTaskDragData } from '#components/task/queue-item-row'
 import { QueueSection } from '#components/task/queue-section'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import type { Task } from '#hooks/use-tasks'
 import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
 import { isCandidateDragData, type QueueCandidate } from '#lib/queue-candidates'
@@ -41,7 +41,7 @@ export interface QueuePaneProps {
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
-  taskRowStates?: ReadonlyMap<string, NowPanelTaskRowState>
+  taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   className?: string
 }
 

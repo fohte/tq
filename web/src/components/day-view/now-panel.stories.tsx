@@ -1,9 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { type ReactNode, useMemo } from 'react'
 
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
-import { NowPanel, type NowPanelProps } from '#components/day-view/now-panel'
+import { NowPanel } from '#components/day-view/now-panel'
+import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
@@ -54,10 +56,33 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function NowPanelStory(props: NowPanelProps) {
+interface NowPanelStoryProps {
+  now: Date
+  timeBlocks: TimeBlock[]
+  calendarEvents: TimeBlockEvent[]
+  taskMap: Map<string, Task>
+  isLoading?: boolean
+}
+
+function NowPanelStory({
+  now,
+  timeBlocks,
+  calendarEvents,
+  taskMap,
+  isLoading,
+}: NowPanelStoryProps) {
+  const model = useMemo(
+    () =>
+      buildNowPanelModel({ now, timeBlocks, calendarEvents, tasks: taskMap }),
+    [now, timeBlocks, calendarEvents, taskMap],
+  )
+
   return (
     <Providers>
-      <NowPanel {...props} />
+      <NowPanel
+        model={model}
+        {...(isLoading === undefined ? {} : { isLoading })}
+      />
     </Providers>
   )
 }

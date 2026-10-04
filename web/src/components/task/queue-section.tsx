@@ -1,10 +1,12 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { ReactNode } from 'react'
 
-import type { NowPanelTaskRowState } from '#components/day-view/now-panel-model'
 import { QueueItemRow } from '#components/task/queue-item-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import {
+  getTaskRowTimeBlockExtras,
+  type TaskRowTimeBlockState,
+} from '#components/task/task-row-time-block'
 import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
@@ -17,7 +19,7 @@ export interface QueueSectionProps {
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
   isReadOnly?: boolean
-  taskRowStates?: ReadonlyMap<string, NowPanelTaskRowState>
+  taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   onRemove: (taskId: string) => void
   emptyMessage: string
 }
@@ -36,28 +38,6 @@ export function QueueSection({
     id: queueKey,
     disabled: isReadOnly,
   })
-
-  const getTaskRowExtras = (
-    state: NowPanelTaskRowState | undefined,
-  ): ReactNode[] => {
-    if (state == null) return []
-    return [
-      ...(state.timeRanges.length > 0
-        ? [
-            <span key="time-ranges" className="font-mono text-xs">
-              {state.timeRanges.join(', ')}
-            </span>,
-          ]
-        : []),
-      ...(state.blockEndedAt == null
-        ? []
-        : [
-            <span key="block-ended" className="text-destructive">
-              block ended {state.blockEndedAt}
-            </span>,
-          ]),
-    ]
-  }
 
   return (
     <div className="border-b border-border">
@@ -84,7 +64,7 @@ export function QueueSection({
                 <div key={task.id} className="border-b border-border">
                   <TaskRowAppearance
                     task={task}
-                    secondLineExtras={getTaskRowExtras(
+                    secondLineExtras={getTaskRowTimeBlockExtras(
                       taskRowStates?.get(task.id),
                     )}
                     isCurrentTimeBlock={
@@ -97,7 +77,7 @@ export function QueueSection({
                   key={task.id}
                   task={task}
                   queueKey={queueKey}
-                  secondLineExtras={getTaskRowExtras(
+                  secondLineExtras={getTaskRowTimeBlockExtras(
                     taskRowStates?.get(task.id),
                   )}
                   isCurrentTimeBlock={

@@ -1,53 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-
-import type { TimeBlockEvent } from '#components/calendar/calendar-view'
-import {
-  buildNowPanelModel,
-  type NowPanelModel,
-} from '#components/day-view/now-panel-model'
+import type { NowPanelModel } from '#components/day-view/now-panel-model'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import type { Task } from '#hooks/use-tasks'
-import type { TimeBlock } from '#hooks/use-time-blocks'
 
 export interface NowPanelProps {
-  timeBlocks: TimeBlock[]
-  calendarEvents: TimeBlockEvent[]
-  taskMap: Map<string, Task>
-  model?: NowPanelModel
+  model: NowPanelModel
   isLoading?: boolean
-  /** Fixed clock for stories and tests. The live panel updates itself every minute. */
-  now?: Date
 }
 
-export function NowPanel({
-  timeBlocks,
-  calendarEvents,
-  taskMap,
-  model: providedModel,
-  isLoading = false,
-  now: fixedNow,
-}: NowPanelProps) {
-  const [clockNow, setClockNow] = useState(() => fixedNow ?? new Date())
-
-  useEffect(() => {
-    if (fixedNow != null) return
-
-    const intervalId = window.setInterval(() => {
-      setClockNow(new Date())
-    }, 60_000)
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [fixedNow])
-
-  const now = fixedNow ?? clockNow
-  const model = useMemo(
-    () =>
-      providedModel ??
-      buildNowPanelModel({ now, timeBlocks, calendarEvents, tasks: taskMap }),
-    [providedModel, now, timeBlocks, calendarEvents, taskMap],
-  )
-
+export function NowPanel({ model, isLoading = false }: NowPanelProps) {
   return (
     <section
       aria-label="Now"

@@ -17,7 +17,6 @@ import {
 } from '#components/calendar/calendar-view'
 import { CompactMemoPanel } from '#components/day-view/compact-memo-panel'
 import { NowPanel, type NowPanelProps } from '#components/day-view/now-panel'
-import type { NowPanelTaskRowState } from '#components/day-view/now-panel-model'
 import {
   QueuePane,
   type QueueSectionData,
@@ -30,6 +29,7 @@ import {
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import { ActionsMenu, type ActionsMenuItem } from '#components/ui/actions-menu'
 import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -117,7 +117,7 @@ export interface DayViewPresentationProps {
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
   nowPanel?: NowPanelProps
-  taskRowStates?: ReadonlyMap<string, NowPanelTaskRowState>
+  taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   compactMemo?:
     | {
         context: MemoContext

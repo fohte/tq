@@ -7,9 +7,11 @@ import { fn } from 'storybook/test'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
+import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { makeMemo } from '#hooks/memo-test-fixtures'
 import type { SaveMemoInput } from '#hooks/use-memos'
@@ -219,17 +221,24 @@ const compactTaskTitles = [
   'Document the retry policy',
   'Plan the follow-up review',
 ]
+const compactUpcomingTask = makeTask({
+  id: 'compact-task-2',
+  number: 2,
+  title: 'Draft the onboarding guide',
+  estimatedMinutes: 30,
+})
 const compactCurrentTaskId = 'compact-task-1'
 const compactTasks = compactTaskTitles.map((title, index) =>
-  makeTask({
-    id: `compact-task-${String(index + 1)}`,
-    number: index + 1,
-    title,
-    estimatedMinutes: 30,
-    ...(index === 0 ? { dueDate: overdueDateStr } : {}),
-  }),
+  index === 1
+    ? compactUpcomingTask
+    : makeTask({
+        id: `compact-task-${String(index + 1)}`,
+        number: index + 1,
+        title,
+        estimatedMinutes: 30,
+        ...(index === 0 ? { dueDate: overdueDateStr } : {}),
+      }),
 )
-const compactUpcomingTask = compactTasks[1]
 const compactExternalDueTask = makeTask({
   id: 'compact-external-due-task',
   title: 'Confirm the supplier estimate',
@@ -335,6 +344,21 @@ const compactEvents: TimeBlockEvent[] = [
     scheduleId: 'compact-lunch',
   },
 ]
+const compactNow = new Date(`${dateStr}T09:30:00`)
+const compactNowTimeBlocks = [
+  compactOverrunTaskBlock,
+  compactTaskBlock,
+  compactUpcomingTaskBlock,
+]
+const compactNowTaskMap = new Map(
+  [...compactTasks, compactExternalDueTask].map((task) => [task.id, task]),
+)
+const compactNowPanelModel = buildNowPanelModel({
+  now: compactNow,
+  timeBlocks: compactNowTimeBlocks,
+  calendarEvents: compactEvents,
+  tasks: compactNowTaskMap,
+})
 const compactSchedules: Schedule[] = [
   makeSchedule({
     scheduleId: 'compact-lunch',
@@ -477,36 +501,27 @@ export const Compact: Story = {
     calendarEvents: compactEvents,
     schedules: compactSchedules,
     nowPanel: {
-      now: new Date(`${dateStr}T09:30:00`),
-      timeBlocks: [
-        compactOverrunTaskBlock,
-        compactTaskBlock,
-        compactUpcomingTaskBlock,
-      ],
-      calendarEvents: compactEvents,
-      taskMap: new Map(
-        [...compactTasks, compactExternalDueTask].map((task) => [
-          task.id,
-          task,
-        ]),
-      ),
+      model: compactNowPanelModel,
     },
     taskRowStates: new Map([
       [
         compactCurrentTaskId,
-        { timeRanges: ['09:00–10:00'], isCurrentTimeBlock: true },
+        makeTaskRowTimeBlockState({
+          timeRanges: ['09:00–10:00'],
+          isCurrentTimeBlock: true,
+        }),
       ],
       [
         compactExternalDueTask.id,
-        {
+        makeTaskRowTimeBlockState({
           timeRanges: ['08:30–09:00'],
           isCurrentTimeBlock: false,
           blockEndedAt: '09:00',
-        },
+        }),
       ],
       [
         compactUpcomingTask.id,
-        { timeRanges: ['10:00–10:30'], isCurrentTimeBlock: false },
+        makeTaskRowTimeBlockState({ timeRanges: ['10:00–10:30'] }),
       ],
     ]),
     compactMemo: {

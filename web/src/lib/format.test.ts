@@ -4,7 +4,14 @@ import {
   formatMinutes,
   formatRelativeTime,
   formatReminderTime,
+  formatTime24,
 } from '#lib/format'
+
+describe('formatTime24', () => {
+  it('formats local hours and minutes with leading zeroes', () => {
+    expect(formatTime24(new Date(2026, 2, 20, 9, 5))).toBe('09:05')
+  })
+})
 
 describe('formatMinutes', () => {
   it('formats minutes under an hour', () => {

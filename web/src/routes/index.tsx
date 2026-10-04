@@ -187,6 +187,7 @@ function DayView() {
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
   const {
+    now,
     nowPanelProps,
     taskRowStates: compactTaskRowStates,
     gcalAuthRequired: nowPanelGcalAuthRequired,
@@ -446,7 +447,9 @@ function DayView() {
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
         nowPanel={nowPanelProps}
-        taskRowStates={compactTaskRowStates}
+        {...(selectedDateStr === formatLocalDate(now)
+          ? { taskRowStates: compactTaskRowStates }
+          : {})}
         compactMemo={compactMemoProps}
         isLoading={
           isLoading ||

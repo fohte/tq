@@ -7,6 +7,8 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { getTaskRowTimeBlockExtras } from '#components/task/task-row-time-block'
+import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -122,11 +124,9 @@ export const WithTodayBlock: Story = {
   render: ({ task }) => (
     <TaskRowAppearanceWithProviders
       task={task}
-      secondLineExtras={[
-        <span key="time-ranges" className="font-mono text-xs">
-          09:00–09:30
-        </span>,
-      ]}
+      secondLineExtras={getTaskRowTimeBlockExtras(
+        makeTaskRowTimeBlockState({ timeRanges: ['09:00–09:30'] }),
+      )}
     />
   ),
 }
@@ -139,14 +139,12 @@ export const BlockEnded: Story = {
   render: ({ task }) => (
     <TaskRowAppearanceWithProviders
       task={task}
-      secondLineExtras={[
-        <span key="time-ranges" className="font-mono text-xs">
-          09:00–09:30
-        </span>,
-        <span key="block-ended" className="text-destructive">
-          block ended 09:30
-        </span>,
-      ]}
+      secondLineExtras={getTaskRowTimeBlockExtras(
+        makeTaskRowTimeBlockState({
+          timeRanges: ['09:00–09:30'],
+          blockEndedAt: '09:30',
+        }),
+      )}
     />
   ),
 }
@@ -159,12 +157,13 @@ export const CurrentTimeBlock: Story = {
   render: ({ task }) => (
     <TaskRowAppearanceWithProviders
       task={task}
-      secondLineExtras={[
-        <span key="time-ranges" className="font-mono text-xs">
-          09:00–09:30
-        </span>,
-      ]}
-      isCurrentTimeBlock
+      secondLineExtras={getTaskRowTimeBlockExtras(
+        makeTaskRowTimeBlockState({ timeRanges: ['09:00–09:30'] }),
+      )}
+      isCurrentTimeBlock={
+        makeTaskRowTimeBlockState({ isCurrentTimeBlock: true })
+          .isCurrentTimeBlock
+      }
     />
   ),
 }

@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import type { NowPanelProps } from '#components/day-view/now-panel'
 import {
   buildNowPanelModel,
   buildNowPanelTaskRowStates,
-  type NowPanelTaskRowState,
 } from '#components/day-view/now-panel-model'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
+import { useNowPanelClock } from '#hooks/use-now-panel-clock'
 import { useScheduleList } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import { useTimeBlocks } from '#hooks/use-time-blocks'
@@ -23,8 +24,9 @@ interface UseNowPanelDataOptions {
 }
 
 export interface NowPanelData {
+  now: Date
   nowPanelProps: NowPanelProps
-  taskRowStates: Map<string, NowPanelTaskRowState>
+  taskRowStates: Map<string, TaskRowTimeBlockState>
   gcalAuthRequired: boolean
 }
 
@@ -35,18 +37,7 @@ export function useNowPanelData({
   isTasksLoading,
   refetchInterval,
 }: UseNowPanelDataOptions): NowPanelData {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    if (!enabled) return
-
-    const intervalId = window.setInterval(() => {
-      setNow(new Date())
-    }, 60_000)
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [enabled])
-
+  const now = useNowPanelClock(enabled)
   const dateRange = getNowPanelQueryDateRange(now)
   const timeBlocksQuery = useTimeBlocks(
     dateRange.startDate,
@@ -111,11 +102,8 @@ export function useNowPanelData({
   )
 
   return {
+    now,
     nowPanelProps: {
-      timeBlocks,
-      calendarEvents,
-      taskMap,
-      now,
       model,
       isLoading:
         isTasksLoading ||

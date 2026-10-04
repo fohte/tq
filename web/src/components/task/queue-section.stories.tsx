@@ -6,6 +6,7 @@ import { fn } from 'storybook/test'
 
 import { QueueSection } from '#components/task/queue-section'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import { formatLocalDate } from '#lib/date-range'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
@@ -98,11 +99,10 @@ export const DueToday: Story = {
     taskRowStates: new Map([
       [
         '1',
-        {
+        makeTaskRowTimeBlockState({
           timeRanges: ['08:30–09:00'],
-          isCurrentTimeBlock: false,
           blockEndedAt: '09:00',
-        },
+        }),
       ],
     ]),
   },
@@ -120,7 +120,7 @@ export const ScheduledTask: Story = {
     taskRowStates: new Map([
       [
         'scheduled-task',
-        { timeRanges: ['10:00–10:30'], isCurrentTimeBlock: false },
+        makeTaskRowTimeBlockState({ timeRanges: ['10:00–10:30'] }),
       ],
     ]),
   },
@@ -138,7 +138,10 @@ export const CurrentWorkBlock: Story = {
     taskRowStates: new Map([
       [
         'current-task',
-        { timeRanges: ['09:00–09:30'], isCurrentTimeBlock: true },
+        makeTaskRowTimeBlockState({
+          timeRanges: ['09:00–09:30'],
+          isCurrentTimeBlock: true,
+        }),
       ],
     ]),
   },

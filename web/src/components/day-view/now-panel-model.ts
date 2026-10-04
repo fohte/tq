@@ -1,12 +1,15 @@
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
+import { formatTime24 } from '#lib/format'
 
 type NowPanelActivity =
   | {
       kind: 'task'
       key: string
       task: Task
+      blockEnd: string
       statusLabel: string
       isOverrun: boolean
     }
@@ -28,12 +31,6 @@ export interface NowPanelModel {
   activities: NowPanelActivity[]
   emptyState: 'no-time-blocks-today' | 'no-block-now' | null
   nextEvent: NowPanelNextEvent | null
-}
-
-export interface NowPanelTaskRowState {
-  timeRanges: string[]
-  isCurrentTimeBlock: boolean
-  blockEndedAt?: string
 }
 
 interface NowPanelModelInput {
@@ -86,11 +83,6 @@ function getTimeBlocksForLocalDay(now: Date, timeBlocks: TimeBlock[]) {
       end > dayStart
     )
   })
-}
-
-function formatTime(value: string): string {
-  const date = new Date(value)
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 function minutesUntil(target: number, now: number): number {
@@ -212,6 +204,7 @@ export function buildNowPanelModel({
             kind: 'task',
             key: resolved.block.id,
             task: resolved.task,
+            blockEnd: resolved.block.endTime,
             statusLabel,
             isOverrun,
           }
@@ -320,7 +313,7 @@ export function buildNowPanelTaskRowStates({
   now: Date
   timeBlocks: TimeBlock[]
   model: NowPanelModel
-}): Map<string, NowPanelTaskRowState> {
+}): Map<string, TaskRowTimeBlockState> {
   const timeBlocksByTaskId = new Map<string, TimeBlock[]>()
   for (const block of getTimeBlocksForLocalDay(now, timeBlocks)) {
     const blocks = timeBlocksByTaskId.get(block.taskId) ?? []
@@ -330,19 +323,15 @@ export function buildNowPanelTaskRowStates({
 
   const stateByTaskId = new Map<
     string,
-    Omit<NowPanelTaskRowState, 'timeRanges'>
+    Omit<TaskRowTimeBlockState, 'timeRanges'>
   >()
-  const timeBlockById = new Map(timeBlocks.map((block) => [block.id, block]))
   for (const activity of model.activities) {
     if (activity.kind !== 'task') continue
-    const endedBlock = activity.isOverrun
-      ? timeBlockById.get(activity.key)
-      : undefined
     stateByTaskId.set(activity.task.id, {
       isCurrentTimeBlock: !activity.isOverrun,
-      ...(endedBlock == null
-        ? {}
-        : { blockEndedAt: formatTime(endedBlock.endTime) }),
+      ...(activity.isOverrun
+        ? { blockEndedAt: formatTime24(new Date(activity.blockEnd)) }
+        : {}),
     })
   }
 
@@ -356,7 +345,7 @@ export function buildNowPanelTaskRowStates({
         )
         .map(
           (block) =>
-            `${formatTime(block.startTime)}–${formatTime(block.endTime)}`,
+            `${formatTime24(new Date(block.startTime))}–${formatTime24(new Date(block.endTime))}`,
         )
       return [
         taskId,
