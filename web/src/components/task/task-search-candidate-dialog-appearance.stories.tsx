@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
+import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskSearchCandidateDialogAppearance } from '#components/task/task-search-candidate-dialog'
 import type { SearchResult } from '#hooks/use-search'
@@ -68,5 +69,42 @@ export const WithSkipAction: Story = {
     query: 'Deploy',
     candidates: [orphanCandidate, candidateWithParent],
     skipAction: { label: 'Close without linking', onSkip: () => {} },
+  },
+}
+
+export const WithGithubUrlCandidate: Story = {
+  name: 'a pasted GitHub URL shows its pull request candidate',
+  args: {
+    title: 'Add blocker',
+    allowGithubUrls: true,
+    query: 'https://github.com/example-team/sample-project/pull/2048',
+    githubCandidate: makeResolveGithubUrlResult({
+      owner: 'example-team',
+      repo: 'sample-project',
+      number: 2048,
+      kind: 'pull_request',
+      url: 'https://github.com/example-team/sample-project/pull/2048',
+      title: 'Update the build tools',
+    }).preview,
+  },
+}
+
+export const ResolvingGithubUrl: Story = {
+  name: 'the dialog indicates that GitHub details are loading',
+  args: {
+    title: 'Add blocker',
+    allowGithubUrls: true,
+    query: 'https://github.com/example-team/sample-project/pull/2048',
+    isResolvingGithubUrl: true,
+  },
+}
+
+export const GithubUrlError: Story = {
+  name: 'the dialog explains why a GitHub URL could not be resolved',
+  args: {
+    title: 'Add blocker',
+    allowGithubUrls: true,
+    query: 'https://github.com/example-team/sample-project/pull/2048',
+    githubUrlError: 'GitHub is not connected.',
   },
 }

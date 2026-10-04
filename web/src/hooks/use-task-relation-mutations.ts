@@ -125,8 +125,11 @@ export function useUpdateTaskBlockedBy() {
         queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
       }
     },
-    onSettled: (_data, _err, { id }) => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: taskKeys.all }),
+        queryClient.invalidateQueries({ queryKey: projectKeys.all }),
+      ])
     },
   })
 }

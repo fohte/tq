@@ -34,12 +34,19 @@ type QueueItemsMock = (
   date: string,
   refetchInterval?: number,
 ) => unknown
+type MemosMock = () => {
+  data: undefined
+  error: unknown
+  isPending: boolean
+  isError: boolean
+}
 
 const mocks = vi.hoisted(() => ({
   useTaskList: vi.fn<TaskListMock>(),
   useTimeBlocks: vi.fn<DateRangeQueryMock>(),
   useScheduleList: vi.fn<DateRangeQueryMock>(),
   useGcalEvents: vi.fn<GcalQueryMock>(),
+  useMemos: vi.fn<MemosMock>(),
   useQueues: vi.fn<QueueListMock>(),
   useQueueItemsForQueues: vi.fn<QueueItemsMock>(),
 }))
@@ -84,7 +91,7 @@ vi.mock('#hooks/use-calendar-change-feedback', () => ({
 }))
 
 vi.mock('#hooks/use-current-context', () => ({
-  useCurrentContext: () => null,
+  useCurrentContext: () => 'work',
 }))
 
 vi.mock('#hooks/use-filtered-tasks', () => ({
@@ -104,6 +111,11 @@ vi.mock('#hooks/use-github-link', () => ({ useGithubSync: () => {} }))
 
 vi.mock('#hooks/use-integrations', () => ({
   useIntegrationAuthUrl: () => ({ data: undefined }),
+}))
+
+vi.mock('#hooks/use-memos', () => ({
+  useMemos: () => mocks.useMemos(),
+  useUpdateMemo: () => ({ mutateAsync: vi.fn() }),
 }))
 
 vi.mock('#hooks/use-projects', () => ({
@@ -199,6 +211,12 @@ beforeEach(() => {
   mocks.useTimeBlocks.mockReturnValue({ data: [], error: null })
   mocks.useScheduleList.mockReturnValue({ data: [], error: null })
   mocks.useGcalEvents.mockReturnValue({ data: [], error: null })
+  mocks.useMemos.mockReturnValue({
+    data: undefined,
+    error: null,
+    isPending: false,
+    isError: false,
+  })
   mocks.useQueues.mockReturnValue({ data: [] })
   mocks.useQueueItemsForQueues.mockReturnValue([])
 })
@@ -343,9 +361,16 @@ describe('day-view route compact layout', () => {
     const timeBlocksError = new Error('time blocks unavailable')
     const schedulesError = new Error('schedules unavailable')
     const dueTasksError = new Error('due tasks unavailable')
+    const memosError = new Error('memos unavailable')
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     mocks.useTimeBlocks.mockReturnValue({ data: [], error: timeBlocksError })
     mocks.useScheduleList.mockReturnValue({ data: [], error: schedulesError })
+    mocks.useMemos.mockReturnValue({
+      data: undefined,
+      error: memosError,
+      isPending: false,
+      isError: true,
+    })
     mocks.useTaskList
       .mockReturnValueOnce({
         data: [],
@@ -365,6 +390,14 @@ describe('day-view route compact layout', () => {
     await waitFor(() => {
       expect(getLoggedErrors()).toEqual([
         [
+          'Failed to refresh Now panel time blocks in compact layout',
+          timeBlocksError,
+        ],
+        [
+          'Failed to refresh Now panel schedules in compact layout',
+          schedulesError,
+        ],
+        [
           'Failed to refresh day view time blocks in compact layout',
           timeBlocksError,
         ],
@@ -376,14 +409,7 @@ describe('day-view route compact layout', () => {
           'Failed to refresh day view due tasks in compact layout',
           dueTasksError,
         ],
-        [
-          'Failed to refresh Now panel time blocks in compact layout',
-          timeBlocksError,
-        ],
-        [
-          'Failed to refresh Now panel schedules in compact layout',
-          schedulesError,
-        ],
+        ['Failed to refresh day view memos in compact layout', memosError],
       ])
     })
 

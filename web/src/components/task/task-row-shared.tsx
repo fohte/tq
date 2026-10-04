@@ -7,7 +7,7 @@ import { TaskSearchCandidateDialog } from '#components/task/task-search-candidat
 import type { StatusPickerValue } from '#components/task/task-status-picker'
 import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
-import type { Task } from '#hooks/use-tasks'
+import type { BlockedByGithubRef, Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatMinutes, formatReminderTime } from '#lib/format'
 import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
@@ -271,17 +271,45 @@ export function CloseReasonLabel({
 
 export function BlockedByLabel({
   blockedByNumbers,
+  blockedByGithubRefs,
 }: {
   blockedByNumbers: number[]
+  blockedByGithubRefs: BlockedByGithubRef[]
 }) {
+  const blockerCount = blockedByNumbers.length + blockedByGithubRefs.length
+  const soleGithubBlocker =
+    blockerCount === 1 ? blockedByGithubRefs[0] : undefined
   const text =
-    blockedByNumbers.length === 1
+    blockerCount === 1 && soleGithubBlocker == null
       ? `blocked by #${String(blockedByNumbers[0])}`
-      : `blocked by ${String(blockedByNumbers.length)}`
+      : `blocked by ${String(blockerCount)}`
 
   return (
     <span className="shrink-0 font-mono text-xs text-muted-foreground">
-      {text}
+      {soleGithubBlocker == null ? (
+        text
+      ) : (
+        <>
+          blocked by{' '}
+          <button
+            type="button"
+            className="hover:text-foreground hover:underline"
+            aria-label={`Open ${soleGithubBlocker.owner}/${soleGithubBlocker.repo}#${String(soleGithubBlocker.number)} on GitHub`}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              window.open(
+                soleGithubBlocker.url,
+                '_blank',
+                'noopener,noreferrer',
+              )
+            }}
+          >
+            {soleGithubBlocker.owner}/{soleGithubBlocker.repo}#
+            {soleGithubBlocker.number}
+          </button>
+        </>
+      )}
     </span>
   )
 }

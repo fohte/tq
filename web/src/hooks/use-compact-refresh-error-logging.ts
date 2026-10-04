@@ -7,9 +7,10 @@ export function useCompactRefreshErrorLogging(
     timeBlocks: unknown
     schedules: unknown
     dueTasks?: unknown
+    memos?: unknown
   },
 ) {
-  const { timeBlocks, schedules, dueTasks } = errors
+  const { timeBlocks, schedules, dueTasks, memos } = errors
 
   useEffect(() => {
     if (!enabled) return
@@ -32,5 +33,11 @@ export function useCompactRefreshErrorLogging(
         dueTasks,
       )
     }
-  }, [enabled, source, timeBlocks, schedules, dueTasks])
+    if (memos != null) {
+      console.error(
+        `Failed to refresh ${source} memos in compact layout`,
+        memos,
+      )
+    }
+  }, [enabled, source, timeBlocks, schedules, dueTasks, memos])
 }
