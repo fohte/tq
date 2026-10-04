@@ -74,12 +74,6 @@ function displayTitle(event: TimeBlockEvent, fallback = event.title): string {
   return event.redacted === true ? 'Busy' : fallback
 }
 
-function visibleMeetingUrl(event: TimeBlockEvent): string | undefined {
-  if (event.redacted === true || !isGoogleCalendarEvent(event)) return undefined
-  const meetingUrl = event.meetingUrl?.trim()
-  return meetingUrl === '' ? undefined : meetingUrl
-}
-
 function resolveTimeBlocks(
   timeBlocks: TimeBlock[],
   eventById: Map<string, TimeBlockEvent>,
@@ -224,14 +218,13 @@ export function buildNowPanelModel({
     const end = parseTimestamp(event.end)
     if (start == null || end == null || start > nowTime || end <= nowTime)
       continue
-    const meetingUrl = visibleMeetingUrl(event)
     activities.push({
       kind: 'event',
       key: event.id,
       title: displayTitle(event),
       statusLabel: `now (${String(minutesUntil(end, nowTime))} min left)`,
       isOverrun: false,
-      ...(meetingUrl != null ? { meetingUrl } : {}),
+      ...(event.meetingUrl != null ? { meetingUrl: event.meetingUrl } : {}),
     })
   }
 
@@ -257,13 +250,12 @@ export function buildNowPanelModel({
       event.allDay !== true &&
       event.responseStatus !== 'declined'
     ) {
-      const meetingUrl = visibleMeetingUrl(event)
       candidates.push({
         title: displayTitle(event),
         start,
         priority: 1,
         warningThresholdMinutes: event.type === 'gcal-meeting' ? 5 : null,
-        ...(meetingUrl != null ? { meetingUrl } : {}),
+        ...(event.meetingUrl != null ? { meetingUrl: event.meetingUrl } : {}),
       })
     }
   }

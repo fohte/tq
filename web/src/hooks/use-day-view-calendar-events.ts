@@ -70,21 +70,24 @@ export function useDayViewCalendarEvents({
 
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsData) return []
-    return gcalEventsData.map((event) => ({
-      id: `gcal-${event.id}`,
-      title: event.summary,
-      start: event.startTime,
-      end: event.endTime,
-      type: classifyGcalEvent(event),
-      gcalEventType: event.eventType,
-      allDay: event.isAllDay,
-      calendarColor: event.calendarColor,
-      responseStatus: event.responseStatus,
-      redacted: event.redacted,
-      ...(!event.redacted && event.meetingUrl != null
-        ? { meetingUrl: event.meetingUrl }
-        : {}),
-    }))
+    return gcalEventsData.map((event) => {
+      const meetingUrl = event.meetingUrl?.trim()
+      return {
+        id: `gcal-${event.id}`,
+        title: event.summary,
+        start: event.startTime,
+        end: event.endTime,
+        type: classifyGcalEvent(event),
+        gcalEventType: event.eventType,
+        allDay: event.isAllDay,
+        calendarColor: event.calendarColor,
+        responseStatus: event.responseStatus,
+        redacted: event.redacted,
+        ...(!event.redacted && meetingUrl != null && meetingUrl !== ''
+          ? { meetingUrl }
+          : {}),
+      }
+    })
   }, [gcalEventsData])
 
   const calendarEvents: TimeBlockEvent[] = useMemo(

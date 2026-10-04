@@ -231,7 +231,6 @@ describe('buildNowPanelModel', () => {
       end: localTime(9, 15, 14),
       type: 'gcal-meeting',
       redacted: true,
-      meetingUrl: 'https://meet.example.com/private-room',
     })
 
     expect(

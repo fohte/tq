@@ -5,7 +5,7 @@ import { makeGcalEvent } from '#hooks/gcal-event-test-fixtures'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 
 describe('useDayViewCalendarEvents', () => {
-  it('maps visible meeting URLs and omits URLs from redacted events', () => {
+  it('maps meeting URLs only for visible events with nonblank URLs', () => {
     const visibleMeeting = makeGcalEvent({
       id: 'visible-meeting',
       summary: 'Product review',
@@ -17,12 +17,26 @@ describe('useDayViewCalendarEvents', () => {
       meetingUrl: 'https://meet.example.com/private-room',
       redacted: true,
     })
+    const unlinkedMeeting = makeGcalEvent({
+      id: 'unlinked-meeting',
+      summary: 'Room check',
+    })
+    const blankLinkMeeting = makeGcalEvent({
+      id: 'blank-link-meeting',
+      summary: 'Planning session',
+      meetingUrl: '   ',
+    })
 
     const { result } = renderHook(() =>
       useDayViewCalendarEvents({
         timeBlocksData: undefined,
         schedulesData: undefined,
-        gcalEventsData: [visibleMeeting, redactedMeeting],
+        gcalEventsData: [
+          visibleMeeting,
+          redactedMeeting,
+          unlinkedMeeting,
+          blankLinkMeeting,
+        ],
         taskMap: new Map(),
         context: 'work',
       }),
@@ -53,6 +67,30 @@ describe('useDayViewCalendarEvents', () => {
         calendarColor: null,
         responseStatus: 'accepted',
         redacted: true,
+      },
+      {
+        id: 'gcal-unlinked-meeting',
+        title: 'Room check',
+        start: '2031-04-09T15:00:00.000Z',
+        end: '2031-04-09T15:30:00.000Z',
+        type: 'gcal-meeting',
+        gcalEventType: 'default',
+        allDay: false,
+        calendarColor: null,
+        responseStatus: 'accepted',
+        redacted: false,
+      },
+      {
+        id: 'gcal-blank-link-meeting',
+        title: 'Planning session',
+        start: '2031-04-09T15:00:00.000Z',
+        end: '2031-04-09T15:30:00.000Z',
+        type: 'gcal-meeting',
+        gcalEventType: 'default',
+        allDay: false,
+        calendarColor: null,
+        responseStatus: 'accepted',
+        redacted: false,
       },
     ])
   })

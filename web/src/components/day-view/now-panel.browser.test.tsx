@@ -58,7 +58,6 @@ describe('NowPanel', () => {
       end: localTime(9, 14, 30),
       type: 'gcal-meeting',
       redacted: true,
-      meetingUrl: 'https://meet.example.com/private-room',
     })
 
     render(

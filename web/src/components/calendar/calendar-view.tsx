@@ -45,7 +45,7 @@ export interface TimeBlockEvent {
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
-  /** Google Meet URL, omitted for events hidden by the context filter */
+  /** Google Meet URL; redacted and blank values are omitted by event mapping */
   meetingUrl?: string
   /** Google's raw eventType (e.g. `outOfOffice`), used to pick the status/info icon */
   gcalEventType?: string
