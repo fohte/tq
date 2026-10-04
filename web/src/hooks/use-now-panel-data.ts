@@ -53,6 +53,7 @@ export function useNowPanelData({
     enabled,
     timeBlocksQuery.error,
     schedulesQuery.error,
+    undefined,
   )
 
   useEffect(() => {

@@ -367,6 +367,8 @@ describe('day-view route compact layout', () => {
         ['Failed to refresh time blocks in compact layout', timeBlocksError],
         ['Failed to refresh schedules in compact layout', schedulesError],
         ['Failed to refresh due tasks in compact layout', dueTasksError],
+        ['Failed to refresh time blocks in compact layout', timeBlocksError],
+        ['Failed to refresh schedules in compact layout', schedulesError],
       ])
     })
 
