@@ -5,12 +5,14 @@ export function TabStrip<T extends string>({
   options,
   onChange,
   disabled,
+  tabIndex,
   className,
 }: {
   value: T
   options: ReadonlyArray<{ value: T; label: React.ReactNode }>
   onChange: (value: T) => void
   disabled?: boolean
+  tabIndex?: number
   className?: string
 }) {
   return (
@@ -20,6 +22,7 @@ export function TabStrip<T extends string>({
           key={option.value}
           type="button"
           disabled={disabled}
+          tabIndex={tabIndex}
           onClick={() => {
             onChange(option.value)
           }}
