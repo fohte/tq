@@ -49,4 +49,13 @@ describe('SessionIndicator', () => {
     expect(body.getByText('Implement session indicator')).toBeVisible()
     expect(body.getByText('Write the release notes')).toBeVisible()
   })
+
+  it('marks an archived session as inactive', () => {
+    renderSessionIndicator([
+      { ...activeAgentSession, archivedAt: '2026-03-20T11:59:00Z' },
+    ])
+
+    const indicator = screen.getByTestId('session-indicator')
+    expect(indicator.querySelector('.lucide-square') != null).toEqual(true)
+  })
 })

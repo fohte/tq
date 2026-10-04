@@ -61,6 +61,15 @@ export const EndedSession: Story = {
   args: { sessions: [endedAgentSession] },
 }
 
+export const ArchivedSession: Story = {
+  name: 'the session indicator marks an archived session as inactive',
+  args: {
+    sessions: [
+      { ...activeAgentSession, id: '3', archivedAt: '2026-03-20T11:59:00Z' },
+    ],
+  },
+}
+
 export const ShowsActiveWhenOneOfManyIsActive: Story = {
   name: 'the indicator marks a mixed session list as active',
   args: {

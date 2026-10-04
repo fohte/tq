@@ -107,6 +107,14 @@ export const EndedDimmed: Story = {
   },
 }
 
+export const Archived: Story = {
+  name: 'an archived session appears muted without an open action',
+  args: {
+    session: { ...baseSession, id: '16', archivedAt: '2026-03-20T11:59:00Z' },
+    isDimmed: false,
+  },
+}
+
 export const NoLabel: Story = {
   name: 'a running session without a custom label shows its default title',
   args: {
