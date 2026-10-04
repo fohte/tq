@@ -15,8 +15,7 @@ import {
 } from '#routes/schedule-expansion'
 import { scheduleOverridesApp } from '#routes/schedule-overrides'
 import {
-  indexScheduleOverridesBySchedule,
-  loadScheduleOverridesForDateRange,
+  loadScheduleOverridesForExpansion,
   loadSchedulesWithRules,
 } from '#routes/schedule-shared'
 import { timeBlockToResponse } from '#routes/tasks/shared'
@@ -287,13 +286,9 @@ export const schedulesApp = new Hono()
         cursor.setDate(cursor.getDate() + 1)
       }
 
-      const previousDate = new Date(startDate + 'T00:00:00')
-      previousDate.setDate(previousDate.getDate() - 1)
-      const overridesBySchedule = indexScheduleOverridesBySchedule(
-        await loadScheduleOverridesForDateRange(
-          formatDateStr(previousDate),
-          endDate,
-        ),
+      const overridesBySchedule = await loadScheduleOverridesForExpansion(
+        startDate,
+        endDate,
       )
 
       const expanded = dates.flatMap((dateStr) =>

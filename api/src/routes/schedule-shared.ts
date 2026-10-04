@@ -2,7 +2,10 @@ import { and, gte, inArray, lte } from 'drizzle-orm'
 
 import { db } from '#db/connection'
 import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
-import type { ScheduleOverrideTimes } from '#routes/schedule-expansion'
+import {
+  formatDateStr,
+  type ScheduleOverrideTimes,
+} from '#routes/schedule-expansion'
 
 export async function loadSchedulesWithRules() {
   const allSchedules = await db.select().from(schedules)
@@ -60,4 +63,19 @@ export function indexScheduleOverridesBySchedule(
   }
 
   return result
+}
+
+export async function loadScheduleOverridesForExpansion(
+  startDate: string,
+  endDate: string,
+) {
+  const previousDate = new Date(`${startDate}T00:00:00`)
+  previousDate.setDate(previousDate.getDate() - 1)
+
+  return indexScheduleOverridesBySchedule(
+    await loadScheduleOverridesForDateRange(
+      formatDateStr(previousDate),
+      endDate,
+    ),
+  )
 }

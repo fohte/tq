@@ -1,5 +1,4 @@
 import { errAsync } from 'neverthrow'
-import { z } from 'zod'
 
 import { encodePathSegment } from '#operations/path-segment'
 import {
@@ -7,14 +6,10 @@ import {
   requestJson,
   requestNoContent,
 } from '#operations/types'
-import { scheduleOverrideOperationInputSchema } from '#schemas/schedule-override'
-
-const clearScheduleOverrideInputSchema = z.object({
-  scheduleId: z.string().min(1).describe('Recurring schedule ID.'),
-  occurrenceDate: z.iso
-    .date()
-    .describe('Date on which this occurrence starts, in YYYY-MM-DD format.'),
-})
+import {
+  clearScheduleOverrideInputSchema,
+  scheduleOverrideOperationInputSchema,
+} from '#schemas/schedule-override'
 
 export const scheduleOverrideOperations = [
   defineOperation(scheduleOverrideOperationInputSchema, {
@@ -75,10 +70,7 @@ export const scheduleOverrideOperations = [
     routes: [
       'DELETE /api/schedule/recurring/:scheduleId/overrides/:occurrenceDate',
     ],
-    cli: {
-      group: { description: 'Manage schedule overrides', order: 10 },
-      output: { kind: 'json' },
-    },
+    cli: { output: { kind: 'json' } },
     run: (client, { scheduleId, occurrenceDate }) =>
       requestNoContent(
         client.api.schedule.recurring[':scheduleId'].overrides[

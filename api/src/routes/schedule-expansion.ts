@@ -12,7 +12,7 @@ export type ScheduleOverrideTimes = Pick<
  * - weekly: matches if the date's day-of-week is in daysOfWeek
  * - monthly: matches if the date's day-of-month equals dayOfMonth
  */
-function matchesDate(
+export function matchesDate(
   rule: typeof recurrenceRules.$inferSelect | null,
   date: Date,
 ): boolean {

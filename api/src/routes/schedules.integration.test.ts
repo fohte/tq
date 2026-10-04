@@ -121,6 +121,21 @@ async function createSchedule(body: Record<string, unknown>) {
   return { res, body: await jsonBody<ScheduleResponse>(res) }
 }
 
+async function putScheduleOverride(
+  scheduleId: string,
+  occurrenceDate: string,
+  body: unknown,
+) {
+  return app.request(
+    `/api/schedule/recurring/${scheduleId}/overrides/${occurrenceDate}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+}
+
 describe('schedule/time-blocks API', () => {
   describe('POST /api/schedule/time-blocks', () => {
     it('creates a time block', async () => {
@@ -645,11 +660,10 @@ describe('schedule overrides API', () => {
       startTime: '09:00',
       endTime: '10:00',
     })
-    const url = `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`
-    await app.request(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startTime: '08:30', endTime: '09:45' }),
+    await putScheduleOverride(schedule.id, '2026-03-22', { skipped: true })
+    await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '08:30',
+      endTime: '09:45',
     })
     const response = await app.request(
       '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
@@ -674,10 +688,9 @@ describe('schedule overrides API', () => {
       endTime: '10:00',
     })
     const url = `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`
-    await app.request(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startTime: '08:30', endTime: '09:45' }),
+    await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '08:30',
+      endTime: '09:45',
     })
     await app.request(url, { method: 'DELETE' })
 
@@ -703,14 +716,7 @@ describe('schedule overrides API', () => {
       startTime: '09:00',
       endTime: '10:00',
     })
-    await app.request(
-      `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skipped: true }),
-      },
-    )
+    await putScheduleOverride(schedule.id, '2026-03-22', { skipped: true })
     const response = await app.request(
       '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-23',
     )
@@ -734,14 +740,10 @@ describe('schedule overrides API', () => {
       startTime: '23:00',
       endTime: '07:00',
     })
-    await app.request(
-      `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startTime: '22:30', endTime: '08:00' }),
-      },
-    )
+    await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '22:30',
+      endTime: '08:00',
+    })
     const nextDateResponse = await app.request(
       '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-23',
     )
@@ -768,35 +770,58 @@ describe('schedule overrides API', () => {
     ])
   })
 
-  it('rejects incomplete or invalid time ranges and unknown schedules', async () => {
+  it('rejects an incomplete time range', async () => {
     const { body: schedule } = await createSchedule({
       title: 'Routine',
       startTime: '09:00',
       endTime: '10:00',
     })
-    const request = (url: string, body: unknown) =>
-      app.request(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-    const path = `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`
-    const incomplete = await request(path, { startTime: '08:30' })
-    const invalidTime = await request(path, {
+    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '08:30',
+    })
+
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects a time outside the 24-hour clock', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
       startTime: '24:00',
       endTime: '09:45',
     })
-    const missingSchedule = await request(
-      `/api/schedule/recurring/${TEST_UUID}/overrides/2026-03-22`,
-      { skipped: true },
-    )
 
-    const getStatuses = () => [
-      incomplete.status,
-      invalidTime.status,
-      missingSchedule.status,
-    ]
-    expect(getStatuses()).toEqual([400, 400, 404])
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects a date that does not match the recurrence rule', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+      recurrence: {
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [1],
+      },
+    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-24', {
+      startTime: '08:00',
+      endTime: '09:00',
+    })
+
+    expect(response.status).toBe(422)
+  })
+
+  it('returns 404 for an unknown schedule', async () => {
+    const response = await putScheduleOverride(TEST_UUID, '2026-03-22', {
+      skipped: true,
+    })
+
+    expect(response.status).toBe(404)
   })
 })
 
@@ -813,14 +838,10 @@ describe('schedule/auto-assign API', () => {
         startTime: '09:00',
         endTime: '10:00',
       })
-      await app.request(
-        `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startTime: '12:00', endTime: '13:00' }),
-        },
-      )
+      await putScheduleOverride(schedule.id, '2026-03-22', {
+        startTime: '12:00',
+        endTime: '13:00',
+      })
 
       const { body } = await requestAutoAssign('2026-03-22')
 

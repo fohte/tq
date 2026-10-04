@@ -4,8 +4,9 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { scheduleOverrides, schedules } from '#db/schema'
+import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { matchesDate } from '#routes/schedule-expansion'
 import {
   scheduleOverrideDateSchema,
   setScheduleOverrideBodySchema,
@@ -22,6 +23,20 @@ async function findSchedule(scheduleId: string) {
   })
 }
 
+async function findScheduleWithRule(scheduleId: string) {
+  const schedule = await findSchedule(scheduleId)
+  if (!schedule) return null
+
+  const rule =
+    schedule.recurrenceRuleId != null
+      ? await db.query.recurrenceRules.findFirst({
+          where: eq(recurrenceRules.id, schedule.recurrenceRuleId),
+        })
+      : null
+
+  return { schedule, rule: rule ?? null }
+}
+
 export const scheduleOverridesApp = new Hono()
   .put(
     '/recurring/:scheduleId/overrides/:occurrenceDate',
@@ -29,8 +44,21 @@ export const scheduleOverridesApp = new Hono()
     zValidator('json', setScheduleOverrideBodySchema),
     async (c) => {
       const { scheduleId, occurrenceDate } = c.req.valid('param')
-      if (!(await findSchedule(scheduleId))) {
+      const scheduleWithRule = await findScheduleWithRule(scheduleId)
+      if (!scheduleWithRule) {
         return c.json({ error: 'Schedule not found' }, 404)
+      }
+
+      if (
+        !matchesDate(
+          scheduleWithRule.rule,
+          new Date(`${occurrenceDate}T00:00:00`),
+        )
+      ) {
+        return c.json(
+          { error: 'Date is not an occurrence of this schedule' },
+          422,
+        )
       }
 
       const input = c.req.valid('json')

@@ -290,6 +290,11 @@ export const scheduleOverrides = pgTable(
       'schedule_overrides_time_or_skip_check',
       sql`(${table.skipped} AND ${table.startTime} IS NULL AND ${table.endTime} IS NULL) OR (NOT ${table.skipped} AND ${table.startTime} IS NOT NULL AND ${table.endTime} IS NOT NULL)`,
     ),
+    check(
+      'schedule_overrides_time_format_check',
+      sql`(${table.startTime} IS NULL OR ${table.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$') AND (${table.endTime} IS NULL OR ${table.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')`,
+    ),
+    index('idx_schedule_overrides_occurrence_date').on(table.occurrenceDate),
   ],
 )
 

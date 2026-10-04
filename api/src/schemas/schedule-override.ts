@@ -33,3 +33,9 @@ export const setScheduleOverrideBodySchema = z.union([
     })
     .strict(),
 ])
+
+export const clearScheduleOverrideInputSchema =
+  scheduleOverrideOperationInputSchema.pick({
+    scheduleId: true,
+    occurrenceDate: true,
+  })
