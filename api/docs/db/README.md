@@ -24,7 +24,7 @@
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 8       | Calendars selected for OAuth accounts.                                               | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 13      | Task status changes and GitHub link or unlink events shown in the activity timeline. | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 7       | Singleton preferences for task scheduling.                                           | BASE TABLE |
-| [public.agent_sessions](public.agent_sessions.md)                                   | 12      | Sessions reported by coding agent providers.                                         | BASE TABLE |
+| [public.agent_sessions](public.agent_sessions.md)                                   | 13      | Sessions reported by coding agent providers.                                         | BASE TABLE |
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 3       | Associations between tasks and coding agent sessions.                                | BASE TABLE |
 | [public.saved_views](public.saved_views.md)                                         | 7       | Saved task searches with a display name, query, context, and position.               | BASE TABLE |
 | [public.task_relations](public.task_relations.md)                                   | 4       | User-defined directed relationships between tasks.                                   | BASE TABLE |
@@ -334,6 +334,7 @@ erDiagram
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
   text parent_session_id
+  timestamp_with_time_zone archived_at
 }
 "public.task_agent_sessions" {
   text task_id FK

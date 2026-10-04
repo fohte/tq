@@ -1,26 +1,37 @@
+import type { AgentSession } from '#hooks/use-agent-sessions'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
+
+export function makeAgentSession(
+  overrides: Partial<AgentSession> = {},
+): AgentSession {
+  return {
+    id: 'agent-session-1',
+    provider: 'claude_code',
+    sessionId: 'session-1',
+    parentSessionId: null,
+    context: 'work',
+    cwd: '/Users/example/ghq/github.com/example/tq',
+    label: 'Session label',
+    lastMessage: null,
+    customLabel: null,
+    startedAt: '2026-03-20T11:00:00Z',
+    lastActiveAt: '2026-03-20T11:50:00Z',
+    endedAt: null,
+    archivedAt: null,
+    ...overrides,
+  }
+}
 
 export function makeTaskAgentSession(
   overrides: Partial<TaskAgentSession> = {},
 ): TaskAgentSession {
   return {
-    id: 'agent-session-1',
+    ...makeAgentSession(),
     taskId: 'task-1',
     taskNumber: 1,
     taskTitle: 'Task title',
     taskParentId: null,
     taskStatus: 'todo',
-    provider: 'claude_code',
-    sessionId: 'session-1',
-    parentSessionId: null,
-    context: 'work',
-    cwd: '/Users/fohte/ghq/github.com/fohte/tq',
-    label: 'Session label',
-    lastMessage: null,
-    customLabel: null,
-    startedAt: '2026-03-20T00:00:00.000Z',
-    lastActiveAt: '2026-03-20T00:00:00.000Z',
-    endedAt: null,
     linkedAt: '2030-01-01T00:00:00.000Z',
     ...overrides,
   }

@@ -23,6 +23,7 @@ interface AgentSessionResponse {
   startedAt: string
   lastActiveAt: string
   endedAt: string | null
+  archivedAt: string | null
 }
 
 interface TaskLinkResponse {

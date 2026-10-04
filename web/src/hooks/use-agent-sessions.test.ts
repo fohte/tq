@@ -1,24 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
+import { makeAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import {
   type AgentSession,
   isAgentSessionActive,
 } from '#hooks/use-agent-sessions'
 
-const baseSession: AgentSession = {
+const baseSession: AgentSession = makeAgentSession({
   id: '1',
-  provider: 'claude_code',
-  sessionId: 'session-1',
-  parentSessionId: null,
-  context: 'work',
-  cwd: '/tmp/example',
   label: null,
-  lastMessage: null,
-  customLabel: null,
-  startedAt: '2026-03-20T11:00:00Z',
-  lastActiveAt: '2026-03-20T11:50:00Z',
-  endedAt: null,
-}
+})
 
 describe('isAgentSessionActive', () => {
   const now = new Date('2026-03-20T12:00:00Z')

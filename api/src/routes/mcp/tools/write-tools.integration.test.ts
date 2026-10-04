@@ -48,6 +48,21 @@ async function createAsset(): Promise<{ id: string }> {
   return jsonBody(response, z.object({ id: z.uuid() }))
 }
 
+async function createAgentSession(sessionId: string): Promise<void> {
+  const response = await app.request('/api/agent-sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: 'claude_code',
+      sessionId,
+      cwd: '/tmp/example',
+      label: 'Archive test session',
+      lastMessage: null,
+    }),
+  })
+  await jsonBody(response, z.object({ id: z.uuid() }))
+}
+
 async function projectTitle(projectId: string): Promise<string> {
   const response = await app.request(`/api/projects/${projectId}`)
   const project = await jsonBody(response, z.object({ title: z.string() }))
@@ -227,6 +242,23 @@ describe('session_delete tool', () => {
         content: [{ type: 'text', text: 'Agent session not found' }],
       },
       task: { status: 200, body: { title: 'Protected test task' } },
+    })
+  })
+})
+
+describe('session_archive tool', () => {
+  it('archives an agent session', async () => {
+    await createAgentSession('archive-session-1')
+
+    const result = await callMcpTool(client, 'session_archive', {
+      provider: 'claude_code',
+      sessionId: 'archive-session-1',
+    })
+
+    expect(parseToolData(result)).toEqual({
+      archived: true,
+      provider: 'claude_code',
+      sessionId: 'archive-session-1',
     })
   })
 })
@@ -695,6 +727,7 @@ describe('operation tool input schemas', () => {
       schedule_time_blocks_delete: false,
       schedule_time_blocks_list: false,
       schedule_time_blocks_update: false,
+      session_archive: false,
       session_delete: false,
       session_list: false,
       task_activity: false,

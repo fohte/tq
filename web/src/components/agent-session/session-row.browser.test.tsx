@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SessionRow } from '#components/agent-session/session-row'
+import { makeAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import { useUpdateAgentSessionCustomLabel } from '#hooks/use-agent-sessions'
@@ -35,20 +36,13 @@ function mockUpdateCustomLabel(mutate = vi.fn()) {
   return mutate
 }
 
-const baseSession: AgentSession = {
+const baseSession: AgentSession = makeAgentSession({
   id: '1',
-  provider: 'claude_code',
-  sessionId: 'session-1',
-  parentSessionId: null,
-  context: 'work',
-  cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'web sessions page',
   lastMessage: 'Implement the sessions list page',
-  customLabel: null,
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
-  endedAt: null,
-}
+})
 
 function renderSessionRow(
   props: Partial<ComponentProps<typeof SessionRow>> = {},

@@ -56,6 +56,7 @@ const REGISTERED_TOOL_NAMES = [
   'schedule_time_blocks_delete',
   'schedule_time_blocks_list',
   'schedule_time_blocks_update',
+  'session_archive',
   'session_delete',
   'session_list',
   'task_activity',
