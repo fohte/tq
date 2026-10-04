@@ -94,7 +94,7 @@ describe('queue operation tools', () => {
     const invalidKeys = ['', '.', '..', '\uD800']
     const results = await Promise.all(
       invalidKeys.flatMap((key) => [
-        callMcpTool(client, 'queue_get', { key }),
+        callMcpTool(client, 'queue_get', { key, date: '2026-08-06' }),
         callMcpTool(client, 'queue_set', {
           key,
           date: '2026-08-06',
@@ -161,14 +161,16 @@ describe('queue operation tools', () => {
     expect(parseToolJson(result)).toEqual(expected)
   })
 
-  it('uses the current UTC date when date is omitted', async () => {
-    const today = new Date().toISOString().slice(0, 10)
-    const task = await createTask('Today item')
-    const expected = await putDayQueueItems([task.id], today)
-
+  it('requires an explicit date', async () => {
     const result = await callMcpTool(client, 'queue_get', { key: 'day' })
 
-    expect(parseToolJson(result)).toEqual(expected)
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'queue_get',
+        'date',
+        'Invalid input: expected string, received undefined',
+      ),
+    )
   })
 
   it('replaces queue items in the supplied order', async () => {

@@ -87,13 +87,20 @@ export function useUpdateTaskBlockedBy() {
     mutationFn: async ({
       id,
       blockedBy,
+      githubBlockerUrls,
     }: {
       id: string
       blockedBy: LinkedTaskSummary[]
+      githubBlockerUrls: string[]
     }) => {
       const res = await api.api.tasks[':id'].$patch({
         param: { id },
-        json: { blockedBy: blockedBy.map((task) => task.id) },
+        json: {
+          blockedBy: [
+            ...blockedBy.map((task) => task.id),
+            ...githubBlockerUrls,
+          ],
+        },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },

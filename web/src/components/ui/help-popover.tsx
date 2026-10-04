@@ -12,6 +12,7 @@ interface HelpPopoverProps {
   defaultOpen?: boolean
   onOpenChange?: ((open: boolean) => void) | undefined
   popupClassName?: string
+  tabIndex?: number
 }
 
 export function HelpPopover({
@@ -21,6 +22,7 @@ export function HelpPopover({
   defaultOpen = false,
   onOpenChange,
   popupClassName,
+  tabIndex,
 }: HelpPopoverProps) {
   const [open, setOpen] = useState(defaultOpen)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -38,6 +40,7 @@ export function HelpPopover({
         type="button"
         variant="ghost"
         size="icon-sm"
+        tabIndex={tabIndex}
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}

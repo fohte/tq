@@ -48,3 +48,19 @@ export const MonthView: Story = {
     activeView: 'month',
   },
 }
+
+export const Compact: Story = {
+  name: 'the compact calendar header keeps date navigation in a narrow window',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    activeView: 'day',
+    showViewSwitcher: false,
+  },
+}

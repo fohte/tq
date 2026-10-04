@@ -8,11 +8,7 @@ const queueKeySchema = pathSegmentSchema('Queue key')
 
 const queueGetInputSchema = z.object({
   key: queueKeySchema,
-  date: queueDateSchema
-    .optional()
-    .describe(
-      'Date to fetch the queue for, as YYYY-MM-DD. Defaults to the current UTC date; pass an explicit date when your local date differs.',
-    ),
+  date: queueDateSchema.describe('Date to fetch the queue for, as YYYY-MM-DD.'),
 })
 
 const queueSetInputSchema = z.object({
@@ -38,9 +34,8 @@ export const queueOperations = [
   }),
   defineOperation(queueGetInputSchema, {
     path: ['queue', 'get'],
-    description:
-      'List a queue for a date (YYYY-MM-DD). The date defaults to the current UTC date; pass an explicit date when your local date differs.',
-    positionalArgs: ['key', { name: 'date', optional: true }],
+    description: 'List a queue for a date (YYYY-MM-DD).',
+    positionalArgs: ['key', 'date'],
     kind: 'read',
     routes: ['GET /api/queues/:key/items'],
     cli: { output: { kind: 'json' } },
@@ -48,7 +43,7 @@ export const queueOperations = [
       requestJson(
         client.api.queues[':key'].items.$get({
           param: { key: encodePathSegment(key) },
-          query: { date: date ?? new Date().toISOString().slice(0, 10) },
+          query: { date },
         }),
       ),
   }),

@@ -13,6 +13,7 @@
     "./lib/text-scan": "./src/lib/text-scan.ts",
     "./operations": "./src/operations/index.ts",
     "./operations/test-fixtures": "./src/operations/operation-test-fixtures.ts",
+    "./routes/schedule-test-fixtures": "./src/routes/schedule-test-fixtures.ts",
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
     "./schemas/description-template": "./src/schemas/description-template.ts",
     "./schemas/label": "./src/schemas/label.ts",
