@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { PageEditorInner } from '#components/task/task-page-editor'
+import { PageEditorInner } from '#components/task/task-page-editor-inner'
 import { assertDefined } from '#lib/test-utils'
 
 function renderPageEditor() {
