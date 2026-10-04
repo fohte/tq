@@ -10,9 +10,10 @@ import {
 import { tasks } from '#db/schema/core'
 
 // One row per coding-agent session (e.g. a Claude Code CLI invocation),
-// reported by that agent's hook integration. "Running" is derived as
-// `endedAt IS NULL AND lastActiveAt` being recent, since a status column would
-// go stale forever once a process is killed without a final hook firing.
+// reported by that agent's hook integration. "Running" is derived from
+// `endedAt IS NULL`, `archivedAt IS NULL`, and a recent `lastActiveAt`: a status
+// column would go stale if a process is killed without a final hook, and an
+// archived session can still have recent activity.
 export const agentSessions = pgTable(
   'agent_sessions',
   {
