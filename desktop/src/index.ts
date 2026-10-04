@@ -1,7 +1,15 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-import { app, BrowserWindow, clipboard, Menu, screen, shell } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  globalShortcut,
+  Menu,
+  screen,
+  shell,
+} from 'electron'
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
@@ -9,6 +17,7 @@ import { buildMenuTemplate } from '#menu'
 import {
   classifyNavigation,
   DEEP_LINK_SCHEME,
+  type NavigationSource,
   resolveDeepLink,
   shouldOpenSideNavigationInMain,
 } from '#navigation'
@@ -23,11 +32,13 @@ import {
 let isQuitting = false
 let mainWindow: BrowserWindow | undefined
 let sideWindow: BrowserWindow | undefined
+let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
 const SIDE_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/?layout=compact`
+const MEMO_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/memo?layout=compact`
 
 // Both `loadURL` and `shell.openExternal` can reject; there is no caller to
 // hand the error to, so log it.
@@ -151,6 +162,41 @@ const openSideWindow = () => {
   showWindow(sideWindow)
 }
 
+const createMemoWindow = (): BrowserWindow => {
+  const win = new BrowserWindow({
+    width: 480,
+    height: 560,
+    minWidth: 360,
+    minHeight: 320,
+    title: 'Memo',
+    webPreferences: { sandbox: true },
+  })
+  memoWindow = win
+
+  win.on('closed', () => {
+    memoWindow = undefined
+  })
+  hideOnCloseUnlessQuitting(win)
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.key !== 'Escape') return
+    event.preventDefault()
+    win.hide()
+  })
+
+  void logRejection(win.loadURL(MEMO_WINDOW_URL), 'failed to load memo window')
+  showWindow(win)
+  return win
+}
+
+const openMemoWindow = () => {
+  if (memoWindow === undefined || memoWindow.isDestroyed()) {
+    createMemoWindow()
+    return
+  }
+
+  showWindow(memoWindow)
+}
+
 app.on('before-quit', () => {
   isQuitting = true
   flushSideWindowBounds?.()
@@ -174,11 +220,12 @@ app.on('open-url', (event, url) => {
 // Route every external link to the default browser. Registered on
 // `web-contents-created` so it also covers windows opened later.
 app.on('web-contents-created', (_event, contents) => {
-  const navigationSource = () =>
-    sideWindow !== undefined &&
-    BrowserWindow.fromWebContents(contents) === sideWindow
-      ? 'side'
-      : 'main'
+  const navigationSource = (): NavigationSource => {
+    const sourceWindow = BrowserWindow.fromWebContents(contents)
+    if (sourceWindow === sideWindow) return 'side'
+    if (sourceWindow === memoWindow) return 'memo'
+    return 'main'
+  }
 
   contents.on('will-navigate', (event) => {
     const action = classifyNavigation(
@@ -192,6 +239,7 @@ app.on('web-contents-created', (_event, contents) => {
     event.preventDefault()
     if (action === 'open-external') void openExternal(event.url)
     if (action === 'open-main') openMainWindow(event.url)
+    if (action === 'open-memo') openMemoWindow()
   })
 
   contents.setWindowOpenHandler(({ url }) => {
@@ -204,6 +252,7 @@ app.on('web-contents-created', (_event, contents) => {
     )
     if (action === 'open-external') void openExternal(url)
     if (action === 'open-main') openMainWindow(url)
+    if (action === 'open-memo') openMemoWindow()
     return { action: action === 'allow' ? 'allow' : 'deny' }
   })
 
@@ -232,6 +281,8 @@ void app.whenReady().then(() => {
   mainWindow = win
   pendingUrl = undefined
 
+  globalShortcut.register('Alt+M', openMemoWindow)
+
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       buildMenuTemplate(
@@ -245,5 +296,9 @@ void app.whenReady().then(() => {
 
   app.on('activate', () => {
     showWindow(win)
+  })
+
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll()
   })
 })

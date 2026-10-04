@@ -101,6 +101,45 @@ describe('MarkdownEditor size', () => {
   })
 })
 
+describe('MarkdownEditor focus', () => {
+  it('starts typing at the end of the document when focus is requested', async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <MarkdownEditor
+        defaultValue={'The first paragraph.\n\nThe last paragraph.'}
+        focusAtEnd
+      />,
+    )
+    await findEditorText('The last paragraph.')
+
+    const editor = getEditorRoot(container)
+    await waitForFocus(editor)
+    await user.keyboard('!')
+    await findEditorText('The last paragraph.!')
+
+    expect(
+      Array.from(editor.querySelectorAll('p'))
+        .map((paragraph) => paragraph.textContent)
+        .filter((text) => text !== ''),
+    ).toEqual(['The first paragraph.', 'The last paragraph.!'])
+  })
+
+  it('does not report a markdown change when focusing after a trailing list', async () => {
+    const onChange = vi.fn<(markdown: string) => void>()
+    render(
+      <MarkdownEditor
+        defaultValue={'## Checklist\n\n- First item'}
+        focusAtEnd
+        onChange={onChange}
+      />,
+    )
+    await findEditorText('First item')
+    await waitForMarkdownUpdateNotifications()
+
+    expect(onChange.mock.calls).toEqual([])
+  })
+})
+
 describe('MarkdownEditor view mode spacing', () => {
   it('hides the trailing empty paragraph after a final list', async () => {
     const { container } = render(

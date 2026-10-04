@@ -6,6 +6,7 @@ import {
   navKeybindings,
   type SearchKeybinding,
 } from '#lib/keybindings'
+import { openMemoWindow } from '#lib/memo-window'
 
 export const CHORD_TIMEOUT_MS = 1000
 
@@ -106,6 +107,12 @@ export function useGlobalKeybindings({
       if (key === 'n') {
         e.preventDefault()
         onNewTask()
+        return
+      }
+
+      if (key === 'm') {
+        e.preventDefault()
+        openMemoWindow()
       }
     }
 

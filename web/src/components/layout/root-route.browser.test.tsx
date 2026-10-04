@@ -36,7 +36,13 @@ const taskRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => search,
   component: () => <div data-testid="task-content" />,
 })
-const testRootRoute = RootRoute.addChildren([indexRoute, taskRoute])
+const memoRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/memo',
+  validateSearch: (search: Record<string, unknown>) => search,
+  component: () => <div data-testid="memo-content" />,
+})
+const testRootRoute = RootRoute.addChildren([indexRoute, taskRoute, memoRoute])
 
 async function renderRoot(initialEntry: string) {
   const router = createRouter({
@@ -60,6 +66,22 @@ describe('root route layout', () => {
     expect(getCompactRouteState()).toEqual({
       appLayoutVisible: false,
       routeContentVisible: true,
+      viewportHeightWrapper: true,
+    })
+  })
+
+  it('omits AppLayout for the compact memo route', async () => {
+    const { container } = await renderRoot('/memo?layout=compact')
+
+    const getCompactMemoRouteState = () => ({
+      appLayoutVisible: screen.queryByTestId('app-layout') != null,
+      memoContentVisible: screen.queryByTestId('memo-content') != null,
+      viewportHeightWrapper:
+        container.firstElementChild?.classList.contains('h-dvh') ?? false,
+    })
+    expect(getCompactMemoRouteState()).toEqual({
+      appLayoutVisible: false,
+      memoContentVisible: true,
       viewportHeightWrapper: true,
     })
   })

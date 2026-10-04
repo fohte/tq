@@ -78,6 +78,31 @@ describe('classifyNavigation', () => {
     ).toBe('open-main')
   })
 
+  it.each(['main', 'side'] as const)(
+    'routes the memo path from the %s window to the memo window',
+    (source) => {
+      expect(
+        classifyNavigation(
+          `${ORIGIN}/tasks/1`,
+          `${ORIGIN}/memo?layout=compact`,
+          ORIGIN,
+          [],
+          source,
+        ),
+      ).toBe('open-memo')
+    },
+  )
+
+  it('recognizes a trailing slash on the memo path', () => {
+    expect(
+      classifyNavigation(
+        `${ORIGIN}/tasks/1`,
+        `${ORIGIN}/memo/?layout=compact`,
+        ORIGIN,
+      ),
+    ).toBe('open-memo')
+  })
+
   it('leaves side-window query and hash changes on the compact page', () => {
     expect(
       shouldOpenSideNavigationInMain(

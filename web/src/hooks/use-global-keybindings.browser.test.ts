@@ -5,6 +5,7 @@ import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { getSearchKeybinding } from '#lib/keybindings'
 
 const navigateMock = vi.fn(() => Promise.resolve())
+let windowOpenCalls: unknown[][]
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -26,6 +27,10 @@ function fireKey(
 }
 
 function searchShortcutOutcome(calls: unknown[], event: KeyboardEvent) {
+  return { calls, defaultPrevented: event.defaultPrevented }
+}
+
+function memoShortcutOutcome(calls: unknown[], event: KeyboardEvent) {
   return { calls, defaultPrevented: event.defaultPrevented }
 }
 
@@ -59,6 +64,15 @@ describe('useGlobalKeybindings', () => {
   beforeEach(() => {
     navigateMock.mockClear()
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
+    windowOpenCalls = []
+    vi.spyOn(window, 'open').mockImplementation((...args) => {
+      windowOpenCalls.push(args)
+      return null
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('toggles search open on Cmd+K on macOS', () => {
@@ -191,6 +205,16 @@ describe('useGlobalKeybindings', () => {
     expect(onNewTask).toHaveBeenCalledTimes(1)
   })
 
+  it('opens the memo window on m', () => {
+    setup()
+    const event = fireKey('m')
+
+    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [['/memo?layout=compact']],
+      defaultPrevented: true,
+    })
+  })
+
   it('ignores single-key shortcuts while typing in an input', () => {
     const input = document.createElement('input')
     document.body.appendChild(input)
@@ -199,6 +223,19 @@ describe('useGlobalKeybindings', () => {
     fireKey('n', {}, input)
 
     expect(onNewTask).not.toHaveBeenCalled()
+    input.remove()
+  })
+
+  it('ignores the memo shortcut while typing in an input', () => {
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+
+    const event = fireKey('m', {}, input)
+
+    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
     input.remove()
   })
 
@@ -212,12 +249,34 @@ describe('useGlobalKeybindings', () => {
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
   })
 
+  it('ignores the memo shortcut while a Base UI dialog is open', () => {
+    document.documentElement.setAttribute('data-base-ui-scroll-locked', '')
+
+    const event = fireKey('m')
+
+    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
+  })
+
   it('ignores single-key shortcuts while the search modal is open', () => {
     const { onNewTask } = setup(true)
 
     fireKey('n')
 
     expect(onNewTask).not.toHaveBeenCalled()
+  })
+
+  it('ignores the memo shortcut while the search modal is open', () => {
+    setup(true)
+
+    const event = fireKey('m')
+
+    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
   })
 
   it('still handles Cmd+K while typing in an input', () => {
