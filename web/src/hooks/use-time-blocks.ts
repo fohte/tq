@@ -18,9 +18,11 @@ export function useTimeBlocks(
   startDate: string,
   endDate: string,
   refetchInterval?: number,
+  enabled = true,
 ) {
   return useQuery({
     queryKey: timeBlockKeys.list(startDate, endDate),
+    enabled,
     ...(refetchInterval === undefined ? {} : { refetchInterval }),
     queryFn: async () => {
       const res = await api.api.schedule['time-blocks'].$get({

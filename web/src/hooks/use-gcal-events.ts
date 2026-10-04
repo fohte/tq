@@ -32,9 +32,11 @@ export function useGcalEvents(
   startDate: string,
   endDate: string,
   context: 'work' | 'personal',
+  enabled = true,
 ) {
   return useQuery({
     queryKey: gcalEventsKeys.list(startDate, endDate, context),
+    enabled,
     queryFn: async () => {
       const { timeMin } = getDayIsoRange(startDate)
       const { timeMax } = getDayIsoRange(endDate)

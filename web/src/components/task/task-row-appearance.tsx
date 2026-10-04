@@ -41,6 +41,7 @@ export interface TaskRowAppearanceProps {
   // context, parent, dateRange, remindAt, estimate, recurrence, githubLink,
   // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
+  size?: 'default' | 'large'
 }
 
 // Shared row body: status glyph + number/title line + a dot-separated
@@ -60,6 +61,7 @@ export function TaskRowAppearance({
   onClick,
   draggable = false,
   secondLineExtras = [],
+  size = 'default',
 }: TaskRowAppearanceProps) {
   const isCompleted = task.status === 'completed'
   const completedReason = isCompleted
@@ -135,6 +137,7 @@ export function TaskRowAppearance({
         className={cn(
           'group',
           rowWrapperClassName(isCompleted),
+          size === 'large' && 'py-3',
           // Must come after rowWrapperClassName: twMerge keeps
           // both px-* and a later pl-* (CSS cascade lets pl-* win),
           // but drops pl-* if it precedes the conflicting px-*.
@@ -155,7 +158,13 @@ export function TaskRowAppearance({
                 statusReason={task.statusReason}
               />
               <TaskNumberLabel number={task.number} />
-              <span className={cn(rowTitleClassName(isCompleted), 'min-w-16')}>
+              <span
+                className={cn(
+                  rowTitleClassName(isCompleted),
+                  size === 'large' && 'text-base',
+                  'min-w-16',
+                )}
+              >
                 {titleContent ?? task.title}
               </span>
               {showChildCompletionCount &&
