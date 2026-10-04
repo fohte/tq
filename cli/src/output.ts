@@ -70,7 +70,7 @@ function formatRefSource(source: RefSource): string {
 // no other sign that e.g. a GitHub PR number like `#76` in the body was
 // parsed as a tq task reference. Written to stderr so stdout stays clean
 // JSON for `| jq`.
-export function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
+function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
   if (linkSync == null) return
 
   const lines: string[] = []

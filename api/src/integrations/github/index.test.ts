@@ -6,12 +6,14 @@ import { oauthTokens } from '#db/schema'
 import { IntegrationConfigError } from '#integrations/errors'
 import { githubProvider } from '#integrations/github/index'
 import {
-  disconnectAccount,
   getAuthUrl,
   getIntegrationSummary,
   handleOAuthCallback,
-  listConnectedAccounts,
 } from '#integrations/oauth'
+import {
+  disconnectAccount,
+  listConnectedAccounts,
+} from '#integrations/oauth-accounts'
 import { TokenExchangeError } from '#lib/fetch-json'
 import { assertDefined, setupTestDb } from '#testing'
 

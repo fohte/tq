@@ -1,14 +1,17 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
-import type { IntegrationConfigError } from '#integrations/errors'
-import { TokenRefreshError } from '#integrations/errors'
+import {
+  type IntegrationConfigError,
+  TokenRefreshError,
+} from '#integrations/errors'
 import {
   type CalendarApiError,
   googleCalendarProvider,
 } from '#integrations/google-calendar/provider'
 import { listSubscribedCalendars } from '#integrations/google-calendar/subscriptions'
-import { ensureValidAccessToken, listAccountTokens } from '#integrations/oauth'
+import { ensureValidAccessToken } from '#integrations/oauth'
+import { listAccountTokens } from '#integrations/oauth-accounts'
 import type { ExternalEvent } from '#integrations/types'
 
 type AccountEventsError =
