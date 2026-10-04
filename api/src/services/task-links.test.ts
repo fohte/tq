@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { APP_DOMAIN } from '#env'
-import {
-  extractMentionedNumbers,
-  extractMentionedTaskRefs,
-} from '#services/task-links'
+import { extractMentionedTaskRefs } from '#services/task-link-references'
+import { extractMentionedNumbers } from '#services/task-mention-numbers'
 
 describe('extractMentionedNumbers', () => {
   it('extracts a single mention', () => {

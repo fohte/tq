@@ -6,7 +6,7 @@ interface NavigatorWithIosStandalone extends Navigator {
 
 const ZOOM_DISABLING_SUFFIX = ', maximum-scale=1.0, user-scalable=no'
 
-export function isStandaloneDisplayMode(win: Window = window): boolean {
+function isStandaloneDisplayMode(win: Window = window): boolean {
   const navigator = win.navigator as NavigatorWithIosStandalone
 
   return (
@@ -17,7 +17,7 @@ export function isStandaloneDisplayMode(win: Window = window): boolean {
 
 // Appends to the existing viewport content instead of hardcoding the
 // non-standalone case, so it stays in sync with whatever web/index.html sets.
-export function getViewportContent(
+function getViewportContent(
   currentContent: string,
   isStandalone: boolean,
 ): string {

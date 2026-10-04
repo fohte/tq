@@ -21,6 +21,7 @@ export function makeTaskAgentSession(
     startedAt: '2026-03-20T00:00:00.000Z',
     lastActiveAt: '2026-03-20T00:00:00.000Z',
     endedAt: null,
+    linkedAt: '2030-01-01T00:00:00.000Z',
     ...overrides,
   }
 }

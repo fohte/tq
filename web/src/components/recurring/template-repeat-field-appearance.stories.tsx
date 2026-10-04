@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { TemplateRepeatFieldAppearance } from '#components/recurring/template-repeat-field'
+import { TemplateRepeatFieldAppearance } from '#components/recurring/template-repeat-field-appearance'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import type { RecurrenceRule } from '#lib/recurrence'
 

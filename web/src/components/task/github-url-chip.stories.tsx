@@ -9,7 +9,7 @@ import {
 import { GithubUrlChip } from '#components/task/github-url-chip'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
-import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
+import { githubUrlPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const OPEN_ISSUE_URL = 'https://github.com/fohte/tq/issues/158'

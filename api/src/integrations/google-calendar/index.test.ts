@@ -12,19 +12,21 @@ import {
 import { makeExternalEvent } from '#integrations/external-event-test-fixtures'
 import {
   type AccountEventsResult,
-  CalendarApiError,
   getEvents,
-  googleCalendarProvider,
-} from '#integrations/google-calendar/index'
+} from '#integrations/google-calendar/events'
+import { googleCalendarProvider } from '#integrations/google-calendar/index'
+import { CalendarApiError } from '#integrations/google-calendar/provider'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import {
-  disconnectAccount,
   getAuthUrl,
   getIntegrationSummary,
   getValidAccessToken,
   handleOAuthCallback,
-  listConnectedAccounts,
 } from '#integrations/oauth'
+import {
+  disconnectAccount,
+  listConnectedAccounts,
+} from '#integrations/oauth-accounts'
 import { TokenExchangeError } from '#lib/fetch-json'
 import { assertDefined, setupTestDb } from '#testing'
 

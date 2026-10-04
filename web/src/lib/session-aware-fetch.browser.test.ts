@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  SESSION_RELOAD_MARKER_KEY,
-  sessionAwareFetch,
-} from '#lib/session-aware-fetch'
+import { createSessionAwareFetch } from '#lib/create-session-aware-fetch'
+import { sessionAwareFetch } from '#lib/session-aware-fetch'
+import { SESSION_RELOAD_MARKER_KEY } from '#lib/storage-keys'
 
 // A real browser doesn't allow redefining any property of `location`
 // (including `reload`), so sessionAwareFetch calls it through this module
@@ -30,22 +29,15 @@ function raceWithPending<T>(promise: Promise<T>): Promise<T | typeof PENDING> {
   ])
 }
 
-// Re-importing under real ESM returns the already-evaluated module instead
-// of re-running its top-level code, so state is reset explicitly instead;
-// reload-page's mock is re-fetched and cleared since it's bound to the new
-// import.
+// A new fetch client simulates the state snapshot from a fresh page load.
 async function importFreshSessionAwareFetch() {
-  const [
-    { sessionAwareFetch: freshFetch, resetSessionAwareFetchStateForTest },
-    { reloadPage },
-  ] = await Promise.all([
-    import('#lib/session-aware-fetch'),
-    import('#lib/reload-page'),
-  ])
-  resetSessionAwareFetchStateForTest()
+  const { reloadPage } = await import('#lib/reload-page')
   const freshReloadPage = vi.mocked(reloadPage)
   freshReloadPage.mockClear()
-  return { sessionAwareFetch: freshFetch, reloadPage: freshReloadPage }
+  return {
+    sessionAwareFetch: createSessionAwareFetch(),
+    reloadPage: freshReloadPage,
+  }
 }
 
 describe('sessionAwareFetch', () => {

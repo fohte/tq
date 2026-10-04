@@ -1,9 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { LIVE_TODAY_CHECK_INTERVAL_MS } from '#hooks/use-live-today'
 import { useSelectedDate } from '#hooks/use-selected-date'
 import { formatLocalDate } from '#lib/date-range'
+
+const LIVE_TODAY_CHECK_INTERVAL_MS = 60_000
 
 beforeEach(() => {
   vi.useFakeTimers()

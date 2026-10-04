@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { makeLabel, makeTask } from '#components/layout/sidebar-test-fixtures'
 import { TagsSection } from '#components/layout/tags-section'
 import type { Label } from '#hooks/use-labels'
-import { labelKeys } from '#hooks/use-labels'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { labelKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const tasks: Task[] = [

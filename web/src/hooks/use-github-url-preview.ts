@@ -1,21 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
-import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
-
-// Nested under `taskKeys.all` (like `use-task-mentions.ts`'s
-// `mentionPreviewKeyPrefix`) so `useGithubSync`'s periodic
-// `invalidateQueries({ queryKey: taskKeys.all })` also refreshes a
-// `linked: true` preview's task/link state after it changes on GitHub.
-const githubUrlPreviewKeyPrefix = [
-  ...taskKeys.all,
-  'github-url-preview',
-] as const
-
-export const githubUrlPreviewKeys = {
-  preview: (url: string) => [...githubUrlPreviewKeyPrefix, url] as const,
-}
+import { githubUrlPreviewKeys } from '#lib/query-keys'
 
 function githubUrlPreviewQueryOptions(url: string) {
   return {

@@ -67,6 +67,7 @@ erDiagram
 "public.task_agent_sessions" {
   text task_id FK
   text agent_session_id FK
+  timestamp_with_time_zone linked_at
 }
 ```
 

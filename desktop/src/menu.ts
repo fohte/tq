@@ -17,7 +17,15 @@ type ClipboardWriter = {
   writeText: (text: string) => void
 }
 
-export const historyItems = (history: NavigationHistory): ShortcutItem[] => [
+type MenuTemplateItem = Omit<
+  MenuItemConstructorOptions,
+  'click' | 'submenu'
+> & {
+  click?: () => void
+  submenu?: MenuTemplateItem[]
+}
+
+const historyItems = (history: NavigationHistory): ShortcutItem[] => [
   {
     label: 'Back',
     accelerator: 'CmdOrCtrl+[',
@@ -34,7 +42,7 @@ export const historyItems = (history: NavigationHistory): ShortcutItem[] => [
   },
 ]
 
-export const pageItems = (
+const pageItems = (
   webContents: CurrentPage,
   clipboard: ClipboardWriter,
 ): ShortcutItem[] => [
@@ -74,7 +82,7 @@ export const buildMenuTemplate = (
   webContents: CurrentPage,
   clipboard: ClipboardWriter,
   openSideWindow: () => void,
-): MenuItemConstructorOptions[] => [
+): MenuTemplateItem[] => [
   { role: 'appMenu' },
   { role: 'fileMenu' },
   { role: 'editMenu' },

@@ -2,6 +2,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 
 import { QueueItemRow } from '#components/task/queue-item-row'
+import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
@@ -13,6 +14,7 @@ export interface QueueSectionProps {
   items: Task[]
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
+  isReadOnly?: boolean
   onRemove: (taskId: string) => void
   emptyMessage: string
 }
@@ -22,10 +24,14 @@ export function QueueSection({
   title,
   items,
   dateRangeLabel,
+  isReadOnly = false,
   onRemove,
   emptyMessage,
 }: QueueSectionProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: queueKey })
+  const { setNodeRef, isOver } = useDroppable({
+    id: queueKey,
+    disabled: isReadOnly,
+  })
 
   return (
     <div className="border-b border-border">
@@ -47,16 +53,22 @@ export function QueueSection({
               {emptyMessage}
             </div>
           ) : (
-            items.map((task) => (
-              <QueueItemRow
-                key={task.id}
-                task={task}
-                queueKey={queueKey}
-                onRemove={() => {
-                  onRemove(task.id)
-                }}
-              />
-            ))
+            items.map((task) =>
+              isReadOnly ? (
+                <div key={task.id} className="border-b border-border">
+                  <TaskRowAppearance task={task} />
+                </div>
+              ) : (
+                <QueueItemRow
+                  key={task.id}
+                  task={task}
+                  queueKey={queueKey}
+                  onRemove={() => {
+                    onRemove(task.id)
+                  }}
+                />
+              ),
+            )
           )}
         </SortableContext>
       </div>

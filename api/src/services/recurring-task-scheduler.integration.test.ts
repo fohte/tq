@@ -10,7 +10,7 @@ import {
   tasks,
 } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { generateDueRecurringTasks } from '#services/recurring-task-scheduler'
+import { generateDueRecurringTasks } from '#services/recurring-task-generator'
 import { syncTemplateLabels } from '#services/recurring-task-template-labels'
 import { setupTestDb } from '#testing'
 

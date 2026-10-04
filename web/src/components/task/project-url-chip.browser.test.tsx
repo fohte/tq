@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { ProjectUrlChip } from '#components/task/project-url-chip'
-import { projectUrlPreviewKeys } from '#hooks/use-project-url-preview'
+import { projectUrlPreviewKeys } from '#lib/query-keys'
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()

@@ -14,7 +14,7 @@ type CalendarSubscriptionRow = typeof calendarSubscriptions.$inferSelect
 // the calendarId comment on ensureDefaultCalendarSubscription below.
 const DEFAULT_CALENDAR_ID = 'primary'
 
-// Never fails (a bare select), matching listAccountTokens in oauth.ts: an
+// Never fails (a bare select), matching listAccountTokens in oauth-accounts.ts: an
 // account with zero subscribed calendars is a normal, expected state (not
 // an error), and getEvents() relies on that to fetch nothing for it rather
 // than falling back to any implicit default.

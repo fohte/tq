@@ -18,13 +18,12 @@ import {
 } from '#components/layout/sidebar-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { Label } from '#hooks/use-labels'
-import { labelKeys } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import { savedViewKeys } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
+import { labelKeys, savedViewKeys } from '#lib/query-keys'
 import { assertDefined } from '#lib/test-utils'
 
 // Only Link/useMatchRoute are stubbed — useSearch stays real so the

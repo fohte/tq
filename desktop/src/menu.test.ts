@@ -2,12 +2,7 @@ import { runInNewContext } from 'node:vm'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  buildMenuTemplate,
-  historyItems,
-  type NavigationHistory,
-  pageItems,
-} from '#menu'
+import { buildMenuTemplate, type NavigationHistory } from '#menu'
 
 type Can = { back: boolean; forward: boolean }
 
@@ -25,12 +20,12 @@ const fakeHistory = (can: Can) => {
   return { calls, history }
 }
 
-const clickItem = (label: string, can: Can): string[] => {
+const menuWithHistory = (can: Can) => {
   const { calls, history } = fakeHistory(can)
-  historyItems(history)
-    .find((item) => item.label === label)
-    ?.click()
-  return calls
+  const menu = buildTestMenuTemplate(history, fakePage(), {
+    writeText: () => {},
+  })
+  return { calls, menu }
 }
 
 const fakePage = (
@@ -42,12 +37,41 @@ const fakePage = (
   executeJavaScript,
 })
 
-describe('historyItems', () => {
+function buildTestMenuTemplate(
+  history: NavigationHistory,
+  webContents: ReturnType<typeof fakePage>,
+  clipboard: { writeText: (text: string) => void },
+) {
+  return buildMenuTemplate(history, webContents, clipboard, () => {})
+}
+
+type MenuTemplateItem = ReturnType<typeof buildMenuTemplate>[number]
+
+const menuItems = (
+  menu: MenuTemplateItem[],
+  label: string,
+): MenuTemplateItem[] => {
+  const submenu = menu.find((item) => item.label === label)?.submenu
+  return Array.isArray(submenu) ? submenu : []
+}
+
+const clickMenuItem = (
+  menu: MenuTemplateItem[],
+  menuLabel: string,
+  itemLabel: string,
+): void => {
+  const item = menuItems(menu, menuLabel).find(
+    (menuItem) => menuItem.label === itemLabel,
+  )
+  item?.click?.()
+}
+
+describe('History menu', () => {
   it('binds the browser shortcuts', () => {
-    const { history } = fakeHistory({ back: true, forward: true })
+    const { menu } = menuWithHistory({ back: true, forward: true })
 
     expect(
-      historyItems(history).map(({ label, accelerator }) => ({
+      menuItems(menu, 'History').map(({ label, accelerator }) => ({
         label,
         accelerator,
       })),
@@ -58,32 +82,47 @@ describe('historyItems', () => {
   })
 
   it('Back goes back when there is a previous entry', () => {
-    expect(clickItem('Back', { back: true, forward: false })).toEqual([
-      'goBack',
-    ])
+    const { calls, menu } = menuWithHistory({ back: true, forward: false })
+    clickMenuItem(menu, 'History', 'Back')
+
+    expect(calls).toEqual(['goBack'])
   })
 
   it('Back does nothing when there is no previous entry', () => {
-    expect(clickItem('Back', { back: false, forward: true })).toEqual([])
+    const { calls, menu } = menuWithHistory({ back: false, forward: true })
+    clickMenuItem(menu, 'History', 'Back')
+
+    expect(calls).toEqual([])
   })
 
   it('Forward goes forward when there is a next entry', () => {
-    expect(clickItem('Forward', { back: false, forward: true })).toEqual([
-      'goForward',
-    ])
+    const { calls, menu } = menuWithHistory({ back: false, forward: true })
+    clickMenuItem(menu, 'History', 'Forward')
+
+    expect(calls).toEqual(['goForward'])
   })
 
   it('Forward does nothing when there is no next entry', () => {
-    expect(clickItem('Forward', { back: true, forward: false })).toEqual([])
+    const { calls, menu } = menuWithHistory({ back: true, forward: false })
+    clickMenuItem(menu, 'History', 'Forward')
+
+    expect(calls).toEqual([])
   })
 })
 
-describe('pageItems', () => {
+describe('Page menu', () => {
   it('binds the Page menu shortcuts', () => {
-    const items = pageItems(fakePage(), { writeText: () => {} })
+    const menu = buildTestMenuTemplate(
+      fakeHistory({ back: false, forward: false }).history,
+      fakePage(),
+      { writeText: () => {} },
+    )
 
     expect(
-      items.map(({ label, accelerator }) => ({ label, accelerator })),
+      menuItems(menu, 'Page').map(({ label, accelerator }) => ({
+        label,
+        accelerator,
+      })),
     ).toEqual([
       { label: 'Find…', accelerator: 'CmdOrCtrl+F' },
       { label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' },
@@ -95,7 +134,8 @@ describe('pageItems', () => {
     class FakeCustomEvent {
       constructor(readonly type: string) {}
     }
-    const find = pageItems(
+    const menu = buildTestMenuTemplate(
+      fakeHistory({ back: false, forward: false }).history,
       fakePage(undefined, (script) => {
         runInNewContext(script, {
           window: {
@@ -109,9 +149,9 @@ describe('pageItems', () => {
         return Promise.resolve('')
       }),
       { writeText: () => {} },
-    ).find(({ label }) => label === 'Find…')
+    )
 
-    find?.click()
+    clickMenuItem(menu, 'Page', 'Find…')
     await Promise.resolve()
 
     expect(events).toEqual(['tq:find'])
@@ -120,12 +160,13 @@ describe('pageItems', () => {
   it('logs when the page cannot open the find bar', async () => {
     const failure = new Error('renderer unavailable')
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const find = pageItems(
+    const menu = buildTestMenuTemplate(
+      fakeHistory({ back: false, forward: false }).history,
       fakePage(undefined, () => Promise.reject(failure)),
       { writeText: () => {} },
-    ).find(({ label }) => label === 'Find…')
+    )
 
-    find?.click()
+    clickMenuItem(menu, 'Page', 'Find…')
     await Promise.resolve()
     const loggedCalls = errorLog.mock.calls
     errorLog.mockRestore()
@@ -136,17 +177,18 @@ describe('pageItems', () => {
   it('copies the URL the page has at click time', () => {
     let currentUrl = 'https://example.test/tasks/41'
     const copiedUrls: string[] = []
-    const copyUrl = pageItems(
+    const menu = buildTestMenuTemplate(
+      fakeHistory({ back: false, forward: false }).history,
       fakePage(() => currentUrl),
       {
         writeText: (url) => {
           copiedUrls.push(url)
         },
       },
-    ).find(({ label }) => label === 'Copy URL')
+    )
 
     currentUrl = 'https://example.test/tasks/42'
-    copyUrl?.click()
+    clickMenuItem(menu, 'Page', 'Copy URL')
 
     expect(copiedUrls).toEqual(['https://example.test/tasks/42'])
   })
@@ -170,7 +212,8 @@ describe('pageItems', () => {
         return true
       },
     }
-    const copyUrl = pageItems(
+    const menu = buildTestMenuTemplate(
+      fakeHistory({ back: false, forward: false }).history,
       fakePage(
         () => url,
         (script) => {
@@ -182,9 +225,9 @@ describe('pageItems', () => {
         },
       ),
       { writeText: () => {} },
-    ).find(({ label }) => label === 'Copy URL')
+    )
 
-    copyUrl?.click()
+    clickMenuItem(menu, 'Page', 'Copy URL')
 
     expect(events).toEqual([{ type: 'tq:url-copied', detail: { url } }])
   })
@@ -192,15 +235,16 @@ describe('pageItems', () => {
   it('logs when the page cannot display the copied URL toast', async () => {
     const failure = new Error('renderer unavailable')
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const copyUrl = pageItems(
+    const menu = buildTestMenuTemplate(
+      fakeHistory({ back: false, forward: false }).history,
       fakePage(
         () => 'https://example.test/tasks/42',
         () => Promise.reject(failure),
       ),
       { writeText: () => {} },
-    ).find(({ label }) => label === 'Copy URL')
+    )
 
-    copyUrl?.click()
+    clickMenuItem(menu, 'Page', 'Copy URL')
     await Promise.resolve()
     const loggedCalls = errorLog.mock.calls
     errorLog.mockRestore()
@@ -210,30 +254,7 @@ describe('pageItems', () => {
     ])
   })
 })
-
-describe('buildMenuTemplate', () => {
-  it('includes the find and Copy URL commands in the Page menu', () => {
-    const { history } = fakeHistory({ back: false, forward: false })
-    const menu = buildMenuTemplate(
-      history,
-      fakePage(),
-      { writeText: () => {} },
-      () => {},
-    )
-    const pageMenu = menu.find(({ label }) => label === 'Page')
-    const pageSubmenu =
-      pageMenu && Array.isArray(pageMenu.submenu) ? pageMenu.submenu : []
-    const items = pageSubmenu.map(({ label, accelerator }) => ({
-      label,
-      accelerator,
-    }))
-
-    expect(items).toEqual([
-      { label: 'Find…', accelerator: 'CmdOrCtrl+F' },
-      { label: 'Copy URL', accelerator: 'CmdOrCtrl+Shift+C' },
-    ])
-  })
-
+describe('Window menu', () => {
   it('includes a command to open the side window in the Window menu', () => {
     const { history } = fakeHistory({ back: false, forward: false })
     const menu = buildMenuTemplate(
@@ -242,12 +263,11 @@ describe('buildMenuTemplate', () => {
       { writeText: () => {} },
       () => {},
     )
-    const windowMenu = menu.find(({ label }) => label === 'Window')
-    const submenu =
-      windowMenu && Array.isArray(windowMenu.submenu) ? windowMenu.submenu : []
 
     expect(
-      submenu.map(({ label, role, type }) => label ?? role ?? type),
+      menuItems(menu, 'Window').map(
+        ({ label, role, type }) => label ?? role ?? type,
+      ),
     ).toEqual([
       'Open Side Window',
       'separator',
@@ -269,16 +289,8 @@ describe('buildMenuTemplate', () => {
       { writeText: () => {} },
       openSideWindow,
     )
-    const windowMenu = menu.find(({ label }) => label === 'Window')
-    const submenu =
-      windowMenu && Array.isArray(windowMenu.submenu) ? windowMenu.submenu : []
+    clickMenuItem(menu, 'Window', 'Open Side Window')
 
-    const openSideWindowItem = submenu.find(
-      ({ label }) => label === 'Open Side Window',
-    )
-    if (openSideWindowItem?.click !== undefined) {
-      Reflect.apply(openSideWindowItem.click, undefined, [])
-    }
     expect(openSideWindow.mock.calls).toEqual([[]])
   })
 })
