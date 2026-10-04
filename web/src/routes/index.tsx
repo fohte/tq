@@ -159,11 +159,6 @@ function DayView() {
     refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
-  useCompactRefreshErrorLogging(
-    isCompactLayout,
-    timeBlocksQuery.error,
-    schedulesQuery.error,
-  )
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
@@ -174,7 +169,13 @@ function DayView() {
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
   const memosQuery = useMemos(context, isCompactLayout)
-  const updateMemo = useUpdateMemo(context)
+  const updateMemo = useUpdateMemo()
+  useCompactRefreshErrorLogging(
+    isCompactLayout,
+    timeBlocksQuery.error,
+    schedulesQuery.error,
+    memosQuery.error,
+  )
   const queryClient = useQueryClient()
   const projects = useProjects()
 
@@ -411,7 +412,9 @@ function DayView() {
               compactMemo: {
                 context,
                 memo: memosQuery.data,
-                onSave: (input) => updateMemo.mutateAsync(input),
+                isLoading: memosQuery.isPending,
+                loadError: memosQuery.data == null && memosQuery.isError,
+                onSave: (input) => updateMemo.mutateAsync({ context, input }),
               },
             }
           : {})}

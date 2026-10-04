@@ -28,6 +28,11 @@ interface MemoTransport {
   ) => Promise<MemoUpdateResult>
 }
 
+interface UpdateMemoVariables {
+  context: MemoContext
+  input: SaveMemoInput
+}
+
 export const memoKeys = {
   detail: (context: MemoContext) => ['memos', context] as const,
 }
@@ -108,16 +113,20 @@ export function useMemos(context: MemoContext, isCompactLayout: boolean) {
   })
 }
 
-export function useUpdateMemo(context: MemoContext) {
+export function useUpdateMemo() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: SaveMemoInput) =>
+    mutationFn: async ({ context, input }: UpdateMemoVariables) =>
       unwrapOrThrow(
         await saveMemoWithConflictResolution(context, input, memoTransport),
       ),
-    onSuccess: (memo) => {
+    onSuccess: async (memo, { context }) => {
+      await queryClient.cancelQueries({ queryKey: memoKeys.detail(context) })
       queryClient.setQueryData(memoKeys.detail(context), memo)
+    },
+    onError: (error, { context }) => {
+      console.error(`Failed to save ${context} memo`, error)
     },
   })
 }

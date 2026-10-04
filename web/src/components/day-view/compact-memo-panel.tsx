@@ -14,12 +14,16 @@ import {
 interface CompactMemoPanelProps {
   context: MemoContext
   memo: Memo | undefined
+  isLoading?: boolean
+  loadError?: boolean
   onSave: (input: SaveMemoInput) => Promise<Memo>
 }
 
 export function CompactMemoPanel({
   context,
   memo,
+  isLoading = false,
+  loadError = false,
   onSave,
 }: CompactMemoPanelProps) {
   const initialContent = memo?.content ?? ''
@@ -42,6 +46,15 @@ export function CompactMemoPanel({
     useDebouncedSave((content) => {
       saveRef.current(content)
     })
+  const replaceDraft = useCallback((content: string) => {
+    draftRef.current = content
+    setDraft(content)
+    setEditorKey((key) => key + 1)
+  }, [])
+  const markClean = useCallback(() => {
+    dirtyRef.current = false
+    setIsDirty(false)
+  }, [])
 
   useEffect(() => {
     if (dirtyRef.current || memo == null) return
@@ -49,10 +62,8 @@ export function CompactMemoPanel({
     revisionRef.current = memo.revision
     if (draftRef.current === memo.content) return
 
-    draftRef.current = memo.content
-    setDraft(memo.content)
-    setEditorKey((key) => key + 1)
-  }, [memo?.content, memo?.revision])
+    replaceDraft(memo.content)
+  }, [memo?.content, memo?.revision, replaceDraft])
 
   const save = useCallback(
     (content: string) => {
@@ -89,12 +100,9 @@ export function CompactMemoPanel({
             cancelScheduledSave()
             queuedSaveRef.current = null
             if (savedMemo.content !== currentDraft) {
-              draftRef.current = savedMemo.content
-              setDraft(savedMemo.content)
-              setEditorKey((key) => key + 1)
+              replaceDraft(savedMemo.content)
             }
-            dirtyRef.current = false
-            setIsDirty(false)
+            markClean()
             return
           }
 
@@ -102,11 +110,8 @@ export function CompactMemoPanel({
             cancelScheduledSave()
             queuedSaveRef.current = null
             if (currentDraft === conflictDraft) {
-              draftRef.current = savedMemo.content
-              setDraft(savedMemo.content)
-              setEditorKey((key) => key + 1)
-              dirtyRef.current = false
-              setIsDirty(false)
+              replaceDraft(savedMemo.content)
+              markClean()
               return
             }
 
@@ -114,9 +119,7 @@ export function CompactMemoPanel({
               savedMemo.content,
               currentDraft,
             )
-            draftRef.current = mergedDraft
-            setDraft(mergedDraft)
-            setEditorKey((key) => key + 1)
+            replaceDraft(mergedDraft)
             queuedSaveRef.current = mergedDraft
           }
         })
@@ -135,7 +138,7 @@ export function CompactMemoPanel({
           saveRef.current(queuedContent)
         })
     },
-    [cancelScheduledSave],
+    [cancelScheduledSave, markClean, replaceDraft],
   )
 
   saveRef.current = save
@@ -158,11 +161,15 @@ export function CompactMemoPanel({
 
   const status = saveError
     ? "Couldn't save"
-    : isSaving
-      ? 'Saving…'
-      : isDirty
-        ? 'Unsaved'
-        : 'Saved'
+    : loadError
+      ? "Couldn't load"
+      : isLoading
+        ? 'Loading…'
+        : isSaving
+          ? 'Saving…'
+          : isDirty
+            ? 'Unsaved'
+            : 'Saved'
   const title = context === 'work' ? 'Work memo' : 'Personal memo'
 
   return (
@@ -174,15 +181,24 @@ export function CompactMemoPanel({
         </span>
       </div>
       <div className="h-18 shrink-0 overflow-y-auto rounded-md border border-border bg-card">
-        <div aria-label={title} className="compact-memo-editor" role="group">
-          <MarkdownEditor
-            key={editorKey}
-            defaultValue={draft}
-            onChange={handleChange}
-            placeholder="Add a note..."
-            size="fit"
-          />
-        </div>
+        {isLoading || loadError ? (
+          <div
+            className="flex h-full items-center px-2 text-xs text-muted-foreground"
+            role="status"
+          >
+            {isLoading ? 'Loading memo…' : 'Memo unavailable'}
+          </div>
+        ) : (
+          <div aria-label={title} className="compact-memo-editor" role="group">
+            <MarkdownEditor
+              key={editorKey}
+              defaultValue={draft}
+              onChange={handleChange}
+              placeholder="Add a note..."
+              size="fit"
+            />
+          </div>
+        )}
       </div>
     </section>
   )

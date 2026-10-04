@@ -116,6 +116,8 @@ export interface DayViewPresentationProps {
   compactMemo?: {
     context: MemoContext
     memo: Memo | undefined
+    isLoading: boolean
+    loadError: boolean
     onSave: (input: SaveMemoInput) => Promise<Memo>
   }
 }
@@ -453,6 +455,8 @@ export function DayViewPresentation({
           key={compactMemo.context}
           context={compactMemo.context}
           memo={compactMemo.memo}
+          isLoading={compactMemo.isLoading}
+          loadError={compactMemo.loadError}
           onSave={compactMemo.onSave}
         />
       )}

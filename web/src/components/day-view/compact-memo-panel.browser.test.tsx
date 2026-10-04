@@ -62,7 +62,7 @@ function readSaveCalls(save: ReturnType<typeof makeSaveHandler>) {
 }
 
 function getEditorValue(): string | null {
-  const editor = screen.getByRole('textbox', { name: 'memo editor' })
+  const editor = screen.queryByRole('textbox', { name: 'memo editor' })
   return editor instanceof HTMLTextAreaElement ? editor.value : null
 }
 
@@ -81,7 +81,84 @@ function saveFrames(
   return { beforeDelay, afterDelay }
 }
 
+function memoLoadState(
+  editorValue: string | null,
+  loadingMessage: string | null,
+  status: string | null,
+) {
+  return { editorValue, loadingMessage, status }
+}
+
+function memoLoadFlowState(
+  loadingState: ReturnType<typeof memoLoadState>,
+  errorState: ReturnType<typeof memoLoadState>,
+  loadedState: ReturnType<typeof panelState>,
+) {
+  return { loadingState, errorState, loadedState }
+}
+
 describe('CompactMemoPanel', () => {
+  it('shows loading state and applies the memo after it loads', () => {
+    const onSave = makeSaveHandler()
+    const { rerender } = render(
+      <CompactMemoPanel
+        context="work"
+        memo={undefined}
+        isLoading
+        onSave={onSave}
+      />,
+    )
+    const loadingState = memoLoadState(
+      getEditorValue(),
+      screen.getByRole('status').textContent,
+      screen.getByText('Loading…').textContent,
+    )
+
+    act(() => {
+      rerender(
+        <CompactMemoPanel
+          context="work"
+          memo={undefined}
+          loadError
+          onSave={onSave}
+        />,
+      )
+    })
+    const errorState = memoLoadState(
+      getEditorValue(),
+      screen.getByRole('status').textContent,
+      screen.getByText("Couldn't load").textContent,
+    )
+
+    act(() => {
+      rerender(
+        <CompactMemoPanel
+          context="work"
+          memo={makeMemo({ content: 'A fetched note', revision: 2 })}
+          onSave={onSave}
+        />,
+      )
+    })
+
+    expect(
+      memoLoadFlowState(
+        loadingState,
+        errorState,
+        panelState(
+          getEditorValue(),
+          screen.queryByRole('status')?.textContent ?? null,
+          readSaveCalls(onSave),
+        ),
+      ),
+    ).toEqual(
+      memoLoadFlowState(
+        memoLoadState(null, 'Loading memo…', 'Loading…'),
+        memoLoadState(null, 'Memo unavailable', "Couldn't load"),
+        panelState('A fetched note', null, []),
+      ),
+    )
+  })
+
   it('keeps the local draft when a refreshed memo arrives while editing', async () => {
     const onSave = makeSaveHandler()
     const { rerender } = render(
