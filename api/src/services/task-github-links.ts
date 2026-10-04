@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { err, errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
 
 import { db, type DbTransaction } from '#db/connection'
+import type { GithubNotifyEvent } from '#db/schema'
 import { defaultGithubNotifyEvents, taskGithubLinks, tasks } from '#db/schema'
 import type {
   IntegrationConfigError,
@@ -57,6 +58,7 @@ type LinkRow = typeof taskGithubLinks.$inferSelect
 function linkInsertValues(
   taskId: string,
   issue: GithubIssueData,
+  notifyEvents?: GithubNotifyEvent[],
 ): typeof taskGithubLinks.$inferInsert {
   const role = 'subject'
   return {
@@ -65,7 +67,7 @@ function linkInsertValues(
     repo: issue.repo,
     number: issue.number,
     role,
-    notifyEvents: defaultGithubNotifyEvents(role),
+    notifyEvents: notifyEvents ?? defaultGithubNotifyEvents(role),
     kind: issue.kind,
     url: issue.url,
     state: issue.state,
@@ -305,6 +307,7 @@ export function linkTaskToGithubUrl(
   taskId: string,
   ref: GithubResourceRef,
   author: EditAuthor,
+  notifyEvents?: GithubNotifyEvent[],
 ): ResultAsync<
   LinkRow,
   | TaskNotFoundError
@@ -333,7 +336,7 @@ export function linkTaskToGithubUrl(
             const linkResult = firstOrErr(
               await tx
                 .insert(taskGithubLinks)
-                .values(linkInsertValues(taskId, issue))
+                .values(linkInsertValues(taskId, issue, notifyEvents))
                 .returning(),
             )
             if (linkResult.isErr()) {
@@ -379,6 +382,26 @@ export function unlinkTask(
       .returning(),
   ).andThen((deleted) => {
     const [link] = deleted
+    return link ? okAsync(link) : errAsync(new GithubLinkNotFoundError())
+  })
+}
+
+export function updateGithubLinkNotifyEvents(
+  executor: Executor,
+  taskId: string,
+  linkId: string,
+  notifyEvents: GithubNotifyEvent[],
+): ResultAsync<LinkRow, GithubLinkNotFoundError> {
+  return ResultAsync.fromSafePromise(
+    executor
+      .update(taskGithubLinks)
+      .set({ notifyEvents, updatedAt: new Date() })
+      .where(
+        and(eq(taskGithubLinks.id, linkId), eq(taskGithubLinks.taskId, taskId)),
+      )
+      .returning(),
+  ).andThen((updated) => {
+    const [link] = updated
     return link ? okAsync(link) : errAsync(new GithubLinkNotFoundError())
   })
 }
