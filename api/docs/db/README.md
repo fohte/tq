@@ -334,6 +334,7 @@ erDiagram
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
   text parent_session_id
+  timestamp_with_time_zone archived_at
 }
 "public.task_agent_sessions" {
   text task_id FK
