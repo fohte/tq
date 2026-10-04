@@ -21,10 +21,10 @@ export const SingleBlocker: Story = {
 }
 
 export const MultipleBlockers: Story = {
-  name: 'the badge lists several tasks blocking the current task',
+  name: 'the badge counts task and GitHub blockers together',
   args: {
-    blockedByNumbers: [312, 315],
-    blockedByGithubRefs: [],
+    blockedByNumbers: [312],
+    blockedByGithubRefs: [makeBlockedByGithubRef()],
   },
 }
 
@@ -32,14 +32,6 @@ export const SingleGithubBlocker: Story = {
   name: 'the badge links to one GitHub blocker',
   args: {
     blockedByNumbers: [],
-    blockedByGithubRefs: [makeBlockedByGithubRef()],
-  },
-}
-
-export const MultipleMixedBlockers: Story = {
-  name: 'the badge counts task and GitHub blockers together',
-  args: {
-    blockedByNumbers: [312],
     blockedByGithubRefs: [makeBlockedByGithubRef()],
   },
 }
