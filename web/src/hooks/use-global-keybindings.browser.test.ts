@@ -26,11 +26,7 @@ function fireKey(
   return event
 }
 
-function searchShortcutOutcome(calls: unknown[], event: KeyboardEvent) {
-  return { calls, defaultPrevented: event.defaultPrevented }
-}
-
-function memoShortcutOutcome(calls: unknown[], event: KeyboardEvent) {
+function shortcutOutcome(calls: unknown[], event: KeyboardEvent) {
   return { calls, defaultPrevented: event.defaultPrevented }
 }
 
@@ -81,9 +77,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { metaKey: true })
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [[true]], defaultPrevented: true },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [[true]],
+      defaultPrevented: true,
+    })
   })
 
   it('toggles search closed on Cmd+K on macOS when already open', () => {
@@ -101,9 +98,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true })
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [], defaultPrevented: false },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
   })
 
   it('leaves Ctrl+K to the OS/browser on macOS while typing in an input', () => {
@@ -114,9 +112,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true }, input)
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [], defaultPrevented: false },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
     input.remove()
   })
 
@@ -128,9 +127,10 @@ describe('useGlobalKeybindings', () => {
 
       const event = fireKey('k', { ctrlKey: true })
 
-      expect(
-        searchShortcutOutcome(onSearchOpenChange.mock.calls, event),
-      ).toEqual({ calls: [[true]], defaultPrevented: true })
+      expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+        calls: [[true]],
+        defaultPrevented: true,
+      })
     },
   )
 
@@ -140,9 +140,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true })
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [[false]], defaultPrevented: true },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [[false]],
+      defaultPrevented: true,
+    })
   })
 
   it('toggles search open on Ctrl+K on Linux while typing in an input', () => {
@@ -153,9 +154,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true }, input)
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [[true]], defaultPrevented: true },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [[true]],
+      defaultPrevented: true,
+    })
     input.remove()
   })
 
@@ -209,9 +211,19 @@ describe('useGlobalKeybindings', () => {
     setup()
     const event = fireKey('m')
 
-    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
       calls: [['/memo?layout=compact']],
       defaultPrevented: true,
+    })
+  })
+
+  it('leaves Shift+M to the calendar month-view shortcut', () => {
+    setup()
+    const event = fireKey('M', { shiftKey: true })
+
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
     })
   })
 
@@ -232,7 +244,7 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('m', {}, input)
 
-    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
       calls: [],
       defaultPrevented: false,
     })
@@ -254,7 +266,7 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('m')
 
-    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
       calls: [],
       defaultPrevented: false,
     })
@@ -273,7 +285,7 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('m')
 
-    expect(memoShortcutOutcome(windowOpenCalls, event)).toEqual({
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
       calls: [],
       defaultPrevented: false,
     })

@@ -33,6 +33,18 @@ export const Notes: Story = {
   name: 'the window shows the full work memo editor',
 }
 
+export const Personal: Story = {
+  name: 'the window shows the full personal memo editor',
+  args: {
+    context: 'personal',
+    memo: makeMemo({
+      context: 'personal',
+      content: '# Personal notes\n\nCapture a thought for later.',
+      revision: 3,
+    }),
+  },
+}
+
 export const Loading: Story = {
   name: 'the window shows a loading message while the memo is fetched',
   args: {

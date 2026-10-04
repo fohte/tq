@@ -78,6 +78,18 @@ describe('classifyNavigation', () => {
     ).toBe('open-main')
   })
 
+  it('routes internal navigation from the memo window to the main window', () => {
+    expect(
+      classifyNavigation(
+        `${ORIGIN}/memo?layout=compact`,
+        `${ORIGIN}/tasks/2`,
+        ORIGIN,
+        [],
+        'memo',
+      ),
+    ).toBe('open-main')
+  })
+
   it.each(['main', 'side'] as const)(
     'routes the memo path from the %s window to the memo window',
     (source) => {

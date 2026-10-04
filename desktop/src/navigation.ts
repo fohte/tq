@@ -109,7 +109,12 @@ export const classifyNavigation = (
   if (isInternal(targetUrl, origin) && isMemoPath(targetUrl)) {
     return 'open-memo'
   }
-  if (source === 'side' && isInternal(targetUrl, origin)) return 'open-main'
+  if (
+    (source === 'side' || source === 'memo') &&
+    isInternal(targetUrl, origin)
+  ) {
+    return 'open-main'
+  }
   if (isInternal(targetUrl, origin)) return 'allow'
   // `shell.openExternal` launches whatever handler is registered for the
   // scheme, so only hand it schemes known to be safe to open.

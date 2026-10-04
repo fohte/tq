@@ -281,7 +281,9 @@ void app.whenReady().then(() => {
   mainWindow = win
   pendingUrl = undefined
 
-  globalShortcut.register('Alt+M', openMemoWindow)
+  if (!globalShortcut.register('Alt+M', openMemoWindow)) {
+    console.error('failed to register global shortcut Alt+M')
+  }
 
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(

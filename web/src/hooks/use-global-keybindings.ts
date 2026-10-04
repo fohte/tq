@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 
 import {
+  memoKeybinding,
   type NavKeybinding,
   navKeybindings,
   type SearchKeybinding,
@@ -110,7 +111,7 @@ export function useGlobalKeybindings({
         return
       }
 
-      if (key === 'm') {
+      if (key === memoKeybinding.keys && !e.shiftKey) {
         e.preventDefault()
         openMemoWindow()
       }
