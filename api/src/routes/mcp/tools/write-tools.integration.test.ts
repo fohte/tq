@@ -693,6 +693,7 @@ describe('operation tool input schemas', () => {
       schedule_time_blocks_delete: false,
       schedule_time_blocks_list: false,
       schedule_time_blocks_update: false,
+      session_archive: false,
       session_delete: false,
       session_list: false,
       task_activity: false,

@@ -58,6 +58,7 @@ describe('session_list', () => {
         startedAt: '<timestamp>',
         lastActiveAt: '<timestamp>',
         endedAt: null,
+        archivedAt: null,
         tasks: [],
       },
     ])
@@ -84,6 +85,7 @@ describe('session_list', () => {
         startedAt: '<timestamp>',
         lastActiveAt: '<timestamp>',
         endedAt: null,
+        archivedAt: null,
         tasks: [],
       },
     ])

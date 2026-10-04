@@ -26,6 +26,7 @@ comments:
       started_at: 'Time when the session was first recorded.'
       last_active_at: 'Time of the most recent activity report for the session.'
       ended_at: 'Time the integration last reported the session as ended; cleared by a later activity report.'
+      archived_at: 'Time the session was archived by an external session manager.'
   - table: assets
     tableComment: 'Metadata for uploaded assets stored in object storage.'
     columnComments:

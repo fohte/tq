@@ -23,6 +23,7 @@ interface AgentSessionResponse {
   startedAt: string
   lastActiveAt: string
   endedAt: string | null
+  archivedAt: string | null
 }
 
 interface TaskAgentSessionResponse extends AgentSessionResponse {
@@ -40,6 +41,7 @@ function normalizeSession(session: AgentSessionResponse) {
     startedAt: 'DATE',
     lastActiveAt: 'DATE',
     endedAt: session.endedAt === null ? null : 'DATE',
+    archivedAt: session.archivedAt === null ? null : 'DATE',
   }
 }
 
@@ -89,6 +91,7 @@ describe('agent sessions API', () => {
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: null,
+        archivedAt: null,
       })
     })
 
@@ -116,6 +119,7 @@ describe('agent sessions API', () => {
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: null,
+        archivedAt: null,
       })
     })
 
@@ -161,6 +165,7 @@ describe('agent sessions API', () => {
         startedAt: created.startedAt,
         lastActiveAt: '2030-01-02T00:00:00.000Z',
         endedAt: null,
+        archivedAt: null,
       })
     })
 
@@ -200,6 +205,7 @@ describe('agent sessions API', () => {
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: null,
+        archivedAt: null,
       })
     })
 
@@ -239,6 +245,7 @@ describe('agent sessions API', () => {
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: null,
+        archivedAt: null,
       })
     })
 
@@ -277,6 +284,95 @@ describe('agent sessions API', () => {
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: 'DATE',
+        archivedAt: null,
+      })
+    })
+
+    it('keeps archivedAt when an ended report arrives after archiving', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'archive-session-1',
+        cwd: '/tmp/archive-test',
+        context: 'work',
+        label: 'Archive test session',
+        lastMessage: 'Archive test message',
+      })
+      await archiveSession('claude_code', 'archive-session-1')
+
+      const res = await upsertSession({
+        provider: 'claude_code',
+        sessionId: 'archive-session-1',
+        cwd: '/tmp/archive-test',
+        context: 'work',
+        label: 'Archive test session',
+        lastMessage: 'Archive test message',
+        ended: true,
+      })
+
+      expect(
+        responseWithBody(
+          res.status,
+          normalizeSession(await jsonBody<AgentSessionResponse>(res)),
+        ),
+      ).toEqual({
+        status: 200,
+        body: {
+          id: created.id,
+          provider: 'claude_code',
+          sessionId: 'archive-session-1',
+          parentSessionId: null,
+          context: 'work',
+          cwd: '/tmp/archive-test',
+          label: 'Archive test session',
+          lastMessage: 'Archive test message',
+          customLabel: null,
+          startedAt: 'DATE',
+          lastActiveAt: 'DATE',
+          endedAt: 'DATE',
+          archivedAt: 'DATE',
+        },
+      })
+    })
+
+    it('clears archivedAt when the session reports activity again', async () => {
+      await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'archive-session-2',
+        cwd: '/tmp/archive-test',
+        context: 'work',
+        label: 'Archive test session',
+        lastMessage: 'Archive test message',
+        ended: true,
+      })
+      await archiveSession('claude_code', 'archive-session-2')
+
+      const res = await upsertSession({
+        provider: 'claude_code',
+        sessionId: 'archive-session-2',
+        cwd: '/tmp/archive-test',
+        context: 'work',
+        label: 'Archive test session',
+        lastMessage: 'Archive test message',
+      })
+
+      const body = await jsonBody<AgentSessionResponse>(res)
+      expect(responseWithBody(res.status, normalizeSession(body))).toEqual({
+        status: 200,
+        body: {
+          id: body.id,
+          provider: 'claude_code',
+          sessionId: 'archive-session-2',
+          parentSessionId: null,
+          context: 'work',
+          cwd: '/tmp/archive-test',
+          label: 'Archive test session',
+          lastMessage: 'Archive test message',
+          customLabel: null,
+          startedAt: 'DATE',
+          lastActiveAt: 'DATE',
+          endedAt: null,
+          archivedAt: null,
+        },
       })
     })
 
@@ -305,6 +401,7 @@ describe('agent sessions API', () => {
         startedAt: 'DATE',
         lastActiveAt: 'DATE',
         endedAt: null,
+        archivedAt: null,
       })
     })
 
@@ -925,6 +1022,80 @@ describe('agent sessions API', () => {
       expect(res.status).toBe(404)
     })
   })
+
+  describe('POST /api/agent-sessions/by-session/:provider/:sessionId/archive', () => {
+    it('archives a session by provider and session id', async () => {
+      const created = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'archive-session-3',
+        cwd: '/tmp/archive-test',
+        context: 'work',
+        label: 'Archive test session',
+        lastMessage: 'Archive test message',
+      })
+
+      const res = await archiveSession('claude_code', 'archive-session-3')
+      const body = await jsonBody<AgentSessionResponse>(res)
+
+      expect(responseWithBody(res.status, normalizeSession(body))).toEqual({
+        status: 200,
+        body: {
+          id: created.id,
+          provider: 'claude_code',
+          sessionId: 'archive-session-3',
+          parentSessionId: null,
+          context: 'work',
+          cwd: '/tmp/archive-test',
+          label: 'Archive test session',
+          lastMessage: 'Archive test message',
+          customLabel: null,
+          startedAt: 'DATE',
+          lastActiveAt: 'DATE',
+          endedAt: null,
+          archivedAt: 'DATE',
+        },
+      })
+    })
+
+    it('archives after the session reports ended', async () => {
+      const ended = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'archive-session-4',
+        cwd: '/tmp/archive-test',
+        context: 'work',
+        label: 'Archive test session',
+        lastMessage: 'Archive test message',
+        ended: true,
+      })
+
+      const res = await archiveSession('claude_code', 'archive-session-4')
+      const body = await jsonBody<AgentSessionResponse>(res)
+
+      expect(responseWithBody(res.status, normalizeSession(body))).toEqual({
+        status: 200,
+        body: {
+          ...normalizeSession(ended),
+          endedAt: 'DATE',
+          archivedAt: 'DATE',
+        },
+      })
+    })
+
+    it('returns 404 for a non-existent session id', async () => {
+      const res = await archiveSession('claude_code', 'nonexistent')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 404 for an unknown provider', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-session/other_provider/session-1/archive',
+        { method: 'POST' },
+      )
+
+      expect(res.status).toBe(404)
+    })
+  })
 })
 
 interface UpsertSessionInput {
@@ -944,6 +1115,13 @@ function upsertSession(input: UpsertSessionInput) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+}
+
+function archiveSession(provider: string, sessionId: string) {
+  return app.request(
+    `/api/agent-sessions/by-session/${provider}/${sessionId}/archive`,
+    { method: 'POST' },
+  )
 }
 
 async function upsertSessionAndGetBody(input: UpsertSessionInput) {

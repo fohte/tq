@@ -10,10 +10,9 @@ import {
 import { tasks } from '#db/schema/core'
 
 // One row per coding-agent session (e.g. a Claude Code CLI invocation),
-// reported by that agent's hook integration. No status column: "running" is
-// derived as `endedAt IS NULL AND lastActiveAt` being recent, since a status
-// column would go stale forever once a process is killed without a final
-// hook firing, while a timestamp just ages visibly instead.
+// reported by that agent's hook integration. "Running" is derived as
+// `endedAt IS NULL AND lastActiveAt` being recent, since a status column would
+// go stale forever once a process is killed without a final hook firing.
 export const agentSessions = pgTable(
   'agent_sessions',
   {
@@ -44,6 +43,7 @@ export const agentSessions = pgTable(
       .notNull()
       .defaultNow(),
     endedAt: timestamp('ended_at', { withTimezone: true }),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
   },
   (table) => [
     unique('uq_agent_sessions_provider_session_id').on(
