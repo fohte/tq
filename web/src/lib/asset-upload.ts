@@ -5,7 +5,7 @@ import { api } from '#lib/api'
 
 const ASSET_PATH_PATTERN = /^\/api\/assets\/([^/]+)$/
 
-export function parseAssetId(src: string): string | null {
+function parseAssetId(src: string): string | null {
   return ASSET_PATH_PATTERN.exec(src)?.[1] ?? null
 }
 

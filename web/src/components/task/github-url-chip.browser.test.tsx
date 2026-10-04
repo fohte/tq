@@ -10,7 +10,7 @@ import {
 import { GithubUrlChip } from '#components/task/github-url-chip'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
-import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
+import { githubUrlPreviewKeys } from '#lib/query-keys'
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()

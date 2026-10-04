@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { ProjectUrlCard } from '#components/task/project-url-card'
-import type { ProjectUrlPreview } from '#hooks/use-project-url-preview'
-import { projectUrlPreviewKeys } from '#hooks/use-project-url-preview'
+import type { ProjectDetail } from '#hooks/use-projects'
+import { projectUrlPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const PROJECT_ID = 'aaaa0000-0000-0000-0000-000000000000'
@@ -14,7 +14,7 @@ const PROJECT_URL =
 const UNRESOLVED_ID = 'unknown'
 const UNRESOLVED_URL = 'https://tq.fohte.net/projects/unknown'
 
-const baseProject: ProjectUrlPreview = makeProjectDetail({
+const baseProject: ProjectDetail = makeProjectDetail({
   id: 'aaaa0000-0000-0000-0000-000000000000',
   description: 'Personal task manager built with React and Hono.',
   targetDate: '2026-06-01',
@@ -28,7 +28,7 @@ function Providers({
   children,
 }: {
   id: string
-  project: ProjectUrlPreview | null
+  project: ProjectDetail | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
@@ -53,7 +53,7 @@ function ProjectUrlCardWithProviders({
 }: {
   id: string
   raw: string
-  project: ProjectUrlPreview | null
+  project: ProjectDetail | null
 }) {
   return (
     <Providers id={id} project={project}>

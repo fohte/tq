@@ -3,15 +3,12 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertStatus, unwrapOrThrow } from '#lib/assert-response'
+import { gcalCalendarsKeys } from '#lib/query-keys'
 
 export type GcalCalendar = InferResponseType<
   (typeof api.api.calendar.accounts)[':accountId']['calendars']['$get'],
   200
 >[number]
-
-export const gcalCalendarsKeys = {
-  list: (accountId: string) => ['gcal-calendars', accountId] as const,
-}
 
 export function useGcalCalendarsList(accountId: string, enabled: boolean) {
   return useQuery({

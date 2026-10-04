@@ -8,6 +8,7 @@ import {
   assertOkWithMessage,
   unwrapOrThrow,
 } from '#lib/assert-response'
+import { savedViewKeys } from '#lib/query-keys'
 
 export type SavedView = InferResponseType<
   (typeof api.api)['saved-views']['$get'],
@@ -17,12 +18,6 @@ export type SavedView = InferResponseType<
 export interface SavedViewFilter {
   q?: string
   context?: 'work' | 'personal'
-}
-
-export const savedViewKeys = {
-  all: ['saved-views'] as const,
-  lists: ['saved-views', 'list'] as const,
-  list: (filter?: SavedViewFilter) => [...savedViewKeys.lists, filter] as const,
 }
 
 export function useSavedViews(

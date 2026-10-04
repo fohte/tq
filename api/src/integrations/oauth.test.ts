@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
 import { oauthTokens } from '#db/schema'
-import { disconnectAccount, listConnectedAccounts } from '#integrations/oauth'
+import {
+  disconnectAccount,
+  listConnectedAccounts,
+} from '#integrations/oauth-accounts'
 import type {
   ConnectionStatus,
   IntegrationProvider,

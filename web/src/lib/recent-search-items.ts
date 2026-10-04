@@ -4,7 +4,7 @@ import { isRecord } from '#lib/type-guards'
 const STORAGE_KEY = 'tq:recent-search-items'
 const MAX_ITEMS_PER_KIND = 5
 
-export interface RecentTask {
+interface RecentTask {
   kind: 'task'
   id: string
   title: string
@@ -13,7 +13,7 @@ export interface RecentTask {
   viewedAt: number
 }
 
-export interface RecentProject {
+interface RecentProject {
   kind: 'project'
   id: string
   title: string

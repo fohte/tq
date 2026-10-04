@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TagsInput } from '#components/task/tags-input'
-import { labelKeys } from '#hooks/use-labels'
+import { labelKeys } from '#lib/query-keys'
 
 function renderTagsInput(initialLabels: string[] = []) {
   const queryClient = new QueryClient({

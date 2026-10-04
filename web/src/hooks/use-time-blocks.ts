@@ -4,18 +4,15 @@ import type { InferResponseType } from 'hono/client'
 import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { timeBlockKeys } from '#lib/query-keys'
+
+export { timeBlockKeys }
 
 type TimeBlock = InferResponseType<
   (typeof api.api.schedule)['time-blocks']['$get']
 >[number]
 
 export type { TimeBlock }
-
-export const timeBlockKeys = {
-  all: ['time-blocks'] as const,
-  list: (startDate: string, endDate: string) =>
-    [...timeBlockKeys.all, 'list', { startDate, endDate }] as const,
-}
 
 export function useTimeBlocks(
   startDate: string,
@@ -174,7 +171,7 @@ export function useUpdateTimeBlock() {
   })
 }
 
-export function useDeleteTimeBlock() {
+function useDeleteTimeBlock() {
   const queryClient = useQueryClient()
 
   return useMutation({

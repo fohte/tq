@@ -4,6 +4,9 @@ import { useMemo } from 'react'
 
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { taskKeys } from '#lib/query-keys'
+
+export { taskKeys }
 
 type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
@@ -34,21 +37,7 @@ export interface TaskListFilter {
   offset?: number
 }
 
-export const TASK_LIST_PAGE_SIZE = 50
-
-// infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
-// runs optimistic updates against every `lists`-prefixed cache entry assuming
-// each holds a Task[], but an infinite query's cache entry is an InfiniteData
-// object instead, so a shared prefix would make those updates throw.
-export const taskKeys = {
-  all: ['tasks'] as const,
-  lists: ['tasks', 'list'] as const,
-  list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
-  infiniteLists: ['tasks', 'infinite-list'] as const,
-  infiniteList: (filter?: TaskListFilter) =>
-    [...taskKeys.infiniteLists, filter] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
-}
+const TASK_LIST_PAGE_SIZE = 50
 
 export type { LinkedTaskSummary, Task, TaskDetail }
 

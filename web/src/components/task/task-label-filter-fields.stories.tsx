@@ -5,7 +5,7 @@ import { fn } from 'storybook/test'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
-import { labelKeys } from '#hooks/use-labels'
+import { labelKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },

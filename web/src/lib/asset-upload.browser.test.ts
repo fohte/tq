@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import videoFixtureAsset from '#components/ui/markdown-editor-video-fixture.webm?url'
 import {
   handleAssetLoadError,
-  parseAssetId,
+  resolveAssetDetails,
   resolveAssetSrc,
   UnsupportedAssetTypeError,
   uploadAssetFile,
@@ -59,17 +59,56 @@ function videoFixtureUrl(version: string): string {
   return `${new URL(videoFixtureAsset, document.baseURI).href}#${version}`
 }
 
-describe('parseAssetId', () => {
-  it('extracts the id from an /api/assets/:id path', () => {
-    expect(parseAssetId('/api/assets/abc-123')).toBe('abc-123')
+describe('resolveAssetDetails', () => {
+  it('resolves an asset path through the API', async () => {
+    const mocks = await getMocks()
+    assertDefined(mocks['mockGet']).mockResolvedValue(
+      signedAssetResponse('https://cdn.example.com/asset.png'),
+    )
+
+    const result = await resolveAssetDetails('/api/assets/asset-123')
+
+    const getOutput = () => ({
+      asset: result._unsafeUnwrap(),
+      calls: mocks['mockGet']?.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      asset: {
+        url: 'https://cdn.example.com/asset.png',
+        contentType: 'image/png',
+      },
+      calls: [[{ param: { id: 'asset-123' } }]],
+    })
   })
 
-  it('does not extract ids from the former image path', () => {
-    expect(parseAssetId('/api/images/abc-123')).toBeNull()
+  it('leaves the former image path unchanged', async () => {
+    const mocks = await getMocks()
+
+    const result = await resolveAssetDetails('/api/images/asset-123')
+
+    const getOutput = () => ({
+      asset: result._unsafeUnwrap(),
+      calls: mocks['mockGet']?.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      asset: { url: '/api/images/asset-123', contentType: null },
+      calls: [],
+    })
   })
 
-  it('returns null for URLs that do not match the pattern', () => {
-    expect(parseAssetId('https://example.com/foo.png')).toBeNull()
+  it('leaves external URLs unchanged', async () => {
+    const mocks = await getMocks()
+
+    const result = await resolveAssetDetails('https://example.com/foo.png')
+
+    const getOutput = () => ({
+      asset: result._unsafeUnwrap(),
+      calls: mocks['mockGet']?.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      asset: { url: 'https://example.com/foo.png', contentType: null },
+      calls: [],
+    })
   })
 })
 

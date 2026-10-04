@@ -1,7 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { PERSIST_DEBOUNCE_MS, useFocusNotes } from '#hooks/use-focus-notes'
+import { useFocusNotes } from '#hooks/use-focus-notes'
+
+const PERSIST_DEBOUNCE_MS = 300
 
 function seedNotes(taskId: string, value: string) {
   localStorage.setItem(`tq:focus-notes:${taskId}`, value)

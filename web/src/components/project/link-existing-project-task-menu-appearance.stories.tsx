@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { LinkExistingProjectTaskMenuAppearance } from '#components/project/link-existing-project-task-menu'
+import { LinkExistingProjectTaskMenuAppearance } from '#components/project/link-existing-project-task-menu-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { SearchResult } from '#hooks/use-search'
 

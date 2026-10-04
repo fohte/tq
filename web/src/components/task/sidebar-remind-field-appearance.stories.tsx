@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { SidebarRemindFieldAppearance } from '#components/task/sidebar-remind-field'
+import { SidebarRemindFieldAppearance } from '#components/task/sidebar-remind-field-appearance'
 import { formatReminderSummary } from '#lib/reminder-input'
 
 // Kept relative to `Date.now()` (not a fixed ISO literal) so the "今日"/"明日"
