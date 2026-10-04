@@ -21,6 +21,7 @@ export interface QueueSectionData {
   items: Task[]
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
+  isReadOnly?: boolean
   emptyMessage: string
 }
 
@@ -142,6 +143,7 @@ export function QueuePane({
               {...(section.dateRangeLabel != null
                 ? { dateRangeLabel: section.dateRangeLabel }
                 : {})}
+              {...(section.isReadOnly === true ? { isReadOnly: true } : {})}
               emptyMessage={section.emptyMessage}
               onRemove={(taskId) => {
                 onRemoveFromQueue(section.key, taskId)

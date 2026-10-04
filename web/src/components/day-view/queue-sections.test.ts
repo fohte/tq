@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildQueueSections } from '#components/day-view/queue-sections'
+import {
+  buildCompactQueueSections,
+  buildQueueSections,
+  DUE_TODAY_SECTION_KEY,
+  filterDueTodayTasks,
+} from '#components/day-view/queue-sections'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { DAY_QUEUE_KEY, type Queue, type QueueItem } from '#hooks/use-queues'
@@ -67,5 +72,62 @@ describe('buildQueueSections', () => {
         new Date(2026, 6, 30),
       ),
     ).toEqual([])
+  })
+})
+
+describe('compact queue sections', () => {
+  it('includes overdue and due-today tasks while excluding later and undated tasks', () => {
+    const overdueTask = makeTask({ id: 'overdue', dueDate: '2026-07-29' })
+    const dueTodayTask = makeTask({ id: 'due-today', dueDate: '2026-07-30' })
+    const futureTask = makeTask({ id: 'future', dueDate: '2026-07-31' })
+    const undatedTask = makeTask({ id: 'undated' })
+
+    expect(
+      filterDueTodayTasks(
+        [overdueTask, dueTodayTask, futureTask, undatedTask],
+        '2026-07-30',
+      ),
+    ).toEqual([overdueTask, dueTodayTask])
+  })
+
+  it('shows due tasks first and removes their duplicates from the day queue', () => {
+    const dueTask = makeTask({ id: 'due' })
+    const dayTask = makeTask({ id: 'day' })
+
+    expect(
+      buildCompactQueueSections(
+        [
+          {
+            key: DAY_QUEUE_KEY,
+            title: 'today',
+            items: [dueTask, dayTask],
+            dateRangeLabel: '07-30',
+            emptyMessage: "No tasks in today's queue",
+          },
+          {
+            key: 'week',
+            title: 'this week',
+            items: [],
+            emptyMessage: "No tasks in this week's queue",
+          },
+        ],
+        [dueTask],
+      ),
+    ).toEqual([
+      {
+        key: DUE_TODAY_SECTION_KEY,
+        title: 'due today',
+        items: [dueTask],
+        emptyMessage: 'No tasks due today',
+        isReadOnly: true,
+      },
+      {
+        key: DAY_QUEUE_KEY,
+        title: 'today',
+        items: [dayTask],
+        dateRangeLabel: '07-30',
+        emptyMessage: "No tasks in today's queue",
+      },
+    ])
   })
 })

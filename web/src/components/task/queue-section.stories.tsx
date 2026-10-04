@@ -25,6 +25,16 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
+function formatDate(date: Date): string {
+  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+const today = new Date()
+const todayDate = formatDate(today)
+const yesterday = new Date(today)
+yesterday.setDate(yesterday.getDate() - 1)
+const yesterdayDate = formatDate(yesterday)
+
 const meta = {
   title: 'Task/QueueSection',
   component: QueueSection,
@@ -65,6 +75,28 @@ export const DayQueue: Story = {
         estimatedMinutes: 30,
       }),
       makeTask({ id: '2', title: 'Plan the launch', estimatedMinutes: null }),
+    ],
+  },
+}
+
+export const DueToday: Story = {
+  name: 'the due today section lists overdue tasks before tasks due today',
+  args: {
+    queueKey: 'due-today',
+    title: 'due today',
+    isReadOnly: true,
+    emptyMessage: 'No tasks due today',
+    items: [
+      makeTask({
+        id: '1',
+        title: 'Send the revised estimate',
+        dueDate: yesterdayDate,
+      }),
+      makeTask({
+        id: '2',
+        title: 'Review the access request',
+        dueDate: todayDate,
+      }),
     ],
   },
 }
