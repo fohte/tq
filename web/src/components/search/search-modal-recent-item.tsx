@@ -1,4 +1,4 @@
-import { SearchModalRecentItem } from '#components/search/search-modal-recent-item-view'
+import { SearchModalRecentItem } from '#components/search/search-modal-recent-item-appearance'
 import type { ListItem } from '#components/search/search-modal-result-items'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 

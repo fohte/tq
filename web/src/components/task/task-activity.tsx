@@ -1,11 +1,8 @@
 import { Button } from '@fohte/ui/button'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
-import {
-  ActivityHeader,
-  CommentRow,
-  formatWho,
-} from '#components/task/comment-row'
+import { ActivityHeader, formatWho } from '#components/task/activity-header'
+import { CommentRow } from '#components/task/comment-row'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { ActivityItem } from '#hooks/use-task-activity'

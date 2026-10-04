@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { SearchModalRecentItem } from '#components/search/search-modal-recent-item-view'
+import { SearchModalRecentItem } from '#components/search/search-modal-recent-item-appearance'
 import {
   makeRecentProject,
   makeRecentTask,
