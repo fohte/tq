@@ -248,6 +248,7 @@ describe('project operation tools', () => {
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
+        blockedByGithubRefs: [],
         childCompletionCount: { completed: 0, total: 0 },
       },
     ])

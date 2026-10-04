@@ -48,19 +48,9 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/description-templates/:name':
     'template management is a web UI action',
 
-  // Time blocks and recurring schedules are calendar-UI operations: faster
-  // to drag/resize directly than to drive through a CLI.
-  'POST /api/schedule/time-blocks':
-    'calendar UI is faster for direct manipulation',
-  'GET /api/schedule/time-blocks':
-    'calendar UI is faster for direct manipulation',
-  'PATCH /api/schedule/time-blocks/:id':
-    'calendar UI is faster for direct manipulation',
-  'DELETE /api/schedule/time-blocks/:id':
-    'calendar UI is faster for direct manipulation',
+  // Editing recurring schedules and running auto-assignment remain web UI
+  // actions; only expanded recurring instances are exposed as read-only data.
   'POST /api/schedule/recurring':
-    'calendar UI is faster for direct manipulation',
-  'GET /api/schedule/recurring':
     'calendar UI is faster for direct manipulation',
   'PATCH /api/schedule/recurring/:id':
     'calendar UI is faster for direct manipulation',

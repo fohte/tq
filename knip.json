@@ -7,18 +7,58 @@
       "ignore": ["commitlint-plugin-no-external-refs.cjs"]
     },
     "web": {
-      "entry": ["src/lib/**"],
+      "entry": [
+        "src/routes/**/*.tsx!",
+        "!src/routes/**/*.test.tsx!",
+        "src/lib/pwa-manifest.ts!"
+      ],
+      "project": [
+        "src/**!",
+        "!src/**/*-test-fixtures.{ts,tsx}!",
+        "!src/**/test-utils.ts!",
+        "!src/**/test-helpers.ts!",
+        "!src/**/*.stories.tsx!",
+        "!src/**/*.test.{ts,tsx}!",
+        "!src/browser-test-setup.ts!",
+        "!src/lib/render-controlled-modal.tsx!",
+        "!src/routeTree.gen.ts!"
+      ],
       "ignoreDependencies": [
         "reg-suit",
         "reg-publish-s3-plugin",
         "reg-simple-keygen-plugin"
       ]
     },
+    "api": {
+      "project": [
+        "src/**!",
+        "!src/**/*-test-fixtures.ts!",
+        "!src/**/testing.ts!",
+        "!src/**/test-utils.ts!",
+        "!src/global-setup.ts!",
+        "!src/resolve-test-database-url.ts!",
+        "!src/**/*.test.ts!"
+      ]
+    },
     "cli": {
-      "entry": ["src/route-coverage.ts"]
+      "entry": ["src/route-coverage.ts"],
+      "project": [
+        "src/**!",
+        "!src/commands/test-support.ts!",
+        "!src/**/*.test.ts!"
+      ]
     },
     "extension": {
-      "entry": ["src/background.ts"]
+      "entry": ["src/background.ts!", "src/content.ts!"],
+      "project": [
+        "src/**!",
+        "!src/**/*-test-fixtures.ts!",
+        "!src/**/*.test.ts!"
+      ]
+    },
+    "desktop": {
+      "project": ["src/**!", "!src/**/*.test.ts!"],
+      "ignoreBinaries": ["electron!"]
     }
   }
 }

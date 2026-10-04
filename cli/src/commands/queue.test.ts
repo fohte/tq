@@ -88,27 +88,17 @@ describe('queue get', () => {
     })
   })
 
-  it('uses the current UTC date when the date is omitted', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-08-06T12:00:00.000Z'))
-
+  it('requires an explicit date', async () => {
     expect(
       await runQueueCli(
         ['queue', 'get', 'day'],
         new Response(JSON.stringify([]), { status: 200 }),
       ),
     ).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/queues/day/items',
-          query: { date: '2026-08-06' },
-          body: undefined,
-        },
-      ],
-      stderr: [],
-      stdout: [['[]\n']],
+      exitCode: 1,
+      requests: [],
+      stderr: [["error: missing required argument 'date'\n"]],
+      stdout: [],
     })
   })
 })

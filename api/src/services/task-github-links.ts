@@ -18,6 +18,7 @@ import { fetchGithubIssue } from '#integrations/github/issues'
 import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
 import type { EditAuthor } from '#lib/edits'
 import { recordGithubLinked } from '#lib/task-events'
+import { lockTaskGithubLinks } from '#services/task-github-blockers'
 
 export class TaskNotFoundError extends Error {
   constructor() {
@@ -333,6 +334,7 @@ export function linkTaskToGithubUrl(
       return fetchGithubIssue(ref).andThen((issue) =>
         ResultAsync.fromPromise<LinkRow, unknown>(
           db.transaction(async (tx) => {
+            await lockTaskGithubLinks(tx, taskId)
             const linkResult = firstOrErr(
               await tx
                 .insert(taskGithubLinks)

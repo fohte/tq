@@ -1,14 +1,15 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
-import { db, type DbTransaction } from '#db/connection'
+import { db } from '#db/connection'
 import { recurrenceRules, taskRelations, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
+import { githubLinkErrorResponse } from '#routes/github-link-error'
 import {
-  resolveBlockedByExistence,
-  resolveBlockedByTargets,
+  resolveCreateBlockedByInputs,
+  resolveUpdateBlockedByInputs,
 } from '#routes/tasks/blocked-by'
 import {
   taskDescriptionTemplateErrorBody,
@@ -29,36 +30,16 @@ import {
   listTasksQuerySchema,
   updateTaskSchema,
 } from '#schemas/task'
+import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
+import {
+  GithubBlockerSubjectConflictError,
+  insertTaskGithubBlockers,
+  type PreparedGithubBlockers,
+} from '#services/task-github-blockers'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
 import { syncTaskBlockedBy } from '#services/task-relations'
-
-// Deletes `recurrenceRules` row `ruleId` if no other task still references it
-// directly, so redirecting or clearing a legacy directly-owned rule doesn't
-// leave it orphaned. `excludeTaskId` is the task being updated/deleted itself,
-// whose own row may still carry the stale reference at the time of this check.
-async function deleteRecurrenceRuleIfUnreferenced(
-  tx: DbTransaction,
-  ruleId: string,
-  excludeTaskId?: string,
-) {
-  const [otherRef] = await tx
-    .select({ id: tasks.id })
-    .from(tasks)
-    .where(
-      excludeTaskId != null
-        ? and(
-            eq(tasks.recurrenceRuleId, ruleId),
-            sql`${tasks.id} != ${excludeTaskId}`,
-          )
-        : eq(tasks.recurrenceRuleId, ruleId),
-    )
-    .limit(1)
-  if (!otherRef) {
-    await tx.delete(recurrenceRules).where(eq(recurrenceRules.id, ruleId))
-  }
-}
 
 export const tasksCrudApp = new Hono()
   .post('/', zValidator('json', createTaskSchema), async (c) => {
@@ -82,14 +63,21 @@ export const tasksCrudApp = new Hono()
     }
 
     let blockedByTargetIds: string[] = []
+    let githubBlockers: PreparedGithubBlockers | undefined
     if (input.blockedBy != null) {
-      const resolved = await resolveBlockedByExistence(
-        input.blockedBy.map(String),
-      )
+      const resolved = await resolveCreateBlockedByInputs(input.blockedBy)
       if ('error' in resolved) {
         return c.json(resolved.error.body, resolved.error.status)
       }
+      if ('githubError' in resolved) {
+        return githubLinkErrorResponse(
+          c,
+          resolved.githubError,
+          'tasks.blocked-by',
+        )
+      }
       blockedByTargetIds = resolved.targetIds
+      githubBlockers = resolved.githubBlockers
     }
 
     const { task, createdRule, labelNames } = await db.transaction(
@@ -166,6 +154,9 @@ export const tasksCrudApp = new Hono()
             })),
           )
         }
+        if (githubBlockers != null) {
+          await insertTaskGithubBlockers(tx, task.id, githubBlockers.newIssues)
+        }
 
         await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
 
@@ -238,18 +229,45 @@ export const tasksCrudApp = new Hono()
           : { remindAt: remindAtInput == null ? null : new Date(remindAtInput) }
 
       if (blockedByInput != null) {
-        const resolveResult = await resolveBlockedByTargets(
+        const resolveResult = await resolveUpdateBlockedByInputs(
           existing,
-          blockedByInput.map(String),
+          blockedByInput,
         )
         if ('error' in resolveResult) {
           return c.json(resolveResult.error.body, resolveResult.error.status)
         }
+        if ('githubError' in resolveResult) {
+          return githubLinkErrorResponse(
+            c,
+            resolveResult.githubError,
+            'tasks.blocked-by',
+          )
+        }
 
-        const syncResult = await syncTaskBlockedBy(id, resolveResult.targetIds)
+        const syncResult = await syncTaskBlockedBy(
+          id,
+          resolveResult.targetIds,
+          resolveResult.githubBlockers,
+        )
         if (syncResult === 'cycle') {
           return c.json(
             { error: 'Circular blocking relationship detected' },
+            409,
+          )
+        }
+        if (syncResult === 'github-subject-conflict') {
+          return githubLinkErrorResponse(
+            c,
+            new GithubBlockerSubjectConflictError(),
+            'tasks.blocked-by',
+          )
+        }
+        if (syncResult === 'github-stale-blocker') {
+          return c.json(
+            {
+              error:
+                'GitHub blockers changed during this update. Retry the request.',
+            },
             409,
           )
         }
@@ -431,7 +449,7 @@ export const tasksCrudApp = new Hono()
         'description' in taskFields ? await syncTaskLinks(id) : undefined
 
       const [githubLinksByTaskId, labelsByTaskId] = await Promise.all([
-        getGithubLinksByTaskId([id]),
+        getGithubLinksByTaskId([id], { role: 'subject' }),
         getLabelNamesByTaskId([id]),
       ])
 

@@ -8,6 +8,7 @@ import {
 } from '#integrations/errors'
 import { GithubApiError } from '#integrations/github/index'
 import { InvalidGithubUrlError } from '#integrations/github/issues'
+import { GithubBlockerSubjectConflictError } from '#services/task-github-blockers'
 import {
   GithubLinkNotFoundError,
   GithubResourceAlreadyLinkedError,
@@ -37,6 +38,9 @@ export function githubLinkErrorResponse(
       { error: error.message, linkedTaskId: error.linkedTaskId },
       409,
     )
+  }
+  if (error instanceof GithubBlockerSubjectConflictError) {
+    return c.json({ error: error.message }, 409)
   }
   // No GitHub connection: client-actionable (connect GitHub first), safe to
   // relay directly.
