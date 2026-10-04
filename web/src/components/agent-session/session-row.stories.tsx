@@ -2,26 +2,20 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { SessionRow } from '#components/agent-session/session-row'
+import { makeAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 
 // Kept relative to `Date.now()` (not a fixed ISO literal) so this session
 // keeps rendering as active (isAgentSessionActive) no matter when this story
 // runs.
-const baseSession: AgentSession = {
+const baseSession: AgentSession = makeAgentSession({
   id: '1',
-  provider: 'claude_code',
-  sessionId: 'session-1',
-  parentSessionId: null,
-  context: 'work',
-  cwd: '/Users/fohte/ghq/github.com/fohte/tq',
   label: 'web sessions page',
   lastMessage: 'Implement the sessions list page',
-  customLabel: null,
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
-  endedAt: null,
-}
+})
 
 function SessionRowStory({
   localContext,
@@ -127,7 +121,7 @@ export const LongCwdAndLabel: Story = {
     session: {
       ...baseSession,
       id: '6',
-      cwd: '/Users/fohte/ghq/github.com/fohte/tq/.worktrees/some-very-long-worktree-directory-name-for-a-feature-branch',
+      cwd: '/workspace/project/.worktrees/some-very-long-worktree-directory-name-for-a-feature-branch',
       label:
         'a very long session label describing exactly what this agent session is working on right now',
     },

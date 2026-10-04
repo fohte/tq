@@ -1084,7 +1084,12 @@ describe('agent sessions API', () => {
     it('returns 404 for a non-existent session id', async () => {
       const res = await archiveSession('claude_code', 'nonexistent')
 
-      expect(res.status).toBe(404)
+      expect(
+        responseWithBody(res.status, await jsonBody<{ error: string }>(res)),
+      ).toEqual({
+        status: 404,
+        body: { error: 'Agent session not found' },
+      })
     })
 
     it('returns 404 for an unknown provider', async () => {
@@ -1093,7 +1098,12 @@ describe('agent sessions API', () => {
         { method: 'POST' },
       )
 
-      expect(res.status).toBe(404)
+      expect(
+        responseWithBody(res.status, await jsonBody<{ error: string }>(res)),
+      ).toEqual({
+        status: 404,
+        body: { error: 'Agent session not found' },
+      })
     })
   })
 })

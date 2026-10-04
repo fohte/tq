@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
@@ -64,20 +65,16 @@ const sampleSubtasks: Task[] = [
 ]
 
 const sampleSessions: AgentSession[] = [
-  {
+  makeAgentSession({
     id: 'session-001',
-    provider: 'claude_code',
     sessionId: 'session-001',
-    parentSessionId: null,
-    context: 'work',
-    cwd: '/Users/fohte/ghq/github.com/tq',
+    cwd: '/Users/example/ghq/github.com/tq',
     label: 'Add inline editing',
     lastMessage: 'Implement the inline title editor',
-    customLabel: null,
     startedAt: '2026-03-20T09:00:00.000Z',
     lastActiveAt: '2026-03-20T09:34:00.000Z',
     endedAt: '2026-03-20T09:34:00.000Z',
-  },
+  }),
 ]
 
 function Providers({
