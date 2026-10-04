@@ -46,12 +46,6 @@ export function mockGithubIssueResponse(
   )
 }
 
-export function mockGithubNotModifiedResponse() {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-    new Response(null, { status: 304 }),
-  )
-}
-
 export function mockAssignedIssuesResponse(
   issues: Array<{
     owner?: string
