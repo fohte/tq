@@ -14,17 +14,23 @@ export function TaskDependenciesSection({
   taskId,
   blockedBy,
   blocking,
+  githubBlockerUrls,
 }: {
   taskId: string
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
+  githubBlockerUrls: string[]
 }) {
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>dependencies</SectionHeading>
 
       <div className="flex flex-col gap-3">
-        <BlockedByGroup taskId={taskId} blockedBy={blockedBy} />
+        <BlockedByGroup
+          taskId={taskId}
+          blockedBy={blockedBy}
+          githubBlockerUrls={githubBlockerUrls}
+        />
 
         {blocking.length > 0 && (
           <div className="flex flex-col gap-1.5">
@@ -48,9 +54,11 @@ export function TaskDependenciesSection({
 function BlockedByGroup({
   taskId,
   blockedBy,
+  githubBlockerUrls,
 }: {
   taskId: string
   blockedBy: LinkedTaskSummary[]
+  githubBlockerUrls: string[]
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const updateBlockedBy = useUpdateTaskBlockedBy()
@@ -81,6 +89,7 @@ function BlockedByGroup({
                   updateBlockedBy.mutate({
                     id: taskId,
                     blockedBy: blockedBy.filter((t) => t.id !== task.id),
+                    githubBlockerUrls,
                   })
                 }}
                 disabled={updateBlockedBy.isPending}
@@ -114,6 +123,7 @@ function BlockedByGroup({
           updateBlockedBy.mutate({
             id: taskId,
             blockedBy: [...blockedBy, candidate],
+            githubBlockerUrls,
           })
           setDialogOpen(false)
         }}

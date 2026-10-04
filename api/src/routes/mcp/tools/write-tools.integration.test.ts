@@ -655,6 +655,8 @@ describe('operation tool input schemas', () => {
       label_delete: false,
       label_list: false,
       label_update: false,
+      memo_get: false,
+      memo_update: false,
       page_create: true,
       page_delete: false,
       page_get: false,
@@ -679,6 +681,11 @@ describe('operation tool input schemas', () => {
       saved_view_get: false,
       saved_view_list: false,
       saved_view_update: false,
+      schedule_recurring_list: false,
+      schedule_time_blocks_create: false,
+      schedule_time_blocks_delete: false,
+      schedule_time_blocks_list: false,
+      schedule_time_blocks_update: false,
       session_delete: false,
       session_list: false,
       task_activity: false,
@@ -741,6 +748,8 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      memo_get: { readOnlyHint: true },
+      memo_update: { readOnlyHint: false, destructiveHint: false },
     }
     const annotations = Object.fromEntries(
       tools.tools

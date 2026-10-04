@@ -37,6 +37,7 @@ import { selectValueHandler } from '#lib/form-utils'
 export function CreateTaskModalDesktop({
   parentIndicator,
   githubIndicator,
+  descriptionTemplateSelector,
   descriptionEditor,
   title,
   setTitle,
@@ -60,6 +61,7 @@ export function CreateTaskModalDesktop({
 }: {
   parentIndicator: ReactNode
   githubIndicator: ReactNode
+  descriptionTemplateSelector: ReactNode
   descriptionEditor: ReactNode
   title: string
   setTitle: (value: string) => void
@@ -116,6 +118,8 @@ export function CreateTaskModalDesktop({
           autoFocus
           className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"
         />
+
+        {descriptionTemplateSelector}
 
         {/* Description (WYSIWYG) */}
         <div className="max-h-modal-composer overflow-y-auto rounded-lg border border-border p-1 text-sm focus-within:border-primary/50">

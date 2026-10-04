@@ -5,23 +5,32 @@ import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
-import { DAY_QUEUE_KEY, useTaskPlan, WEEK_QUEUE_KEY } from '#hooks/use-queues'
+import {
+  DAY_QUEUE_KEY,
+  type Queue,
+  useQueueItemsForQueues,
+  useQueues,
+  useTaskPlan,
+  WEEK_QUEUE_KEY,
+} from '#hooks/use-queues'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
+  const mockQueueGet = vi.fn()
   const mockGet = vi.fn()
   const mockPut = vi.fn()
   return {
     api: {
       api: {
         queues: {
+          $get: mockQueueGet,
           ':key': {
             items: { $get: mockGet, $put: mockPut },
           },
         },
       },
     },
-    __mocks: { mockGet, mockPut },
+    __mocks: { mockQueueGet, mockGet, mockPut },
   }
 })
 
@@ -110,5 +119,59 @@ describe('useTaskPlan', () => {
     await waitFor(() => {
       expect(dayFetchCount(mockGet)).toBeGreaterThan(dayFetchesBeforeSwitch)
     })
+  })
+})
+
+describe('queue polling', () => {
+  it('refreshes queue definitions and items when an interval is configured', async () => {
+    vi.useFakeTimers()
+    try {
+      const mocks = await getMocks()
+      const queueGet = assertDefined(mocks['mockQueueGet'])
+      const itemGet = assertDefined(mocks['mockGet'])
+      const queues = [
+        {
+          key: DAY_QUEUE_KEY,
+          name: 'today',
+          periodUnit: 'day',
+          position: 0,
+        },
+      ] satisfies Queue[]
+      queueGet.mockResolvedValue(jsonResponse(queues))
+      itemGet.mockResolvedValue(jsonResponse([]))
+
+      renderHook(() => useQueues(60_000), { wrapper })
+      renderHook(() => useQueueItemsForQueues(queues, date, 60_000), {
+        wrapper,
+      })
+
+      let initialCallCounts = { queues: 0, items: 0 }
+      const getCallCounts = () => ({
+        initial: initialCallCounts,
+        afterInterval: {
+          queues: queueGet.mock.calls.length,
+          items: itemGet.mock.calls.length,
+        },
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      initialCallCounts = {
+        queues: queueGet.mock.calls.length,
+        items: itemGet.mock.calls.length,
+      }
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+      })
+
+      expect(getCallCounts()).toEqual({
+        initial: { queues: 1, items: 1 },
+        afterInterval: { queues: 2, items: 2 },
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

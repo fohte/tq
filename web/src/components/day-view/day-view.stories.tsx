@@ -205,6 +205,86 @@ const sampleSchedules: Schedule[] = [
   }),
 ]
 
+const compactTaskTitles = [
+  'Review the launch checklist',
+  'Draft the onboarding guide',
+  'Update the test plan',
+  'Check the deployment notes',
+  'Prepare the team update',
+  'Refine the settings page',
+  'Document the retry policy',
+  'Plan the follow-up review',
+]
+const compactTasks = compactTaskTitles.map((title, index) =>
+  makeTask({
+    id: `compact-task-${String(index + 1)}`,
+    number: index + 1,
+    title,
+    estimatedMinutes: 30,
+  }),
+)
+const compactWeekTask = makeTask({
+  id: 'compact-week-task',
+  title: "Review next week's milestones",
+})
+const compactQueueSections = [
+  {
+    key: 'day',
+    title: 'today',
+    items: compactTasks,
+    dateRangeLabel: dateStr.slice(5),
+    emptyMessage: "No tasks in today's queue",
+  },
+  {
+    key: 'week',
+    title: 'this week',
+    items: [compactWeekTask],
+    dateRangeLabel: '09-01 - 09-07',
+    emptyMessage: "No tasks in this week's queue",
+  },
+]
+const compactCandidate = makeTask({
+  id: 'compact-candidate',
+  title: 'Add a follow-up check',
+})
+const compactQueueCandidates = getQueueCandidates(
+  [...compactTasks, compactWeekTask, compactCandidate],
+  new Set([...compactTasks, compactWeekTask].map((task) => task.id)),
+  today,
+)
+const compactEvents: TimeBlockEvent[] = [
+  {
+    id: 'compact-task-block',
+    title: 'Review the launch checklist',
+    start: `${dateStr}T09:00:00`,
+    end: `${dateStr}T10:00:00`,
+    type: 'manual',
+  },
+  {
+    id: 'compact-team-meeting',
+    title: 'Team check-in',
+    start: `${dateStr}T10:30:00`,
+    end: `${dateStr}T11:00:00`,
+    type: 'gcal-meeting',
+  },
+  {
+    id: 'compact-lunch',
+    title: 'Lunch',
+    start: `${dateStr}T12:00:00`,
+    end: `${dateStr}T13:00:00`,
+    type: 'schedule',
+    scheduleId: 'compact-lunch',
+  },
+]
+const compactSchedules: Schedule[] = [
+  makeSchedule({
+    scheduleId: 'compact-lunch',
+    title: 'Lunch',
+    start: `${dateStr}T12:00:00`,
+    end: `${dateStr}T13:00:00`,
+  }),
+]
+
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -319,6 +399,27 @@ export const Default: Story = {
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
+  },
+}
+
+export const Compact: Story = {
+  name: "the compact day planner stacks today's queue above the daily calendar",
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-screen w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    ...Default.args,
+    layout: 'compact',
+    calendarEvents: compactEvents,
+    schedules: compactSchedules,
+    queueSections: compactQueueSections,
+    dayQueueTasks: compactTasks,
+    queueCandidates: compactQueueCandidates,
   },
 }
 

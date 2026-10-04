@@ -53,9 +53,11 @@ function Providers({ children }: { children: ReactNode }) {
 function SectionStory({
   blockedBy,
   blocking,
+  githubBlockerUrls,
 }: {
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
+  githubBlockerUrls: string[]
 }) {
   return (
     <Providers>
@@ -64,6 +66,7 @@ function SectionStory({
           taskId={taskId}
           blockedBy={blockedBy}
           blocking={blocking}
+          githubBlockerUrls={githubBlockerUrls}
         />
       </div>
     </Providers>
@@ -83,15 +86,23 @@ type Story = StoryObj<typeof meta>
 
 export const WithBothGroups: Story = {
   name: 'both blocked-by and blocking task groups are visible',
-  args: { blockedBy: blockedByTasks, blocking: blockingTasks },
+  args: {
+    blockedBy: blockedByTasks,
+    blocking: blockingTasks,
+    githubBlockerUrls: [],
+  },
 }
 
 export const BlockedByOnly: Story = {
   name: 'the section shows only tasks blocking the current task',
-  args: { blockedBy: blockedByTasks, blocking: [] },
+  args: {
+    blockedBy: blockedByTasks,
+    blocking: [],
+    githubBlockerUrls: [],
+  },
 }
 
 export const Empty: Story = {
   name: 'the task has no dependencies',
-  args: { blockedBy: [], blocking: [] },
+  args: { blockedBy: [], blocking: [], githubBlockerUrls: [] },
 }

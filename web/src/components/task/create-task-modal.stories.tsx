@@ -1,13 +1,54 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
+import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { fn } from 'storybook/test'
 
+import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-})
+function CreateTaskModalStoryProvider({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      }),
+  )
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="dark h-screen bg-background">{children}</div>
+    </QueryClientProvider>
+  )
+}
+
+function createTaskModalHandlers(
+  templates: ReturnType<typeof makeDescriptionTemplate>[] = [
+    makeDescriptionTemplate(),
+  ],
+) {
+  return [
+    http.get('/api/labels', () => HttpResponse.json([])),
+    http.get('/api/description-templates', () => HttpResponse.json(templates)),
+    // Typing `^N` triggers TaskTitleInput's own suggestion menu (see
+    // task-title-input.stories.tsx) in addition to the parent-preview
+    // lookup these stories care about; an empty list keeps that menu out
+    // of the way.
+    http.get('/api/tasks/mentions', () => HttpResponse.json([])),
+    http.post('/api/tasks', () =>
+      HttpResponse.json({
+        id: 'temp-id',
+        number: 1,
+        title: 'temp',
+        description: null,
+        status: 'todo',
+        context: 'personal',
+        labels: [],
+      }),
+    ),
+  ]
+}
 
 const meta = {
   title: 'Task/CreateTaskModal',
@@ -15,25 +56,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
     msw: {
-      handlers: [
-        http.get('/api/labels', () => HttpResponse.json([])),
-        // Typing `^N` triggers TaskTitleInput's own suggestion menu (see
-        // task-title-input.stories.tsx) in addition to the parent-preview
-        // lookup these stories care about; an empty list keeps that menu out
-        // of the way.
-        http.get('/api/tasks/mentions', () => HttpResponse.json([])),
-        http.post('/api/tasks', () =>
-          HttpResponse.json({
-            id: 'temp-id',
-            number: 1,
-            title: 'temp',
-            description: null,
-            status: 'todo',
-            context: 'personal',
-            labels: [],
-          }),
-        ),
-      ],
+      handlers: createTaskModalHandlers(),
     },
     // The chip row (start/due date, tags, ...) is an intentional horizontal
     // scroll area (`overflow-x-auto`); which stories trip it at the
@@ -43,11 +66,9 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <QueryClientProvider client={queryClient}>
-        <div className="dark h-screen bg-background">
-          <Story />
-        </div>
-      </QueryClientProvider>
+      <CreateTaskModalStoryProvider>
+        <Story />
+      </CreateTaskModalStoryProvider>
     ),
   ],
   args: {
@@ -84,6 +105,13 @@ export const DiscardConfirmation: Story = {
   },
 }
 
+export const WithoutTemplates: Story = {
+  name: 'opens with an empty description when no templates are available',
+  parameters: {
+    msw: { handlers: createTaskModalHandlers([]) },
+  },
+}
+
 export const AsSubtask: Story = {
   name: 'creates a subtask under the selected parent',
   args: {
@@ -117,9 +145,18 @@ const longDescription = [
 ].join('\n')
 
 export const LongDescription: Story = {
-  name: 'opens the editor with a long description and start date',
+  name: 'opens the editor with a long template description and start date',
   args: {
-    defaultDescription: longDescription,
     defaultStartDate: new Date().toISOString().slice(0, 10),
+  },
+  parameters: {
+    msw: {
+      handlers: createTaskModalHandlers([
+        makeDescriptionTemplate({
+          name: 'Long description',
+          body: longDescription,
+        }),
+      ]),
+    },
   },
 }

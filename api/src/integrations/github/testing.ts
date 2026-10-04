@@ -13,6 +13,18 @@ export async function upsertGithubToken(accessToken: string) {
     })
 }
 
+export function makeGithubTimelineEvent(
+  event: string,
+  login: string | null,
+  createdAt = '2024-08-13T09:30:00Z',
+) {
+  return {
+    event,
+    ...(login === null ? {} : { actor: { login } }),
+    created_at: createdAt,
+  }
+}
+
 export function makeGithubIssueResponse(
   htmlUrl: string,
   overrides: Partial<Record<string, unknown>> = {},
@@ -43,6 +55,35 @@ export function mockGithubIssueResponse(
       overrides,
       responseInit,
     ),
+  )
+}
+
+export function mockGithubActivityRoutes({
+  login = 'authenticated-user',
+  timelineEvents = [makeGithubTimelineEvent('closed', 'external-user')],
+}: {
+  login?: string
+  timelineEvents?: Array<Record<string, unknown>>
+} = {}) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    if (url.pathname === '/user') {
+      return Promise.resolve(
+        new Response(JSON.stringify({ login }), { status: 200 }),
+      )
+    }
+    if (/\/issues\/\d+\/timeline$/.test(url.pathname)) {
+      return Promise.resolve(
+        new Response(JSON.stringify(timelineEvents), { status: 200 }),
+      )
+    }
+    return Promise.resolve(new Response('{}', { status: 404 }))
+  })
+}
+
+export function mockGithubPullResponse(merged: boolean) {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+    new Response(JSON.stringify({ merged }), { status: 200 }),
   )
 }
 
