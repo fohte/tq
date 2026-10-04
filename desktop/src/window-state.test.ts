@@ -5,10 +5,21 @@ import {
   createDebouncedAction,
   createWindowBoundsStore,
   initialWindowBounds,
-  parseWindowBounds,
 } from '#window-state'
 
 afterEach(() => vi.useRealTimers())
+
+const loadSavedBounds = (serialized: string) => {
+  const store = createWindowBoundsStore({
+    read: () => serialized,
+    write: () => {},
+  })
+
+  return store.load().match(
+    (bounds) => bounds,
+    () => undefined,
+  )
+}
 
 describe('createDebouncedAction', () => {
   it('coalesces scheduled actions and flushes a pending action immediately', () => {
@@ -63,20 +74,20 @@ describe('window bounds storage', () => {
     ).toEqual(bounds)
   })
 
-  it('uses defaults when the saved value is missing', () => {
-    expect(parseWindowBounds(undefined)).toBeUndefined()
+  it('uses defaults when the saved value is null', () => {
+    expect(loadSavedBounds('null')).toEqual(undefined)
   })
 
   it('uses defaults when the saved width is zero', () => {
-    expect(
-      parseWindowBounds({ x: 10, y: 20, width: 0, height: 300 }),
-    ).toBeUndefined()
+    expect(loadSavedBounds('{"x":10,"y":20,"width":0,"height":300}')).toEqual(
+      undefined,
+    )
   })
 
   it('uses defaults when a saved coordinate has the wrong type', () => {
     expect(
-      parseWindowBounds({ x: '10', y: 20, width: 320, height: 300 }),
-    ).toBeUndefined()
+      loadSavedBounds('{"x":"10","y":20,"width":320,"height":300}'),
+    ).toEqual(undefined)
   })
 })
 

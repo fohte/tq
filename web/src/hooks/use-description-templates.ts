@@ -22,12 +22,10 @@ export type UpdateDescriptionTemplateInput = InferRequestType<
   (typeof api.api)['description-templates'][':name']['$patch']
 >['json']
 
-export const descriptionTemplateKeys = {
+const descriptionTemplateKeys = {
   all: ['description-templates'] as const,
   lists: ['description-templates', 'list'] as const,
   list: () => descriptionTemplateKeys.lists,
-  details: ['description-templates', 'detail'] as const,
-  detail: (name: string) => [...descriptionTemplateKeys.details, name] as const,
 }
 
 export function useDescriptionTemplates({
@@ -38,18 +36,6 @@ export function useDescriptionTemplates({
     enabled,
     queryFn: async () => {
       const res = await api.api['description-templates'].$get()
-      return unwrapOrThrow(assertOk(res)).json()
-    },
-  })
-}
-
-export function useDescriptionTemplate(name: string) {
-  return useQuery({
-    queryKey: descriptionTemplateKeys.detail(name),
-    queryFn: async () => {
-      const res = await api.api['description-templates'][':name'].$get({
-        param: { name: encodeURIComponent(name) },
-      })
       return unwrapOrThrow(assertOk(res)).json()
     },
   })

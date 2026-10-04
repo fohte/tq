@@ -21,12 +21,6 @@
     }
   },
   "scripts": {
-<<<<<<< before updating
-||||||| last update
-    "test:unit": "vitest run",
-=======
-    "test:unit": "vitest run --passWithNoTests",
->>>>>>> after updating
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -69,6 +63,7 @@
     "lucide-react": "0.577.0",
     "mdast-util-from-markdown": "2.0.3",
     "mdast-util-to-markdown": "2.1.2",
+    "neverthrow": "8.2.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "4.21.0",

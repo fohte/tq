@@ -83,13 +83,7 @@ class DataSourceBoundaryError extends BoundaryError {}
 
 When `error_tracking` or `is_web_app` is enabled, call `captureWithFingerprint` from `@fohte/service-kit/observability` immediately before rethrowing to give the error a stable Sentry fingerprint.
 
-<<<<<<< before updating
-Use `ResultAsync.fromPromise()` or `Result.fromThrowable()` to interop with a throwing API without a local try/catch. If the throw-based contract genuinely can't be wrapped that way, catch the exception, wrap it in a `BoundaryError` subclass (see `api/src/errors.ts`), and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
-||||||| last update
-Use `ResultAsync.fromPromise()` or `Result.fromThrowable()` to interop with a throwing API without a local try/catch. If the throw-based contract genuinely can't be wrapped that way, catch the exception, wrap it in a `BoundaryError` subclass (see `src/errors.ts`), and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
-=======
 Catch the exception, wrap it in the boundary-specific subclass, and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
->>>>>>> after updating
 
 ## Storybook
 

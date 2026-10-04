@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeMemo } from '#hooks/memo-test-fixtures'
-import { memoKeys, useMemos, useUpdateMemo } from '#hooks/use-memos'
+import { useMemos, useUpdateMemo } from '#hooks/use-memos'
 
 const { mockGet, mockPut } = vi.hoisted(() => ({
   mockGet: vi.fn(),
@@ -63,7 +63,7 @@ function staleRefetchState(
 beforeEach(() => {
   queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, staleTime: Infinity },
       mutations: { retry: false },
     },
   })
@@ -85,17 +85,31 @@ describe('useUpdateMemo', () => {
     })
     const updatedWorkMemo = makeMemo({ content: 'Work after', revision: 3 })
     const pendingPut = makeDeferred<ReturnType<typeof memoResponse>>()
+    mockGet.mockImplementation(({ param }: { param: { context: string } }) =>
+      Promise.resolve(
+        memoResponse(param.context === 'work' ? workMemo : personalMemo),
+      ),
+    )
     mockPut.mockReturnValue(pendingPut.promise)
-    queryClient.setQueryData(memoKeys.detail('work'), workMemo)
-    queryClient.setQueryData(memoKeys.detail('personal'), personalMemo)
 
     const { result, rerender } = renderHook(
       ({ context }: { context: 'work' | 'personal' }) => ({
         memo: useMemos(context, false),
+        workMemo: useMemos('work', true),
+        personalMemo: useMemos('personal', true),
         updateMemo: useUpdateMemo(),
       }),
       { wrapper, initialProps: { context: 'work' } },
     )
+
+    await waitFor(() => {
+      expect(
+        Object.values({
+          work: result.current.workMemo.data,
+          personal: result.current.personalMemo.data,
+        }),
+      ).toEqual([workMemo, personalMemo])
+    })
 
     let mutationPromise: Promise<ReturnType<typeof makeMemo>>
     act(() => {
@@ -122,8 +136,8 @@ describe('useUpdateMemo', () => {
       contextSwitchState(
         mockPut.mock.calls,
         result.current.memo.data,
-        queryClient.getQueryData(memoKeys.detail('work')),
-        queryClient.getQueryData(memoKeys.detail('personal')),
+        result.current.workMemo.data,
+        result.current.personalMemo.data,
       ),
     ).toEqual(
       contextSwitchState(
@@ -186,7 +200,7 @@ describe('useUpdateMemo', () => {
 
     expect(
       staleRefetchState(
-        queryClient.getQueryData(memoKeys.detail('work')),
+        result.current.memo.data,
         mockGet.mock.calls,
         mockPut.mock.calls,
       ),
