@@ -14,6 +14,14 @@ afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
 })
+
+function taskCreateSnapshot(
+  exitCode: number,
+  call: Parameters<typeof request>[0],
+) {
+  return { exitCode, request: request(call) }
+}
+
 describe('task create', () => {
   it('sends only the title when no optional flags are given and prints the response', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
@@ -83,6 +91,37 @@ describe('task create', () => {
       pathname: '/api/tasks',
       query: {},
       body: { title: 'New task', parentId: '42' },
+    })
+  })
+
+  it('sends --template with the selected description template name', async () => {
+    const created = { id: 't2', number: 2, title: 'Draft proposal' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'Draft proposal',
+        '--template',
+        'Execution brief',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(taskCreateSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: { title: 'Draft proposal', template: 'Execution brief' },
+      },
     })
   })
 

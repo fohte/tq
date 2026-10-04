@@ -27,6 +27,12 @@ const testApp = new Hono()
   .post('/widgets/:id/lock', (c) =>
     c.json({ error: 'Widget is already locked' }, 409),
   )
+  .post('/widgets/invalid', (c) =>
+    c.json(
+      { error: 'Fill all required sections and retry task creation.' },
+      400,
+    ),
+  )
   .get('/boom', () => {
     throw new Error('boom')
   })
@@ -75,6 +81,25 @@ describe('callInternalRoute', () => {
       result: {
         isError: true,
         content: [{ type: 'text', text: 'Widget not found' }],
+      },
+    })
+  })
+
+  it('maps a custom 400 message from the response body', async () => {
+    const result = await callInternalRoute(testApp, '/widgets/invalid', {
+      method: 'POST',
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      result: {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: 'Fill all required sections and retry task creation.',
+          },
+        ],
       },
     })
   })
