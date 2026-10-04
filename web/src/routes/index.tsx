@@ -42,6 +42,7 @@ import {
 } from '#hooks/use-time-blocks'
 import {
   getCompactRefetchInterval,
+  getNowPanelQueryDateRange,
   isCompactDayLayoutSearch,
 } from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
@@ -158,10 +159,28 @@ function DayView() {
     refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
+  const nowPanelDateRange = getNowPanelQueryDateRange(new Date())
+  const nowPanelTimeBlocksQuery = useTimeBlocks(
+    nowPanelDateRange.startDate,
+    nowPanelDateRange.endDate,
+    refetchInterval,
+    isCompactLayout,
+  )
+  const nowPanelSchedulesQuery = useScheduleList(
+    nowPanelDateRange.startDate,
+    nowPanelDateRange.endDate,
+    refetchInterval,
+    isCompactLayout,
+  )
   useCompactRefreshErrorLogging(
     isCompactLayout,
     timeBlocksQuery.error,
     schedulesQuery.error,
+  )
+  useCompactRefreshErrorLogging(
+    isCompactLayout,
+    nowPanelTimeBlocksQuery.error,
+    nowPanelSchedulesQuery.error,
   )
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
@@ -187,27 +206,39 @@ function DayView() {
     visibleRange.endDate,
     context,
   )
+  const nowPanelGcalEventsQuery = useGcalEvents(
+    nowPanelDateRange.startDate,
+    nowPanelDateRange.endDate,
+    context,
+    isCompactLayout,
+  )
   const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
-    gcalEventsQuery.error instanceof GcalAuthRequiredError
+    gcalEventsQuery.error instanceof GcalAuthRequiredError ||
+    nowPanelGcalEventsQuery.error instanceof GcalAuthRequiredError
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
     'google_calendar',
     gcalAuthRequired,
   )
 
   useEffect(() => {
-    if (gcalEventsQuery.error != null && !gcalAuthRequired) {
-      console.error(
-        'Failed to fetch Google Calendar events',
-        gcalEventsQuery.error,
-      )
+    const error = gcalEventsQuery.error ?? nowPanelGcalEventsQuery.error
+    if (error != null && !gcalAuthRequired) {
+      console.error('Failed to fetch Google Calendar events', error)
     }
-  }, [gcalEventsQuery.error, gcalAuthRequired])
+  }, [gcalEventsQuery.error, nowPanelGcalEventsQuery.error, gcalAuthRequired])
 
   const setQueueItems = useSetQueueItems()
   const autoAssign = useAutoAssign()
 
   const taskMap = useTaskMap(categorized.all)
+  const nowPanelCalendarEvents = useDayViewCalendarEvents({
+    timeBlocksData: nowPanelTimeBlocksQuery.data,
+    schedulesData: nowPanelSchedulesQuery.data,
+    gcalEventsData: nowPanelGcalEventsQuery.data,
+    taskMap,
+    context,
+  })
 
   // Queue updates replace the full list, so keep stored IDs separate from
   // filters applied to the displayed sections.
@@ -403,6 +434,16 @@ function DayView() {
     <>
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
+        nowPanel={{
+          timeBlocks: nowPanelTimeBlocksQuery.data ?? [],
+          calendarEvents: nowPanelCalendarEvents,
+          taskMap,
+          isLoading:
+            isLoading ||
+            nowPanelTimeBlocksQuery.isPending ||
+            nowPanelSchedulesQuery.isPending ||
+            nowPanelGcalEventsQuery.isPending,
+        }}
         isLoading={
           isLoading || (isKanbanFiltering && filteredTasksQuery.isLoading)
         }

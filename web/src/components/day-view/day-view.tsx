@@ -15,6 +15,7 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
+import { NowPanel, type NowPanelProps } from '#components/day-view/now-panel'
 import {
   QueuePane,
   type QueueSectionData,
@@ -111,6 +112,7 @@ export interface DayViewPresentationProps {
   /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
+  nowPanel?: NowPanelProps
 }
 
 export function DayViewPresentation({
@@ -138,6 +140,7 @@ export function DayViewPresentation({
   kanbanFilterRow,
   initialMobileTab,
   layout = 'default',
+  nowPanel,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
@@ -352,6 +355,8 @@ export function DayViewPresentation({
           }}
         >
           {activeViewMode === 'kanban' && kanbanFilterRow}
+
+          {isCompactLayout && nowPanel != null && <NowPanel {...nowPanel} />}
 
           {/* Summary header (today's queue only) */}
           <div className="border-b border-border py-2.5">

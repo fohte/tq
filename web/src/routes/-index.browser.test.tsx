@@ -8,6 +8,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { getNowPanelQueryDateRange } from '#lib/compact-layout'
 import { Route as RootRoute } from '#routes/__root'
 import { Route as DayRoute } from '#routes/index'
 
@@ -19,6 +20,13 @@ type DateRangeQueryMock = (
   startDate: string,
   endDate: string,
   refetchInterval?: number,
+  enabled?: boolean,
+) => unknown
+type GcalQueryMock = (
+  startDate: string,
+  endDate: string,
+  context: 'work' | 'personal',
+  enabled?: boolean,
 ) => unknown
 type QueueListMock = (refetchInterval?: number) => unknown
 type QueueItemsMock = (
@@ -31,6 +39,7 @@ const mocks = vi.hoisted(() => ({
   useTaskList: vi.fn<TaskListMock>(),
   useTimeBlocks: vi.fn<DateRangeQueryMock>(),
   useScheduleList: vi.fn<DateRangeQueryMock>(),
+  useGcalEvents: vi.fn<GcalQueryMock>(),
   useQueues: vi.fn<QueueListMock>(),
   useQueueItemsForQueues: vi.fn<QueueItemsMock>(),
 }))
@@ -79,7 +88,10 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 vi.mock('#hooks/use-gcal-events', () => ({
   GcalAuthRequiredError: class extends Error {},
   useAutoRescheduleOnGcalChange: vi.fn(),
-  useGcalEvents: () => ({ data: [], error: null }),
+  useGcalEvents: (...args: Parameters<GcalQueryMock>) => {
+    mocks.useGcalEvents(...args)
+    return { data: [], error: null }
+  },
 }))
 
 vi.mock('#hooks/use-github-link', () => ({ useGithubSync: () => {} }))
@@ -180,6 +192,7 @@ beforeEach(() => {
   })
   mocks.useTimeBlocks.mockReturnValue({ data: [], error: null })
   mocks.useScheduleList.mockReturnValue({ data: [], error: null })
+  mocks.useGcalEvents.mockReturnValue({ data: [], error: null })
   mocks.useQueues.mockReturnValue({ data: [] })
   mocks.useQueueItemsForQueues.mockReturnValue([])
 })
@@ -191,6 +204,7 @@ afterEach(() => {
 describe('day-view route compact layout', () => {
   it('activates the compact shell and polls every visible data query from the URL', async () => {
     const { queryClient, router } = await renderDayRoute('/?layout=compact')
+    const nowPanelRange = getNowPanelQueryDateRange(new Date())
     const getCompactRouteState = () => ({
       pathname: router.state.location.pathname,
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
@@ -198,6 +212,15 @@ describe('day-view route compact layout', () => {
       taskListInterval: mocks.useTaskList.mock.calls[0]?.[1]?.refetchInterval,
       timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
       schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
+      nowPanelTimeBlocksRange: mocks.useTimeBlocks.mock.calls
+        .find((call) => call[3] === true)
+        ?.slice(0, 2),
+      nowPanelSchedulesRange: mocks.useScheduleList.mock.calls
+        .find((call) => call[3] === true)
+        ?.slice(0, 2),
+      nowPanelGcalRange: mocks.useGcalEvents.mock.calls
+        .find((call) => call[3] === true)
+        ?.slice(0, 2),
       queuesInterval: mocks.useQueues.mock.calls[0]?.[0],
       queueItemsInterval: mocks.useQueueItemsForQueues.mock.calls[0]?.[2],
     })
@@ -210,6 +233,15 @@ describe('day-view route compact layout', () => {
         taskListInterval: 60_000,
         timeBlocksInterval: 60_000,
         schedulesInterval: 60_000,
+        nowPanelTimeBlocksRange: [
+          nowPanelRange.startDate,
+          nowPanelRange.endDate,
+        ],
+        nowPanelSchedulesRange: [
+          nowPanelRange.startDate,
+          nowPanelRange.endDate,
+        ],
+        nowPanelGcalRange: [nowPanelRange.startDate, nowPanelRange.endDate],
         queuesInterval: 60_000,
         queueItemsInterval: 60_000,
       })
@@ -227,6 +259,15 @@ describe('day-view route compact layout', () => {
       taskListInterval: mocks.useTaskList.mock.calls[0]?.[1]?.refetchInterval,
       timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
       schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
+      nowPanelTimeBlocksEnabled: mocks.useTimeBlocks.mock.calls.some(
+        (call) => call[3] === false,
+      ),
+      nowPanelSchedulesEnabled: mocks.useScheduleList.mock.calls.some(
+        (call) => call[3] === false,
+      ),
+      nowPanelGcalEnabled: mocks.useGcalEvents.mock.calls.some(
+        (call) => call[3] === false,
+      ),
       queuesInterval: mocks.useQueues.mock.calls[0]?.[0],
       queueItemsInterval: mocks.useQueueItemsForQueues.mock.calls[0]?.[2],
     })
@@ -239,6 +280,9 @@ describe('day-view route compact layout', () => {
         taskListInterval: undefined,
         timeBlocksInterval: undefined,
         schedulesInterval: undefined,
+        nowPanelTimeBlocksEnabled: true,
+        nowPanelSchedulesEnabled: true,
+        nowPanelGcalEnabled: true,
         queuesInterval: undefined,
         queueItemsInterval: undefined,
       })
@@ -259,6 +303,8 @@ describe('day-view route compact layout', () => {
 
     await waitFor(() => {
       expect(getLoggedErrors()).toEqual([
+        ['Failed to refresh time blocks in compact layout', timeBlocksError],
+        ['Failed to refresh schedules in compact layout', schedulesError],
         ['Failed to refresh time blocks in compact layout', timeBlocksError],
         ['Failed to refresh schedules in compact layout', schedulesError],
       ])

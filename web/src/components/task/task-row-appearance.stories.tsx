@@ -30,11 +30,17 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function TaskRowAppearanceWithProviders({ task }: { task: Task }) {
+function TaskRowAppearanceWithProviders({
+  task,
+  size = 'default',
+}: {
+  task: Task
+  size?: 'default' | 'large'
+}) {
   return (
     <Providers>
       <div className="w-full max-w-3xl">
-        <TaskRowAppearance task={task} />
+        <TaskRowAppearance task={task} size={size} />
       </div>
     </Providers>
   )
@@ -96,6 +102,14 @@ export const Todo: Story = {
   name: 'the row shows a task that is not yet complete',
   args: {
     task: { ...baseTask },
+  },
+}
+
+export const Large: Story = {
+  name: 'the row uses a larger title and more vertical space',
+  args: {
+    task: { ...baseTask },
+    size: 'large',
   },
 }
 
