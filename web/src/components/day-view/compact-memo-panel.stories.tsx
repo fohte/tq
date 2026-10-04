@@ -31,3 +31,19 @@ type Story = StoryObj<typeof meta>
 export const WithNotes: Story = {
   name: 'the work memo shows a few notes in its fixed editor area',
 }
+
+export const Loading: Story = {
+  name: 'the memo shows a loading message while its contents are fetched',
+  args: {
+    memo: undefined,
+    isLoading: true,
+  },
+}
+
+export const LoadError: Story = {
+  name: 'the memo shows an unavailable message after a load error',
+  args: {
+    memo: undefined,
+    loadError: true,
+  },
+}
