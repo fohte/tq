@@ -109,6 +109,9 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
     childCompletionCount: task.childCompletionCount,
     duplicateOfNumber: task.duplicateOfNumber ?? null,
     blockedByNumbers: task.blockedBy.map(({ number }) => number),
+    blockedByGithubRefs: task.githubBlockers
+      .filter(({ state }) => state === 'open')
+      .map(({ owner, repo, number, url }) => ({ owner, repo, number, url })),
   }
 }
 

@@ -222,7 +222,7 @@ describe('task create', () => {
     })
   })
 
-  it('splits --blocked-by into an id/number array', async () => {
+  it('splits --blocked-by into task ids/numbers and GitHub URLs', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -236,7 +236,7 @@ describe('task create', () => {
         'create',
         'New task',
         '--blocked-by',
-        '312, 315',
+        '312, https://github.com/example-owner/example-repo/issues/17, 315',
       ],
       fetchStub,
       fakeStdin(true),
@@ -247,7 +247,14 @@ describe('task create', () => {
       method: 'POST',
       pathname: '/api/tasks',
       query: {},
-      body: { title: 'New task', blockedBy: ['312', '315'] },
+      body: {
+        title: 'New task',
+        blockedBy: [
+          '312',
+          'https://github.com/example-owner/example-repo/issues/17',
+          '315',
+        ],
+      },
     })
   })
 
@@ -428,14 +435,22 @@ describe('task update', () => {
     })
   })
 
-  it('splits --blocked-by into an id/number array', async () => {
+  it('splits --blocked-by into task ids/numbers and GitHub URLs', async () => {
     const updated = { id: 't1', number: 1 }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
     )
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'update', '42', '--blocked-by', '312, 315'],
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'update',
+        '42',
+        '--blocked-by',
+        '312, https://github.com/example-owner/example-repo/issues/17, 315',
+      ],
       fetchStub,
       fakeStdin(true),
     )
@@ -445,7 +460,13 @@ describe('task update', () => {
       method: 'PATCH',
       pathname: '/api/tasks/42',
       query: {},
-      body: { blockedBy: ['312', '315'] },
+      body: {
+        blockedBy: [
+          '312',
+          'https://github.com/example-owner/example-repo/issues/17',
+          '315',
+        ],
+      },
     })
   })
 

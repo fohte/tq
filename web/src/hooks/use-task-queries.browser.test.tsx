@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +8,7 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
   TASK_LIST_PAGE_SIZE,
   useInfiniteTaskList,
+  useTaskList,
 } from '#hooks/use-task-queries'
 
 vi.mock('#lib/api', () => {
@@ -171,5 +172,38 @@ describe('useInfiniteTaskList', () => {
     )
 
     expect(mockGet).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTaskList polling', () => {
+  it('refetches when an interval is supplied', async () => {
+    vi.useFakeTimers()
+    try {
+      const mockGet = await getMockGet()
+      mockGet.mockResolvedValue(jsonResponse([]))
+
+      renderHook(() => useTaskList(undefined, { refetchInterval: 60_000 }), {
+        wrapper,
+      })
+
+      let initialCallCount = 0
+      const getCallCounts = () => ({
+        initial: initialCallCount,
+        afterInterval: mockGet.mock.calls.length,
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      initialCallCount = mockGet.mock.calls.length
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+      })
+
+      expect(getCallCounts()).toEqual({ initial: 1, afterInterval: 2 })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

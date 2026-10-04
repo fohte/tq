@@ -7,6 +7,7 @@ import { pushSubscriptions, taskGithubLinks, tasks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import {
   makeGithubIssueResponse,
+  makeGithubTimelineEvent,
   upsertGithubToken,
 } from '#integrations/github/testing'
 import { firstOrThrow } from '#lib/drizzle-utils'
@@ -130,11 +131,7 @@ function timelineEvent(
   login: string | null,
   timestamp = '2024-08-13T09:30:00Z',
 ) {
-  return {
-    event,
-    ...(login === null ? {} : { actor: { login } }),
-    created_at: timestamp,
-  }
+  return makeGithubTimelineEvent(event, login, timestamp)
 }
 
 function defaultTimelineEvents() {

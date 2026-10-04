@@ -81,6 +81,7 @@ Set `TQ_ORIGIN` to the tq instance the window loads, using an `http://` or `http
 - Pages outside `TQ_ORIGIN`, such as the sign-in flow, keep navigating inside the window.
 - Back / Forward are in the History menu (`Cmd+[` / `Cmd+]`); the window has no browser toolbar.
 - Copy the current page URL from the Page menu with `Cmd+Shift+C`; the window has no address bar.
+- Open a narrow side window from **Window > Open Side Window**. Its position and size are restored after the app restarts.
 - A `tq://<host>/<path>` link opens the same path on `TQ_ORIGIN` in the window, e.g. `tq://tq.fohte.net/tasks/1` opens `https://tq.fohte.net/tasks/1` for `TQ_ORIGIN=https://tq.fohte.net`. A link whose host (including any port) differs from `TQ_ORIGIN` is ignored. Only the packaged app registers the scheme, not `pnpm --filter desktop run start`.
 - Closing the window hides it; the app keeps running and comes back from the Dock.
 

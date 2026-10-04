@@ -81,6 +81,7 @@ export const buildMenuTemplate = (
   history: NavigationHistory,
   webContents: CurrentPage,
   clipboard: ClipboardWriter,
+  openSideWindow: () => void,
 ): MenuTemplateItem[] => [
   { role: 'appMenu' },
   { role: 'fileMenu' },
@@ -88,5 +89,17 @@ export const buildMenuTemplate = (
   { role: 'viewMenu' },
   { label: 'Page', submenu: pageItems(webContents, clipboard) },
   { label: 'History', submenu: historyItems(history) },
-  { role: 'windowMenu' },
+  {
+    label: 'Window',
+    submenu: [
+      { label: 'Open Side Window', click: openSideWindow },
+      { type: 'separator' },
+      { role: 'minimize' },
+      { role: 'zoom' },
+      { type: 'separator' },
+      { role: 'front' },
+      { type: 'separator' },
+      { role: 'window' },
+    ],
+  },
 ]

@@ -22,7 +22,9 @@ const fakeHistory = (can: Can) => {
 
 const menuWithHistory = (can: Can) => {
   const { calls, history } = fakeHistory(can)
-  const menu = buildMenuTemplate(history, fakePage(), { writeText: () => {} })
+  const menu = buildTestMenuTemplate(history, fakePage(), {
+    writeText: () => {},
+  })
   return { calls, menu }
 }
 
@@ -34,6 +36,14 @@ const fakePage = (
   getURL,
   executeJavaScript,
 })
+
+function buildTestMenuTemplate(
+  history: NavigationHistory,
+  webContents: ReturnType<typeof fakePage>,
+  clipboard: { writeText: (text: string) => void },
+) {
+  return buildMenuTemplate(history, webContents, clipboard, () => {})
+}
 
 type MenuTemplateItem = ReturnType<typeof buildMenuTemplate>[number]
 
@@ -102,7 +112,7 @@ describe('History menu', () => {
 
 describe('Page menu', () => {
   it('binds the Page menu shortcuts', () => {
-    const menu = buildMenuTemplate(
+    const menu = buildTestMenuTemplate(
       fakeHistory({ back: false, forward: false }).history,
       fakePage(),
       { writeText: () => {} },
@@ -124,7 +134,7 @@ describe('Page menu', () => {
     class FakeCustomEvent {
       constructor(readonly type: string) {}
     }
-    const menu = buildMenuTemplate(
+    const menu = buildTestMenuTemplate(
       fakeHistory({ back: false, forward: false }).history,
       fakePage(undefined, (script) => {
         runInNewContext(script, {
@@ -150,7 +160,7 @@ describe('Page menu', () => {
   it('logs when the page cannot open the find bar', async () => {
     const failure = new Error('renderer unavailable')
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const menu = buildMenuTemplate(
+    const menu = buildTestMenuTemplate(
       fakeHistory({ back: false, forward: false }).history,
       fakePage(undefined, () => Promise.reject(failure)),
       { writeText: () => {} },
@@ -167,7 +177,7 @@ describe('Page menu', () => {
   it('copies the URL the page has at click time', () => {
     let currentUrl = 'https://example.test/tasks/41'
     const copiedUrls: string[] = []
-    const menu = buildMenuTemplate(
+    const menu = buildTestMenuTemplate(
       fakeHistory({ back: false, forward: false }).history,
       fakePage(() => currentUrl),
       {
@@ -202,7 +212,7 @@ describe('Page menu', () => {
         return true
       },
     }
-    const menu = buildMenuTemplate(
+    const menu = buildTestMenuTemplate(
       fakeHistory({ back: false, forward: false }).history,
       fakePage(
         () => url,
@@ -225,7 +235,7 @@ describe('Page menu', () => {
   it('logs when the page cannot display the copied URL toast', async () => {
     const failure = new Error('renderer unavailable')
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const menu = buildMenuTemplate(
+    const menu = buildTestMenuTemplate(
       fakeHistory({ back: false, forward: false }).history,
       fakePage(
         () => 'https://example.test/tasks/42',
@@ -242,5 +252,45 @@ describe('Page menu', () => {
     expect(loggedCalls).toEqual([
       ['failed to show the URL copied toast', failure],
     ])
+  })
+})
+describe('Window menu', () => {
+  it('includes a command to open the side window in the Window menu', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const menu = buildMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      () => {},
+    )
+
+    expect(
+      menuItems(menu, 'Window').map(
+        ({ label, role, type }) => label ?? role ?? type,
+      ),
+    ).toEqual([
+      'Open Side Window',
+      'separator',
+      'minimize',
+      'zoom',
+      'separator',
+      'front',
+      'separator',
+      'window',
+    ])
+  })
+
+  it('calls the side-window action when the menu command is selected', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const openSideWindow = vi.fn()
+    const menu = buildMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      openSideWindow,
+    )
+    clickMenuItem(menu, 'Window', 'Open Side Window')
+
+    expect(openSideWindow.mock.calls).toEqual([[]])
   })
 })

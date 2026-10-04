@@ -7,10 +7,12 @@ import { healthOperations } from '#operations/health'
 import { hookOperations } from '#operations/hook'
 import { labelOperations } from '#operations/label'
 import { linkOperations } from '#operations/link'
+import { memoOperations } from '#operations/memo'
 import { pageOperations } from '#operations/page'
 import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
 import { savedViewOperations } from '#operations/saved-view'
+import { scheduleOperations } from '#operations/schedule'
 import { sessionOperations } from '#operations/session'
 import { taskReadOperations } from '#operations/task-read'
 import { taskWriteOperations } from '#operations/task-write'
@@ -25,10 +27,12 @@ export {
   hookOperations,
   labelOperations,
   linkOperations,
+  memoOperations,
   pageOperations,
   projectOperations,
   queueOperations,
   savedViewOperations,
+  scheduleOperations,
   sessionOperations,
   taskReadOperations,
   taskWriteOperations,
@@ -43,10 +47,12 @@ export const operations = [
   ...hookOperations,
   ...labelOperations,
   ...linkOperations,
+  ...memoOperations,
   ...pageOperations,
   ...projectOperations,
   ...queueOperations,
   ...savedViewOperations,
+  ...scheduleOperations,
   ...sessionOperations,
   ...taskReadOperations,
   ...taskWriteOperations,
