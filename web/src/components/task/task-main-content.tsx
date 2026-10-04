@@ -127,7 +127,7 @@ export function TaskMainContent({
         taskId={task.id}
         blockedBy={task.blockedBy}
         blocking={task.blocking}
-        githubBlockerUrls={task.githubBlockers.map(({ url }) => url)}
+        githubBlockers={task.githubBlockers}
       />
 
       {/* Linked Tasks */}

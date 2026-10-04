@@ -107,8 +107,11 @@ export function TaskRowAppearance({
         duplicateOfNumber={task.duplicateOfNumber}
       />
     ) : null,
-    task.blockedByNumbers.length > 0 ? (
-      <BlockedByLabel blockedByNumbers={task.blockedByNumbers} />
+    task.blockedByNumbers.length + task.blockedByGithubRefs.length > 0 ? (
+      <BlockedByLabel
+        blockedByNumbers={task.blockedByNumbers}
+        blockedByGithubRefs={task.blockedByGithubRefs}
+      />
     ) : null,
     ...secondLineExtras,
   ]

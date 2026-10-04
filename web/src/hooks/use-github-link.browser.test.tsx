@@ -65,7 +65,8 @@ function makeDetail(): TaskDetail {
   return makeTaskDetail({
     id: taskId,
     title: 'An example task',
-    githubLinks: [targetLink, otherLink],
+    githubLinks: [targetLink],
+    githubBlockers: [otherLink],
   })
 }
 
@@ -117,7 +118,69 @@ afterEach(() => {
 })
 
 describe('useUpdateGithubLinkNotifyEvents', () => {
-  it('optimistically updates only the selected link while the PATCH is pending', async () => {
+  it('optimistically updates the selected blocker while the PATCH is pending', async () => {
+    const mocks = await getMocks()
+    const previousDetail = makeDetail()
+    const nextEvents: GithubLink['notifyEvents'] = ['closed', 'comments']
+    const optimisticDetail = {
+      ...previousDetail,
+      githubBlockers: previousDetail.githubBlockers.map((blocker) =>
+        blocker.id === otherLink.id
+          ? { ...blocker, notifyEvents: nextEvents }
+          : blocker,
+      ),
+    }
+    queryClient.setQueryData(taskKeys.detail(taskId), previousDetail)
+
+    let resolvePatch: (value: unknown) => void = () => {
+      throw new Error('resolvePatch called before the PATCH request starts')
+    }
+    const patchResponsePromise = new Promise((resolve) => {
+      resolvePatch = resolve
+    })
+    assertDefined(mocks['mockPatch']).mockReturnValue(patchResponsePromise)
+
+    const { result } = renderHook(
+      () => useUpdateGithubLinkNotifyEvents(taskId),
+      { wrapper },
+    )
+    let mutationPromise: Promise<GithubLink> | undefined
+    act(() => {
+      mutationPromise = result.current.mutateAsync({
+        linkId: otherLink.id,
+        notifyEvents: nextEvents,
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        readPendingMutationState(
+          assertDefined(mocks['mockPatch']),
+          result.current.isPending,
+        ),
+      ).toEqual({
+        cache: optimisticDetail,
+        patchCalls: [
+          [
+            {
+              param: { taskId, linkId: otherLink.id },
+              json: { notifyEvents: nextEvents },
+            },
+          ],
+        ],
+        isPending: true,
+      })
+    })
+
+    resolvePatch({
+      status: 200,
+      ok: true,
+      json: () => Promise.resolve({ ...otherLink, notifyEvents: nextEvents }),
+    })
+    await assertDefined(mutationPromise)
+  })
+
+  it('optimistically updates an ordinary GitHub link while the PATCH is pending', async () => {
     const mocks = await getMocks()
     const previousDetail = makeDetail()
     const nextEvents: GithubLink['notifyEvents'] = ['closed', 'comments']
@@ -197,7 +260,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
     let mutationOutcome: Promise<'resolved' | 'rejected'> | undefined
     act(() => {
       mutationOutcome = result.current
-        .mutateAsync({ linkId: targetLink.id, notifyEvents: nextEvents })
+        .mutateAsync({ linkId: otherLink.id, notifyEvents: nextEvents })
         .then(
           () => 'resolved' as const,
           () => 'rejected' as const,
@@ -213,7 +276,7 @@ describe('useUpdateGithubLinkNotifyEvents', () => {
       patchCalls: [
         [
           {
-            param: { taskId, linkId: targetLink.id },
+            param: { taskId, linkId: otherLink.id },
             json: { notifyEvents: nextEvents },
           },
         ],

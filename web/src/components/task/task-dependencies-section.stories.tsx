@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeGithubBlocker } from '#components/task/github-link-test-fixtures'
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
@@ -35,6 +36,26 @@ const blockingTasks: LinkedTaskSummary[] = [
   },
 ]
 
+const githubBlockers = [
+  makeGithubBlocker({
+    id: 'github-blocker-open',
+    owner: 'example-team',
+    repo: 'sample-project',
+    number: 2048,
+    title: 'Update the build tools',
+  }),
+  makeGithubBlocker({
+    id: 'github-blocker-merged',
+    owner: 'sample-group',
+    repo: 'sample-cli',
+    number: 87,
+    kind: 'pull_request',
+    state: 'merged',
+    title: 'Add the config file option',
+    url: 'https://github.com/sample-group/sample-cli/pull/87',
+  }),
+]
+
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -53,11 +74,11 @@ function Providers({ children }: { children: ReactNode }) {
 function SectionStory({
   blockedBy,
   blocking,
-  githubBlockerUrls,
+  githubBlockers: currentGithubBlockers,
 }: {
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
-  githubBlockerUrls: string[]
+  githubBlockers: typeof githubBlockers
 }) {
   return (
     <Providers>
@@ -66,7 +87,7 @@ function SectionStory({
           taskId={taskId}
           blockedBy={blockedBy}
           blocking={blocking}
-          githubBlockerUrls={githubBlockerUrls}
+          githubBlockers={currentGithubBlockers}
         />
       </div>
     </Providers>
@@ -89,7 +110,7 @@ export const WithBothGroups: Story = {
   args: {
     blockedBy: blockedByTasks,
     blocking: blockingTasks,
-    githubBlockerUrls: [],
+    githubBlockers,
   },
 }
 
@@ -98,11 +119,20 @@ export const BlockedByOnly: Story = {
   args: {
     blockedBy: blockedByTasks,
     blocking: [],
-    githubBlockerUrls: [],
+    githubBlockers,
+  },
+}
+
+export const WithGitHubBlockers: Story = {
+  name: 'the section shows open and resolved GitHub blockers',
+  args: {
+    blockedBy: [],
+    blocking: [],
+    githubBlockers,
   },
 }
 
 export const Empty: Story = {
   name: 'the task has no dependencies',
-  args: { blockedBy: [], blocking: [], githubBlockerUrls: [] },
+  args: { blockedBy: [], blocking: [], githubBlockers: [] },
 }

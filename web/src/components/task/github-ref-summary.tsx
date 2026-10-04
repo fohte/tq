@@ -26,13 +26,14 @@ export function GithubRefSummary({
   number,
   title,
   titleClassName,
-}: GithubRef & { titleClassName?: string }) {
+  refClassName,
+}: GithubRef & { titleClassName?: string; refClassName?: string }) {
   const Icon = kind === 'pull_request' ? GitPullRequest : CircleDot
 
   return (
     <>
       <Icon className={cn('size-3.5 shrink-0', STATE_COLORS[state])} />
-      <span className="shrink-0 text-muted-foreground">
+      <span className={cn('shrink-0 text-muted-foreground', refClassName)}>
         {owner}/{repo}#{number}
       </span>
       <span className={cn('truncate', titleClassName)}>{title}</span>

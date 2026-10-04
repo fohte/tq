@@ -13,6 +13,7 @@ type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
 type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
+export type BlockedByGithubRef = Task['blockedByGithubRefs'][number]
 
 type TaskStatus = 'todo' | 'completed'
 
