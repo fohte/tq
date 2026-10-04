@@ -6,11 +6,11 @@ Associations between tasks and coding agent sessions.
 
 ## Columns
 
-| Name             | Type                     | Default | Nullable | Children | Parents                                           | Comment                                             |
-| ---------------- | ------------------------ | ------- | -------- | -------- | ------------------------------------------------- | --------------------------------------------------- |
-| task_id          | text                     |         | false    |          | [public.tasks](public.tasks.md)                   | Task associated with the agent session.             |
-| agent_session_id | text                     |         | false    |          | [public.agent_sessions](public.agent_sessions.md) | Agent session associated with the task.             |
-| linked_at        | timestamp with time zone | now()   | false    |          |                                                   | Time when the task was linked to the agent session. |
+| Name             | Type                     | Default | Nullable | Children | Parents                                           | Comment                                                                                        |
+| ---------------- | ------------------------ | ------- | -------- | -------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| task_id          | text                     |         | false    |          | [public.tasks](public.tasks.md)                   | Task associated with the agent session.                                                        |
+| agent_session_id | text                     |         | false    |          | [public.agent_sessions](public.agent_sessions.md) | Agent session associated with the task.                                                        |
+| linked_at        | timestamp with time zone | now()   | false    |          |                                                   | Time when the task was linked to the agent session; existing links receive the migration time. |
 
 ## Constraints
 

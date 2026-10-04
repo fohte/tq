@@ -165,7 +165,7 @@ comments:
     columnComments:
       task_id: 'Task associated with the agent session.'
       agent_session_id: 'Agent session associated with the task.'
-      linked_at: 'Time when the task was linked to the agent session.'
+      linked_at: 'Time when the task was linked to the agent session; existing links receive the migration time.'
   - table: task_comments
     tableComment: 'Text comments attached to tasks.'
     columnComments:

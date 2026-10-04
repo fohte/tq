@@ -1,10 +1,10 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions } from '#db/schema'
-import { jsonBody, setupTestDb } from '#testing'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -56,6 +56,17 @@ describe('task <-> agent session links API', () => {
     it('links an agent session to a task', async () => {
       const task = await createTask('My task')
       const session = await createAgentSession('session-1')
+      const sessionStartedAt = new Date('2000-01-01T00:00:00.000Z')
+      await db
+        .update(agentSessions)
+        .set({ startedAt: sessionStartedAt })
+        .where(eq(agentSessions.id, session.id))
+      const [linkTimestampRow] = await db
+        .select({ linkTimestamp: sql<string>`now()` })
+        .from(agentSessions)
+        .where(eq(agentSessions.id, session.id))
+      assertDefined(linkTimestampRow)
+      const { linkTimestamp } = linkTimestampRow
 
       const res = await postLink(task.id, session.id)
       const [link] = await db
@@ -76,11 +87,11 @@ describe('task <-> agent session links API', () => {
         ),
       ).toEqual({
         status: 201,
-        body: session,
+        body: { ...session, startedAt: sessionStartedAt.toISOString() },
         link: {
           taskId: task.id,
           agentSessionId: session.id,
-          linkedAt: session.startedAt,
+          linkedAt: new Date(linkTimestamp).toISOString(),
         },
       })
     })
