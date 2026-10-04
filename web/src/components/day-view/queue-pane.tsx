@@ -13,6 +13,7 @@ import { QueueSection } from '#components/task/queue-section'
 import type { Task } from '#hooks/use-tasks'
 import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
 import { isCandidateDragData, type QueueCandidate } from '#lib/queue-candidates'
+import { cn } from '#lib/utils'
 
 export interface QueueSectionData {
   key: string
@@ -50,6 +51,7 @@ export interface QueuePaneProps {
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
+  className?: string
 }
 
 export function QueuePane({
@@ -60,6 +62,7 @@ export function QueuePane({
   onMoveTask,
   onInsertCandidate,
   onRemoveFromQueue,
+  className,
 }: QueuePaneProps) {
   // Delayed touch activation keeps scrolling available and lets short taps navigate.
   const dndSensors = useSensors(
@@ -116,7 +119,10 @@ export function QueuePane({
   }
 
   return (
-    <div className="flex-1 overflow-auto" data-scroll-restoration-id="day-view">
+    <div
+      className={cn('flex-1 overflow-auto', className)}
+      data-scroll-restoration-id="day-view"
+    >
       {isLoading ? (
         <div className="p-4 text-center text-sm text-muted-foreground">
           Loading...

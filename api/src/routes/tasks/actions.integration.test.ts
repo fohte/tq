@@ -1,9 +1,14 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskRelations, tasks } from '#db/schema'
+import { taskGithubLinks, taskRelations, tasks } from '#db/schema'
+import {
+  mockGithubIssueResponse,
+  mockGithubPullResponse,
+  upsertGithubToken,
+} from '#integrations/github/testing'
 import {
   createLabel,
   createRecurringTask,
@@ -17,6 +22,10 @@ import {
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 async function setStatus(
   taskId: string,
@@ -888,7 +897,107 @@ describe('tasks actions API', () => {
     }
 
     describe('POST /api/tasks/:id/complete', () => {
-      it('returns 409 with blockedByNumbers when a blocker is incomplete', async () => {
+      it('blocks completion with open GitHub issues and ignores merged pull requests', async () => {
+        const internalBlocker = await createTask('Internal blocker')
+        const task = await createTask('Blocked by GitHub')
+        const issueUrl =
+          'https://github.com/example-owner/example-repo/issues/17'
+        const pullUrl = 'https://github.com/example-owner/example-repo/pull/18'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({
+          title: 'Open issue',
+          html_url: issueUrl,
+        })
+        mockGithubIssueResponse({
+          title: 'Merged pull request',
+          html_url: pullUrl,
+          state: 'closed',
+          pull_request: {},
+        })
+        mockGithubPullResponse(true)
+        const patchRes = await setBlockedBy(task.id, [
+          internalBlocker.id,
+          issueUrl,
+          pullUrl,
+        ])
+        const blockedRes = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+        })
+        const githubBlockers = await db
+          .select({
+            id: taskGithubLinks.id,
+            owner: taskGithubLinks.owner,
+            repo: taskGithubLinks.repo,
+            number: taskGithubLinks.number,
+            state: taskGithubLinks.state,
+          })
+          .from(taskGithubLinks)
+          .where(eq(taskGithubLinks.taskId, task.id))
+          .orderBy(taskGithubLinks.number)
+        const issueLink = githubBlockers.find(({ number }) => number === 17)
+        assertDefined(issueLink)
+        await db
+          .update(taskGithubLinks)
+          .set({ state: 'closed', stateReason: 'not_planned' })
+          .where(eq(taskGithubLinks.id, issueLink.id))
+        const internalBlockerRes = await app.request(
+          `/api/tasks/${internalBlocker.id}/complete`,
+          { method: 'POST' },
+        )
+        const resolvedRes = await app.request(
+          `/api/tasks/${task.id}/complete`,
+          { method: 'POST' },
+        )
+        const resolvedBody = await jsonBody<TaskResponse>(resolvedRes)
+        const blockedBody = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(blockedRes)
+
+        const getActual = () => ({
+          patchStatus: patchRes.status,
+          blockedStatus: blockedRes.status,
+          blockedBody,
+          githubBlockerStates: githubBlockers.map(({ number, state }) => ({
+            number,
+            state,
+          })),
+          resolvedStatus: resolvedRes.status,
+          internalBlockerStatus: internalBlockerRes.status,
+          resolvedTaskStatus: resolvedBody.status,
+        })
+        expect(getActual()).toEqual({
+          patchStatus: 200,
+          blockedStatus: 409,
+          blockedBody: {
+            error: `Task is blocked by unresolved blockers: #${String(internalBlocker.number)}, example-owner/example-repo#17`,
+            blockedByNumbers: [internalBlocker.number],
+            blockedByGithubRefs: [
+              {
+                owner: 'example-owner',
+                repo: 'example-repo',
+                number: 17,
+                url: issueUrl,
+              },
+            ],
+          },
+          githubBlockerStates: [
+            { number: 17, state: 'open' },
+            { number: 18, state: 'merged' },
+          ],
+          resolvedStatus: 200,
+          internalBlockerStatus: 200,
+          resolvedTaskStatus: 'completed',
+        })
+      })
+
+      it('returns 409 with all unresolved blockers when a blocker is incomplete', async () => {
         const blocker = await createTask('Blocker')
         const task = await createTask('Blocked')
         await setBlockedBy(task.id, [blocker.id])
@@ -897,20 +1006,36 @@ describe('tasks actions API', () => {
           method: 'POST',
         })
 
-        expect(res.status).toBe(409)
-        expect(
-          await jsonBody<{ error: string; blockedByNumbers: number[] }>(res),
-        ).toEqual({
-          error: `Task is blocked by incomplete tasks: #${String(blocker.number)}`,
-          blockedByNumbers: [blocker.number],
-        })
-
+        const body = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(res)
         const [dbTask] = await db
           .select({ status: tasks.status })
           .from(tasks)
           .where(eq(tasks.id, task.id))
         assertDefined(dbTask)
-        expect(dbTask.status).toBe('todo')
+
+        const getActual = () => ({
+          status: res.status,
+          body,
+          taskStatus: dbTask.status,
+        })
+        expect(getActual()).toEqual({
+          status: 409,
+          body: {
+            error: `Task is blocked by unresolved blockers: #${String(blocker.number)}`,
+            blockedByNumbers: [blocker.number],
+            blockedByGithubRefs: [],
+          },
+          taskStatus: 'todo',
+        })
       })
 
       it('lists every incomplete blocker, ordered by number', async () => {
@@ -923,12 +1048,24 @@ describe('tasks actions API', () => {
           method: 'POST',
         })
 
-        expect(res.status).toBe(409)
-        expect(
-          await jsonBody<{ error: string; blockedByNumbers: number[] }>(res),
-        ).toEqual({
-          error: `Task is blocked by incomplete tasks: #${String(blockerA.number)}, #${String(blockerB.number)}`,
-          blockedByNumbers: [blockerA.number, blockerB.number],
+        const body = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(res)
+        const getActual = () => ({ status: res.status, body })
+        expect(getActual()).toEqual({
+          status: 409,
+          body: {
+            error: `Task is blocked by unresolved blockers: #${String(blockerA.number)}, #${String(blockerB.number)}`,
+            blockedByNumbers: [blockerA.number, blockerB.number],
+            blockedByGithubRefs: [],
+          },
         })
       })
 
@@ -969,19 +1106,31 @@ describe('tasks actions API', () => {
     })
 
     describe('PATCH /api/tasks/:id/status', () => {
-      it('returns 409 with blockedByNumbers when closing while a blocker is incomplete', async () => {
+      it('returns 409 with all unresolved blockers when closing with an incomplete blocker', async () => {
         const blocker = await createTask('Blocker')
         const task = await createTask('Blocked')
         await setBlockedBy(task.id, [blocker.id])
 
         const res = await setStatus(task.id, 'completed')
 
-        expect(res.status).toBe(409)
-        expect(
-          await jsonBody<{ error: string; blockedByNumbers: number[] }>(res),
-        ).toEqual({
-          error: `Task is blocked by incomplete tasks: #${String(blocker.number)}`,
-          blockedByNumbers: [blocker.number],
+        const body = await jsonBody<{
+          error: string
+          blockedByNumbers: number[]
+          blockedByGithubRefs: {
+            owner: string
+            repo: string
+            number: number
+            url: string
+          }[]
+        }>(res)
+        const getActual = () => ({ status: res.status, body })
+        expect(getActual()).toEqual({
+          status: 409,
+          body: {
+            error: `Task is blocked by unresolved blockers: #${String(blocker.number)}`,
+            blockedByNumbers: [blocker.number],
+            blockedByGithubRefs: [],
+          },
         })
       })
 
