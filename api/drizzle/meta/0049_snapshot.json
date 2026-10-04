@@ -1,6 +1,6 @@
 {
-  "id": "fac5fe8d-a5b5-44c1-9c71-9c1234110859",
-  "prevId": "a6ff804c-bd93-47a7-a86c-018e00d9c160",
+  "id": "28074ef4-6f47-4349-b864-6b23b9d52dac",
+  "prevId": "fac5fe8d-a5b5-44c1-9c71-9c1234110859",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -129,6 +129,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "linked_at": {
+          "name": "linked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
