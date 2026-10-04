@@ -7,7 +7,6 @@ import {
   TaskKanban,
   type TaskKanbanColumn,
 } from '#components/kanban/task-kanban'
-import { TaskKanbanSeeAllLink } from '#components/kanban/task-kanban-see-all-link'
 import {
   makeQueueCandidate,
   makeTask,
@@ -141,7 +140,7 @@ export const WithDateRangeLabel: Story = {
 }
 
 export const WithFooter: Story = {
-  name: 'active and someday columns include links below their tasks',
+  name: 'active and someday columns include footer content below their tasks',
   args: {
     columns: [
       { id: 'inbox', title: 'Inbox', tasks: inboxTasks },
@@ -150,14 +149,18 @@ export const WithFooter: Story = {
         title: 'Active',
         tasks: activeTasks,
         showCount: false,
-        footer: <TaskKanbanSeeAllLink commitment="active" />,
+        footer: (
+          <span className="text-xs text-muted-foreground">show more</span>
+        ),
       },
       {
         id: 'someday',
         title: 'Someday',
         tasks: someTasks,
         showCount: false,
-        footer: <TaskKanbanSeeAllLink commitment="someday" />,
+        footer: (
+          <span className="text-xs text-muted-foreground">show more</span>
+        ),
       },
     ],
   },

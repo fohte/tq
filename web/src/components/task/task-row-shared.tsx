@@ -4,7 +4,6 @@ import { Bell, CalendarRange, Repeat } from 'lucide-react'
 import { useState } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
-import type { StatusPickerValue } from '#components/task/task-status-picker'
 import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
 import type { Task } from '#hooks/use-tasks'
@@ -14,6 +13,8 @@ import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
+
+type StatusPickerValue = 'todo' | 'completed' | 'not_planned' | 'duplicate'
 
 export function useHandleStatusChange(
   id: string,

@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { db } from '#db/connection'
@@ -12,7 +13,6 @@ import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import {
   createTaskFromGithubUrl,
   createTaskFromIssueData,
-  findLinksByTaskId,
   findTaskByGithubRef,
   GithubLinkNotFoundError,
   GithubResourceAlreadyLinkedError,
@@ -300,7 +300,10 @@ describe('linkTaskToGithubUrl', () => {
       await linkTaskToGithubUrl(task.id, { ...ref, number: 43 }, author)
     )._unsafeUnwrap()
 
-    const links = (await findLinksByTaskId(task.id))._unsafeUnwrap()
+    const links = await db
+      .select()
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.taskId, task.id))
     const byNumber = (a: { number: number }, b: { number: number }) =>
       a.number - b.number
     expect([...links].sort(byNumber).map(normalizeLink)).toEqual(
@@ -364,7 +367,10 @@ describe('unlinkTask', () => {
 
     ;(await unlinkTask(db, task.id, first.id))._unsafeUnwrap()
 
-    const links = (await findLinksByTaskId(task.id))._unsafeUnwrap()
+    const links = await db
+      .select()
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.taskId, task.id))
     expect(links.map(normalizeLink)).toEqual([normalizeLink(second)])
   })
 
@@ -385,7 +391,10 @@ describe('unlinkTask', () => {
     const error = (await unlinkTask(db, taskA.id, linkB.id))._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubLinkNotFoundError())
-    const links = (await findLinksByTaskId(taskB.id))._unsafeUnwrap()
+    const links = await db
+      .select()
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.taskId, taskB.id))
     expect(links.map(normalizeLink)).toEqual([normalizeLink(linkB)])
   })
 })

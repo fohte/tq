@@ -93,16 +93,6 @@ function findLinkByRef(
   ).map((link) => link ?? null)
 }
 
-export function findLinksByTaskId(
-  taskId: string,
-): ResultAsync<LinkRow[], never> {
-  return ResultAsync.fromSafePromise(
-    db.query.taskGithubLinks.findMany({
-      where: eq(taskGithubLinks.taskId, taskId),
-    }),
-  )
-}
-
 function findTaskForLink(
   link: LinkRow,
 ): ResultAsync<TaskRow, GithubLinkConsistencyError> {

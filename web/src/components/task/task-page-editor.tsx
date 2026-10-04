@@ -3,10 +3,8 @@ import { Input } from '@fohte/ui/input'
 import { Loader2, Pencil } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { BackLink } from '#components/ui/back-header-bar'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import {
   DEBOUNCED_SAVE_DELAY_MS,
   useDebouncedSave,
@@ -174,30 +172,6 @@ export function PageEditorInner({
           onExitEditMode={flushContent}
         />
       </div>
-    </div>
-  )
-}
-
-// --- Subpage View (header + editor, for Storybook) ---
-
-export function SubpageViewPresentation({
-  taskId,
-  pageTitle,
-  children,
-}: {
-  taskId: string
-  pageTitle: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex h-full flex-col">
-      <ScreenHeaderBar>
-        <BackLink to="/tasks/$taskId" params={{ taskId }} aria-label="Back" />
-        <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium text-foreground">
-          {pageTitle}
-        </span>
-      </ScreenHeaderBar>
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
     </div>
   )
 }

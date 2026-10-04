@@ -54,7 +54,7 @@ function toRecentSearchItems(value: unknown): RecentSearchItem[] {
   return Array.isArray(value) ? value.filter(isRecentSearchItem) : []
 }
 
-export function addRecentSearchItem(
+function addRecentSearchItem(
   items: RecentSearchItem[],
   item: RecentSearchItemInput,
   viewedAt: number,
