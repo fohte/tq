@@ -22,6 +22,7 @@ import {
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
+import { useMemos, useUpdateMemo } from '#hooks/use-memos'
 import { useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
@@ -172,6 +173,8 @@ function DayView() {
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
+  const memosQuery = useMemos(context, isCompactLayout)
+  const updateMemo = useUpdateMemo(context)
   const queryClient = useQueryClient()
   const projects = useProjects()
 
@@ -403,6 +406,15 @@ function DayView() {
     <>
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
+        {...(isCompactLayout
+          ? {
+              compactMemo: {
+                context,
+                memo: memosQuery.data,
+                onSave: (input) => updateMemo.mutateAsync(input),
+              },
+            }
+          : {})}
         isLoading={
           isLoading || (isKanbanFiltering && filteredTasksQuery.isLoading)
         }

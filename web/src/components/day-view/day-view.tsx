@@ -15,6 +15,7 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
+import { CompactMemoPanel } from '#components/day-view/compact-memo-panel'
 import {
   QueuePane,
   type QueueSectionData,
@@ -31,6 +32,7 @@ import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { TabStrip } from '#components/ui/tab-strip'
+import type { Memo, MemoContext, SaveMemoInput } from '#hooks/use-memos'
 import { DAY_QUEUE_KEY } from '#hooks/use-queues'
 import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { Schedule } from '#hooks/use-schedules'
@@ -111,6 +113,11 @@ export interface DayViewPresentationProps {
   /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
+  compactMemo?: {
+    context: MemoContext
+    memo: Memo | undefined
+    onSave: (input: SaveMemoInput) => Promise<Memo>
+  }
 }
 
 export function DayViewPresentation({
@@ -138,6 +145,7 @@ export function DayViewPresentation({
   kanbanFilterRow,
   initialMobileTab,
   layout = 'default',
+  compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
@@ -439,6 +447,15 @@ export function DayViewPresentation({
           </div>
         </div>
       </div>
+
+      {isCompactLayout && compactMemo != null && (
+        <CompactMemoPanel
+          key={compactMemo.context}
+          context={compactMemo.context}
+          memo={compactMemo.memo}
+          onSave={compactMemo.onSave}
+        />
+      )}
     </div>
   )
 }
