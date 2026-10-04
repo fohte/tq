@@ -15,6 +15,7 @@ export function TaskShorthandHelp({
       label="Show title shortcut help"
       defaultOpen={defaultOpen}
       onOpenChange={onOpenChange}
+      tabIndex={-1}
       className={className}
       popupClassName="w-80 p-3 font-sans"
     >
