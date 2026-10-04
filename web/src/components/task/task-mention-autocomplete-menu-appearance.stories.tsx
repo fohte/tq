@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
-import { TaskMentionAutocompleteMenuAppearance } from '#components/task/task-mention-autocomplete-menu'
+import { TaskMentionAutocompleteMenuAppearance } from '#components/task/task-mention-autocomplete-menu-appearance'
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 
 const sampleItems = [

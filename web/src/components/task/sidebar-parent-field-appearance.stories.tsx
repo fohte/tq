@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { SidebarParentFieldAppearance } from '#components/task/sidebar-parent-field'
+import { SidebarParentFieldAppearance } from '#components/task/sidebar-parent-field-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 

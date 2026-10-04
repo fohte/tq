@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { RenameSavedViewDialogAppearance } from '#components/saved-view/rename-saved-view-dialog'
+import { RenameSavedViewDialogAppearance } from '#components/saved-view/rename-saved-view-dialog-appearance'
 
 const meta = {
   title: 'SavedView/RenameSavedViewDialogAppearance',

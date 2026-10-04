@@ -2,10 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import {
-  PageEditorInner,
-  SubpageViewPresentation,
-} from '#components/task/task-page-editor'
+import { PageEditorInner } from '#components/task/task-page-editor-inner'
+import { BackLink } from '#components/ui/back-header-bar'
+import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import type { TaskPage } from '#hooks/use-task-pages'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -21,6 +20,28 @@ function Providers({ children }: { children: ReactNode }) {
         paths={['/tasks/$taskId']}
       />
     </QueryClientProvider>
+  )
+}
+
+function SubpageViewPresentation({
+  taskId,
+  pageTitle,
+  children,
+}: {
+  taskId: string
+  pageTitle: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <ScreenHeaderBar>
+        <BackLink to="/tasks/$taskId" params={{ taskId }} aria-label="Back" />
+        <span className="min-w-0 flex-1 truncate font-mono text-xs font-medium text-foreground">
+          {pageTitle}
+        </span>
+      </ScreenHeaderBar>
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </div>
   )
 }
 
