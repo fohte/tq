@@ -13,30 +13,36 @@ export async function upsertGithubToken(accessToken: string) {
     })
 }
 
+export function makeGithubIssueResponse(
+  htmlUrl: string,
+  overrides: Partial<Record<string, unknown>> = {},
+  responseInit: ResponseInit = {},
+) {
+  return new Response(
+    JSON.stringify({
+      title: 'Bug: something broke',
+      body: 'Steps to reproduce...',
+      state: 'open',
+      comments: 2,
+      updated_at: '2024-08-12T09:30:00Z',
+      state_reason: null,
+      html_url: htmlUrl,
+      ...overrides,
+    }),
+    { status: 200, ...responseInit },
+  )
+}
+
 export function mockGithubIssueResponse(
   overrides: Partial<Record<string, unknown>> = {},
   responseInit: ResponseInit = {},
 ) {
   vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-    new Response(
-      JSON.stringify({
-        title: 'Bug: something broke',
-        body: 'Steps to reproduce...',
-        state: 'open',
-        comments: 2,
-        updated_at: '2024-08-12T09:30:00Z',
-        state_reason: null,
-        html_url: 'https://github.com/fohte/tq/issues/42',
-        ...overrides,
-      }),
-      { status: 200, ...responseInit },
+    makeGithubIssueResponse(
+      'https://github.com/fohte/tq/issues/42',
+      overrides,
+      responseInit,
     ),
-  )
-}
-
-export function mockGithubNotModifiedResponse() {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-    new Response(null, { status: 304 }),
   )
 }
 
