@@ -275,7 +275,7 @@ describe('GET /api/calendar/events', () => {
     ])
   })
 
-  it('masks summary/calendarDisplayName/calendarColor for events from a calendar whose context does not match the context query param', async () => {
+  it('masks meetingUrl and other event details for a calendar with a mismatched context', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -302,6 +302,7 @@ describe('GET /api/calendar/events', () => {
                 {
                   id: 'event-1',
                   summary: 'Standup',
+                  hangoutLink: 'https://meet.example.com/abc-defg-hij',
                   start: { dateTime: '2026-03-22T09:00:00Z' },
                   end: { dateTime: '2026-03-22T09:30:00Z' },
                 },
@@ -319,6 +320,7 @@ describe('GET /api/calendar/events', () => {
                 {
                   id: 'event-2',
                   summary: 'Doctor appointment',
+                  hangoutLink: 'https://meet.example.com/klm-nopq-rst',
                   start: { dateTime: '2026-03-22T14:00:00Z' },
                   end: { dateTime: '2026-03-22T14:30:00Z' },
                 },
@@ -340,10 +342,12 @@ describe('GET /api/calendar/events', () => {
     expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
       makeExternalEvent({
         summary: 'Standup',
+        meetingUrl: 'https://meet.example.com/abc-defg-hij',
       }),
       makeExternalEvent({
         id: 'event-2',
         summary: '',
+        meetingUrl: null,
         startTime: '2026-03-22T14:00:00Z',
         endTime: '2026-03-22T14:30:00Z',
         calendarId: 'personal@example.com',

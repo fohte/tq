@@ -231,6 +231,7 @@ describe('buildNowPanelModel', () => {
       end: localTime(9, 15, 14),
       type: 'gcal-meeting',
       redacted: true,
+      meetingUrl: 'https://meet.example.com/private-room',
     })
 
     expect(
@@ -262,6 +263,7 @@ describe('buildNowPanelModel', () => {
       start: localTime(9, 14),
       end: localTime(9, 15, 14),
       type: 'gcal-meeting',
+      meetingUrl: 'https://meet.example.com/current-room',
     })
     const nextMeeting = makeTimeBlockEvent({
       id: 'meeting-next',
@@ -269,6 +271,7 @@ describe('buildNowPanelModel', () => {
       start: localTime(9, 14, 57),
       end: localTime(9, 15, 27),
       type: 'gcal-meeting',
+      meetingUrl: 'https://meet.example.com/next-room',
     })
 
     expect(
@@ -286,10 +289,16 @@ describe('buildNowPanelModel', () => {
           title: 'Product review',
           statusLabel: 'now (22 min left)',
           isOverrun: false,
+          meetingUrl: 'https://meet.example.com/current-room',
         },
       ],
       emptyState: null,
-      nextEvent: { title: 'Planning call', minutesUntil: 5, isWarning: true },
+      nextEvent: {
+        title: 'Planning call',
+        minutesUntil: 5,
+        isWarning: true,
+        meetingUrl: 'https://meet.example.com/next-room',
+      },
     })
   })
 

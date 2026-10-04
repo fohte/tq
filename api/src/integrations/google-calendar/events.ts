@@ -52,6 +52,7 @@ function maskEvent(event: ProviderEvent): CalendarEvent {
     id: event.id,
     startTime: event.startTime,
     endTime: event.endTime,
+    meetingUrl: null,
     isAllDay: event.isAllDay,
     source: event.source,
     calendarId: event.calendarId,

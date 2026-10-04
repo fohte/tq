@@ -119,6 +119,7 @@ type CalendarResponseStatus =
 export interface ExternalEvent {
   id: string
   summary: string
+  meetingUrl: string | null
   startTime: string
   endTime: string
   isAllDay: boolean

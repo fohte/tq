@@ -81,6 +81,9 @@ export function useDayViewCalendarEvents({
       calendarColor: event.calendarColor,
       responseStatus: event.responseStatus,
       redacted: event.redacted,
+      ...(!event.redacted && event.meetingUrl != null
+        ? { meetingUrl: event.meetingUrl }
+        : {}),
     }))
   }, [gcalEventsData])
 

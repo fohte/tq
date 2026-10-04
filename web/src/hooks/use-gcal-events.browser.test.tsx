@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeGcalEvent } from '#hooks/gcal-event-test-fixtures'
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
@@ -53,24 +54,16 @@ beforeEach(async () => {
   }
 })
 
-const sampleEvent = {
-  id: 'gcal-event-1',
-  summary: 'Team Standup',
+const sampleEvent = makeGcalEvent({
+  id: 'event-1',
+  summary: 'Planning session',
   startTime: '2026-07-07T10:00:00.000Z',
   endTime: '2026-07-07T10:30:00.000Z',
-  isAllDay: false,
-  source: 'google_calendar' as const,
-  accountId: 'google-sub-1',
-  accountLabel: 'user@example.com',
+  accountId: 'account-1',
+  accountLabel: 'calendar@example.com',
   calendarId: 'primary',
-  calendarDisplayName: null,
-  calendarColor: null,
-  responseStatus: 'accepted' as const,
-  eventType: 'default',
   hasOtherAttendees: false,
-  busy: true,
-  redacted: false,
-}
+})
 
 describe('useGcalEvents', () => {
   it('does not fetch or poll when disabled', async () => {

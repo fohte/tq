@@ -6,6 +6,7 @@ export function makeExternalEvent(
   return {
     id: 'event-1',
     summary: 'Team standup',
+    meetingUrl: null,
     startTime: '2026-03-22T09:00:00Z',
     endTime: '2026-03-22T09:30:00Z',
     isAllDay: false,
