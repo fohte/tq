@@ -59,6 +59,7 @@ describe('session list', () => {
         taskTitle: 'First task',
         taskParentId: null,
         taskStatus: 'todo',
+        linkedAt: '2030-01-03T00:00:00.000Z',
         ...session1,
       },
       {
@@ -67,6 +68,7 @@ describe('session list', () => {
         taskTitle: 'Second task',
         taskParentId: 'task-1',
         taskStatus: 'completed',
+        linkedAt: '2030-01-04T00:00:00.000Z',
         ...session1,
       },
     ]
@@ -120,6 +122,7 @@ describe('session list', () => {
                   title: 'First task',
                   parentId: null,
                   status: 'todo',
+                  linkedAt: '2030-01-03T00:00:00.000Z',
                 },
                 {
                   id: 'task-2',
@@ -127,6 +130,7 @@ describe('session list', () => {
                   title: 'Second task',
                   parentId: 'task-1',
                   status: 'completed',
+                  linkedAt: '2030-01-04T00:00:00.000Z',
                 },
               ],
             },

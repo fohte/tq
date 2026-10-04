@@ -1,6 +1,9 @@
+import { and, eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { taskAgentSessions } from '#db/schema'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -28,6 +31,7 @@ interface TaskAgentSessionResponse extends AgentSessionResponse {
   taskTitle: string
   taskParentId: string | null
   taskStatus: 'todo' | 'completed'
+  linkedAt: string
 }
 
 function normalizeSession(session: AgentSessionResponse) {
@@ -36,6 +40,24 @@ function normalizeSession(session: AgentSessionResponse) {
     startedAt: 'DATE',
     lastActiveAt: 'DATE',
     endedAt: session.endedAt === null ? null : 'DATE',
+  }
+}
+
+function responseWithBody<T>(status: number, body: T) {
+  return { status, body }
+}
+
+function responseWithInheritedLink<T>(
+  tasks: T,
+  link: typeof taskAgentSessions.$inferSelect,
+) {
+  return {
+    tasks,
+    inheritedLink: {
+      taskId: link.taskId,
+      agentSessionId: link.agentSessionId,
+      linkedAt: link.linkedAt.toISOString(),
+    },
   }
 }
 
@@ -341,9 +363,37 @@ describe('agent sessions API', () => {
       const tasksRes = await app.request(
         `/api/agent-sessions/${child.id}/tasks`,
       )
-      expect(await jsonBody<{ id: string }[]>(tasksRes)).toEqual([
-        { id: task.id, number: task.number, title: 'My task', status: 'todo' },
-      ])
+      const [inheritedLink] = await db
+        .select()
+        .from(taskAgentSessions)
+        .where(
+          and(
+            eq(taskAgentSessions.taskId, task.id),
+            eq(taskAgentSessions.agentSessionId, child.id),
+          ),
+        )
+      assertDefined(inheritedLink)
+
+      expect(
+        responseWithInheritedLink(
+          await jsonBody<{ id: string }[]>(tasksRes),
+          inheritedLink,
+        ),
+      ).toEqual({
+        tasks: [
+          {
+            id: task.id,
+            number: task.number,
+            title: 'My task',
+            status: 'todo',
+          },
+        ],
+        inheritedLink: {
+          taskId: task.id,
+          agentSessionId: child.id,
+          linkedAt: child.startedAt,
+        },
+      })
     })
 
     it('does not link to any task when the parent session is unresolvable', async () => {
@@ -583,25 +633,34 @@ describe('agent sessions API', () => {
 
       const res = await app.request('/api/agent-sessions/by-task')
 
-      expect(res.status).toBe(200)
-      expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
-        {
-          taskId: task.id,
-          taskNumber: task.number,
-          taskTitle: task.title,
-          taskParentId: null,
-          taskStatus: 'todo',
-          ...newer,
-        },
-        {
-          taskId: task.id,
-          taskNumber: task.number,
-          taskTitle: task.title,
-          taskParentId: null,
-          taskStatus: 'todo',
-          ...older,
-        },
-      ])
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: newer.startedAt,
+            ...newer,
+          },
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: older.startedAt,
+            ...older,
+          },
+        ],
+      })
     })
 
     it('returns each session with the taskId of the task it is linked to', async () => {
@@ -634,25 +693,34 @@ describe('agent sessions API', () => {
 
       const res = await app.request('/api/agent-sessions/by-task')
 
-      expect(res.status).toBe(200)
-      expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
-        {
-          taskId: task2.id,
-          taskNumber: task2.number,
-          taskTitle: task2.title,
-          taskParentId: null,
-          taskStatus: 'todo',
-          ...newerSession,
-        },
-        {
-          taskId: task1.id,
-          taskNumber: task1.number,
-          taskTitle: task1.title,
-          taskParentId: null,
-          taskStatus: 'todo',
-          ...olderSession,
-        },
-      ])
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task2.id,
+            taskNumber: task2.number,
+            taskTitle: task2.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: newerSession.startedAt,
+            ...newerSession,
+          },
+          {
+            taskId: task1.id,
+            taskNumber: task1.number,
+            taskTitle: task1.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: olderSession.startedAt,
+            ...olderSession,
+          },
+        ],
+      })
     })
 
     it('returns the parent task id for a subtask', async () => {
@@ -673,17 +741,25 @@ describe('agent sessions API', () => {
 
       const res = await app.request('/api/agent-sessions/by-task')
 
-      expect(res.status).toBe(200)
-      expect(await jsonBody<TaskAgentSessionResponse[]>(res)).toEqual([
-        {
-          taskId: child.id,
-          taskNumber: child.number,
-          taskTitle: child.title,
-          taskParentId: parent.id,
-          taskStatus: 'todo',
-          ...session,
-        },
-      ])
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: child.id,
+            taskNumber: child.number,
+            taskTitle: child.title,
+            taskParentId: parent.id,
+            taskStatus: 'todo',
+            linkedAt: session.startedAt,
+            ...session,
+          },
+        ],
+      })
     })
   })
 

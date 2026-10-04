@@ -5,7 +5,7 @@ import { sendNotification } from 'web-push'
 import { db } from '#db/connection'
 import { pushSubscriptions, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { deliverDueReminders } from '#services/task-reminders'
+import { deliverDueReminders } from '#services/reminder-delivery'
 import { setupTestDb } from '#testing'
 
 // Stub both named and default exports so callers using either import style

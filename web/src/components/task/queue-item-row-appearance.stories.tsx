@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 import { fn } from 'storybook/test'
 
-import { QueueItemRowAppearance } from '#components/task/queue-item-row'
+import { QueueItemRowAppearance } from '#components/task/queue-item-row-appearance'
 import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'

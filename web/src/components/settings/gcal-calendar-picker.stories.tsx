@@ -6,7 +6,8 @@ import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { makeGcalCalendar } from '#components/settings/gcal-calendar-test-fixtures'
 import type { IntegrationAccountView } from '#components/settings/integration-card'
 import { Panel } from '#components/ui/panel'
-import { type GcalCalendar, gcalCalendarsKeys } from '#hooks/use-gcal-calendars'
+import { type GcalCalendar } from '#hooks/use-gcal-calendars'
+import { gcalCalendarsKeys } from '#lib/query-keys'
 
 const account: IntegrationAccountView = {
   id: 'token-1',

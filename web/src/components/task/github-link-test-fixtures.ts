@@ -1,4 +1,5 @@
 import type { GithubLink, ResolveGithubUrlResult } from '#hooks/use-github-link'
+import type { BlockedByGithubRef } from '#hooks/use-tasks'
 
 export function makeGithubLink(
   overrides: Partial<GithubLink> = {},
@@ -16,6 +17,46 @@ export function makeGithubLink(
     title: 'Sample issue',
     lastSyncedAt: '2026-03-20T00:00:00.000Z',
     ...overrides,
+  }
+}
+
+export function makeGithubBlocker(
+  overrides: Partial<GithubLink> = {},
+): GithubLink {
+  const owner = overrides.owner ?? 'example-team'
+  const repo = overrides.repo ?? 'sample-project'
+  const number = overrides.number ?? 2048
+  const kind = overrides.kind ?? 'pull_request'
+
+  return makeGithubLink({
+    ...overrides,
+    id: overrides.id ?? 'github-blocker-1',
+    owner,
+    repo,
+    number,
+    kind,
+    role: 'blocker',
+    notifyEvents: overrides.notifyEvents ?? ['closed'],
+    url:
+      overrides.url ??
+      `https://github.com/${owner}/${repo}/${kind === 'pull_request' ? 'pull' : 'issues'}/${String(number)}`,
+  })
+}
+
+export function makeBlockedByGithubRef(
+  overrides: Partial<BlockedByGithubRef> = {},
+): BlockedByGithubRef {
+  const owner = overrides.owner ?? 'example-team'
+  const repo = overrides.repo ?? 'sample-project'
+  const number = overrides.number ?? 2048
+
+  return {
+    owner,
+    repo,
+    number,
+    url:
+      overrides.url ??
+      `https://github.com/${owner}/${repo}/pull/${String(number)}`,
   }
 }
 
@@ -69,6 +110,6 @@ function makeGithubUrlPreview(
 
 export function makeResolveGithubUrlResult(
   overrides: Partial<GithubUrlPreview> = {},
-): ResolveGithubUrlResult {
+): Extract<ResolveGithubUrlResult, { linked: false }> {
   return { linked: false, preview: makeGithubUrlPreview(overrides) }
 }

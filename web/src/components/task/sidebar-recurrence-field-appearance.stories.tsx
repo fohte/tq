@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { SidebarRecurrenceFieldAppearance } from '#components/task/sidebar-recurrence-field'
+import { SidebarRecurrenceFieldAppearance } from '#components/task/sidebar-recurrence-field-appearance'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
 import type { RecurrenceRule } from '#lib/recurrence'
 import { StoryRouter } from '#storybook-config/story-router'

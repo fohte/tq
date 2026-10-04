@@ -25,7 +25,7 @@
 | [public.task_events](public.task_events.md)                                         | 13      | Task status changes and GitHub link or unlink events shown in the activity timeline. | BASE TABLE |
 | [public.scheduling_settings](public.scheduling_settings.md)                         | 7       | Singleton preferences for task scheduling.                                           | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 12      | Sessions reported by coding agent providers.                                         | BASE TABLE |
-| [public.task_agent_sessions](public.task_agent_sessions.md)                         | 2       | Associations between tasks and coding agent sessions.                                | BASE TABLE |
+| [public.task_agent_sessions](public.task_agent_sessions.md)                         | 3       | Associations between tasks and coding agent sessions.                                | BASE TABLE |
 | [public.saved_views](public.saved_views.md)                                         | 7       | Saved task searches with a display name, query, context, and position.               | BASE TABLE |
 | [public.task_relations](public.task_relations.md)                                   | 4       | User-defined directed relationships between tasks.                                   | BASE TABLE |
 | [public.task_queues](public.task_queues.md)                                         | 7       | Named queues that organize tasks, with optional period-based rollover.               | BASE TABLE |
@@ -338,6 +338,7 @@ erDiagram
 "public.task_agent_sessions" {
   text task_id FK
   text agent_session_id FK
+  timestamp_with_time_zone linked_at
 }
 "public.saved_views" {
   text id

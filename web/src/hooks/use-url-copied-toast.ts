@@ -7,7 +7,7 @@ export function notifyUrlCopied(url: string): void {
   window.dispatchEvent(new CustomEvent(URL_COPIED_EVENT, { detail: { url } }))
 }
 
-export function getUrlCopiedFromEvent(event: Event): string | null {
+function getUrlCopiedFromEvent(event: Event): string | null {
   if (!(event instanceof CustomEvent)) return null
 
   const detail: unknown = event.detail

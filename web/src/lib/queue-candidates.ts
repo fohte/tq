@@ -43,7 +43,7 @@ function reasonDays(reason: CandidateReason): number {
  * "active". A future due date takes precedence over startability or active
  * commitment for tasks that would already be candidates for either reason.
  */
-export function getCandidateReason(
+function getCandidateReason(
   task: CandidateCheckable,
   now: Date = new Date(),
 ): CandidateReason | null {

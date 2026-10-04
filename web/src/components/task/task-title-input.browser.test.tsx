@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
+import { taskMentionKeys } from '#lib/query-keys'
 
 function renderTaskTitleInput(initialValue = '', queryClient?: QueryClient) {
   const client =

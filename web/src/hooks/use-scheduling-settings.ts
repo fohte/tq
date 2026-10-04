@@ -1,13 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { InferRequestType, InferResponseType } from 'hono/client'
+import type { InferRequestType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
-
-export type SchedulingSettings = InferResponseType<
-  (typeof api.api)['scheduling-settings']['$get'],
-  200
->
 
 export type UpdateSchedulingSettingsInput = InferRequestType<
   (typeof api.api)['scheduling-settings']['$patch']

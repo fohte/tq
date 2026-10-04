@@ -1,26 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { type ProjectDetail, projectKeys } from '#hooks/use-projects'
+import type { ProjectDetail } from '#hooks/use-projects'
 import { api } from '#lib/api'
-
-export type ProjectUrlPreview = ProjectDetail
-
-// Uses its own key namespace instead of projectKeys.detail(id): a
-// 404/failed lookup caches `null` here, which would be unsound to share
-// with useProject's cache — callers there assume a non-null ProjectDetail.
-const projectUrlPreviewKeyPrefix = [
-  ...projectKeys.all,
-  'project-url-preview',
-] as const
-
-export const projectUrlPreviewKeys = {
-  preview: (id: string) => [...projectUrlPreviewKeyPrefix, id] as const,
-}
+import { projectUrlPreviewKeys } from '#lib/query-keys'
 
 function projectUrlPreviewQueryOptions(id: string) {
   return {
     queryKey: projectUrlPreviewKeys.preview(id),
-    queryFn: async (): Promise<ProjectUrlPreview | null> => {
+    queryFn: async (): Promise<ProjectDetail | null> => {
       const res = await api.api.projects[':id'].$get({ param: { id } })
       // A non-2xx here means the id doesn't match a project or the request
       // otherwise failed; the caller just leaves the match as plain text,

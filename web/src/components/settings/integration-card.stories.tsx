@@ -6,7 +6,8 @@ import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
 import { Panel } from '#components/ui/panel'
-import { type GcalCalendar, gcalCalendarsKeys } from '#hooks/use-gcal-calendars'
+import { type GcalCalendar } from '#hooks/use-gcal-calendars'
+import { gcalCalendarsKeys } from '#lib/query-keys'
 
 const meta = {
   title: 'Settings/IntegrationCard',

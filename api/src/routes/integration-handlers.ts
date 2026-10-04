@@ -4,11 +4,11 @@ import { z } from 'zod'
 
 import { IntegrationConfigError } from '#integrations/errors'
 import {
-  disconnectAccount,
   getAuthUrl,
   handleOAuthCallback,
   type OAuthCallbackResult,
 } from '#integrations/oauth'
+import { disconnectAccount } from '#integrations/oauth-accounts'
 import type { IntegrationProvider } from '#integrations/types'
 import { TokenExchangeError } from '#lib/fetch-json'
 

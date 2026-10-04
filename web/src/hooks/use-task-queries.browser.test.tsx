@@ -5,11 +5,9 @@ import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import {
-  TASK_LIST_PAGE_SIZE,
-  useInfiniteTaskList,
-  useTaskList,
-} from '#hooks/use-task-queries'
+import { useInfiniteTaskList, useTaskList } from '#hooks/use-task-queries'
+
+const TASK_LIST_PAGE_SIZE = 50
 
 vi.mock('#lib/api', () => {
   const mockGet = vi.fn()
@@ -175,7 +173,29 @@ describe('useInfiniteTaskList', () => {
   })
 })
 
-describe('useTaskList polling', () => {
+describe('useTaskList', () => {
+  it('serializes the due-date filter as an HTTP query string', async () => {
+    const mockGet = await getMockGet()
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () => useTaskList({ status: 'todo', hasDue: true, sortBy: 'due' }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([])
+    })
+
+    expect(mockGet.mock.calls).toEqual([
+      [
+        {
+          query: { status: 'todo', hasDue: 'true', sortBy: 'due' },
+        },
+      ],
+    ])
+  })
+
   it('refetches when an interval is supplied', async () => {
     vi.useFakeTimers()
     try {

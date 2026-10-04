@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 
 import { TaskMentionCard } from '#components/task/task-mention-card'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
 import type { TaskDetail } from '#hooks/use-tasks'
+import { taskMentionKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask = makeTaskDetail({

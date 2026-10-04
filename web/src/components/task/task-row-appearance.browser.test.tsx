@@ -8,8 +8,9 @@ import {
 } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import { makeBlockedByGithubRef } from '#components/task/github-link-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
@@ -87,5 +88,29 @@ describe('TaskRowAppearance', () => {
     expect(router.state.location.pathname).toBe(
       '/recurring/00000000-0000-0000-0000-000000000002',
     )
+  })
+
+  it('opens a sole GitHub blocker without navigating away from the task row', async () => {
+    const blockerRef = makeBlockedByGithubRef()
+    const blockedTask = makeTask({ blockedByGithubRefs: [blockerRef] })
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const user = userEvent.setup()
+    const { router } = await renderTaskRow(blockedTask)
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Open example-team/sample-project#2048 on GitHub',
+      }),
+    )
+
+    const readActual = () => ({
+      openCalls: openSpy.mock.calls,
+      location: router.state.location.pathname,
+    })
+
+    expect(readActual()).toEqual({
+      openCalls: [[blockerRef.url, '_blank', 'noopener,noreferrer']],
+      location: '/',
+    })
   })
 })

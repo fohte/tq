@@ -40,8 +40,14 @@ vi.mock('#components/calendar/calendar-change-feedback-popup', () => ({
 }))
 
 vi.mock('#components/day-view/day-view', () => ({
-  DayViewPresentation: ({ layout }: { layout?: string }) => (
-    <div data-testid="day-view" data-layout={layout} />
+  DayViewPresentation: ({
+    layout,
+    isLoading,
+  }: {
+    layout?: string
+    isLoading?: boolean
+  }) => (
+    <div data-testid="day-view" data-layout={layout} data-loading={isLoading} />
   ),
 }))
 
@@ -196,6 +202,8 @@ describe('day-view route compact layout', () => {
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
       appLayoutVisible: screen.queryByTestId('app-layout') != null,
       taskListInterval: mocks.useTaskList.mock.calls[0]?.[1]?.refetchInterval,
+      dueTaskFilter: mocks.useTaskList.mock.calls[1]?.[0],
+      dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
       timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
       schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
       queuesInterval: mocks.useQueues.mock.calls[0]?.[0],
@@ -208,6 +216,8 @@ describe('day-view route compact layout', () => {
         layout: 'compact',
         appLayoutVisible: false,
         taskListInterval: 60_000,
+        dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
+        dueTaskOptions: { enabled: true, refetchInterval: 60_000 },
         timeBlocksInterval: 60_000,
         schedulesInterval: 60_000,
         queuesInterval: 60_000,
@@ -225,6 +235,8 @@ describe('day-view route compact layout', () => {
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
       appLayoutVisible: screen.queryByTestId('app-layout') != null,
       taskListInterval: mocks.useTaskList.mock.calls[0]?.[1]?.refetchInterval,
+      dueTaskFilter: mocks.useTaskList.mock.calls[1]?.[0],
+      dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
       timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
       schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
       queuesInterval: mocks.useQueues.mock.calls[0]?.[0],
@@ -237,6 +249,8 @@ describe('day-view route compact layout', () => {
         layout: 'default',
         appLayoutVisible: true,
         taskListInterval: undefined,
+        dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
+        dueTaskOptions: { enabled: false },
         timeBlocksInterval: undefined,
         schedulesInterval: undefined,
         queuesInterval: undefined,
@@ -247,12 +261,59 @@ describe('day-view route compact layout', () => {
     queryClient.clear()
   })
 
-  it('logs compact calendar refresh errors', async () => {
+  it('shows a loading state while the compact due-date query loads', async () => {
+    mocks.useTaskList
+      .mockReturnValueOnce({
+        data: [],
+        isLoading: false,
+        categorized: { all: [] },
+      })
+      .mockReturnValueOnce({
+        data: undefined,
+        isLoading: true,
+        categorized: { all: [] },
+      })
+      .mockReturnValueOnce({
+        data: [],
+        isLoading: false,
+        categorized: { all: [] },
+      })
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+    const getDayViewLoadingState = () => ({
+      layout: screen.getByTestId('day-view').getAttribute('data-layout'),
+      loading: screen.getByTestId('day-view').getAttribute('data-loading'),
+    })
+
+    await waitFor(() => {
+      expect(getDayViewLoadingState()).toEqual({
+        layout: 'compact',
+        loading: 'true',
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it('logs compact data refresh errors', async () => {
     const timeBlocksError = new Error('time blocks unavailable')
     const schedulesError = new Error('schedules unavailable')
+    const dueTasksError = new Error('due tasks unavailable')
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     mocks.useTimeBlocks.mockReturnValue({ data: [], error: timeBlocksError })
     mocks.useScheduleList.mockReturnValue({ data: [], error: schedulesError })
+    mocks.useTaskList
+      .mockReturnValueOnce({
+        data: [],
+        isLoading: false,
+        categorized: { all: [] },
+      })
+      .mockReturnValueOnce({
+        data: [],
+        error: dueTasksError,
+        isLoading: false,
+        categorized: { all: [] },
+      })
 
     const { queryClient } = await renderDayRoute('/?layout=compact')
     const getLoggedErrors = () => consoleError.mock.calls
@@ -261,6 +322,7 @@ describe('day-view route compact layout', () => {
       expect(getLoggedErrors()).toEqual([
         ['Failed to refresh time blocks in compact layout', timeBlocksError],
         ['Failed to refresh schedules in compact layout', schedulesError],
+        ['Failed to refresh due tasks in compact layout', dueTasksError],
       ])
     })
 

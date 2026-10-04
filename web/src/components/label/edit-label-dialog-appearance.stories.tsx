@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
-import { EditLabelDialogAppearance } from '#components/label/edit-label-dialog'
+import { EditLabelDialogAppearance } from '#components/label/edit-label-dialog-appearance'
 
 const meta = {
   title: 'Label/EditLabelDialogAppearance',

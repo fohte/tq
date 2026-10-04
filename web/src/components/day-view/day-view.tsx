@@ -19,6 +19,7 @@ import {
   QueuePane,
   type QueueSectionData,
 } from '#components/day-view/queue-pane'
+import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import {
   TaskKanban,
   type TaskKanbanColumn,
@@ -67,7 +68,7 @@ interface SelectedRange {
 
 // A plain click (no drag) reports a range as short as one snap increment —
 // treat anything under 30 minutes as "just a click" and default to 30.
-export function estimateMinutesForRange(range: SelectedRange): number {
+function estimateMinutesForRange(range: SelectedRange): number {
   const rawMinutes = Math.round(
     (range.end.getTime() - range.start.getTime()) / 60_000,
   )
@@ -201,7 +202,11 @@ export function DayViewPresentation({
   // always shows both panes, so it always keeps the entry.
   const mobileLayoutItems = mobileTab === 'calendar' ? [] : layoutItems
   const visibleQueueSections = isCompactLayout
-    ? queueSections.filter((section) => section.key === DAY_QUEUE_KEY)
+    ? queueSections.filter(
+        (section) =>
+          section.key === DAY_QUEUE_KEY ||
+          section.key === DUE_TODAY_SECTION_KEY,
+      )
     : queueSections
 
   const kanbanColumns: TaskKanbanColumn[] = useMemo(
