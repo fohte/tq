@@ -161,9 +161,9 @@ comments:
       context: 'Whether the schedule belongs to the work or personal context.'
       color: 'Optional color value associated with the schedule.'
   - table: schedule_overrides
-    tableComment: 'One-day time changes and skipped occurrences for recurring schedules.'
+    tableComment: 'One-day time changes and skipped schedule occurrences.'
     columnComments:
-      schedule_id: 'Recurring schedule whose occurrence is changed.'
+      schedule_id: 'Schedule whose occurrence is changed.'
       occurrence_date: 'Date on which the changed occurrence starts.'
       start_time: 'Replacement local start time in 24-hour HH:MM format; null when skipped.'
       end_time: 'Replacement local end time in 24-hour HH:MM format; null when skipped.'
