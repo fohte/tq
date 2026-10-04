@@ -173,7 +173,29 @@ describe('useInfiniteTaskList', () => {
   })
 })
 
-describe('useTaskList polling', () => {
+describe('useTaskList', () => {
+  it('serializes the due-date filter as an HTTP query string', async () => {
+    const mockGet = await getMockGet()
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () => useTaskList({ status: 'todo', hasDue: true, sortBy: 'due' }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([])
+    })
+
+    expect(mockGet.mock.calls).toEqual([
+      [
+        {
+          query: { status: 'todo', hasDue: 'true', sortBy: 'due' },
+        },
+      ],
+    ])
+  })
+
   it('refetches when an interval is supplied', async () => {
     vi.useFakeTimers()
     try {
