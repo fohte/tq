@@ -1,4 +1,9 @@
-import type { recurrenceRules, schedules } from '#db/schema'
+import type { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
+
+export type ScheduleOverrideTimes = Pick<
+  typeof scheduleOverrides.$inferSelect,
+  'startTime' | 'endTime' | 'skipped'
+>
 
 /**
  * Check if a schedule matches a given date based on its recurrence rule.
@@ -42,6 +47,7 @@ export function expandScheduleForDate(
   schedule: typeof schedules.$inferSelect,
   rule: typeof recurrenceRules.$inferSelect | null,
   dateStr: string,
+  overrides: ReadonlyMap<string, ScheduleOverrideTimes> = new Map(),
 ): Array<{
   scheduleId: string
   title: string
@@ -51,7 +57,10 @@ export function expandScheduleForDate(
   color: string | null
 }> {
   const date = new Date(dateStr + 'T00:00:00')
-  const isCrossMidnight = schedule.startTime > schedule.endTime
+  const currentOverride = overrides.get(dateStr)
+  const currentStartTime = currentOverride?.startTime ?? schedule.startTime
+  const currentEndTime = currentOverride?.endTime ?? schedule.endTime
+  const isCrossMidnight = currentStartTime > currentEndTime
 
   const blocks: Array<{
     scheduleId: string
@@ -63,7 +72,7 @@ export function expandScheduleForDate(
   }> = []
 
   // Check if the schedule's "start day" is this date
-  if (matchesDate(rule, date)) {
+  if (matchesDate(rule, date) && currentOverride?.skipped !== true) {
     if (isCrossMidnight) {
       // Start portion: startTime on this date -> midnight
       const nextDate = new Date(date)
@@ -71,7 +80,7 @@ export function expandScheduleForDate(
       blocks.push({
         scheduleId: schedule.id,
         title: schedule.title,
-        start: `${dateStr}T${schedule.startTime}:00`,
+        start: `${dateStr}T${currentStartTime}:00`,
         end: `${formatDateStr(nextDate)}T00:00:00`,
         context: schedule.context,
         color: schedule.color,
@@ -80,28 +89,34 @@ export function expandScheduleForDate(
       blocks.push({
         scheduleId: schedule.id,
         title: schedule.title,
-        start: `${dateStr}T${schedule.startTime}:00`,
-        end: `${dateStr}T${schedule.endTime}:00`,
+        start: `${dateStr}T${currentStartTime}:00`,
+        end: `${dateStr}T${currentEndTime}:00`,
         context: schedule.context,
         color: schedule.color,
       })
     }
   }
 
-  // Check if the schedule's "end day" is this date (cross-midnight continuation)
-  if (isCrossMidnight) {
-    const prevDate = new Date(date)
-    prevDate.setDate(prevDate.getDate() - 1)
-    if (matchesDate(rule, prevDate)) {
-      blocks.push({
-        scheduleId: schedule.id,
-        title: schedule.title,
-        start: `${dateStr}T00:00:00`,
-        end: `${dateStr}T${schedule.endTime}:00`,
-        context: schedule.context,
-        color: schedule.color,
-      })
-    }
+  // Check whether the previous occurrence continues into this date.
+  const prevDate = new Date(date)
+  prevDate.setDate(prevDate.getDate() - 1)
+  const prevDateStr = formatDateStr(prevDate)
+  const previousOverride = overrides.get(prevDateStr)
+  const previousStartTime = previousOverride?.startTime ?? schedule.startTime
+  const previousEndTime = previousOverride?.endTime ?? schedule.endTime
+  if (
+    previousStartTime > previousEndTime &&
+    matchesDate(rule, prevDate) &&
+    previousOverride?.skipped !== true
+  ) {
+    blocks.push({
+      scheduleId: schedule.id,
+      title: schedule.title,
+      start: `${dateStr}T00:00:00`,
+      end: `${dateStr}T${previousEndTime}:00`,
+      context: schedule.context,
+      color: schedule.color,
+    })
   }
 
   return blocks

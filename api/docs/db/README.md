@@ -10,6 +10,7 @@
 | [public.projects](public.projects.md)                                               | 11      | Projects group related tasks and track planning status and dates.                    | BASE TABLE |
 | [public.recurrence_rules](public.recurrence_rules.md)                               | 7       | Recurrence definitions referenced by tasks, schedules, and recurring task templates. | BASE TABLE |
 | [public.schedules](public.schedules.md)                                             | 9       | Recurring calendar schedules with a local time range and optional recurrence rule.   | BASE TABLE |
+| [public.schedule_overrides](public.schedule_overrides.md)                           | 5       | One-day time changes and skipped occurrences for recurring schedules.                | BASE TABLE |
 | [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
@@ -76,6 +77,7 @@
 erDiagram
 
 "public.schedules" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
+"public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.task_comments" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_labels" }o--|| "public.labels" : "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
 "public.task_labels" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
@@ -164,6 +166,13 @@ erDiagram
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.schedule_overrides" {
+  text schedule_id FK
+  date occurrence_date
+  text start_time
+  text end_time
+  boolean skipped
 }
 "public.task_comments" {
   text id

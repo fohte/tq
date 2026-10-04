@@ -1,7 +1,8 @@
-import { inArray } from 'drizzle-orm'
+import { and, gte, inArray, lte } from 'drizzle-orm'
 
 import { db } from '#db/connection'
-import { recurrenceRules, schedules } from '#db/schema'
+import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
+import type { ScheduleOverrideTimes } from '#routes/schedule-expansion'
 
 export async function loadSchedulesWithRules() {
   const allSchedules = await db.select().from(schedules)
@@ -28,4 +29,35 @@ export async function loadSchedulesWithRules() {
         ? (ruleMap.get(schedule.recurrenceRuleId) ?? null)
         : null,
   }))
+}
+
+export async function loadScheduleOverridesForDateRange(
+  startDate: string,
+  endDate: string,
+) {
+  return db
+    .select()
+    .from(scheduleOverrides)
+    .where(
+      and(
+        gte(scheduleOverrides.occurrenceDate, startDate),
+        lte(scheduleOverrides.occurrenceDate, endDate),
+      ),
+    )
+}
+
+export function indexScheduleOverridesBySchedule(
+  overrides: Awaited<ReturnType<typeof loadScheduleOverridesForDateRange>>,
+) {
+  const result = new Map<string, Map<string, ScheduleOverrideTimes>>()
+
+  for (const override of overrides) {
+    const dateOverrides =
+      result.get(override.scheduleId) ??
+      new Map<string, ScheduleOverrideTimes>()
+    dateOverrides.set(override.occurrenceDate, override)
+    result.set(override.scheduleId, dateOverrides)
+  }
+
+  return result
 }

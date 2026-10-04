@@ -46,6 +46,8 @@ const REGISTERED_TOOL_NAMES = [
   'saved_view_get',
   'saved_view_list',
   'saved_view_update',
+  'schedule_override_clear',
+  'schedule_override_set',
   'session_delete',
   'session_list',
   'task_activity',

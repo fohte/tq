@@ -13,7 +13,12 @@ import {
   expandScheduleForDate,
   formatDateStr,
 } from '#routes/schedule-expansion'
-import { loadSchedulesWithRules } from '#routes/schedule-shared'
+import { scheduleOverridesApp } from '#routes/schedule-overrides'
+import {
+  indexScheduleOverridesBySchedule,
+  loadScheduleOverridesForDateRange,
+  loadSchedulesWithRules,
+} from '#routes/schedule-shared'
 import { timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
@@ -282,9 +287,23 @@ export const schedulesApp = new Hono()
         cursor.setDate(cursor.getDate() + 1)
       }
 
+      const previousDate = new Date(startDate + 'T00:00:00')
+      previousDate.setDate(previousDate.getDate() - 1)
+      const overridesBySchedule = indexScheduleOverridesBySchedule(
+        await loadScheduleOverridesForDateRange(
+          formatDateStr(previousDate),
+          endDate,
+        ),
+      )
+
       const expanded = dates.flatMap((dateStr) =>
         scheduleRules.flatMap(({ schedule, rule }) =>
-          expandScheduleForDate(schedule, rule, dateStr).map((block) => ({
+          expandScheduleForDate(
+            schedule,
+            rule,
+            dateStr,
+            overridesBySchedule.get(schedule.id),
+          ).map((block) => ({
             ...block,
             recurrence: recurrenceRuleToResponse(rule),
           })),
@@ -392,3 +411,4 @@ export const schedulesApp = new Hono()
     return c.body(null, 204)
   })
   .route('/', autoAssignApp)
+  .route('/', scheduleOverridesApp)

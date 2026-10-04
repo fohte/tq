@@ -46,6 +46,7 @@ Recurring calendar schedules with a local time range and optional recurrence rul
 erDiagram
 
 "public.schedules" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
+"public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 
 "public.schedules" {
   text id
@@ -57,6 +58,13 @@ erDiagram
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.schedule_overrides" {
+  text schedule_id FK
+  date occurrence_date
+  text start_time
+  text end_time
+  boolean skipped
 }
 "public.recurrence_rules" {
   text id

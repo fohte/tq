@@ -101,6 +101,73 @@ describe('expandScheduleForDate', () => {
         color: null,
       })
     })
+
+    it('uses the previous occurrence override for the next date continuation', () => {
+      const schedule = makeSchedule({ startTime: '23:00', endTime: '07:00' })
+      const overrides = new Map([
+        [
+          '2026-03-22',
+          { startTime: '22:30', endTime: '08:00', skipped: false },
+        ],
+      ])
+
+      expect(
+        expandScheduleForDate(schedule, null, '2026-03-23', overrides),
+      ).toEqual([
+        {
+          scheduleId: 'sched-1',
+          title: 'Test Schedule',
+          start: '2026-03-23T23:00:00',
+          end: '2026-03-24T00:00:00',
+          context: 'personal',
+          color: null,
+        },
+        {
+          scheduleId: 'sched-1',
+          title: 'Test Schedule',
+          start: '2026-03-23T00:00:00',
+          end: '2026-03-23T08:00:00',
+          context: 'personal',
+          color: null,
+        },
+      ])
+    })
+  })
+
+  describe('schedule overrides', () => {
+    it('replaces the start and end times for one occurrence', () => {
+      const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
+      const overrides = new Map([
+        [
+          '2026-03-22',
+          { startTime: '08:30', endTime: '09:45', skipped: false },
+        ],
+      ])
+
+      expect(
+        expandScheduleForDate(schedule, null, '2026-03-22', overrides),
+      ).toEqual([
+        {
+          scheduleId: 'sched-1',
+          title: 'Test Schedule',
+          start: '2026-03-22T08:30:00',
+          end: '2026-03-22T09:45:00',
+          context: 'personal',
+          color: null,
+        },
+      ])
+    })
+
+    it('omits a skipped occurrence', () => {
+      const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
+      const overrides = new Map([
+        ['2026-03-22', { startTime: null, endTime: null, skipped: true }],
+      ])
+
+      expect(
+        expandScheduleForDate(schedule, null, '2026-03-22', overrides),
+      ).toEqual([])
+    })
   })
 
   describe('weekly recurrence', () => {

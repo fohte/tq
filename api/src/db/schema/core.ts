@@ -270,6 +270,29 @@ export const schedules = pgTable(
   ],
 )
 
+export const scheduleOverrides = pgTable(
+  'schedule_overrides',
+  {
+    scheduleId: text('schedule_id')
+      .notNull()
+      .references(() => schedules.id, { onDelete: 'cascade' }),
+    occurrenceDate: date('occurrence_date').notNull(),
+    startTime: text('start_time'),
+    endTime: text('end_time'),
+    skipped: boolean('skipped').notNull().default(false),
+  },
+  (table) => [
+    unique('schedule_overrides_schedule_date_unique').on(
+      table.scheduleId,
+      table.occurrenceDate,
+    ),
+    check(
+      'schedule_overrides_time_or_skip_check',
+      sql`(${table.skipped} AND ${table.startTime} IS NULL AND ${table.endTime} IS NULL) OR (NOT ${table.skipped} AND ${table.startTime} IS NOT NULL AND ${table.endTime} IS NOT NULL)`,
+    ),
+  ],
+)
+
 export const taskQueues = pgTable(
   'task_queues',
   {
