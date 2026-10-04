@@ -15,7 +15,7 @@ import { DATABASE_URL } from '#env'
 const testClient = postgres(DATABASE_URL, { max: 1 })
 const testDb = drizzle(testClient, { schema })
 
-export function runWithDb<T>(current: DbContextValue, fn: () => T): T {
+function runWithDb<T>(current: DbContextValue, fn: () => T): T {
   return dbContext.run(current, fn)
 }
 
