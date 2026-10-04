@@ -67,6 +67,7 @@ export const ArchivedSession: Story = {
     sessions: [
       { ...activeAgentSession, id: '3', archivedAt: '2026-03-20T11:59:00Z' },
     ],
+    defaultOpen: true,
   },
 }
 
