@@ -67,7 +67,7 @@ interface SelectedRange {
 
 // A plain click (no drag) reports a range as short as one snap increment —
 // treat anything under 30 minutes as "just a click" and default to 30.
-export function estimateMinutesForRange(range: SelectedRange): number {
+function estimateMinutesForRange(range: SelectedRange): number {
   const rawMinutes = Math.round(
     (range.end.getTime() - range.start.getTime()) / 60_000,
   )

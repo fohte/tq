@@ -4,6 +4,9 @@ import type { InferResponseType } from 'hono/client'
 import type { Task } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { projectKeys } from '#lib/query-keys'
+
+export { projectKeys }
 
 type Project = InferResponseType<typeof api.api.projects.$get, 200>[number]
 
@@ -34,14 +37,6 @@ export const PROJECT_COLOR_PRESETS = [
   { name: 'Pink', hex: '#E91E63' },
   { name: 'Yellow', hex: '#FFC107' },
 ] as const
-
-export const projectKeys = {
-  all: ['projects'] as const,
-  lists: ['projects', 'list'] as const,
-  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
-  detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
-  taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
-}
 
 export function useProjects(
   filter?: ProjectFilter,

@@ -16,7 +16,7 @@ import {
   MENTION_FIXTURE_TITLE,
   seedLiveReferenceFixtures,
 } from '#components/ui/markdown-editor-live-references-test-fixtures'
-import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
+import { githubUrlPreviewKeys } from '#lib/query-keys'
 import { assertDefined, findEditorText } from '#lib/test-utils'
 import { createStoryRouter } from '#storybook-config/story-router'
 

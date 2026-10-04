@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  applyStandaloneViewport,
-  getViewportContent,
-  isStandaloneDisplayMode,
-} from '#lib/standalone-viewport'
+import { applyStandaloneViewport } from '#lib/standalone-viewport'
 
 function createFakeWindow({
   iosStandalone = false,
@@ -33,40 +29,6 @@ function createDocumentWithViewportMeta(
   return doc
 }
 
-describe('isStandaloneDisplayMode', () => {
-  it('returns false when neither navigator.standalone nor the display-mode media query match', () => {
-    expect(isStandaloneDisplayMode(createFakeWindow())).toBe(false)
-  })
-
-  it('returns true when navigator.standalone is true (iOS home screen launch)', () => {
-    expect(
-      isStandaloneDisplayMode(createFakeWindow({ iosStandalone: true })),
-    ).toBe(true)
-  })
-
-  it('returns true when the display-mode: standalone media query matches', () => {
-    expect(
-      isStandaloneDisplayMode(createFakeWindow({ matchesDisplayMode: true })),
-    ).toBe(true)
-  })
-})
-
-describe('getViewportContent', () => {
-  it('leaves the content unchanged when not standalone', () => {
-    expect(
-      getViewportContent('width=device-width, initial-scale=1.0', false),
-    ).toBe('width=device-width, initial-scale=1.0')
-  })
-
-  it('appends the zoom-disabling directives when standalone', () => {
-    expect(
-      getViewportContent('width=device-width, initial-scale=1.0', true),
-    ).toBe(
-      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
-    )
-  })
-})
-
 describe('applyStandaloneViewport', () => {
   it('appends zoom-disabling directives to whatever content is already set when standalone', () => {
     const doc = createDocumentWithViewportMeta(
@@ -92,6 +54,18 @@ describe('applyStandaloneViewport', () => {
     expect(
       doc.querySelector('meta[name="viewport"]')?.getAttribute('content'),
     ).toBe('width=device-width, initial-scale=1.0, viewport-fit=cover')
+  })
+
+  it('appends zoom-disabling directives when display-mode is standalone', () => {
+    const doc = createDocumentWithViewportMeta()
+
+    applyStandaloneViewport(doc, createFakeWindow({ matchesDisplayMode: true }))
+
+    expect(
+      doc.querySelector('meta[name="viewport"]')?.getAttribute('content'),
+    ).toBe(
+      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
+    )
   })
 
   it('does nothing when there is no viewport meta tag', () => {

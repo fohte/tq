@@ -22,7 +22,7 @@ export function extractSearchScopeTokens(query: string): string[] {
   ).filter((token): token is string => token != null)
 }
 
-export function stripSearchScopeTokens(query: string): string {
+function stripSearchScopeTokens(query: string): string {
   return query.replace(scopeTokenPattern, '').replace(/^\s+/, '')
 }
 
@@ -65,7 +65,7 @@ function removeQueryTokenAt(query: string, start: number, end: number): string {
   return before + after
 }
 
-export function addSearchScope(query: string, scopeToken: string): string {
+function addSearchScope(query: string, scopeToken: string): string {
   const existingScopes = extractSearchScopeTokens(query)
   const filters = { ...parseSearchQuery(query), freeText: '' }
   delete filters.parentId

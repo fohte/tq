@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 
 import { cn } from '#lib/utils'
 
-export interface ColorSwatchOption {
+interface ColorSwatchOption {
   name: string
   hex: string
 }
