@@ -1,10 +1,14 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { defaultGithubNotifyEvents, taskGithubLinks } from '#db/schema'
 import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { firstOrThrow } from '#lib/drizzle-utils'
 import type {
   GithubLinkResponse,
   TaskListItemResponse,
@@ -51,6 +55,29 @@ function mockGithubIssueActivity() {
   })
 }
 
+function normalizeGithubLinkResult(status: number, link: GithubLinkResponse) {
+  return { status, link: normalizeLink(link) }
+}
+
+function normalizeGithubLinkUpdateResult(
+  status: number,
+  response: GithubLinkResponse,
+  stored: GithubLinkResponse[],
+) {
+  return {
+    status,
+    response: normalizeLink(response),
+    stored: stored.map(normalizeLink),
+  }
+}
+
+function normalizeGithubLinkErrorResult(status: number, body: unknown) {
+  return { status, body }
+}
+
+const exampleGithubIssueUrl =
+  'https://github.com/example-owner/example-repo/issues/7319'
+
 describe('POST /api/tasks/:taskId/github-link', () => {
   it('links an existing task to a GitHub issue', async () => {
     const task = await createTask('My task')
@@ -78,6 +105,61 @@ describe('POST /api/tasks/:taskId/github-link', () => {
       title: 'Bug: something broke',
       lastSyncedAt: 'DATE',
     })
+  })
+
+  it('uses the requested notify events when linking', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      title: 'An example issue',
+      html_url: exampleGithubIssueUrl,
+    })
+
+    const res = await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: exampleGithubIssueUrl,
+        notifyEvents: ['comments'],
+      }),
+    })
+
+    expect(
+      normalizeGithubLinkResult(
+        res.status,
+        await jsonBody<GithubLinkResponse>(res),
+      ),
+    ).toEqual({
+      status: 201,
+      link: {
+        id: 'ID',
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 7319,
+        kind: 'issue',
+        role: 'subject',
+        notifyEvents: ['comments'],
+        url: exampleGithubIssueUrl,
+        state: 'open',
+        title: 'An example issue',
+        lastSyncedAt: 'DATE',
+      },
+    })
+  })
+
+  it('rejects unknown notify events when linking', async () => {
+    const task = await createTask('My task')
+
+    const res = await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: exampleGithubIssueUrl,
+        notifyEvents: ['unknown'],
+      }),
+    })
+
+    expect(res.status).toEqual(400)
   })
 
   it('records a github_linked task_event', async () => {
@@ -215,6 +297,206 @@ describe('POST /api/tasks/:taskId/github-link', () => {
     })
   })
 })
+
+describe('PATCH /api/tasks/:taskId/github-link/:linkId', () => {
+  it('updates and persists the notify events', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      title: 'An example issue',
+      html_url: exampleGithubIssueUrl,
+    })
+    const linkRes = await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: exampleGithubIssueUrl }),
+    })
+    const link = await jsonBody<GithubLinkResponse>(linkRes)
+
+    const res = await app.request(
+      `/api/tasks/${task.id}/github-link/${link.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyEvents: [] }),
+      },
+    )
+    const updatedLink = await jsonBody<GithubLinkResponse>(res)
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detailRes)
+
+    expect(
+      normalizeGithubLinkUpdateResult(
+        res.status,
+        updatedLink,
+        detailBody.githubLinks,
+      ),
+    ).toEqual({
+      status: 200,
+      response: {
+        ...normalizeLink(link),
+        notifyEvents: [],
+      },
+      stored: [
+        {
+          ...normalizeLink(link),
+          notifyEvents: [],
+        },
+      ],
+    })
+  })
+
+  it('updates notification events for a blocker link', async () => {
+    const task = await createTask('My task')
+    const link = firstOrThrow(
+      await db
+        .insert(taskGithubLinks)
+        .values({
+          taskId: task.id,
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 7319,
+          role: 'blocker',
+          notifyEvents: defaultGithubNotifyEvents('blocker'),
+          kind: 'issue',
+          url: exampleGithubIssueUrl,
+          state: 'open',
+          title: 'An example issue',
+        })
+        .returning(),
+    )
+
+    const res = await app.request(
+      `/api/tasks/${task.id}/github-link/${link.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyEvents: ['closed', 'comments'] }),
+      },
+    )
+
+    expect(
+      normalizeGithubLinkResult(
+        res.status,
+        await jsonBody<GithubLinkResponse>(res),
+      ),
+    ).toEqual({
+      status: 200,
+      link: {
+        id: 'ID',
+        owner: 'example-owner',
+        repo: 'example-repo',
+        number: 7319,
+        kind: 'issue',
+        role: 'blocker',
+        notifyEvents: ['closed', 'comments'],
+        url: exampleGithubIssueUrl,
+        state: 'open',
+        title: 'An example issue',
+        lastSyncedAt: 'DATE',
+      },
+    })
+  })
+
+  it('rejects unknown notify events', async () => {
+    const task = await createTask('My task')
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: exampleGithubIssueUrl })
+    const linkRes = await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: exampleGithubIssueUrl }),
+    })
+    const link = await jsonBody<GithubLinkResponse>(linkRes)
+
+    const res = await app.request(
+      `/api/tasks/${task.id}/github-link/${link.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyEvents: ['unknown'] }),
+      },
+    )
+
+    expect(res.status).toEqual(400)
+  })
+
+  it('returns 404 when the task has no link', async () => {
+    const task = await createTask('My task')
+
+    const res = await app.request(
+      `/api/tasks/${task.id}/github-link/${TEST_UUID}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyEvents: ['closed'] }),
+      },
+    )
+
+    expect(
+      normalizeGithubLinkErrorResult(res.status, await res.json()),
+    ).toEqual({
+      status: 404,
+      body: { error: 'GitHub link not found' },
+    })
+  })
+
+  it('does not update a link that belongs to another task', async () => {
+    const linkTask = await createTask('Linked task')
+    const requestTask = await createTask('Other task')
+    const link = firstOrThrow(
+      await db
+        .insert(taskGithubLinks)
+        .values({
+          taskId: linkTask.id,
+          owner: 'example-owner',
+          repo: 'example-repo',
+          number: 7319,
+          role: 'subject',
+          notifyEvents: defaultGithubNotifyEvents('subject'),
+          kind: 'issue',
+          url: exampleGithubIssueUrl,
+          state: 'open',
+          title: 'An example issue',
+        })
+        .returning(),
+    )
+
+    const res = await app.request(
+      `/api/tasks/${requestTask.id}/github-link/${link.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyEvents: ['comments'] }),
+      },
+    )
+    const storedLink = firstOrThrow(
+      await db
+        .select()
+        .from(taskGithubLinks)
+        .where(eq(taskGithubLinks.id, link.id)),
+    )
+
+    expect(await readUpdateAttempt(res, storedLink)).toEqual({
+      status: 404,
+      body: { error: 'GitHub link not found' },
+      taskId: linkTask.id,
+      notifyEvents: defaultGithubNotifyEvents('subject'),
+    })
+  })
+})
+
+async function readUpdateAttempt(
+  response: Response,
+  link: { taskId: string; notifyEvents: string[] },
+) {
+  return {
+    status: response.status,
+    body: await response.json(),
+    taskId: link.taskId,
+    notifyEvents: link.notifyEvents,
+  }
+}
 
 describe('DELETE /api/tasks/:taskId/github-link/:linkId', () => {
   it('removes the link, leaving the task intact', async () => {

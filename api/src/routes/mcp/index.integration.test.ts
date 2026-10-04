@@ -19,6 +19,7 @@ const REGISTERED_TOOL_NAMES = [
   'description_template_get',
   'description_template_list',
   'github_link',
+  'github_notify',
   'github_resolve',
   'github_sync',
   'github_unlink',

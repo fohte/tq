@@ -13,6 +13,7 @@ const baseLink: GithubLink = makeGithubLink({
   number: 412,
   url: 'https://github.com/fohte/tq/issues/412',
   title: 'Support associating multiple GitHub links with a task',
+  notifyEvents: ['closed', 'comments'],
 })
 
 const mixedLinks: GithubLink[] = [
@@ -24,6 +25,7 @@ const mixedLinks: GithubLink[] = [
     url: 'https://github.com/fohte/tq/issues/412',
     state: 'merged',
     title: 'api: allow associating multiple GitHub links with a single task',
+    notifyEvents: ['closed'],
   }),
   makeGithubLink({
     id: 'link-3',
@@ -32,6 +34,7 @@ const mixedLinks: GithubLink[] = [
     url: 'https://github.com/fohte/tq/issues/412',
     state: 'open',
     title: 'web: show every linked GitHub issue and PR in a section',
+    notifyEvents: [],
   }),
 ]
 

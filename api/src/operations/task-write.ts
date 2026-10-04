@@ -164,7 +164,10 @@ export const taskWriteOperations = [
       'uses 0=Sunday through 6=Saturday for weekly rules, and `dayOfMonth` ' +
       'uses 1-31 for monthly rules. `blockedBy` lists task ids/numbers or ' +
       'GitHub issue/pull request URLs that must resolve first; unknown tasks ' +
-      'return 404.',
+      'return 404. `template` selects ' +
+      'a description template by name; for LLM-authored tasks, omit it to ' +
+      'use the default template when one is configured. The description must ' +
+      'include content under every `##` section.',
     positionalArgs: ['title'],
     kind: 'write',
     attribution: 'agent',
@@ -181,8 +184,10 @@ export const taskWriteOperations = [
           'Comma-separated label names to attach (unknown names are created)',
         blockedBy:
           'Comma-separated task ids/numbers or GitHub issue/pull request URLs blocking this task',
+        template:
+          'Description template name to validate for LLM-authored tasks',
       },
-      optionMetavars: { labels: 'names', blockedBy: 'items' },
+      optionMetavars: { labels: 'names', blockedBy: 'ids', template: 'name' },
       customOptions: [
         {
           flags: '--parent-id <id>',
