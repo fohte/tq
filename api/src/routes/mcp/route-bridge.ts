@@ -1,5 +1,4 @@
 import type { CallToolResult } from '@modelcontextprotocol/server'
-import type { Hono } from 'hono'
 import { fromThrowable, ResultAsync } from 'neverthrow'
 import { z } from 'zod'
 
@@ -18,32 +17,6 @@ const validationErrorBodySchema = z.object({
 // Matches routes' hand-written client-error bodies, e.g. `{ error: 'Task not
 // found' }` (404) or `{ error: 'Task is already completed' }` (409).
 const clientErrorBodySchema = z.object({ error: z.string() })
-
-export type RouteCallResult<T> =
-  { ok: true; data: T } | { ok: false; result: CallToolResult }
-
-/**
- * Calls an existing route in-process via `app.request()` and maps the HTTP
- * response to an MCP tool result. Non-2xx responses become a `CallToolResult`
- * with `isError: true` so the agent sees a normal tool result it can react
- * to, rather than a protocol-level error.
- */
-export async function callInternalRoute<T = unknown>(
-  app: Hono,
-  path: string,
-  init?: RequestInit,
-): Promise<RouteCallResult<T>> {
-  const res = await app.request(path, init)
-
-  if (res.ok) {
-    // Routes without a response body (e.g. DELETE endpoints) return 204.
-    const data = res.status === 204 ? undefined : await res.json()
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the caller specifies T based on which route it's calling; the response body isn't validated against it here
-    return { ok: true, data: data as T }
-  }
-
-  return { ok: false, result: await toErrorResult(res) }
-}
 
 export async function toErrorResult(res: Response): Promise<CallToolResult> {
   if (res.status === 400) {

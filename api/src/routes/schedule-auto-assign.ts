@@ -12,7 +12,10 @@ import {
 } from '#integrations/google-calendar/index'
 import { localDateBoundsToUtc, localNaiveDateTimeToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
-import { loadSchedulesWithRules } from '#routes/schedule-shared'
+import {
+  loadScheduleOverridesForExpansion,
+  loadSchedulesWithRules,
+} from '#routes/schedule-shared'
 import { timeBlockToResponse } from '#routes/tasks/shared'
 import { queueDateSchema } from '#schemas/queue'
 import {
@@ -116,8 +119,17 @@ export const autoAssignApp = new Hono().post(
     }
 
     const scheduleRules = await loadSchedulesWithRules()
+    const overridesBySchedule = await loadScheduleOverridesForExpansion(
+      date,
+      date,
+    )
     const expandedScheduleBlocks = scheduleRules.flatMap(({ schedule, rule }) =>
-      expandScheduleForDate(schedule, rule, date),
+      expandScheduleForDate(
+        schedule,
+        rule,
+        date,
+        overridesBySchedule.get(schedule.id),
+      ),
     )
 
     const manualBlocks = await db

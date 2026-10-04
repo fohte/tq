@@ -48,8 +48,8 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/description-templates/:name':
     'template management is a web UI action',
 
-  // Editing recurring schedules and running auto-assignment remain web UI
-  // actions; only expanded recurring instances are exposed as read-only data.
+  // Recurring schedule defaults and auto-assignment remain calendar actions;
+  // per-occurrence changes have separate CLI operations.
   'POST /api/schedule/recurring':
     'calendar UI is faster for direct manipulation',
   'PATCH /api/schedule/recurring/:id':

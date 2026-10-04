@@ -16,6 +16,7 @@ import {
 } from '#components/day-view/queue-sections'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
+import { useCompactMemoData } from '#hooks/use-compact-memo-data'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
@@ -26,6 +27,7 @@ import {
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
+import { useNowPanelData } from '#hooks/use-now-panel-data'
 import { useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
@@ -92,6 +94,7 @@ function DayView() {
     baseFilter,
     refetchInterval === undefined ? undefined : { refetchInterval },
   )
+  const taskMap = useTaskMap(categorized.all)
   const dueDateTasksQuery = useTaskList(
     { ...baseFilter, status: 'todo', hasDue: true, sortBy: 'due' },
     {
@@ -169,12 +172,11 @@ function DayView() {
     refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
-  useCompactRefreshErrorLogging(
-    isCompactLayout,
-    timeBlocksQuery.error,
-    schedulesQuery.error,
-    dueDateTasksQuery.error,
-  )
+  useCompactRefreshErrorLogging(isCompactLayout, 'day view', {
+    timeBlocks: timeBlocksQuery.error,
+    schedules: schedulesQuery.error,
+    dueTasks: dueDateTasksQuery.error,
+  })
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
@@ -184,6 +186,18 @@ function DayView() {
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
+  const { nowPanelProps, gcalAuthRequired: nowPanelGcalAuthRequired } =
+    useNowPanelData({
+      enabled: isCompactLayout,
+      context,
+      taskMap,
+      isTasksLoading: isLoading,
+      ...(refetchInterval === undefined ? {} : { refetchInterval }),
+    })
+  const compactMemoProps = useCompactMemoData({
+    enabled: isCompactLayout,
+    context,
+  })
   const queryClient = useQueryClient()
   const projects = useProjects()
 
@@ -201,25 +215,22 @@ function DayView() {
   )
   const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
-    gcalEventsQuery.error instanceof GcalAuthRequiredError
+    gcalEventsQuery.error instanceof GcalAuthRequiredError ||
+    nowPanelGcalAuthRequired
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
     'google_calendar',
     gcalAuthRequired,
   )
 
   useEffect(() => {
-    if (gcalEventsQuery.error != null && !gcalAuthRequired) {
-      console.error(
-        'Failed to fetch Google Calendar events',
-        gcalEventsQuery.error,
-      )
+    const error = gcalEventsQuery.error
+    if (error != null && !(error instanceof GcalAuthRequiredError)) {
+      console.error('Failed to fetch Google Calendar events', error)
     }
-  }, [gcalEventsQuery.error, gcalAuthRequired])
+  }, [gcalEventsQuery.error])
 
   const setQueueItems = useSetQueueItems()
   const autoAssign = useAutoAssign()
-
-  const taskMap = useTaskMap(categorized.all)
 
   // Queue updates replace the full list, so keep stored IDs separate from
   // filters applied to the displayed sections.
@@ -431,6 +442,8 @@ function DayView() {
     <>
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
+        nowPanel={nowPanelProps}
+        compactMemo={compactMemoProps}
         isLoading={
           isLoading ||
           (isCompactLayout && dueDateTasksQuery.isLoading) ||

@@ -5,7 +5,6 @@ import { TaskStatusGlyph } from '#components/task/status-icon'
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
 import { Badge } from '#components/ui/badge'
 
-// Mirrors the label convention in task-status-picker.tsx's STATUS_OPTIONS.
 function statusLabel(status: TaskPreviewChipTask['status']): string {
   return status === 'completed' ? 'Completed' : 'Todo'
 }

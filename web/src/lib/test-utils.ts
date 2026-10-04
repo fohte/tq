@@ -29,6 +29,15 @@ export async function waitForFocus(element: Element): Promise<void> {
 }
 
 /**
+ * Waits for an editor to receive focus and its selection to settle.
+ */
+export async function waitForEditorFocus(element: Element): Promise<void> {
+  await waitForFocus(element)
+  // ProseMirror may restore its state selection 20 ms after focus.
+  await new Promise((resolve) => setTimeout(resolve, 25))
+}
+
+/**
  * Waits for the lazy Markdown editor to mount and gives it focus.
  */
 export async function focusDescriptionEditor(

@@ -64,6 +64,14 @@ describe('schedule operation tools', () => {
         .sort((left, right) => left.name.localeCompare(right.name)),
     ).toEqual([
       {
+        name: 'schedule_override_clear',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      {
+        name: 'schedule_override_set',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
         name: 'schedule_recurring_list',
         annotations: { readOnlyHint: true },
       },

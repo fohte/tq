@@ -720,6 +720,8 @@ describe('operation tool input schemas', () => {
       saved_view_get: false,
       saved_view_list: false,
       saved_view_update: false,
+      schedule_override_clear: false,
+      schedule_override_set: false,
       schedule_recurring_list: false,
       schedule_time_blocks_create: false,
       schedule_time_blocks_delete: false,
@@ -785,6 +787,14 @@ describe('operation tool annotations', () => {
       },
       label_list: { readOnlyHint: true },
       label_update: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      schedule_override_clear: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
+      schedule_override_set: {
         readOnlyHint: false,
         destructiveHint: false,
       },

@@ -84,6 +84,26 @@ const sampleBlock = {
 }
 
 describe('useTimeBlocks', () => {
+  it('does not fetch or poll when disabled', async () => {
+    vi.useFakeTimers()
+    try {
+      const mocks = await getMocks()
+
+      renderHook(
+        () => useTimeBlocks('2026-03-22', '2026-03-22', 60_000, false),
+        { wrapper },
+      )
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+      })
+
+      expect(assertDefined(mocks['mockGet']).mock.calls).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('fetches time blocks for a date', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockGet']).mockResolvedValue({

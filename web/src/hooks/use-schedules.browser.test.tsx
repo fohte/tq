@@ -47,6 +47,22 @@ afterEach(() => {
 })
 
 describe('useScheduleList', () => {
+  it('does not fetch or poll when disabled', async () => {
+    vi.useFakeTimers()
+    const mocks = await getMocks()
+
+    renderHook(
+      () => useScheduleList('2026-03-22', '2026-03-22', 60_000, false),
+      { wrapper },
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+
+    expect(assertDefined(mocks.mockGet).mock.calls).toEqual([])
+  })
+
   it('polls for external schedule changes when an interval is configured', async () => {
     vi.useFakeTimers()
     const mocks = await getMocks()
