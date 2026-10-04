@@ -312,7 +312,7 @@ bigger). E.g. `gap-[7px]` → `gap-2`, `py-[7px]` → `py-2`.
 | -------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `3px`          | `1` (4px)     | Equidistant between `0.5` (2px) and `1` (4px) — ties round up                                                                                                                                                                                                                                                                                                      |
 | `5px`          | `1.5` (6px)   | Equidistant between `1` (4px) and `1.5` (6px) — ties round up                                                                                                                                                                                                                                                                                                      |
-| `-5px`         | `-1.5` (-6px) | Same tie as `5px` above, applied to a negative position offset (`tabs.tsx`'s active-tab underline `bottom-[-5px]` → `-bottom-1.5`) — ties round away from zero, mirroring the positive case                                                                                                                                                                        |
+| `-5px`         | `-1.5` (-6px) | Same tie as `5px` above, applied to a negative position offset (`bottom-[-5px]` → `-bottom-1.5`) — ties round away from zero, mirroring the positive case                                                                                                                                                                                                          |
 | `7px`          | `2` (8px)     | Equidistant between `1.5` (6px) and `2` (8px) — ties round up                                                                                                                                                                                                                                                                                                      |
 | `9px`          | `2.5` (10px)  | Equidistant between `2` (8px) and `2.5` (10px) — ties round up                                                                                                                                                                                                                                                                                                     |
 | `11px`         | `3` (12px)    | Equidistant between `2.5` (10px) and `3` (12px) — ties round up                                                                                                                                                                                                                                                                                                    |
@@ -512,11 +512,11 @@ their own tokens or rules.
 There are exactly **three** sanctioned exceptions, each scoped to a distinct
 UI role:
 
-| Exception                          | Where                                                                                                                                                                                                               |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--keycap-radius` (4px)            | Shared by `Kbd` (`web/src/components/ui/kbd.tsx`) and `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`) — both call `rounded-(--keycap-radius)`, a token defined in `@fohte/ui/tokens.css` |
-| `--radius-task-filter-value` (3px) | `TaskFilterChip` condition values use `rounded-task-filter-value` for their tinted background; token defined in `web/src/index.css`                                                                                 |
-| Inline `<code>` elements           | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                                                                          |
+| Exception                          | Where                                                                                                                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--keycap-radius` (4px)            | Used by `KeybindHint`'s `boxed` variant (`web/src/components/ui/keybind-hint.tsx`), which calls `rounded-(--keycap-radius)`; token defined in `@fohte/ui/tokens.css` |
+| `--radius-task-filter-value` (3px) | `TaskFilterChip` condition values use `rounded-task-filter-value` for their tinted background; token defined in `web/src/index.css`                                  |
+| Inline `<code>` elements           | `border-radius: 4px` on `.ProseMirror code` in `web/src/components/ui/markdown-editor.css`                                                                           |
 
 **Do not introduce new radius exceptions without updating this doc.**
 
@@ -526,13 +526,6 @@ Note: `@fohte/ui/button`'s size variants use `rounded-lg` / `rounded-(--btn-radi
 `min(var(--radius-md), 12px)`) are still driven by the `--radius` token chain
 (they resolve to `0rem` because `--radius` is `0rem`), so they are **not**
 exceptions to this policy.
-
-**shadcn regeneration risk:** `tabs.tsx` and `kbd.tsx` are shadcn CLI-managed
-(`web/components.json` points its `ui` alias at `web/src/components/ui/`).
-Running `pnpm dlx shadcn add <component>` on either file overwrites its local
-customizations, including `h-(--tabs-trigger-height)` and
-`rounded-(--keycap-radius)`. Button, Dialog, Input, Select, and Tooltip are
-provided by `@fohte/ui` and must be changed there.
 
 ## Status convention
 
@@ -568,8 +561,9 @@ opacity has no `@theme` namespace to hang a named scale step off of.
 
 ## Primitives
 
-All primitives live in `web/src/components/ui/` and are imported via the
-`#components/ui/<file>` path alias.
+App-specific primitives live in `web/src/components/ui/` and are imported via
+the `#components/ui/<file>` path alias. Button, Dialog, Input, Select, and
+Tooltip are provided by `@fohte/ui` and must be changed there.
 
 ### `SectionHeading`
 
@@ -845,26 +839,6 @@ call site.
   ...
 </DetailSidebarPanel>
 ```
-
-## Naming boundary with shadcn primitives
-
-`web/src/components/ui/` is expected to eventually also hold shadcn-derived
-`badge.tsx`, `kbd.tsx`, `progress.tsx`, `tabs.tsx` — full Base UI primitives
-with ARIA semantics, built for form-control use cases. `Chip`, `KeybindHint`,
-`ProgressBar`, `TabStrip` are deliberately named to avoid colliding with
-those filenames/exports.
-
-They are **not** replacements for the shadcn primitives: they're
-lighter-weight, non-form-control, presentation-only components for the same
-visual patterns. Both sets are meant to coexist — pick whichever fits a
-given usage:
-
-| Need                                         | Reach for                                           |
-| -------------------------------------------- | --------------------------------------------------- |
-| Static/simple bordered label, no ARIA needed | `Chip` / `KeybindHint` / `ProgressBar` / `TabStrip` |
-| Full variant system, ARIA semantics needed   | shadcn `Badge` / `Kbd` / `Progress` / `Tabs`        |
-
-There is no requirement to migrate a screen from one set to the other.
 
 ## Non-goals
 

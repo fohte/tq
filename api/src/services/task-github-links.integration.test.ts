@@ -41,6 +41,13 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
   }
 }
 
+function findLinksForTask(taskId: string) {
+  return db
+    .select()
+    .from(taskGithubLinks)
+    .where(eq(taskGithubLinks.taskId, taskId))
+}
+
 const ref = { owner: 'fohte', repo: 'tq', number: 42 }
 const roleRef = { owner: 'example-owner', repo: 'example-repo', number: 17 }
 const author: EditAuthor = { kind: 'human', agent: null }
@@ -300,10 +307,7 @@ describe('linkTaskToGithubUrl', () => {
       await linkTaskToGithubUrl(task.id, { ...ref, number: 43 }, author)
     )._unsafeUnwrap()
 
-    const links = await db
-      .select()
-      .from(taskGithubLinks)
-      .where(eq(taskGithubLinks.taskId, task.id))
+    const links = await findLinksForTask(task.id)
     const byNumber = (a: { number: number }, b: { number: number }) =>
       a.number - b.number
     expect([...links].sort(byNumber).map(normalizeLink)).toEqual(
@@ -367,10 +371,7 @@ describe('unlinkTask', () => {
 
     ;(await unlinkTask(db, task.id, first.id))._unsafeUnwrap()
 
-    const links = await db
-      .select()
-      .from(taskGithubLinks)
-      .where(eq(taskGithubLinks.taskId, task.id))
+    const links = await findLinksForTask(task.id)
     expect(links.map(normalizeLink)).toEqual([normalizeLink(second)])
   })
 
@@ -391,10 +392,7 @@ describe('unlinkTask', () => {
     const error = (await unlinkTask(db, taskA.id, linkB.id))._unsafeUnwrapErr()
 
     expect(error).toEqual(new GithubLinkNotFoundError())
-    const links = await db
-      .select()
-      .from(taskGithubLinks)
-      .where(eq(taskGithubLinks.taskId, taskB.id))
+    const links = await findLinksForTask(taskB.id)
     expect(links.map(normalizeLink)).toEqual([normalizeLink(linkB)])
   })
 })
