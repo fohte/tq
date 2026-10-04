@@ -187,7 +187,7 @@ export const taskWriteOperations = [
         template:
           'Description template name to validate for LLM-authored tasks',
       },
-      optionMetavars: { labels: 'names', blockedBy: 'ids', template: 'name' },
+      optionMetavars: { labels: 'names', blockedBy: 'items', template: 'name' },
       customOptions: [
         {
           flags: '--parent-id <id>',
