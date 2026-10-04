@@ -130,8 +130,9 @@ function timelineEvent(
   event: string,
   login: string | null,
   timestamp = '2024-08-13T09:30:00Z',
+  actorType?: string,
 ) {
-  return makeGithubTimelineEvent(event, login, timestamp)
+  return makeGithubTimelineEvent(event, login, timestamp, actorType)
 }
 
 function defaultTimelineEvents() {
@@ -779,6 +780,44 @@ describe('syncLinkFromGithub', () => {
         user: { login: AUTHENTICATED_GITHUB_LOGIN },
         created_at: '2024-08-13T09:30:00Z',
       },
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it('does not count bot comments as external comments', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+
+    queueGithubIssueResponse({
+      comments: 3,
+      updated_at: '2024-08-13T09:30:00Z',
+    })
+    queueGithubTimelineResponse([
+      {
+        event: 'commented',
+        user: { login: 'automation-bot', type: 'Bot' },
+        created_at: '2024-08-13T09:30:00Z',
+      },
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it('does not notify about other activity performed by a bot', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+
+    queueGithubIssueResponse({ updated_at: '2024-08-13T09:30:00Z' })
+    queueGithubTimelineResponse([
+      timelineEvent(
+        'reviewed',
+        'automation-bot',
+        '2024-08-13T09:30:00Z',
+        'Bot',
+      ),
     ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 

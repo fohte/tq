@@ -21,8 +21,14 @@ const githubUserSchema = z.object({ login: z.string() })
 const githubTimelineEventSchema = z
   .object({
     event: z.string(),
-    actor: z.object({ login: z.string() }).nullable().optional(),
-    user: z.object({ login: z.string() }).nullable().optional(),
+    actor: z
+      .object({ login: z.string(), type: z.string().optional() })
+      .nullable()
+      .optional(),
+    user: z
+      .object({ login: z.string(), type: z.string().optional() })
+      .nullable()
+      .optional(),
     created_at: z.string().optional(),
     submitted_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -35,6 +41,7 @@ const githubTimelineSchema = z.array(githubTimelineEventSchema)
 export interface GithubIssueActivityEvent {
   event: string
   login: string | null
+  actorType: string | null
   occurredAt: Date | null
 }
 
@@ -134,6 +141,7 @@ function fetchAllTimelineEvents(
 function toActivityEvent(
   event: z.infer<typeof githubTimelineEventSchema>,
 ): GithubIssueActivityEvent {
+  const actor = event.actor?.login == null ? event.user : event.actor
   const timestamp =
     event.created_at ??
     event.submitted_at ??
@@ -143,7 +151,8 @@ function toActivityEvent(
 
   return {
     event: event.event,
-    login: event.actor?.login ?? event.user?.login ?? null,
+    login: actor?.login ?? null,
+    actorType: actor?.type ?? null,
     occurredAt:
       occurredAt != null && !Number.isNaN(occurredAt.getTime())
         ? occurredAt

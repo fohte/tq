@@ -17,10 +17,15 @@ export function makeGithubTimelineEvent(
   event: string,
   login: string | null,
   createdAt = '2024-08-13T09:30:00Z',
+  actorType?: string,
 ) {
   return {
     event,
-    ...(login === null ? {} : { actor: { login } }),
+    ...(login === null
+      ? {}
+      : {
+          actor: { login, ...(actorType == null ? {} : { type: actorType }) },
+        }),
     created_at: createdAt,
   }
 }
