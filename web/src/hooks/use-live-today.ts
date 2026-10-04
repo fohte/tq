@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { formatLocalDate } from '#lib/date-range'
 
-export const LIVE_TODAY_CHECK_INTERVAL_MS = 60_000
+const LIVE_TODAY_CHECK_INTERVAL_MS = 60_000
 
 /**
  * Returns the current local date, re-rendering once the local calendar day

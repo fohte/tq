@@ -5,10 +5,11 @@ import type { InferResponseType } from 'hono/client'
 import { useDebounce } from '#hooks/use-debounce'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import type { SearchContext } from '#lib/query-keys'
+import { searchKeys } from '#lib/query-keys'
+import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
 
 type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
-
-type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
@@ -18,22 +19,9 @@ type PageSearchResult = InferResponseType<
   (typeof api.api.tasks.search)['pages']['$get'],
   200
 >['results'][number]
-type SearchContext = 'work' | 'personal'
-
 export const SEARCH_QUERY_DEBOUNCE_MS = 200
 
 export type { PageSearchResult, SearchResult, Suggestion }
-
-export const searchKeys = {
-  all: ['search'] as const,
-  results: (q: string, context: SearchContext | undefined) =>
-    [...searchKeys.all, 'results', q, context] as const,
-  number: (number: string | undefined) =>
-    [...searchKeys.all, 'number', number] as const,
-  pages: (q: string) => [...searchKeys.all, 'pages', q] as const,
-  suggestions: (prefix: string) =>
-    [...searchKeys.all, 'suggestions', prefix] as const,
-}
 
 /**
  * Hook for the command palette search modal (Cmd+K).
@@ -75,44 +63,6 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
   })
 
   return { ...queryResult, isDebouncing: debouncedQuery !== query }
-}
-
-export function extractTaskNumber(query: string): string | undefined {
-  return /^#?(\d+)$/.exec(query)?.[1]
-}
-
-export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
-  return {
-    id: task.id,
-    number: task.number,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    statusReason: task.statusReason,
-    context: task.context,
-    commitment: task.commitment,
-    labels: task.labels,
-    startDate: task.startDate,
-    dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
-    remindAt: task.remindAt,
-    parentId: task.parentId,
-    parentNumber: task.parentNumber,
-    projectId: task.projectId,
-    recurrenceRuleId: task.recurrenceRuleId,
-    recurrenceRule: task.recurrenceRule,
-    templateId: task.templateId,
-    occurrenceDate: task.occurrenceDate,
-    githubLinks: task.githubLinks,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    childCompletionCount: task.childCompletionCount,
-    duplicateOfNumber: task.duplicateOfNumber ?? null,
-    blockedByNumbers: task.blockedBy.map(({ number }) => number),
-    blockedByGithubRefs: task.githubBlockers
-      .filter(({ state }) => state === 'open')
-      .map(({ owner, repo, number, url }) => ({ owner, repo, number, url })),
-  }
 }
 
 export function useSearchTaskByNumber(query: string) {

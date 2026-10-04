@@ -7,7 +7,7 @@ import { makeComment } from '#components/task/task-activity-test-fixtures'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
+import { taskMentionKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseComments: Comment[] = [

@@ -2,9 +2,8 @@ import { useSyncExternalStore } from 'react'
 
 import { getStorageItem, parseJson, setStorageItem } from '#lib/local-storage'
 import type { SessionOpenSettings } from '#lib/session-open'
+import { SESSION_OPEN_SETTINGS_STORAGE_KEY } from '#lib/storage-keys'
 import { isRecord } from '#lib/type-guards'
-
-export const STORAGE_KEY = 'tq:session-open-settings'
 
 const DEFAULT_SETTINGS: SessionOpenSettings = {
   localContext: 'personal',
@@ -51,7 +50,7 @@ function notifyListeners(): void {
 function onStorage(event: StorageEvent): void {
   if (
     event.storageArea === localStorage &&
-    (event.key === STORAGE_KEY || event.key === null)
+    (event.key === SESSION_OPEN_SETTINGS_STORAGE_KEY || event.key === null)
   ) {
     notifyListeners()
   }
@@ -72,7 +71,7 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getSnapshot(): string | null {
-  return getStorageItem(STORAGE_KEY).unwrapOr(null)
+  return getStorageItem(SESSION_OPEN_SETTINGS_STORAGE_KEY).unwrapOr(null)
 }
 
 /**
@@ -87,7 +86,10 @@ export function useSessionOpenSettings() {
   const updateSettings = (patch: Partial<SessionOpenSettings>) => {
     const next = { ...settings, ...patch }
     // best-effort persistence; keep the in-memory value even if storage write fails
-    setStorageItem(STORAGE_KEY, JSON.stringify(next)).unwrapOr(undefined)
+    setStorageItem(
+      SESSION_OPEN_SETTINGS_STORAGE_KEY,
+      JSON.stringify(next),
+    ).unwrapOr(undefined)
     notifyListeners()
   }
 

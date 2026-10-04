@@ -4,7 +4,11 @@ import { delay, http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
 import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
-import type { SchedulingSettings } from '#hooks/use-scheduling-settings'
+import type { useSchedulingSettings } from '#hooks/use-scheduling-settings'
+
+type SchedulingSettings = NonNullable<
+  ReturnType<typeof useSchedulingSettings>['data']
+>
 
 const sampleSettings: SchedulingSettings = {
   workingHoursStart: '09:00',

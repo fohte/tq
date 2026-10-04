@@ -7,6 +7,7 @@ import { fn } from 'storybook/test'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
+import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { Schedule } from '#hooks/use-schedules'
@@ -221,17 +222,35 @@ const compactTasks = compactTaskTitles.map((title, index) =>
     number: index + 1,
     title,
     estimatedMinutes: 30,
+    ...(index === 0 ? { dueDate: overdueDateStr } : {}),
   }),
 )
+const compactExternalDueTask = makeTask({
+  id: 'compact-external-due-task',
+  title: 'Confirm the supplier estimate',
+  dueDate: dateStr,
+  estimatedMinutes: 45,
+})
+const compactDueTodayTasks = [
+  ...compactTasks.slice(0, 1),
+  compactExternalDueTask,
+]
 const compactWeekTask = makeTask({
   id: 'compact-week-task',
   title: "Review next week's milestones",
 })
 const compactQueueSections = [
   {
+    key: DUE_TODAY_SECTION_KEY,
+    title: 'due today',
+    items: compactDueTodayTasks,
+    emptyMessage: 'No tasks due today',
+    isReadOnly: true,
+  },
+  {
     key: 'day',
     title: 'today',
-    items: compactTasks,
+    items: compactTasks.slice(1),
     dateRangeLabel: dateStr.slice(5),
     emptyMessage: "No tasks in today's queue",
   },
@@ -403,7 +422,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: "the compact day planner stacks today's queue above the daily calendar",
+  name: 'the compact day planner shows due tasks before the remaining today queue',
   tags: ['mobile-only'],
   decorators: [
     (Story) => (

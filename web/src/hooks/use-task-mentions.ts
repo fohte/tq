@@ -3,21 +3,14 @@ import type { InferResponseType } from 'hono/client'
 import { useEffect } from 'react'
 
 import { useDebounce } from '#hooks/use-debounce'
-import { type TaskDetail, taskKeys } from '#hooks/use-tasks'
+import type { TaskDetail } from '#hooks/use-tasks'
 import { api } from '#lib/api'
+import { taskMentionKeys } from '#lib/query-keys'
 
 export type MentionSuggestion = InferResponseType<
   typeof api.api.tasks.mentions.$get,
   200
 >[number]
-
-const mentionPreviewKeyPrefix = [...taskKeys.all, 'mention-preview'] as const
-
-export const taskMentionKeys = {
-  preview: (number: number) => [...mentionPreviewKeyPrefix, number] as const,
-  suggestions: (query: string) =>
-    [...taskKeys.all, 'mention-suggestions', query] as const,
-}
 
 function taskMentionPreviewQueryOptions(number: number) {
   return {

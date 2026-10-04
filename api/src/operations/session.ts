@@ -17,6 +17,7 @@ const agentSessionByTaskSchema = z.looseObject({
   taskTitle: z.string(),
   taskParentId: z.string().nullable(),
   taskStatus: z.enum(['todo', 'completed']),
+  linkedAt: z.iso.datetime(),
 })
 
 type AgentSessionByTask = z.output<typeof agentSessionByTaskSchema>
@@ -27,6 +28,7 @@ type LinkedTask = {
   title: string
   parentId: string | null
   status: 'todo' | 'completed'
+  linkedAt: string
 }
 
 function groupTasksBySessionId(
@@ -41,6 +43,7 @@ function groupTasksBySessionId(
       title: row.taskTitle,
       parentId: row.taskParentId,
       status: row.taskStatus,
+      linkedAt: row.linkedAt,
     })
     map.set(row.id, list)
   }

@@ -1,8 +1,26 @@
 import { McpServer } from '@modelcontextprotocol/server'
+import { asc, desc } from 'drizzle-orm'
 
+import { db } from '#db/connection'
+import { taskDescriptionTemplates } from '#db/schema'
+import { operations } from '#operations/index'
 import { registerOperationTools } from '#routes/mcp/tools/operation-tools'
 
-export function createMcpServer(): McpServer {
+export async function createMcpServer(): Promise<McpServer> {
+  const descriptionTemplates = await db
+    .select({
+      name: taskDescriptionTemplates.name,
+      whenToUse: taskDescriptionTemplates.whenToUse,
+      body: taskDescriptionTemplates.body,
+      guide: taskDescriptionTemplates.guide,
+      isDefault: taskDescriptionTemplates.isDefault,
+    })
+    .from(taskDescriptionTemplates)
+    .orderBy(
+      desc(taskDescriptionTemplates.isDefault),
+      asc(taskDescriptionTemplates.name),
+    )
+
   const server = new McpServer(
     { name: 'tq', version: '0.1.0' },
     { capabilities: { tools: {} } },
@@ -20,7 +38,7 @@ export function createMcpServer(): McpServer {
     }))
     .remove()
 
-  registerOperationTools(server)
+  registerOperationTools(server, operations, descriptionTemplates)
 
   return server
 }

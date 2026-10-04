@@ -3,15 +3,12 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { activityKeys } from '#lib/query-keys'
 
 export type ActivityItem = InferResponseType<
   (typeof api.api.tasks)[':id']['activity']['$get'],
   200
 >[number]
-
-export const activityKeys = {
-  all: (taskId: string) => ['tasks', taskId, 'activity'] as const,
-}
 
 export function useTaskActivity(taskId: string) {
   return useQuery({

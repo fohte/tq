@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   printJson,
   printJsonList,
-  printLinkSync,
+  printOperationJsonWithLinkSync,
   writeContentFile,
 } from '#output'
 
@@ -96,13 +96,18 @@ describe('printJsonList', () => {
   })
 })
 
-describe('printLinkSync', () => {
+function printOperationResponse(data: unknown): void {
+  vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+  printOperationJsonWithLinkSync(data)._unsafeUnwrap()
+}
+
+describe('printOperationJsonWithLinkSync', () => {
   it('writes nothing when linkSync is undefined', () => {
     const write = vi
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printLinkSync(undefined)
+    printOperationResponse({})
 
     expect(write.mock.calls).toEqual([])
   })
@@ -112,7 +117,7 @@ describe('printLinkSync', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printLinkSync({ outgoing: [], unresolvedRefs: [] })
+    printOperationResponse({ linkSync: { outgoing: [], unresolvedRefs: [] } })
 
     expect(write.mock.calls).toEqual([])
   })
@@ -122,12 +127,14 @@ describe('printLinkSync', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printLinkSync({
-      outgoing: [
-        { number: 76, title: 'Fix bug' },
-        { number: 12, title: 'Add feature' },
-      ],
-      unresolvedRefs: [],
+    printOperationResponse({
+      linkSync: {
+        outgoing: [
+          { number: 76, title: 'Fix bug' },
+          { number: 12, title: 'Add feature' },
+        ],
+        unresolvedRefs: [],
+      },
     })
 
     expect(write.mock.calls).toEqual([
@@ -140,18 +147,20 @@ describe('printLinkSync', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printLinkSync({
-      outgoing: [],
-      unresolvedRefs: [
-        { kind: 'number', value: 465, sources: [{ kind: 'description' }] },
-        {
-          kind: 'id',
-          value: 'abc123',
-          sources: [
-            { kind: 'comment', id: '3f2a1c9e-0000-0000-0000-000000000000' },
-          ],
-        },
-      ],
+    printOperationResponse({
+      linkSync: {
+        outgoing: [],
+        unresolvedRefs: [
+          { kind: 'number', value: 465, sources: [{ kind: 'description' }] },
+          {
+            kind: 'id',
+            value: 'abc123',
+            sources: [
+              { kind: 'comment', id: '3f2a1c9e-0000-0000-0000-000000000000' },
+            ],
+          },
+        ],
+      },
     })
 
     expect(write.mock.calls).toEqual([
@@ -169,15 +178,17 @@ describe('printLinkSync', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printLinkSync({
-      outgoing: [{ number: 76, title: 'Fix bug' }],
-      unresolvedRefs: [
-        {
-          kind: 'number',
-          value: 465,
-          sources: [{ kind: 'page', id: 'p1', title: 'Notes' }],
-        },
-      ],
+    printOperationResponse({
+      linkSync: {
+        outgoing: [{ number: 76, title: 'Fix bug' }],
+        unresolvedRefs: [
+          {
+            kind: 'number',
+            value: 465,
+            sources: [{ kind: 'page', id: 'p1', title: 'Notes' }],
+          },
+        ],
+      },
     })
 
     expect(write.mock.calls).toEqual([
@@ -196,18 +207,20 @@ describe('printLinkSync', () => {
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printLinkSync({
-      outgoing: [],
-      unresolvedRefs: [
-        {
-          kind: 'number',
-          value: 465,
-          sources: [
-            { kind: 'description' },
-            { kind: 'page', id: 'p1', title: 'Notes' },
-          ],
-        },
-      ],
+    printOperationResponse({
+      linkSync: {
+        outgoing: [],
+        unresolvedRefs: [
+          {
+            kind: 'number',
+            value: 465,
+            sources: [
+              { kind: 'description' },
+              { kind: 'page', id: 'p1', title: 'Notes' },
+            ],
+          },
+        ],
+      },
     })
 
     expect(write.mock.calls).toEqual([

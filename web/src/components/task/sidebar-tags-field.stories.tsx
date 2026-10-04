@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
-import { labelKeys } from '#hooks/use-labels'
+import { labelKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
   defaultOptions: {

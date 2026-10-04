@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-import { CommentRow } from '#components/task/task-activity'
+import { CommentRow } from '#components/task/comment-row'
 import { makeComment } from '#components/task/task-activity-test-fixtures'
 import type { Comment } from '#hooks/use-task-comments'
 import { StoryRouter } from '#storybook-config/story-router'

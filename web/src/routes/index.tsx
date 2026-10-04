@@ -9,7 +9,11 @@ import {
   DayViewPresentation,
 } from '#components/day-view/day-view'
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
-import { buildQueueSections } from '#components/day-view/queue-sections'
+import {
+  buildCompactQueueSections,
+  buildQueueSections,
+  filterTasksDueOnOrBeforeToday,
+} from '#components/day-view/queue-sections'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
@@ -88,6 +92,13 @@ function DayView() {
   const { isLoading, categorized } = useTaskList(
     baseFilter,
     refetchInterval === undefined ? undefined : { refetchInterval },
+  )
+  const dueDateTasksQuery = useTaskList(
+    { ...baseFilter, status: 'todo', hasDue: true, sortBy: 'due' },
+    {
+      enabled: isCompactLayout,
+      ...(refetchInterval === undefined ? {} : { refetchInterval }),
+    },
   )
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
@@ -174,6 +185,7 @@ function DayView() {
     isCompactLayout,
     timeBlocksQuery.error,
     schedulesQuery.error,
+    dueDateTasksQuery.error,
     memosQuery.error,
   )
   const queryClient = useQueryClient()
@@ -229,7 +241,7 @@ function DayView() {
     [queuesData, rawItemsByKey, taskMap, selectedDate],
   )
 
-  const visibleQueueSections = useMemo(
+  const filteredQueueSections = useMemo(
     () =>
       filterTaskIds == null
         ? queueSections
@@ -238,6 +250,22 @@ function DayView() {
             items: section.items.filter((task) => filterTaskIds.has(task.id)),
           })),
     [queueSections, filterTaskIds],
+  )
+
+  const todayStr = formatLocalDate(new Date())
+  const tasksDueOnOrBeforeToday = useMemo(
+    () => filterTasksDueOnOrBeforeToday(dueDateTasksQuery.data ?? [], todayStr),
+    [dueDateTasksQuery.data, todayStr],
+  )
+  const visibleQueueSections = useMemo(
+    () =>
+      isCompactLayout
+        ? buildCompactQueueSections(
+            filteredQueueSections,
+            tasksDueOnOrBeforeToday,
+          )
+        : filteredQueueSections,
+    [isCompactLayout, filteredQueueSections, tasksDueOnOrBeforeToday],
   )
 
   const dayQueueTasks =
@@ -419,7 +447,9 @@ function DayView() {
             }
           : {})}
         isLoading={
-          isLoading || (isKanbanFiltering && filteredTasksQuery.isLoading)
+          isLoading ||
+          (isCompactLayout && dueDateTasksQuery.isLoading) ||
+          (isKanbanFiltering && filteredTasksQuery.isLoading)
         }
         calendarEvents={calendarEvents}
         schedules={schedulesData ?? []}

@@ -5,7 +5,7 @@ import { useState } from 'react'
 
 import { makeLabel } from '#components/label/label-test-fixtures'
 import { TagsInput } from '#components/task/tags-input'
-import { labelKeys } from '#hooks/use-labels'
+import { labelKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },

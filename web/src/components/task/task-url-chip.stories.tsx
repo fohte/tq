@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { TaskUrlChip } from '#components/task/task-url-chip'
-import type { TaskUrlPreview } from '#hooks/use-task-url-preview'
-import { taskUrlPreviewKeys } from '#hooks/use-task-url-preview'
+import type { TaskDetail } from '#hooks/use-tasks'
+import { taskUrlPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const TASK_ID = '42'
@@ -13,7 +13,7 @@ const TASK_URL = 'https://tq.fohte.net/tasks/42'
 const UNRESOLVED_ID = '999'
 const UNRESOLVED_URL = 'https://tq.fohte.net/tasks/999'
 
-const baseTask: TaskUrlPreview = makeTaskDetail({
+const baseTask: TaskDetail = makeTaskDetail({
   id: '00000000-0000-0000-0000-000000000001',
   number: 42,
   title: 'Implement task URL live preview',
@@ -29,7 +29,7 @@ function Providers({
   children,
 }: {
   id: string
-  task: TaskUrlPreview | null
+  task: TaskDetail | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
@@ -55,7 +55,7 @@ function TaskUrlChipWithProviders({
 }: {
   id: string
   raw: string
-  task: TaskUrlPreview | null
+  task: TaskDetail | null
   defaultOpen?: boolean | undefined
 }) {
   return (

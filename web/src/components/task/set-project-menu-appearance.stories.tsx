@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { makeProject } from '#components/project/project-test-fixtures'
-import { SetProjectMenuAppearance } from '#components/task/set-project-menu'
+import { SetProjectMenuAppearance } from '#components/task/set-project-menu-appearance'
 
 const projectA = makeProject({
   id: 'aaaa0000-0000-0000-0000-000000000000',

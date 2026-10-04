@@ -1,0 +1,140 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
+import { Pencil } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { HtmlPageEditor } from '#components/ui/html-page-editor'
+import { MarkdownEditor } from '#components/ui/markdown-editor'
+import {
+  DEBOUNCED_SAVE_DELAY_MS,
+  useDebouncedSave,
+} from '#hooks/use-debounced-save'
+import type { TaskPage } from '#hooks/use-task-pages'
+import { useUpdateTaskPage } from '#hooks/use-task-pages'
+
+export function PageEditorInner({
+  taskId,
+  pageId,
+  defaultTitle,
+  defaultContent,
+  format,
+  defaultContentEditing = false,
+}: {
+  taskId: string
+  pageId: string
+  defaultTitle: string
+  defaultContent: string
+  format: TaskPage['format']
+  defaultContentEditing?: boolean
+}) {
+  const updatePage = useUpdateTaskPage(taskId)
+  const [title, setTitle] = useState(defaultTitle)
+  const [isContentEditing, setIsContentEditing] = useState(
+    defaultContentEditing,
+  )
+  const titleSavingRef = useRef(false)
+
+  useEffect(() => {
+    setTitle(defaultTitle)
+  }, [defaultTitle])
+
+  const handleTitleBlur = useCallback(() => {
+    if (titleSavingRef.current) {
+      titleSavingRef.current = false
+      return
+    }
+    const trimmed = title.trim()
+    if (trimmed && trimmed !== defaultTitle) {
+      updatePage.mutate({ pageId, input: { title: trimmed } })
+    } else {
+      setTitle(defaultTitle)
+    }
+  }, [title, defaultTitle, pageId, updatePage])
+
+  const { onChange: handleContentChange, flush: flushContent } =
+    useDebouncedSave((content) => {
+      updatePage.mutate({ pageId, input: { content } })
+    })
+
+  const titleInput = (
+    <Input
+      value={title}
+      onChange={(e) => {
+        setTitle(e.target.value)
+      }}
+      onBlur={handleTitleBlur}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') {
+          titleSavingRef.current = true
+          setTitle(defaultTitle)
+          e.currentTarget.blur()
+        }
+      }}
+      className="h-auto border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0 md:text-2xl"
+      placeholder="Page title"
+    />
+  )
+
+  if (format === 'html') {
+    return (
+      <div className="flex h-full flex-col gap-3.5 p-6">
+        {titleInput}
+
+        <div className="flex items-center gap-2 font-mono text-2xs text-muted-foreground-faint">
+          <span>HTML</span>
+          <span className="text-border">|</span>
+          <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>
+        </div>
+
+        <div className="min-h-0 flex-1 border border-border bg-card p-2.5 text-sm">
+          <HtmlPageEditor
+            defaultValue={defaultContent}
+            placeholder="Write HTML..."
+            onChange={handleContentChange}
+            onExitSourceMode={flushContent}
+            size="fill"
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto flex max-w-3xl flex-col gap-3.5 p-6">
+      {/* Editable title */}
+      {titleInput}
+
+      {/* Meta line */}
+      <div className="flex items-center gap-2 font-mono text-2xs text-muted-foreground-faint">
+        <span>MARKDOWN</span>
+        <span className="text-border">|</span>
+        <span>autosave {DEBOUNCED_SAVE_DELAY_MS / 1000}s</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="ml-auto h-5 px-1 text-2xs"
+          onClick={() => {
+            setIsContentEditing(true)
+          }}
+        >
+          <Pencil className="size-3" />
+          edit
+        </Button>
+      </div>
+
+      {/* Content editor */}
+      <div className="border border-border bg-card p-2.5 text-sm">
+        <MarkdownEditor
+          defaultValue={defaultContent}
+          placeholder="Write something..."
+          editing={isContentEditing}
+          onEditingChange={setIsContentEditing}
+          onChange={handleContentChange}
+          onExitEditMode={flushContent}
+        />
+      </div>
+    </div>
+  )
+}

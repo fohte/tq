@@ -18,12 +18,11 @@ import {
 import type { DescriptionTemplate } from '#hooks/use-description-templates'
 import { useDescriptionTemplates } from '#hooks/use-description-templates'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
-import { githubUrlPreviewKeys } from '#hooks/use-github-url-preview'
 import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
-import { taskMentionKeys } from '#hooks/use-task-mentions'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import {
   assertDefined,

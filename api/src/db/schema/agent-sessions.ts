@@ -66,6 +66,9 @@ export const taskAgentSessions = pgTable(
     agentSessionId: text('agent_session_id')
       .notNull()
       .references(() => agentSessions.id, { onDelete: 'cascade' }),
+    linkedAt: timestamp('linked_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [
     primaryKey({ columns: [table.taskId, table.agentSessionId] }),

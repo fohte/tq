@@ -1,0 +1,124 @@
+import { Button } from '@fohte/ui/button'
+import { Input } from '@fohte/ui/input'
+import { useRef } from 'react'
+
+import {
+  SidebarField,
+  sidebarFieldValueButtonClassName,
+} from '#components/task/sidebar-field'
+import { TaskCandidateList } from '#components/task/task-candidate-list'
+import { AnchoredPopup } from '#components/ui/anchored-popup'
+import type { SearchResult } from '#hooks/use-search'
+
+export function SidebarParentFieldAppearance({
+  currentParent,
+  isEditing,
+  onOpenChange,
+  query,
+  onQueryChange,
+  isFetching,
+  candidates,
+  onClear,
+  onSelectCandidate,
+}: {
+  currentParent: { number: number; title: string } | null
+  isEditing: boolean
+  onOpenChange: (open: boolean) => void
+  query: string
+  onQueryChange: (value: string) => void
+  isFetching: boolean
+  candidates: SearchResult[]
+  onClear: () => void
+  onSelectCandidate: (candidate: SearchResult) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <SidebarField label="PARENT">
+      {isEditing ? (
+        <Input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            onQueryChange(e.target.value)
+          }}
+          onBlur={() => {
+            onOpenChange(false)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              onOpenChange(false)
+            }
+          }}
+          placeholder="Search tasks..."
+          autoFocus
+          className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+        />
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            onOpenChange(true)
+          }}
+          className={`${sidebarFieldValueButtonClassName} min-w-0`}
+        >
+          <span className="min-w-0 truncate">
+            {currentParent != null
+              ? `#${String(currentParent.number)} ${currentParent.title}`
+              : '—'}
+          </span>
+        </Button>
+      )}
+      <AnchoredPopup
+        open={isEditing}
+        onOpenChange={(open) => {
+          if (!open) onOpenChange(false)
+        }}
+        anchor={inputRef}
+        // Base UI's popover moves focus to the popup's first focusable
+        // element (the clear button below) as soon as it opens. That races
+        // the anchor `Input`'s own `autoFocus` and steals keystrokes away
+        // from it, so keep focus on the input instead.
+        initialFocus={false}
+        className="w-72"
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            onClear()
+          }}
+        >
+          —
+        </Button>
+        <div className="mt-1 border-t border-border pt-1">
+          {query === '' ? (
+            <div className="px-3 py-1.5 text-sm text-muted-foreground">
+              Type to search...
+            </div>
+          ) : isFetching ? (
+            <div className="px-3 py-1.5 text-sm text-muted-foreground">
+              Searching...
+            </div>
+          ) : candidates.length === 0 ? (
+            <div className="px-3 py-1.5 text-sm text-muted-foreground">
+              No matching tasks
+            </div>
+          ) : (
+            <TaskCandidateList
+              candidates={candidates}
+              highlightedIndex={-1}
+              indexOffset={1}
+              onSelectCandidate={onSelectCandidate}
+            />
+          )}
+        </div>
+      </AnchoredPopup>
+    </SidebarField>
+  )
+}

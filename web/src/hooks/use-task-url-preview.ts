@@ -1,23 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { type TaskDetail, taskKeys } from '#hooks/use-tasks'
+import type { TaskDetail } from '#hooks/use-tasks'
 import { api } from '#lib/api'
-
-export type TaskUrlPreview = TaskDetail
-
-// Uses its own key namespace instead of taskKeys.detail(id): a 404/failed
-// lookup caches `null` here, which would be unsound to share with
-// useTask's cache — callers there assume a non-null TaskDetail.
-const taskUrlPreviewKeyPrefix = [...taskKeys.all, 'task-url-preview'] as const
-
-export const taskUrlPreviewKeys = {
-  preview: (id: string) => [...taskUrlPreviewKeyPrefix, id] as const,
-}
+import { taskUrlPreviewKeys } from '#lib/query-keys'
 
 function taskUrlPreviewQueryOptions(id: string) {
   return {
     queryKey: taskUrlPreviewKeys.preview(id),
-    queryFn: async (): Promise<TaskUrlPreview | null> => {
+    queryFn: async (): Promise<TaskDetail | null> => {
       const res = await api.api.tasks[':id'].$get({ param: { id } })
       // A non-2xx here means the id doesn't match a task or the request
       // otherwise failed; the caller just leaves the match as plain text,

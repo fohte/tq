@@ -4,6 +4,9 @@ import { useMemo } from 'react'
 
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { taskKeys } from '#lib/query-keys'
+
+export { taskKeys }
 
 type Task = InferResponseType<typeof api.api.tasks.$get>[number]
 
@@ -22,6 +25,7 @@ export type TaskCommitment = 'inbox' | 'active' | 'someday'
 export interface TaskListFilter {
   q?: string
   status?: TaskStatus | TaskStatus[]
+  hasDue?: boolean
   context?: TaskContext
   commitment?: TaskCommitment
   parentId?: string
@@ -34,21 +38,7 @@ export interface TaskListFilter {
   offset?: number
 }
 
-export const TASK_LIST_PAGE_SIZE = 50
-
-// infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
-// runs optimistic updates against every `lists`-prefixed cache entry assuming
-// each holds a Task[], but an infinite query's cache entry is an InfiniteData
-// object instead, so a shared prefix would make those updates throw.
-export const taskKeys = {
-  all: ['tasks'] as const,
-  lists: ['tasks', 'list'] as const,
-  list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
-  infiniteLists: ['tasks', 'infinite-list'] as const,
-  infiniteList: (filter?: TaskListFilter) =>
-    [...taskKeys.infiniteLists, filter] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
-}
+const TASK_LIST_PAGE_SIZE = 50
 
 export type { LinkedTaskSummary, Task, TaskDetail }
 
@@ -58,10 +48,11 @@ export interface CategorizedTasks {
 }
 
 export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
-  const { limit, offset, ...rest } = filter ?? {}
+  const { limit, offset, hasDue, ...rest } = filter ?? {}
   const res = await api.api.tasks.$get({
     query: {
       ...rest,
+      hasDue: hasDue == null ? undefined : String(hasDue),
       includeAncestors: rest.includeAncestors === true ? 'true' : undefined,
       ...(limit != null ? { limit: String(limit) } : {}),
       ...(offset != null ? { offset: String(offset) } : {}),

@@ -272,7 +272,7 @@ Two roles resolved so far, scoped to `web/src/components/task/`:
   to apply the same ±1px rounding tolerance used throughout this doc rather
   than add a dedicated `--leading-*` token for one occurrence. Resolved to
   `leading-relaxed`, matching every other prose-like block in the app
-  (`task-activity.tsx`, `project-detail-main.tsx`, `task-main-content.tsx`)
+  (`comment-row.tsx`, `project-detail-main.tsx`, `task-main-content.tsx`)
   and clearing the last remaining `leading-[…]` arbitrary value in the
   codebase.
 
@@ -349,7 +349,7 @@ it is:
   a comfortable reading width — the same role expressed with four values
   that tracked when each screen was written, not a deliberate per-screen
   choice. Unified to `max-w-3xl` (768px, Tailwind's default container
-  step) — nothing was narrowed, and `task-page-editor.tsx`'s full-page
+  step) — nothing was narrowed, and `task-page-editor-inner.tsx`'s full-page
   markdown editor already used `max-w-3xl` for the same "reading width"
   role, so this aligns with existing usage instead of picking a fifth
   value.
@@ -480,7 +480,7 @@ Tailwind's border-width utilities resolve straight to `<N>px` (`border` →
 `border-width: 1px`, `border-2` → `2px`, and the same holds for the dynamic
 `border-<number>` utility used for values with no named step, e.g.
 `border-l-3` → `border-left-width: 3px`) — there is no `--spacing`
-multiplication to round onto. `task-activity.tsx`'s `CommentRow` accent
+multiplication to round onto. `comment-row.tsx`'s `CommentRow` accent
 border (`border-l-3`) is a plain literal for that reason, not a rounding
 case.
 
@@ -491,13 +491,13 @@ inline` block, referenced via `grid-cols-(--<name>)`. Each backs a fixed
 layout shared by multiple call sites so widths can't drift between them —
 usually a list's rows and its column header (`--project-list-columns`), but
 `--icon-content-columns` instead unifies an icon-column width across
-otherwise-unrelated components (`task-activity.tsx`'s rows,
-`integration-card.tsx`'s `CARD_INDENT`).
+otherwise-unrelated components (`task-activity.tsx`'s `EventRow`,
+`comment-row.tsx`'s `CommentRow`, and `integration-card.tsx`'s `CARD_INDENT`).
 
-| Token                    | Value                      | Used by                                                                                                                                                                                                                                                                                          |
-| ------------------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--project-list-columns` | `14px 1fr 96px 190px 78px` | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                     |
-| `--icon-content-columns` | `20px 1fr`                 | `task-activity.tsx`'s `EventRow`/`CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (was `14px` in `task-activity.tsx`, too narrow for that icon) |
+| Token                    | Value                      | Used by                                                                                                                                                                                                                                                                                                                     |
+| ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--project-list-columns` | `14px 1fr 96px 190px 78px` | Projects list: column header (`routes/projects/index.tsx`), `ProjectListRow` — tracks are status mark, project name, status badge, progress bar, target date                                                                                                                                                                |
+| `--icon-content-columns` | `20px 1fr`                 | `task-activity.tsx`'s `EventRow`/`comment-row.tsx`'s `CommentRow` marker column, `integration-card.tsx`'s `CARD_INDENT` — same "small icon column + body" role, unified onto the 20px column width that `IntegrationCard`'s actual `size-5` icon needs (the activity rows previously used `14px`, too narrow for that icon) |
 
 The tasks list (`TreeTaskGridRow`) is a flex-based two-line stack instead of
 a fixed grid — see the `min-w-30` comment on its title `<span>` for how it
