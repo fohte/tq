@@ -69,11 +69,13 @@ function SidebarStory({
   projects,
   savedViews,
   labels,
+  desktopWindowControls,
 }: {
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
   labels?: Label[] | undefined
+  desktopWindowControls?: boolean | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -101,7 +103,7 @@ function SidebarStory({
   return (
     <QueryClientProvider client={queryClient}>
       <div className="h-screen md:flex">
-        <Sidebar />
+        <Sidebar desktopWindowControls={desktopWindowControls} />
       </div>
     </QueryClientProvider>
   )
@@ -113,12 +115,14 @@ function SidebarWithRouter({
   projects,
   savedViews,
   labels,
+  desktopWindowControls,
 }: {
   currentPath: string
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
   labels?: Label[] | undefined
+  desktopWindowControls?: boolean | undefined
 }) {
   return (
     <StoryRouter
@@ -128,6 +132,7 @@ function SidebarWithRouter({
           projects={projects}
           savedViews={savedViews}
           labels={labels}
+          desktopWindowControls={desktopWindowControls}
         />
       )}
       initialPath={currentPath}
@@ -178,6 +183,14 @@ export const SettingsActive: Story = {
   name: 'the sidebar highlights the settings route',
   args: {
     currentPath: '/settings',
+  },
+}
+
+export const DesktopWindowControls: Story = {
+  name: 'the sidebar reserves space for the desktop window controls',
+  args: {
+    currentPath: '/',
+    desktopWindowControls: true,
   },
 }
 
