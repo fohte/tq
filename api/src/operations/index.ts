@@ -11,6 +11,7 @@ import { pageOperations } from '#operations/page'
 import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
 import { savedViewOperations } from '#operations/saved-view'
+import { scheduleOperations } from '#operations/schedule'
 import { sessionOperations } from '#operations/session'
 import { taskReadOperations } from '#operations/task-read'
 import { taskWriteOperations } from '#operations/task-write'
@@ -29,6 +30,7 @@ export {
   projectOperations,
   queueOperations,
   savedViewOperations,
+  scheduleOperations,
   sessionOperations,
   taskReadOperations,
   taskWriteOperations,
@@ -47,6 +49,7 @@ export const operations = [
   ...projectOperations,
   ...queueOperations,
   ...savedViewOperations,
+  ...scheduleOperations,
   ...sessionOperations,
   ...taskReadOperations,
   ...taskWriteOperations,
