@@ -5,10 +5,7 @@ import type { ReactNode } from 'react'
 
 import { DescriptionTemplateList } from '#components/settings/description-template-list'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
-import {
-  type DescriptionTemplate,
-  descriptionTemplateKeys,
-} from '#hooks/use-description-templates'
+import type { DescriptionTemplate } from '#hooks/use-description-templates'
 
 const sampleTemplates: DescriptionTemplate[] = [
   makeDescriptionTemplate({
@@ -29,32 +26,19 @@ const sampleTemplates: DescriptionTemplate[] = [
   }),
 ]
 
-function Providers({
-  children,
-  templates,
-}: {
-  children: ReactNode
-  templates?: DescriptionTemplate[] | undefined
-}) {
+function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  if (templates !== undefined) {
-    queryClient.setQueryData(descriptionTemplateKeys.list(), templates)
-  }
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
 }
 
-function WrappedDescriptionTemplateList({
-  templates,
-}: {
-  templates?: DescriptionTemplate[] | undefined
-}) {
+function WrappedDescriptionTemplateList() {
   return (
-    <Providers templates={templates}>
+    <Providers>
       <div className="w-full max-w-3xl">
         <DescriptionTemplateList />
       </div>
@@ -90,9 +74,7 @@ export const Loading: Story = {
 
 export const Empty: Story = {
   name: 'the description template list explains that no templates exist',
-  args: {
-    templates: [],
-  },
+  args: {},
   parameters: {
     msw: {
       handlers: [
@@ -104,9 +86,7 @@ export const Empty: Story = {
 
 export const Populated: Story = {
   name: 'the description template list shows configured templates',
-  args: {
-    templates: sampleTemplates,
-  },
+  args: {},
   parameters: {
     msw: {
       handlers: [

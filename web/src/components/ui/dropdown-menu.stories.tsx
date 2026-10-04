@@ -8,33 +8,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '#components/ui/dropdown-menu'
-
-function DropdownMenuDemo({
-  open,
-  onOpenChange,
-}: {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}) {
-  const [value, setValue] = useState('date')
-
-  return (
-    <DropdownMenu open={open} onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger render={<Button />}>Sort by</DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuRadioGroup value={value} onValueChange={setValue}>
-          <DropdownMenuRadioItem value="date">Date</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="type">Type</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
 
 function DropdownMenuCheckboxDemo({
   open,
@@ -81,31 +56,16 @@ function DropdownMenuItemsDemo({
 
 const meta = {
   title: 'UI/DropdownMenu',
-  component: DropdownMenuDemo,
+  component: DropdownMenuItemsDemo,
   parameters: {
     layout: 'centered',
   },
   args: {
     onOpenChange: fn(),
   },
-} satisfies Meta<typeof DropdownMenuDemo>
+} satisfies Meta<typeof DropdownMenuItemsDemo>
 
 export default meta
-type Story = StoryObj<typeof meta>
-
-export const ClosedTrigger: Story = {
-  name: 'shows a sort menu trigger before opening it',
-  args: {
-    open: false,
-  },
-}
-
-export const Open: Story = {
-  name: 'shows date, name, and type sorting options',
-  args: {
-    open: true,
-  },
-}
 
 export const ItemsClosedTrigger: StoryObj<typeof DropdownMenuItemsDemo> = {
   name: 'shows an actions menu trigger before opening it',

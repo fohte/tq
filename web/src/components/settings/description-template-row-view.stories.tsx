@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import type { ComponentProps } from 'react'
 import { fn } from 'storybook/test'
 
-import { DescriptionTemplateRowView } from '#components/settings/description-template-row'
+import { DescriptionTemplateRowView } from '#components/settings/description-template-row-view'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 
 function WrappedDescriptionTemplateRowView(

@@ -1,4 +1,4 @@
-import type { Memo } from '#hooks/use-memos'
+import type { Memo } from '#hooks/memo-save'
 
 export function makeMemo(overrides: Partial<Memo> = {}): Memo {
   return {

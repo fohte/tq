@@ -7,7 +7,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createSyncedQueryClient } from '#lib/query-client'
+import { createSyncedQueryClient } from '#lib/synced-query-client'
 
 const clients: Array<ReturnType<typeof createSyncedQueryClient>> = []
 const observers: BroadcastChannel[] = []
