@@ -27,6 +27,15 @@ describe('isAgentSessionActive', () => {
     ).toBe(false)
   })
 
+  it('returns false when archived, regardless of how recent lastActiveAt is', () => {
+    expect(
+      isAgentSessionActive(
+        { ...baseSession, archivedAt: '2026-03-20T11:59:00Z' },
+        now,
+      ),
+    ).toBe(false)
+  })
+
   it('returns false when not ended but lastActiveAt is stale', () => {
     expect(
       isAgentSessionActive(

@@ -197,6 +197,7 @@ export function SessionRow({
   labelDefaultEditing?: boolean | undefined
 }) {
   const active = isAgentSessionActive(session)
+  const archived = session.archivedAt != null
   const label = session.customLabel ?? session.label
   const [settings] = useSessionOpenSettings()
   const canOpen = canOpenSessionLocally(session.context, settings.localContext)
@@ -207,7 +208,7 @@ export function SessionRow({
       <div
         className={cn(
           'flex min-w-0 flex-1 items-center gap-3',
-          (isDimmed || !canOpen) && 'opacity-55',
+          (isDimmed || archived || !canOpen) && 'opacity-55',
         )}
       >
         {/* flex-wrap: only the label (via EditableSessionLabel) has flex-1
@@ -235,7 +236,7 @@ export function SessionRow({
           {formatMinutes(durationMinutes(session))}
         </span>
       </div>
-      {canOpen && (
+      {canOpen && !archived && (
         <SessionOpenButton
           sessionId={session.sessionId}
           active={active}

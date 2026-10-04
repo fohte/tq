@@ -203,6 +203,28 @@ describe('SessionRow', () => {
       ).not.toBeInTheDocument()
     })
 
+    it('hides the Focus/Resume button for archived sessions', () => {
+      const { container } = renderSessionRow({
+        session: { ...baseSession, archivedAt: '2026-03-20T11:59:00Z' },
+      })
+      const canvas = within(container)
+
+      expect(
+        canvas.queryByRole('button', {
+          name: /Focus session|Resume session/,
+        }),
+      ).toEqual(null)
+    })
+
+    it('dims archived sessions', () => {
+      const { container } = renderSessionRow({
+        session: { ...baseSession, archivedAt: '2026-03-20T11:59:00Z' },
+      })
+      const row = container.firstElementChild
+
+      expect(row?.querySelector('.opacity-55') != null).toEqual(true)
+    })
+
     it('shows the resolved URL in the button title when a focus URL template is configured', () => {
       const { container } = renderSessionRow(
         { session: { ...baseSession, id: '13' } },
