@@ -14,6 +14,7 @@
     "./operations": "./src/operations/index.ts",
     "./operations/test-fixtures": "./src/operations/operation-test-fixtures.ts",
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
+    "./schemas/description-template": "./src/schemas/description-template.ts",
     "./schemas/label": "./src/schemas/label.ts",
     "./schemas/project": "./src/schemas/project.ts",
     "./schemas/recurrence-rule": "./src/schemas/recurrence-rule.ts",
@@ -60,6 +61,6 @@
     "aws-sdk-client-mock": "4.1.0",
     "drizzle-kit": "0.31.10",
     "tsup": "8.5.1",
-    "tsx": "4.23.13"
+    "tsx": "4.23.15"
   }
 }

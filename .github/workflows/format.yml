@@ -38,14 +38,25 @@ jobs:
       - name: Check peer dependencies
         run: pnpm peers check
 
-      - name: Generate and lint DB documentation
+      - name: Check for database documentation changes
+        id: db-doc-changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          files: |
+            api/drizzle/**
+            **/.tbls.yml
+            scripts/db-*
+            compose*.yaml
+            .mise.toml
+            .github/workflows/format.yml
+
+      - name: Generate database documentation
+        if: steps.db-doc-changes.outputs.any_changed == 'true'
         run: mise run db:doc
 
-      # lefthook's `--all-files` resolves `{staged_files}` via `git ls-files --cached`,
-      # which skips untracked files. Stage newly generated docs so a schema-adding PR's
-      # first CI run formats them here instead of leaving a follow-up commit on main.
-      - name: Stage generated DB documentation
-        run: git add docs/db
+      - name: Stage generated database documentation
+        if: steps.db-doc-changes.outputs.any_changed == 'true'
+        run: git add -- api/docs/db
 
       - name: Run lefthook
         id: lefthook

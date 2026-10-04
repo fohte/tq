@@ -1,7 +1,7 @@
-const DEV_DATABASE_PATH = '/tq_dev'
+const DEV_DATABASE_PATH = '/tq_api_dev'
 
 // A plain `includes` would also match a custom database sharing the
-// `tq_dev` prefix (e.g. `/tq_dev_snapshot`), so require the path to end
+// `tq_api_dev` prefix (e.g. `/tq_api_dev_snapshot`), so require the path to end
 // there or be followed by a query/fragment separator.
 function pointsAtDevDatabase(url: string): boolean {
   const index = url.indexOf(DEV_DATABASE_PATH)
@@ -18,7 +18,7 @@ export function resolveTestDatabaseUrl(
     return currentDatabaseUrl
   }
 
-  // Only override the mise-injected tq_dev default; an explicit DATABASE_URL
+  // Only override the mise-injected tq_api_dev default; an explicit DATABASE_URL
   // set for this invocation (e.g. `DATABASE_URL=... pnpm test`) wins.
   if (
     currentDatabaseUrl == null ||

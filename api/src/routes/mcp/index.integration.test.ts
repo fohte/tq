@@ -16,6 +16,8 @@ const REGISTERED_TOOL_NAMES = [
   'comment_delete',
   'comment_list',
   'comment_update',
+  'description_template_get',
+  'description_template_list',
   'github_link',
   'github_resolve',
   'github_sync',

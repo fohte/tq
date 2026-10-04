@@ -1,0 +1,98 @@
+# public.task_pages
+
+## Description
+
+Formatted content pages attached to tasks.
+
+## Columns
+
+| Name       | Type                     | Default          | Nullable | Children                        | Parents                         | Comment                                                            |
+| ---------- | ------------------------ | ---------------- | -------- | ------------------------------- | ------------------------------- | ------------------------------------------------------------------ |
+| id         | text                     |                  | false    | [public.edits](public.edits.md) |                                 |                                                                    |
+| task_id    | text                     |                  | false    |                                 | [public.tasks](public.tasks.md) | Task that owns this page.                                          |
+| title      | text                     |                  | false    |                                 |                                 | Title shown for this task page.                                    |
+| content    | text                     | ''::text         | false    |                                 |                                 | Page body stored according to format; defaults to an empty string. |
+| sort_order | integer                  | 0                | false    |                                 |                                 | Ordering value for pages belonging to the same task.               |
+| created_at | timestamp with time zone | now()            | false    |                                 |                                 |                                                                    |
+| updated_at | timestamp with time zone | now()            | false    |                                 |                                 |                                                                    |
+| format     | text                     | 'markdown'::text | false    |                                 |                                 | Content format: markdown or html. Defaults to markdown.            |
+
+## Constraints
+
+| Name                           | Type        | Definition                                                   |
+| ------------------------------ | ----------- | ------------------------------------------------------------ |
+| task_pages_content_not_null    | n           | NOT NULL content                                             |
+| task_pages_created_at_not_null | n           | NOT NULL created_at                                          |
+| task_pages_format_not_null     | n           | NOT NULL format                                              |
+| task_pages_id_not_null         | n           | NOT NULL id                                                  |
+| task_pages_sort_order_not_null | n           | NOT NULL sort_order                                          |
+| task_pages_task_id_not_null    | n           | NOT NULL task_id                                             |
+| task_pages_title_not_null      | n           | NOT NULL title                                               |
+| task_pages_updated_at_not_null | n           | NOT NULL updated_at                                          |
+| task_pages_pkey                | PRIMARY KEY | PRIMARY KEY (id)                                             |
+| task_pages_task_id_tasks_id_fk | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE |
+
+## Indexes
+
+| Name                        | Definition                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| task_pages_pkey             | CREATE UNIQUE INDEX task_pages_pkey ON public.task_pages USING btree (id)                      |
+| idx_task_pages_task_id      | CREATE INDEX idx_task_pages_task_id ON public.task_pages USING btree (task_id)                 |
+| idx_task_pages_content_trgm | CREATE INDEX idx_task_pages_content_trgm ON public.task_pages USING gin (content gin_trgm_ops) |
+
+## Relations
+
+```mermaid
+erDiagram
+
+"public.edits" }o--o| "public.task_pages" : "FOREIGN KEY (page_id) REFERENCES task_pages(id) ON DELETE CASCADE"
+"public.task_pages" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+
+"public.task_pages" {
+  text id
+  text task_id FK
+  text title
+  text content
+  integer sort_order
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  text format
+}
+"public.edits" {
+  bigint id
+  text task_id FK
+  text page_id FK
+  text comment_id FK
+  text action
+  text field
+  text author_kind
+  text author_agent
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.tasks" {
+  text id
+  text title
+  text description
+  text status
+  date start_date
+  date due_date
+  integer estimated_minutes
+  text parent_id FK
+  text project_id FK
+  text recurrence_rule_id FK
+  text context
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  integer number
+  text commitment
+  text status_reason
+  timestamp_with_time_zone remind_at
+  text template_id FK
+  date occurrence_date
+}
+```
+
+---
+
+> Generated by [tbls](https://github.com/k1LoW/tbls)

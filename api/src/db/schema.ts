@@ -3,6 +3,7 @@
 // imports elsewhere don't need to change.
 export * from '#db/schema/agent-sessions'
 export * from '#db/schema/core'
+export * from '#db/schema/description-templates'
 export * from '#db/schema/integrations'
 export * from '#db/schema/push'
 export * from '#db/schema/recurring-task-templates'
