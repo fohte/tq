@@ -149,6 +149,112 @@ describe('buildNowPanelModel', () => {
     })
   })
 
+  it('shows one row per task and prefers its active block over an ended block', () => {
+    const task = makeTask({
+      id: 'task-repeat',
+      title: 'Review the release plan',
+    })
+    const ended = block(
+      'block-ended',
+      task.id,
+      localTime(9, 9),
+      localTime(9, 10),
+    )
+    const active = block(
+      'block-active',
+      task.id,
+      localTime(9, 14),
+      localTime(9, 15, 14),
+    )
+
+    expect(
+      buildNowPanelModel({
+        now,
+        timeBlocks: [ended, active],
+        calendarEvents: [
+          blockEvent(ended, task.title),
+          blockEvent(active, task.title),
+        ],
+        tasks: taskMap(task),
+      }),
+    ).toEqual({
+      activities: [
+        {
+          kind: 'task',
+          key: 'block-active',
+          task,
+          statusLabel: 'now (22 min left)',
+          isOverrun: false,
+        },
+      ],
+      emptyState: null,
+      nextEvent: null,
+    })
+  })
+
+  it('hides ended and upcoming blocks when their tasks are outside the current context', () => {
+    const ended = block(
+      'hidden-ended',
+      'hidden-task',
+      localTime(9, 9),
+      localTime(9, 10),
+    )
+    const upcoming = block(
+      'hidden-upcoming',
+      'hidden-task-next',
+      localTime(9, 15),
+      localTime(9, 15, 30),
+    )
+
+    expect(
+      buildNowPanelModel({
+        now,
+        timeBlocks: [ended, upcoming],
+        calendarEvents: [
+          blockEvent(ended, 'Private task'),
+          blockEvent(upcoming, 'Another private task'),
+        ],
+        tasks: taskMap(),
+      }),
+    ).toEqual({
+      activities: [],
+      emptyState: 'no-block-now',
+      nextEvent: null,
+    })
+  })
+
+  it('replaces a redacted active event title with Busy', () => {
+    const privateMeeting = makeTimeBlockEvent({
+      id: 'meeting-private',
+      title: 'Private appointment',
+      start: localTime(9, 14),
+      end: localTime(9, 15, 14),
+      type: 'gcal-meeting',
+      redacted: true,
+    })
+
+    expect(
+      buildNowPanelModel({
+        now,
+        timeBlocks: [],
+        calendarEvents: [privateMeeting],
+        tasks: taskMap(),
+      }),
+    ).toEqual({
+      activities: [
+        {
+          kind: 'event',
+          key: 'meeting-private',
+          title: 'Busy',
+          statusLabel: 'now (22 min left)',
+          isOverrun: false,
+        },
+      ],
+      emptyState: null,
+      nextEvent: null,
+    })
+  })
+
   it('shows an active meeting and warns for a meeting starting within five minutes', () => {
     const activeMeeting = makeTimeBlockEvent({
       id: 'meeting-current',
@@ -207,8 +313,8 @@ describe('buildNowPanelModel', () => {
     const declinedMeeting = makeTimeBlockEvent({
       id: 'meeting-declined',
       title: 'Declined call',
-      start: localTime(9, 14, 55),
-      end: localTime(9, 15, 25),
+      start: localTime(9, 23, 55),
+      end: localTime(9, 23, 59),
       type: 'gcal-meeting',
       responseStatus: 'declined',
     })

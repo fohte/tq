@@ -73,6 +73,26 @@ const sampleEvent = {
 }
 
 describe('useGcalEvents', () => {
+  it('does not fetch or poll when disabled', async () => {
+    vi.useFakeTimers()
+    try {
+      const mocks = await getMocks()
+
+      renderHook(
+        () => useGcalEvents('2026-07-07', '2026-07-07', 'work', false),
+        { wrapper },
+      )
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+      })
+
+      expect(assertDefined(mocks['mockEventsGet']).mock.calls).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('returns the fetched events on success', async () => {
     const mocks = await getMocks()
     assertDefined(mocks['mockEventsGet']).mockResolvedValue({

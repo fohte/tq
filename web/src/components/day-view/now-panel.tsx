@@ -25,10 +25,7 @@ export function NowPanel({
   const [clockNow, setClockNow] = useState(() => fixedNow ?? new Date())
 
   useEffect(() => {
-    if (fixedNow != null) {
-      setClockNow(fixedNow)
-      return
-    }
+    if (fixedNow != null) return
 
     const intervalId = window.setInterval(() => {
       setClockNow(new Date())

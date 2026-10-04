@@ -200,6 +200,17 @@ export const NoTimeBlocksToday: Story = {
   },
 }
 
+export const Loading: Story = {
+  name: 'the panel shows a loading message while its data loads',
+  args: {
+    now,
+    timeBlocks: [],
+    calendarEvents: [],
+    taskMap: taskMap(),
+    isLoading: true,
+  },
+}
+
 export const UpcomingScheduleWarning: Story = {
   name: 'the next recurring schedule turns red ten minutes before it starts',
   args: {

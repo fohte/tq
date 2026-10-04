@@ -22,6 +22,7 @@ import {
   useGcalEvents,
 } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
+import { useNowPanelData } from '#hooks/use-now-panel-data'
 import { useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
@@ -42,7 +43,6 @@ import {
 } from '#hooks/use-time-blocks'
 import {
   getCompactRefetchInterval,
-  getNowPanelQueryDateRange,
   isCompactDayLayoutSearch,
 } from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
@@ -89,6 +89,7 @@ function DayView() {
     baseFilter,
     refetchInterval === undefined ? undefined : { refetchInterval },
   )
+  const taskMap = useTaskMap(categorized.all)
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
   const filteredTasksQuery = useTaskList(
@@ -159,28 +160,10 @@ function DayView() {
     refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
-  const nowPanelDateRange = getNowPanelQueryDateRange(new Date())
-  const nowPanelTimeBlocksQuery = useTimeBlocks(
-    nowPanelDateRange.startDate,
-    nowPanelDateRange.endDate,
-    refetchInterval,
-    isCompactLayout,
-  )
-  const nowPanelSchedulesQuery = useScheduleList(
-    nowPanelDateRange.startDate,
-    nowPanelDateRange.endDate,
-    refetchInterval,
-    isCompactLayout,
-  )
   useCompactRefreshErrorLogging(
     isCompactLayout,
     timeBlocksQuery.error,
     schedulesQuery.error,
-  )
-  useCompactRefreshErrorLogging(
-    isCompactLayout,
-    nowPanelTimeBlocksQuery.error,
-    nowPanelSchedulesQuery.error,
   )
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
@@ -191,6 +174,14 @@ function DayView() {
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
+  const { nowPanelProps, gcalAuthRequired: nowPanelGcalAuthRequired } =
+    useNowPanelData({
+      enabled: isCompactLayout,
+      context,
+      taskMap,
+      isTasksLoading: isLoading,
+      ...(refetchInterval === undefined ? {} : { refetchInterval }),
+    })
   const queryClient = useQueryClient()
   const projects = useProjects()
 
@@ -206,39 +197,24 @@ function DayView() {
     visibleRange.endDate,
     context,
   )
-  const nowPanelGcalEventsQuery = useGcalEvents(
-    nowPanelDateRange.startDate,
-    nowPanelDateRange.endDate,
-    context,
-    isCompactLayout,
-  )
   const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError ||
-    nowPanelGcalEventsQuery.error instanceof GcalAuthRequiredError
+    nowPanelGcalAuthRequired
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
     'google_calendar',
     gcalAuthRequired,
   )
 
   useEffect(() => {
-    const error = gcalEventsQuery.error ?? nowPanelGcalEventsQuery.error
-    if (error != null && !gcalAuthRequired) {
+    const error = gcalEventsQuery.error
+    if (error != null && !(error instanceof GcalAuthRequiredError)) {
       console.error('Failed to fetch Google Calendar events', error)
     }
-  }, [gcalEventsQuery.error, nowPanelGcalEventsQuery.error, gcalAuthRequired])
+  }, [gcalEventsQuery.error])
 
   const setQueueItems = useSetQueueItems()
   const autoAssign = useAutoAssign()
-
-  const taskMap = useTaskMap(categorized.all)
-  const nowPanelCalendarEvents = useDayViewCalendarEvents({
-    timeBlocksData: nowPanelTimeBlocksQuery.data,
-    schedulesData: nowPanelSchedulesQuery.data,
-    gcalEventsData: nowPanelGcalEventsQuery.data,
-    taskMap,
-    context,
-  })
 
   // Queue updates replace the full list, so keep stored IDs separate from
   // filters applied to the displayed sections.
@@ -434,16 +410,7 @@ function DayView() {
     <>
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
-        nowPanel={{
-          timeBlocks: nowPanelTimeBlocksQuery.data ?? [],
-          calendarEvents: nowPanelCalendarEvents,
-          taskMap,
-          isLoading:
-            isLoading ||
-            nowPanelTimeBlocksQuery.isPending ||
-            nowPanelSchedulesQuery.isPending ||
-            nowPanelGcalEventsQuery.isPending,
-        }}
+        nowPanel={nowPanelProps}
         isLoading={
           isLoading || (isKanbanFiltering && filteredTasksQuery.isLoading)
         }
