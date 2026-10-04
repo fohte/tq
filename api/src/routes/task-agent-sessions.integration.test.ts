@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { agentSessions } from '#db/schema'
+import { agentSessions, taskAgentSessions } from '#db/schema'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -32,6 +32,25 @@ interface TaskLinkResponse {
   status: string
 }
 
+function linkResponse<T>(
+  status: number,
+  body: T,
+  link: typeof taskAgentSessions.$inferSelect | undefined,
+) {
+  return {
+    status,
+    body,
+    link:
+      link == null
+        ? null
+        : {
+            taskId: link.taskId,
+            agentSessionId: link.agentSessionId,
+            linkedAt: link.linkedAt.toISOString(),
+          },
+  }
+}
+
 describe('task <-> agent session links API', () => {
   describe('POST /api/tasks/:taskId/agent-sessions', () => {
     it('links an agent session to a task', async () => {
@@ -39,20 +58,74 @@ describe('task <-> agent session links API', () => {
       const session = await createAgentSession('session-1')
 
       const res = await postLink(task.id, session.id)
+      const [link] = await db
+        .select()
+        .from(taskAgentSessions)
+        .where(
+          and(
+            eq(taskAgentSessions.taskId, task.id),
+            eq(taskAgentSessions.agentSessionId, session.id),
+          ),
+        )
 
-      expect(res.status).toBe(201)
-      expect(await jsonBody<AgentSessionResponse>(res)).toEqual(session)
+      expect(
+        linkResponse(
+          res.status,
+          await jsonBody<AgentSessionResponse>(res),
+          link,
+        ),
+      ).toEqual({
+        status: 201,
+        body: session,
+        link: {
+          taskId: task.id,
+          agentSessionId: session.id,
+          linkedAt: session.startedAt,
+        },
+      })
     })
 
     it('is idempotent when the link already exists', async () => {
       const task = await createTask('My task')
       const session = await createAgentSession('session-1')
       await postLink(task.id, session.id)
+      const linkedAt = new Date('2030-01-01T00:00:00.000Z')
+      await db
+        .update(taskAgentSessions)
+        .set({ linkedAt })
+        .where(
+          and(
+            eq(taskAgentSessions.taskId, task.id),
+            eq(taskAgentSessions.agentSessionId, session.id),
+          ),
+        )
 
       const res = await postLink(task.id, session.id)
+      const [link] = await db
+        .select()
+        .from(taskAgentSessions)
+        .where(
+          and(
+            eq(taskAgentSessions.taskId, task.id),
+            eq(taskAgentSessions.agentSessionId, session.id),
+          ),
+        )
 
-      expect(res.status).toBe(200)
-      expect(await jsonBody<AgentSessionResponse>(res)).toEqual(session)
+      expect(
+        linkResponse(
+          res.status,
+          await jsonBody<AgentSessionResponse>(res),
+          link,
+        ),
+      ).toEqual({
+        status: 200,
+        body: session,
+        link: {
+          taskId: task.id,
+          agentSessionId: session.id,
+          linkedAt: linkedAt.toISOString(),
+        },
+      })
     })
 
     it('accepts the task number in place of the UUID', async () => {

@@ -6,16 +6,18 @@ Associations between tasks and coding agent sessions.
 
 ## Columns
 
-| Name             | Type | Default | Nullable | Children | Parents                                           | Comment                                 |
-| ---------------- | ---- | ------- | -------- | -------- | ------------------------------------------------- | --------------------------------------- |
-| task_id          | text |         | false    |          | [public.tasks](public.tasks.md)                   | Task associated with the agent session. |
-| agent_session_id | text |         | false    |          | [public.agent_sessions](public.agent_sessions.md) | Agent session associated with the task. |
+| Name             | Type                     | Default | Nullable | Children | Parents                                           | Comment                                             |
+| ---------------- | ------------------------ | ------- | -------- | -------- | ------------------------------------------------- | --------------------------------------------------- |
+| task_id          | text                     |         | false    |          | [public.tasks](public.tasks.md)                   | Task associated with the agent session.             |
+| agent_session_id | text                     |         | false    |          | [public.agent_sessions](public.agent_sessions.md) | Agent session associated with the task.             |
+| linked_at        | timestamp with time zone | now()   | false    |          |                                                   | Time when the task was linked to the agent session. |
 
 ## Constraints
 
 | Name                                                      | Type        | Definition                                                                     |
 | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
 | task_agent_sessions_agent_session_id_not_null             | n           | NOT NULL agent_session_id                                                      |
+| task_agent_sessions_linked_at_not_null                    | n           | NOT NULL linked_at                                                             |
 | task_agent_sessions_task_id_not_null                      | n           | NOT NULL task_id                                                               |
 | task_agent_sessions_task_id_tasks_id_fk                   | FOREIGN KEY | FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE                   |
 | task_agent_sessions_agent_session_id_agent_sessions_id_fk | FOREIGN KEY | FOREIGN KEY (agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE |
@@ -40,6 +42,7 @@ erDiagram
 "public.task_agent_sessions" {
   text task_id FK
   text agent_session_id FK
+  timestamp_with_time_zone linked_at
 }
 "public.tasks" {
   text id
