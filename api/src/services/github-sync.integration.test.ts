@@ -463,6 +463,22 @@ describe('syncLinkFromGithub', () => {
     )
   })
 
+  it('does not notify when a bot closes an issue', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+
+    queueGithubIssueResponse({
+      state: 'closed',
+      updated_at: '2024-08-13T09:30:00Z',
+    })
+    queueGithubTimelineResponse([
+      timelineEvent('closed', 'automation-bot', undefined, 'Bot'),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
   it('does not notify when the authenticated user closes an issue', async () => {
     const { link } = await createLinkedTask()
     await registerPush('personal')
@@ -629,6 +645,24 @@ describe('syncLinkFromGithub', () => {
     expect(sentNotifications()).toEqual([])
   })
 
+  it('does not notify when a bot merges a pull request', async () => {
+    const { link } = await createLinkedTask(ref, true)
+    await registerPush('personal')
+
+    queueGithubIssueResponse({
+      state: 'closed',
+      pull_request: {},
+      updated_at: '2024-08-13T09:30:00Z',
+    })
+    queueGithubPullResponse(true)
+    queueGithubTimelineResponse([
+      timelineEvent('merged', 'automation-bot', undefined, 'Bot'),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
   it('uses the unmerged title when a pull request closes without merging', async () => {
     const { task, link } = await createLinkedTask(ref, true)
     await registerPush('personal')
@@ -699,6 +733,29 @@ describe('syncLinkFromGithub', () => {
     queueGithubIssueResponse({ state: 'open' })
     queueGithubTimelineResponse([
       timelineEvent('reopened', AUTHENTICATED_GITHUB_LOGIN),
+    ])
+    ;(await syncLinkFromGithub(closedLink))._unsafeUnwrap()
+
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it('does not notify when a bot reopens an issue', async () => {
+    const { link } = await createLinkedTask()
+    await registerPush('personal')
+    const closedLink = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({ state: 'closed' })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+
+    queueGithubIssueResponse({
+      state: 'open',
+      updated_at: '2024-08-13T09:30:00Z',
+    })
+    queueGithubTimelineResponse([
+      timelineEvent('reopened', 'automation-bot', undefined, 'Bot'),
     ])
     ;(await syncLinkFromGithub(closedLink))._unsafeUnwrap()
 

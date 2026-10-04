@@ -17,18 +17,16 @@ import { fetchJson, fetchJsonWithHeaders } from '#lib/fetch-json'
 const GITHUB_API_BASE = 'https://api.github.com'
 
 const githubUserSchema = z.object({ login: z.string() })
+const githubTimelineActorSchema = z
+  .object({ login: z.string(), type: z.string().optional() })
+  .nullable()
+  .optional()
 
 const githubTimelineEventSchema = z
   .object({
     event: z.string(),
-    actor: z
-      .object({ login: z.string(), type: z.string().optional() })
-      .nullable()
-      .optional(),
-    user: z
-      .object({ login: z.string(), type: z.string().optional() })
-      .nullable()
-      .optional(),
+    actor: githubTimelineActorSchema,
+    user: githubTimelineActorSchema,
     created_at: z.string().optional(),
     submitted_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -141,7 +139,7 @@ function fetchAllTimelineEvents(
 function toActivityEvent(
   event: z.infer<typeof githubTimelineEventSchema>,
 ): GithubIssueActivityEvent {
-  const actor = event.actor?.login == null ? event.user : event.actor
+  const actor = event.actor ?? event.user
   const timestamp =
     event.created_at ??
     event.submitted_at ??
