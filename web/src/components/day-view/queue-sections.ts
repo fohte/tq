@@ -45,15 +45,18 @@ export function buildQueueSections(
   })
 }
 
-export function filterDueTodayTasks(tasks: Task[], today: string): Task[] {
+export function filterTasksDueOnOrBeforeToday(
+  tasks: Task[],
+  today: string,
+): Task[] {
   return tasks.filter((task) => task.dueDate != null && task.dueDate <= today)
 }
 
 export function buildCompactQueueSections(
   queueSections: QueueSectionData[],
-  dueTodayTasks: Task[],
+  tasksDueOnOrBeforeToday: Task[],
 ): QueueSectionData[] {
-  const dueTodayTaskIds = new Set(dueTodayTasks.map((task) => task.id))
+  const dueTaskIds = new Set(tasksDueOnOrBeforeToday.map((task) => task.id))
   const daySection = queueSections.find(
     (section) => section.key === DAY_QUEUE_KEY,
   )
@@ -62,7 +65,7 @@ export function buildCompactQueueSections(
     {
       key: DUE_TODAY_SECTION_KEY,
       title: 'due today',
-      items: dueTodayTasks,
+      items: tasksDueOnOrBeforeToday,
       emptyMessage: 'No tasks due today',
       isReadOnly: true,
     },
@@ -71,10 +74,21 @@ export function buildCompactQueueSections(
       : [
           {
             ...daySection,
-            items: daySection.items.filter(
-              (task) => !dueTodayTaskIds.has(task.id),
-            ),
+            items: daySection.items.filter((task) => !dueTaskIds.has(task.id)),
           },
         ]),
   ]
+}
+
+export function findWritableQueueSection(
+  sections: QueueSectionData[],
+  overId: string,
+): QueueSectionData | undefined {
+  const section =
+    sections.find((candidate) => candidate.key === overId) ??
+    sections.find((candidate) =>
+      candidate.items.some((task) => task.id === overId),
+    )
+
+  return section?.isReadOnly === true ? undefined : section
 }

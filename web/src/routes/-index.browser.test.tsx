@@ -40,8 +40,14 @@ vi.mock('#components/calendar/calendar-change-feedback-popup', () => ({
 }))
 
 vi.mock('#components/day-view/day-view', () => ({
-  DayViewPresentation: ({ layout }: { layout?: string }) => (
-    <div data-testid="day-view" data-layout={layout} />
+  DayViewPresentation: ({
+    layout,
+    isLoading,
+  }: {
+    layout?: string
+    isLoading?: boolean
+  }) => (
+    <div data-testid="day-view" data-layout={layout} data-loading={isLoading} />
   ),
 }))
 
@@ -249,6 +255,40 @@ describe('day-view route compact layout', () => {
         schedulesInterval: undefined,
         queuesInterval: undefined,
         queueItemsInterval: undefined,
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it('shows a loading state while the compact due-date query loads', async () => {
+    mocks.useTaskList
+      .mockReturnValueOnce({
+        data: [],
+        isLoading: false,
+        categorized: { all: [] },
+      })
+      .mockReturnValueOnce({
+        data: undefined,
+        isLoading: true,
+        categorized: { all: [] },
+      })
+      .mockReturnValueOnce({
+        data: [],
+        isLoading: false,
+        categorized: { all: [] },
+      })
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+    const getDayViewLoadingState = () => ({
+      layout: screen.getByTestId('day-view').getAttribute('data-layout'),
+      loading: screen.getByTestId('day-view').getAttribute('data-loading'),
+    })
+
+    await waitFor(() => {
+      expect(getDayViewLoadingState()).toEqual({
+        layout: 'compact',
+        loading: 'true',
       })
     })
 

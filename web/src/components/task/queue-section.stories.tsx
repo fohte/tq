@@ -6,6 +6,7 @@ import { fn } from 'storybook/test'
 
 import { QueueSection } from '#components/task/queue-section'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { formatLocalDate } from '#lib/date-range'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
 function Providers({ children }: { children: ReactNode }) {
@@ -25,15 +26,11 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function formatDate(date: Date): string {
-  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
 const today = new Date()
-const todayDate = formatDate(today)
+const todayDate = formatLocalDate(today)
 const yesterday = new Date(today)
 yesterday.setDate(yesterday.getDate() - 1)
-const yesterdayDate = formatDate(yesterday)
+const yesterdayDate = formatLocalDate(yesterday)
 
 const meta = {
   title: 'Task/QueueSection',

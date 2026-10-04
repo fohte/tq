@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 
+import { findWritableQueueSection } from '#components/day-view/queue-sections'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import type { QueueTaskDragData } from '#components/task/queue-item-row'
 import { QueueSection } from '#components/task/queue-section'
@@ -29,19 +30,6 @@ function isQueueTaskDragData(
   data: Record<string, unknown> | undefined,
 ): data is QueueTaskDragData {
   return data?.['type'] === 'queue-task'
-}
-
-// `over.id` is either a section's own droppable id (dropped on empty space
-// within it) or one of its item ids (dropped on/near a row) — either way,
-// this finds which section the drag ended over.
-function findTargetSection(
-  sections: QueueSectionData[],
-  overId: string,
-): QueueSectionData | undefined {
-  return (
-    sections.find((s) => s.key === overId) ??
-    sections.find((s) => s.items.some((t) => t.id === overId))
-  )
 }
 
 export interface QueuePaneProps {
@@ -77,7 +65,7 @@ export function QueuePane({
     const { active, over } = event
     if (over == null) return
     const overId = String(over.id)
-    const targetSection = findTargetSection(queueSections, overId)
+    const targetSection = findWritableQueueSection(queueSections, overId)
     if (targetSection == null) return
 
     const activeData = active.data.current

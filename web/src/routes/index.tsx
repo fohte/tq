@@ -12,7 +12,7 @@ import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import {
   buildCompactQueueSections,
   buildQueueSections,
-  filterDueTodayTasks,
+  filterTasksDueOnOrBeforeToday,
 } from '#components/day-view/queue-sections'
 import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
@@ -92,7 +92,7 @@ function DayView() {
     baseFilter,
     refetchInterval === undefined ? undefined : { refetchInterval },
   )
-  const dueTodayQuery = useTaskList(
+  const dueDateTasksQuery = useTaskList(
     { ...baseFilter, status: 'todo', hasDue: true, sortBy: 'due' },
     {
       enabled: isCompactLayout,
@@ -173,7 +173,7 @@ function DayView() {
     isCompactLayout,
     timeBlocksQuery.error,
     schedulesQuery.error,
-    dueTodayQuery.error,
+    dueDateTasksQuery.error,
   )
   const { data: queuesData } = useQueues(refetchInterval)
   const queueItemsResults = useQueueItemsForQueues(
@@ -249,16 +249,19 @@ function DayView() {
   )
 
   const todayStr = formatLocalDate(new Date())
-  const dueTodayTasks = useMemo(
-    () => filterDueTodayTasks(dueTodayQuery.data ?? [], todayStr),
-    [dueTodayQuery.data, todayStr],
+  const tasksDueOnOrBeforeToday = useMemo(
+    () => filterTasksDueOnOrBeforeToday(dueDateTasksQuery.data ?? [], todayStr),
+    [dueDateTasksQuery.data, todayStr],
   )
   const visibleQueueSections = useMemo(
     () =>
       isCompactLayout
-        ? buildCompactQueueSections(filteredQueueSections, dueTodayTasks)
+        ? buildCompactQueueSections(
+            filteredQueueSections,
+            tasksDueOnOrBeforeToday,
+          )
         : filteredQueueSections,
-    [isCompactLayout, filteredQueueSections, dueTodayTasks],
+    [isCompactLayout, filteredQueueSections, tasksDueOnOrBeforeToday],
   )
 
   const dayQueueTasks =
@@ -430,7 +433,7 @@ function DayView() {
         layout={isCompactLayout ? 'compact' : 'default'}
         isLoading={
           isLoading ||
-          (isCompactLayout && dueTodayQuery.isLoading) ||
+          (isCompactLayout && dueDateTasksQuery.isLoading) ||
           (isKanbanFiltering && filteredTasksQuery.isLoading)
         }
         calendarEvents={calendarEvents}
