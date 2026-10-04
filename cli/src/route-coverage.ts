@@ -48,19 +48,9 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/description-templates/:name':
     'template management is a web UI action',
 
-  // Time blocks and recurring schedule defaults are managed in the calendar;
-  // per-occurrence schedule overrides have separate CLI operations.
-  'POST /api/schedule/time-blocks':
-    'calendar UI is faster for direct manipulation',
-  'GET /api/schedule/time-blocks':
-    'calendar UI is faster for direct manipulation',
-  'PATCH /api/schedule/time-blocks/:id':
-    'calendar UI is faster for direct manipulation',
-  'DELETE /api/schedule/time-blocks/:id':
-    'calendar UI is faster for direct manipulation',
+  // Recurring schedule defaults and auto-assignment remain calendar actions;
+  // per-occurrence changes have separate CLI operations.
   'POST /api/schedule/recurring':
-    'calendar UI is faster for direct manipulation',
-  'GET /api/schedule/recurring':
     'calendar UI is faster for direct manipulation',
   'PATCH /api/schedule/recurring/:id':
     'calendar UI is faster for direct manipulation',

@@ -1,4 +1,7 @@
-import { app, BrowserWindow, clipboard, Menu, shell } from 'electron'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+
+import { app, BrowserWindow, clipboard, Menu, screen, shell } from 'electron'
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
@@ -7,12 +10,24 @@ import {
   classifyNavigation,
   DEEP_LINK_SCHEME,
   resolveDeepLink,
+  shouldOpenSideNavigationInMain,
 } from '#navigation'
+import {
+  clampWindowBounds,
+  createDebouncedAction,
+  createWindowBoundsStore,
+  initialWindowBounds,
+  type WindowBoundsStore,
+} from '#window-state'
 
 let isQuitting = false
 let mainWindow: BrowserWindow | undefined
+let sideWindow: BrowserWindow | undefined
+let flushSideWindowBounds: (() => void) | undefined
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
+
+const SIDE_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/?layout=compact`
 
 // Both `loadURL` and `shell.openExternal` can reject; there is no caller to
 // hand the error to, so log it.
@@ -30,17 +45,31 @@ const openExternal = (url: string) =>
     `failed to open ${url} in the default browser`,
   )
 
+const hideOnCloseUnlessQuitting = (
+  win: BrowserWindow,
+  beforeHide?: () => void,
+) => {
+  win.on('close', (event) => {
+    if (isQuitting) return
+    event.preventDefault()
+    beforeHide?.()
+    win.hide()
+  })
+}
+
+const openMainWindow = (url: string) => {
+  if (mainWindow === undefined || mainWindow.isDestroyed()) return
+
+  void logRejection(mainWindow.loadURL(url), `failed to load ${url}`)
+  showWindow(mainWindow)
+}
+
 const createWindow = (url: string): BrowserWindow => {
   const win = new BrowserWindow({ webPreferences: { sandbox: true } })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
   // state; `before-quit` lets a real quit through.
-  win.on('close', (event) => {
-    if (!isQuitting) {
-      event.preventDefault()
-      win.hide()
-    }
-  })
+  hideOnCloseUnlessQuitting(win)
 
   void logRejection(win.loadURL(url), `failed to load ${url}`)
 
@@ -52,8 +81,79 @@ const showWindow = (win: BrowserWindow) => {
   win.show()
 }
 
+const isMissingFile = (caughtErr: unknown): boolean =>
+  typeof caughtErr === 'object' &&
+  caughtErr !== null &&
+  'code' in caughtErr &&
+  caughtErr.code === 'ENOENT'
+
+const createSideWindow = (): BrowserWindow => {
+  const boundsFile = join(app.getPath('userData'), 'side-window-bounds.json')
+  const boundsStore: WindowBoundsStore = createWindowBoundsStore({
+    read: () => readFileSync(boundsFile, 'utf8'),
+    write: (serialized) => {
+      mkdirSync(dirname(boundsFile), { recursive: true })
+      writeFileSync(boundsFile, serialized)
+    },
+  })
+  const loadedBounds = boundsStore.load().match(
+    (bounds) => bounds,
+    (caughtErr) => {
+      if (!isMissingFile(caughtErr)) {
+        console.error('failed to read side window bounds', caughtErr)
+      }
+      return undefined
+    },
+  )
+  const bounds =
+    loadedBounds === undefined
+      ? initialWindowBounds(screen.getPrimaryDisplay().workArea)
+      : clampWindowBounds(
+          loadedBounds,
+          screen.getDisplayMatching(loadedBounds).workArea,
+        )
+  const win = new BrowserWindow({
+    ...bounds,
+    webPreferences: { sandbox: true },
+  })
+  sideWindow = win
+
+  const saveBounds = () => {
+    if (win.isDestroyed()) return
+    boundsStore.save(win.getNormalBounds()).match(
+      () => undefined,
+      (caughtErr) => {
+        console.error('failed to save side window bounds', caughtErr)
+      },
+    )
+  }
+  const boundsSaver = createDebouncedAction(saveBounds, 200)
+
+  flushSideWindowBounds = boundsSaver.flush
+  win.on('move', boundsSaver.schedule)
+  win.on('resize', boundsSaver.schedule)
+  win.on('closed', () => {
+    sideWindow = undefined
+  })
+  hideOnCloseUnlessQuitting(win, boundsSaver.flush)
+
+  void logRejection(win.loadURL(SIDE_WINDOW_URL), 'failed to load side window')
+  showWindow(win)
+  return win
+}
+
+const openSideWindow = () => {
+  if (sideWindow === undefined || sideWindow.isDestroyed()) {
+    createSideWindow()
+    return
+  }
+
+  showWindow(sideWindow)
+}
+
 app.on('before-quit', () => {
   isQuitting = true
+  flushSideWindowBounds?.()
 })
 
 // Must be registered before `ready`: macOS can deliver the launch URL earlier,
@@ -74,16 +174,24 @@ app.on('open-url', (event, url) => {
 // Route every external link to the default browser. Registered on
 // `web-contents-created` so it also covers windows opened later.
 app.on('web-contents-created', (_event, contents) => {
+  const navigationSource = () =>
+    sideWindow !== undefined &&
+    BrowserWindow.fromWebContents(contents) === sideWindow
+      ? 'side'
+      : 'main'
+
   contents.on('will-navigate', (event) => {
     const action = classifyNavigation(
       contents.getURL(),
       event.url,
       TQ_ORIGIN,
       EXTERNAL_SCHEMES,
+      navigationSource(),
     )
     if (action === 'allow') return
     event.preventDefault()
     if (action === 'open-external') void openExternal(event.url)
+    if (action === 'open-main') openMainWindow(event.url)
   })
 
   contents.setWindowOpenHandler(({ url }) => {
@@ -92,9 +200,22 @@ app.on('web-contents-created', (_event, contents) => {
       url,
       TQ_ORIGIN,
       EXTERNAL_SCHEMES,
+      navigationSource(),
     )
     if (action === 'open-external') void openExternal(url)
+    if (action === 'open-main') openMainWindow(url)
     return { action: action === 'allow' ? 'allow' : 'deny' }
+  })
+
+  contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (!isMainFrame || navigationSource() !== 'side') return
+    if (!shouldOpenSideNavigationInMain(url, SIDE_WINDOW_URL, TQ_ORIGIN)) return
+
+    openMainWindow(url)
+    void logRejection(
+      contents.loadURL(SIDE_WINDOW_URL),
+      'failed to restore side window page',
+    )
   })
 })
 
@@ -117,6 +238,7 @@ void app.whenReady().then(() => {
         win.webContents.navigationHistory,
         win.webContents,
         clipboard,
+        openSideWindow,
       ),
     ),
   )

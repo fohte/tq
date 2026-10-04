@@ -17,6 +17,10 @@ import {
   estimateMinutesForRange,
 } from '#components/day-view/day-view'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
+import {
+  makeQueueCandidate,
+  makeTask,
+} from '#components/task/task-row-test-fixtures'
 import { assertDefined, findVisible } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
@@ -41,6 +45,7 @@ let capturedOnSelectRange:
 let capturedOnTaskClick: ((taskId: string) => void) | undefined
 let capturedOnScheduleClick:
   ((scheduleId: string, start: string) => void) | undefined
+let capturedShowViewSwitcher: boolean | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
@@ -53,11 +58,13 @@ vi.mock('#components/calendar/calendar-view', () => ({
     onSelectRange?: (info: { start: Date; end: Date }) => void
     onTaskClick?: (taskId: string) => void
     onScheduleClick?: (scheduleId: string, start: string) => void
+    showViewSwitcher?: boolean
   }) => {
     capturedOnSelectRange = props.onSelectRange
     capturedOnTaskClick = props.onTaskClick
     capturedOnScheduleClick = props.onScheduleClick
-    return null
+    capturedShowViewSwitcher = props.showViewSwitcher
+    return <div data-testid="calendar-view" />
   },
 }))
 
@@ -116,12 +123,12 @@ async function renderDayView(
   })
   await router.load()
 
-  render(
+  const rendered = render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
-  return { onCreateTimeBlock, router }
+  return { ...rendered, onCreateTimeBlock, router }
 }
 
 describe('DayViewPresentation', () => {
@@ -259,5 +266,72 @@ describe('DayViewPresentation', () => {
 
     expect(await screen.findByText('List')).toBeInTheDocument()
     expect(screen.getByText('Board')).toBeInTheDocument()
+  })
+
+  it('shows only the today queue and calendar in compact layout', async () => {
+    const todayTask = makeTask({
+      id: 'compact-today-task',
+      title: 'Review the launch checklist',
+    })
+    const weekTask = makeTask({
+      id: 'compact-week-task',
+      title: 'Review next week milestones',
+    })
+    const candidate = makeQueueCandidate({
+      task: makeTask({
+        id: 'compact-candidate',
+        title: 'Add a follow-up check',
+      }),
+    })
+    const { container } = await renderDayView({
+      layout: 'compact',
+      viewMode: 'kanban',
+      kanbanFilterRow: <div data-testid="kanban-filter" />,
+      queueSections: [
+        {
+          key: 'day',
+          title: 'today',
+          items: [todayTask],
+          emptyMessage: "No tasks in today's queue",
+        },
+        {
+          key: 'week',
+          title: 'this week',
+          items: [weekTask],
+          emptyMessage: "No tasks in this week's queue",
+        },
+      ],
+      dayQueueTasks: [todayTask],
+      queueCandidates: [candidate],
+    })
+
+    const getCompactState = () => ({
+      verticalLayout:
+        container.firstElementChild?.classList.contains('flex-col') ?? false,
+      todayQueueVisible: screen.queryByText('today') != null,
+      todayTaskVisible: screen.queryByText(todayTask.title) != null,
+      weekQueueVisible: screen.queryByText('this week') != null,
+      weekTaskVisible: screen.queryByText(weekTask.title) != null,
+      candidateVisible: screen.queryByText(candidate.task.title) != null,
+      calendarVisible: screen.queryByTestId('calendar-view') != null,
+      calendarViewSwitcherVisible: capturedShowViewSwitcher !== false,
+      calendarTabVisible:
+        screen.queryByRole('button', { name: 'calendar' }) != null,
+      tasksTabVisible: screen.queryByRole('button', { name: 'tasks' }) != null,
+      kanbanFilterVisible: screen.queryByTestId('kanban-filter') != null,
+    })
+    expect(getCompactState()).toEqual({
+      verticalLayout: true,
+      todayQueueVisible: true,
+      todayTaskVisible: true,
+      weekQueueVisible: false,
+      weekTaskVisible: false,
+      candidateVisible: false,
+      calendarVisible: true,
+      calendarViewSwitcherVisible: false,
+      calendarTabVisible: false,
+      tasksTabVisible: false,
+      kanbanFilterVisible: false,
+    })
   })
 })

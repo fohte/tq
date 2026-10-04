@@ -9,10 +9,12 @@ import {
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   getRecurrenceRulesByTemplateIds,
+  githubLinkToResponse,
   requireTask,
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
+import { getTaskGithubBlockers } from '#services/task-github-blockers'
 import { getTaskLinks } from '#services/task-links'
 import {
   getDuplicateOfNumbersByTaskId,
@@ -38,6 +40,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     duplicateOfNumbersByTaskId,
     duplicateOfTask,
     blockedByRelations,
+    githubBlockers,
   ] = await Promise.all([
     db
       .select({
@@ -73,13 +76,14 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
             where: eq(recurrenceRules.id, task.recurrenceRuleId),
           })
         : Promise.resolve(null),
-    getGithubLinksByTaskId([id]),
+    getGithubLinksByTaskId([id], { role: 'subject' }),
     getTaskLinks(id),
     getTaskFieldAuthors(id),
     getLabelNamesByTaskId([id]),
     getDuplicateOfNumbersByTaskId([id]),
     getDuplicateOfTask(id),
     getTaskBlockedByRelations(id),
+    getTaskGithubBlockers(id),
   ])
 
   const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -113,6 +117,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
         task.statusReason === 'duplicate' ? duplicateOfTask : null,
       blockedBy: blockedByRelations.blockedBy,
       blocking: blockedByRelations.blocking,
+      githubBlockers: githubBlockers.map(githubLinkToResponse),
     },
     200,
   )

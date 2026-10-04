@@ -16,6 +16,8 @@ export type TaskStatusReason = z.infer<typeof taskStatusReason>
 export const contextEnum = z.enum(['work', 'personal'])
 export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
+const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
+
 export const taskSortBy = z.enum(['created', 'updated', 'due', 'estimate'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 
@@ -69,7 +71,10 @@ export const createTaskSchema = z.object({
   commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
-  blockedBy: z.array(taskIdOrNumber).optional(),
+  blockedBy: z
+    .array(blockedByItemSchema)
+    .optional()
+    .describe('Task ids/numbers or GitHub issue/pull request URLs'),
 })
 
 export const updateTaskSchema = z.object({
@@ -97,10 +102,12 @@ export const updateTaskSchema = z.object({
         'reminder has been delivered, or dropped undelivered because the ' +
         'task was no longer todo or was more than an hour overdue.',
     ),
-  // Full replacement, not add/remove: the complete desired set of blocker
-  // tasks (id or number) each time. An empty array clears every
-  // `blocked_by` relation.
-  blockedBy: z.array(taskIdOrNumber).optional(),
+  // Full replacement, not add/remove: the complete desired set of task and
+  // GitHub blockers each time. An empty array clears every blocker.
+  blockedBy: z
+    .array(blockedByItemSchema)
+    .optional()
+    .describe('Task ids/numbers or GitHub issue/pull request URLs'),
 })
 
 export const listTasksQuerySchema = z.object({

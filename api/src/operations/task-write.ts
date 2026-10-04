@@ -162,8 +162,9 @@ export const taskWriteOperations = [
       '`type` is daily/weekly/monthly/custom, `interval` is the repeat ' +
       'count (for example, 2 with weekly means every 2 weeks), `daysOfWeek` ' +
       'uses 0=Sunday through 6=Saturday for weekly rules, and `dayOfMonth` ' +
-      'uses 1-31 for monthly rules. `blockedBy` lists task ids or numbers ' +
-      'that must complete first; unknown tasks return 404. `template` selects ' +
+      'uses 1-31 for monthly rules. `blockedBy` lists task ids/numbers or ' +
+      'GitHub issue/pull request URLs that must resolve first; unknown tasks ' +
+      'return 404. `template` selects ' +
       'a description template by name; for LLM-authored tasks, omit it to ' +
       'use the default template when one is configured. The description must ' +
       'include content under every `##` section.',
@@ -181,11 +182,12 @@ export const taskWriteOperations = [
       optionDescriptions: {
         labels:
           'Comma-separated label names to attach (unknown names are created)',
-        blockedBy: 'Comma-separated ids/numbers of tasks blocking this task',
+        blockedBy:
+          'Comma-separated task ids/numbers or GitHub issue/pull request URLs blocking this task',
         template:
           'Description template name to validate for LLM-authored tasks',
       },
-      optionMetavars: { labels: 'names', blockedBy: 'ids', template: 'name' },
+      optionMetavars: { labels: 'names', blockedBy: 'items', template: 'name' },
       customOptions: [
         {
           flags: '--parent-id <id>',
@@ -206,7 +208,8 @@ export const taskWriteOperations = [
       'null. `labels` replaces the full set; an empty array clears it, and ' +
       "new labels inherit the task's possibly updated context while existing " +
       'label contexts stay unchanged. `blockedBy` also replaces the full ' +
-      'set; an empty array clears every blocker. `recurrenceRule` has the ' +
+      'set (task ids/numbers or GitHub issue/pull request URLs); an empty ' +
+      'array clears every blocker. `recurrenceRule` has the ' +
       'same shape as task_create, or null to remove recurrence.',
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'write',
@@ -220,11 +223,11 @@ export const taskWriteOperations = [
       commaSeparatedOptions: ['labels', 'blockedBy'],
       optionDescriptions: {
         blockedBy:
-          'Comma-separated ids/numbers of tasks blocking this task (replaces the full set; pass an empty string to clear)',
+          'Comma-separated task ids/numbers or GitHub issue/pull request URLs blocking this task (replaces the full set; pass an empty string to clear)',
         labels:
           'Comma-separated label names to set (replaces the full set; unknown names are created; pass an empty string to clear)',
       },
-      optionMetavars: { labels: 'names', blockedBy: 'ids' },
+      optionMetavars: { labels: 'names', blockedBy: 'items' },
       customOptions: [
         ...recurrenceCliOptions,
         {

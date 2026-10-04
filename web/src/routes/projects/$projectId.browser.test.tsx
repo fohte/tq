@@ -48,6 +48,7 @@ const mockProject = makeProject({
 const baseTask = {
   description: null,
   blockedByNumbers: [],
+  blockedByGithubRefs: [],
   context: 'personal' as const,
   labels: [],
   startDate: null,
