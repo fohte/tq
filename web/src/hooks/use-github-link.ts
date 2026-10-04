@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
 import { projectKeys } from '#hooks/use-projects'
+import { taskKeys } from '#hooks/use-task-queries'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import {
   assertOkOrThrow,
