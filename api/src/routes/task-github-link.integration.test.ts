@@ -23,6 +23,34 @@ function normalizeLink(link: GithubLinkResponse) {
   return { ...link, id: 'ID', lastSyncedAt: 'DATE' }
 }
 
+function mockGithubIssueActivity() {
+  vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    if (url.pathname === '/user') {
+      return Promise.resolve(
+        new Response(JSON.stringify({ login: 'authenticated-user' }), {
+          status: 200,
+        }),
+      )
+    }
+    if (url.pathname.endsWith('/timeline')) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify([
+            {
+              event: 'closed',
+              actor: { login: 'external-user' },
+              created_at: '2024-08-13T09:30:00Z',
+            },
+          ]),
+          { status: 200 },
+        ),
+      )
+    }
+    return Promise.resolve(new Response('{}', { status: 404 }))
+  })
+}
+
 describe('POST /api/tasks/:taskId/github-link', () => {
   it('links an existing task to a GitHub issue', async () => {
     const task = await createTask('My task')
@@ -272,6 +300,7 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     const task = await createTask('Blocked task')
     const url = 'https://github.com/example-owner/example-repo/issues/17'
     await upsertGithubToken('valid-token')
+    mockGithubIssueActivity()
     mockGithubIssueResponse({ html_url: url, title: 'Open blocker' })
     const patchRes = await app.request(`/api/tasks/${task.id}`, {
       method: 'PATCH',
