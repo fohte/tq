@@ -1,4 +1,4 @@
-export const COMPACT_REFRESH_INTERVAL_MS = 60_000
+const COMPACT_REFRESH_INTERVAL_MS = 60_000
 
 export function isCompactDayLayoutSearch(search: {
   layout?: unknown
