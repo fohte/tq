@@ -4,8 +4,8 @@ export function useCompactRefreshErrorLogging(
   enabled: boolean,
   source: 'day view' | 'Now panel',
   errors: {
-    timeBlocks: unknown
-    schedules: unknown
+    timeBlocks?: unknown
+    schedules?: unknown
     dueTasks?: unknown
     memos?: unknown
   },

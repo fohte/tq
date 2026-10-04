@@ -116,13 +116,15 @@ export interface DayViewPresentationProps {
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
   nowPanel?: NowPanelProps
-  compactMemo?: {
-    context: MemoContext
-    memo: Memo | undefined
-    isLoading: boolean
-    loadError: boolean
-    onSave: (input: SaveMemoInput) => Promise<Memo>
-  }
+  compactMemo?:
+    | {
+        context: MemoContext
+        memo: Memo | undefined
+        isLoading: boolean
+        loadError: boolean
+        onSave: (input: SaveMemoInput) => Promise<Memo>
+      }
+    | undefined
 }
 
 export function DayViewPresentation({

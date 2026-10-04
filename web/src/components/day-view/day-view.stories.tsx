@@ -11,6 +11,8 @@ import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
+import { makeMemo } from '#hooks/memo-test-fixtures'
+import type { SaveMemoInput } from '#hooks/use-memos'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
@@ -431,7 +433,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the compact day planner shows due tasks before the remaining today queue',
+  name: 'the compact day planner shows current work, due tasks, and its work memo',
   tags: ['mobile-only'],
   decorators: [
     (Story) => (
@@ -450,6 +452,23 @@ export const Compact: Story = {
       timeBlocks: [compactTaskBlock],
       calendarEvents: compactEvents,
       taskMap: new Map(compactTasks.map((task) => [task.id, task])),
+    },
+    compactMemo: {
+      context: 'work',
+      memo: makeMemo({
+        content: '- Confirm the meeting notes\n- Review the weekly plan',
+        revision: 2,
+      }),
+      isLoading: false,
+      loadError: false,
+      onSave: fn((input: SaveMemoInput) =>
+        Promise.resolve(
+          makeMemo({
+            content: input.content,
+            revision: input.revision + 1,
+          }),
+        ),
+      ),
     },
     queueSections: compactQueueSections,
     dayQueueTasks: compactTasks,

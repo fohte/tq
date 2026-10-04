@@ -34,7 +34,10 @@ type QueueItemsMock = (
   date: string,
   refetchInterval?: number,
 ) => unknown
-type MemosMock = () => {
+type MemosMock = (
+  context: 'work' | 'personal',
+  enabled: boolean,
+) => {
   data: undefined
   error: unknown
   isPending: boolean
@@ -114,7 +117,7 @@ vi.mock('#hooks/use-integrations', () => ({
 }))
 
 vi.mock('#hooks/use-memos', () => ({
-  useMemos: () => mocks.useMemos(),
+  useMemos: (...args: Parameters<MemosMock>) => mocks.useMemos(...args),
   useUpdateMemo: () => ({ mutateAsync: vi.fn() }),
 }))
 
@@ -238,6 +241,7 @@ describe('day-view route compact layout', () => {
       dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
       timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
       schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
+      memoArgs: mocks.useMemos.mock.calls.at(-1),
       nowPanelTimeBlocksRange: mocks.useTimeBlocks.mock.calls
         .find((call) => call[3] === true)
         ?.slice(0, 2),
@@ -261,6 +265,7 @@ describe('day-view route compact layout', () => {
         dueTaskOptions: { enabled: true, refetchInterval: 60_000 },
         timeBlocksInterval: 60_000,
         schedulesInterval: 60_000,
+        memoArgs: ['work', true],
         nowPanelTimeBlocksRange: [
           nowPanelRange.startDate,
           nowPanelRange.endDate,
@@ -289,6 +294,7 @@ describe('day-view route compact layout', () => {
       dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
       timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
       schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
+      memoArgs: mocks.useMemos.mock.calls.at(-1),
       nowPanelTimeBlocksEnabled: mocks.useTimeBlocks.mock.calls.some(
         (call) => call[3] === false,
       ),
@@ -312,6 +318,7 @@ describe('day-view route compact layout', () => {
         dueTaskOptions: { enabled: false },
         timeBlocksInterval: undefined,
         schedulesInterval: undefined,
+        memoArgs: ['work', false],
         nowPanelTimeBlocksEnabled: true,
         nowPanelSchedulesEnabled: true,
         nowPanelGcalEnabled: true,
@@ -390,14 +397,6 @@ describe('day-view route compact layout', () => {
     await waitFor(() => {
       expect(getLoggedErrors()).toEqual([
         [
-          'Failed to refresh Now panel time blocks in compact layout',
-          timeBlocksError,
-        ],
-        [
-          'Failed to refresh Now panel schedules in compact layout',
-          schedulesError,
-        ],
-        [
           'Failed to refresh day view time blocks in compact layout',
           timeBlocksError,
         ],
@@ -408,6 +407,14 @@ describe('day-view route compact layout', () => {
         [
           'Failed to refresh day view due tasks in compact layout',
           dueTasksError,
+        ],
+        [
+          'Failed to refresh Now panel time blocks in compact layout',
+          timeBlocksError,
+        ],
+        [
+          'Failed to refresh Now panel schedules in compact layout',
+          schedulesError,
         ],
         ['Failed to refresh day view memos in compact layout', memosError],
       ])
