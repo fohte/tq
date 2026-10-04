@@ -65,9 +65,13 @@ async function formatClientErrorMessage(res: Response): Promise<string> {
 }
 
 async function formatValidationMessage(res: Response): Promise<string> {
-  const body = validationErrorBodySchema.safeParse(await readJson(res))
+  const responseBody = await readJson(res)
+  const body = validationErrorBodySchema.safeParse(responseBody)
   if (!body.success) {
-    return 'The request was invalid.'
+    const clientError = clientErrorBodySchema.safeParse(responseBody)
+    return clientError.success
+      ? clientError.data.error
+      : 'The request was invalid.'
   }
 
   const issues = z

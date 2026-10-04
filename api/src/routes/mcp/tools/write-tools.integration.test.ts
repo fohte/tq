@@ -647,6 +647,7 @@ describe('operation tool input schemas', () => {
       description_template_get: false,
       description_template_list: false,
       github_link: true,
+      github_notify: true,
       github_resolve: false,
       github_sync: false,
       github_unlink: true,
@@ -654,6 +655,8 @@ describe('operation tool input schemas', () => {
       label_delete: false,
       label_list: false,
       label_update: false,
+      memo_get: false,
+      memo_update: false,
       page_create: true,
       page_delete: false,
       page_get: false,
@@ -719,6 +722,10 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      github_notify: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
       github_resolve: { readOnlyHint: true },
       github_sync: {
         readOnlyHint: false,
@@ -746,6 +753,8 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      memo_get: { readOnlyHint: true },
+      memo_update: { readOnlyHint: false, destructiveHint: false },
     }
     const annotations = Object.fromEntries(
       tools.tools

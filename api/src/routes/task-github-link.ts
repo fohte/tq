@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { isQuietProviderError } from '#integrations/quiet-errors'
+import { githubNotifyEventsSchema } from '#lib/github-notify-events'
 import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import {
@@ -15,9 +16,19 @@ import {
   type TaskEnv,
 } from '#routes/tasks/shared'
 import { syncLinkFromGithub } from '#services/github-sync'
-import { linkTaskToGithubUrl, unlinkTask } from '#services/task-github-links'
+import {
+  linkTaskToGithubUrl,
+  unlinkTask,
+  updateGithubLinkNotifyEvents,
+} from '#services/task-github-links'
 
-const linkSchema = z.object({ url: z.string().min(1) })
+const linkSchema = z.object({
+  url: z.string().min(1),
+  notifyEvents: githubNotifyEventsSchema.optional(),
+})
+const updateNotifyEventsSchema = z.object({
+  notifyEvents: githubNotifyEventsSchema,
+})
 
 export const taskGithubLinkApp = new Hono<TaskEnv>()
   .use('*', async (c, next) => {
@@ -37,10 +48,10 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
   .post('/', zValidator('json', linkSchema), async (c) => {
     const taskId = c.get('task').id
     const author = c.get('author')
-    const { url } = c.req.valid('json')
+    const { url, notifyEvents } = c.req.valid('json')
 
     const result = await parseGithubIssueUrl(url).asyncAndThen((ref) =>
-      linkTaskToGithubUrl(taskId, ref, author),
+      linkTaskToGithubUrl(taskId, ref, author, notifyEvents),
     )
 
     return result.match(
@@ -48,6 +59,27 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
       (error) => githubLinkErrorResponse(c, error, 'task-github-link.link'),
     )
   })
+  .patch(
+    '/:linkId',
+    zValidator('json', updateNotifyEventsSchema),
+    async (c) => {
+      const taskId = c.get('task').id
+      const linkId = c.req.param('linkId')
+      const { notifyEvents } = c.req.valid('json')
+
+      const result = await updateGithubLinkNotifyEvents(
+        db,
+        taskId,
+        linkId,
+        notifyEvents,
+      )
+
+      return result.match(
+        (link) => c.json(githubLinkToResponse(link), 200),
+        (error) => githubLinkErrorResponse(c, error, 'task-github-link.update'),
+      )
+    },
+  )
   .delete('/:linkId', async (c) => {
     const taskId = c.get('task').id
     const linkId = c.req.param('linkId')

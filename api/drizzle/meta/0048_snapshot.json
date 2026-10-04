@@ -1,5 +1,5 @@
 {
-  "id": "9b2f5ca2-f5eb-4eed-b38d-67233678d5fe",
+  "id": "fac5fe8d-a5b5-44c1-9c71-9c1234110859",
   "prevId": "a6ff804c-bd93-47a7-a86c-018e00d9c160",
   "version": "7",
   "dialect": "postgresql",
@@ -537,71 +537,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.schedule_overrides": {
-      "name": "schedule_overrides",
-      "schema": "",
-      "columns": {
-        "schedule_id": {
-          "name": "schedule_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "occurrence_date": {
-          "name": "occurrence_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "start_time": {
-          "name": "start_time",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "end_time": {
-          "name": "end_time",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "skipped": {
-          "name": "skipped",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "schedule_overrides_schedule_id_schedules_id_fk": {
-          "name": "schedule_overrides_schedule_id_schedules_id_fk",
-          "tableFrom": "schedule_overrides",
-          "tableTo": "schedules",
-          "columnsFrom": ["schedule_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "schedule_overrides_schedule_date_unique": {
-          "name": "schedule_overrides_schedule_date_unique",
-          "nullsNotDistinct": false,
-          "columns": ["schedule_id", "occurrence_date"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "schedule_overrides_time_or_skip_check": {
-          "name": "schedule_overrides_time_or_skip_check",
-          "value": "(\"schedule_overrides\".\"skipped\" AND \"schedule_overrides\".\"start_time\" IS NULL AND \"schedule_overrides\".\"end_time\" IS NULL) OR (NOT \"schedule_overrides\".\"skipped\" AND \"schedule_overrides\".\"start_time\" IS NOT NULL AND \"schedule_overrides\".\"end_time\" IS NOT NULL)"
-        }
-      },
       "isRLSEnabled": false
     },
     "public.schedules": {
@@ -2187,6 +2122,46 @@
           "value": "\"task_github_links\".\"kind\" = 'pull_request' OR \"task_github_links\".\"state\" <> 'merged'"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.memos": {
+      "name": "memos",
+      "schema": "",
+      "columns": {
+        "context": {
+          "name": "context",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.push_subscriptions": {

@@ -7,8 +7,12 @@ WORKDIR /app
 # Install dependencies
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Frozen installs require a manifest for every workspace importer in the lockfile.
 COPY api/package.json api/
 COPY web/package.json web/
+COPY cli/package.json cli/
+COPY extension/package.json extension/
+COPY desktop/package.json desktop/
 RUN pnpm install --frozen-lockfile
 
 # Build

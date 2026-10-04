@@ -3,10 +3,14 @@ import { X } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubIssueLinkModal } from '#components/task/github-issue-link-modal'
+import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-picker'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { GithubLink } from '#hooks/use-github-link'
-import { useUnlinkTaskFromGithub } from '#hooks/use-github-link'
+import {
+  useUnlinkTaskFromGithub,
+  useUpdateGithubLinkNotifyEvents,
+} from '#hooks/use-github-link'
 
 export function TaskGithubLinksSection({
   taskId,
@@ -17,6 +21,7 @@ export function TaskGithubLinksSection({
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const unlink = useUnlinkTaskFromGithub(taskId)
+  const updateNotifyEvents = useUpdateGithubLinkNotifyEvents(taskId)
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -41,6 +46,16 @@ export function TaskGithubLinksSection({
                   title={link.title}
                 />
               </a>
+              <GitHubNotifyEventsPicker
+                value={link.notifyEvents}
+                onChange={(notifyEvents) => {
+                  updateNotifyEvents.mutate({
+                    linkId: link.id,
+                    notifyEvents,
+                  })
+                }}
+                disabled={updateNotifyEvents.isPending}
+              />
               <Button
                 type="button"
                 variant="ghost"

@@ -44,10 +44,30 @@ function parseSettings(raw: string | null): SessionOpenSettings {
 // writes a new value, instead of only the instance that called updateSettings.
 const listeners = new Set<() => void>()
 
+function notifyListeners(): void {
+  for (const listener of listeners) listener()
+}
+
+function onStorage(event: StorageEvent): void {
+  if (
+    event.storageArea === localStorage &&
+    (event.key === STORAGE_KEY || event.key === null)
+  ) {
+    notifyListeners()
+  }
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener)
+  if (listeners.size === 1) {
+    window.addEventListener('storage', onStorage)
+  }
+
   return () => {
     listeners.delete(listener)
+    if (listeners.size === 0) {
+      window.removeEventListener('storage', onStorage)
+    }
   }
 }
 
@@ -68,7 +88,7 @@ export function useSessionOpenSettings() {
     const next = { ...settings, ...patch }
     // best-effort persistence; keep the in-memory value even if storage write fails
     setStorageItem(STORAGE_KEY, JSON.stringify(next)).unwrapOr(undefined)
-    for (const listener of listeners) listener()
+    notifyListeners()
   }
 
   return [settings, updateSettings] as const

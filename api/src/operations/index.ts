@@ -7,6 +7,7 @@ import { healthOperations } from '#operations/health'
 import { hookOperations } from '#operations/hook'
 import { labelOperations } from '#operations/label'
 import { linkOperations } from '#operations/link'
+import { memoOperations } from '#operations/memo'
 import { pageOperations } from '#operations/page'
 import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
@@ -26,6 +27,7 @@ export {
   hookOperations,
   labelOperations,
   linkOperations,
+  memoOperations,
   pageOperations,
   projectOperations,
   queueOperations,
@@ -45,6 +47,7 @@ export const operations = [
   ...hookOperations,
   ...labelOperations,
   ...linkOperations,
+  ...memoOperations,
   ...pageOperations,
   ...projectOperations,
   ...queueOperations,

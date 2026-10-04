@@ -83,6 +83,13 @@ comments:
       access_token: 'Credential sent to the provider when making authenticated API requests.'
       refresh_token: 'OAuth refresh token; null for providers whose access tokens do not expire.'
       expires_at: 'Access token expiration time; null when the provider supplies no expiration.'
+  - table: memos
+    tableComment: 'Markdown scratchpads stored once per work or personal context.'
+    columnComments:
+      context: 'Context that owns the memo: work or personal.'
+      content: 'Markdown document stored for the context.'
+      revision: 'Monotonically increasing revision used to reject stale writes.'
+      updated_at: 'Time when the memo content was last updated.'
   - table: projects
     tableComment: 'Projects group related tasks and track planning status and dates.'
     columnComments:
