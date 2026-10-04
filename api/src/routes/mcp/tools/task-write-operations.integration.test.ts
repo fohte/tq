@@ -12,6 +12,7 @@ import {
   parseToolData,
   parseToolJson,
 } from '#routes/mcp/testing'
+import { makeDescriptionTemplate } from '#routes/tasks/description-template-test-fixtures'
 import { createLabel, createTask, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -69,12 +70,14 @@ afterEach(async () => {
 describe('task_create tool', () => {
   it('returns template guidance when an LLM description has an empty section', async () => {
     const guide = 'Describe what success looks like.'
-    await db.insert(taskDescriptionTemplates).values({
-      name: 'mcp-plan',
-      whenToUse: 'Use for an MCP-created plan',
-      body: '## Goal',
-      guide,
-    })
+    await db.insert(taskDescriptionTemplates).values(
+      makeDescriptionTemplate({
+        name: 'mcp-plan',
+        whenToUse: 'Use for an MCP-created plan',
+        body: '## Goal',
+        guide,
+      }),
+    )
 
     const result = await callMcpTool(client, 'task_create', {
       title: 'MCP task',
@@ -213,13 +216,15 @@ describe('task_create tool', () => {
   })
 
   it('lists the current description templates in the task creation tool', async () => {
-    await db.insert(taskDescriptionTemplates).values({
-      name: 'mcp-plan',
-      whenToUse: 'Use for planning a project with several deliverables',
-      body: '## Goal\n## Steps',
-      guide: 'Describe the outcome before listing the steps.',
-      isDefault: true,
-    })
+    await db.insert(taskDescriptionTemplates).values(
+      makeDescriptionTemplate({
+        name: 'mcp-plan',
+        whenToUse: 'Use for planning a project with several deliverables',
+        body: '## Goal\n## Steps',
+        guide: 'Describe the outcome before listing the steps.',
+        isDefault: true,
+      }),
+    )
 
     const snapshots = [
       taskCreateTemplateSnapshot((await client.listTools()).tools),
@@ -230,25 +235,27 @@ describe('task_create tool', () => {
       .set({
         name: 'mcp-plan-v2',
         whenToUse: 'Use for planning a single milestone',
-        body: '## Outcome\n~~~md\n## Not a section\n~~~\n## Validation',
+        body: '## Outcome\n~~~md\n## Not a section\n~~~\n```md\n## Also not a section\n```\n## Validation',
         guide: 'State one measurable outcome.\nExplain how to verify it.',
         isDefault: false,
       })
       .where(eq(taskDescriptionTemplates.name, 'mcp-plan'))
-    await db.insert(taskDescriptionTemplates).values({
-      name: 'mcp-review',
-      whenToUse: 'Use for reviewing completed work',
-      body: '## Findings\n## Follow-up',
-      guide: 'Record findings and the next action.',
-      isDefault: true,
-    })
+    await db.insert(taskDescriptionTemplates).values(
+      makeDescriptionTemplate({
+        name: 'mcp-review',
+        whenToUse: 'Use for reviewing completed work',
+        body: '## Findings\n## Follow-up',
+        guide: 'Record findings and the next action.',
+        isDefault: true,
+      }),
+    )
 
     snapshots.push(taskCreateTemplateSnapshot((await client.listTools()).tools))
 
     expect(snapshots).toEqual([
       {
         guidance:
-          '\n\nCurrent description templates:\n' +
+          '\n\nCurrent description templates:\n\n' +
           'Choose the template that best fits the task, pass its name in `template`, and fill every listed section with substantive content following its guide.\n\n' +
           '`mcp-plan` (default)\n' +
           'When to use: Use for planning a project with several deliverables\n' +
@@ -266,7 +273,7 @@ describe('task_create tool', () => {
       },
       {
         guidance:
-          '\n\nCurrent description templates:\n' +
+          '\n\nCurrent description templates:\n\n' +
           'Choose the template that best fits the task, pass its name in `template`, and fill every listed section with substantive content following its guide.\n\n' +
           '`mcp-review` (default)\n' +
           'When to use: Use for reviewing completed work\n' +

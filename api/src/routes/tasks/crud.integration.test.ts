@@ -11,6 +11,7 @@ import {
   tasks,
 } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { makeDescriptionTemplate } from '#routes/tasks/description-template-test-fixtures'
 import {
   createComment,
   createLabel,
@@ -149,14 +150,12 @@ function createdTaskResponse(title: string, description: string) {
   })
 }
 
-async function insertDescriptionTemplate(template: {
-  name: string
-  whenToUse: string
-  body: string
-  guide: string
-  isDefault?: boolean
-}) {
-  await db.insert(taskDescriptionTemplates).values(template)
+async function insertDescriptionTemplate(
+  template: Parameters<typeof makeDescriptionTemplate>[0],
+) {
+  await db
+    .insert(taskDescriptionTemplates)
+    .values(makeDescriptionTemplate(template))
 }
 
 // Simulates a legacy task where recurrenceRuleId is owned directly without a template.

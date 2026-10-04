@@ -12,6 +12,7 @@ import {
   authorHeader,
   toolResult,
 } from '#routes/mcp/tools/tool-helpers'
+import { descriptionTemplateHeadings } from '#routes/tasks/description-template-sections'
 
 function operationClient(
   operation: OperationDefinition,
@@ -56,38 +57,6 @@ type DescriptionTemplate = Pick<
   'name' | 'whenToUse' | 'body' | 'guide' | 'isDefault'
 >
 
-function sectionHeadings(markdown: string): string[] {
-  const headings: string[] = []
-  let codeFence: { marker: string; length: number } | undefined
-
-  for (const line of markdown.split(/\r?\n/)) {
-    const fenceText = line.match(/^\s{0,3}(`{3,}|~{3,})/)?.[1]
-    const fenceMarker = fenceText?.[0]
-
-    if (codeFence !== undefined) {
-      if (
-        fenceText !== undefined &&
-        fenceMarker === codeFence.marker &&
-        fenceText.length >= codeFence.length
-      ) {
-        codeFence = undefined
-      }
-      continue
-    }
-    if (fenceText !== undefined && fenceMarker !== undefined) {
-      codeFence = { marker: fenceMarker, length: fenceText.length }
-      continue
-    }
-
-    const match = line.match(/^\s{0,3}##[ \t]+(.+?)\s*$/)
-    if (match?.[1] !== undefined) {
-      headings.push(`## ${match[1].replace(/[ \t]+#+$/, '').trim()}`)
-    }
-  }
-
-  return headings
-}
-
 function taskCreateTemplateGuidance(
   templates: readonly DescriptionTemplate[],
 ): string {
@@ -95,7 +64,7 @@ function taskCreateTemplateGuidance(
     'Current description templates:',
     'Choose the template that best fits the task, pass its name in `template`, and fill every listed section with substantive content following its guide.',
     ...templates.map((template) => {
-      const headings = sectionHeadings(template.body)
+      const headings = descriptionTemplateHeadings(template.body)
       return [
         `\`${template.name}\`${template.isDefault ? ' (default)' : ''}`,
         `When to use: ${template.whenToUse}`,
