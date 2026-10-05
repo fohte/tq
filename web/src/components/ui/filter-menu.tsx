@@ -7,10 +7,10 @@ import {
   DialogPortal,
   DialogTrigger,
 } from '@fohte/ui/dialog'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { X } from 'lucide-react'
 import { useRef, useState } from 'react'
 
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import {
   BottomSheetHeader,
   BottomSheetOverlay,
@@ -29,7 +29,7 @@ interface FilterMenuProps {
 
 // Picks the container only: a popover on desktop, a bottom sheet below the
 // `md` breakpoint. Content passed as `children` must work in both, so the
-// desktop side uses AnchoredPopup (a plain popover) rather than
+// desktop side uses a plain Popover rather than
 // DropdownMenu — Base UI's Menu only wires close-on-select and arrow-key
 // navigation into Menu.Item-family children, which plain controls like
 // Checkbox or a <button> aren't.
@@ -54,20 +54,21 @@ export function FilterMenu({
           className={triggerClassName}
           aria-label={triggerAriaLabel}
           onClick={() => {
-            setOpen((prev) => !prev)
+            // Base UI may report this press as an outside dismissal too.
+            setOpen(!open)
           }}
         >
           {trigger}
         </button>
-        <AnchoredPopup
-          anchor={triggerRef}
-          open={open}
-          onOpenChange={setOpen}
-          align="start"
-          className="flex w-72 flex-col gap-5 rounded-lg p-2 font-sans shadow-md"
-        >
-          {children}
-        </AnchoredPopup>
+        <Popover anchor={triggerRef} open={open} onOpenChange={setOpen}>
+          <PopoverContent
+            align="start"
+            padding="md"
+            className="flex w-72 flex-col gap-5"
+          >
+            {children}
+          </PopoverContent>
+        </Popover>
       </>
     )
   }

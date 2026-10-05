@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import {
   Select,
   SelectContent,
@@ -15,7 +16,6 @@ import {
   SidebarField,
   sidebarFieldValueButtonClassName,
 } from '#components/task/sidebar-field'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { formatLocalDate } from '#lib/date-range'
 import { selectValueHandler } from '#lib/form-utils'
 import {
@@ -133,94 +133,94 @@ export function SidebarRecurrenceFieldAppearance({
             : '—'}
         </span>
       </Button>
-      <AnchoredPopup
-        open={isEditing}
-        onOpenChange={onOpenChange}
-        anchor={anchorRef}
-        className="w-72 p-3"
-      >
-        <div className="flex flex-col gap-3">
-          <Input
-            type="text"
-            value={shorthandInput}
-            onChange={(e) => {
-              onShorthandInputChange(e.target.value)
-            }}
-            placeholder="*weekly, *sun, *毎週 ..."
-            className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
-          />
+      <Popover open={isEditing} onOpenChange={onOpenChange} anchor={anchorRef}>
+        <PopoverContent padding="md" className="w-72">
+          <div className="flex flex-col gap-3">
+            <Input
+              type="text"
+              value={shorthandInput}
+              onChange={(e) => {
+                onShorthandInputChange(e.target.value)
+              }}
+              placeholder="*weekly, *sun, *毎週 ..."
+              className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+            />
 
-          <Select
-            value={type}
-            onValueChange={selectValueHandler(
-              onTypeChange,
-              recurrenceTypeOptions,
-            )}
-          >
-            <SelectTrigger
-              size="sm"
-              className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+            <Select
+              value={type}
+              onValueChange={selectValueHandler(
+                onTypeChange,
+                recurrenceTypeOptions,
+              )}
             >
-              <SelectValue placeholder="None" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">None</SelectItem>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                size="sm"
+                className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+              >
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {type !== '' && (
-            <div className="flex items-center gap-1.5 text-xs text-foreground">
-              Every
+            {type !== '' && (
+              <div className="flex items-center gap-1.5 text-xs text-foreground">
+                Every
+                <Input
+                  type="number"
+                  min="1"
+                  value={intervalInput}
+                  onChange={(e) => {
+                    onIntervalInputChange(e.target.value)
+                  }}
+                  className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
+                />
+                {intervalUnitLabel(type, intervalValue ?? 1)}
+              </div>
+            )}
+
+            {type === 'weekly' && (
+              <WeekdayToggleRow
+                daysOfWeek={daysOfWeek}
+                toggleDay={onToggleDay}
+              />
+            )}
+
+            {type === 'monthly' && (
               <Input
                 type="number"
                 min="1"
-                value={intervalInput}
+                max="31"
+                value={dayOfMonth}
                 onChange={(e) => {
-                  onIntervalInputChange(e.target.value)
+                  onDayOfMonthChange(e.target.value)
                 }}
-                className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
+                placeholder="Day of month (1-31)"
+                className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
               />
-              {intervalUnitLabel(type, intervalValue ?? 1)}
-            </div>
-          )}
+            )}
 
-          {type === 'weekly' && (
-            <WeekdayToggleRow daysOfWeek={daysOfWeek} toggleDay={onToggleDay} />
-          )}
+            {nextOccurrence != null && (
+              <p className="text-2xs text-muted-foreground">
+                Next: {formatShortDate(nextOccurrence)}
+              </p>
+            )}
 
-          {type === 'monthly' && (
-            <Input
-              type="number"
-              min="1"
-              max="31"
-              value={dayOfMonth}
-              onChange={(e) => {
-                onDayOfMonthChange(e.target.value)
-              }}
-              placeholder="Day of month (1-31)"
-              className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
-            />
-          )}
-
-          {nextOccurrence != null && (
-            <p className="text-2xs text-muted-foreground">
-              Next: {formatShortDate(nextOccurrence)}
-            </p>
-          )}
-
-          <Button
-            size="sm"
-            onClick={onSave}
-            disabled={!canSave}
-            className="self-end"
-          >
-            Save
-          </Button>
-        </div>
-      </AnchoredPopup>
+            <Button
+              size="sm"
+              onClick={onSave}
+              disabled={!canSave}
+              className="self-end"
+            >
+              Save
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     </SidebarField>
   )
 }
