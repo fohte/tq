@@ -77,6 +77,7 @@ export function QueueSection({
                   key={task.id}
                   task={task}
                   queueKey={queueKey}
+                  isReorderTarget={false}
                   secondLineExtras={getTaskRowTimeBlockExtras(
                     taskRowStates?.get(task.id),
                   )}

@@ -148,7 +148,6 @@ function renderDayViewWithManyCandidates(queryClient: QueryClient) {
           queueSections={[]}
           dayQueueTasks={[]}
           queueCandidates={manyQueueCandidates}
-          onReorderQueue={vi.fn()}
           onMoveTask={vi.fn()}
           onInsertCandidate={vi.fn()}
           onAddCandidate={vi.fn()}

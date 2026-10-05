@@ -97,9 +97,8 @@ export interface DayViewPresentationProps {
    * "today" regardless of how many other queues exist. */
   dayQueueTasks: Task[]
   queueCandidates: QueueCandidate<Task>[]
-  onReorderQueue: (queueKey: string, taskIds: string[]) => void
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
-  onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
+  onInsertCandidate: (queueKey: string, taskId: string) => void
   /** The kanban candidates' "+" button always adds to the day queue —
    * dragging a candidate onto a different section goes through
    * onInsertCandidate instead. */
@@ -139,7 +138,6 @@ export function DayViewPresentation({
   queueSections,
   dayQueueTasks,
   queueCandidates,
-  onReorderQueue,
   onMoveTask,
   onInsertCandidate,
   onAddCandidate,
@@ -389,7 +387,6 @@ export function DayViewPresentation({
               <TaskKanban
                 columns={kanbanColumns}
                 onDrop={handleKanbanDrop}
-                onReorder={onReorderQueue}
                 candidates={queueCandidates}
                 onAddCandidate={onAddCandidate}
                 onInsertCandidate={onInsertCandidate}
@@ -400,7 +397,6 @@ export function DayViewPresentation({
               isLoading={isLoading}
               queueSections={visibleQueueSections}
               queueCandidates={isCompactLayout ? [] : queueCandidates}
-              onReorderQueue={onReorderQueue}
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
               onRemoveFromQueue={onRemoveFromQueue}

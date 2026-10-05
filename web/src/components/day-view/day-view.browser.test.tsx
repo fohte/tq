@@ -76,7 +76,6 @@ async function renderDayView(
     queueSections: [],
     dayQueueTasks: [],
     queueCandidates: [],
-    onReorderQueue: vi.fn(),
     onMoveTask: vi.fn(),
     onInsertCandidate: vi.fn(),
     onAddCandidate: vi.fn(),

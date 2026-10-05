@@ -1,0 +1,164 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { describe, expect, it, vi } from 'vitest'
+
+import { QueuePane } from '#components/day-view/queue-pane'
+import { makeTask } from '#components/task/task-row-test-fixtures'
+import { getQueueCandidates } from '#lib/queue-candidates'
+import { MemoizedStoryRouter } from '#storybook-config/story-router'
+
+const dayTask = makeTask({
+  id: 'day-task',
+  title: 'Day task',
+  estimatedMinutes: 30,
+})
+const anotherDayTask = makeTask({
+  id: 'another-day-task',
+  title: 'Another day task',
+  estimatedMinutes: 30,
+})
+const weekTask = makeTask({
+  id: 'week-task',
+  title: 'Week task',
+  estimatedMinutes: 30,
+})
+const candidateTask = makeTask({
+  id: 'candidate-task',
+  title: 'Candidate task',
+  estimatedMinutes: 30,
+})
+
+function Providers({ children }: { children: ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MemoizedStoryRouter paths={['/tasks/$taskId']}>
+        {children}
+      </MemoizedStoryRouter>
+    </QueryClientProvider>
+  )
+}
+
+function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
+  render(
+    <Providers>
+      <div style={{ height: 600, width: 480 }}>
+        <QueuePane
+          isLoading={false}
+          queueSections={[
+            {
+              key: 'day',
+              title: 'today',
+              items: [dayTask, anotherDayTask],
+              emptyMessage: "No tasks in today's queue",
+            },
+            {
+              key: 'week',
+              title: 'this week',
+              items: [weekTask],
+              emptyMessage: "No tasks in this week's queue",
+            },
+          ]}
+          queueCandidates={getQueueCandidates([candidateTask], new Set())}
+          onMoveTask={onMoveTask}
+          onInsertCandidate={onInsertCandidate}
+          onRemoveFromQueue={vi.fn()}
+        />
+      </div>
+    </Providers>,
+  )
+  return { onMoveTask, onInsertCandidate }
+}
+
+async function dragTaskTo(sourceTitle: string, targetTitle: string) {
+  const source = (await screen.findByText(sourceTitle)).closest('.cursor-grab')
+  const target = (await screen.findByText(targetTitle)).closest('.cursor-grab')
+  if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement)) {
+    throw new Error('Could not find queue drag source and target')
+  }
+
+  const sourceRect = source.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const sourceX = sourceRect.x + sourceRect.width / 2
+  const sourceY = sourceRect.y + sourceRect.height / 2
+  const targetX = targetRect.x + targetRect.width / 2
+  const targetY = targetRect.y + targetRect.height / 2
+
+  fireEvent.mouseDown(source, { button: 0, clientX: sourceX, clientY: sourceY })
+  fireEvent.mouseMove(document, {
+    buttons: 1,
+    clientX: sourceX + 10,
+    clientY: sourceY + 10,
+  })
+  fireEvent.mouseMove(document, {
+    buttons: 1,
+    clientX: targetX,
+    clientY: targetY,
+  })
+  fireEvent.mouseUp(document, { button: 0, clientX: targetX, clientY: targetY })
+}
+
+async function dragCandidateToQueue(targetTitle: string) {
+  const source = (await screen.findByText(candidateTask.title)).closest(
+    '.cursor-grab',
+  )
+  const target = (await screen.findByText(targetTitle)).closest('.cursor-grab')
+  if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement)) {
+    throw new Error('Could not find candidate drag source and queue target')
+  }
+
+  const sourceRect = source.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const sourceX = sourceRect.x + sourceRect.width / 2
+  const sourceY = sourceRect.y + sourceRect.height / 2
+  const targetX = targetRect.x + targetRect.width / 2
+  const targetY = targetRect.y + targetRect.height / 2
+
+  fireEvent.mouseDown(source, { button: 0, clientX: sourceX, clientY: sourceY })
+  fireEvent.mouseMove(document, {
+    buttons: 1,
+    clientX: sourceX + 10,
+    clientY: sourceY + 10,
+  })
+  fireEvent.mouseMove(document, {
+    buttons: 1,
+    clientX: targetX,
+    clientY: targetY,
+  })
+  fireEvent.mouseUp(document, { button: 0, clientX: targetX, clientY: targetY })
+}
+
+describe('QueuePane dragging', () => {
+  it('does not reorder tasks dragged within the same queue', async () => {
+    const { onMoveTask } = renderQueuePane()
+
+    await dragTaskTo('Day task', 'Another day task')
+
+    await waitFor(() => {
+      expect(onMoveTask).not.toHaveBeenCalled()
+    })
+  })
+
+  it('moves a task when it is dragged to another queue', async () => {
+    const { onMoveTask } = renderQueuePane()
+
+    await dragTaskTo('Day task', 'Week task')
+
+    await waitFor(() => {
+      expect(onMoveTask).toHaveBeenCalledWith('day-task', 'day', 'week')
+    })
+  })
+
+  it('adds a candidate when it is dragged into a queue', async () => {
+    const { onInsertCandidate } = renderQueuePane()
+
+    await dragCandidateToQueue('Week task')
+
+    await waitFor(() => {
+      expect(onInsertCandidate).toHaveBeenCalledWith('week', 'candidate-task')
+    })
+  })
+})

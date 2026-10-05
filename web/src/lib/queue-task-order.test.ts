@@ -1,63 +1,28 @@
 import { describe, expect, it } from 'vitest'
 
-import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
+import {
+  appendQueueTaskId,
+  sortQueueItemsBySortOrder,
+} from '#lib/queue-task-order'
 
-describe('replaceVisibleQueueTaskIds', () => {
-  it('keeps hidden tasks in their stored slots when visible tasks are reordered', () => {
+describe('sortQueueItemsBySortOrder', () => {
+  it('restores queue order when the response array uses due order', () => {
     expect(
-      replaceVisibleQueueTaskIds(
-        [
-          'task-hidden-a',
-          'task-visible-a',
-          'task-hidden-b',
-          'task-visible-b',
-          'task-hidden-c',
-        ],
-        ['task-visible-a', 'task-visible-b'],
-        ['task-visible-b', 'task-visible-a'],
-      ),
+      sortQueueItemsBySortOrder([
+        { taskId: 'due-first', sortOrder: 1 },
+        { taskId: 'due-second', sortOrder: 0 },
+      ]),
     ).toEqual([
-      'task-hidden-a',
-      'task-visible-b',
-      'task-hidden-b',
-      'task-visible-a',
-      'task-hidden-c',
+      { taskId: 'due-second', sortOrder: 0 },
+      { taskId: 'due-first', sortOrder: 1 },
     ])
   })
+})
 
-  it('removes a visible task without moving hidden tasks', () => {
+describe('appendQueueTaskId', () => {
+  it('keeps existing queue order and appends the new task', () => {
     expect(
-      replaceVisibleQueueTaskIds(
-        ['task-hidden-a', 'task-visible-a', 'task-hidden-b', 'task-visible-b'],
-        ['task-visible-a', 'task-visible-b'],
-        ['task-visible-b'],
-      ),
-    ).toEqual(['task-hidden-a', 'task-visible-b', 'task-hidden-b'])
-  })
-
-  it('inserts a new visible task before the next visible anchor', () => {
-    expect(
-      replaceVisibleQueueTaskIds(
-        ['task-hidden-a', 'task-visible-a', 'task-hidden-b', 'task-visible-b'],
-        ['task-visible-a', 'task-visible-b'],
-        ['task-new', 'task-visible-b', 'task-visible-a'],
-      ),
-    ).toEqual([
-      'task-hidden-a',
-      'task-new',
-      'task-visible-b',
-      'task-hidden-b',
-      'task-visible-a',
-    ])
-  })
-
-  it('appends a new visible task when it has no later visible anchor', () => {
-    expect(
-      replaceVisibleQueueTaskIds(
-        ['task-hidden-a', 'task-visible-a', 'task-hidden-b'],
-        ['task-visible-a'],
-        ['task-visible-a', 'task-new'],
-      ),
-    ).toEqual(['task-hidden-a', 'task-visible-a', 'task-hidden-b', 'task-new'])
+      appendQueueTaskId(['stored-later', 'stored-earlier'], 'new-task'),
+    ).toEqual(['stored-later', 'stored-earlier', 'new-task'])
   })
 })

@@ -57,7 +57,6 @@ const meta = {
     ),
   ],
   args: {
-    onReorderQueue: fn(),
     onMoveTask: fn(),
     onInsertCandidate: fn(),
     onRemoveFromQueue: fn(),

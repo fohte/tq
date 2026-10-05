@@ -5,7 +5,6 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { arrayMove } from '@dnd-kit/sortable'
 
 import { findWritableQueueSection } from '#components/day-view/queue-sections'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
@@ -37,9 +36,8 @@ export interface QueuePaneProps {
   isLoading: boolean
   queueSections: QueueSectionData[]
   queueCandidates: QueueCandidate<Task>[]
-  onReorderQueue: (queueKey: string, taskIds: string[]) => void
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
-  onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
+  onInsertCandidate: (queueKey: string, taskId: string) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
   taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   className?: string
@@ -49,7 +47,6 @@ export function QueuePane({
   isLoading,
   queueSections,
   queueCandidates,
-  onReorderQueue,
   onMoveTask,
   onInsertCandidate,
   onRemoveFromQueue,
@@ -73,22 +70,7 @@ export function QueuePane({
 
     const activeData = active.data.current
     if (isCandidateDragData(activeData)) {
-      const overIndex = targetSection.items.findIndex((t) => t.id === overId)
-      if (overIndex === -1) {
-        onInsertCandidate(
-          targetSection.key,
-          activeData.taskId,
-          targetSection.items.length,
-        )
-        return
-      }
-      const activeTop = active.rect.current.translated?.top ?? over.rect.top
-      const isAfter = activeTop > over.rect.top + over.rect.height / 2
-      onInsertCandidate(
-        targetSection.key,
-        activeData.taskId,
-        overIndex + (isAfter ? 1 : 0),
-      )
+      onInsertCandidate(targetSection.key, activeData.taskId)
       return
     }
 
@@ -96,17 +78,7 @@ export function QueuePane({
       const sourceKey = activeData.queueKey
       if (targetSection.key !== sourceKey) {
         onMoveTask(String(active.id), sourceKey, targetSection.key)
-        return
       }
-
-      if (active.id === over.id) return
-      const oldIndex = targetSection.items.findIndex((t) => t.id === active.id)
-      const newIndex = targetSection.items.findIndex((t) => t.id === over.id)
-      if (oldIndex === -1 || newIndex === -1) return
-      onReorderQueue(
-        sourceKey,
-        arrayMove(targetSection.items, oldIndex, newIndex).map((t) => t.id),
-      )
     }
   }
 

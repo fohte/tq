@@ -53,7 +53,7 @@ import {
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
-import { replaceVisibleQueueTaskIds } from '#lib/queue-task-order'
+import { appendQueueTaskId } from '#lib/queue-task-order'
 
 const dayViewSearchDefaults = { view: 'queue', q: '' } as const
 
@@ -327,55 +327,21 @@ function DayView() {
     [handleTimeBlockChange, createTimeBlock],
   )
 
-  function queueTaskIdsFor(queueKey: string, visibleIds: string[]): string[] {
-    const rawIds = (rawItemsByKey.get(queueKey) ?? []).map((i) => i.taskId)
-    const previousVisibleIds = visibleIdsFor(queueKey)
-    return replaceVisibleQueueTaskIds(rawIds, previousVisibleIds, visibleIds)
-  }
-
-  function visibleIdsFor(queueKey: string): string[] {
-    return (
-      visibleQueueSections
-        .find((q) => q.key === queueKey)
-        ?.items.map((t) => t.id) ?? []
+  const handleInsertCandidate = (queueKey: string, taskId: string) => {
+    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
+      return
+    const rawIds = (rawItemsByKey.get(queueKey) ?? []).map(
+      (item) => item.taskId,
     )
-  }
-
-  const handleReorderQueue = (
-    queueKey: string,
-    newVisibleTaskIds: string[],
-  ) => {
-    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
-      return
     setQueueItems.mutate({
       key: queueKey,
       date: selectedDateStr,
-      taskIds: queueTaskIdsFor(queueKey, newVisibleTaskIds),
-    })
-  }
-
-  const handleInsertCandidate = (
-    queueKey: string,
-    taskId: string,
-    index: number,
-  ) => {
-    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
-      return
-    const nextVisible = [...visibleIdsFor(queueKey)]
-    nextVisible.splice(index, 0, taskId)
-    setQueueItems.mutate({
-      key: queueKey,
-      date: selectedDateStr,
-      taskIds: queueTaskIdsFor(queueKey, nextVisible),
+      taskIds: appendQueueTaskId(rawIds, taskId),
     })
   }
 
   const handleAddCandidate = (taskId: string) => {
-    handleInsertCandidate(
-      DAY_QUEUE_KEY,
-      taskId,
-      visibleIdsFor(DAY_QUEUE_KEY).length,
-    )
+    handleInsertCandidate(DAY_QUEUE_KEY, taskId)
   }
 
   const handleRemoveFromQueue = (queueKey: string, taskId: string) => {
@@ -398,12 +364,14 @@ function DayView() {
   ) => {
     if (setQueueItems.isPending && setQueueItems.variables.key === toQueueKey)
       return
-    const nextVisible = [...visibleIdsFor(toQueueKey), taskId]
+    const rawIds = (rawItemsByKey.get(toQueueKey) ?? []).map(
+      (item) => item.taskId,
+    )
     setQueueItems.mutate(
       {
         key: toQueueKey,
         date: selectedDateStr,
-        taskIds: queueTaskIdsFor(toQueueKey, nextVisible),
+        taskIds: appendQueueTaskId(rawIds, taskId),
       },
       {
         onSuccess: () => {
@@ -466,7 +434,6 @@ function DayView() {
         queueSections={visibleQueueSections}
         dayQueueTasks={dayQueueTasks}
         queueCandidates={queueCandidates}
-        onReorderQueue={handleReorderQueue}
         onMoveTask={handleMoveTask}
         onInsertCandidate={handleInsertCandidate}
         onAddCandidate={handleAddCandidate}
