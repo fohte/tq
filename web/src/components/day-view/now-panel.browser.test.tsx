@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
 import { NowPanel } from '#components/day-view/now-panel'
+import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 
 const now = new Date(2031, 3, 9, 14, 52)
 
@@ -59,20 +60,19 @@ describe('NowPanel', () => {
       type: 'gcal-meeting',
       redacted: true,
     })
+    const model = buildNowPanelModel({
+      now,
+      timeBlocks: [],
+      calendarEvents: [
+        currentMeeting,
+        nextMeeting,
+        unlinkedMeeting,
+        hiddenMeeting,
+      ],
+      tasks: new Map(),
+    })
 
-    render(
-      <NowPanel
-        now={now}
-        timeBlocks={[]}
-        calendarEvents={[
-          currentMeeting,
-          nextMeeting,
-          unlinkedMeeting,
-          hiddenMeeting,
-        ]}
-        taskMap={new Map()}
-      />,
-    )
+    render(<NowPanel model={model} />)
 
     await user.click(
       screen.getByRole('button', { name: 'Join Product review' }),

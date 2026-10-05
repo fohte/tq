@@ -7,6 +7,8 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { getTaskRowTimeBlockExtras } from '#components/task/task-row-time-block'
+import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -33,14 +35,23 @@ function Providers({ children }: { children: ReactNode }) {
 function TaskRowAppearanceWithProviders({
   task,
   size = 'default',
+  secondLineExtras = [],
+  isCurrentTimeBlock = false,
 }: {
   task: Task
   size?: 'default' | 'large'
+  secondLineExtras?: ReactNode[]
+  isCurrentTimeBlock?: boolean
 }) {
   return (
     <Providers>
       <div className="w-full max-w-3xl">
-        <TaskRowAppearance task={task} size={size} />
+        <TaskRowAppearance
+          task={task}
+          size={size}
+          secondLineExtras={secondLineExtras}
+          isCurrentTimeBlock={isCurrentTimeBlock}
+        />
       </div>
     </Providers>
   )
@@ -103,6 +114,58 @@ export const Todo: Story = {
   args: {
     task: { ...baseTask },
   },
+}
+
+export const WithTodayBlock: Story = {
+  name: "the row shows today's work block time",
+  args: {
+    task: { ...baseTask },
+  },
+  render: ({ task }) => (
+    <TaskRowAppearanceWithProviders
+      task={task}
+      secondLineExtras={getTaskRowTimeBlockExtras(
+        makeTaskRowTimeBlockState({ timeRanges: ['09:00–09:30'] }),
+      )}
+    />
+  ),
+}
+
+export const BlockEnded: Story = {
+  name: 'the row shows when an unfinished work block ended',
+  args: {
+    task: { ...baseTask },
+  },
+  render: ({ task }) => (
+    <TaskRowAppearanceWithProviders
+      task={task}
+      secondLineExtras={getTaskRowTimeBlockExtras(
+        makeTaskRowTimeBlockState({
+          timeRanges: ['09:00–09:30'],
+          blockEndedAt: '09:30',
+        }),
+      )}
+    />
+  ),
+}
+
+export const CurrentTimeBlock: Story = {
+  name: 'the row has a stronger background during its current work block',
+  args: {
+    task: { ...baseTask },
+  },
+  render: ({ task }) => (
+    <TaskRowAppearanceWithProviders
+      task={task}
+      secondLineExtras={getTaskRowTimeBlockExtras(
+        makeTaskRowTimeBlockState({ timeRanges: ['09:00–09:30'] }),
+      )}
+      isCurrentTimeBlock={
+        makeTaskRowTimeBlockState({ isCurrentTimeBlock: true })
+          .isCurrentTimeBlock
+      }
+    />
+  ),
 }
 
 export const Large: Story = {

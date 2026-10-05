@@ -5,7 +5,7 @@ import type {
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import { X } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { Chip } from '#components/ui/chip'
@@ -23,6 +23,8 @@ export function QueueItemRowAppearance({
   isDragging = false,
   isEditingEstimate,
   estimateInput,
+  secondLineExtras = [],
+  isCurrentTimeBlock = false,
   onEstimateInputChange,
   onStartEditingEstimate,
   onCommitEstimate,
@@ -37,6 +39,8 @@ export function QueueItemRowAppearance({
   isDragging?: boolean
   isEditingEstimate: boolean
   estimateInput: string
+  secondLineExtras?: ReactNode[]
+  isCurrentTimeBlock?: boolean
   onEstimateInputChange: (value: string) => void
   onStartEditingEstimate: () => void
   onCommitEstimate: () => void
@@ -97,7 +101,8 @@ export function QueueItemRowAppearance({
         <TaskRowAppearance
           task={task}
           draggable={task.status !== 'completed'}
-          secondLineExtras={[estimateItem]}
+          secondLineExtras={[estimateItem, ...secondLineExtras]}
+          isCurrentTimeBlock={isCurrentTimeBlock}
         />
       </div>
 

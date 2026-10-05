@@ -6,6 +6,7 @@ import { fn } from 'storybook/test'
 
 import { QueueSection } from '#components/task/queue-section'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import { formatLocalDate } from '#lib/date-range'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
@@ -95,6 +96,54 @@ export const DueToday: Story = {
         dueDate: todayDate,
       }),
     ],
+    taskRowStates: new Map([
+      [
+        '1',
+        makeTaskRowTimeBlockState({
+          timeRanges: ['08:30–09:00'],
+          blockEndedAt: '09:00',
+        }),
+      ],
+    ]),
+  },
+}
+
+export const ScheduledTask: Story = {
+  name: "a queued task shows today's work block time",
+  args: {
+    queueKey: 'day',
+    title: 'today',
+    emptyMessage: "No tasks in today's queue",
+    items: [
+      makeTask({ id: 'scheduled-task', title: 'Prepare the release notes' }),
+    ],
+    taskRowStates: new Map([
+      [
+        'scheduled-task',
+        makeTaskRowTimeBlockState({ timeRanges: ['10:00–10:30'] }),
+      ],
+    ]),
+  },
+}
+
+export const CurrentWorkBlock: Story = {
+  name: 'a queued task has a stronger background during its current work block',
+  args: {
+    queueKey: 'day',
+    title: 'today',
+    emptyMessage: "No tasks in today's queue",
+    items: [
+      makeTask({ id: 'current-task', title: 'Review the handoff notes' }),
+    ],
+    taskRowStates: new Map([
+      [
+        'current-task',
+        makeTaskRowTimeBlockState({
+          timeRanges: ['09:00–09:30'],
+          isCurrentTimeBlock: true,
+        }),
+      ],
+    ]),
   },
 }
 

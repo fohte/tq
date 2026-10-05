@@ -186,14 +186,18 @@ function DayView() {
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
-  const { nowPanelProps, gcalAuthRequired: nowPanelGcalAuthRequired } =
-    useNowPanelData({
-      enabled: isCompactLayout,
-      context,
-      taskMap,
-      isTasksLoading: isLoading,
-      ...(refetchInterval === undefined ? {} : { refetchInterval }),
-    })
+  const {
+    now,
+    nowPanelProps,
+    taskRowStates: compactTaskRowStates,
+    gcalAuthRequired: nowPanelGcalAuthRequired,
+  } = useNowPanelData({
+    enabled: isCompactLayout,
+    context,
+    taskMap,
+    isTasksLoading: isLoading,
+    ...(refetchInterval === undefined ? {} : { refetchInterval }),
+  })
   const compactMemoProps = useCompactMemoData({
     enabled: isCompactLayout,
     context,
@@ -443,6 +447,9 @@ function DayView() {
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
         nowPanel={nowPanelProps}
+        {...(selectedDateStr === formatLocalDate(now)
+          ? { taskRowStates: compactTaskRowStates }
+          : {})}
         compactMemo={compactMemoProps}
         isLoading={
           isLoading ||

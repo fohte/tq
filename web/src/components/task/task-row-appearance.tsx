@@ -41,6 +41,7 @@ export interface TaskRowAppearanceProps {
   // context, parent, dateRange, remindAt, estimate, recurrence, githubLink,
   // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
+  isCurrentTimeBlock?: boolean
   size?: 'default' | 'large'
 }
 
@@ -61,6 +62,7 @@ export function TaskRowAppearance({
   onClick,
   draggable = false,
   secondLineExtras = [],
+  isCurrentTimeBlock = false,
   size = 'default',
 }: TaskRowAppearanceProps) {
   const isCompleted = task.status === 'completed'
@@ -137,6 +139,7 @@ export function TaskRowAppearance({
         className={cn(
           'group',
           rowWrapperClassName(isCompleted),
+          isCurrentTimeBlock && 'bg-accent hover:bg-accent',
           size === 'large' && 'py-3',
           // Must come after rowWrapperClassName: twMerge keeps
           // both px-* and a later pl-* (CSS cascade lets pl-* win),

@@ -11,6 +11,7 @@ import { findWritableQueueSection } from '#components/day-view/queue-sections'
 import { QueueCandidatesSection } from '#components/task/queue-candidates-section'
 import type { QueueTaskDragData } from '#components/task/queue-item-row'
 import { QueueSection } from '#components/task/queue-section'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import type { Task } from '#hooks/use-tasks'
 import { NoDndMouseSensor, NoDndTouchSensor } from '#lib/dnd-sensors'
 import { isCandidateDragData, type QueueCandidate } from '#lib/queue-candidates'
@@ -40,6 +41,7 @@ export interface QueuePaneProps {
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string, index: number) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
+  taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   className?: string
 }
 
@@ -51,6 +53,7 @@ export function QueuePane({
   onMoveTask,
   onInsertCandidate,
   onRemoveFromQueue,
+  taskRowStates,
   className,
 }: QueuePaneProps) {
   // Delayed touch activation keeps scrolling available and lets short taps navigate.
@@ -128,6 +131,7 @@ export function QueuePane({
               queueKey={section.key}
               title={section.title}
               items={section.items}
+              {...(taskRowStates == null ? {} : { taskRowStates })}
               {...(section.dateRangeLabel != null
                 ? { dateRangeLabel: section.dateRangeLabel }
                 : {})}

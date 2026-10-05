@@ -1,21 +1,13 @@
 import { Button } from '@fohte/ui/button'
-import { useEffect, useMemo, useState } from 'react'
 
-import type { TimeBlockEvent } from '#components/calendar/calendar-view'
-import { buildNowPanelModel } from '#components/day-view/now-panel-model'
+import type { NowPanelModel } from '#components/day-view/now-panel-model'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import type { Task } from '#hooks/use-tasks'
-import type { TimeBlock } from '#hooks/use-time-blocks'
 import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import { cn } from '#lib/utils'
 
 export interface NowPanelProps {
-  timeBlocks: TimeBlock[]
-  calendarEvents: TimeBlockEvent[]
-  taskMap: Map<string, Task>
+  model: NowPanelModel
   isLoading?: boolean
-  /** Fixed clock for stories and tests. The live panel updates itself every minute. */
-  now?: Date
   desktopWindowControls?: boolean | undefined
 }
 
@@ -47,33 +39,10 @@ function getActivityStatusClassName(isOverrun: boolean): string {
 }
 
 export function NowPanel({
-  timeBlocks,
-  calendarEvents,
-  taskMap,
+  model,
   isLoading = false,
-  now: fixedNow,
   desktopWindowControls = hasTqDesktopWindowControls(),
 }: NowPanelProps) {
-  const [clockNow, setClockNow] = useState(() => fixedNow ?? new Date())
-
-  useEffect(() => {
-    if (fixedNow != null) return
-
-    const intervalId = window.setInterval(() => {
-      setClockNow(new Date())
-    }, 60_000)
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [fixedNow])
-
-  const now = fixedNow ?? clockNow
-  const model = useMemo(
-    () =>
-      buildNowPanelModel({ now, timeBlocks, calendarEvents, tasks: taskMap }),
-    [now, timeBlocks, calendarEvents, taskMap],
-  )
-
   return (
     <section
       aria-label="Now"

@@ -30,6 +30,7 @@ import {
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { TaskListHeader } from '#components/task/task-list-header'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import { ActionsMenu, type ActionsMenuItem } from '#components/ui/actions-menu'
 import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
@@ -116,6 +117,7 @@ export interface DayViewPresentationProps {
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
   nowPanel?: NowPanelProps
+  taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   compactMemo?:
     | {
         context: MemoContext
@@ -153,6 +155,7 @@ export function DayViewPresentation({
   initialMobileTab,
   layout = 'default',
   nowPanel,
+  taskRowStates,
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
@@ -401,6 +404,9 @@ export function DayViewPresentation({
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
               onRemoveFromQueue={onRemoveFromQueue}
+              {...(isCompactLayout && taskRowStates != null
+                ? { taskRowStates }
+                : {})}
               {...(isCompactLayout
                 ? { className: 'flex-none overflow-visible' }
                 : {})}

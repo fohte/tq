@@ -1,12 +1,15 @@
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import type { TaskRowTimeBlockState } from '#components/task/task-row-time-block'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
+import { formatTime24 } from '#lib/format'
 
 type NowPanelActivity =
   | {
       kind: 'task'
       key: string
       task: Task
+      blockEnd: string
       statusLabel: string
       isOverrun: boolean
     }
@@ -60,6 +63,29 @@ const MINUTE_MS = 60_000
 function parseTimestamp(value: string): number | null {
   const timestamp = new Date(value).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
+}
+
+function getLocalDayRange(now: Date): { start: number; end: number } {
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  return { start: start.getTime(), end: end.getTime() }
+}
+
+function getTimeBlocksForLocalDay(now: Date, timeBlocks: TimeBlock[]) {
+  const { start: dayStart, end: dayEnd } = getLocalDayRange(now)
+  return timeBlocks.filter((block) => {
+    const start = parseTimestamp(block.startTime)
+    const end = parseTimestamp(block.endTime)
+    return (
+      start != null &&
+      end != null &&
+      end > start &&
+      start < dayEnd &&
+      end > dayStart
+    )
+  })
 }
 
 function minutesUntil(target: number, now: number): number {
@@ -128,29 +154,16 @@ export function buildNowPanelModel({
   tasks,
 }: NowPanelModelInput): NowPanelModel {
   const nowTime = now.getTime()
-  const dayStart = new Date(now)
-  dayStart.setHours(0, 0, 0, 0)
-  const dayEnd = new Date(dayStart)
-  dayEnd.setDate(dayEnd.getDate() + 1)
-  const timeBlocksToday = timeBlocks.filter((block) => {
-    const start = parseTimestamp(block.startTime)
-    const end = parseTimestamp(block.endTime)
-    return (
-      start != null &&
-      end != null &&
-      end > start &&
-      start < dayEnd.getTime() &&
-      end > dayStart.getTime()
-    )
-  })
+  const { start: dayStart, end: dayEnd } = getLocalDayRange(now)
+  const timeBlocksToday = getTimeBlocksForLocalDay(now, timeBlocks)
   const eventById = new Map(calendarEvents.map((event) => [event.id, event]))
   const resolvedBlocks = resolveTimeBlocks(timeBlocks, eventById, tasks)
   const currentBlocksByTask = new Map<string, ResolvedTimeBlock>()
 
   for (const resolved of resolvedBlocks) {
     if (
-      resolved.start >= dayEnd.getTime() ||
-      resolved.end <= dayStart.getTime() ||
+      resolved.start >= dayEnd ||
+      resolved.end <= dayStart ||
       resolved.start > nowTime ||
       (resolved.task == null && resolved.end <= nowTime)
     ) {
@@ -194,6 +207,7 @@ export function buildNowPanelModel({
             kind: 'task',
             key: resolved.block.id,
             task: resolved.task,
+            blockEnd: resolved.block.endTime,
             statusLabel,
             isOverrun,
           }
@@ -297,4 +311,60 @@ export function buildNowPanelModel({
           : 'no-block-now',
     nextEvent,
   }
+}
+
+export function buildNowPanelTaskRowStates({
+  now,
+  timeBlocks,
+  model,
+}: {
+  now: Date
+  timeBlocks: TimeBlock[]
+  model: NowPanelModel
+}): Map<string, TaskRowTimeBlockState> {
+  const timeBlocksByTaskId = new Map<string, TimeBlock[]>()
+  for (const block of getTimeBlocksForLocalDay(now, timeBlocks)) {
+    const blocks = timeBlocksByTaskId.get(block.taskId) ?? []
+    blocks.push(block)
+    timeBlocksByTaskId.set(block.taskId, blocks)
+  }
+
+  const stateByTaskId = new Map<
+    string,
+    Omit<TaskRowTimeBlockState, 'timeRanges'>
+  >()
+  for (const activity of model.activities) {
+    if (activity.kind !== 'task') continue
+    stateByTaskId.set(activity.task.id, {
+      isCurrentTimeBlock: !activity.isOverrun,
+      ...(activity.isOverrun
+        ? { blockEndedAt: formatTime24(new Date(activity.blockEnd)) }
+        : {}),
+    })
+  }
+
+  return new Map(
+    [...timeBlocksByTaskId].map(([taskId, blocks]) => {
+      const state = stateByTaskId.get(taskId)
+      const timeRanges = blocks
+        .sort(
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        )
+        .map(
+          (block) =>
+            `${formatTime24(new Date(block.startTime))}–${formatTime24(new Date(block.endTime))}`,
+        )
+      return [
+        taskId,
+        {
+          timeRanges,
+          isCurrentTimeBlock: state?.isCurrentTimeBlock ?? false,
+          ...(state?.blockEndedAt == null
+            ? {}
+            : { blockEndedAt: state.blockEndedAt }),
+        },
+      ]
+    }),
+  )
 }

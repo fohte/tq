@@ -44,6 +44,15 @@ type MemosMock = (
   isError: boolean
 }
 
+function isDueTaskQuery(filter: unknown): boolean {
+  return (
+    typeof filter === 'object' &&
+    filter !== null &&
+    'hasDue' in filter &&
+    filter.hasDue === true
+  )
+}
+
 const mocks = vi.hoisted(() => ({
   useTaskList: vi.fn<TaskListMock>(),
   useTimeBlocks: vi.fn<DateRangeQueryMock>(),
@@ -331,22 +340,15 @@ describe('day-view route compact layout', () => {
   })
 
   it('shows a loading state while the compact due-date query loads', async () => {
-    mocks.useTaskList
-      .mockReturnValueOnce({
-        data: [],
-        isLoading: false,
+    mocks.useTaskList.mockImplementation((filter) => {
+      const isDueTask = isDueTaskQuery(filter)
+
+      return {
+        data: isDueTask ? undefined : [],
+        isLoading: isDueTask,
         categorized: { all: [] },
-      })
-      .mockReturnValueOnce({
-        data: undefined,
-        isLoading: true,
-        categorized: { all: [] },
-      })
-      .mockReturnValueOnce({
-        data: [],
-        isLoading: false,
-        categorized: { all: [] },
-      })
+      }
+    })
 
     const { queryClient } = await renderDayRoute('/?layout=compact')
     const getDayViewLoadingState = () => ({
@@ -378,18 +380,16 @@ describe('day-view route compact layout', () => {
       isPending: false,
       isError: true,
     })
-    mocks.useTaskList
-      .mockReturnValueOnce({
+    mocks.useTaskList.mockImplementation((filter) => {
+      const isDueTask = isDueTaskQuery(filter)
+
+      return {
         data: [],
+        ...(isDueTask ? { error: dueTasksError } : {}),
         isLoading: false,
         categorized: { all: [] },
-      })
-      .mockReturnValueOnce({
-        data: [],
-        error: dueTasksError,
-        isLoading: false,
-        categorized: { all: [] },
-      })
+      }
+    })
 
     const { queryClient } = await renderDayRoute('/?layout=compact')
     const getLoggedErrors = () => consoleError.mock.calls

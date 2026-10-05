@@ -4,6 +4,10 @@ import { Chip } from '@fohte/ui/chip'
 
 import { QueueItemRow } from '#components/task/queue-item-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
+import {
+  getTaskRowTimeBlockExtras,
+  type TaskRowTimeBlockState,
+} from '#components/task/task-row-time-block'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 
@@ -15,6 +19,7 @@ export interface QueueSectionProps {
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
   isReadOnly?: boolean
+  taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   onRemove: (taskId: string) => void
   emptyMessage: string
 }
@@ -25,6 +30,7 @@ export function QueueSection({
   items,
   dateRangeLabel,
   isReadOnly = false,
+  taskRowStates,
   onRemove,
   emptyMessage,
 }: QueueSectionProps) {
@@ -56,13 +62,27 @@ export function QueueSection({
             items.map((task) =>
               isReadOnly ? (
                 <div key={task.id} className="border-b border-border">
-                  <TaskRowAppearance task={task} />
+                  <TaskRowAppearance
+                    task={task}
+                    secondLineExtras={getTaskRowTimeBlockExtras(
+                      taskRowStates?.get(task.id),
+                    )}
+                    isCurrentTimeBlock={
+                      taskRowStates?.get(task.id)?.isCurrentTimeBlock ?? false
+                    }
+                  />
                 </div>
               ) : (
                 <QueueItemRow
                   key={task.id}
                   task={task}
                   queueKey={queueKey}
+                  secondLineExtras={getTaskRowTimeBlockExtras(
+                    taskRowStates?.get(task.id),
+                  )}
+                  isCurrentTimeBlock={
+                    taskRowStates?.get(task.id)?.isCurrentTimeBlock ?? false
+                  }
                   onRemove={() => {
                     onRemove(task.id)
                   }}
