@@ -117,7 +117,7 @@ describe('MarkdownEditor focus', () => {
     await findEditorText('The last paragraph.')
 
     const editor = getEditorRoot(container)
-    await waitForFocus(editor)
+    await waitForEditorFocus(editor)
     await user.keyboard('!')
     await findEditorText('The last paragraph.!')
 
