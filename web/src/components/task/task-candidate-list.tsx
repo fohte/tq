@@ -1,7 +1,6 @@
-import { Button } from '@fohte/ui/button'
+import { List, ListItem } from '@fohte/ui/list'
 
 import type { SearchResult } from '#hooks/use-search'
-import { cn } from '#lib/utils'
 
 export function TaskCandidateList({
   candidates,
@@ -18,21 +17,16 @@ export function TaskCandidateList({
   onHighlightCandidate?: (index: number) => void
 }) {
   return (
-    <>
+    <List
+      onMouseDown={(event) => {
+        event.preventDefault()
+      }}
+    >
       {candidates.map((candidate, index) => (
-        <Button
+        <ListItem
           key={candidate.id}
-          type="button"
-          variant="ghost"
-          className={cn(
-            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-            'flex min-h-11 w-full items-center justify-start gap-2 px-3 text-left text-sm',
-            highlightedIndex === index + indexOffset
-              ? 'bg-accent text-accent-foreground'
-              : 'text-popover-foreground hover:bg-accent/50',
-          )}
-          onMouseDown={(e) => {
-            e.preventDefault()
+          highlighted={highlightedIndex === index + indexOffset}
+          onSelect={() => {
             onSelectCandidate(candidate)
           }}
           onMouseEnter={() => {
@@ -48,8 +42,8 @@ export function TaskCandidateList({
               ← #{candidate.parentNumber}
             </span>
           )}
-        </Button>
+        </ListItem>
       ))}
-    </>
+    </List>
   )
 }

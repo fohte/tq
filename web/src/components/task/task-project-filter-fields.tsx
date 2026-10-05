@@ -1,4 +1,5 @@
-import { FilterOptionButton } from '#components/ui/filter-option-button'
+import { List, ListItem } from '@fohte/ui/list'
+
 import type { Project } from '#hooks/use-projects'
 
 export function TaskProjectFilterFields({
@@ -11,26 +12,26 @@ export function TaskProjectFilterFields({
   onProjectIdChange: (id: string) => void
 }) {
   return (
-    <div>
-      <FilterOptionButton
-        active={selectedProjectId == null || selectedProjectId === ''}
-        onClick={() => {
+    <List>
+      <ListItem
+        selected={selectedProjectId == null || selectedProjectId === ''}
+        onSelect={() => {
           onProjectIdChange('')
         }}
       >
         All projects
-      </FilterOptionButton>
+      </ListItem>
       {projects.map((project) => (
-        <FilterOptionButton
+        <ListItem
           key={project.id}
-          active={selectedProjectId === project.id}
-          onClick={() => {
+          selected={selectedProjectId === project.id}
+          onSelect={() => {
             onProjectIdChange(project.id)
           }}
         >
           {project.title}
-        </FilterOptionButton>
+        </ListItem>
       ))}
-    </div>
+    </List>
   )
 }

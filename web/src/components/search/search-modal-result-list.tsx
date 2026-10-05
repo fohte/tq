@@ -1,3 +1,4 @@
+import { List } from '@fohte/ui/list'
 import { Fragment, type RefObject, useRef } from 'react'
 
 import type { ListItem } from '#components/search/search-modal-result-items'
@@ -115,46 +116,43 @@ export function SearchModalResultList({
   )
 
   return (
-    <div
-      ref={listRef}
-      className="flex-1 overflow-y-auto py-2"
-      role="listbox"
-      aria-label="Search results"
-    >
-      {emptyMessage != null && (
-        <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-          {emptyMessage}
-        </div>
-      )}
-
-      {groups.map((group, groupIndex) => (
-        <Fragment key={group.id}>
-          {groupIndex > 0 && <div className="mx-4 my-1 h-px bg-border" />}
-          <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
-            {group.title}
+    <div ref={listRef} className="flex-1 overflow-y-auto py-2">
+      <List role="listbox" aria-label="Search results">
+        {emptyMessage != null && (
+          <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+            {emptyMessage}
           </div>
-          {group.sections == null
-            ? group.items.map(renderItem)
-            : group.sections.map((section) => (
-                <Fragment key={section.id}>
-                  {section.items.length > 0 && (
-                    <>
-                      <div className="px-4 pt-2 pb-1 font-mono text-2xs text-muted-foreground-faint">
-                        {section.title}
-                      </div>
-                      {section.items.map(renderItem)}
-                    </>
-                  )}
-                </Fragment>
-              ))}
-        </Fragment>
-      ))}
+        )}
 
-      {initialMessage != null && (
-        <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
-          {initialMessage}
-        </div>
-      )}
+        {groups.map((group, groupIndex) => (
+          <Fragment key={group.id}>
+            {groupIndex > 0 && <div className="mx-4 my-1 h-px bg-border" />}
+            <div className="px-4 py-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
+              {group.title}
+            </div>
+            {group.sections == null
+              ? group.items.map(renderItem)
+              : group.sections.map((section) => (
+                  <Fragment key={section.id}>
+                    {section.items.length > 0 && (
+                      <>
+                        <div className="px-4 pt-2 pb-1 font-mono text-2xs text-muted-foreground-faint">
+                          {section.title}
+                        </div>
+                        {section.items.map(renderItem)}
+                      </>
+                    )}
+                  </Fragment>
+                ))}
+          </Fragment>
+        ))}
+
+        {initialMessage != null && (
+          <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
+            {initialMessage}
+          </div>
+        )}
+      </List>
     </div>
   )
 }

@@ -801,7 +801,7 @@ describe('SearchModal', () => {
     expect(screen.getByText('personal')).toBeInTheDocument()
   })
 
-  it('shows suggestions when data is available', async () => {
+  it('highlights and applies a suggestion with arrow keys and Enter', async () => {
     mockSuggestionData = mockSuggestions
 
     const user = userEvent.setup()
@@ -810,8 +810,28 @@ describe('SearchModal', () => {
     const input = screen.getByLabelText('Search tasks')
     await user.type(input, 'is:')
 
-    expect(screen.getByText('is:todo')).toBeInTheDocument()
-    expect(screen.getByText('is:completed')).toBeInTheDocument()
+    const getHighlightedOptions = () =>
+      screen
+        .getAllByRole('option')
+        .map((option) => option.hasAttribute('data-highlighted'))
+    const states = [getHighlightedOptions()]
+    await user.keyboard('{ArrowDown}')
+    states.push(getHighlightedOptions())
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      states,
+      inputValue:
+        input instanceof HTMLInputElement ? input.value : 'not an input',
+    })
+    const expected = {
+      states: [
+        [true, false],
+        [false, true],
+      ],
+      inputValue: 'is:completed ',
+    }
+    expect(getOutput()).toEqual(expected)
   })
 
   it('navigates through suggestions and selects the following task', async () => {

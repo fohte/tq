@@ -1,4 +1,4 @@
-import { Button } from '@fohte/ui/button'
+import { ListItem as UiListItem } from '@fohte/ui/list'
 import { Link } from '@tanstack/react-router'
 import type { MouseEvent, ReactNode } from 'react'
 
@@ -46,30 +46,20 @@ export function createOptionItem(
   key: string,
   select: () => void,
   content: ReactNode,
-  options: { selectOnTab?: () => void; className?: string } = {},
+  options: { selectOnTab?: () => void } = {},
 ): ListItem {
-  const { className, ...listItemOptions } = options
   return {
     key,
     select,
-    ...listItemOptions,
+    ...options,
     render: ({ isSelected, onMouseMove }) => (
-      <Button
-        type="button"
-        variant="ghost"
-        role="option"
-        aria-selected={isSelected}
-        data-selected={isSelected}
-        onClick={select}
+      <UiListItem
+        highlighted={isSelected}
+        onSelect={select}
         onMouseMove={onMouseMove}
-        className={cn(
-          'h-auto min-h-0 w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 focus-visible:border-transparent focus-visible:ring-0 flex items-center gap-2 px-4 py-2 text-left whitespace-normal',
-          isSelected ? 'bg-accent hover:bg-accent' : 'hover:bg-accent/50',
-          className,
-        )}
       >
         {content}
-      </Button>
+      </UiListItem>
     ),
   }
 }

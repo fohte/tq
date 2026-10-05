@@ -239,10 +239,12 @@ export function SearchModal({
     }
   }, [open, defaultRecentItems])
 
-  // Scroll selected item into view
+  // Scroll the active result into view.
   useEffect(() => {
     if (listRef.current == null) return
-    const selected = listRef.current.querySelector('[data-selected="true"]')
+    const selected = listRef.current.querySelector(
+      '[data-highlighted], [data-selected="true"]',
+    )
     if (typeof selected?.scrollIntoView === 'function') {
       selected.scrollIntoView({ block: 'nearest' })
     }

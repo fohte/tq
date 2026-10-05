@@ -28,9 +28,9 @@ export function TaskMentionAutocompleteMenu({
 
   if (isLoading) {
     return (
-      <ul className={menuClassName}>
-        <li className="px-2 py-1.5 text-muted-foreground">Searching...</li>
-      </ul>
+      <div className={menuClassName}>
+        <div className="px-2 py-1.5 text-muted-foreground">Searching...</div>
+      </div>
     )
   }
 
