@@ -55,6 +55,7 @@ export function createOptionItem(
     render: ({ isSelected, onMouseMove }) => (
       <UiListItem
         highlighted={isSelected}
+        selected={isSelected}
         onSelect={select}
         onMouseMove={onMouseMove}
       >
@@ -149,7 +150,7 @@ export function createPageItems(
               }}
               role="option"
               aria-selected={isSelected}
-              data-selected={isSelected}
+              data-highlighted={isSelected ? '' : undefined}
               onMouseMove={onMouseMove}
               onClick={(e) => {
                 if (
@@ -207,7 +208,7 @@ export function renderTaskOption(
     <div
       role="option"
       aria-selected={isSelected}
-      data-selected={isSelected}
+      data-highlighted={isSelected ? '' : undefined}
       onMouseMove={onMouseMove}
       className={cn(isSelected ? 'bg-accent' : 'hover:bg-accent/50')}
     >
