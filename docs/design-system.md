@@ -10,7 +10,7 @@ Source of truth for every value in this doc:
 
 - Shared tokens: `@fohte/ui/tokens.css`
 - tq-specific tokens and utilities: `web/src/index.css`
-- Shared primitives: `@fohte/ui/{button,dialog,input,select,tooltip}`
+- Shared primitives: `@fohte/ui/{button,chip,dialog,input,select,tooltip}`
 - tq primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,modal-panel,desktop-modal-frame}.tsx`
 
 Add tq-specific tokens to `web/src/index.css`. Shared tokens come from the
@@ -647,7 +647,27 @@ component — extend one of these two.
 />
 ```
 
-### `Chip`
+### Shared `Chip`
+
+`@fohte/ui/chip`
+
+```ts
+function Chip(props: {
+  as?: 'span' | 'button'
+  size?: 'sm' | 'md'
+  tone?: 'muted' | 'strong' | 'faint'
+  onRemove?: () => void
+  removeLabel?: string
+  children: ReactNode
+}): JSX.Element
+```
+
+Use the shared chip for standard short labels. `tone` selects muted, strong,
+or faint text and border colors. A `span` chip can show a remove button when
+`onRemove` and `removeLabel` are both set; a `button` chip is interactive and
+does not support removal.
+
+### Local `Chip`
 
 `web/src/components/ui/chip.tsx`
 
@@ -661,8 +681,11 @@ function Chip(props: {
 }): JSX.Element
 ```
 
-A small bordered label. `size="sm"` for dense inline context (e.g. a
-context tag, a `tq#212` GitHub link chip); `size="md"` for a standalone
+A small bordered label retained for call sites that need per-instance sizing,
+pointer-event control, or GitHub state colors that the shared chip does not
+provide. Use the shared `@fohte/ui/chip` for standard short labels.
+
+`size="sm"` is for dense inline context; `size="md"` is for a standalone
 badge or interactive filter chip (`as="button"`). `active` swaps to
 `border-border-strong` + `text-foreground`.
 
