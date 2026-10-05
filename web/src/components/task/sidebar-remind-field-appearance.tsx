@@ -1,12 +1,12 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useRef } from 'react'
 
 import {
   SidebarField,
   sidebarFieldValueButtonClassName,
 } from '#components/task/sidebar-field'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { formatAbsoluteReminder, REMINDER_PRESETS } from '#lib/reminder-input'
 import { cn } from '#lib/utils'
 
@@ -75,63 +75,63 @@ export function SidebarRemindFieldAppearance({
           <span className="min-w-0 truncate">{remindAtLabel}</span>
         </Button>
       )}
-      <AnchoredPopup
-        open={isEditing}
-        onOpenChange={onOpenChange}
-        anchor={inputRef}
-        // Base UI's popover moves focus to the popup's first focusable
-        // element (the "なし" button below) as soon as it opens. That races
-        // the anchor `Input`'s own `autoFocus` and steals keystrokes away
-        // from it, so keep focus on the input instead.
-        initialFocus={false}
-        className="w-64"
-      >
-        <Button
-          type="button"
-          variant="ghost"
-          className={popupRowClassName}
-          onMouseDown={(e) => {
-            e.preventDefault()
-            onClear()
-          }}
+      <Popover open={isEditing} onOpenChange={onOpenChange} anchor={inputRef}>
+        <PopoverContent
+          // Base UI's popover moves focus to the popup's first focusable
+          // element (the "なし" button below) as soon as it opens. That races
+          // the anchor `Input`'s own `autoFocus` and steals keystrokes away
+          // from it, so keep focus on the input instead.
+          initialFocus={false}
+          padding="none"
+          className="w-64"
         >
-          なし
-        </Button>
-        <div className="mt-1 border-t border-border pt-1">
-          {query.trim() === '' ? (
-            REMINDER_PRESETS.map((preset) => (
+          <Button
+            type="button"
+            variant="ghost"
+            className={popupRowClassName}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              onClear()
+            }}
+          >
+            なし
+          </Button>
+          <div className="mt-1 border-t border-border pt-1">
+            {query.trim() === '' ? (
+              REMINDER_PRESETS.map((preset) => (
+                <Button
+                  key={preset}
+                  type="button"
+                  variant="ghost"
+                  className={popupRowClassName}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onSelectPreset(preset)
+                  }}
+                >
+                  {preset}
+                </Button>
+              ))
+            ) : parsedDate != null ? (
               <Button
-                key={preset}
                 type="button"
                 variant="ghost"
-                className={popupRowClassName}
+                className={cn(popupRowClassName, 'font-mono')}
                 onMouseDown={(e) => {
                   e.preventDefault()
-                  onSelectPreset(preset)
+                  onCommit(parsedDate)
                 }}
               >
-                {preset}
+                {formatAbsoluteReminder(parsedDate)}
               </Button>
-            ))
-          ) : parsedDate != null ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn(popupRowClassName, 'font-mono')}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                onCommit(parsedDate)
-              }}
-            >
-              {formatAbsoluteReminder(parsedDate)}
-            </Button>
-          ) : (
-            <div className="px-3 py-1.5 text-sm text-muted-foreground">
-              解釈できません
-            </div>
-          )}
-        </div>
-      </AnchoredPopup>
+            ) : (
+              <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                解釈できません
+              </div>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
     </SidebarField>
   )
 }

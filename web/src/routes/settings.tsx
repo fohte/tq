@@ -1,3 +1,4 @@
+import { Panel } from '@fohte/ui/panel'
 import { createFileRoute } from '@tanstack/react-router'
 import { Calendar, Puzzle } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -13,7 +14,6 @@ import { SchedulingSettingsPanel } from '#components/settings/scheduling-setting
 import { ServiceWorkerPanel } from '#components/settings/service-worker-panel'
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
-import { Panel } from '#components/ui/panel'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import {
@@ -56,7 +56,7 @@ function Settings() {
           {integrationsList.isLoading ? (
             <QueryStateMessage status="loading" />
           ) : integrationsList.isSuccess ? (
-            <Panel>
+            <Panel padding="none">
               <div className="divide-y divide-border">
                 {integrationsList.data.map((summary) => (
                   <SettingsIntegrationRow key={summary.id} summary={summary} />

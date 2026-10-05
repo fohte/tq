@@ -1,6 +1,5 @@
 import { Button } from '@fohte/ui/button'
-
-import { AnchoredPopup } from '#components/ui/anchored-popup'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 
 export type CalendarChangeFeedback =
   { kind: 'undo'; onUndo: () => void } | { kind: 'error' }
@@ -17,31 +16,35 @@ export function CalendarChangeFeedbackPopup({
   onOpenChange,
 }: CalendarChangeFeedbackPopupProps) {
   return (
-    <AnchoredPopup
+    <Popover
+      anchor={anchor}
       open={feedback != null}
       onOpenChange={onOpenChange}
-      anchor={anchor}
-      initialFocus={false}
-      className="flex items-center gap-2 px-3 py-1.5 text-xs whitespace-nowrap"
     >
-      {feedback?.kind === 'error' ? (
-        <span className="text-destructive">
-          Couldn't save — reverted to the original time
-        </span>
-      ) : feedback?.kind === 'undo' ? (
-        <>
-          <span className="text-muted-foreground">Moved</span>
-          <Button
-            type="button"
-            variant="link"
-            size="xs"
-            className="h-auto p-0"
-            onClick={feedback.onUndo}
-          >
-            Undo
-          </Button>
-        </>
-      ) : null}
-    </AnchoredPopup>
+      <PopoverContent
+        initialFocus={false}
+        padding="sm"
+        className="flex items-center gap-2 text-xs whitespace-nowrap"
+      >
+        {feedback?.kind === 'error' ? (
+          <span className="text-destructive">
+            Couldn't save — reverted to the original time
+          </span>
+        ) : feedback?.kind === 'undo' ? (
+          <>
+            <span className="text-muted-foreground">Moved</span>
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              className="h-auto p-0"
+              onClick={feedback.onUndo}
+            >
+              Undo
+            </Button>
+          </>
+        ) : null}
+      </PopoverContent>
+    </Popover>
   )
 }

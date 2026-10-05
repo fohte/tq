@@ -10,8 +10,8 @@ Source of truth for every value in this doc:
 
 - Shared tokens: `@fohte/ui/tokens.css`
 - tq-specific tokens and utilities: `web/src/index.css`
-- Shared primitives: `@fohte/ui/{button,chip,dialog,input,select,tooltip}`
-- tq primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,panel,progress-bar,modal-panel,desktop-modal-frame}.tsx`
+- Shared primitives: `@fohte/ui/{button,chip,dialog,input,panel,popover,select,tooltip}`
+- tq primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,progress-bar,modal-panel,desktop-modal-frame}.tsx`
 
 Add tq-specific tokens to `web/src/index.css`. Shared tokens come from the
 `@fohte/ui` dependency; when a dependency update changes their values, update
@@ -286,10 +286,9 @@ custom token, unlike `--text-2xs` above.
 
 **Half-step utilities (`0.5`/`1.5`/`2.5`/`3.5` → 2/6/10/14px) are part of
 this grid, not an exception to it.** Tailwind ships them as named scale
-steps, and `web/src/components/ui/` already leans on them heavily —
-`chip.tsx`'s `px-1.5 py-0.5`, `panel.tsx`'s `py-1.5`, `badge.tsx`'s
-`py-0.5`, `modal-field.tsx`'s `px-2.5 py-1.5`, and more. Banning them would
-fight code that's already correct.
+steps, and the UI already uses them heavily — `chip.tsx`'s `px-1.5 py-0.5`,
+`badge.tsx`'s `py-0.5`, `modal-field.tsx`'s `px-2.5 py-1.5`, and more.
+Banning them would fight code that's already correct.
 
 What's **not** allowed is inventing a step Tailwind doesn't ship by
 default, e.g. `gap-1.75` (7px) or `gap-4.5` (18px). Tailwind v4's dynamic
@@ -723,21 +722,42 @@ key-cap look (`rounded-(--keycap-radius)`, one of the three [radius exceptions](
 
 ### `Panel`
 
-`web/src/components/ui/panel.tsx`
+`@fohte/ui/panel`
 
 ```ts
-function Panel(props: { children: ReactNode; className?: string }): JSX.Element
+function Panel(
+  props: React.ComponentProps<'div'> & {
+    padding?: 'none' | 'sm' | 'md'
+  },
+): JSX.Element
 ```
 
-A bordered container (`border border-border`) for a grouped list of rows,
-each typically bottom-bordered with `last:border-b-0`.
+A bordered container (`border border-border`) for grouped content. `padding`
+defaults to `md` (`p-3`); `sm` uses `px-3 py-1.5`, and `none` adds no inset.
+Use `padding="none"` when children already define their own spacing.
 
 ```tsx
-<Panel>
+<Panel padding="none">
   <div className="border-b border-border px-3 py-2 text-sm last:border-b-0">
     Set up CI pipeline
   </div>
 </Panel>
+```
+
+### `Popover`
+
+`@fohte/ui/popover`
+
+`Popover` accepts an optional anchor ref and controlled `open` state. Its
+`PopoverContent` handles portal positioning and uses the same `padding`
+variants as `Panel`, defaulting to `md`.
+
+```tsx
+<Popover anchor={anchorRef} open={open} onOpenChange={setOpen}>
+  <PopoverContent padding="none" side="bottom" align="start">
+    Suggestions
+  </PopoverContent>
+</Popover>
 ```
 
 ### `ProgressBar`

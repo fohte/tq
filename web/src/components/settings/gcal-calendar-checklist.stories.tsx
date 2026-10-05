@@ -1,7 +1,7 @@
+import { Panel } from '@fohte/ui/panel'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { GcalCalendarChecklist } from '#components/settings/gcal-calendar-checklist'
-import { Panel } from '#components/ui/panel'
 import type { GcalCalendar } from '#hooks/use-gcal-calendars'
 
 const sampleCalendars: GcalCalendar[] = [
@@ -38,7 +38,7 @@ const meta = {
     layout: 'centered',
   },
   render: (args) => (
-    <Panel className="w-72 p-3">
+    <Panel padding="md" className="w-72">
       <GcalCalendarChecklist {...args} />
     </Panel>
   ),

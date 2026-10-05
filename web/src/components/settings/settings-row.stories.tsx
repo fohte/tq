@@ -1,15 +1,15 @@
 import { Input } from '@fohte/ui/input'
+import { Panel } from '@fohte/ui/panel'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { SettingsRow } from '#components/settings/settings-row'
-import { Panel } from '#components/ui/panel'
 
 const meta = {
   title: 'Settings/SettingsRow',
   component: SettingsRow,
   decorators: [
     (Story) => (
-      <Panel className="w-full max-w-lg">
+      <Panel padding="none" className="w-full max-w-lg">
         <Story />
       </Panel>
     ),

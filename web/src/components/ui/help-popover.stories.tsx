@@ -8,7 +8,7 @@ const meta = {
   args: {
     label: 'Show example help',
     children: (
-      <div className="w-64 p-3 font-sans text-sm text-popover-foreground">
+      <div className="w-64 text-sm text-popover-foreground">
         Short help content appears here.
       </div>
     ),

@@ -1,9 +1,8 @@
 import { Button } from '@fohte/ui/button'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { CircleHelp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useId, useRef, useState } from 'react'
-
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 
 interface HelpPopoverProps {
   label: string
@@ -11,7 +10,6 @@ interface HelpPopoverProps {
   className?: string | undefined
   defaultOpen?: boolean
   onOpenChange?: ((open: boolean) => void) | undefined
-  popupClassName?: string
   tabIndex?: number
 }
 
@@ -21,7 +19,6 @@ export function HelpPopover({
   className,
   defaultOpen = false,
   onOpenChange,
-  popupClassName,
   tabIndex,
 }: HelpPopoverProps) {
   const [open, setOpen] = useState(defaultOpen)
@@ -52,16 +49,11 @@ export function HelpPopover({
       >
         <CircleHelp aria-hidden="true" />
       </Button>
-      <AnchoredPopup
-        id={popupId}
-        open={open}
-        onOpenChange={updateOpen}
-        anchor={triggerRef}
-        align="end"
-        className={popupClassName}
-      >
-        {children}
-      </AnchoredPopup>
+      <Popover anchor={triggerRef} open={open} onOpenChange={updateOpen}>
+        <PopoverContent id={popupId} align="end" padding="md">
+          {children}
+        </PopoverContent>
+      </Popover>
     </>
   )
 }

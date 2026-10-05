@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
@@ -8,7 +9,6 @@ import {
   type SearchSyntaxHelpSection,
 } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import type { Suggestion } from '#hooks/use-search'
 import {
   applySuggestionToQuery,
@@ -159,34 +159,37 @@ export function TaskFilterFreeTextInput({
         className="h-auto min-w-0 flex-1 border-0 bg-transparent dark:bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground transition-none focus-visible:border-0 focus-visible:ring-0"
         aria-label="Filter query"
       />
-      <AnchoredPopup
-        open={isFocused && hasSuggestions}
-        anchor={inputRef}
-        initialFocus={false}
-        className="min-w-(--anchor-width)"
-      >
-        {availableSuggestions?.map((suggestion, index) => (
-          <Button
-            key={suggestion.value}
-            type="button"
-            variant="ghost"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              applySuggestion(suggestion)
-            }}
-            className={cn(
-              'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-              'flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left font-mono text-xs',
-              index === selectedIndex
-                ? 'bg-accent text-accent-foreground'
-                : 'text-popover-foreground hover:bg-accent/50',
-            )}
-          >
-            <span>{suggestion.value}</span>
-            <span className="text-muted-foreground">{suggestion.display}</span>
-          </Button>
-        ))}
-      </AnchoredPopup>
+      <Popover open={isFocused && hasSuggestions} anchor={inputRef}>
+        <PopoverContent
+          initialFocus={false}
+          padding="none"
+          className="min-w-(--anchor-width)"
+        >
+          {availableSuggestions?.map((suggestion, index) => (
+            <Button
+              key={suggestion.value}
+              type="button"
+              variant="ghost"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                applySuggestion(suggestion)
+              }}
+              className={cn(
+                'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                'flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left font-mono text-xs',
+                index === selectedIndex
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-popover-foreground hover:bg-accent/50',
+              )}
+            >
+              <span>{suggestion.value}</span>
+              <span className="text-muted-foreground">
+                {suggestion.display}
+              </span>
+            </Button>
+          ))}
+        </PopoverContent>
+      </Popover>
       <SearchSyntaxHelpPopover
         anchor={inputRef}
         open={isFocused && value.trim() === ''}

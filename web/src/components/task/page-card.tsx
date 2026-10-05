@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { Panel } from '@fohte/ui/panel'
 import { Link } from '@tanstack/react-router'
 import { ChevronDown, Code2, ExternalLink, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -6,7 +7,6 @@ import { useState } from 'react'
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
-import { Panel } from '#components/ui/panel'
 import type { TaskPage } from '#hooks/use-task-pages'
 import { formatRelativeTime } from '#lib/format'
 import { cn } from '#lib/utils'
@@ -77,7 +77,7 @@ export function PageCardPresentation({
   ]
 
   return (
-    <Panel>
+    <Panel padding="none">
       {/* Header */}
       <div className="flex items-center gap-2 px-2.5 py-2">
         <Button

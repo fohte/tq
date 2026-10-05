@@ -1,10 +1,10 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useMemo, useRef, useState } from 'react'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import { TaskShorthandHelp } from '#components/task/task-shorthand-help'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 import {
@@ -166,63 +166,67 @@ export function TaskTitleInput({
           }}
         />
       </div>
-      <AnchoredPopup
+      <Popover
         open={suggestionCount > 0}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setCursorTrigger(null)
         }}
         anchor={inputRef}
-        initialFocus={false}
-        className={isParentTrigger ? 'w-64' : 'w-40 font-mono'}
       >
-        {isParentTrigger
-          ? parentSuggestions.map((item, index) => (
-              <Button
-                key={item.id}
-                type="button"
-                variant="ghost"
-                className={cn(
-                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-                  'flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left text-xs',
-                  index === selectedIndex
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-popover-foreground hover:bg-accent/50',
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  applyParentSuggestion(item)
-                }}
-              >
-                <TaskMentionSummary
-                  status={item.status}
-                  statusReason={item.statusReason ?? null}
-                  number={item.number}
-                  title={item.title}
-                />
-              </Button>
-            ))
-          : suggestions.map((item, index) => (
-              <Button
-                key={item.value}
-                type="button"
-                variant="ghost"
-                className={cn(
-                  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-                  'w-full justify-start px-3 py-1.5 text-left text-xs',
-                  index === selectedIndex
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-popover-foreground hover:bg-accent/50',
-                )}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  applySuggestion(item)
-                }}
-              >
-                {cursorTrigger?.trigger}
-                {item.display}
-              </Button>
-            ))}
-      </AnchoredPopup>
+        <PopoverContent
+          initialFocus={false}
+          padding="none"
+          className={isParentTrigger ? 'w-64' : 'w-40'}
+        >
+          {isParentTrigger
+            ? parentSuggestions.map((item, index) => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                    'flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left text-xs',
+                    index === selectedIndex
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-popover-foreground hover:bg-accent/50',
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    applyParentSuggestion(item)
+                  }}
+                >
+                  <TaskMentionSummary
+                    status={item.status}
+                    statusReason={item.statusReason ?? null}
+                    number={item.number}
+                    title={item.title}
+                  />
+                </Button>
+              ))
+            : suggestions.map((item, index) => (
+                <Button
+                  key={item.value}
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
+                    'w-full justify-start px-3 py-1.5 text-left text-xs',
+                    index === selectedIndex
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-popover-foreground hover:bg-accent/50',
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    applySuggestion(item)
+                  }}
+                >
+                  {cursorTrigger?.trigger}
+                  {item.display}
+                </Button>
+              ))}
+        </PopoverContent>
+      </Popover>
     </>
   )
 }

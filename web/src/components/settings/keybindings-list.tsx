@@ -1,5 +1,6 @@
+import { Panel } from '@fohte/ui/panel'
+
 import { KeybindHint } from '#components/ui/keybind-hint'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import {
   calendarKeybindings,
@@ -34,17 +35,17 @@ export function KeybindingsList({
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>keybindings</SectionHeading>
-      <Panel>
+      <Panel padding="none">
         <KeybindingGrid keybindings={getAllKeybindings(searchKeybinding)} />
       </Panel>
 
       <SectionHeading level={3}>calendar keybindings</SectionHeading>
-      <Panel>
+      <Panel padding="none">
         <KeybindingGrid keybindings={calendarKeybindings} />
       </Panel>
 
       <SectionHeading level={3}>filter keybindings</SectionHeading>
-      <Panel>
+      <Panel padding="none">
         <KeybindingGrid keybindings={filterKeybindings} />
       </Panel>
     </div>

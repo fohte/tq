@@ -1,5 +1,6 @@
+import { Panel } from '@fohte/ui/panel'
+
 import { SessionRow } from '#components/agent-session/session-row'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import type { AgentSession } from '#hooks/use-agent-sessions'
@@ -37,7 +38,7 @@ export function TaskSessionsList({ sessions }: { sessions: AgentSession[] }) {
           No sessions linked to this task yet.
         </p>
       ) : (
-        <Panel>
+        <Panel padding="none">
           {sessions.map((session) => (
             <SessionRow key={session.id} session={session} isDimmed={false} />
           ))}

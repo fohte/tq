@@ -1,10 +1,10 @@
 import { Button } from '@fohte/ui/button'
+import { Panel } from '@fohte/ui/panel'
 import { Loader2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
-import { Panel } from '#components/ui/panel'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
@@ -153,7 +153,7 @@ function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
           {completed}/{subtasks.length}
         </span>
       </div>
-      <Panel>
+      <Panel padding="none">
         {subtasks.map((subtask) => (
           <TaskRowAppearance key={subtask.id} task={subtask} />
         ))}
@@ -183,19 +183,21 @@ function FocusNotes({ taskId }: { taskId: string }) {
 
 function FocusUpNext({ task }: { task: Task }) {
   return (
-    <Panel className="flex items-center gap-3 p-3.5">
-      <FocusLabel>UP NEXT</FocusLabel>
-      <span className="hidden font-mono text-2xs text-muted-foreground-faint md:inline">
-        #{task.number}
-      </span>
-      <span className="truncate text-sm text-muted-foreground-strong">
-        {task.title}
-      </span>
-      {task.estimatedMinutes != null && (
-        <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground">
-          {formatMinutes(task.estimatedMinutes)}
+    <Panel padding="md">
+      <div className="flex items-center gap-3">
+        <FocusLabel>UP NEXT</FocusLabel>
+        <span className="hidden font-mono text-2xs text-muted-foreground-faint md:inline">
+          #{task.number}
         </span>
-      )}
+        <span className="truncate text-sm text-muted-foreground-strong">
+          {task.title}
+        </span>
+        {task.estimatedMinutes != null && (
+          <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground">
+            {formatMinutes(task.estimatedMinutes)}
+          </span>
+        )}
+      </div>
     </Panel>
   )
 }

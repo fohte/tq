@@ -17,9 +17,8 @@ export function TaskShorthandHelp({
       onOpenChange={onOpenChange}
       tabIndex={-1}
       className={className}
-      popupClassName="w-80 p-3 font-sans"
     >
-      <div>
+      <div className="w-80">
         <h2 className="text-sm font-semibold text-popover-foreground">
           Title shortcuts
         </h2>
