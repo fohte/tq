@@ -73,41 +73,11 @@ function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
   return { onMoveTask, onInsertCandidate }
 }
 
-async function dragTaskTo(sourceTitle: string, targetTitle: string) {
+async function dragByTitle(sourceTitle: string, targetTitle: string) {
   const source = (await screen.findByText(sourceTitle)).closest('.cursor-grab')
   const target = (await screen.findByText(targetTitle)).closest('.cursor-grab')
   if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement)) {
-    throw new Error('Could not find queue drag source and target')
-  }
-
-  const sourceRect = source.getBoundingClientRect()
-  const targetRect = target.getBoundingClientRect()
-  const sourceX = sourceRect.x + sourceRect.width / 2
-  const sourceY = sourceRect.y + sourceRect.height / 2
-  const targetX = targetRect.x + targetRect.width / 2
-  const targetY = targetRect.y + targetRect.height / 2
-
-  fireEvent.mouseDown(source, { button: 0, clientX: sourceX, clientY: sourceY })
-  fireEvent.mouseMove(document, {
-    buttons: 1,
-    clientX: sourceX + 10,
-    clientY: sourceY + 10,
-  })
-  fireEvent.mouseMove(document, {
-    buttons: 1,
-    clientX: targetX,
-    clientY: targetY,
-  })
-  fireEvent.mouseUp(document, { button: 0, clientX: targetX, clientY: targetY })
-}
-
-async function dragCandidateToQueue(targetTitle: string) {
-  const source = (await screen.findByText(candidateTask.title)).closest(
-    '.cursor-grab',
-  )
-  const target = (await screen.findByText(targetTitle)).closest('.cursor-grab')
-  if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement)) {
-    throw new Error('Could not find candidate drag source and queue target')
+    throw new Error('Could not find drag source and queue target')
   }
 
   const sourceRect = source.getBoundingClientRect()
@@ -135,30 +105,30 @@ describe('QueuePane dragging', () => {
   it('does not reorder tasks dragged within the same queue', async () => {
     const { onMoveTask } = renderQueuePane()
 
-    await dragTaskTo('Day task', 'Another day task')
+    await dragByTitle('Day task', 'Another day task')
 
     await waitFor(() => {
-      expect(onMoveTask).not.toHaveBeenCalled()
+      expect(onMoveTask.mock.calls).toEqual([])
     })
   })
 
   it('moves a task when it is dragged to another queue', async () => {
     const { onMoveTask } = renderQueuePane()
 
-    await dragTaskTo('Day task', 'Week task')
+    await dragByTitle('Day task', 'Week task')
 
     await waitFor(() => {
-      expect(onMoveTask).toHaveBeenCalledWith('day-task', 'day', 'week')
+      expect(onMoveTask.mock.calls).toEqual([['day-task', 'day', 'week']])
     })
   })
 
   it('adds a candidate when it is dragged into a queue', async () => {
     const { onInsertCandidate } = renderQueuePane()
 
-    await dragCandidateToQueue('Week task')
+    await dragByTitle(candidateTask.title, 'Week task')
 
     await waitFor(() => {
-      expect(onInsertCandidate).toHaveBeenCalledWith('week', 'candidate-task')
+      expect(onInsertCandidate.mock.calls).toEqual([['week', 'candidate-task']])
     })
   })
 })

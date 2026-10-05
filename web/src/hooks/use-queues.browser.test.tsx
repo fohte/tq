@@ -5,20 +5,25 @@ import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
   DAY_QUEUE_KEY,
   type Queue,
+  useQueueItems,
   useQueueItemsForQueues,
   useQueues,
+  useSetQueueItems,
   useTaskPlan,
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
+import { useUpdateTask } from '#hooks/use-task-mutations'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
   const mockQueueGet = vi.fn()
   const mockGet = vi.fn()
   const mockPut = vi.fn()
+  const mockTaskPatch = vi.fn()
   return {
     api: {
       api: {
@@ -28,9 +33,10 @@ vi.mock('#lib/api', () => {
             items: { $get: mockGet, $put: mockPut },
           },
         },
+        tasks: { ':id': { $patch: mockTaskPatch } },
       },
     },
-    __mocks: { mockQueueGet, mockGet, mockPut },
+    __mocks: { mockQueueGet, mockGet, mockPut, mockTaskPatch },
   }
 })
 
@@ -65,6 +71,8 @@ beforeEach(async () => {
 })
 
 const taskId = '00000000-0000-0000-0000-000000000001'
+const earlierTaskId = '00000000-0000-0000-0000-000000000002'
+const laterTaskId = '00000000-0000-0000-0000-000000000003'
 const date = '2026-08-01'
 
 function jsonResponse(body: unknown) {
@@ -118,6 +126,85 @@ describe('useTaskPlan', () => {
 
     await waitFor(() => {
       expect(dayFetchCount(mockGet)).toBeGreaterThan(dayFetchesBeforeSwitch)
+    })
+  })
+})
+
+describe('queue ordering cache', () => {
+  it('refetches server order after replacing queue items', async () => {
+    const mocks = await getMocks()
+    const mockGet = assertDefined(mocks['mockGet'])
+    const mockPut = assertDefined(mocks['mockPut'])
+    const requestOrder = [
+      makeQueueItem({ id: 'queue-item-later', taskId: laterTaskId }),
+      makeQueueItem({ id: 'queue-item-earlier', taskId: earlierTaskId }),
+    ]
+    const dueOrder = [...requestOrder].reverse()
+    mockGet
+      .mockResolvedValueOnce(jsonResponse(requestOrder))
+      .mockResolvedValueOnce(jsonResponse(dueOrder))
+    mockPut.mockResolvedValue(jsonResponse(requestOrder))
+
+    const { result: queue } = renderHook(
+      () => useQueueItems(DAY_QUEUE_KEY, date),
+      { wrapper },
+    )
+    await waitFor(() => {
+      expect(queue.current.data).toEqual(requestOrder)
+    })
+    const { result: setQueueItems } = renderHook(() => useSetQueueItems(), {
+      wrapper,
+    })
+
+    act(() => {
+      setQueueItems.current.mutate({
+        key: DAY_QUEUE_KEY,
+        date,
+        taskIds: [laterTaskId, earlierTaskId],
+      })
+    })
+
+    await waitFor(() => {
+      expect(queue.current.data).toEqual(dueOrder)
+    })
+  })
+
+  it('refreshes queue order after a task due date changes', async () => {
+    const mocks = await getMocks()
+    const mockGet = assertDefined(mocks['mockGet'])
+    const mockTaskPatch = assertDefined(mocks['mockTaskPatch'])
+    const previousOrder = [
+      makeQueueItem({ id: 'queue-item-later', taskId: taskId }),
+      makeQueueItem({ id: 'queue-item-earlier', taskId: earlierTaskId }),
+    ]
+    const dueOrder = [...previousOrder].reverse()
+    mockGet
+      .mockResolvedValueOnce(jsonResponse(previousOrder))
+      .mockResolvedValueOnce(jsonResponse(dueOrder))
+    mockTaskPatch.mockResolvedValue(
+      jsonResponse(makeTask({ id: taskId, dueDate: '2026-08-03' })),
+    )
+
+    const { result: queue } = renderHook(
+      () => useQueueItems(DAY_QUEUE_KEY, date),
+      { wrapper },
+    )
+    await waitFor(() => {
+      expect(queue.current.data).toEqual(previousOrder)
+    })
+    const { result: updateTask } = renderHook(() => useUpdateTask(), {
+      wrapper,
+    })
+
+    act(() => {
+      updateTask.current.mutate({
+        id: taskId,
+        input: { dueDate: '2026-08-03' },
+      })
+    })
+
+    await waitFor(() => {
+      expect(queue.current.data).toEqual(dueOrder)
     })
   })
 })

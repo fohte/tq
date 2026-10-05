@@ -16,7 +16,6 @@ export function QueueItemRow({
   task,
   queueKey,
   onRemove,
-  isReorderTarget = true,
   secondLineExtras = [],
   isCurrentTimeBlock = false,
 }: {
@@ -26,7 +25,6 @@ export function QueueItemRow({
    * in. */
   queueKey: string
   onRemove: () => void
-  isReorderTarget?: boolean
   secondLineExtras?: ReactNode[]
   isCurrentTimeBlock?: boolean
 }) {
@@ -40,7 +38,8 @@ export function QueueItemRow({
   } = useSortable({
     id: task.id,
     data: { type: 'queue-task', queueKey } satisfies QueueTaskDragData,
-    disabled: { droppable: !isReorderTarget },
+    // Queue rows stay draggable for cross-queue moves; drops target the section.
+    disabled: { droppable: true },
   })
   const updateTask = useUpdateTask()
   const [isEditingEstimate, setIsEditingEstimate] = useState(false)

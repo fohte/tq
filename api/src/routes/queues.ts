@@ -137,26 +137,21 @@ export const queuesApp = new Hono()
       )
       const requestedTaskIds = new Set(uniqueTaskIds)
 
-      if (uniqueTaskIds.length === 0) {
-        await tx
-          .delete(taskQueueItems)
-          .where(
-            and(
-              eq(taskQueueItems.queueId, queue.id),
-              periodStartCondition(periodStart),
-            ),
-          )
-      } else {
-        await tx
-          .delete(taskQueueItems)
-          .where(
-            and(
-              eq(taskQueueItems.queueId, queue.id),
-              periodStartCondition(periodStart),
-              notInArray(taskQueueItems.taskId, uniqueTaskIds),
-            ),
-          )
-      }
+      const retainedRows = existingRows.filter((row) =>
+        requestedTaskIds.has(row.taskId),
+      )
+
+      await tx
+        .delete(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, queue.id),
+            periodStartCondition(periodStart),
+            uniqueTaskIds.length > 0
+              ? notInArray(taskQueueItems.taskId, uniqueTaskIds)
+              : undefined,
+          ),
+        )
 
       if (uniqueTaskIds.length > 0 && overlapConditions.length > 0) {
         await tx
@@ -174,9 +169,7 @@ export const queuesApp = new Hono()
       )
       const maxSortOrder = Math.max(
         -1,
-        ...existingRows
-          .filter((row) => requestedTaskIds.has(row.taskId))
-          .map((row) => row.sortOrder),
+        ...retainedRows.map((row) => row.sortOrder),
       )
       const insertedRows =
         newTaskIds.length > 0
@@ -193,9 +186,7 @@ export const queuesApp = new Hono()
               .returning()
           : []
       const rowsByTaskId = new Map([
-        ...existingRows
-          .filter((row) => requestedTaskIds.has(row.taskId))
-          .map((row) => [row.taskId, row] as const),
+        ...retainedRows.map((row) => [row.taskId, row] as const),
         ...insertedRows.map((row) => [row.taskId, row] as const),
       ])
 

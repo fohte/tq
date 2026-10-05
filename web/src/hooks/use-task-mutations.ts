@@ -6,6 +6,7 @@ import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { queueKeys } from '#lib/query-keys'
 import { removeRecentSearchItem } from '#lib/recent-search-items'
 
 export interface CreateTaskInput {
@@ -263,10 +264,13 @@ export function useUpdateTask() {
         }
       }
     },
-    onSettled: (_data, _err, { id }) => {
+    onSettled: (_data, _err, { id, input }) => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
+      if (input.dueDate !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: queueKeys.all })
+      }
     },
   })
 }

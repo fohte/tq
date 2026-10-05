@@ -327,16 +327,22 @@ function DayView() {
     [handleTimeBlockChange, createTimeBlock],
   )
 
-  const handleInsertCandidate = (queueKey: string, taskId: string) => {
+  const appendedTaskIdsFor = (queueKey: string, taskId: string) => {
     if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
-      return
-    const rawIds = (rawItemsByKey.get(queueKey) ?? []).map(
+      return null
+    const taskIds = (rawItemsByKey.get(queueKey) ?? []).map(
       (item) => item.taskId,
     )
+    return appendQueueTaskId(taskIds, taskId)
+  }
+
+  const handleInsertCandidate = (queueKey: string, taskId: string) => {
+    const taskIds = appendedTaskIdsFor(queueKey, taskId)
+    if (taskIds == null) return
     setQueueItems.mutate({
       key: queueKey,
       date: selectedDateStr,
-      taskIds: appendQueueTaskId(rawIds, taskId),
+      taskIds,
     })
   }
 
@@ -362,16 +368,13 @@ function DayView() {
     fromQueueKey: string,
     toQueueKey: string,
   ) => {
-    if (setQueueItems.isPending && setQueueItems.variables.key === toQueueKey)
-      return
-    const rawIds = (rawItemsByKey.get(toQueueKey) ?? []).map(
-      (item) => item.taskId,
-    )
+    const taskIds = appendedTaskIdsFor(toQueueKey, taskId)
+    if (taskIds == null) return
     setQueueItems.mutate(
       {
         key: toQueueKey,
         date: selectedDateStr,
-        taskIds: appendQueueTaskId(rawIds, taskId),
+        taskIds,
       },
       {
         onSuccess: () => {
