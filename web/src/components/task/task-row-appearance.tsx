@@ -139,7 +139,7 @@ export function TaskRowAppearance({
         className={cn(
           'group',
           rowWrapperClassName(isCompleted),
-          isCurrentTimeBlock && 'bg-secondary/60',
+          isCurrentTimeBlock && 'bg-accent hover:bg-accent',
           size === 'large' && 'py-3',
           // Must come after rowWrapperClassName: twMerge keeps
           // both px-* and a later pl-* (CSS cascade lets pl-* win),
