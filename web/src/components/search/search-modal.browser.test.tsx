@@ -801,7 +801,7 @@ describe('SearchModal', () => {
     expect(screen.getByText('personal')).toBeInTheDocument()
   })
 
-  it('shows suggestions when data is available', async () => {
+  it('highlights and applies a suggestion with arrow keys and Enter', async () => {
     mockSuggestionData = mockSuggestions
 
     const user = userEvent.setup()
@@ -810,8 +810,101 @@ describe('SearchModal', () => {
     const input = screen.getByLabelText('Search tasks')
     await user.type(input, 'is:')
 
-    expect(screen.getByText('is:todo')).toBeInTheDocument()
-    expect(screen.getByText('is:completed')).toBeInTheDocument()
+    const getOptionStates = () =>
+      screen.getAllByRole('option').map((option) => ({
+        highlighted: option.hasAttribute('data-highlighted'),
+        selected: option.getAttribute('aria-selected') === 'true',
+      }))
+    const states = [getOptionStates()]
+    await user.keyboard('{ArrowDown}')
+    states.push(getOptionStates())
+    await user.keyboard('{Enter}')
+
+    const getOutput = () => ({
+      states,
+      inputValue:
+        input instanceof HTMLInputElement ? input.value : 'not an input',
+    })
+    const expected = {
+      states: [
+        [
+          { highlighted: true, selected: true },
+          { highlighted: false, selected: false },
+        ],
+        [
+          { highlighted: false, selected: false },
+          { highlighted: true, selected: true },
+        ],
+      ],
+      inputValue: 'is:completed ',
+    }
+    expect(getOutput()).toEqual(expected)
+  })
+
+  it('scrolls an offscreen highlighted suggestion into view', async () => {
+    mockSuggestionData = Array.from({ length: 20 }, (_, index) =>
+      makeSuggestion({
+        value: `is:${String(index)}`,
+        display: `Status ${String(index)}`,
+      }),
+    )
+    const scrollCalls: {
+      optionIndex: number
+      block: ScrollLogicalPosition | undefined
+      highlighted: boolean
+      selected: boolean
+    }[] = []
+    vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(
+      function (this: HTMLElement, options?: ScrollIntoViewOptions | boolean) {
+        const listbox = this.closest('[role="listbox"]')
+        const optionIndex =
+          listbox == null
+            ? -1
+            : Array.from(listbox.querySelectorAll('[role="option"]')).indexOf(
+                this,
+              )
+
+        scrollCalls.push({
+          optionIndex,
+          block:
+            options != null && typeof options === 'object'
+              ? options.block
+              : undefined,
+          highlighted: this.hasAttribute('data-highlighted'),
+          selected: this.getAttribute('aria-selected') === 'true',
+        })
+      },
+    )
+
+    const user = userEvent.setup()
+    renderSearchModal()
+
+    const input = screen.getByLabelText('Search tasks')
+    await user.type(input, 'is:')
+    scrollCalls.length = 0
+
+    for (let index = 0; index < 15; index += 1) {
+      await user.keyboard('{ArrowDown}')
+    }
+
+    const getOutput = () => ({
+      optionCount: screen.getAllByRole('option').length,
+      highlightedIndex: screen
+        .getAllByRole('option')
+        .findIndex((option) => option.hasAttribute('data-highlighted')),
+      lastScrollCall: scrollCalls.at(-1) ?? null,
+    })
+    const expected = {
+      optionCount: 20,
+      highlightedIndex: 15,
+      lastScrollCall: {
+        optionIndex: 15,
+        block: 'nearest',
+        highlighted: true,
+        selected: true,
+      },
+    }
+    expect(getOutput()).toEqual(expected)
   })
 
   it('navigates through suggestions and selects the following task', async () => {

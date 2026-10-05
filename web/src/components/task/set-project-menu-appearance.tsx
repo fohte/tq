@@ -1,10 +1,10 @@
-import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@fohte/ui/dialog'
+import { List, ListItem } from '@fohte/ui/list'
 
 import type { Project } from '#hooks/use-projects'
 
@@ -28,30 +28,26 @@ export function SetProjectMenuAppearance({
           <DialogTitle>{`Set project for #${String(taskNumber)}`}</DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-72 overflow-y-auto">
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto focus-visible:ring-0"
-            onClick={() => {
-              onSelectProject(null)
-            }}
-          >
-            —
-          </Button>
-          {projects.map((project) => (
-            <Button
-              key={project.id}
-              type="button"
-              variant="ghost"
-              className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center px-3 text-left text-sm text-popover-foreground hover:bg-accent/50 focus:outline-auto focus-visible:ring-0"
-              onClick={() => {
-                onSelectProject(project.id)
+        <div className="max-h-72 overflow-y-auto text-popover-foreground">
+          <List>
+            <ListItem
+              onSelect={() => {
+                onSelectProject(null)
               }}
             >
-              {project.title}
-            </Button>
-          ))}
+              —
+            </ListItem>
+            {projects.map((project) => (
+              <ListItem
+                key={project.id}
+                onSelect={() => {
+                  onSelectProject(project.id)
+                }}
+              >
+                {project.title}
+              </ListItem>
+            ))}
+          </List>
         </div>
       </DialogContent>
     </Dialog>

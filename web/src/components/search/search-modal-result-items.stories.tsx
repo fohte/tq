@@ -1,3 +1,4 @@
+import { List } from '@fohte/ui/list'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -197,15 +198,17 @@ function SearchModalResultItemStory({
   return (
     <Providers>
       <div className="w-full max-w-160 bg-popover text-popover-foreground">
-        <div className="py-2" role="listbox" aria-label="Search results">
-          {itemsByKind[kind].map((item) => (
-            <Fragment key={item.key}>
-              {item.render({
-                isSelected,
-                onMouseMove: () => {},
-              })}
-            </Fragment>
-          ))}
+        <div className="py-2">
+          <List role="listbox" aria-label="Search results">
+            {itemsByKind[kind].map((item) => (
+              <Fragment key={item.key}>
+                {item.render({
+                  isSelected,
+                  onMouseMove: () => {},
+                })}
+              </Fragment>
+            ))}
+          </List>
         </div>
       </div>
     </Providers>
