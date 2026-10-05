@@ -302,7 +302,7 @@ export function CreateScheduleModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
-        <DialogOverlay className="bg-black/40" />
+        <DialogOverlay />
         <DialogPopup onKeyDown={handleKeyDown}>
           <ScheduleModalDesktopPanel {...panelProps} />
           <ScheduleModalMobilePanel {...panelProps} />

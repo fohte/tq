@@ -427,6 +427,7 @@ describe('task_sessions', () => {
         startedAt: '<timestamp>',
         lastActiveAt: '<timestamp>',
         endedAt: null,
+        archivedAt: null,
       },
     ])
   })

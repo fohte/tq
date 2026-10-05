@@ -26,6 +26,7 @@ const session1 = {
   startedAt: '2030-01-01T00:00:00.000Z',
   lastActiveAt: '2030-01-01T00:00:00.000Z',
   endedAt: null,
+  archivedAt: '2030-01-03T00:00:00.000Z',
 }
 
 const session2 = {
@@ -40,6 +41,7 @@ const session2 = {
   startedAt: '2030-01-02T00:00:00.000Z',
   lastActiveAt: '2030-01-02T00:00:00.000Z',
   endedAt: null,
+  archivedAt: null,
 }
 
 function summarizeSessionDeleteRequest(
@@ -47,6 +49,14 @@ function summarizeSessionDeleteRequest(
   requestDetails: ReturnType<typeof request>,
 ) {
   return { exitCode, request: requestDetails }
+}
+
+function summarizeSessionCommand<Output>(
+  exitCode: number,
+  requestDetails: ReturnType<typeof request>,
+  output: Output,
+) {
+  return { exitCode, request: requestDetails, output }
 }
 
 describe('session list', () => {
@@ -115,6 +125,7 @@ describe('session list', () => {
               startedAt: '2030-01-01T00:00:00.000Z',
               lastActiveAt: '2030-01-01T00:00:00.000Z',
               endedAt: null,
+              archivedAt: '2030-01-03T00:00:00.000Z',
               tasks: [
                 {
                   id: 'task-1',
@@ -145,6 +156,7 @@ describe('session list', () => {
               startedAt: '2030-01-02T00:00:00.000Z',
               lastActiveAt: '2030-01-02T00:00:00.000Z',
               endedAt: null,
+              archivedAt: null,
               tasks: [],
             },
           ],
@@ -187,6 +199,7 @@ describe('session list', () => {
               startedAt: '2030-01-01T00:00:00.000Z',
               lastActiveAt: '2030-01-01T00:00:00.000Z',
               endedAt: null,
+              archivedAt: '2030-01-03T00:00:00.000Z',
               tasks: [],
             },
           ],
@@ -354,6 +367,45 @@ describe('session delete', () => {
         query: {},
         body: undefined,
       },
+    })
+  })
+})
+
+describe('session archive', () => {
+  it('archives a session by provider and session id', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response(JSON.stringify({ id: 'agent-session-1' }), {
+          status: 200,
+        }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'session', 'archive', 'claude_code', 'sess-1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizeSessionCommand(exitCode, request(calls[0]), write.mock.calls),
+    ).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/agent-sessions/by-session/claude_code/sess-1/archive',
+        query: {},
+        body: undefined,
+      },
+      output: [
+        [
+          `${JSON.stringify(
+            { archived: true, provider: 'claude_code', sessionId: 'sess-1' },
+            null,
+            2,
+          )}\n`,
+        ],
+      ],
     })
   })
 })

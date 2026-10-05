@@ -15,13 +15,14 @@ export type AgentSession = InferResponseType<
 // backs this cutoff yet — adjust if real usage data suggests a better number.
 const STALE_THRESHOLD_MS = 30 * 60_000
 
-/** A session is active when it hasn't ended and hasn't gone stale (see `agentSessions` schema doc). */
+/** A session is active when it hasn't ended or been archived and hasn't gone stale (see `agentSessions` schema doc). */
 export function isAgentSessionActive(
   session: AgentSession,
   now: Date = new Date(),
 ): boolean {
   return (
     session.endedAt == null &&
+    session.archivedAt == null &&
     now.getTime() - new Date(session.lastActiveAt).getTime() <
       STALE_THRESHOLD_MS
   )

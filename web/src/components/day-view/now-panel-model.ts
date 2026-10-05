@@ -19,12 +19,14 @@ type NowPanelActivity =
       title: string
       statusLabel: string
       isOverrun: boolean
+      meetingUrl?: string
     }
 
 interface NowPanelNextEvent {
   title: string
   minutesUntil: number
   isWarning: boolean
+  meetingUrl?: string
 }
 
 export interface NowPanelModel {
@@ -45,6 +47,7 @@ interface NextEventCandidate {
   start: number
   priority: number
   warningThresholdMinutes: number | null
+  meetingUrl?: string
 }
 
 interface ResolvedTimeBlock {
@@ -235,6 +238,7 @@ export function buildNowPanelModel({
       title: displayTitle(event),
       statusLabel: `now (${String(minutesUntil(end, nowTime))} min left)`,
       isOverrun: false,
+      ...(event.meetingUrl != null ? { meetingUrl: event.meetingUrl } : {}),
     })
   }
 
@@ -265,6 +269,7 @@ export function buildNowPanelModel({
         start,
         priority: 1,
         warningThresholdMinutes: event.type === 'gcal-meeting' ? 5 : null,
+        ...(event.meetingUrl != null ? { meetingUrl: event.meetingUrl } : {}),
       })
     }
   }
@@ -291,6 +296,9 @@ export function buildNowPanelModel({
             nextCandidate.warningThresholdMinutes != null &&
             nextCandidate.start - nowTime <=
               nextCandidate.warningThresholdMinutes * MINUTE_MS,
+          ...(nextCandidate.meetingUrl != null
+            ? { meetingUrl: nextCandidate.meetingUrl }
+            : {}),
         }
 
   return {

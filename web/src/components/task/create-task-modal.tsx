@@ -413,7 +413,7 @@ export function CreateTaskModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
-        <DialogOverlay className="bg-black/40" />
+        <DialogOverlay />
         <DialogPopup onKeyDown={handleKeyDown}>
           <CreateTaskModalDesktop
             parentIndicator={parentIndicator}

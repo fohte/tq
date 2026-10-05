@@ -66,7 +66,7 @@ jobs:
         env:
           # Changes to these files affect every package, so they trigger the full matrix.
           GLOBAL_PATHS_REGEX: '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.github/workflows/test\.yml|\.github/workflows/vrt\.yml|\.github/actions/setup-workspace/action\.yml)$'
-          CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
+          CHANGED_FILES: ${{ steps.changed.outputs.all_modified_files }}
         run: |
           # Workspace packages are the directories holding a non-root package.json.
           mapfile -t pkgs < <(git ls-files '*/package.json' | grep -v node_modules | sed 's#/package.json$##' | sort -u)
@@ -249,3 +249,6 @@ jobs:
 
       - name: Run knip
         run: pnpm exec knip
+
+      - name: Run knip in production mode
+        run: pnpm exec knip --production

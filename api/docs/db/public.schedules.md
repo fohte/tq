@@ -6,17 +6,17 @@ Recurring calendar schedules with a local time range and optional recurrence rul
 
 ## Columns
 
-| Name               | Type                     | Default          | Nullable | Children | Parents                                               | Comment                                                                     |
-| ------------------ | ------------------------ | ---------------- | -------- | -------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
-| id                 | text                     |                  | false    |          |                                                       |                                                                             |
-| title              | text                     |                  | false    |          |                                                       | Human-readable schedule title.                                              |
-| start_time         | text                     |                  | false    |          |                                                       | Local start time of the schedule in 24-hour HH:MM format.                   |
-| end_time           | text                     |                  | false    |          |                                                       | Local end time of the schedule in 24-hour HH:MM format.                     |
-| recurrence_rule_id | text                     |                  | true     |          | [public.recurrence_rules](public.recurrence_rules.md) | Recurrence rule associated with the schedule; null for a one-time schedule. |
-| context            | text                     | 'personal'::text | false    |          |                                                       | Whether the schedule belongs to the work or personal context.               |
-| color              | text                     |                  | true     |          |                                                       | Optional color value associated with the schedule.                          |
-| created_at         | timestamp with time zone | now()            | false    |          |                                                       |                                                                             |
-| updated_at         | timestamp with time zone | now()            | false    |          |                                                       |                                                                             |
+| Name               | Type                     | Default          | Nullable | Children                                                  | Parents                                               | Comment                                                                     |
+| ------------------ | ------------------------ | ---------------- | -------- | --------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| id                 | text                     |                  | false    | [public.schedule_overrides](public.schedule_overrides.md) |                                                       |                                                                             |
+| title              | text                     |                  | false    |                                                           |                                                       | Human-readable schedule title.                                              |
+| start_time         | text                     |                  | false    |                                                           |                                                       | Local start time of the schedule in 24-hour HH:MM format.                   |
+| end_time           | text                     |                  | false    |                                                           |                                                       | Local end time of the schedule in 24-hour HH:MM format.                     |
+| recurrence_rule_id | text                     |                  | true     |                                                           | [public.recurrence_rules](public.recurrence_rules.md) | Recurrence rule associated with the schedule; null for a one-time schedule. |
+| context            | text                     | 'personal'::text | false    |                                                           |                                                       | Whether the schedule belongs to the work or personal context.               |
+| color              | text                     |                  | true     |                                                           |                                                       | Optional color value associated with the schedule.                          |
+| created_at         | timestamp with time zone | now()            | false    |                                                           |                                                       |                                                                             |
+| updated_at         | timestamp with time zone | now()            | false    |                                                           |                                                       |                                                                             |
 
 ## Constraints
 
@@ -45,6 +45,7 @@ Recurring calendar schedules with a local time range and optional recurrence rul
 ```mermaid
 erDiagram
 
+"public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.schedules" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 
 "public.schedules" {
@@ -57,6 +58,13 @@ erDiagram
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.schedule_overrides" {
+  text schedule_id FK
+  date occurrence_date
+  text start_time
+  text end_time
+  boolean skipped
 }
 "public.recurrence_rules" {
   text id

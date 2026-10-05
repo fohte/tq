@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import { makeAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { TaskSessionsList } from '#components/task/task-sessions-section'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
@@ -10,20 +11,14 @@ import { StoryRouter } from '#storybook-config/story-router'
 // Kept relative to `Date.now()` (not a fixed ISO literal) so the active
 // session keeps rendering as active (isAgentSessionActive) no matter when
 // this story runs.
-const activeSession: AgentSession = {
+const activeSession: AgentSession = makeAgentSession({
   id: '1',
-  provider: 'claude_code',
-  sessionId: 'session-1',
-  parentSessionId: null,
-  context: 'work',
-  cwd: '/Users/fohte/ghq/github.com/tq',
+  cwd: '/Users/example/ghq/github.com/tq',
   label: 'Add agent session list view',
   lastMessage: 'Implement the sessions list page',
-  customLabel: null,
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
-  endedAt: null,
-}
+})
 
 const endedSession: AgentSession = {
   ...activeSession,
