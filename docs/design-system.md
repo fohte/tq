@@ -606,45 +606,32 @@ trailing actions (e.g. `ml-auto` button).
 </ScreenHeaderBar>
 ```
 
+### `SegmentedControl`
+
+`@fohte/ui/segmented-control`
+
+```ts
+function SegmentedControl<Value extends string>(props: {
+  value: Value
+  options: ReadonlyArray<{ value: Value; label: string }>
+  onValueChange: (value: Value) => void
+  disabled?: boolean
+}): JSX.Element
+```
+
+Use for choosing one value from a small, fixed set of options. The control has
+a single border and secondary background; the selected option has a background
+matching the surrounding surface. It uses `role="group"` and `aria-pressed` on
+each option button.
+
 ### `TabStrip`
 
 `web/src/components/ui/tab-strip.tsx`
 
-```ts
-function TabStrip<T extends string>(props: {
-  value: T
-  options: ReadonlyArray<{ value: T; label: React.ReactNode }>
-  onChange: (value: T) => void
-  className?: string
-}): JSX.Element
-```
-
-A row of adjoining bordered tab buttons (borders collapse between tabs via
-`border-l-0` on all but the first). The active tab gets `border-border-strong`
-plus `bg-surface-strong`; inactive tabs get `border-border` plus
-`text-muted-foreground`. Use for switching between a small, fixed set of
-views (e.g. Day/Week/Month) — this is a plain presentation component, not an
-ARIA tablist.
-
-`web/src/components/ui/segmented-control.tsx` has a near-identical generic
-shape (`value`/`options`/`onChange`) but takes its active/inactive styling as
-`className` props instead of baking in this design's connected-border look.
-Use `TabStrip` for the joined-mono-tabs pattern described above; keep using
-`SegmentedControl` where a caller needs a different visual (e.g. the rounded
-pill look in `project-view-tabs.tsx`). Don't add a third tab-switcher
-component — extend one of these two.
-
-```tsx
-<TabStrip
-  value={value}
-  options={[
-    { value: 'day', label: 'Day' },
-    { value: 'week', label: 'Week' },
-    { value: 'month', label: 'Month' },
-  ]}
-  onChange={setValue}
-/>
-```
+The local `TabStrip` remains for the description-template selector, whose
+buttons use `tabIndex={-1}` to stay out of the page's keyboard tab order. The
+shared `SegmentedControl` does not expose an item-level `tabIndex` prop, so use
+it for other segmented choices.
 
 ### Shared `Chip`
 

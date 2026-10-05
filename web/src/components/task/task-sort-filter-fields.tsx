@@ -1,4 +1,5 @@
-import { TabStrip } from '#components/ui/tab-strip'
+import { SegmentedControl } from '@fohte/ui/segmented-control'
+
 import type { TaskSortBy } from '#hooks/use-tasks'
 import { sortLabels, sortOptionValues } from '#lib/tasks-query'
 
@@ -10,13 +11,13 @@ export function TaskSortFilterFields({
   onSortByChange: (sortBy: TaskSortBy) => void
 }) {
   return (
-    <TabStrip
+    <SegmentedControl
       value={sortBy}
       options={sortOptionValues.map((sort) => ({
         value: sort,
         label: sortLabels[sort] ?? sort,
       }))}
-      onChange={onSortByChange}
+      onValueChange={onSortByChange}
     />
   )
 }

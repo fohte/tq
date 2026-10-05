@@ -1,8 +1,8 @@
 import { Button } from '@fohte/ui/button'
+import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
-import { TabStrip } from '#components/ui/tab-strip'
 import { formatLocalDate } from '#lib/date-range'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
@@ -95,12 +95,13 @@ export function CalendarHeader({
       </div>
 
       {showViewSwitcher && (
-        <TabStrip
-          className="ml-auto"
-          value={activeView}
-          options={VIEW_OPTIONS}
-          onChange={onViewChange}
-        />
+        <div className="ml-auto">
+          <SegmentedControl
+            value={activeView}
+            options={VIEW_OPTIONS}
+            onValueChange={onViewChange}
+          />
+        </div>
       )}
     </ScreenHeaderBar>
   )

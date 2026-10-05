@@ -6,32 +6,42 @@ import { PlanTabStrip } from '#components/task/plan-tab-strip'
 
 describe('PlanTabStrip', () => {
   it('calls onChange with the clicked tab value', async () => {
-    const onChange = vi.fn()
+    const changes: string[] = []
     const user = userEvent.setup()
-    render(<PlanTabStrip value="" onChange={onChange} />)
+    render(<PlanTabStrip value="" onChange={(value) => changes.push(value)} />)
 
     await user.click(screen.getByText('today'))
 
-    expect(onChange).toHaveBeenCalledWith('day')
+    expect(changes).toEqual(['day'])
   })
 
   it('marks the tab matching value as pressed', () => {
     render(<PlanTabStrip value="day" onChange={vi.fn()} />)
 
-    expect(screen.getByText('today')).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('this week')).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
+    expect(
+      screen.getAllByRole('button').map((button) => ({
+        label: button.textContent,
+        pressed: button.getAttribute('aria-pressed'),
+      })),
+    ).toEqual([
+      { label: '—', pressed: 'false' },
+      { label: 'today', pressed: 'true' },
+      { label: 'this week', pressed: 'false' },
+    ])
   })
 
-  it('does not call onChange when disabled', async () => {
-    const onChange = vi.fn()
-    const user = userEvent.setup()
-    render(<PlanTabStrip value="" onChange={onChange} disabled />)
+  it('disables the options when disabled', () => {
+    render(<PlanTabStrip value="" onChange={vi.fn()} disabled />)
 
-    await user.click(screen.getByText('today'))
-
-    expect(onChange).not.toHaveBeenCalled()
+    expect(
+      screen.getAllByRole('button').map((button) => ({
+        label: button.textContent,
+        disabled: button.getAttribute('disabled') !== null,
+      })),
+    ).toEqual([
+      { label: '—', disabled: true },
+      { label: 'today', disabled: true },
+      { label: 'this week', disabled: true },
+    ])
   })
 })

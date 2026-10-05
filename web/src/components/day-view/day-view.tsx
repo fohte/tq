@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { useNavigate } from '@tanstack/react-router'
 import { CalendarPlus, Kanban, List, Plus } from 'lucide-react'
 import {
@@ -33,7 +34,6 @@ import { ActionsMenu, type ActionsMenuItem } from '#components/ui/actions-menu'
 import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
-import { TabStrip } from '#components/ui/tab-strip'
 import type { Memo, MemoContext, SaveMemoInput } from '#hooks/use-memos'
 import { DAY_QUEUE_KEY } from '#hooks/use-queues'
 import { useResizableWidth } from '#hooks/use-resizable-width'
@@ -269,15 +269,16 @@ export function DayViewPresentation({
     // height for h-full to resolve against.
     <div className="flex h-full flex-col overflow-hidden">
       {!isCompactLayout && (
-        <ScreenHeaderBar>
+        <ScreenHeaderBar className="gap-1.5 sm:gap-2.5">
           <SectionHeading level={2}>queue</SectionHeading>
 
-          <TabStrip
-            value={mobileTab}
-            options={MOBILE_TAB_OPTIONS}
-            onChange={setMobileTab}
-            className="md:hidden [&>button]:px-1.5"
-          />
+          <div className="md:hidden">
+            <SegmentedControl
+              value={mobileTab}
+              options={MOBILE_TAB_OPTIONS}
+              onValueChange={setMobileTab}
+            />
+          </div>
 
           <Button
             variant="outline"
