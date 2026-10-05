@@ -1,10 +1,10 @@
 import { Button } from '@fohte/ui/button'
+import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 
 import { GithubSyncRuleFormModal } from '#components/settings/github-sync-rule-form-modal'
 import { DeleteConfirmButton } from '#components/ui/delete-confirm-button'
-import { SegmentedControl } from '#components/ui/segmented-control'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
   useDeleteGithubSyncRule,
@@ -77,16 +77,13 @@ export function GithubSyncRuleRow({ rule, projects }: GithubSyncRuleRowProps) {
         <SegmentedControl
           value={rule.enabled ? 'enabled' : 'disabled'}
           options={ENABLED_STATE_OPTIONS}
-          onChange={(value) => {
+          onValueChange={(value) => {
             if (updateRule.isPending) return
             updateRule.mutate({
               id: rule.id,
               input: { enabled: value === 'enabled' },
             })
           }}
-          containerClassName="rounded-md bg-secondary p-0.5"
-          activeClassName="bg-background text-foreground shadow-sm"
-          inactiveClassName="text-muted-foreground hover:text-foreground"
         />
         <Button
           variant="outline"

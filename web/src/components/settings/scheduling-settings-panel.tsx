@@ -1,11 +1,11 @@
 import { Input } from '@fohte/ui/input'
+import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { useEffect, useState } from 'react'
 
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SettingsRow } from '#components/settings/settings-row'
 import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
-import { SegmentedControl } from '#components/ui/segmented-control'
 import {
   useSchedulingSettings,
   useUpdateSchedulingSettings,
@@ -115,15 +115,12 @@ export function SchedulingSettingsPanel() {
               <SegmentedControl
                 value={settings.data.autoRescheduleOnGcalChange ? 'on' : 'off'}
                 options={AUTO_RESCHEDULE_OPTIONS}
-                onChange={(value) => {
+                onValueChange={(value) => {
                   if (updateSettings.isPending) return
                   updateSettings.mutate({
                     autoRescheduleOnGcalChange: value === 'on',
                   })
                 }}
-                containerClassName="rounded-md bg-secondary p-0.5"
-                activeClassName="bg-background text-foreground shadow-sm"
-                inactiveClassName="text-muted-foreground hover:text-foreground"
               />
             </SettingsRow>
           </div>

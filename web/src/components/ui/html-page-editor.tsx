@@ -1,7 +1,7 @@
+import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { useState } from 'react'
 
 import { HtmlPageViewer } from '#components/ui/html-page-viewer'
-import { SegmentedControl } from '#components/ui/segmented-control'
 import { Textarea } from '#components/ui/textarea'
 import { cn } from '#lib/utils'
 
@@ -42,20 +42,19 @@ export function HtmlPageEditor({
         className,
       )}
     >
-      <SegmentedControl
-        value={mode}
-        options={[
-          { value: 'preview', label: 'Preview' },
-          { value: 'source', label: 'Source' },
-        ]}
-        onChange={(next) => {
-          if (mode === 'source' && next === 'preview') onExitSourceMode?.()
-          setMode(next)
-        }}
-        containerClassName="self-end shrink-0 rounded-md bg-secondary p-0.5"
-        activeClassName="bg-background text-foreground shadow-sm"
-        inactiveClassName="text-muted-foreground hover:text-foreground"
-      />
+      <div className="self-end shrink-0">
+        <SegmentedControl
+          value={mode}
+          options={[
+            { value: 'preview', label: 'Preview' },
+            { value: 'source', label: 'Source' },
+          ]}
+          onValueChange={(next) => {
+            if (mode === 'source' && next === 'preview') onExitSourceMode?.()
+            setMode(next)
+          }}
+        />
+      </div>
       {mode === 'source' ? (
         <Textarea
           value={value}

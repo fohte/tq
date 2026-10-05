@@ -1,9 +1,10 @@
+import { SegmentedControl } from '@fohte/ui/segmented-control'
+
 import {
   planLabels,
   type PlanValue,
   planValues,
 } from '#components/task/create-task-modal-fields'
-import { TabStrip } from '#components/ui/tab-strip'
 
 const PLAN_OPTIONS: ReadonlyArray<{ value: PlanValue | ''; label: string }> =
   planValues.map((value) => ({
@@ -22,13 +23,18 @@ export function PlanTabStrip({
   disabled?: boolean
   className?: string
 }) {
-  return (
-    <TabStrip
+  const control = (
+    <SegmentedControl
       value={value}
       options={PLAN_OPTIONS}
-      onChange={onChange}
+      onValueChange={onChange}
       {...(disabled != null ? { disabled } : {})}
-      {...(className != null ? { className } : {})}
     />
+  )
+
+  return className == null ? (
+    control
+  ) : (
+    <div className={className}>{control}</div>
   )
 }

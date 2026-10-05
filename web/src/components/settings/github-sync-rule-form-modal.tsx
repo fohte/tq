@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@fohte/ui/dialog'
 import { Input } from '@fohte/ui/input'
+import { SegmentedControl } from '@fohte/ui/segmented-control'
 import {
   Select,
   SelectContent,
@@ -18,7 +19,6 @@ import {
 import { useState } from 'react'
 
 import { Checkbox } from '#components/ui/checkbox'
-import { SegmentedControl } from '#components/ui/segmented-control'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
   useCreateGithubSyncRule,
@@ -172,9 +172,7 @@ export function GithubSyncRuleFormModal({
                 <SegmentedControl
                   value={scope}
                   options={SCOPE_OPTIONS}
-                  onChange={setScope}
-                  activeClassName="bg-secondary text-foreground"
-                  inactiveClassName="text-muted-foreground hover:text-foreground"
+                  onValueChange={setScope}
                 />
               </FieldRow>
               {scope !== 'all' && (
