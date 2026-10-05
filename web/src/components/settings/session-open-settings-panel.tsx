@@ -1,4 +1,5 @@
 import { Input } from '@fohte/ui/input'
+import { Panel } from '@fohte/ui/panel'
 import {
   Select,
   SelectContent,
@@ -8,7 +9,6 @@ import {
 } from '@fohte/ui/select'
 
 import { SettingsRow } from '#components/settings/settings-row'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useSessionOpenSettings } from '#hooks/use-session-open-settings'
 import { selectValueHandler } from '#lib/form-utils'
@@ -21,7 +21,7 @@ export function SessionOpenSettingsPanel() {
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>session open</SectionHeading>
-      <Panel>
+      <Panel padding="none">
         <div className="divide-y divide-border">
           <SettingsRow
             label="This machine's context"

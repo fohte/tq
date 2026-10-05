@@ -1,3 +1,4 @@
+import { Panel } from '@fohte/ui/panel'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Calendar } from 'lucide-react'
@@ -5,7 +6,6 @@ import { Calendar } from 'lucide-react'
 import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
-import { Panel } from '#components/ui/panel'
 import { type GcalCalendar } from '#hooks/use-gcal-calendars'
 import { gcalCalendarsKeys } from '#lib/query-keys'
 
@@ -16,7 +16,7 @@ const meta = {
     layout: 'centered',
   },
   render: (args) => (
-    <Panel className="w-full max-w-96">
+    <Panel padding="none" className="w-full max-w-96">
       <IntegrationCard {...args} />
     </Panel>
   ),

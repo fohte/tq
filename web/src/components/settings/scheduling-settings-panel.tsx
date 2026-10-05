@@ -1,10 +1,10 @@
 import { Input } from '@fohte/ui/input'
+import { Panel } from '@fohte/ui/panel'
 import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { useEffect, useState } from 'react'
 
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { SettingsRow } from '#components/settings/settings-row'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import {
   useSchedulingSettings,
@@ -65,7 +65,7 @@ export function SchedulingSettingsPanel() {
       {settings.isLoading ? (
         <QueryStateMessage status="loading" />
       ) : settings.isSuccess ? (
-        <Panel>
+        <Panel padding="none">
           <div className="divide-y divide-border">
             <SettingsRow
               label="Working hours"

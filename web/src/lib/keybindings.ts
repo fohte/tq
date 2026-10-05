@@ -32,6 +32,12 @@ export const newTaskKeybinding: Keybinding = {
   description: 'new task',
 }
 
+export const memoKeybinding: Keybinding = {
+  id: 'open-memo',
+  keys: 'm',
+  description: 'open memo',
+}
+
 export const navKeybindings = {
   goToToday: {
     id: 'go-to-today',
@@ -76,7 +82,12 @@ export const navKeybindings = {
 export function getAllKeybindings(
   searchKeybinding: SearchKeybinding,
 ): Keybinding[] {
-  return [searchKeybinding, newTaskKeybinding, ...Object.values(navKeybindings)]
+  return [
+    searchKeybinding,
+    newTaskKeybinding,
+    memoKeybinding,
+    ...Object.values(navKeybindings),
+  ]
 }
 
 // Only active on the calendar screen; see use-calendar-keybindings.ts.
@@ -86,7 +97,7 @@ export const calendarKeybindings: Keybinding[] = [
   { id: 'calendar-next', keys: '→', description: 'next period' },
   { id: 'calendar-day-view', keys: 'd', description: 'day view' },
   { id: 'calendar-week-view', keys: 'w', description: 'week view' },
-  { id: 'calendar-month-view', keys: 'm', description: 'month view' },
+  { id: 'calendar-month-view', keys: 'Shift+M', description: 'month view' },
 ]
 
 // Only active on screens with task filters; see TaskFilterChipRow.

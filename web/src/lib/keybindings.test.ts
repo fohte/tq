@@ -4,6 +4,7 @@ import {
   calendarKeybindings,
   getAllKeybindings,
   getSearchKeybinding,
+  memoKeybinding,
   navKeybindings,
 } from '#lib/keybindings'
 
@@ -42,6 +43,14 @@ describe('getAllKeybindings', () => {
     const ids = allKeybindings.map((keybinding) => keybinding.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
+
+  it('lists the memo shortcut in the general keybindings', () => {
+    expect(
+      allKeybindings.filter(
+        (keybinding) => keybinding.id === memoKeybinding.id,
+      ),
+    ).toEqual([memoKeybinding])
+  })
 })
 
 describe('calendarKeybindings', () => {
@@ -53,6 +62,16 @@ describe('calendarKeybindings', () => {
   it('has no duplicate ids', () => {
     const ids = calendarKeybindings.map((keybinding) => keybinding.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('uses Shift+M for the month view shortcut', () => {
+    expect(
+      calendarKeybindings.filter(
+        (keybinding) => keybinding.id === 'calendar-month-view',
+      ),
+    ).toEqual([
+      { id: 'calendar-month-view', keys: 'Shift+M', description: 'month view' },
+    ])
   })
 })
 

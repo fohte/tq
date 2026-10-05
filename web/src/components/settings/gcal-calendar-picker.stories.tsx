@@ -1,3 +1,4 @@
+import { Panel } from '@fohte/ui/panel'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -5,7 +6,6 @@ import type { ReactNode } from 'react'
 import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { makeGcalCalendar } from '#components/settings/gcal-calendar-test-fixtures'
 import type { IntegrationAccountView } from '#components/settings/integration-card'
-import { Panel } from '#components/ui/panel'
 import { type GcalCalendar } from '#hooks/use-gcal-calendars'
 import { gcalCalendarsKeys } from '#lib/query-keys'
 
@@ -51,7 +51,7 @@ function WrappedGcalCalendarPicker(props: {
 }) {
   return (
     <Providers calendars={props.calendars}>
-      <Panel className="w-72 p-3">
+      <Panel padding="md" className="w-72">
         <GcalCalendarPicker
           account={account}
           initialOpen={props.initialOpen ?? false}

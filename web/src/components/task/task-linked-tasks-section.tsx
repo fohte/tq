@@ -1,5 +1,6 @@
+import { Panel } from '@fohte/ui/panel'
+
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 
@@ -17,7 +18,7 @@ function LinkedTaskGroup({
       <span className="font-mono text-2xs text-muted-foreground-faint">
         {label}
       </span>
-      <Panel>
+      <Panel padding="none">
         {tasks.map((task) => (
           <TaskRowAppearance key={task.id} task={task} />
         ))}

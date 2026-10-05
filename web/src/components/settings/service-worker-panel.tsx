@@ -1,7 +1,7 @@
 import { Button } from '@fohte/ui/button'
+import { Panel } from '@fohte/ui/panel'
 
 import { SettingsRow } from '#components/settings/settings-row'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 
 export interface ServiceWorkerPanelProps {
@@ -13,7 +13,7 @@ export function ServiceWorkerPanel({ onReinstall }: ServiceWorkerPanelProps) {
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>service worker</SectionHeading>
 
-      <Panel>
+      <Panel padding="none">
         <div className="divide-y divide-border">
           <SettingsRow
             label="Service worker"

@@ -1,9 +1,9 @@
 import { Button } from '@fohte/ui/button'
+import { Chip } from '@fohte/ui/chip'
 import { Input } from '@fohte/ui/input'
 import { Check, Terminal, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { Chip } from '#components/ui/chip'
 import {
   type AgentSession,
   isAgentSessionActive,
@@ -227,7 +227,9 @@ export function SessionRow({
             label={label}
             defaultEditing={labelDefaultEditing}
           />
-          <Chip className="shrink-0">{session.context}</Chip>
+          <span className="shrink-0">
+            <Chip>{session.context}</Chip>
+          </span>
         </div>
         <span className="ml-auto shrink-0 font-mono text-xs text-muted-foreground">
           {formatRelativeTime(session.lastActiveAt)}

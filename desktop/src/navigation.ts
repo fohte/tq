@@ -1,8 +1,9 @@
 import { Result } from 'neverthrow'
 
-export type NavigationAction = 'allow' | 'open-main' | 'open-external' | 'deny'
+export type NavigationAction =
+  'allow' | 'open-main' | 'open-memo' | 'open-external' | 'deny'
 
-export type NavigationSource = 'main' | 'side'
+export type NavigationSource = 'main' | 'side' | 'memo'
 
 const parseUrl = Result.fromThrowable(
   (url: string) => new URL(url),
@@ -20,6 +21,9 @@ const pathOf = (url: string): string | undefined =>
     (parsed) => parsed.pathname,
     () => undefined,
   )
+
+const isMemoPath = (url: string): boolean =>
+  pathOf(url)?.replace(/\/+$/, '') === '/memo'
 
 // Compare origins for equality, never by prefix: a prefix match lets
 // `https://tq.example.com.evil.test` through. `origin` may carry a path or
@@ -102,7 +106,15 @@ export const classifyNavigation = (
   // Leave pages outside tq (e.g. the Cloudflare Access / IdP login) alone;
   // otherwise the first sign-in can never complete inside the app.
   if (!isInternal(currentUrl, origin)) return 'allow'
-  if (source === 'side' && isInternal(targetUrl, origin)) return 'open-main'
+  if (isInternal(targetUrl, origin) && isMemoPath(targetUrl)) {
+    return 'open-memo'
+  }
+  if (
+    (source === 'side' || source === 'memo') &&
+    isInternal(targetUrl, origin)
+  ) {
+    return 'open-main'
+  }
   if (isInternal(targetUrl, origin)) return 'allow'
   // `shell.openExternal` launches whatever handler is registered for the
   // scheme, so only hand it schemes known to be safe to open.

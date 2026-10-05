@@ -688,6 +688,7 @@ describe('getEvents', () => {
             {
               id: 'event-1',
               summary: 'Team standup',
+              hangoutLink: 'https://meet.example.com/abc-defg-hij',
               start: { dateTime: '2026-03-22T09:00:00Z' },
               end: { dateTime: '2026-03-22T09:30:00Z' },
             },
@@ -717,6 +718,7 @@ describe('getEvents', () => {
           makeExternalEvent({
             id: 'event-1',
             summary: 'Team standup',
+            meetingUrl: 'https://meet.example.com/abc-defg-hij',
             startTime: '2026-03-22T09:00:00Z',
             endTime: '2026-03-22T09:30:00Z',
           }),

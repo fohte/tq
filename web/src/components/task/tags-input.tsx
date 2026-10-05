@@ -1,10 +1,9 @@
 import { Button } from '@fohte/ui/button'
+import { Chip } from '@fohte/ui/chip'
 import { Input } from '@fohte/ui/input'
-import { X } from 'lucide-react'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useMemo, useRef, useState } from 'react'
 
-import { AnchoredPopup } from '#components/ui/anchored-popup'
-import { Chip } from '#components/ui/chip'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 import type { LabelTreeNode } from '#lib/tag-tree'
@@ -174,20 +173,16 @@ export function TagsInput({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {labels.map((label) => (
-        <Chip key={label} size="sm" className="gap-1 py-px pr-0.5">
+        <Chip
+          key={label}
+          size="sm"
+          onRemove={() => {
+            removeTag(label)
+          }}
+          removeLabel={`Remove ${label}`}
+        >
           <span className="text-primary font-bold">#</span>
           {label}
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              removeTag(label)
-            }}
-            aria-label={`Remove ${label}`}
-            className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
-          >
-            <X className="size-2.5" />
-          </Button>
         </Chip>
       ))}
 
@@ -207,23 +202,24 @@ export function TagsInput({
             autoFocus
             className="h-auto w-24 border-0 bg-transparent p-0 font-mono text-xs shadow-none focus-visible:ring-0"
           />
-          <AnchoredPopup
-            open={suggestions.length > 0}
-            anchor={inputRef}
-            initialFocus={false}
-            className="w-40"
-          >
-            {suggestionTree.map((node) => (
-              <LabelSuggestion
-                key={node.name}
-                node={node}
-                depth={0}
-                indexByName={suggestionIndexByName}
-                selectedIndex={selectedIndex}
-                onSelect={addTag}
-              />
-            ))}
-          </AnchoredPopup>
+          <Popover open={suggestions.length > 0} anchor={inputRef}>
+            <PopoverContent
+              initialFocus={false}
+              padding="none"
+              className="w-40"
+            >
+              {suggestionTree.map((node) => (
+                <LabelSuggestion
+                  key={node.name}
+                  node={node}
+                  depth={0}
+                  indexByName={suggestionIndexByName}
+                  selectedIndex={selectedIndex}
+                  onSelect={addTag}
+                />
+              ))}
+            </PopoverContent>
+          </Popover>
         </>
       ) : (
         <Button

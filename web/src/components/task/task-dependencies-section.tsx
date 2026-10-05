@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { Panel } from '@fohte/ui/panel'
 import { Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -7,7 +8,6 @@ import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { GithubBlocker } from '#hooks/use-github-link'
 import { useUpdateGithubLinkNotifyEvents } from '#hooks/use-github-link'
@@ -42,7 +42,7 @@ export function TaskDependenciesSection({
             <span className="font-mono text-2xs text-muted-foreground-faint">
               blocking
             </span>
-            <Panel>
+            <Panel padding="none">
               {blocking.map((task) => (
                 <TaskRowAppearance key={task.id} task={task} />
               ))}
@@ -80,7 +80,7 @@ function BlockedByGroup({
       <span className="font-mono text-2xs text-muted-foreground-faint">
         blocked by
       </span>
-      <Panel>
+      <Panel padding="none">
         {blockedBy.map((task) => (
           <TaskRowAppearance
             key={task.id}

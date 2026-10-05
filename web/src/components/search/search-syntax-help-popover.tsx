@@ -1,3 +1,4 @@
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import type { RefObject } from 'react'
 
 import {
@@ -5,7 +6,6 @@ import {
   type SearchSyntaxHelpSection,
 } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 
 interface SearchSyntaxHelpPopoverProps {
   anchor: RefObject<HTMLInputElement | null>
@@ -19,14 +19,15 @@ export function SearchSyntaxHelpPopover({
   sections = getSearchSyntaxHelpSections(),
 }: SearchSyntaxHelpPopoverProps) {
   return (
-    <AnchoredPopup
-      anchor={anchor}
-      open={open}
-      initialFocus={false}
-      finalFocus={false}
-      className="w-88 p-0"
-    >
-      <SearchSyntaxHelpPanel sections={sections} showFilterIcons />
-    </AnchoredPopup>
+    <Popover anchor={anchor} open={open}>
+      <PopoverContent
+        initialFocus={false}
+        finalFocus={false}
+        padding="none"
+        className="w-88"
+      >
+        <SearchSyntaxHelpPanel sections={sections} showFilterIcons />
+      </PopoverContent>
+    </Popover>
   )
 }

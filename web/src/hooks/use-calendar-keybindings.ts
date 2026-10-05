@@ -75,6 +75,7 @@ export function useCalendarKeybindings({
           onViewChange('week')
           return
         case 'm':
+          if (!e.shiftKey) return
           e.preventDefault()
           onViewChange('month')
           return

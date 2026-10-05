@@ -1,7 +1,7 @@
+import { Chip } from '@fohte/ui/chip'
+
 import type { ProjectStatus } from '#components/project/project-status-mark'
 import { isProjectStatus } from '#components/project/project-status-mark'
-import { Chip } from '#components/ui/chip'
-import { cn } from '#lib/utils'
 
 export const statusLabels: Record<ProjectStatus, string> = {
   active: 'Active',
@@ -10,24 +10,10 @@ export const statusLabels: Record<ProjectStatus, string> = {
   archived: 'Archived',
 }
 
-export function ProjectStatusBadge({
-  status,
-  className,
-}: {
-  status: string
-  className?: string
-}) {
+export function ProjectStatusBadge({ status }: { status: string }) {
   if (!isProjectStatus(status)) return null
   return (
-    <Chip
-      size="md"
-      className={cn(
-        status === 'active'
-          ? 'text-muted-foreground-strong'
-          : 'text-muted-foreground-faint',
-        className,
-      )}
-    >
+    <Chip size="md" tone={status === 'active' ? 'strong' : 'faint'}>
       {status}
     </Chip>
   )

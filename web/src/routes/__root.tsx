@@ -20,7 +20,8 @@ function RootComponent() {
     select: (state) =>
       state.matches.some(
         (match) =>
-          match.routeId === '/' && isCompactDayLayoutSearch(match.search),
+          (match.routeId === '/' || match.routeId === '/memo') &&
+          isCompactDayLayoutSearch(match.search),
       ),
   })
 

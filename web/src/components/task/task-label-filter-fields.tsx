@@ -1,4 +1,5 @@
-import { FilterOptionButton } from '#components/ui/filter-option-button'
+import { List, ListItem } from '@fohte/ui/list'
+
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLabels } from '#hooks/use-labels'
 import type { LabelTreeNode } from '#lib/tag-tree'
@@ -22,15 +23,15 @@ function LabelOption({
 
   return (
     <>
-      <FilterOptionButton
-        depth={depth}
-        active={selectedLabel === node.name}
-        onClick={() => {
+      <ListItem
+        indent={depth}
+        selected={selectedLabel === node.name}
+        onSelect={() => {
           onLabelChange(node.name)
         }}
       >
         #{displayName}
-      </FilterOptionButton>
+      </ListItem>
       {node.children.map((child) => (
         <LabelOption
           key={child.name}
@@ -58,15 +59,15 @@ export function TaskLabelFilterFields({
   )
 
   return (
-    <div>
-      <FilterOptionButton
-        active={selectedLabel == null}
-        onClick={() => {
+    <List>
+      <ListItem
+        selected={selectedLabel == null}
+        onSelect={() => {
           onLabelChange(undefined)
         }}
       >
         No label
-      </FilterOptionButton>
+      </ListItem>
       {labelTree.map((node) => (
         <LabelOption
           key={node.name}
@@ -76,6 +77,6 @@ export function TaskLabelFilterFields({
           onLabelChange={onLabelChange}
         />
       ))}
-    </div>
+    </List>
   )
 }

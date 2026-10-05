@@ -1,5 +1,7 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { List, ListItem } from '@fohte/ui/list'
+import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useRef } from 'react'
 
 import {
@@ -7,7 +9,6 @@ import {
   sidebarFieldValueButtonClassName,
 } from '#components/task/sidebar-field'
 import { TaskCandidateList } from '#components/task/task-candidate-list'
-import { AnchoredPopup } from '#components/ui/anchored-popup'
 import type { SearchResult } from '#hooks/use-search'
 
 export function SidebarParentFieldAppearance({
@@ -72,53 +73,53 @@ export function SidebarParentFieldAppearance({
           </span>
         </Button>
       )}
-      <AnchoredPopup
+      <Popover
         open={isEditing}
         onOpenChange={(open) => {
           if (!open) onOpenChange(false)
         }}
         anchor={inputRef}
-        // Base UI's popover moves focus to the popup's first focusable
-        // element (the clear button below) as soon as it opens. That races
-        // the anchor `Input`'s own `autoFocus` and steals keystrokes away
-        // from it, so keep focus on the input instead.
-        initialFocus={false}
-        className="w-72"
       >
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50"
-          onMouseDown={(e) => {
-            e.preventDefault()
-            onClear()
-          }}
+        <PopoverContent
+          // Base UI's popover moves focus to the popup's first focusable
+          // element (the clear option below) as soon as it opens. That races
+          // the anchor `Input`'s own `autoFocus` and steals keystrokes away
+          // from it, so keep focus on the input instead.
+          initialFocus={false}
+          padding="none"
+          className="w-72 text-popover-foreground"
         >
-          —
-        </Button>
-        <div className="mt-1 border-t border-border pt-1">
-          {query === '' ? (
-            <div className="px-3 py-1.5 text-sm text-muted-foreground">
-              Type to search...
-            </div>
-          ) : isFetching ? (
-            <div className="px-3 py-1.5 text-sm text-muted-foreground">
-              Searching...
-            </div>
-          ) : candidates.length === 0 ? (
-            <div className="px-3 py-1.5 text-sm text-muted-foreground">
-              No matching tasks
-            </div>
-          ) : (
-            <TaskCandidateList
-              candidates={candidates}
-              highlightedIndex={-1}
-              indexOffset={1}
-              onSelectCandidate={onSelectCandidate}
-            />
-          )}
-        </div>
-      </AnchoredPopup>
+          <List
+            onMouseDown={(event) => {
+              event.preventDefault()
+            }}
+          >
+            <ListItem onSelect={onClear}>—</ListItem>
+          </List>
+          <div className="mt-1 border-t border-border pt-1">
+            {query === '' ? (
+              <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                Type to search...
+              </div>
+            ) : isFetching ? (
+              <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                Searching...
+              </div>
+            ) : candidates.length === 0 ? (
+              <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                No matching tasks
+              </div>
+            ) : (
+              <TaskCandidateList
+                candidates={candidates}
+                highlightedIndex={-1}
+                indexOffset={1}
+                onSelectCandidate={onSelectCandidate}
+              />
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
     </SidebarField>
   )
 }

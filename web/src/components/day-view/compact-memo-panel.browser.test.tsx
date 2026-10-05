@@ -27,6 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 function makeSaveHandler() {
@@ -98,6 +99,21 @@ function memoLoadFlowState(
 }
 
 describe('CompactMemoPanel', () => {
+  it('opens the memo window from the expand button', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    render(
+      <CompactMemoPanel
+        context="work"
+        memo={makeMemo()}
+        onSave={makeSaveHandler()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open memo window' }))
+
+    expect(open.mock.calls).toEqual([['/memo?layout=compact']])
+  })
+
   it('shows loading state and applies the memo after it loads', () => {
     const onSave = makeSaveHandler()
     const { rerender } = render(

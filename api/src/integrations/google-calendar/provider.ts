@@ -70,6 +70,7 @@ const googleCalendarAttendeeSchema = z.object({
 const googleCalendarEventSchema = z.object({
   id: z.string(),
   summary: z.string().optional(),
+  hangoutLink: z.string().optional(),
   start: z.object({
     dateTime: z.string().optional(),
     date: z.string().optional(),
@@ -205,6 +206,7 @@ export const googleCalendarProvider = {
             > => ({
               id: event.id,
               summary: event.summary ?? '(No title)',
+              meetingUrl: event.hangoutLink ?? null,
               startTime: event.start.dateTime ?? event.start.date ?? '',
               endTime: event.end.dateTime ?? event.end.date ?? '',
               isAllDay: event.start.dateTime == null,

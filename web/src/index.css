@@ -86,6 +86,14 @@
   padding-top: 15vh;
 }
 
+.electron-drag-region {
+  -webkit-app-region: drag;
+}
+
+.electron-no-drag-region {
+  -webkit-app-region: no-drag;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

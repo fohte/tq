@@ -1,5 +1,6 @@
+import { Panel } from '@fohte/ui/panel'
+
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 
@@ -17,7 +18,7 @@ export function TaskDuplicateOfSection({
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>duplicate of</SectionHeading>
-      <Panel>
+      <Panel padding="none">
         <TaskRowAppearance task={duplicateOfTask} />
       </Panel>
     </div>

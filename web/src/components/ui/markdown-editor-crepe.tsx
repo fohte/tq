@@ -6,7 +6,7 @@ import { shift } from '@floating-ui/dom'
 import { Crepe } from '@milkdown/crepe'
 import { EditorStatus, editorViewCtx, serializerCtx } from '@milkdown/kit/core'
 import type { Node as ProseMirrorNode } from '@milkdown/kit/prose/model'
-import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import { Plugin, PluginKey, TextSelection } from '@milkdown/kit/prose/state'
 import { $prose, replaceAll } from '@milkdown/kit/utils'
 import { upload, uploadConfig } from '@milkdown/plugin-upload'
 import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
@@ -39,6 +39,7 @@ export interface CrepeEditorProps {
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
   focusOnEdit?: boolean
+  focusAtEnd?: boolean
   skipNoopChanges?: boolean
   // Also controls Crepe's readOnly (view => readOnly, edit => editable): the
   // two always move together, since an editable+chip combination would let
@@ -109,6 +110,7 @@ function CrepeEditor({
   placeholder,
   mode,
   focusOnEdit = false,
+  focusAtEnd = false,
   skipNoopChanges = false,
 }: CrepeEditorProps) {
   const crepeRef = useRef<Crepe | null>(null)
@@ -365,9 +367,15 @@ function CrepeEditor({
       crepe.editor.status === EditorStatus.Created
     )
       crepe.editor.action((ctx) => {
-        ctx.get(editorViewCtx).focus()
+        const view = ctx.get(editorViewCtx)
+        if (focusAtEnd) {
+          view.dispatch(
+            view.state.tr.setSelection(TextSelection.atEnd(view.state.doc)),
+          )
+        }
+        view.focus()
       })
-  }, [canFocusOnEdit, mode, skipNoopChanges])
+  }, [canFocusOnEdit, focusAtEnd, mode, skipNoopChanges])
 
   // Syncs a `defaultValue` that changed externally while in view mode;
   // skipped during editing so a live cursor isn't overwritten, and diffed

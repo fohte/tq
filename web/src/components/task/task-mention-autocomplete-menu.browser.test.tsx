@@ -47,7 +47,7 @@ describe('TaskMentionAutocompleteMenu', () => {
     const { onSelect } = renderMenu()
 
     await user.click(
-      await screen.findByRole('button', { name: /Deploy docs site/ }),
+      await screen.findByRole('option', { name: /Deploy docs site/ }),
     )
 
     expect(onSelect).toHaveBeenCalledWith(secondItem)
@@ -66,7 +66,7 @@ describe('TaskMentionAutocompleteMenu', () => {
     const { store } = renderMenu()
 
     await user.hover(
-      await screen.findByRole('button', { name: /Deploy docs site/ }),
+      await screen.findByRole('option', { name: /Deploy docs site/ }),
     )
 
     expect(store.getSnapshot().highlightedIndex).toBe(1)
@@ -85,14 +85,14 @@ describe('TaskMentionAutocompleteMenu', () => {
       }),
     ]
     const { store } = renderMenu()
-    await screen.findByRole('button', { name: /Deploy docs site/ })
+    await screen.findByRole('option', { name: /Deploy docs site/ })
 
     act(() => {
       store.moveHighlight(1)
     })
 
     expect(
-      screen.getByRole('button', { name: /Deploy docs site/ }),
+      screen.getByRole('option', { name: /Deploy docs site/ }),
     ).toHaveClass('bg-accent')
   })
 

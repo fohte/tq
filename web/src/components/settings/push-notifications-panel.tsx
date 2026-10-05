@@ -1,8 +1,8 @@
 import { Button } from '@fohte/ui/button'
+import { Panel } from '@fohte/ui/panel'
 
 import { SettingsRow } from '#components/settings/settings-row'
 import { Badge } from '#components/ui/badge'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import type {
   PushAction,
@@ -79,7 +79,7 @@ export function PushNotificationsPanel({
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>notifications</SectionHeading>
 
-      <Panel>
+      <Panel padding="none">
         <div className="divide-y divide-border">
           <SettingsRow
             label="Web push"
