@@ -202,6 +202,17 @@ export const Loading: Story = {
   },
 }
 
+export const DesktopWindowControls: Story = {
+  name: 'the Now panel reserves space for the desktop window controls',
+  args: {
+    desktopWindowControls: true,
+    now,
+    timeBlocks: [],
+    calendarEvents: [],
+    taskMap: taskMap(),
+  },
+}
+
 export const UpcomingScheduleWarning: Story = {
   name: 'the next recurring schedule turns red ten minutes before it starts',
   args: {

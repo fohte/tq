@@ -5,6 +5,8 @@ import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
+import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
+import { cn } from '#lib/utils'
 
 export interface NowPanelProps {
   timeBlocks: TimeBlock[]
@@ -13,6 +15,7 @@ export interface NowPanelProps {
   isLoading?: boolean
   /** Fixed clock for stories and tests. The live panel updates itself every minute. */
   now?: Date
+  desktopWindowControls?: boolean | undefined
 }
 
 export function NowPanel({
@@ -21,6 +24,7 @@ export function NowPanel({
   taskMap,
   isLoading = false,
   now: fixedNow,
+  desktopWindowControls = hasTqDesktopWindowControls(),
 }: NowPanelProps) {
   const [clockNow, setClockNow] = useState(() => fixedNow ?? new Date())
 
@@ -47,9 +51,22 @@ export function NowPanel({
       aria-label="Now"
       className="sticky top-0 z-10 shrink-0 border-b border-border bg-background px-3 py-2"
     >
-      <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Now
-      </h2>
+      <div
+        className={cn(
+          'mb-1',
+          desktopWindowControls &&
+            'electron-drag-region -mx-3 -mt-2 flex h-7 items-center px-3',
+        )}
+      >
+        <h2
+          className={cn(
+            'text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+            desktopWindowControls && 'pl-16',
+          )}
+        >
+          Now
+        </h2>
+      </div>
 
       {isLoading ? (
         <div className="py-1 text-sm text-muted-foreground">Loading…</div>
