@@ -113,13 +113,24 @@ interface CalendarEventsCapability {
  * attendees or none of them is the signed-in user (e.g. a self-only event,
  * or another account's calendar the user isn't invited to).
  */
-type CalendarResponseStatus =
+export type CalendarResponseStatus =
   'needsAction' | 'declined' | 'tentative' | 'accepted'
 
 export interface ExternalEvent {
   id: string
   summary: string
   meetingUrl: string | null
+  htmlLink: string | null
+  location: string | null
+  description: string | null
+  organizer: { email: string | null; displayName: string | null } | null
+  attendees: {
+    email: string | null
+    displayName: string | null
+    responseStatus: CalendarResponseStatus | null
+    isSelf: boolean
+    isOrganizer: boolean
+  }[]
   startTime: string
   endTime: string
   isAllDay: boolean
@@ -149,9 +160,8 @@ export interface ExternalEvent {
    */
   busy: boolean
   /**
-   * True when `summary`/`meetingUrl`/`calendarDisplayName`/`calendarColor`/
-   * `eventType`/`hasOtherAttendees` are masked because this event's calendar
-   * context doesn't match the requested one.
+   * True when event details are masked because this event's calendar context
+   * doesn't match the requested one.
    */
   redacted: boolean
 }

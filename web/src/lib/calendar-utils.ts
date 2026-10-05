@@ -1,5 +1,7 @@
 import type { EventApi } from '@fullcalendar/core'
 
+import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
+
 export interface CalendarEventProps {
   type?:
     | 'manual'
@@ -23,6 +25,8 @@ export interface CalendarEventProps {
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
   /** Google's raw eventType (e.g. `outOfOffice`), used to pick the status/info icon */
   gcalEventType?: string
+  /** Event data passed only for non-redacted Google Calendar events. */
+  gcalDetails?: CalendarGcalEventDetails
 }
 
 /**

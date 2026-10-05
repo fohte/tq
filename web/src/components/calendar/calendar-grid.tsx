@@ -20,6 +20,7 @@ import {
   useState,
 } from 'react'
 
+import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import {
   type CalendarViewType,
   FULLCALENDAR_THREE_DAY_VIEW,
@@ -27,9 +28,11 @@ import {
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
+import { GcalEventDetailPopover } from '#components/calendar/gcal-event-detail-popover'
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import {
+  type CalendarEventProps,
   findHoveredSlot,
   getEventProps,
   isClickableEvent,
@@ -70,6 +73,15 @@ function formatHm(date: Date): string {
 }
 
 const DEFAULT_SCROLL_TIME = '08:00:00'
+
+function isCalendarEventClickable(props: CalendarEventProps): boolean {
+  return (
+    isClickableEvent(props) ||
+    (isGcalEventType(props.type) &&
+      props.redacted !== true &&
+      props.gcalDetails != null)
+  )
+}
 
 function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
   const now = new Date()
@@ -133,6 +145,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     // is still false for that call and only flips true for later navigation.
     const hasMountedRef = useRef(false)
     const [slotGhost, setSlotGhost] = useState<SlotGhostRect | null>(null)
+    const [selectedGcalEvent, setSelectedGcalEvent] =
+      useState<CalendarGcalEventDetails | null>(null)
+    const gcalEventAnchorRef = useRef<Element | null>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,
       () => fullCalendarRef.current,
@@ -230,6 +245,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         calendarColor: event.calendarColor,
         responseStatus: event.responseStatus,
         gcalEventType: event.gcalEventType,
+        ...(isGcalEventType(event.type) &&
+        event.redacted !== true &&
+        event.gcalDetails != null
+          ? { gcalDetails: event.gcalDetails }
+          : {}),
       },
     }))
 
@@ -277,6 +297,13 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleEventClick = (info: EventClickArg) => {
       const props = getEventProps(info.event)
+      if (isGcalEventType(props.type)) {
+        if (props.redacted !== true && props.gcalDetails != null) {
+          gcalEventAnchorRef.current = info.el
+          setSelectedGcalEvent(props.gcalDetails)
+        }
+        return
+      }
       if (!isClickableEvent(props)) return
       const { type, scheduleId, scheduleStart, taskId } = props
       if (type === 'schedule') {
@@ -372,7 +399,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
           eventClassNames={(arg) =>
-            isClickableEvent(getEventProps(arg.event))
+            isCalendarEventClickable(getEventProps(arg.event))
               ? ['tq-event-clickable']
               : []
           }
@@ -493,6 +520,16 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
                 '--slot-height': `${String(slotGhost.height)}px`,
               } as SlotGhostStyle
             }
+          />
+        )}
+        {selectedGcalEvent != null && (
+          <GcalEventDetailPopover
+            anchor={gcalEventAnchorRef}
+            event={selectedGcalEvent}
+            open={true}
+            onOpenChange={(open) => {
+              if (!open) setSelectedGcalEvent(null)
+            }}
           />
         )}
       </div>

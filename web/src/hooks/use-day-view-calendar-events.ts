@@ -71,7 +71,14 @@ export function useDayViewCalendarEvents({
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsData) return []
     return gcalEventsData.map((event) => {
-      const meetingUrl = event.meetingUrl?.trim()
+      const trimmedMeetingUrl = event.meetingUrl?.trim()
+      const meetingUrl =
+        trimmedMeetingUrl == null || trimmedMeetingUrl === ''
+          ? null
+          : trimmedMeetingUrl
+      const selfResponseStatus =
+        event.attendees.find((attendee) => attendee.isSelf)?.responseStatus ??
+        null
       return {
         id: `gcal-${event.id}`,
         title: event.summary,
@@ -83,8 +90,25 @@ export function useDayViewCalendarEvents({
         calendarColor: event.calendarColor,
         responseStatus: event.responseStatus,
         redacted: event.redacted,
-        ...(!event.redacted && meetingUrl != null && meetingUrl !== ''
-          ? { meetingUrl }
+        ...(!event.redacted
+          ? {
+              gcalDetails: {
+                title: event.summary,
+                start: event.startTime,
+                end: event.endTime,
+                allDay: event.isAllDay,
+                calendarDisplayName: event.calendarDisplayName,
+                calendarColor: event.calendarColor,
+                responseStatus: selfResponseStatus,
+                meetingUrl,
+                htmlLink: event.htmlLink,
+                location: event.location,
+                description: event.description,
+                organizer: event.organizer,
+                attendees: event.attendees,
+              },
+              ...(meetingUrl == null ? {} : { meetingUrl }),
+            }
           : {}),
       }
     })
