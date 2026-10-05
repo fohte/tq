@@ -16,25 +16,17 @@ export function PlanTabStrip({
   value,
   onChange,
   disabled,
-  className,
 }: {
   value: PlanValue | ''
   onChange: (value: PlanValue | '') => void
   disabled?: boolean
-  className?: string
 }) {
-  const control = (
+  return (
     <SegmentedControl
       value={value}
       options={PLAN_OPTIONS}
       onValueChange={onChange}
       {...(disabled != null ? { disabled } : {})}
     />
-  )
-
-  return className == null ? (
-    control
-  ) : (
-    <div className={className}>{control}</div>
   )
 }
