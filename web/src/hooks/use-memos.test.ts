@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
+import type { MemoContext } from '#hooks/memo-save'
+import { saveMemoWithConflictResolution } from '#hooks/memo-save'
 import { makeMemo } from '#hooks/memo-test-fixtures'
-import {
-  type MemoContext,
-  saveMemoWithConflictResolution,
-} from '#hooks/use-memos'
 
 describe('saveMemoWithConflictResolution', () => {
   it('returns the first successful save without reading or retrying', async () => {

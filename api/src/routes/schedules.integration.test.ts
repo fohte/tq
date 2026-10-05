@@ -121,6 +121,21 @@ async function createSchedule(body: Record<string, unknown>) {
   return { res, body: await jsonBody<ScheduleResponse>(res) }
 }
 
+async function putScheduleOverride(
+  scheduleId: string,
+  occurrenceDate: string,
+  body: unknown,
+) {
+  return app.request(
+    `/api/schedule/recurring/${scheduleId}/overrides/${occurrenceDate}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  )
+}
+
 describe('schedule/time-blocks API', () => {
   describe('POST /api/schedule/time-blocks', () => {
     it('creates a time block', async () => {
@@ -638,11 +653,211 @@ describe('schedules API', () => {
   })
 })
 
+describe('schedule overrides API', () => {
+  it('changes one occurrence in the expanded schedule', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    await putScheduleOverride(schedule.id, '2026-03-22', { skipped: true })
+    await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '08:30',
+      endTime: '09:45',
+    })
+    const response = await app.request(
+      '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+    )
+    expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
+      {
+        scheduleId: schedule.id,
+        title: 'Routine',
+        start: '2026-03-22T08:30:00',
+        end: '2026-03-22T09:45:00',
+        context: 'personal',
+        color: null,
+        recurrence: null,
+      },
+    ])
+  })
+
+  it('clears an override and restores the default time', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    const url = `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`
+    await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '08:30',
+      endTime: '09:45',
+    })
+    await app.request(url, { method: 'DELETE' })
+
+    const response = await app.request(
+      '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+    )
+    expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
+      {
+        scheduleId: schedule.id,
+        title: 'Routine',
+        start: '2026-03-22T09:00:00',
+        end: '2026-03-22T10:00:00',
+        context: 'personal',
+        color: null,
+        recurrence: null,
+      },
+    ])
+  })
+
+  it('skips an occurrence without changing other dates', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    await putScheduleOverride(schedule.id, '2026-03-22', { skipped: true })
+    const response = await app.request(
+      '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-23',
+    )
+
+    expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
+      {
+        scheduleId: schedule.id,
+        title: 'Routine',
+        start: '2026-03-23T09:00:00',
+        end: '2026-03-23T10:00:00',
+        context: 'personal',
+        color: null,
+        recurrence: null,
+      },
+    ])
+  })
+
+  it('uses the start date override for a cross-midnight continuation', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Overnight Routine',
+      startTime: '23:00',
+      endTime: '07:00',
+    })
+    await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '22:30',
+      endTime: '08:00',
+    })
+    const nextDateResponse = await app.request(
+      '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-23',
+    )
+
+    expect(await jsonBody<ExpandedBlock[]>(nextDateResponse)).toEqual([
+      {
+        scheduleId: schedule.id,
+        title: 'Overnight Routine',
+        start: '2026-03-23T23:00:00',
+        end: '2026-03-24T00:00:00',
+        context: 'personal',
+        color: null,
+        recurrence: null,
+      },
+      {
+        scheduleId: schedule.id,
+        title: 'Overnight Routine',
+        start: '2026-03-23T00:00:00',
+        end: '2026-03-23T08:00:00',
+        context: 'personal',
+        color: null,
+        recurrence: null,
+      },
+    ])
+  })
+
+  it('rejects an incomplete time range', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '08:30',
+    })
+
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects a time outside the 24-hour clock', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
+      startTime: '24:00',
+      endTime: '09:45',
+    })
+
+    expect(response.status).toBe(400)
+  })
+
+  it('rejects a date that does not match the recurrence rule', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+      recurrence: {
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [1],
+      },
+    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-24', {
+      startTime: '08:00',
+      endTime: '09:00',
+    })
+
+    expect(response.status).toBe(422)
+  })
+
+  it('returns 404 for an unknown schedule', async () => {
+    const response = await putScheduleOverride(TEST_UUID, '2026-03-22', {
+      skipped: true,
+    })
+
+    expect(response.status).toBe(404)
+  })
+})
+
 // These tests rely on no oauth_tokens row existing in the test DB, so
 // getEvents() always resolves to no connected accounts and auto-assign
 // proceeds as if no Google Calendar events exist.
 describe('schedule/auto-assign API', () => {
   describe('POST /api/schedule/auto-assign', () => {
+    it('uses the overridden recurring schedule as a fixed time range', async () => {
+      const task = await createTask('Queued task', { estimatedMinutes: 30 })
+      await putDayQueueItems([task.id], '2026-03-22')
+      const { body: schedule } = await createSchedule({
+        title: 'Routine',
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+      await putScheduleOverride(schedule.id, '2026-03-22', {
+        startTime: '12:00',
+        endTime: '13:00',
+      })
+
+      const { body } = await requestAutoAssign('2026-03-22')
+
+      expect(body.map(normalizeTimeBlock)).toEqual([
+        {
+          id: 'ID',
+          taskId: task.id,
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T09:30:00.000Z',
+          isAutoScheduled: true,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ])
+    })
+
     it('assigns queued tasks back-to-back starting at the start of working hours', async () => {
       const taskA = await createTask('Task A', { estimatedMinutes: 30 })
       const taskB = await createTask('Task B', { estimatedMinutes: 60 })

@@ -28,7 +28,7 @@ import {
   labelKeys,
   savedViewKeys,
 } from '#lib/query-keys'
-import { assertDefined, waitForFocus } from '#lib/test-utils'
+import { assertDefined, waitForEditorFocus } from '#lib/test-utils'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 // AppLayout mounts Sidebar/StatusLine, and this test also mounts
@@ -136,7 +136,7 @@ async function focusTaskDescriptionEditor(
   await user.click(
     screen.getByRole('button', { name: 'Edit task description' }),
   )
-  await waitForFocus(editor)
+  await waitForEditorFocus(editor)
 }
 
 afterEach(() => {

@@ -78,14 +78,16 @@ function changedEvent(
       (link.githubUpdatedAt === null ||
         event.occurredAt.getTime() > link.githubUpdatedAt.getTime()),
   )
-  const wasCausedByOther = (event: GithubIssueActivityEvent) =>
+  const wasCausedByOtherHuman = (event: GithubIssueActivityEvent) =>
+    event.actorType !== 'Bot' &&
     event.login !== null &&
     event.login.toLowerCase() !== activity.authenticatedUserLogin.toLowerCase()
 
   if (candidates.includes('closed')) {
     const expectedCloseEvent = issue.state === 'merged' ? 'merged' : 'closed'
     const hasExternalClose = newerEvents.some(
-      (event) => event.event === expectedCloseEvent && wasCausedByOther(event),
+      (event) =>
+        event.event === expectedCloseEvent && wasCausedByOtherHuman(event),
     )
     if (hasExternalClose) {
       const title =
@@ -102,7 +104,7 @@ function changedEvent(
 
   if (candidates.includes('reopened')) {
     const hasExternalReopen = newerEvents.some(
-      (event) => event.event === 'reopened' && wasCausedByOther(event),
+      (event) => event.event === 'reopened' && wasCausedByOtherHuman(event),
     )
     if (hasExternalReopen) {
       return { event: 'reopened', title: `${ref} was reopened` }
@@ -110,7 +112,7 @@ function changedEvent(
   }
 
   const newComments = newerEvents.filter(
-    (event) => event.event === 'commented' && wasCausedByOther(event),
+    (event) => event.event === 'commented' && wasCausedByOtherHuman(event),
   ).length
   if (candidates.includes('comments') && newComments > 0) {
     return {
@@ -125,7 +127,7 @@ function changedEvent(
     const hasExternalOtherActivity = newerEvents.some(
       (event) =>
         !['closed', 'merged', 'reopened', 'commented'].includes(event.event) &&
-        wasCausedByOther(event),
+        wasCausedByOtherHuman(event),
     )
     if (!hasExternalOtherActivity) {
       return null

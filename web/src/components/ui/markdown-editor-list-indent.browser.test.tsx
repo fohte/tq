@@ -3,7 +3,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { assertDefined, waitForFocus } from '#lib/test-utils'
+import { assertDefined, waitForEditorFocus } from '#lib/test-utils'
 
 const TWO_ITEM_LIST = '- First item\n- Second item'
 const NESTED_LIST = '- First item\n  - Nested item'
@@ -47,7 +47,7 @@ async function placeCaretAtStart(
   })
   // Only here to focus ProseMirror.
   await user.click(element)
-  await waitForFocus(editor)
+  await waitForEditorFocus(editor)
 
   const textNode = assertDefined(
     doc.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode(),

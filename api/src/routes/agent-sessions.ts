@@ -56,6 +56,7 @@ export function agentSessionToResponse(
     startedAt: session.startedAt.toISOString(),
     lastActiveAt: session.lastActiveAt.toISOString(),
     endedAt: session.endedAt?.toISOString() ?? null,
+    archivedAt: session.archivedAt?.toISOString() ?? null,
   }
 }
 
@@ -96,6 +97,7 @@ export const agentSessionsApp = new Hono()
             // SessionEnd), which must clear a stale endedAt so the "running"
             // derivation (see schema/agent-sessions.ts) doesn't stay stuck.
             endedAt: input.ended === true ? now : null,
+            ...(input.ended === true ? {} : { archivedAt: null }),
             ...(input.context != null ? { context: input.context } : {}),
           },
         })
@@ -290,6 +292,30 @@ export const agentSessionsApp = new Hono()
     }
 
     return c.body(null, 204)
+  })
+  .post('/by-session/:provider/:sessionId/archive', async (c) => {
+    const provider = parseAgentProvider(c.req.param('provider'))
+    if (provider === undefined) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+    const sessionId = c.req.param('sessionId')
+
+    const [session] = await db
+      .update(agentSessions)
+      .set({ archivedAt: new Date() })
+      .where(
+        and(
+          eq(agentSessions.provider, provider),
+          eq(agentSessions.sessionId, sessionId),
+        ),
+      )
+      .returning()
+
+    if (!session) {
+      return c.json({ error: 'Agent session not found' }, 404)
+    }
+
+    return c.json(agentSessionToResponse(session), 200)
   })
   .get('/:id/tasks', async (c) => {
     const id = c.req.param('id')

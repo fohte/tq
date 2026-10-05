@@ -20,6 +20,7 @@ Sessions reported by coding agent providers.
 | last_active_at    | timestamp with time zone | now()            | false    |                                                             |         | Time of the most recent activity report for the session.                                      |
 | ended_at          | timestamp with time zone |                  | true     |                                                             |         | Time the integration last reported the session as ended; cleared by a later activity report.  |
 | parent_session_id | text                     |                  | true     |                                                             |         | Raw parent session ID reported by the provider; it may be recorded before the parent session. |
+| archived_at       | timestamp with time zone |                  | true     |                                                             |         | Time the session was archived by an external session manager.                                 |
 
 ## Constraints
 
@@ -63,6 +64,7 @@ erDiagram
   timestamp_with_time_zone last_active_at
   timestamp_with_time_zone ended_at
   text parent_session_id
+  timestamp_with_time_zone archived_at
 }
 "public.task_agent_sessions" {
   text task_id FK

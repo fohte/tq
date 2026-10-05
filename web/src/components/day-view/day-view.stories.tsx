@@ -10,6 +10,9 @@ import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
+import { makeMemo } from '#hooks/memo-test-fixtures'
+import type { SaveMemoInput } from '#hooks/use-memos'
 import type { Schedule } from '#hooks/use-schedules'
 import type { CategorizedTasks, Task } from '#hooks/use-tasks'
 import { getQueueCandidates } from '#lib/queue-candidates'
@@ -216,6 +219,7 @@ const compactTaskTitles = [
   'Document the retry policy',
   'Plan the follow-up review',
 ]
+const compactCurrentTaskId = 'compact-task-1'
 const compactTasks = compactTaskTitles.map((title, index) =>
   makeTask({
     id: `compact-task-${String(index + 1)}`,
@@ -278,6 +282,7 @@ const compactEvents: TimeBlockEvent[] = [
     start: `${dateStr}T09:00:00`,
     end: `${dateStr}T10:00:00`,
     type: 'manual',
+    taskId: compactCurrentTaskId,
   },
   {
     id: 'compact-team-meeting',
@@ -295,6 +300,12 @@ const compactEvents: TimeBlockEvent[] = [
     scheduleId: 'compact-lunch',
   },
 ]
+const compactTaskBlock = makeTimeBlock({
+  id: 'compact-task-block',
+  taskId: compactCurrentTaskId,
+  startTime: `${dateStr}T09:00:00`,
+  endTime: `${dateStr}T10:00:00`,
+})
 const compactSchedules: Schedule[] = [
   makeSchedule({
     scheduleId: 'compact-lunch',
@@ -422,7 +433,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the compact day planner shows due tasks before the remaining today queue',
+  name: 'the compact day planner shows current work, due tasks, and its work memo',
   tags: ['mobile-only'],
   decorators: [
     (Story) => (
@@ -436,6 +447,29 @@ export const Compact: Story = {
     layout: 'compact',
     calendarEvents: compactEvents,
     schedules: compactSchedules,
+    nowPanel: {
+      now: new Date(`${dateStr}T09:30:00`),
+      timeBlocks: [compactTaskBlock],
+      calendarEvents: compactEvents,
+      taskMap: new Map(compactTasks.map((task) => [task.id, task])),
+    },
+    compactMemo: {
+      context: 'work',
+      memo: makeMemo({
+        content: '- Confirm the meeting notes\n- Review the weekly plan',
+        revision: 2,
+      }),
+      isLoading: false,
+      loadError: false,
+      onSave: fn((input: SaveMemoInput) =>
+        Promise.resolve(
+          makeMemo({
+            content: input.content,
+            revision: input.revision + 1,
+          }),
+        ),
+      ),
+    },
     queueSections: compactQueueSections,
     dayQueueTasks: compactTasks,
     queueCandidates: compactQueueCandidates,

@@ -50,7 +50,7 @@ type WindowBoundsStorage = {
   write: (serialized: string) => void
 }
 
-export const parseWindowBounds = (value: unknown): WindowBounds | undefined => {
+const parseWindowBounds = (value: unknown): WindowBounds | undefined => {
   if (
     typeof value !== 'object' ||
     value === null ||

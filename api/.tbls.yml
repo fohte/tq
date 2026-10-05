@@ -26,6 +26,7 @@ comments:
       started_at: 'Time when the session was first recorded.'
       last_active_at: 'Time of the most recent activity report for the session.'
       ended_at: 'Time the integration last reported the session as ended; cleared by a later activity report.'
+      archived_at: 'Time the session was archived by an external session manager.'
   - table: assets
     tableComment: 'Metadata for uploaded assets stored in object storage.'
     columnComments:
@@ -160,6 +161,14 @@ comments:
       recurrence_rule_id: 'Recurrence rule associated with the schedule; null for a one-time schedule.'
       context: 'Whether the schedule belongs to the work or personal context.'
       color: 'Optional color value associated with the schedule.'
+  - table: schedule_overrides
+    tableComment: 'One-day time changes and skipped schedule occurrences.'
+    columnComments:
+      schedule_id: 'Schedule whose occurrence is changed.'
+      occurrence_date: 'Date on which the changed occurrence starts.'
+      start_time: 'Replacement local start time in 24-hour HH:MM format; null when skipped.'
+      end_time: 'Replacement local end time in 24-hour HH:MM format; null when skipped.'
+      skipped: 'Whether the occurrence is omitted for this date.'
   - table: scheduling_settings
     tableComment: 'Singleton preferences for task scheduling.'
     columnComments:

@@ -57,7 +57,7 @@ const listSessionsInputSchema = z.object({
     .optional(),
   full: z.boolean().optional().describe("Include each session's last message"),
 })
-const deleteSessionInputSchema = z.object({
+const sessionRefInputSchema = z.object({
   provider: pathSegmentSchema('Provider'),
   sessionId: pathSegmentSchema('Session ID'),
 })
@@ -105,7 +105,7 @@ export const sessionOperations = [
       )
     },
   }),
-  defineOperation(deleteSessionInputSchema, {
+  defineOperation(sessionRefInputSchema, {
     path: ['session', 'delete'],
     description:
       'Delete an agent session by provider and session id, e.g. when an external session manager knows the session will never resume',
@@ -124,5 +124,28 @@ export const sessionOperations = [
           },
         }),
       ).map(() => ({ deleted: true, provider, sessionId })),
+  }),
+  defineOperation(sessionRefInputSchema, {
+    path: ['session', 'archive'],
+    description: 'Archive an agent session by provider and session id',
+    positionalArgs: ['provider', 'sessionId'],
+    kind: 'write',
+    routes: [
+      'POST /api/agent-sessions/by-session/:provider/:sessionId/archive',
+    ],
+    cli: { output: { kind: 'json' } },
+    run: (client, { provider, sessionId }) =>
+      requestJson(
+        client.api['agent-sessions']['by-session'][':provider'][':sessionId'][
+          'archive'
+        ].$post({
+          param: {
+            provider: encodePathSegment(provider),
+            sessionId: encodePathSegment(sessionId),
+          },
+        }),
+      )
+        .andThen((value) => parseResponse(agentSessionSchema, value))
+        .map(() => ({ archived: true, provider, sessionId })),
   }),
 ] as const

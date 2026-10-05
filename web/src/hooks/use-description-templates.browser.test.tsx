@@ -6,17 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import {
-  descriptionTemplateKeys,
   useCreateDescriptionTemplate,
   useDeleteDescriptionTemplate,
-  useDescriptionTemplate,
   useDescriptionTemplates,
   useUpdateDescriptionTemplate,
 } from '#hooks/use-description-templates'
 
 vi.mock('#lib/api', () => {
   const getList = vi.fn()
-  const getDetail = vi.fn()
   const create = vi.fn()
   const update = vi.fn()
   const remove = vi.fn()
@@ -27,17 +24,16 @@ vi.mock('#lib/api', () => {
         'description-templates': {
           $get: getList,
           $post: create,
-          ':name': { $get: getDetail, $patch: update, $delete: remove },
+          ':name': { $patch: update, $delete: remove },
         },
       },
     },
-    __mocks: { getList, getDetail, create, update, remove },
+    __mocks: { getList, create, update, remove },
   }
 })
 
 interface ApiMocks {
   getList: Mock
-  getDetail: Mock
   create: Mock
   update: Mock
   remove: Mock
@@ -52,7 +48,6 @@ async function getMocks(): Promise<ApiMocks> {
 
 function getTemplateRequestCalls() {
   return {
-    detail: mocks.getDetail.mock.calls,
     update: mocks.update.mock.calls,
     remove: mocks.remove.mock.calls,
   }
@@ -77,7 +72,6 @@ beforeEach(async () => {
   })
   mocks = await getMocks()
   mocks.getList.mockReset()
-  mocks.getDetail.mockReset()
   mocks.create.mockReset()
   mocks.update.mockReset()
   mocks.remove.mockReset()
@@ -101,32 +95,10 @@ describe('useDescriptionTemplates', () => {
     expect(mocks.getList.mock.calls).toEqual([])
   })
 
-  it('returns the template for a name', async () => {
-    const template = makeDescriptionTemplate()
-    mocks.getDetail.mockResolvedValue(jsonResponse(template))
-
-    const { result } = renderHook(() => useDescriptionTemplate(template.name), {
-      wrapper,
-    })
-
-    await waitFor(() => {
-      expect(result.current.data).toEqual(template)
-    })
-  })
-
-  it('encodes names for detail, update, and delete requests', async () => {
+  it('encodes names for update and delete requests', async () => {
     const template = makeDescriptionTemplate({ name: 'Research/plan' })
-    mocks.getDetail.mockResolvedValue(jsonResponse(template))
     mocks.update.mockResolvedValue(jsonResponse(template))
     mocks.remove.mockResolvedValue({ ok: true, status: 204 })
-
-    const detail = renderHook(() => useDescriptionTemplate(template.name), {
-      wrapper,
-    })
-    await waitFor(() => {
-      expect(detail.result.current.data).toEqual(template)
-    })
-    detail.unmount()
 
     const update = renderHook(() => useUpdateDescriptionTemplate(), { wrapper })
     await act(async () => {
@@ -142,7 +114,6 @@ describe('useDescriptionTemplates', () => {
     })
 
     expect(getTemplateRequestCalls()).toEqual({
-      detail: [[{ param: { name: 'Research%2Fplan' } }]],
       update: [
         [
           {
@@ -155,7 +126,7 @@ describe('useDescriptionTemplates', () => {
     })
   })
 
-  it('invalidates the shared query key after each mutation', async () => {
+  it('refetches the template list after each mutation', async () => {
     const template = makeDescriptionTemplate()
     const input = {
       name: template.name,
@@ -164,15 +135,22 @@ describe('useDescriptionTemplates', () => {
       guide: template.guide,
       isDefault: template.isDefault,
     }
-    const expectedInvalidation = { queryKey: descriptionTemplateKeys.all }
-    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
+    mocks.getList.mockResolvedValue(jsonResponse([template]))
     mocks.create.mockResolvedValue(jsonResponse(template))
     mocks.update.mockResolvedValue(jsonResponse(template))
     mocks.remove.mockResolvedValue({ ok: true, status: 204 })
 
+    const list = renderHook(() => useDescriptionTemplates(), { wrapper })
+    await waitFor(() => {
+      expect(mocks.getList.mock.calls).toEqual([[]])
+    })
+
     const create = renderHook(() => useCreateDescriptionTemplate(), { wrapper })
     await act(async () => {
       await create.result.current.mutateAsync(input)
+    })
+    await waitFor(() => {
+      expect(mocks.getList.mock.calls).toEqual([[], []])
     })
 
     const update = renderHook(() => useUpdateDescriptionTemplate(), { wrapper })
@@ -182,16 +160,17 @@ describe('useDescriptionTemplates', () => {
         input: { isDefault: false },
       })
     })
+    await waitFor(() => {
+      expect(mocks.getList.mock.calls).toEqual([[], [], []])
+    })
 
     const remove = renderHook(() => useDeleteDescriptionTemplate(), { wrapper })
     await act(async () => {
       await remove.result.current.mutateAsync(template.name)
     })
-
-    expect(invalidateQueries.mock.calls).toEqual([
-      [expectedInvalidation],
-      [expectedInvalidation],
-      [expectedInvalidation],
-    ])
+    await waitFor(() => {
+      expect(mocks.getList.mock.calls).toEqual([[], [], [], []])
+    })
+    list.unmount()
   })
 })

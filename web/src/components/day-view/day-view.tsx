@@ -16,6 +16,7 @@ import {
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
 import { CompactMemoPanel } from '#components/day-view/compact-memo-panel'
+import { NowPanel, type NowPanelProps } from '#components/day-view/now-panel'
 import {
   QueuePane,
   type QueueSectionData,
@@ -114,13 +115,16 @@ export interface DayViewPresentationProps {
   /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
   initialMobileTab?: MobileTab
   layout?: 'default' | 'compact'
-  compactMemo?: {
-    context: MemoContext
-    memo: Memo | undefined
-    isLoading: boolean
-    loadError: boolean
-    onSave: (input: SaveMemoInput) => Promise<Memo>
-  }
+  nowPanel?: NowPanelProps
+  compactMemo?:
+    | {
+        context: MemoContext
+        memo: Memo | undefined
+        isLoading: boolean
+        loadError: boolean
+        onSave: (input: SaveMemoInput) => Promise<Memo>
+      }
+    | undefined
 }
 
 export function DayViewPresentation({
@@ -148,6 +152,7 @@ export function DayViewPresentation({
   kanbanFilterRow,
   initialMobileTab,
   layout = 'default',
+  nowPanel,
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
@@ -367,6 +372,8 @@ export function DayViewPresentation({
           }}
         >
           {activeViewMode === 'kanban' && kanbanFilterRow}
+
+          {isCompactLayout && nowPanel != null && <NowPanel {...nowPanel} />}
 
           {/* Summary header (today's queue only) */}
           <div className="border-b border-border py-2.5">

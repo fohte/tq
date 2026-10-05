@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
-import { assertDefined, findEditorText, waitForFocus } from '#lib/test-utils'
+import {
+  assertDefined,
+  findEditorText,
+  waitForEditorFocus,
+} from '#lib/test-utils'
 
 const TRAILING_BLOCKQUOTE_CONTENT =
   'Some intro text.\n\n> A blockquote at the very end.'
@@ -248,7 +252,7 @@ describe('MarkdownEditor edit sessions', () => {
       await waitFor(() =>
         expect(wrapper).toHaveAttribute('data-view-mode', 'edit'),
       )
-      await waitForFocus(getEditorRoot(container))
+      await waitForEditorFocus(getEditorRoot(container))
       await user.keyboard('{Escape}')
       await waitForMarkdownUpdateNotifications()
 
@@ -294,7 +298,7 @@ describe('MarkdownEditor edit sessions', () => {
       />,
     )
     await screen.findByText('Some intro text.')
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
 
     const blockquote = assertDefined(
       container.querySelector('.milkdown .ProseMirror blockquote'),
@@ -325,7 +329,7 @@ describe('MarkdownEditor edit sessions', () => {
     await waitFor(() => {
       expect(container.querySelector('.milkdown .ProseMirror p')).not.toBeNull()
     })
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
 
     const paragraph = assertDefined(
       container.querySelector('.milkdown .ProseMirror p'),
@@ -353,7 +357,7 @@ describe('MarkdownEditor edit sessions', () => {
       />,
     )
     await findEditorText('Some intro text.')
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
 
     const blockquote = assertDefined(
       container.querySelector('.milkdown .ProseMirror blockquote'),
@@ -431,7 +435,7 @@ describe('MarkdownEditor controlled editing', () => {
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'open editor' }))
     const proseMirrorRoot = getEditorRoot(container)
-    await waitForFocus(proseMirrorRoot)
+    await waitForEditorFocus(proseMirrorRoot)
     await user.keyboard('!')
 
     const editedText = await findEditorText('!Some intro text.')
@@ -455,7 +459,7 @@ describe('MarkdownEditor controlled editing', () => {
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'open editor' }))
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
     await user.keyboard('{Escape}')
 
     expect(getModeAndEvents(wrapper, events)).toEqual({
@@ -475,7 +479,7 @@ describe('MarkdownEditor controlled editing', () => {
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'open editor' }))
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
     await user.click(screen.getByRole('button', { name: 'outside editor' }))
 
     expect(getModeAndEvents(wrapper, events)).toEqual({
@@ -562,7 +566,7 @@ describe('MarkdownEditor external updates', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'open editor' }))
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
     await user.click(blockquote)
     await user.keyboard('!')
 
@@ -597,7 +601,7 @@ describe('MarkdownEditor external updates', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'open editor' }))
-    await waitForFocus(getEditorRoot(container))
+    await waitForEditorFocus(getEditorRoot(container))
     await user.click(blockquote)
     await user.keyboard('!')
 
