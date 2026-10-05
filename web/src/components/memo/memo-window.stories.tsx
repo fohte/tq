@@ -45,6 +45,13 @@ export const Personal: Story = {
   },
 }
 
+export const DesktopWindowControls: Story = {
+  name: 'the window reserves space for desktop window controls',
+  args: {
+    desktopWindowControls: true,
+  },
+}
+
 export const Loading: Story = {
   name: 'the window shows a loading message while the memo is fetched',
   args: {
