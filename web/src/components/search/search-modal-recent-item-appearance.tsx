@@ -26,6 +26,5 @@ export function SearchModalRecentItem({
         {item.title}
       </span>
     </>,
-    { className: 'gap-3' },
   ).render({ isSelected, onMouseMove })
 }
