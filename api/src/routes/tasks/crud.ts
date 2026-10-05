@@ -11,10 +11,6 @@ import {
   resolveCreateBlockedByInputs,
   resolveUpdateBlockedByInputs,
 } from '#routes/tasks/blocked-by'
-import {
-  taskDescriptionTemplateErrorBody,
-  validateTaskDescriptionTemplate,
-} from '#routes/tasks/description-template-validation'
 import { queryTaskList } from '#routes/tasks/list-query'
 import {
   getGithubLinksByTaskId,
@@ -33,6 +29,12 @@ import {
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
 import {
+  checkTaskCreate,
+  checkTaskUpdate,
+  taskConventionViolationBody,
+  taskDescriptionTemplateIdForCreate,
+} from '#services/task-conventions'
+import {
   GithubBlockerSubjectConflictError,
   insertTaskGithubBlockers,
   type PreparedGithubBlockers,
@@ -46,12 +48,20 @@ export const tasksCrudApp = new Hono()
     const input = c.req.valid('json')
     const author = c.get('author')
 
-    if (author.kind === 'llm') {
-      const validation = await validateTaskDescriptionTemplate(input)
-      if (validation !== null) {
-        return c.json(taskDescriptionTemplateErrorBody(validation), 400)
-      }
+    const conventionViolation = await checkTaskCreate(author, {
+      template: input.template,
+      description: input.description,
+    })
+    if (conventionViolation !== null) {
+      return c.json(
+        taskConventionViolationBody(conventionViolation, 'creation'),
+        400,
+      )
     }
+    const descriptionTemplateId = await taskDescriptionTemplateIdForCreate(
+      author,
+      { template: input.template },
+    )
 
     let parentId: string | null = null
     if (input.parentId != null) {
@@ -122,6 +132,7 @@ export const tasksCrudApp = new Hono()
             .values({
               title: input.title,
               description: input.description ?? null,
+              descriptionTemplateId,
               startDate: input.startDate ?? null,
               dueDate: templateFields?.occurrenceDate ?? input.dueDate ?? null,
               estimatedMinutes: input.estimatedMinutes ?? null,
@@ -219,6 +230,20 @@ export const tasksCrudApp = new Hono()
           {
             error: 'Cannot edit recurrence on a task generated from a template',
           },
+          400,
+        )
+      }
+
+      const conventionViolation = await checkTaskUpdate(
+        author,
+        existing,
+        'description' in taskFields
+          ? { description: taskFields.description }
+          : {},
+      )
+      if (conventionViolation !== null) {
+        return c.json(
+          taskConventionViolationBody(conventionViolation, 'update'),
           400,
         )
       }
