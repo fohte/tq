@@ -244,9 +244,9 @@ function TaskStatusToggle({
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="plain"
       onClick={handleToggle}
-      className="h-auto min-h-0 w-auto gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 mt-1 shrink-0"
+      className="mt-1 shrink-0"
     >
       <StatusIcon
         status={status}
