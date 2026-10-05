@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { Panel } from '@fohte/ui/panel'
 import { Link2, Plus } from 'lucide-react'
 import { useState } from 'react'
 
@@ -6,7 +7,6 @@ import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { ContextValue } from '#components/task/create-task-modal-fields'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Panel } from '#components/ui/panel'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import type { Task } from '#hooks/use-tasks'
@@ -83,7 +83,7 @@ export function TaskSubtasksList({
           </span>
         )}
       </div>
-      <Panel>
+      <Panel padding="none">
         {subtasks.map((subtask) => (
           <TaskRowAppearance key={subtask.id} task={subtask} />
         ))}
