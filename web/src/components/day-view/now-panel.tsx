@@ -37,6 +37,12 @@ function JoinMeetingButton({
   )
 }
 
+function getActivityStatusClassName(isOverrun: boolean): string {
+  return isOverrun
+    ? 'text-xs font-medium text-destructive'
+    : 'text-xs text-muted-foreground'
+}
+
 export function NowPanel({
   timeBlocks,
   calendarEvents,
@@ -86,57 +92,45 @@ export function NowPanel({
                   size="large"
                   belowMetadata={
                     <div
-                      className={
-                        activity.isOverrun
-                          ? 'text-xs font-medium text-destructive'
-                          : 'text-xs text-muted-foreground'
-                      }
+                      className={getActivityStatusClassName(activity.isOverrun)}
                     >
                       {activity.statusLabel}
                     </div>
                   }
                 />
-              ) : activity.meetingUrl == null ? (
-                <div
-                  key={activity.key}
-                  className="flex min-h-10 items-baseline justify-between gap-3 py-2"
-                >
-                  <span className="min-w-0 break-words text-base font-medium">
-                    {activity.title}
-                  </span>
-                  <span
-                    className={
-                      activity.isOverrun
-                        ? 'shrink-0 text-xs font-medium text-destructive'
-                        : 'shrink-0 text-xs text-muted-foreground'
-                    }
-                  >
-                    {activity.statusLabel}
-                  </span>
-                </div>
               ) : (
                 <div
                   key={activity.key}
-                  className="flex min-h-10 items-center justify-between gap-3 py-2"
+                  className={
+                    activity.meetingUrl == null
+                      ? 'flex min-h-10 items-baseline justify-between gap-3 py-2'
+                      : 'flex min-h-10 items-center justify-between gap-3 py-2'
+                  }
                 >
                   <span className="min-w-0 break-words text-base font-medium">
                     {activity.title}
                   </span>
-                  <div className="flex shrink-0 items-center gap-2">
+                  {activity.meetingUrl == null ? (
                     <span
-                      className={
-                        activity.isOverrun
-                          ? 'text-xs font-medium text-destructive'
-                          : 'text-xs text-muted-foreground'
-                      }
+                      className={`shrink-0 ${getActivityStatusClassName(activity.isOverrun)}`}
                     >
                       {activity.statusLabel}
                     </span>
-                    <JoinMeetingButton
-                      title={activity.title}
-                      meetingUrl={activity.meetingUrl}
-                    />
-                  </div>
+                  ) : (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={getActivityStatusClassName(
+                          activity.isOverrun,
+                        )}
+                      >
+                        {activity.statusLabel}
+                      </span>
+                      <JoinMeetingButton
+                        title={activity.title}
+                        meetingUrl={activity.meetingUrl}
+                      />
+                    </div>
+                  )}
                 </div>
               ),
             )}
