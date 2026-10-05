@@ -5,6 +5,7 @@ import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { getSearchKeybinding } from '#lib/keybindings'
 
 const navigateMock = vi.fn(() => Promise.resolve())
+let windowOpenCalls: unknown[][]
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigateMock,
@@ -25,7 +26,7 @@ function fireKey(
   return event
 }
 
-function searchShortcutOutcome(calls: unknown[], event: KeyboardEvent) {
+function shortcutOutcome(calls: unknown[], event: KeyboardEvent) {
   return { calls, defaultPrevented: event.defaultPrevented }
 }
 
@@ -59,6 +60,15 @@ describe('useGlobalKeybindings', () => {
   beforeEach(() => {
     navigateMock.mockClear()
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
+    windowOpenCalls = []
+    vi.spyOn(window, 'open').mockImplementation((...args) => {
+      windowOpenCalls.push(args)
+      return null
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('toggles search open on Cmd+K on macOS', () => {
@@ -67,9 +77,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { metaKey: true })
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [[true]], defaultPrevented: true },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [[true]],
+      defaultPrevented: true,
+    })
   })
 
   it('toggles search closed on Cmd+K on macOS when already open', () => {
@@ -87,9 +98,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true })
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [], defaultPrevented: false },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
   })
 
   it('leaves Ctrl+K to the OS/browser on macOS while typing in an input', () => {
@@ -100,9 +112,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true }, input)
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [], defaultPrevented: false },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
     input.remove()
   })
 
@@ -114,9 +127,10 @@ describe('useGlobalKeybindings', () => {
 
       const event = fireKey('k', { ctrlKey: true })
 
-      expect(
-        searchShortcutOutcome(onSearchOpenChange.mock.calls, event),
-      ).toEqual({ calls: [[true]], defaultPrevented: true })
+      expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+        calls: [[true]],
+        defaultPrevented: true,
+      })
     },
   )
 
@@ -126,9 +140,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true })
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [[false]], defaultPrevented: true },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [[false]],
+      defaultPrevented: true,
+    })
   })
 
   it('toggles search open on Ctrl+K on Linux while typing in an input', () => {
@@ -139,9 +154,10 @@ describe('useGlobalKeybindings', () => {
 
     const event = fireKey('k', { ctrlKey: true }, input)
 
-    expect(searchShortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual(
-      { calls: [[true]], defaultPrevented: true },
-    )
+    expect(shortcutOutcome(onSearchOpenChange.mock.calls, event)).toEqual({
+      calls: [[true]],
+      defaultPrevented: true,
+    })
     input.remove()
   })
 
@@ -191,6 +207,26 @@ describe('useGlobalKeybindings', () => {
     expect(onNewTask).toHaveBeenCalledTimes(1)
   })
 
+  it('opens the memo window on m', () => {
+    setup()
+    const event = fireKey('m')
+
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [['/memo?layout=compact']],
+      defaultPrevented: true,
+    })
+  })
+
+  it('leaves Shift+M to the calendar month-view shortcut', () => {
+    setup()
+    const event = fireKey('M', { shiftKey: true })
+
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
+  })
+
   it('ignores single-key shortcuts while typing in an input', () => {
     const input = document.createElement('input')
     document.body.appendChild(input)
@@ -199,6 +235,19 @@ describe('useGlobalKeybindings', () => {
     fireKey('n', {}, input)
 
     expect(onNewTask).not.toHaveBeenCalled()
+    input.remove()
+  })
+
+  it('ignores the memo shortcut while typing in an input', () => {
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+
+    const event = fireKey('m', {}, input)
+
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
     input.remove()
   })
 
@@ -212,12 +261,34 @@ describe('useGlobalKeybindings', () => {
     document.documentElement.removeAttribute('data-base-ui-scroll-locked')
   })
 
+  it('ignores the memo shortcut while a Base UI dialog is open', () => {
+    document.documentElement.setAttribute('data-base-ui-scroll-locked', '')
+
+    const event = fireKey('m')
+
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
+  })
+
   it('ignores single-key shortcuts while the search modal is open', () => {
     const { onNewTask } = setup(true)
 
     fireKey('n')
 
     expect(onNewTask).not.toHaveBeenCalled()
+  })
+
+  it('ignores the memo shortcut while the search modal is open', () => {
+    setup(true)
+
+    const event = fireKey('m')
+
+    expect(shortcutOutcome(windowOpenCalls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
   })
 
   it('still handles Cmd+K while typing in an input', () => {

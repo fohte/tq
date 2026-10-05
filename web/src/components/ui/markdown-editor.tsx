@@ -8,6 +8,8 @@ interface MarkdownEditorCommonProps {
   /** Reports the focused editor after a document change so callers can read its current Markdown. */
   onFocusedDocumentChange?: (readMarkdown: () => string) => void
   placeholder?: string
+  /** Focus the editor at the end of the document after it initializes. */
+  focusAtEnd?: boolean
   /**
    * Default min-height: 'default' (400px) for a primary/full editing
    * surface, 'compact' (120px) for a few-lines inline editor, 'fit' for no
@@ -70,6 +72,7 @@ export function MarkdownEditor({
   editing,
   onEditingChange,
   onExitEditMode,
+  focusAtEnd = false,
   size = 'default',
   ...editorProps
 }: MarkdownEditorProps) {
@@ -131,8 +134,9 @@ export function MarkdownEditor({
         <CrepeEditorRoot
           {...editorProps}
           mode={mode}
-          focusOnEdit={isControlled}
-          skipNoopChanges={isControlled}
+          focusOnEdit={isControlled || focusAtEnd}
+          focusAtEnd={focusAtEnd}
+          skipNoopChanges={isControlled || focusAtEnd}
         />
       </Suspense>
     </div>

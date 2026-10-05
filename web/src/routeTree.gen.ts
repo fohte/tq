@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TodayRouteImport } from './routes/today'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as MemoRouteImport } from './routes/memo'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,6 +31,11 @@ const TodayRoute = TodayRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemoRoute = MemoRouteImport.update({
+  id: '/memo',
+  path: '/memo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/inbox': typeof InboxRoute
+  '/memo': typeof MemoRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/inbox': typeof InboxRoute
+  '/memo': typeof MemoRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/browse': typeof BrowseRoute
   '/inbox': typeof InboxRoute
+  '/memo': typeof MemoRoute
   '/settings': typeof SettingsRoute
   '/today': typeof TodayRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/inbox'
+    | '/memo'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/inbox'
+    | '/memo'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/browse'
     | '/inbox'
+    | '/memo'
     | '/settings'
     | '/today'
     | '/projects/$projectId'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrowseRoute: typeof BrowseRoute
   InboxRoute: typeof InboxRoute
+  MemoRoute: typeof MemoRoute
   SettingsRoute: typeof SettingsRoute
   TodayRoute: typeof TodayRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memo': {
+      id: '/memo'
+      path: '/memo'
+      fullPath: '/memo'
+      preLoaderRoute: typeof MemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -279,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrowseRoute: BrowseRoute,
   InboxRoute: InboxRoute,
+  MemoRoute: MemoRoute,
   SettingsRoute: SettingsRoute,
   TodayRoute: TodayRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
