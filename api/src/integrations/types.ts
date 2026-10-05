@@ -119,6 +119,7 @@ type CalendarResponseStatus =
 export interface ExternalEvent {
   id: string
   summary: string
+  meetingUrl: string | null
   startTime: string
   endTime: string
   isAllDay: boolean
@@ -148,9 +149,9 @@ export interface ExternalEvent {
    */
   busy: boolean
   /**
-   * True when `summary`/`calendarDisplayName`/`calendarColor`/`eventType`/
-   * `hasOtherAttendees` are masked because this event's calendar context
-   * doesn't match the requested one.
+   * True when `summary`/`meetingUrl`/`calendarDisplayName`/`calendarColor`/
+   * `eventType`/`hasOtherAttendees` are masked because this event's calendar
+   * context doesn't match the requested one.
    */
   redacted: boolean
 }

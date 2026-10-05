@@ -171,6 +171,33 @@ export const MeetingInProgress: Story = {
   },
 }
 
+export const MeetingJoinButtons: Story = {
+  name: 'active and upcoming meetings offer a Join button',
+  args: {
+    now,
+    timeBlocks: [],
+    calendarEvents: [
+      makeTimeBlockEvent({
+        id: 'meeting-current',
+        title: 'Product review',
+        start: localTime(9, 14),
+        end: localTime(9, 15),
+        type: 'gcal-meeting',
+        meetingUrl: 'https://meet.example.com/current-room',
+      }),
+      makeTimeBlockEvent({
+        id: 'meeting-next',
+        title: 'Planning call',
+        start: localTime(9, 15),
+        end: localTime(9, 15, 30),
+        type: 'gcal-meeting',
+        meetingUrl: 'https://meet.example.com/next-room',
+      }),
+    ],
+    taskMap: taskMap(),
+  },
+}
+
 export const NoBlockNow: Story = {
   name: 'the panel shows when no block is active',
   args: {
