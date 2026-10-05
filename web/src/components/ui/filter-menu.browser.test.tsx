@@ -18,7 +18,7 @@ beforeEach(() => {
   })
 })
 
-function getFilterMenuState(outside: HTMLButtonElement) {
+function getFilterMenuState(outside: HTMLElement) {
   return {
     popupText: screen.queryByText('popover content')?.textContent ?? null,
     focusMovedOutside: document.activeElement === outside,
