@@ -44,6 +44,14 @@ export function isGcalEventType(type: CalendarEventProps['type']): boolean {
   return type != null && type.startsWith('gcal')
 }
 
+export function getGcalEventDetails(
+  props: CalendarEventProps,
+): CalendarGcalEventDetails | null {
+  return isGcalEventType(props.type) && props.redacted !== true
+    ? (props.gcalDetails ?? null)
+    : null
+}
+
 const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
   'manual',
   'auto',

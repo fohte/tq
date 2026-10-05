@@ -440,6 +440,7 @@ describe('GET /api/calendar/events', () => {
           },
         ],
         responseStatus: 'tentative',
+        selfResponseStatus: 'tentative',
         hasOtherAttendees: true,
       }),
       makeExternalEvent({
@@ -470,6 +471,7 @@ describe('GET /api/calendar/events', () => {
             isOrganizer: true,
           },
         ],
+        selfResponseStatus: null,
         hasOtherAttendees: true,
       }),
     ])

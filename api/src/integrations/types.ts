@@ -141,6 +141,7 @@ export interface ExternalEvent {
   calendarDisplayName: string | null
   calendarColor: string | null
   responseStatus: CalendarResponseStatus
+  selfResponseStatus: CalendarResponseStatus | null
   /**
    * Google's event type: `default` for a normal event, `outOfOffice` /
    * `focusTime` / `workingLocation` for the status events that describe

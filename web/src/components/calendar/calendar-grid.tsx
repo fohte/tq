@@ -39,6 +39,7 @@ import { formatHm, getDayRange, getScrollTime } from '#lib/calendar-grid-time'
 import {
   findHoveredSlot,
   getEventProps,
+  getGcalEventDetails,
   isClickableEvent,
   isGcalEventType,
   isPendingGcalResponse,
@@ -118,7 +119,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const [slotGhost, setSlotGhost] = useState<SlotGhostRect | null>(null)
     const [selectedGcalEvent, setSelectedGcalEvent] =
       useState<CalendarGcalEventDetails | null>(null)
-    const gcalEventAnchorRef = useRef<Element | null>(null)
+    const [gcalEventAnchorRect, setGcalEventAnchorRect] =
+      useState<DOMRect | null>(null)
+    const gcalEventAnchorRef = useRef<HTMLDivElement | null>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,
       () => fullCalendarRef.current,
@@ -233,9 +236,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleEventClick = (info: EventClickArg) => {
       const props = getEventProps(info.event)
       if (isGcalEventType(props.type)) {
-        if (props.redacted !== true && props.gcalDetails != null) {
-          gcalEventAnchorRef.current = info.el
-          setSelectedGcalEvent(props.gcalDetails)
+        const gcalDetails = getGcalEventDetails(props)
+        if (gcalDetails != null) {
+          setGcalEventAnchorRect(info.el.getBoundingClientRect())
+          setSelectedGcalEvent(gcalDetails)
         }
         return
       }
@@ -457,15 +461,34 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             }
           />
         )}
-        {selectedGcalEvent != null && (
-          <GcalEventDetailPopover
-            anchor={gcalEventAnchorRef}
-            event={selectedGcalEvent}
-            open={true}
-            onOpenChange={(open) => {
-              if (!open) setSelectedGcalEvent(null)
-            }}
-          />
+        {selectedGcalEvent != null && gcalEventAnchorRect != null && (
+          <>
+            <div
+              ref={gcalEventAnchorRef}
+              aria-hidden="true"
+              data-gcal-event-popover-anchor
+              style={{
+                position: 'fixed',
+                left: gcalEventAnchorRect.left,
+                top: gcalEventAnchorRect.top,
+                width: gcalEventAnchorRect.width,
+                height: gcalEventAnchorRect.height,
+                opacity: 0,
+                pointerEvents: 'none',
+              }}
+            />
+            <GcalEventDetailPopover
+              anchor={gcalEventAnchorRef}
+              event={selectedGcalEvent}
+              open={true}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedGcalEvent(null)
+                  setGcalEventAnchorRect(null)
+                }
+              }}
+            />
+          </>
         )}
       </div>
     )

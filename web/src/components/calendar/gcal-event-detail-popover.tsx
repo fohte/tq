@@ -130,12 +130,6 @@ function getPersonIdentity(
   return email == null || email === '' ? null : email
 }
 
-function getAttendeeIdentity(
-  attendee: CalendarGcalEventDetails['attendees'][number],
-): string | null {
-  return getPersonIdentity(attendee)
-}
-
 function getOrganizerIdentity(event: CalendarGcalEventDetails): string | null {
   return (
     getPersonIdentity(event.organizer) ??
@@ -177,7 +171,7 @@ export function GcalEventDetailPopover({
   onOpenChange,
 }: GcalEventDetailPopoverProps) {
   const attendees = event.attendees
-    .map((attendee) => ({ attendee, identity: getAttendeeIdentity(attendee) }))
+    .map((attendee) => ({ attendee, identity: getPersonIdentity(attendee) }))
     .filter(
       (
         entry,

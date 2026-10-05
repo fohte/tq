@@ -54,6 +54,7 @@ describe('useDayViewCalendarEvents', () => {
     const selfResponseMeeting = makeGcalEvent({
       id: 'self-response-meeting',
       summary: 'RSVP check',
+      selfResponseStatus: 'tentative',
       attendees: [
         {
           email: 'self@example.org',

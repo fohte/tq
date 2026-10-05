@@ -22,6 +22,7 @@ export function makeExternalEvent(
     calendarDisplayName: null,
     calendarColor: null,
     responseStatus: 'accepted',
+    selfResponseStatus: null,
     eventType: 'default',
     hasOtherAttendees: false,
     busy: true,

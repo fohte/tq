@@ -45,6 +45,8 @@ const endDate = formatLocalDate(end)
 const nextDay = new Date(start)
 nextDay.setDate(nextDay.getDate() + 1)
 const nextDayDate = formatLocalDate(nextDay)
+const detailStart = new Date('2031-04-09T15:00:00.000Z')
+const detailEnd = new Date('2031-04-09T15:30:00.000Z')
 
 function makeCalendarEvent(
   overrides: Partial<TimeBlockEvent> = {},
@@ -82,9 +84,9 @@ function renderCalendarEvent(
 function readEventOverview(popup: HTMLElement) {
   return {
     title: popup.querySelector('h2')?.textContent,
-    detailRows: Array.from(popup.querySelectorAll('p'))
-      .slice(1)
-      .map((row) => row.textContent),
+    detailRows: Array.from(popup.querySelectorAll('p')).map(
+      (row) => row.textContent,
+    ),
     links: Array.from(popup.querySelectorAll('a')).map((link) => ({
       text: link.textContent,
       href: link.href,
@@ -92,6 +94,34 @@ function readEventOverview(popup: HTMLElement) {
     joinButton: within(popup).getByRole('button', { name: 'Join meeting' })
       .textContent,
   }
+}
+
+function formatExpectedDate(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date)
+}
+
+function formatExpectedTime(date: Date): string {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function readAnchorPosition(anchor: HTMLElement | null) {
+  return anchor == null
+    ? null
+    : {
+        position: anchor.style.position,
+        left: anchor.style.left,
+        top: anchor.style.top,
+        width: anchor.style.width,
+        height: anchor.style.height,
+      }
 }
 
 function readDescription(description: HTMLElement) {
@@ -142,6 +172,7 @@ describe('GcalEventDetailPopover', () => {
     expect(readEventOverview(popup)).toEqual({
       title: 'Planning session',
       detailRows: [
+        `${formatExpectedDate(detailStart)} · ${formatExpectedTime(detailStart)}–${formatExpectedTime(detailEnd)}`,
         'Project calendar',
         'North conference room',
         'Your response: Accepted',
@@ -159,6 +190,73 @@ describe('GcalEventDetailPopover', () => {
           href: 'https://calendar.example.org/event',
         },
       ],
+      joinButton: 'Join meeting',
+    })
+  })
+
+  it('shows the inclusive final date of a multi-day all-day event', () => {
+    const startDate = new Date(2031, 3, 9)
+    const inclusiveEndDate = new Date(2031, 3, 10)
+    const exclusiveEndDate = new Date(2031, 3, 11)
+    render(
+      <DetailHarness
+        event={makeCalendarGcalEventDetails({
+          title: 'Workshop',
+          start: formatLocalDate(startDate),
+          end: formatLocalDate(exclusiveEndDate),
+          allDay: true,
+          calendarDisplayName: null,
+          calendarColor: null,
+          responseStatus: null,
+          location: null,
+          organizer: null,
+          attendees: [],
+          description: null,
+          htmlLink: null,
+        })}
+      />,
+    )
+
+    expect(
+      readEventOverview(screen.getByLabelText('Calendar event details')),
+    ).toEqual({
+      title: 'Workshop',
+      detailRows: [
+        `${formatExpectedDate(startDate)} – ${formatExpectedDate(inclusiveEndDate)}`,
+      ],
+      links: [],
+      joinButton: 'Join meeting',
+    })
+  })
+
+  it('shows dates on both sides of a timed event that crosses midnight', () => {
+    const startDate = new Date(2031, 3, 9, 23, 30)
+    const endDate = new Date(2031, 3, 10, 0, 30)
+    render(
+      <DetailHarness
+        event={makeCalendarGcalEventDetails({
+          start: startDate.toISOString(),
+          end: endDate.toISOString(),
+          calendarDisplayName: null,
+          calendarColor: null,
+          responseStatus: null,
+          location: null,
+          organizer: null,
+          attendees: [],
+          description: null,
+          htmlLink: null,
+        })}
+      />,
+    )
+
+    expect(
+      readEventOverview(screen.getByLabelText('Calendar event details')),
+    ).toEqual({
+      title: 'Planning session',
+      detailRows: [
+        `${formatExpectedDate(startDate)} ${formatExpectedTime(startDate)} – ${formatExpectedDate(endDate)} ${formatExpectedTime(endDate)}`,
+      ],
+      links: [],
       joinButton: 'Join meeting',
     })
   })
@@ -347,6 +445,52 @@ describe('Google Calendar event clicks', () => {
 
     await waitFor(() => {
       expect(document.querySelector('[data-calendar-event-details]')).toBeNull()
+    })
+  })
+
+  it('keeps the popover anchored after the calendar event is refreshed', async () => {
+    const { container, rerender } = renderCalendarEvent(
+      'day',
+      makeCalendarEvent(),
+    )
+    const user = userEvent.setup()
+    const eventText = await within(container).findByText('Planning session')
+    const eventElement = eventText.closest<HTMLElement>('.fc-event')
+    if (eventElement == null) throw new Error('Calendar event was not rendered')
+    const rect = eventElement.getBoundingClientRect()
+
+    await user.click(eventText)
+    await screen.findByRole('heading', { name: 'Planning session' })
+
+    rerender(
+      <div data-testid="outside-calendar" style={{ height: '100vh' }}>
+        <CalendarGrid
+          events={[
+            makeCalendarEvent({
+              title: 'Updated planning session',
+              gcalDetails: makeCalendarGcalEventDetails({
+                title: 'Updated planning session',
+              }),
+            }),
+          ]}
+          activeView="day"
+          initialDate={start}
+          initialScrollTime="08:00:00"
+        />
+      </div>,
+    )
+    await within(container).findByText('Updated planning session')
+
+    expect(
+      readAnchorPosition(
+        document.querySelector<HTMLElement>('[data-gcal-event-popover-anchor]'),
+      ),
+    ).toEqual({
+      position: 'fixed',
+      left: `${String(Number(rect.left.toFixed(2)))}px`,
+      top: `${String(Number(rect.top.toFixed(2)))}px`,
+      width: `${String(Number(rect.width.toFixed(2)))}px`,
+      height: `${String(Number(rect.height.toFixed(2)))}px`,
     })
   })
 

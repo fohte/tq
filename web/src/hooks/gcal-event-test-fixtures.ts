@@ -15,6 +15,7 @@ export function makeGcalEvent(overrides: Partial<GcalEvent> = {}): GcalEvent {
     calendarDisplayName: null,
     calendarColor: null,
     responseStatus: 'accepted',
+    selfResponseStatus: null,
     htmlLink: null,
     location: null,
     description: null,

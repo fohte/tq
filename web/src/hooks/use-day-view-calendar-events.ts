@@ -76,9 +76,6 @@ export function useDayViewCalendarEvents({
         trimmedMeetingUrl == null || trimmedMeetingUrl === ''
           ? null
           : trimmedMeetingUrl
-      const selfResponseStatus =
-        event.attendees.find((attendee) => attendee.isSelf)?.responseStatus ??
-        null
       return {
         id: `gcal-${event.id}`,
         title: event.summary,
@@ -99,7 +96,7 @@ export function useDayViewCalendarEvents({
                 allDay: event.isAllDay,
                 calendarDisplayName: event.calendarDisplayName,
                 calendarColor: event.calendarColor,
-                responseStatus: selfResponseStatus,
+                responseStatus: event.selfResponseStatus,
                 meetingUrl,
                 htmlLink: event.htmlLink,
                 location: event.location,

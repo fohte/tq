@@ -234,6 +234,9 @@ export const googleCalendarProvider = {
                   (attendee) =>
                     attendee.organizer === true && attendee.resource !== true,
                 )
+              const selfAttendee = event.attendees?.find(
+                (attendee) => attendee.self === true,
+              )
 
               return {
                 id: event.id,
@@ -273,9 +276,8 @@ export const googleCalendarProvider = {
                 isAllDay: event.start.dateTime == null,
                 source: PROVIDER_ID,
                 calendarId,
-                responseStatus:
-                  event.attendees?.find((attendee) => attendee.self === true)
-                    ?.responseStatus ?? 'accepted',
+                responseStatus: selfAttendee?.responseStatus ?? 'accepted',
+                selfResponseStatus: selfAttendee?.responseStatus ?? null,
                 eventType: event.eventType ?? 'default',
                 hasOtherAttendees:
                   event.attendees?.some(

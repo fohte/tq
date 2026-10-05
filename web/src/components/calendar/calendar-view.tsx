@@ -46,7 +46,7 @@ export interface TimeBlockEvent {
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
-  /** Google Meet URL; redacted and blank values are omitted by event mapping */
+  /** Google Calendar video conference URL; redacted and blank values are omitted */
   meetingUrl?: string
   /** Details shown by the click popover; omitted for redacted events. */
   gcalDetails?: CalendarGcalEventDetails
