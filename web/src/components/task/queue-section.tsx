@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { Chip } from '@fohte/ui/chip'
 
 import { QueueItemRow } from '#components/task/queue-item-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
@@ -7,7 +8,6 @@ import {
   getTaskRowTimeBlockExtras,
   type TaskRowTimeBlockState,
 } from '#components/task/task-row-time-block'
-import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 

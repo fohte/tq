@@ -18,6 +18,10 @@ function fireKey(
   return event
 }
 
+function shortcutOutcome(calls: unknown[], event: KeyboardEvent) {
+  return { calls, defaultPrevented: event.defaultPrevented }
+}
+
 function setup() {
   const onToday = vi.fn()
   const onPrev = vi.fn()
@@ -61,13 +65,30 @@ describe('useCalendarKeybindings', () => {
   it.each([
     ['d', 'day'],
     ['w', 'week'],
-    ['m', 'month'],
   ] as const)('calls onViewChange with %s on %s', (key, view) => {
     const { onViewChange } = setup()
 
     fireKey(key)
 
     expect(onViewChange).toHaveBeenCalledExactlyOnceWith(view)
+  })
+
+  it('leaves m for the memo shortcut', () => {
+    const { onViewChange } = setup()
+    const event = fireKey('m')
+
+    expect(shortcutOutcome(onViewChange.mock.calls, event)).toEqual({
+      calls: [],
+      defaultPrevented: false,
+    })
+  })
+
+  it('calls onViewChange with month on Shift+M', () => {
+    const { onViewChange } = setup()
+
+    fireKey('M', { shiftKey: true })
+
+    expect(onViewChange.mock.calls).toEqual([['month']])
   })
 
   it('ignores shortcuts while typing in an input', () => {

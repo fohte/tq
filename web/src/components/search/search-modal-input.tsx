@@ -1,9 +1,9 @@
 import { Button } from '@fohte/ui/button'
+import { Chip } from '@fohte/ui/chip'
 import { Input } from '@fohte/ui/input'
 import { Loader2, X } from 'lucide-react'
 
 import type { SearchMode } from '#components/search/search-modal-mode'
-import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import type { SearchScopeLabel } from '#hooks/use-search-scope-labels'
 
@@ -104,28 +104,22 @@ function RemovableScopeChip({
   onRemove: () => void
 }) {
   return (
-    <Chip
-      size="md"
-      active
-      className="max-w-32 gap-1 py-px pr-0.5"
-      data-testid={testId}
-      title={label}
-    >
-      <span className="min-w-0 truncate">{label}</span>
-      <Button
-        type="button"
-        variant="ghost"
-        aria-label={`Remove ${label} scope`}
-        className="h-auto min-h-0 w-auto shrink-0 gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
-        onClick={onRemove}
+    <span className="flex max-w-32 min-w-0">
+      <Chip
+        size="md"
+        tone="strong"
+        data-testid={testId}
+        title={label}
+        onRemove={onRemove}
+        removeLabel={`Remove ${label} scope`}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.stopPropagation()
           }
         }}
       >
-        <X className="size-2.5" aria-hidden="true" />
-      </Button>
-    </Chip>
+        <span className="min-w-0 max-w-24 truncate">{label}</span>
+      </Chip>
+    </span>
   )
 }
