@@ -87,6 +87,7 @@ erDiagram
   timestamp_with_time_zone remind_at
   text template_id FK
   date occurrence_date
+  uuid description_template_id FK
 }
 ```
 

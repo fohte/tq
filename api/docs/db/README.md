@@ -86,6 +86,7 @@ erDiagram
 "public.tasks" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE SET NULL"
+"public.tasks" }o--o| "public.task_description_templates" : "FOREIGN KEY (description_template_id) REFERENCES task_description_templates(id) ON DELETE SET NULL"
 "public.time_blocks" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_queue_items" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_queue_items" }o--|| "public.task_queues" : "FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE"
@@ -209,6 +210,7 @@ erDiagram
   timestamp_with_time_zone remind_at
   text template_id FK
   date occurrence_date
+  uuid description_template_id FK
 }
 "public.time_blocks" {
   text id
