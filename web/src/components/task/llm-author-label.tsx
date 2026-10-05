@@ -1,4 +1,4 @@
-import { Chip } from '#components/ui/chip'
+import { Chip } from '@fohte/ui/chip'
 
 export interface AuthorInfo {
   kind: 'human' | 'llm' | 'system'
@@ -15,8 +15,8 @@ export function LlmAuthorLabel({
   if (author?.kind !== 'llm') return null
 
   return (
-    <Chip size="sm" className="shrink-0">
-      {author.agent}
-    </Chip>
+    <span className="shrink-0">
+      <Chip size="sm">{author.agent}</Chip>
+    </span>
   )
 }
