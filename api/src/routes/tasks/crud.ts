@@ -3,7 +3,12 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { recurrenceRules, taskRelations, tasks } from '#db/schema'
+import {
+  recurrenceRules,
+  taskDescriptionTemplates,
+  taskRelations,
+  tasks,
+} from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
@@ -27,8 +32,8 @@ import { createTemplateFromTaskFields } from '#services/recurring-task-templates
 import {
   checkTaskCreate,
   checkTaskUpdate,
+  resolveTaskCreateTemplate,
   taskConventionViolationBody,
-  taskDescriptionTemplateIdForCreate,
 } from '#services/task-conventions'
 import {
   GithubBlockerSubjectConflictError,
@@ -44,8 +49,11 @@ export const tasksCrudApp = new Hono()
     const input = c.req.valid('json')
     const author = c.get('author')
 
-    const conventionViolation = await checkTaskCreate(author, {
+    const templateSelection = await resolveTaskCreateTemplate(author, {
       template: input.template,
+    })
+    const conventionViolation = checkTaskCreate(author, {
+      template: templateSelection,
       description: input.description,
     })
     if (conventionViolation !== null) {
@@ -54,11 +62,6 @@ export const tasksCrudApp = new Hono()
         400,
       )
     }
-    const descriptionTemplateId = await taskDescriptionTemplateIdForCreate(
-      author,
-      { template: input.template },
-    )
-
     let parentId: string | null = null
     if (input.parentId != null) {
       const resolved = await resolveParentId(input.parentId)
@@ -88,6 +91,17 @@ export const tasksCrudApp = new Hono()
 
     const { task, createdRule, labelNames } = await db.transaction(
       async (tx) => {
+        let descriptionTemplateId = templateSelection?.selected?.id ?? null
+        if (descriptionTemplateId !== null) {
+          // Keep deletion from racing between template selection and insertion.
+          const [selectedTemplate] = await tx
+            .select({ id: taskDescriptionTemplates.id })
+            .from(taskDescriptionTemplates)
+            .where(eq(taskDescriptionTemplates.id, descriptionTemplateId))
+            .for('key share')
+          descriptionTemplateId = selectedTemplate?.id ?? null
+        }
+
         // Setting recurrence creates a template and links the task as its first instance.
         let templateFields: {
           templateId: string

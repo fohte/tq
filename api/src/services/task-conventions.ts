@@ -20,6 +20,12 @@ export type TaskConventionViolation =
 
 type DescriptionTemplate = typeof taskDescriptionTemplates.$inferSelect
 
+export type TaskCreateTemplateSelection = {
+  requestedName: string | undefined
+  selected: DescriptionTemplate | undefined
+  templates: DescriptionTemplate[]
+}
+
 async function findCreateTemplate(templateName?: string): Promise<{
   selected: DescriptionTemplate | undefined
   templates: DescriptionTemplate[]
@@ -56,19 +62,32 @@ function appliesTaskConventions(author: Author): boolean {
   return author.kind === 'llm'
 }
 
-export async function checkTaskCreate(
+export async function resolveTaskCreateTemplate(
   author: Author,
-  input: { template?: string | undefined; description?: string | undefined },
-): Promise<TaskConventionViolation | null> {
+  input: { template?: string | undefined },
+): Promise<TaskCreateTemplateSelection | null> {
   if (!appliesTaskConventions(author)) return null
 
   const { selected, templates } = await findCreateTemplate(input.template)
+  return { requestedName: input.template, selected, templates }
+}
+
+export function checkTaskCreate(
+  author: Author,
+  input: {
+    template: TaskCreateTemplateSelection | null
+    description?: string | undefined
+  },
+): TaskConventionViolation | null {
+  if (!appliesTaskConventions(author) || input.template === null) return null
+
+  const { requestedName, selected, templates } = input.template
   if (selected === undefined) {
-    return input.template === undefined
+    return requestedName === undefined
       ? null
       : {
           kind: 'unknown-template',
-          template: input.template,
+          template: requestedName,
           templates: templates.map(({ name, whenToUse }) => ({
             name,
             whenToUse,
@@ -98,15 +117,6 @@ export async function checkTaskUpdate(
   return template === undefined
     ? null
     : descriptionViolation(template, update.description)
-}
-
-export async function taskDescriptionTemplateIdForCreate(
-  author: Author,
-  input: { template?: string | undefined },
-): Promise<string | null> {
-  if (!appliesTaskConventions(author)) return null
-  const { selected } = await findCreateTemplate(input.template)
-  return selected?.id ?? null
 }
 
 export function taskConventionViolationBody(

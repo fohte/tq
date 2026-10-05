@@ -2178,6 +2178,65 @@ describe('tasks CRUD API', () => {
       })
     })
 
+    it('rejects clearing an LLM description on a template-bound task', async () => {
+      const guide = 'Describe the goal.'
+      const originalDescription = '## Goal\nExplain the goal.'
+      await insertDescriptionTemplate({
+        name: 'clear-description-plan',
+        whenToUse: 'Use for tasks with a goal',
+        body: '## Goal',
+        guide,
+        isDefault: true,
+      })
+
+      const createRes = await createLlmTask({
+        title: 'Task with a required goal',
+        description: originalDescription,
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const template = firstOrThrow(
+        await db
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.name, 'clear-description-plan')),
+      )
+      const updateRes = await updateLlmTask(createdTask.id, {
+        description: null,
+      })
+      const updateBody = await jsonBody<Record<string, unknown>>(updateRes)
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['createStatus', createRes.status],
+          ['update', responseSnapshot(updateRes.status, updateBody)],
+          ['savedTask', savedTask],
+        ),
+      ).toEqual({
+        createStatus: 201,
+        update: responseSnapshot(400, {
+          error:
+            `Missing sections: ## Goal.\nGuide:\n${guide}\n` +
+            'Fill the sections and retry the task update.',
+          missingSections: ['## Goal'],
+          emptySections: [],
+          guide,
+        }),
+        savedTask: {
+          description: originalDescription,
+          descriptionTemplateId: template.id,
+        },
+      })
+    })
+
     it('accepts an LLM description edit when all saved template sections are filled', async () => {
       await insertDescriptionTemplate({
         name: 'complete-plan',
