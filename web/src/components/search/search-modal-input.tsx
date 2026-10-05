@@ -83,9 +83,9 @@ export function SearchModalInput({
       </KeybindHint>
       <Button
         type="button"
-        variant="plain"
+        variant="ghost"
         aria-label="Close search"
-        className="size-9 shrink-0 md:hidden"
+        className="size-9 shrink-0 rounded-none p-0 md:hidden"
         onClick={onClose}
       >
         <X className="size-4" aria-hidden="true" />
