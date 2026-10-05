@@ -28,6 +28,22 @@ let flushSideWindowBounds: (() => void) | undefined
 let pendingUrl: string | undefined
 
 const SIDE_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/?layout=compact`
+const isMacOS = process.platform === 'darwin'
+
+const createDesktopWindow = (
+  options: Electron.BrowserWindowConstructorOptions,
+) => {
+  const win = new BrowserWindow({
+    ...options,
+    ...(isMacOS ? { titleBarStyle: 'hidden' as const } : {}),
+  })
+
+  if (isMacOS) {
+    win.webContents.setUserAgent(`${win.webContents.getUserAgent()} TQDesktop`)
+  }
+
+  return win
+}
 
 // Both `loadURL` and `shell.openExternal` can reject; there is no caller to
 // hand the error to, so log it.
@@ -65,7 +81,11 @@ const openMainWindow = (url: string) => {
 }
 
 const createWindow = (url: string): BrowserWindow => {
-  const win = new BrowserWindow({ webPreferences: { sandbox: true } })
+  const win = createDesktopWindow({
+    // The sidebar provides the main window's titlebar spacing and drag region.
+    ...(isMacOS ? { minWidth: 768 } : {}),
+    webPreferences: { sandbox: true },
+  })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
   // state; `before-quit` lets a real quit through.
@@ -112,7 +132,7 @@ const createSideWindow = (): BrowserWindow => {
           loadedBounds,
           screen.getDisplayMatching(loadedBounds).workArea,
         )
-  const win = new BrowserWindow({
+  const win = createDesktopWindow({
     ...bounds,
     webPreferences: { sandbox: true },
   })
