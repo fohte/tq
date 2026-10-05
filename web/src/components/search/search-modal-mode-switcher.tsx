@@ -1,5 +1,6 @@
+import { Chip } from '@fohte/ui/chip'
+
 import { SEARCH_MODE_DEFINITIONS } from '#components/search/search-modal-mode'
-import { Chip } from '#components/ui/chip'
 
 const searchModes = [
   { label: 'all', prefix: undefined },
@@ -25,19 +26,19 @@ export function SearchModalModeSwitcher({
       aria-label="Search mode"
     >
       {searchModes.map(({ label, prefix }) => (
-        <Chip
-          key={label}
-          as="button"
-          size="md"
-          active={modePrefix === prefix}
-          aria-pressed={modePrefix === prefix}
-          className="min-h-8 shrink-0 whitespace-nowrap px-1"
-          onClick={() => {
-            onModeChange(prefix)
-          }}
-        >
-          {label}
-        </Chip>
+        <span key={label} className="flex h-8 shrink-0 whitespace-nowrap">
+          <Chip
+            as="button"
+            size="md"
+            tone={modePrefix === prefix ? 'strong' : 'muted'}
+            aria-pressed={modePrefix === prefix}
+            onClick={() => {
+              onModeChange(prefix)
+            }}
+          >
+            {label}
+          </Chip>
+        </span>
       ))}
     </div>
   )

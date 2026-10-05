@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { Chip } from '@fohte/ui/chip'
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
@@ -11,7 +12,6 @@ import {
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
 import { RenameSavedViewDialog } from '#components/saved-view/rename-saved-view-dialog'
-import { Chip } from '#components/ui/chip'
 import { KeybindHint } from '#components/ui/keybind-hint'
 import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { useCurrentContext } from '#hooks/use-current-context'
@@ -20,6 +20,7 @@ import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
 import { useTaskList } from '#hooks/use-tasks'
+import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import { navKeybindings } from '#lib/keybindings'
 import {
   getSidebarMaxWidth,
@@ -264,7 +265,11 @@ export function SidebarContent() {
   )
 }
 
-export function Sidebar() {
+export function Sidebar({
+  desktopWindowControls = hasTqDesktopWindowControls(),
+}: {
+  desktopWindowControls?: boolean | undefined
+}) {
   const { width, maxWidth, onValueChange, onValueCommit } = useResizableWidth({
     storageKey: SIDEBAR_WIDTH_STORAGE_KEY,
     defaultWidth: SIDEBAR_DEFAULT_WIDTH,
@@ -278,14 +283,30 @@ export function Sidebar() {
       className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar md:flex"
       style={{ width }}
     >
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-border px-3.5">
-        <Link to="/" className="flex items-center gap-2">
+      <div
+        className={cn(
+          'flex h-10 shrink-0 items-center gap-2 border-b border-border pr-3.5',
+          desktopWindowControls ? 'electron-drag-region pl-20' : 'px-3.5',
+        )}
+      >
+        <Link
+          to="/"
+          className={cn(
+            'flex items-center gap-2',
+            desktopWindowControls && 'electron-no-drag-region',
+          )}
+        >
           <span className="font-mono text-sm font-bold text-primary">&gt;</span>
           <span className="font-mono text-sm font-bold tracking-tight text-foreground">
             tq
           </span>
         </Link>
-        <span className="ml-auto font-mono text-2xs text-muted-foreground-faint">
+        <span
+          className={cn(
+            'ml-auto font-mono text-2xs text-muted-foreground-faint',
+            desktopWindowControls && 'electron-no-drag-region',
+          )}
+        >
           task queue
         </span>
       </div>
