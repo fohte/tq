@@ -22,7 +22,7 @@ export function getTaskRowTimeBlockExtras(
     ...(state.blockEndedAt == null
       ? []
       : [
-          <span key="block-ended" className="text-destructive">
+          <span key="block-ended" className="text-xs text-destructive">
             block ended {state.blockEndedAt}
           </span>,
         ]),
