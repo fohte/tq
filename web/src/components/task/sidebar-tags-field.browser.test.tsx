@@ -3,10 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import { seedContextLabels } from '#components/label/label-test-fixtures'
 import { SidebarTagsField } from '#components/task/sidebar-tags-field'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
-import { labelKeys } from '#lib/query-keys'
 
 describe('SidebarTagsField', () => {
   it('suggests labels from the task context', async () => {
@@ -14,12 +13,7 @@ describe('SidebarTagsField', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     })
-    queryClient.setQueryData(labelKeys.list({ context: 'work' }), [
-      makeLabel({ id: 'work-label', name: 'work-only', context: 'work' }),
-    ])
-    queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
-      makeLabel({ id: 'personal-label', name: 'personal-only' }),
-    ])
+    seedContextLabels(queryClient)
     const user = userEvent.setup()
 
     render(

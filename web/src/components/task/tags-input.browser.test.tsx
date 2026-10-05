@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import {
+  makeLabel,
+  seedContextLabels,
+} from '#components/label/label-test-fixtures'
 import { TagsInput } from '#components/task/tags-input'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import { labelKeys } from '#lib/query-keys'
@@ -13,7 +16,7 @@ function renderTagsInput(
   initialLabels: string[] = [],
   options: {
     queryClient?: QueryClient
-    context?: 'work' | 'personal' | '' | null
+    context?: 'work' | 'personal' | ''
   } = {},
 ) {
   const queryClient =
@@ -49,12 +52,7 @@ describe('TagsInput', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     })
-    queryClient.setQueryData(labelKeys.list({ context: 'work' }), [
-      makeLabel({ id: 'work-label', name: 'work-only', context: 'work' }),
-    ])
-    queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
-      makeLabel({ id: 'personal-label', name: 'personal-only' }),
-    ])
+    seedContextLabels(queryClient)
     const user = userEvent.setup()
     renderTagsInput([], { queryClient, context: '' })
 

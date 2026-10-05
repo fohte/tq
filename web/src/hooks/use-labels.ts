@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
 
+import { useCurrentContext } from '#hooks/use-current-context'
 import { taskKeys } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import {
@@ -26,6 +27,13 @@ export function useLabels(filter?: LabelFilter) {
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
+  })
+}
+
+export function useLabelsForContext(context?: LabelFilter['context'] | '') {
+  const currentContext = useCurrentContext()
+  return useLabels({
+    context: context === undefined || context === '' ? currentContext : context,
   })
 }
 

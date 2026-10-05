@@ -4,16 +4,16 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import { seedContextLabels } from '#components/label/label-test-fixtures'
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
-import { labelKeys, taskMentionKeys } from '#lib/query-keys'
+import { taskMentionKeys } from '#lib/query-keys'
 
 function renderTaskTitleInput(
   initialValue = '',
   queryClient?: QueryClient,
-  context?: 'work' | 'personal' | '' | null,
+  context?: 'work' | 'personal' | '',
 ) {
   const client =
     queryClient ??
@@ -39,12 +39,7 @@ describe('TaskTitleInput', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     })
-    queryClient.setQueryData(labelKeys.list({ context: 'work' }), [
-      makeLabel({ id: 'work-label', name: 'work-only', context: 'work' }),
-    ])
-    queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
-      makeLabel({ id: 'personal-label', name: 'personal-only' }),
-    ])
+    seedContextLabels(queryClient)
     const user = userEvent.setup()
     renderTaskTitleInput('', queryClient, '')
 

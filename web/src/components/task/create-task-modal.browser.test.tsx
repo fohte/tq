@@ -4,7 +4,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import { seedContextLabels } from '#components/label/label-test-fixtures'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import {
@@ -24,11 +24,7 @@ import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import {
-  githubUrlPreviewKeys,
-  labelKeys,
-  taskMentionKeys,
-} from '#lib/query-keys'
+import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import {
   assertDefined,
@@ -132,12 +128,7 @@ function makeContextLabelsQueryClient() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(labelKeys.list({ context: 'work' }), [
-    makeLabel({ id: 'work-label', name: 'work-only', context: 'work' }),
-  ])
-  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
-    makeLabel({ id: 'personal-label', name: 'personal-only' }),
-  ])
+  seedContextLabels(queryClient)
   return queryClient
 }
 
