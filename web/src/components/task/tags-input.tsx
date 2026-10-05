@@ -5,7 +5,7 @@ import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useMemo, useRef, useState } from 'react'
 
 import { useCurrentContext } from '#hooks/use-current-context'
-import { useLabels } from '#hooks/use-labels'
+import { type LabelFilter, useLabels } from '#hooks/use-labels'
 import type { LabelTreeNode } from '#lib/tag-tree'
 import { buildLabelTree, flattenLabelTree } from '#lib/tag-tree'
 import { cn } from '#lib/utils'
@@ -73,17 +73,23 @@ function LabelSuggestion({
 export function TagsInput({
   labels,
   onLabelsChange,
+  context,
   defaultIsAdding = false,
   defaultInput = '',
 }: {
   labels: string[]
   onLabelsChange: (next: string[]) => void
+  context?: LabelFilter['context'] | '' | null
   /** Lets a story render the "adding a tag" state without a play function. */
   defaultIsAdding?: boolean
   defaultInput?: string
 }) {
-  const context = useCurrentContext()
-  const { data: labelsData } = useLabels({ context })
+  const currentContext = useCurrentContext()
+  const labelContext =
+    context === undefined || context === null || context === ''
+      ? currentContext
+      : context
+  const { data: labelsData } = useLabels({ context: labelContext })
   const [isAdding, setIsAdding] = useState(defaultIsAdding)
   const [input, setInput] = useState(defaultInput)
   const [selectedIndex, setSelectedIndex] = useState(0)

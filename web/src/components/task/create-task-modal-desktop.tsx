@@ -114,6 +114,7 @@ export function CreateTaskModalDesktop({
         <TaskTitleInput
           value={title}
           onChange={setTitle}
+          context={context}
           placeholder="Task title"
           autoFocus
           className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"
@@ -228,7 +229,11 @@ export function CreateTaskModalDesktop({
             <Tag className="size-3.5" />
             TAGS
           </span>
-          <TagsInput labels={labels} onLabelsChange={setLabels} />
+          <TagsInput
+            labels={labels}
+            onLabelsChange={setLabels}
+            context={context}
+          />
         </div>
       </div>
 

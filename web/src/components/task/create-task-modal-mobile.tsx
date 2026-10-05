@@ -123,6 +123,7 @@ export function CreateTaskModalMobile({
           <TaskTitleInput
             value={title}
             onChange={setTitle}
+            context={context}
             placeholder="タスクのタイトル"
             autoFocus
             className="h-auto border-0 bg-transparent p-0 text-lg font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
@@ -249,7 +250,11 @@ export function CreateTaskModalMobile({
           </div>
 
           {/* Tags */}
-          <TagsInput labels={labels} onLabelsChange={setLabels} />
+          <TagsInput
+            labels={labels}
+            onLabelsChange={setLabels}
+            context={context}
+          />
 
           {/* Create button */}
           <Button

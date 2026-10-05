@@ -1,21 +1,29 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
+import { makeLabel } from '#components/label/label-test-fixtures'
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
-import { taskMentionKeys } from '#lib/query-keys'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
+import { labelKeys, taskMentionKeys } from '#lib/query-keys'
 
-function renderTaskTitleInput(initialValue = '', queryClient?: QueryClient) {
+function renderTaskTitleInput(
+  initialValue = '',
+  queryClient?: QueryClient,
+  context?: 'work' | 'personal' | '' | null,
+) {
   const client =
     queryClient ??
     new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   function Managed() {
     const [value, setValue] = useState(initialValue)
-    return <TaskTitleInput value={value} onChange={setValue} />
+    return (
+      <TaskTitleInput value={value} onChange={setValue} context={context} />
+    )
   }
 
   return render(
@@ -26,6 +34,31 @@ function renderTaskTitleInput(initialValue = '', queryClient?: QueryClient) {
 }
 
 describe('TaskTitleInput', () => {
+  it('uses the current context when no label context is selected', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    queryClient.setQueryData(labelKeys.list({ context: 'work' }), [
+      makeLabel({ id: 'work-label', name: 'work-only', context: 'work' }),
+    ])
+    queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
+      makeLabel({ id: 'personal-label', name: 'personal-only' }),
+    ])
+    const user = userEvent.setup()
+    renderTaskTitleInput('', queryClient, '')
+
+    await user.type(screen.getByRole('textbox'), '#')
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByRole('button', { name: /^#/ })
+          .map((button) => button.innerText),
+      ).toEqual(['#work-only'])
+    })
+  })
+
   it('selects a suggestion on Enter, replacing the partial token', async () => {
     const user = userEvent.setup()
     renderTaskTitleInput()

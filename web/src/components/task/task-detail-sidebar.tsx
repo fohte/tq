@@ -84,7 +84,11 @@ export function TaskSidebar({
       <SidebarContextField taskId={task.id} context={task.context} />
       <SidebarCommitmentField taskId={task.id} commitment={task.commitment} />
       <SidebarProjectField taskId={task.id} projectId={task.projectId} />
-      <SidebarTagsField taskId={task.id} labels={task.labels} />
+      <SidebarTagsField
+        taskId={task.id}
+        context={task.context}
+        labels={task.labels}
+      />
       <SidebarGithubLinkField githubLinks={task.githubLinks} />
       <SidebarTimeBlocks taskId={task.id} timeBlocks={task.timeBlocks} />
     </DetailSidebarPanel>
@@ -173,7 +177,11 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
           <SidebarProjectField taskId={task.id} projectId={task.projectId} />
         </MobileFieldCell>
         <MobileFieldCell className="col-span-2">
-          <SidebarTagsField taskId={task.id} labels={task.labels} />
+          <SidebarTagsField
+            taskId={task.id}
+            context={task.context}
+            labels={task.labels}
+          />
         </MobileFieldCell>
         <MobileFieldCell className="col-span-2">
           <SidebarGithubLinkField githubLinks={task.githubLinks} />

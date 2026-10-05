@@ -4,6 +4,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
+import { makeLabel } from '#components/label/label-test-fixtures'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import {
@@ -15,6 +16,7 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { DescriptionTemplate } from '#hooks/use-description-templates'
 import { useDescriptionTemplates } from '#hooks/use-description-templates'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
@@ -22,7 +24,11 @@ import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
+import {
+  githubUrlPreviewKeys,
+  labelKeys,
+  taskMentionKeys,
+} from '#lib/query-keys'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import {
   assertDefined,
@@ -115,6 +121,25 @@ function mockCreateTaskPendingSuccess() {
 }
 
 const titleInputPlaceholder = /task title|タスクのタイトル/i
+
+function visibleLabelSuggestionNames() {
+  return screen
+    .getAllByRole('button', { name: /^#/ })
+    .map((button) => button.innerText)
+}
+
+function makeContextLabelsQueryClient() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  })
+  queryClient.setQueryData(labelKeys.list({ context: 'work' }), [
+    makeLabel({ id: 'work-label', name: 'work-only', context: 'work' }),
+  ])
+  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
+    makeLabel({ id: 'personal-label', name: 'personal-only' }),
+  ])
+  return queryClient
+}
 
 const makeQuickNoteTemplate = () =>
   makeDescriptionTemplate({
@@ -607,6 +632,58 @@ describe('CreateTaskModal', () => {
       await user.click(titleInput)
 
       expect(onOpenChange.mock.calls).toEqual([])
+    },
+  )
+
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'uses the selected context for title label suggestions on %s',
+    async (_viewportName, viewport) => {
+      await page.viewport(viewport.width, viewport.height)
+      resetSessionOpenSettings({ localContext: 'work' })
+      const queryClient = makeContextLabelsQueryClient()
+      const user = userEvent.setup()
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
+
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+      )
+      await user.type(titleInput, 'Review %personal ')
+      await user.type(titleInput, '#')
+
+      await waitFor(() => {
+        expect(visibleLabelSuggestionNames()).toEqual(['#personal-only'])
+      })
+    },
+  )
+
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'uses the selected context for TAGS suggestions on %s',
+    async (_viewportName, viewport) => {
+      await page.viewport(viewport.width, viewport.height)
+      resetSessionOpenSettings({ localContext: 'work' })
+      const queryClient = makeContextLabelsQueryClient()
+      const user = userEvent.setup()
+      renderControlledModal(CreateTaskModal, {}, { queryClient })
+
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+      )
+      await user.type(titleInput, 'Review %personal ')
+      await user.click(
+        assertDefined(
+          findVisible(screen.getAllByRole('button', { name: '+ add tag' })),
+        ),
+      )
+
+      await waitFor(() => {
+        expect(visibleLabelSuggestionNames()).toEqual(['#personal-only'])
+      })
     },
   )
 
