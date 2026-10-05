@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { Chip } from '@fohte/ui/chip'
 import { Input } from '@fohte/ui/input'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
@@ -28,7 +29,6 @@ import {
   TaskSubtasksSection,
 } from '#components/task/task-subtasks-section'
 import { ActionsMenu } from '#components/ui/actions-menu'
-import { Chip } from '#components/ui/chip'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import { useDebouncedSave } from '#hooks/use-debounced-save'

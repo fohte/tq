@@ -1,5 +1,6 @@
+import { Chip } from '@fohte/ui/chip'
+
 import { QueueCandidateRow } from '#components/task/queue-candidate-row'
-import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 

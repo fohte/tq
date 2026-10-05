@@ -1,3 +1,4 @@
+import { Chip } from '@fohte/ui/chip'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
@@ -5,7 +6,6 @@ import { useState } from 'react'
 import { DeleteRecurringTemplateDialog } from '#components/recurring/delete-recurring-template-dialog'
 import { GeneratedTasksList } from '#components/recurring/generated-tasks-list'
 import { ActionsMenu } from '#components/ui/actions-menu'
-import { Chip } from '#components/ui/chip'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
 
 export function RecurringTemplateMainContent({
