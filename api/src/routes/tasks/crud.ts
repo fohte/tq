@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -11,21 +11,17 @@ import {
   resolveCreateBlockedByInputs,
   resolveUpdateBlockedByInputs,
 } from '#routes/tasks/blocked-by'
-import { queryTaskList } from '#routes/tasks/list-query'
+import { tasksDeleteApp } from '#routes/tasks/delete'
+import { tasksListApp } from '#routes/tasks/list'
 import {
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   getRecurrenceRulesByTemplateIds,
-  hydrateTaskListRows,
   requireTask,
   resolveParentId,
   taskToResponse,
 } from '#routes/tasks/shared'
-import {
-  createTaskSchema,
-  listTasksQuerySchema,
-  updateTaskSchema,
-} from '#schemas/task'
+import { createTaskSchema, updateTaskSchema } from '#schemas/task'
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
 import {
@@ -185,30 +181,7 @@ export const tasksCrudApp = new Hono()
       201,
     )
   })
-  .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
-    const query = c.req.valid('query')
-    const { rows, ancestorOnlyIds, matchByTaskId } = await queryTaskList(
-      query,
-      {
-        includeSearchMatch: query.includeMatch === true,
-        prioritizeTitleMatches: query.includeMatch === true,
-      },
-    )
-
-    const hydratedRows = await hydrateTaskListRows(rows)
-
-    return c.json(
-      hydratedRows.map((item) => {
-        const match = matchByTaskId?.get(item.id)
-        return {
-          ...item,
-          ...(match === undefined ? {} : { match }),
-          ...(ancestorOnlyIds.has(item.id) ? { ancestorOnly: true } : {}),
-        }
-      }),
-      200,
-    )
-  })
+  .route('/', tasksListApp)
   .patch(
     '/:id',
     requireTask,
@@ -492,32 +465,4 @@ export const tasksCrudApp = new Hono()
       )
     },
   )
-  .delete('/:id', requireTask, async (c) => {
-    const existing = c.get('task')
-    const id = existing.id
-
-    await db.transaction(async (tx) => {
-      // Reparent children to the deleted task's parent (or top-level if
-      // none) before deleting, so the tree structure above the deleted task
-      // is preserved. The parent is re-read from the row here rather than
-      // taken from `existing` so a concurrent delete of an ancestor (which
-      // takes the same row lock via its own reparent update) can't leave
-      // this pointing at an already-deleted parent.
-      await tx
-        .update(tasks)
-        .set({
-          parentId: sql`(select ${tasks.parentId} from ${tasks} where ${tasks.id} = ${id})`,
-          updatedAt: new Date(),
-        })
-        .where(eq(tasks.parentId, id))
-
-      await tx.delete(tasks).where(eq(tasks.id, id))
-
-      // Clean up orphaned recurrence rule
-      if (existing.recurrenceRuleId != null) {
-        await deleteRecurrenceRuleIfUnreferenced(tx, existing.recurrenceRuleId)
-      }
-    })
-
-    return c.body(null, 204)
-  })
+  .route('/', tasksDeleteApp)
