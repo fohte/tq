@@ -22,6 +22,10 @@ import {
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import {
+  isCalendarEventClickable,
+  mapCalendarGridEvents,
+} from '#components/calendar/calendar-grid-event-data'
+import {
   type CalendarViewType,
   FULLCALENDAR_THREE_DAY_VIEW,
   resolveFullCalendarView,
@@ -32,7 +36,6 @@ import { GcalEventDetailPopover } from '#components/calendar/gcal-event-detail-p
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import {
-  type CalendarEventProps,
   findHoveredSlot,
   getEventProps,
   isClickableEvent,
@@ -73,15 +76,6 @@ function formatHm(date: Date): string {
 }
 
 const DEFAULT_SCROLL_TIME = '08:00:00'
-
-function isCalendarEventClickable(props: CalendarEventProps): boolean {
-  return (
-    isClickableEvent(props) ||
-    (isGcalEventType(props.type) &&
-      props.redacted !== true &&
-      props.gcalDetails != null)
-  )
-}
 
 function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
   const now = new Date()
@@ -215,43 +209,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       }
     }, [externalDragContainerRef])
 
-    const calendarEvents = events.map((event) => ({
-      id: event.id,
-      title: event.title,
-      start: event.start,
-      end: event.end,
-      allDay: event.allDay === true,
-      editable:
-        event.type !== 'schedule' &&
-        !isGcalEventType(event.type) &&
-        event.redacted !== true,
-      // Status events (out of office / focus time) render as a background
-      // band instead of a lane card, so they don't crowd out meetings and
-      // task blocks. Month view has no time slots to render a band into
-      // (FullCalendar only draws timed background events in TimeGrid views),
-      // so it keeps rendering them as the regular month pill.
-      ...(event.type === 'gcal-status' && activeView !== 'month'
-        ? { display: 'background' as const }
-        : {}),
-      extendedProps: {
-        type: event.type,
-        parentRef: event.parentRef,
-        color: event.color,
-        taskId: event.taskId,
-        isAutoScheduled: event.isAutoScheduled,
-        scheduleId: event.scheduleId,
-        scheduleStart: event.start,
-        redacted: event.redacted,
-        calendarColor: event.calendarColor,
-        responseStatus: event.responseStatus,
-        gcalEventType: event.gcalEventType,
-        ...(isGcalEventType(event.type) &&
-        event.redacted !== true &&
-        event.gcalDetails != null
-          ? { gcalDetails: event.gcalDetails }
-          : {}),
-      },
-    }))
+    const calendarEvents = mapCalendarGridEvents(events, activeView)
 
     const handleEventDrop = (info: EventDropArg) => {
       if (!dndCallbacks?.onEventDrop) return
