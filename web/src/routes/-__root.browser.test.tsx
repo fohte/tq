@@ -65,6 +65,10 @@ function mainNavigationResult(subscriptionCount: number, href: string) {
   return { subscriptionCount, href }
 }
 
+function compactNavigationResult(requests: [path: string][], href: string) {
+  return { requests, href }
+}
+
 function compactLayoutResult(
   subscriptionCount: number,
   hasCompactFrame: boolean,
@@ -74,11 +78,13 @@ function compactLayoutResult(
 }
 
 describe('RootRoute desktop navigation', () => {
+  const openInMainWindow = vi.fn<(path: string) => void>()
+
   beforeEach(() => {
     vi.clearAllMocks()
     navigateRequestListener = undefined
     window.tqDesktop = {
-      openInMainWindow: () => {},
+      openInMainWindow,
       onNavigateRequest,
     }
   })
@@ -120,5 +126,59 @@ describe('RootRoute desktop navigation', () => {
       hasCompactFrame: true,
       hasAppLayout: false,
     })
+  })
+
+  it('opens navigations from compact layout in the main window and keeps its location', async () => {
+    const router = await renderRootRoute('/?layout=compact')
+
+    await act(async () => {
+      await router.navigate({
+        href: '/tasks/task-123?source=compact',
+      })
+    })
+
+    expect(
+      compactNavigationResult(
+        openInMainWindow.mock.calls,
+        router.state.location.href,
+      ),
+    ).toEqual({
+      requests: [['/tasks/task-123?source=compact']],
+      href: '/?layout=compact',
+    })
+  })
+
+  it('allows search-only navigations from compact layout in the same window', async () => {
+    const router = await renderRootRoute('/?layout=compact')
+
+    await act(async () => {
+      await router.navigate({ href: '/?layout=compact&refresh=1' })
+    })
+
+    expect(
+      compactNavigationResult(
+        openInMainWindow.mock.calls,
+        router.state.location.href,
+      ),
+    ).toEqual({
+      requests: [],
+      href: '/?layout=compact&refresh=1',
+    })
+  })
+
+  it('allows compact-layout navigations when the desktop API is unavailable', async () => {
+    delete window.tqDesktop
+    const router = await renderRootRoute('/?layout=compact')
+
+    await act(async () => {
+      await router.navigate({ href: '/tasks/task-123' })
+    })
+
+    expect(
+      compactNavigationResult(
+        openInMainWindow.mock.calls,
+        router.state.location.href,
+      ),
+    ).toEqual({ requests: [], href: '/tasks/task-123' })
   })
 })

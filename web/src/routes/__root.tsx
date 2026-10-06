@@ -1,6 +1,7 @@
 import {
   createRootRoute,
   Outlet,
+  useBlocker,
   useRouter,
   useRouterState,
 } from '@tanstack/react-router'
@@ -20,6 +21,27 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const router = useRouter()
+
+  useBlocker({
+    shouldBlockFn: ({ current, next }) => {
+      if (
+        current.pathname === next.pathname ||
+        !isCompactDayLayoutSearch(current.search)
+      ) {
+        return false
+      }
+
+      const desktop = getTqDesktopApi()
+      if (desktop == null) return false
+
+      desktop.openInMainWindow(
+        `${next.pathname}${router.options.stringifySearch(next.search)}`,
+      )
+      return true
+    },
+    enableBeforeUnload: false,
+    withResolver: false,
+  })
 
   useGithubSync()
   useServiceWorkerUpdate()
