@@ -224,6 +224,29 @@ describe('queue set', () => {
     })
   })
 
+  it('sends task numbers as strings to the API', async () => {
+    const taskIds = ['42', '43']
+
+    expect(
+      await runQueueCli(
+        ['queue', 'set', 'day', '2026-08-06', ...taskIds],
+        new Response(JSON.stringify([]), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PUT',
+          pathname: '/api/queues/day/items',
+          query: {},
+          body: { date: '2026-08-06', taskIds },
+        },
+      ],
+      stderr: [],
+      stdout: [['[]\n']],
+    })
+  })
+
   it('sends an empty taskIds array when task ids are omitted', async () => {
     expect(
       await runQueueCli(
@@ -245,7 +268,7 @@ describe('queue set', () => {
     })
   })
 
-  it('rejects invalid task UUIDs before sending a request', async () => {
+  it('rejects an identifier that is neither a UUID nor task number', async () => {
     expect(
       await runQueueCli(
         ['queue', 'set', 'day', '2026-08-06', 'not-a-uuid'],
@@ -254,7 +277,7 @@ describe('queue set', () => {
     ).toEqual({
       exitCode: 1,
       requests: [],
-      stderr: [['Error: taskIds.0: Invalid UUID\n']],
+      stderr: [['Error: taskIds.0: Invalid input\n']],
       stdout: [],
     })
   })

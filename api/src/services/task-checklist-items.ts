@@ -3,7 +3,17 @@ import { err, ok, type Result } from 'neverthrow'
 
 import type { DbTransaction } from '#db/connection'
 import { taskChecklistItems, taskChecklists } from '#db/schema'
-import { recalculateChecklistAncestors } from '#services/task-checklist-progress'
+import type { GithubIssueData } from '#integrations/github/issues'
+import { RowNotFoundError } from '#lib/drizzle-utils'
+import type { EditAuthor } from '#lib/edits'
+import {
+  checkChecklistItemsForGithubLink,
+  recalculateChecklistAncestors,
+} from '#services/task-checklist-progress'
+import {
+  getOrCreateTaskGithubLink,
+  GithubResourceAlreadyLinkedError,
+} from '#services/task-github-links'
 
 type ChecklistError = { status: 400 | 404; message: string }
 type ChecklistItem = typeof taskChecklistItems.$inferSelect
@@ -19,14 +29,14 @@ function fail<T>(status: ChecklistError['status'], message: string) {
 async function lockChecklist(
   tx: DbTransaction,
   checklistId: string,
-): Promise<Result<void, ChecklistError>> {
+): Promise<Result<typeof taskChecklists.$inferSelect, ChecklistError>> {
   const [checklist] = await tx
-    .select({ id: taskChecklists.id })
+    .select()
     .from(taskChecklists)
     .where(eq(taskChecklists.id, checklistId))
     .for('update')
 
-  return checklist == null ? fail(404, 'Checklist not found') : ok(undefined)
+  return checklist == null ? fail(404, 'Checklist not found') : ok(checklist)
 }
 
 async function lockItemChecklist(
@@ -175,6 +185,62 @@ export async function createChecklistItem(
   return ok(orderedItem)
 }
 
+export async function createChecklistItemWithGithubLink(
+  tx: DbTransaction,
+  checklistId: string,
+  input: {
+    content: string
+    note?: string | null | undefined
+    parentItemId?: string | null | undefined
+    sortOrder?: number | undefined
+  },
+  issue: GithubIssueData,
+  author: EditAuthor,
+): Promise<
+  Result<
+    ChecklistItem,
+    ChecklistError | GithubResourceAlreadyLinkedError | RowNotFoundError
+  >
+> {
+  const locked = await lockChecklist(tx, checklistId)
+  if (locked.isErr()) return err(locked.error)
+
+  const parentItemId = input.parentItemId ?? null
+  if (parentItemId != null) {
+    const validParent = await validateParentItem(tx, checklistId, parentItemId)
+    if (validParent.isErr()) return err(validParent.error)
+  }
+
+  const link = await getOrCreateTaskGithubLink(
+    tx,
+    locked.value.taskId,
+    issue,
+    author,
+  )
+  if (link.isErr()) return err(link.error)
+
+  const created = await createChecklistItem(tx, checklistId, input)
+  if (created.isErr()) return err(created.error)
+
+  const [updated] = await tx
+    .update(taskChecklistItems)
+    .set({
+      githubLinkId: link.value.id,
+      checkedAt: link.value.state === 'merged' ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(taskChecklistItems.id, created.value.id))
+    .returning()
+  if (!updated) return fail(404, 'Checklist item not found')
+
+  if (link.value.state === 'merged') {
+    await checkChecklistItemsForGithubLink(tx, link.value.id)
+  } else {
+    await recalculateChecklistAncestors(tx, [updated.parentItemId])
+  }
+  return ok(updated)
+}
+
 export async function updateChecklistItem(
   tx: DbTransaction,
   itemId: string,
@@ -192,6 +258,77 @@ export async function updateChecklistItem(
     .where(eq(taskChecklistItems.id, itemId))
     .returning()
   return updated == null ? fail(404, 'Checklist item not found') : ok(updated)
+}
+
+export async function updateChecklistItemWithGithubLink(
+  tx: DbTransaction,
+  itemId: string,
+  input: {
+    content?: string | undefined
+    note?: string | null | undefined
+  },
+  issue: GithubIssueData,
+  author: EditAuthor,
+): Promise<
+  Result<
+    ChecklistItem,
+    ChecklistError | GithubResourceAlreadyLinkedError | RowNotFoundError
+  >
+> {
+  const itemResult = await lockItemChecklist(tx, itemId)
+  if (itemResult.isErr()) return err(itemResult.error)
+  const item = itemResult.value
+
+  const [child] = await tx
+    .select({ id: taskChecklistItems.id })
+    .from(taskChecklistItems)
+    .where(
+      and(
+        eq(taskChecklistItems.checklistId, item.checklistId),
+        eq(taskChecklistItems.parentItemId, itemId),
+      ),
+    )
+    .limit(1)
+  if (child != null || item.subtaskId != null) {
+    return fail(
+      400,
+      'Items with children or linked tasks cannot be linked to a pull request',
+    )
+  }
+
+  const checklist = await tx.query.taskChecklists.findFirst({
+    where: eq(taskChecklists.id, item.checklistId),
+  })
+  if (checklist == null) return fail(404, 'Checklist not found')
+
+  const link = await getOrCreateTaskGithubLink(
+    tx,
+    checklist.taskId,
+    issue,
+    author,
+  )
+  if (link.isErr()) return err(link.error)
+
+  const checkedAt =
+    link.value.state === 'merged' ? (item.checkedAt ?? new Date()) : null
+  const [updated] = await tx
+    .update(taskChecklistItems)
+    .set({
+      ...input,
+      githubLinkId: link.value.id,
+      checkedAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(taskChecklistItems.id, itemId))
+    .returning()
+  if (!updated) return fail(404, 'Checklist item not found')
+
+  if (link.value.state === 'merged') {
+    await checkChecklistItemsForGithubLink(tx, link.value.id)
+  } else {
+    await recalculateChecklistAncestors(tx, [item.parentItemId])
+  }
+  return ok(updated)
 }
 
 export async function deleteChecklistItem(

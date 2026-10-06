@@ -165,7 +165,7 @@ describe('queue operation tools', () => {
     )
   })
 
-  it('rejects a non-UUID task ID when setting a queue', async () => {
+  it('rejects an identifier that is neither a UUID nor task number', async () => {
     const result = await callMcpTool(client, 'queue_set', {
       key: 'day',
       date: '2026-08-06',
@@ -173,7 +173,7 @@ describe('queue operation tools', () => {
     })
 
     expect(result).toEqual(
-      expectedToolValidationError('queue_set', 'taskIds.0', 'Invalid UUID'),
+      expectedToolValidationError('queue_set', 'taskIds.0', 'Invalid input'),
     )
   })
 
@@ -261,6 +261,38 @@ describe('queue operation tools', () => {
       key: 'day',
       date: '2026-08-06',
       taskIds: [taskB.id, taskA.id],
+    })
+
+    expect(
+      normalizeDynamicValues(parseToolJson(result), { skipKeys: ['taskId'] }),
+    ).toEqual([
+      {
+        id: '<uuid>',
+        taskId: taskB.id,
+        periodStart: '2026-08-06',
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+      {
+        id: '<uuid>',
+        taskId: taskA.id,
+        periodStart: '2026-08-06',
+        sortOrder: 1,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+    ])
+  })
+
+  it('accepts task numbers and deduplicates UUID aliases', async () => {
+    const taskA = await createTask('First numbered item')
+    const taskB = await createTask('Second numbered item')
+
+    const result = await callMcpTool(client, 'queue_set', {
+      key: 'day',
+      date: '2026-08-06',
+      taskIds: [taskB.number, String(taskA.number), taskB.id],
     })
 
     expect(

@@ -65,7 +65,7 @@ async function createTask(title: string, extra: Record<string, unknown> = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, ...extra }),
   })
-  return jsonBody<{ id: string }>(res)
+  return jsonBody<{ id: string; number: number }>(res)
 }
 
 async function completeTask(taskId: string) {
@@ -108,7 +108,7 @@ function normalizeAutoAssignResult(
 }
 
 async function createTimeBlock(
-  taskId: string,
+  taskId: string | number,
   startTime: string,
   endTime: string,
   isAutoScheduled = false,
@@ -162,6 +162,33 @@ describe('schedule/time-blocks API', () => {
       expect(body.isAutoScheduled).toBe(false)
     })
 
+    it('creates a time block for a task number', async () => {
+      const task = await createTask('Numbered task')
+      const { res, body } = await createTimeBlock(
+        task.number,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+
+      const getActual = () => ({
+        status: res.status,
+        body: normalizeTimeBlock(body),
+      })
+
+      expect(getActual()).toEqual({
+        status: 201,
+        body: {
+          id: 'ID',
+          taskId: task.id,
+          startTime: '2026-03-22T09:00:00.000Z',
+          endTime: '2026-03-22T10:00:00.000Z',
+          isAutoScheduled: false,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      })
+    })
+
     it('returns 400 when endTime is missing', async () => {
       const task = await createTask('No end time')
       const res = await app.request('/api/schedule/time-blocks', {
@@ -176,18 +203,29 @@ describe('schedule/time-blocks API', () => {
       expect(res.status).toBe(400)
     })
 
-    it('returns 404 for non-existent task', async () => {
-      const res = await app.request('/api/schedule/time-blocks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taskId: TEST_UUID,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T10:00:00.000Z',
+    it('returns the same not-found response for a missing UUID or task number', async () => {
+      const results = await Promise.all(
+        [TEST_UUID, 2147483647].map(async (taskId) => {
+          const res = await app.request('/api/schedule/time-blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              taskId,
+              startTime: '2026-03-22T09:00:00.000Z',
+              endTime: '2026-03-22T10:00:00.000Z',
+            }),
+          })
+          return {
+            status: res.status,
+            body: await jsonBody<{ error: string }>(res),
+          }
         }),
-      })
+      )
 
-      expect(res.status).toBe(404)
+      expect(results).toEqual([
+        { status: 404, body: { error: 'Task not found' } },
+        { status: 404, body: { error: 'Task not found' } },
+      ])
     })
   })
 

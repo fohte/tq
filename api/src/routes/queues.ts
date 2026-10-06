@@ -15,6 +15,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
+import { resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import {
   carryOverQueueItemsSchema,
   putQueueItemsSchema,
@@ -106,18 +107,12 @@ export const queuesApp = new Hono()
   .put('/:key/items', zValidator('json', putQueueItemsSchema), async (c) => {
     const key = c.req.param('key')
     const { taskIds, date } = c.req.valid('json')
-    const uniqueTaskIds = [...new Set(taskIds)]
+    const taskIdentifiers = taskIds.map(String)
+    const { byParam, ids: uniqueTaskIds } =
+      await resolveTasksByIdsOrNumbers(taskIdentifiers)
 
-    if (uniqueTaskIds.length > 0) {
-      const existingTasks = await db
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(inArray(tasks.id, uniqueTaskIds))
-      const existingIds = new Set(existingTasks.map((t) => t.id))
-      const missing = uniqueTaskIds.filter((id) => !existingIds.has(id))
-      if (missing.length > 0) {
-        return c.json({ error: 'Task not found' }, 404)
-      }
+    if (taskIdentifiers.some((identifier) => !byParam.has(identifier))) {
+      return c.json({ error: 'Task not found' }, 404)
     }
 
     const queueResult = await getQueueByKeyOrRespond(c, key)

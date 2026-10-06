@@ -130,12 +130,21 @@ async function renderSidebar({
   }
 }
 
+function readBreakpointVisibility(sidebar: HTMLElement) {
+  return {
+    hiddenBelowMd: sidebar.classList.contains('hidden'),
+    visibleAtMd: sidebar.classList.contains('md:flex'),
+  }
+}
+
 describe('Sidebar', () => {
   it('is hidden below the md breakpoint', async () => {
     await renderSidebar()
-    expect(screen.getByRole('complementary').className).toBe(
-      'sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar md:flex',
-    )
+    const sidebar = screen.getByRole('complementary')
+    expect(readBreakpointVisibility(sidebar)).toEqual({
+      hiddenBelowMd: true,
+      visibleAtMd: true,
+    })
   })
 
   describe('ViewsSection', () => {
