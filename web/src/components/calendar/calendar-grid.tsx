@@ -49,8 +49,6 @@ export interface CalendarDndCallbacks {
     eventId: string
     eventType: string | undefined
     taskId: string | undefined
-    oldEventType: string | undefined
-    oldTaskId: string | undefined
     isAllDay: boolean
     wasAllDay: boolean
     newStart: Date
@@ -224,8 +222,6 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         eventId: event.id,
         eventType,
         taskId: getEventProps(event).taskId,
-        oldEventType,
-        oldTaskId: getEventProps(oldEvent).taskId,
         isAllDay: event.allDay,
         wasAllDay: oldEvent.allDay,
         newStart: event.start,
@@ -240,6 +236,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleEventResize = (info: EventResizeDoneArg) => {
       if (!dndCallbacks?.onEventResize) return
       const { event, oldEvent, revert, el } = info
+      if (
+        event.allDay ||
+        getEventProps(event).type === 'day-queue' ||
+        getEventProps(oldEvent).type === 'day-queue'
+      ) {
+        revert()
+        return
+      }
       if (!event.start || !event.end || !oldEvent.start || !oldEvent.end) {
         revert()
         return

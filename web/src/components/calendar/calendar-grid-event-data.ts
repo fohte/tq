@@ -29,6 +29,7 @@ export function mapCalendarGridEvents(
         event.type !== 'schedule' &&
         !isGcalEventType(event.type) &&
         event.redacted !== true,
+      durationEditable: event.type !== 'day-queue',
       // Status events (out of office / focus time) render as a background
       // band instead of a lane card, so they don't crowd out meetings and
       // task blocks. Month view has no time slots to render a band into

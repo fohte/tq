@@ -35,7 +35,7 @@ function isQueueTaskDragData(
 export interface QueuePaneProps {
   isLoading: boolean
   queueSections: QueueSectionData[]
-  queueDate?: string
+  queueDate: string
   queueCandidates: QueueCandidate<Task>[]
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string) => void
@@ -103,7 +103,7 @@ export function QueuePane({
             <QueueSection
               key={section.key}
               queueKey={section.key}
-              {...(queueDate == null ? {} : { queueDate })}
+              queueDate={queueDate}
               title={section.title}
               items={section.items}
               {...(taskRowStates == null ? {} : { taskRowStates })}

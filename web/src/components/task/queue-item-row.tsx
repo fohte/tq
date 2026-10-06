@@ -25,7 +25,7 @@ export function QueueItemRow({
    * DndContext across multiple sections can tell which queue a drag started
    * in. */
   queueKey: string
-  queueDate?: string
+  queueDate: string
   onRemove: () => void
   secondLineExtras?: ReactNode[]
   isCurrentTimeBlock?: boolean
@@ -69,7 +69,7 @@ export function QueueItemRow({
     <QueueItemRowAppearance
       task={task}
       queueKey={queueKey}
-      {...(queueDate == null ? {} : { queueDate })}
+      queueDate={queueDate}
       secondLineExtras={secondLineExtras}
       isCurrentTimeBlock={isCurrentTimeBlock}
       onRemove={onRemove}

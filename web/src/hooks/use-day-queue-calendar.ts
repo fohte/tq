@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { Queue, QueueItem } from '#hooks/use-queues'
@@ -46,6 +46,23 @@ export function useDayQueueCalendar({
     visibleDates,
     refetchInterval,
   )
+  const loggedQueryErrors = useRef(new Map<string, number>())
+  useEffect(() => {
+    const visibleDateSet = new Set(visibleDates)
+    for (const date of loggedQueryErrors.current.keys()) {
+      if (!visibleDateSet.has(date)) loggedQueryErrors.current.delete(date)
+    }
+    dayQueueItemsResults.forEach((result, index) => {
+      const date = visibleDates[index]
+      if (date == null || result.error == null) return
+      if (loggedQueryErrors.current.get(date) === result.errorUpdatedAt) return
+      loggedQueryErrors.current.set(date, result.errorUpdatedAt)
+      console.error('Failed to refresh calendar day queue items', {
+        date,
+        error: result.error,
+      })
+    })
+  }, [dayQueueItemsResults, visibleDates])
   const dayQueueItems = useMemo(
     () =>
       visibleDates.flatMap((date, index) =>
@@ -76,13 +93,27 @@ export function useDayQueueCalendar({
     })
   }, [queryClient])
 
-  const addTaskToDayQueue = useCallback(
-    (
-      date: string,
-      taskId: string,
-      sourceQueueKey: string | undefined,
-      sourceDate: string | undefined,
-    ) => {
+  const dayQueueUpdateInProgress = useRef(false)
+  const updateDayQueue = useCallback(
+    ({
+      date,
+      taskId,
+      sourceQueueKey,
+      sourceDate,
+      revert,
+    }: {
+      date: string
+      taskId: string
+      sourceQueueKey?: string
+      sourceDate?: string
+      revert?: () => void
+    }) => {
+      if (dayQueueUpdateInProgress.current || setQueueItems.isPending) {
+        revert?.()
+        return
+      }
+      dayQueueUpdateInProgress.current = true
+
       const sourceItemsPromise =
         sourceQueueKey != null &&
         sourceDate != null &&
@@ -91,115 +122,70 @@ export function useDayQueueCalendar({
           : Promise.resolve(undefined)
 
       void Promise.all([getQueueItems(DAY_QUEUE_KEY, date), sourceItemsPromise])
-        .then(([destinationItems, sourceItems]) => {
-          setQueueItems.mutate(
-            {
+        .then(async ([destinationItems, sourceItems]) => {
+          if (
+            sourceItems != null &&
+            sourceQueueKey != null &&
+            sourceDate != null
+          ) {
+            await setQueueItems.mutateAsync({
+              key: sourceQueueKey,
+              date: sourceDate,
+              taskIds: sourceItems
+                .map((item) => item.taskId)
+                .filter((id) => id !== taskId),
+            })
+          }
+
+          const destinationResult = await setQueueItems
+            .mutateAsync({
               key: DAY_QUEUE_KEY,
               date,
               taskIds: appendQueueTaskId(
                 destinationItems.map((item) => item.taskId),
                 taskId,
               ),
-            },
-            {
-              onSuccess: () => {
-                if (
-                  sourceItems == null ||
-                  sourceQueueKey == null ||
-                  sourceDate == null
-                ) {
-                  invalidateWeekQueueItems()
-                  return
-                }
-                setQueueItems.mutate(
-                  {
-                    key: sourceQueueKey,
-                    date: sourceDate,
-                    taskIds: sourceItems
-                      .map((item) => item.taskId)
-                      .filter((id) => id !== taskId),
-                  },
-                  {
-                    onSuccess: invalidateWeekQueueItems,
-                    onError: (error: unknown) => {
-                      console.error(
-                        'Failed to remove task from source queue',
-                        error,
-                      )
-                    },
-                  },
-                )
-              },
-              onError: (error: unknown) => {
-                console.error('Failed to add task to day queue', error)
-              },
-            },
+            })
+            .then(
+              () => ({ ok: true as const }),
+              (error: unknown) => ({ ok: false as const, error }),
+            )
+          if (destinationResult.ok) return
+
+          if (
+            sourceItems != null &&
+            sourceQueueKey != null &&
+            sourceDate != null
+          ) {
+            await setQueueItems
+              .mutateAsync({
+                key: sourceQueueKey,
+                date: sourceDate,
+                taskIds: sourceItems.map((item) => item.taskId),
+              })
+              .then(
+                () => {},
+                (rollbackError: unknown) => {
+                  console.error(
+                    'Failed to restore source queue after calendar update',
+                    rollbackError,
+                  )
+                },
+              )
+          }
+          revert?.()
+          console.error(
+            'Failed to update day queue from calendar',
+            destinationResult.error,
           )
         })
         .catch((error: unknown) => {
-          console.error('Failed to load queue items for calendar drop', error)
+          revert?.()
+          console.error('Failed to update day queue from calendar', error)
         })
-    },
-    [getQueueItems, invalidateWeekQueueItems, setQueueItems],
-  )
-
-  const moveDayQueueTask = useCallback(
-    ({
-      taskId,
-      sourceDate,
-      targetDate,
-      revert,
-    }: {
-      taskId: string
-      sourceDate: string
-      targetDate: string
-      revert: () => void
-    }) => {
-      if (sourceDate === targetDate) return
-
-      void Promise.all([
-        getQueueItems(DAY_QUEUE_KEY, sourceDate),
-        getQueueItems(DAY_QUEUE_KEY, targetDate),
-      ])
-        .then(([sourceItems, targetItems]) => {
-          setQueueItems.mutate(
-            {
-              key: DAY_QUEUE_KEY,
-              date: targetDate,
-              taskIds: appendQueueTaskId(
-                targetItems.map((item) => item.taskId),
-                taskId,
-              ),
-            },
-            {
-              onSuccess: () => {
-                invalidateWeekQueueItems()
-                setQueueItems.mutate(
-                  {
-                    key: DAY_QUEUE_KEY,
-                    date: sourceDate,
-                    taskIds: sourceItems
-                      .map((item) => item.taskId)
-                      .filter((id) => id !== taskId),
-                  },
-                  {
-                    onError: (error: unknown) => {
-                      revert()
-                      console.error('Failed to move task from day queue', error)
-                    },
-                  },
-                )
-              },
-              onError: (error: unknown) => {
-                revert()
-                console.error('Failed to move task to day queue', error)
-              },
-            },
-          )
-        })
-        .catch((error: unknown) => {
-          revert()
-          console.error('Failed to load day queue items', error)
+        .finally(() => {
+          invalidateWeekQueueItems()
+          dayQueueUpdateInProgress.current = false
         })
     },
     [getQueueItems, invalidateWeekQueueItems, setQueueItems],
@@ -214,15 +200,19 @@ export function useDayQueueCalendar({
           info.wasAllDay
         ) {
           if (info.isAllDay) {
-            moveDayQueueTask({
-              taskId: info.oldTaskId ?? info.taskId,
-              sourceDate: formatLocalDate(info.oldStart),
-              targetDate: formatLocalDate(info.newStart),
+            const sourceDate = formatLocalDate(info.oldStart)
+            const targetDate = formatLocalDate(info.newStart)
+            if (sourceDate === targetDate) return
+            updateDayQueue({
+              taskId: info.taskId,
+              sourceQueueKey: DAY_QUEUE_KEY,
+              sourceDate,
+              date: targetDate,
               revert: info.revert,
             })
           } else {
             createTimeBlock.mutate({
-              taskId: info.oldTaskId ?? info.taskId,
+              taskId: info.taskId,
               startTime: info.newStart.toISOString(),
               endTime: info.newEnd.toISOString(),
             })
@@ -241,12 +231,12 @@ export function useDayQueueCalendar({
         sourceDate,
       }) => {
         if (allDay) {
-          addTaskToDayQueue(
-            formatLocalDate(start),
+          updateDayQueue({
+            date: formatLocalDate(start),
             taskId,
-            sourceQueueKey,
-            sourceDate,
-          )
+            ...(sourceQueueKey == null ? {} : { sourceQueueKey }),
+            ...(sourceDate == null ? {} : { sourceDate }),
+          })
           return
         }
         createTimeBlock.mutate({
@@ -256,7 +246,7 @@ export function useDayQueueCalendar({
         })
       },
     }),
-    [addTaskToDayQueue, createTimeBlock, moveDayQueueTask, onTimeBlockChange],
+    [createTimeBlock, onTimeBlockChange, updateDayQueue],
   )
 
   return { dayQueueItems, dndCallbacks }

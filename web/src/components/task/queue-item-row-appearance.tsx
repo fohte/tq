@@ -34,7 +34,7 @@ export function QueueItemRowAppearance({
 }: {
   task: Task
   queueKey: string
-  queueDate?: string
+  queueDate: string
   onRemove: () => void
   attributes: DraggableAttributes
   listeners: DraggableSyntheticListeners
@@ -97,7 +97,7 @@ export function QueueItemRowAppearance({
       {...attributes}
       {...listeners}
       data-queue-key={queueKey}
-      {...(queueDate == null ? {} : { 'data-queue-date': queueDate })}
+      data-queue-date={queueDate}
       className={cn(
         'flex cursor-grab items-center gap-1 border-b border-border active:cursor-grabbing',
         isDragging && 'opacity-50',

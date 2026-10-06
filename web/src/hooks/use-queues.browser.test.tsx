@@ -6,9 +6,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
-  type Queue,
   useQueueItems,
   useQueueItemsForDates,
   useQueueItemsForQueues,
@@ -217,14 +217,7 @@ describe('queue polling', () => {
       const mocks = await getMocks()
       const queueGet = assertDefined(mocks['mockQueueGet'])
       const itemGet = assertDefined(mocks['mockGet'])
-      const queues = [
-        {
-          key: DAY_QUEUE_KEY,
-          name: 'today',
-          periodUnit: 'day',
-          position: 0,
-        },
-      ] satisfies Queue[]
+      const queues = [makeQueue({ key: DAY_QUEUE_KEY, name: 'today' })]
       queueGet.mockResolvedValue(jsonResponse(queues))
       itemGet.mockResolvedValue(jsonResponse([]))
 
