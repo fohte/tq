@@ -121,6 +121,56 @@ describe('task_list', () => {
     ])
   })
 
+  it('accepts a task number for parentId', async () => {
+    const parent = await createTask('Parent')
+    const child = await createTask('Child', { parentId: parent.id })
+
+    const toolResult = await callMcpTool(client, 'task_list', {
+      parentId: parent.number,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(child),
+        parentNumber: parent.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
+  it('accepts a task number for descendantOf', async () => {
+    const root = await createTask('Root')
+    const child = await createTask('Child', { parentId: root.id })
+    const grandchild = await createTask('Grandchild', { parentId: child.id })
+    await createTask('Unrelated')
+
+    const toolResult = await callMcpTool(client, 'task_list', {
+      descendantOf: root.number,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(child),
+        parentNumber: root.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        childCompletionCount: { total: 1, completed: 0 },
+      },
+      {
+        ...withoutLinkSync(grandchild),
+        parentNumber: child.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
   it('filters by mixed task ids and includes their ancestors', async () => {
     const root = await createTask('Root')
     const selectedByNumber = await createTask('Selected by number', {
@@ -287,6 +337,70 @@ describe('task_search', () => {
       {
         ...withoutLinkSync(match),
         parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
+  it('accepts a task number in the parent: query filter', async () => {
+    const parent = await createTask('Parent')
+    const child = await createTask('Child', { parentId: parent.id })
+    await createTask('Orphan')
+
+    const toolResult = await callMcpTool(client, 'task_search', {
+      q: `parent:${String(parent.number)}`,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(child),
+        parentNumber: parent.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
+  it('accepts a task number for parentId', async () => {
+    const parent = await createTask('Parent')
+    const child = await createTask('Child', { parentId: parent.id })
+    await createTask('Orphan')
+
+    const toolResult = await callMcpTool(client, 'task_search', {
+      parentId: parent.number,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(child),
+        parentNumber: parent.number,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        childCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
+  it('accepts a task number for descendantOf', async () => {
+    const root = await createTask('Root')
+    const child = await createTask('Child', { parentId: root.id })
+    const grandchild = await createTask('Grandchild', { parentId: child.id })
+
+    const toolResult = await callMcpTool(client, 'task_search', {
+      q: 'Grandchild',
+      descendantOf: root.number,
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(grandchild),
+        parentNumber: child.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
         blockedByGithubRefs: [],
