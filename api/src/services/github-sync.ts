@@ -24,6 +24,7 @@ import { getValidAccessToken } from '#integrations/oauth'
 import { isQuietProviderError } from '#integrations/quiet-errors'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
 import { sendPush } from '#services/push'
+import { checkChecklistItemsForGithubLink } from '#services/task-checklist-progress'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
 type NotifyEvent = LinkRow['notifyEvents'][number]
@@ -250,19 +251,30 @@ export function syncLinkFromGithub(
       notification: NonNullable<ReturnType<typeof changedEvent>> | null,
     ) =>
       ResultAsync.fromSafePromise(
-        db
-          .update(taskGithubLinks)
-          .set({
-            title: issue.title,
-            state: issue.state,
-            commentsCount: issue.commentsCount,
-            githubUpdatedAt: new Date(issue.githubUpdatedAt),
-            stateReason: issue.stateReason,
-            etag,
-            lastSyncedAt,
-          })
-          .where(matchesStoredGithubState(link))
-          .returning({ id: taskGithubLinks.id }),
+        db.transaction(async (tx) => {
+          const updatedLinks = await tx
+            .update(taskGithubLinks)
+            .set({
+              title: issue.title,
+              state: issue.state,
+              commentsCount: issue.commentsCount,
+              githubUpdatedAt: new Date(issue.githubUpdatedAt),
+              stateReason: issue.stateReason,
+              etag,
+              lastSyncedAt,
+            })
+            .where(matchesStoredGithubState(link))
+            .returning({ id: taskGithubLinks.id })
+
+          if (
+            updatedLinks.length > 0 &&
+            link.state !== 'merged' &&
+            issue.state === 'merged'
+          ) {
+            await checkChecklistItemsForGithubLink(tx, link.id)
+          }
+          return updatedLinks
+        }),
       ).andThen((updatedLinks) => {
         if (updatedLinks.length === 0 || notification === null) {
           return okAsync(undefined)

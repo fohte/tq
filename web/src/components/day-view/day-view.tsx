@@ -57,6 +57,7 @@ type MobileTab = 'calendar' | 'tasks'
 
 interface QueuePaneStyle extends CSSProperties {
   '--queue-width': string
+  '--queue-max-height': string | undefined
 }
 
 const MOBILE_TAB_OPTIONS = [
@@ -185,6 +186,7 @@ export function DayViewPresentation({
   })
   const queuePaneStyle: QueuePaneStyle = {
     '--queue-width': `${String(queueWidth)}px`,
+    '--queue-max-height': isCompactLayout ? '40%' : undefined,
   }
 
   const openCreateModal = useCallback((range: SelectedRange | null) => {
@@ -359,7 +361,10 @@ export function DayViewPresentation({
           className={cn(
             'relative flex w-full flex-col',
             isCompactLayout
-              ? 'shrink-0 overflow-auto border-b border-border'
+              ? cn(
+                  'shrink-0 overflow-auto border-b border-border',
+                  'max-h-(--queue-max-height)',
+                )
               : 'md:flex-none',
             !isCompactLayout &&
               (activeViewMode === 'kanban'
@@ -368,10 +373,7 @@ export function DayViewPresentation({
             !isCompactLayout &&
               (mobileTab === 'calendar' ? 'hidden md:flex' : 'flex md:flex'),
           )}
-          style={{
-            ...queuePaneStyle,
-            ...(isCompactLayout ? { maxHeight: '40%' } : {}),
-          }}
+          style={queuePaneStyle}
         >
           {activeViewMode === 'kanban' && kanbanFilterRow}
 
@@ -396,6 +398,7 @@ export function DayViewPresentation({
             <QueuePane
               isLoading={isLoading}
               queueSections={visibleQueueSections}
+              queueDate={formatLocalDate(selectedDate)}
               queueCandidates={isCompactLayout ? [] : queueCandidates}
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}

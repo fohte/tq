@@ -15,6 +15,8 @@ import { cn } from '#lib/utils'
 
 export function QueueItemRowAppearance({
   task,
+  queueKey,
+  queueDate,
   onRemove,
   attributes,
   listeners,
@@ -31,6 +33,8 @@ export function QueueItemRowAppearance({
   onCancelEstimate,
 }: {
   task: Task
+  queueKey: string
+  queueDate: string
   onRemove: () => void
   attributes: DraggableAttributes
   listeners: DraggableSyntheticListeners
@@ -92,6 +96,8 @@ export function QueueItemRowAppearance({
       style={style}
       {...attributes}
       {...listeners}
+      data-queue-key={queueKey}
+      data-queue-date={queueDate}
       className={cn(
         'flex cursor-grab items-center gap-1 border-b border-border active:cursor-grabbing',
         isDragging && 'opacity-50',

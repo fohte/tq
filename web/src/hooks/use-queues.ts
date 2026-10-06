@@ -32,6 +32,17 @@ export type QueueItem = InferResponseType<
   200
 >[number]
 
+export async function fetchQueueItems(
+  key: string,
+  date: string,
+): Promise<QueueItem[]> {
+  const res = await api.api.queues[':key'].items.$get({
+    param: { key },
+    query: { date },
+  })
+  return unwrapOrThrow(assertOk(res)).json()
+}
+
 export function useQueues(refetchInterval?: number) {
   return useQuery({
     queryKey: queueKeys.all,
@@ -52,13 +63,7 @@ export function useQueueItems(
 
   return useQuery({
     queryKey: queueKeys.items(key, date),
-    queryFn: async () => {
-      const res = await api.api.queues[':key'].items.$get({
-        param: { key },
-        query: { date },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
+    queryFn: () => fetchQueueItems(key, date),
     // exactOptionalPropertyTypes rejects `enabled: undefined` since Enabled
     // itself doesn't include undefined, so the key must be omitted entirely
     // to fall back to react-query's default (enabled).
@@ -82,14 +87,25 @@ export function useQueueItemsForQueues(
     queries: (queues ?? []).map((queue) => ({
       queryKey: queueKeys.items(queue.key, date),
       ...(refetchInterval === undefined ? {} : { refetchInterval }),
-      queryFn: async () => {
-        const res = await api.api.queues[':key'].items.$get({
-          param: { key: queue.key },
-          query: { date },
-        })
-        return unwrapOrThrow(assertOk(res)).json()
-      },
+      queryFn: () => fetchQueueItems(queue.key, date),
     })),
+  })
+}
+
+export function useQueueItemsForDates(
+  key: string | undefined,
+  dates: string[],
+  refetchInterval?: number,
+) {
+  return useQueries({
+    queries:
+      key == null
+        ? []
+        : dates.map((date) => ({
+            queryKey: queueKeys.items(key, date),
+            ...(refetchInterval === undefined ? {} : { refetchInterval }),
+            queryFn: () => fetchQueueItems(key, date),
+          })),
   })
 }
 
