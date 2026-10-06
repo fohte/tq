@@ -599,9 +599,9 @@ function ScreenHeaderBar(props: {
 ```
 
 A fixed-height (`h-10`) bottom-bordered bar for a screen's or panel's
-top header row. `spacing="compact"` reduces the gap between leading items on
-narrow queue headers. Compose it with a `SectionHeading` / plain label plus
-trailing actions (e.g. `ml-auto` button).
+top header row. `spacing="compact"` reduces the gaps between all child items
+on narrow queue headers; normal spacing resumes from `sm`. Compose it with a
+`SectionHeading` / plain label plus trailing actions (e.g. `ml-auto` button).
 
 ```tsx
 <ScreenHeaderBar>
