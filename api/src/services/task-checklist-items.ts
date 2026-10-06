@@ -7,6 +7,15 @@ import type { GithubIssueData } from '#integrations/github/issues'
 import { RowNotFoundError } from '#lib/drizzle-utils'
 import type { EditAuthor } from '#lib/edits'
 import {
+  type ChecklistError,
+  type ChecklistItem,
+  fail,
+} from '#services/task-checklist-errors'
+import {
+  lockChecklist,
+  lockItemChecklist,
+} from '#services/task-checklist-locking'
+import {
   checkChecklistItemsForGithubLink,
   recalculateChecklistAncestors,
 } from '#services/task-checklist-progress'
@@ -15,46 +24,8 @@ import {
   GithubResourceAlreadyLinkedError,
 } from '#services/task-github-links'
 
-type ChecklistError = { status: 400 | 404; message: string }
-type ChecklistItem = typeof taskChecklistItems.$inferSelect
-
 function clampPosition(position: number, siblingCount: number) {
   return Math.max(0, Math.min(position, siblingCount))
-}
-
-function fail<T>(status: ChecklistError['status'], message: string) {
-  return err<T, ChecklistError>({ status, message })
-}
-
-async function lockChecklist(
-  tx: DbTransaction,
-  checklistId: string,
-): Promise<Result<typeof taskChecklists.$inferSelect, ChecklistError>> {
-  const [checklist] = await tx
-    .select()
-    .from(taskChecklists)
-    .where(eq(taskChecklists.id, checklistId))
-    .for('update')
-
-  return checklist == null ? fail(404, 'Checklist not found') : ok(checklist)
-}
-
-async function lockItemChecklist(
-  tx: DbTransaction,
-  itemId: string,
-): Promise<Result<ChecklistItem, ChecklistError>> {
-  const existing = await tx.query.taskChecklistItems.findFirst({
-    where: eq(taskChecklistItems.id, itemId),
-  })
-  if (!existing) return fail(404, 'Checklist item not found')
-
-  const locked = await lockChecklist(tx, existing.checklistId)
-  if (locked.isErr()) return err(locked.error)
-
-  const item = await tx.query.taskChecklistItems.findFirst({
-    where: eq(taskChecklistItems.id, itemId),
-  })
-  return item == null ? fail(404, 'Checklist item not found') : ok(item)
 }
 
 function siblingsWhere(checklistId: string, parentItemId: string | null) {

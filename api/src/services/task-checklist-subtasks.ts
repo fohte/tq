@@ -11,56 +11,53 @@ import {
 } from '#db/schema'
 import type { EditAuthor } from '#lib/edits'
 import { recordEdit } from '#lib/edits'
+import {
+  type ChecklistError,
+  type ChecklistItem,
+  fail,
+} from '#services/task-checklist-errors'
+import { lockItemChecklistWith } from '#services/task-checklist-locking'
 import { recalculateChecklistAncestors } from '#services/task-checklist-progress'
+import { collectChecklistDescendants } from '#services/task-checklist-subtask-tree'
 import { syncTaskLabels } from '#services/task-labels'
-
-type ChecklistError = { status: 400 | 404; message: string }
-type ChecklistItem = typeof taskChecklistItems.$inferSelect
-
-function fail<T>(status: ChecklistError['status'], message: string) {
-  return err<T, ChecklistError>({ status, message })
-}
 
 export async function promoteChecklistItemToSubtask(
   tx: DbTransaction,
   itemId: string,
   author: EditAuthor,
 ): Promise<Result<ChecklistItem, ChecklistError>> {
-  const initialItem = await tx.query.taskChecklistItems.findFirst({
-    where: eq(taskChecklistItems.id, itemId),
-  })
-  if (initialItem == null) return fail(404, 'Checklist item not found')
+  type ParentTask = Pick<
+    typeof tasks.$inferSelect,
+    'id' | 'context' | 'projectId'
+  >
+  const itemResult = await lockItemChecklistWith<ParentTask>(
+    tx,
+    itemId,
+    async (initialItem) => {
+      const [checklist] = await tx
+        .select({ taskId: taskChecklists.taskId })
+        .from(taskChecklists)
+        .where(eq(taskChecklists.id, initialItem.checklistId))
+      if (checklist == null) return fail(404, 'Checklist item not found')
 
-  const [initialChecklist] = await tx
-    .select({ taskId: taskChecklists.taskId })
-    .from(taskChecklists)
-    .where(eq(taskChecklists.id, initialItem.checklistId))
-  if (initialChecklist == null) return fail(404, 'Checklist item not found')
+      const [task] = await tx
+        .select({
+          id: tasks.id,
+          context: tasks.context,
+          projectId: tasks.projectId,
+        })
+        .from(tasks)
+        .where(eq(tasks.id, checklist.taskId))
+        .for('update')
+      if (task == null) return fail(404, 'Checklist item not found')
 
-  const [parentTask] = await tx
-    .select({
-      id: tasks.id,
-      context: tasks.context,
-      projectId: tasks.projectId,
-    })
-    .from(tasks)
-    .where(eq(tasks.id, initialChecklist.taskId))
-    .for('update')
-  if (parentTask == null) return fail(404, 'Checklist item not found')
+      return ok(task)
+    },
+  )
+  if (itemResult.isErr()) return err(itemResult.error)
 
-  const [checklist] = await tx
-    .select({ id: taskChecklists.id, taskId: taskChecklists.taskId })
-    .from(taskChecklists)
-    .where(eq(taskChecklists.id, initialItem.checklistId))
-    .for('update')
-  if (checklist == null) return fail(404, 'Checklist item not found')
-
-  const item = await tx.query.taskChecklistItems.findFirst({
-    where: eq(taskChecklistItems.id, itemId),
-  })
-  if (item == null || item.checklistId !== checklist.id) {
-    return fail(404, 'Checklist item not found')
-  }
+  const { item, context: parentTask } = itemResult.value
+  const checklistId = item.checklistId
   if (item.githubLinkId != null) {
     return fail(400, 'Checklist items linked to GitHub cannot be promoted')
   }
@@ -71,31 +68,16 @@ export async function promoteChecklistItemToSubtask(
   const items = await tx
     .select()
     .from(taskChecklistItems)
-    .where(eq(taskChecklistItems.checklistId, checklist.id))
+    .where(eq(taskChecklistItems.checklistId, checklistId))
     .orderBy(
       asc(taskChecklistItems.sortOrder),
       asc(taskChecklistItems.createdAt),
       asc(taskChecklistItems.id),
     )
-  const childrenByParentId = new Map<string, ChecklistItem[]>()
-  for (const candidate of items) {
-    if (candidate.parentItemId == null) continue
-    const siblings = childrenByParentId.get(candidate.parentItemId) ?? []
-    siblings.push(candidate)
-    childrenByParentId.set(candidate.parentItemId, siblings)
-  }
-
-  const directChildren = childrenByParentId.get(item.id) ?? []
-  const descendants: ChecklistItem[] = []
-  const visited = new Set([item.id])
-  const pending = [...directChildren]
-  while (pending.length > 0) {
-    const descendant = pending.pop()
-    if (descendant == null || visited.has(descendant.id)) continue
-    visited.add(descendant.id)
-    descendants.push(descendant)
-    pending.push(...(childrenByParentId.get(descendant.id) ?? []))
-  }
+  const { directChildren, descendants } = collectChecklistDescendants(
+    items,
+    item.id,
+  )
 
   const parentLabels = await tx
     .select({ name: labels.name })
@@ -114,7 +96,7 @@ export async function promoteChecklistItemToSubtask(
       context: parentTask.context,
     })
     .returning()
-  if (subtask == null) return fail(404, 'Parent task not found')
+  if (subtask == null) return fail(404, 'Subtask could not be created')
 
   await syncTaskLabels(
     tx,
@@ -143,10 +125,20 @@ export async function promoteChecklistItemToSubtask(
       })
       .where(
         and(
-          eq(taskChecklistItems.checklistId, checklist.id),
+          eq(taskChecklistItems.checklistId, checklistId),
           inArray(taskChecklistItems.id, descendantIds),
         ),
       )
+
+    const linkedSubtaskIds = descendants.flatMap(({ subtaskId }) =>
+      subtaskId == null ? [] : [subtaskId],
+    )
+    if (linkedSubtaskIds.length > 0) {
+      await tx
+        .update(tasks)
+        .set({ parentId: subtask.id, updatedAt: new Date() })
+        .where(inArray(tasks.id, linkedSubtaskIds))
+    }
   }
 
   const [promoted] = await tx
