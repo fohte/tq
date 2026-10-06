@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
   classifyNavigation,
+  createOnNavigateRequest,
   type NavigationAction,
-  type NavigationSource,
   resolveDeepLink,
+  resolveInternalUrl,
   resolveOpenInMainWindowPath,
   shouldOpenSideNavigationInMain,
   shouldUseNavigationRequest,
@@ -12,62 +13,113 @@ import {
 
 const ORIGIN = 'https://tq.example.com'
 
+describe('resolveInternalUrl', () => {
+  it.each<[string, string, string, string | undefined]>([
+    [
+      'internal path',
+      '/tasks/42?tab=details',
+      ORIGIN,
+      `${ORIGIN}/tasks/42?tab=details`,
+    ],
+    ['protocol-relative external path', '//evil.test/x', ORIGIN, undefined],
+    ['invalid configured origin', '/tasks/42', 'https://', undefined],
+  ])('%s', (_name, path, origin, expected) => {
+    expect(resolveInternalUrl(path, origin)).toBe(expected)
+  })
+})
+
 describe('resolveOpenInMainWindowPath', () => {
-  it.each<[string, unknown, NavigationSource, string, string | undefined]>([
+  it.each<[string, unknown, string, string | undefined]>([
     [
       'side window path with search and hash',
       '/tasks/42?tab=activity#comments',
-      'side',
       `${ORIGIN}/?layout=compact`,
       '/tasks/42?tab=activity#comments',
     ],
     [
       'relative memo window path',
       'tasks/42',
-      'memo',
       `${ORIGIN}/memo?layout=compact`,
       '/tasks/42',
     ],
     [
       'absolute path at the configured origin',
       `${ORIGIN}/tasks/42?tab=details`,
-      'side',
       `${ORIGIN}/?layout=compact`,
       '/tasks/42?tab=details',
     ],
-    ['main window sender', '/tasks/42', 'main', `${ORIGIN}/tasks/1`, undefined],
+    [
+      'double-slash path at the configured origin',
+      `${ORIGIN}//evil.test/x`,
+      `${ORIGIN}/?layout=compact`,
+      '/evil.test/x',
+    ],
+    ['non-string path', null, `${ORIGIN}/?layout=compact`, undefined],
     [
       'sender outside the configured origin',
       '/tasks/42',
-      'side',
       'https://login.example.test/',
       undefined,
     ],
     [
       'absolute path at another origin',
       'https://tq.example.com.evil.test/tasks/42',
-      'side',
       `${ORIGIN}/?layout=compact`,
       undefined,
     ],
     [
       'protocol-relative path at another origin',
       '//tq.example.com.evil.test/tasks/42',
-      'memo',
       `${ORIGIN}/memo?layout=compact`,
       undefined,
     ],
-    [
-      'unparseable path',
-      'http://[',
-      'side',
-      `${ORIGIN}/?layout=compact`,
-      undefined,
-    ],
-  ])('%s', (_name, path, source, senderUrl, expected) => {
-    expect(resolveOpenInMainWindowPath(path, source, senderUrl, ORIGIN)).toBe(
-      expected,
+    ['unparseable path', 'http://[', `${ORIGIN}/?layout=compact`, undefined],
+  ])('%s', (_name, path, senderUrl, expected) => {
+    expect(resolveOpenInMainWindowPath(path, senderUrl, ORIGIN)).toBe(expected)
+  })
+})
+
+describe('createOnNavigateRequest', () => {
+  it('reports registration while at least one listener remains subscribed', () => {
+    const listenerStates: boolean[] = []
+    const subscriptions = new Set<(path: unknown) => void>()
+    const firstDeliveries: string[] = []
+    const secondDeliveries: string[] = []
+    const onNavigateRequest = createOnNavigateRequest(
+      (listener) => {
+        subscriptions.add(listener)
+        return () => subscriptions.delete(listener)
+      },
+      (registered) => listenerStates.push(registered),
     )
+
+    const unsubscribeFirst = onNavigateRequest((path) =>
+      firstDeliveries.push(path),
+    )
+    const unsubscribeSecond = onNavigateRequest((path) =>
+      secondDeliveries.push(path),
+    )
+    for (const listener of subscriptions) listener('/tasks/first')
+    unsubscribeFirst()
+    unsubscribeFirst()
+    for (const listener of subscriptions) listener('/tasks/second')
+    unsubscribeSecond()
+    unsubscribeSecond()
+    for (const listener of subscriptions) listener('/tasks/third')
+
+    const actual = () => [
+      listenerStates,
+      firstDeliveries,
+      secondDeliveries,
+      subscriptions.size,
+    ]
+
+    expect(actual()).toEqual([
+      [true, false],
+      ['/tasks/first'],
+      ['/tasks/first', '/tasks/second'],
+      0,
+    ])
   })
 })
 

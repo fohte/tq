@@ -38,17 +38,21 @@ export const isInternalUrl = (url: string, origin: string): boolean => {
   return urlOrigin !== undefined && urlOrigin === originOf(origin)
 }
 
+export const resolveInternalUrl = (
+  path: string,
+  origin: string,
+): string | undefined =>
+  resolveUrl({ path, base: origin }).match(
+    (parsed) => (isInternalUrl(parsed.href, origin) ? parsed.href : undefined),
+    () => undefined,
+  )
+
 export const resolveOpenInMainWindowPath = (
   path: unknown,
-  source: NavigationSource,
   senderUrl: string,
   origin: string,
 ): string | undefined => {
-  if (
-    (source !== 'side' && source !== 'memo') ||
-    typeof path !== 'string' ||
-    !isInternalUrl(senderUrl, origin)
-  ) {
+  if (typeof path !== 'string' || !isInternalUrl(senderUrl, origin)) {
     return undefined
   }
 
@@ -59,12 +63,39 @@ export const resolveOpenInMainWindowPath = (
   if (base === undefined) return undefined
 
   return resolveUrl({ path, base }).match(
-    (parsed) =>
-      isInternalUrl(parsed.href, origin)
-        ? `${parsed.pathname}${parsed.search}${parsed.hash}`
-        : undefined,
+    (parsed) => {
+      if (!isInternalUrl(parsed.href, origin)) return undefined
+      const pathname = `/${parsed.pathname.replace(/^\/+/, '')}`
+      return `${pathname}${parsed.search}${parsed.hash}`
+    },
     () => undefined,
   )
+}
+
+export const createOnNavigateRequest = (
+  subscribe: (listener: (path: unknown) => void) => () => void,
+  reportListenerState: (registered: boolean) => void,
+): ((listener: (path: string) => void) => () => void) => {
+  let listenerCount = 0
+
+  return (listener) => {
+    if (typeof listener !== 'function') return () => undefined
+
+    const unsubscribe = subscribe((path) => {
+      if (typeof path === 'string') listener(path)
+    })
+    listenerCount += 1
+    if (listenerCount === 1) reportListenerState(true)
+
+    let subscribed = true
+    return () => {
+      if (!subscribed) return
+      subscribed = false
+      unsubscribe()
+      listenerCount -= 1
+      if (listenerCount === 0) reportListenerState(false)
+    }
+  }
 }
 
 export const shouldUseNavigationRequest = (

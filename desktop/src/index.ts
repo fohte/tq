@@ -25,6 +25,7 @@ import {
   type NavigationSource,
   OPEN_IN_MAIN_WINDOW_CHANNEL,
   resolveDeepLink,
+  resolveInternalUrl,
   resolveOpenInMainWindowPath,
   shouldOpenSideNavigationInMain,
   shouldUseNavigationRequest,
@@ -119,26 +120,29 @@ const openMainWindow = (url: string) => {
   showWindow(mainWindow)
 }
 
-const isTrustedMainFrame = (
+const trustedMainFrameUrl = (
   event: Electron.IpcMainEvent,
-  win: BrowserWindow | undefined,
-): boolean => {
+  allowedWindows: readonly (BrowserWindow | undefined)[],
+): string | undefined => {
   const frame = event.senderFrame
-  return (
-    win !== undefined &&
-    !win.isDestroyed() &&
-    BrowserWindow.fromWebContents(event.sender) === win &&
-    frame !== null &&
-    frame === event.sender.mainFrame &&
-    isInternalUrl(frame.url, TQ_ORIGIN)
-  )
+  if (
+    frame === null ||
+    frame !== event.sender.mainFrame ||
+    !isInternalUrl(frame.url, TQ_ORIGIN)
+  ) {
+    return undefined
+  }
+
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return win !== null && allowedWindows.includes(win) && !win.isDestroyed()
+    ? frame.url
+    : undefined
 }
 
 const createWindow = (url: string): BrowserWindow => {
   const win = createDesktopWindow({
     // The sidebar provides the main window's titlebar spacing and drag region.
     ...(isMacOS ? { minWidth: 768 } : {}),
-    webPreferences: { sandbox: true },
   })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
@@ -156,24 +160,15 @@ const showWindow = (win: BrowserWindow) => {
 }
 
 ipcMain.on(NAVIGATION_LISTENER_STATE_CHANNEL, (event, registered: unknown) => {
-  if (!isTrustedMainFrame(event, mainWindow)) return
+  if (trustedMainFrameUrl(event, [mainWindow]) === undefined) return
   mainNavigationRequestListenerRegistered = registered === true
 })
 
 ipcMain.on(OPEN_IN_MAIN_WINDOW_CHANNEL, (event, rawPath: unknown) => {
-  const sourceWindow = BrowserWindow.fromWebContents(event.sender)
-  if (sourceWindow !== sideWindow && sourceWindow !== memoWindow) return
+  const senderUrl = trustedMainFrameUrl(event, [sideWindow, memoWindow])
+  if (senderUrl === undefined) return
 
-  const frame = event.senderFrame
-  if (frame === null || frame !== event.sender.mainFrame) return
-
-  const source: NavigationSource = sourceWindow === sideWindow ? 'side' : 'memo'
-  const path = resolveOpenInMainWindowPath(
-    rawPath,
-    source,
-    frame.url,
-    TQ_ORIGIN,
-  )
+  const path = resolveOpenInMainWindowPath(rawPath, senderUrl, TQ_ORIGIN)
   if (path === undefined) return
 
   const targetWindow = mainWindow
@@ -192,7 +187,8 @@ ipcMain.on(OPEN_IN_MAIN_WINDOW_CHANNEL, (event, rawPath: unknown) => {
     return
   }
 
-  openMainWindow(new URL(path, TQ_ORIGIN).href)
+  const url = resolveInternalUrl(path, TQ_ORIGIN)
+  if (url !== undefined) openMainWindow(url)
 })
 
 const isMissingFile = (caughtErr: unknown): boolean =>
@@ -234,7 +230,6 @@ const createSideWindow = (): BrowserWindow => {
         )
   const win = createDesktopWindow({
     ...bounds,
-    webPreferences: { sandbox: true },
   })
   sideWindowAlwaysOnTopController?.applyTo(win)
   setSideWindowTitle(win)
@@ -280,7 +275,6 @@ const createMemoWindow = (): BrowserWindow => {
     minWidth: 360,
     minHeight: 320,
     title: 'Memo',
-    webPreferences: { sandbox: true },
   })
   memoWindow = win
 
@@ -367,17 +361,14 @@ app.on('web-contents-created', (_event, contents) => {
     return { action: action === 'allow' ? 'allow' : 'deny' }
   })
 
-  contents.on('did-navigate', () => {
+  const resetMainNavigationListener = () => {
     if (BrowserWindow.fromWebContents(contents) === mainWindow) {
       mainNavigationRequestListenerRegistered = false
     }
-  })
+  }
 
-  contents.on('render-process-gone', () => {
-    if (BrowserWindow.fromWebContents(contents) === mainWindow) {
-      mainNavigationRequestListenerRegistered = false
-    }
-  })
+  contents.on('did-navigate', resetMainNavigationListener)
+  contents.on('render-process-gone', resetMainNavigationListener)
 
   contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
     if (!isMainFrame || navigationSource() !== 'side') return
