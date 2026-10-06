@@ -135,11 +135,38 @@ describe('schedule operation tools', () => {
     )
   })
 
-  it('creates a time block for a task', async () => {
+  it('creates a time block for a task number', async () => {
     const task = await createTask('Focused work')
 
     const result = await callMcpTool(client, 'schedule_time_blocks_create', {
       taskId: task.number,
+      startTime: '2026-12-18T08:30:00.000Z',
+      endTime: '2026-12-18T09:15:00.000Z',
+      isAutoScheduled: true,
+    })
+
+    expect(
+      normalizeDynamicValues(parseToolJson(result), {
+        skipKeys: ['taskId', 'startTime', 'endTime'],
+      }),
+    ).toEqual(
+      normalizeDynamicValues(
+        makeTimeBlock({
+          taskId: task.id,
+          startTime: '2026-12-18T08:30:00.000Z',
+          endTime: '2026-12-18T09:15:00.000Z',
+          isAutoScheduled: true,
+        }),
+        { skipKeys: ['taskId', 'startTime', 'endTime'] },
+      ),
+    )
+  })
+
+  it('creates a time block for a task UUID', async () => {
+    const task = await createTask('Focused work')
+
+    const result = await callMcpTool(client, 'schedule_time_blocks_create', {
+      taskId: task.id,
       startTime: '2026-12-18T08:30:00.000Z',
       endTime: '2026-12-18T09:15:00.000Z',
       isAutoScheduled: true,

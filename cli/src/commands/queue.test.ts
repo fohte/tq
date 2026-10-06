@@ -178,7 +178,7 @@ describe('queue set', () => {
     })
   })
 
-  it('rejects invalid task UUIDs before sending a request', async () => {
+  it('rejects an identifier that is neither a UUID nor task number', async () => {
     expect(
       await runQueueCli(
         ['queue', 'set', 'day', '2026-08-06', 'not-a-uuid'],

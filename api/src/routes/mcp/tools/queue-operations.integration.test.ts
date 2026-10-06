@@ -137,7 +137,7 @@ describe('queue operation tools', () => {
     )
   })
 
-  it('rejects a non-UUID task ID when setting a queue', async () => {
+  it('rejects an identifier that is neither a UUID nor task number', async () => {
     const result = await callMcpTool(client, 'queue_set', {
       key: 'day',
       date: '2026-08-06',

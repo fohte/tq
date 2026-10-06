@@ -39,11 +39,11 @@ const updateParentSchema = z.object({
 
 // Both close-as-duplicate routes need the target UUID for self-reference
 // checks and relation writes.
-async function checkDuplicateTarget(
+async function resolveDuplicateTargetId(
   id: string,
   duplicateOfTaskId: string | number,
 ): Promise<
-  { taskId: string } | { error: { body: { error: string }; status: 400 | 404 } }
+  { id: string } | { error: { body: { error: string }; status: 400 | 404 } }
 > {
   const duplicateTarget = await findTaskByIdOrNumber(String(duplicateOfTaskId))
   if (!duplicateTarget) {
@@ -64,7 +64,7 @@ async function checkDuplicateTarget(
     }
   }
 
-  return { taskId: duplicateTarget.id }
+  return { id: duplicateTarget.id }
 }
 
 // Must run against the same `tx` as the status update it gates.
@@ -133,7 +133,7 @@ export const tasksActionsApp = new Hono()
       let duplicateTargetTaskId: string | null = null
 
       if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-        const duplicateTarget = await checkDuplicateTarget(
+        const duplicateTarget = await resolveDuplicateTargetId(
           id,
           duplicateOfTaskId,
         )
@@ -143,7 +143,7 @@ export const tasksActionsApp = new Hono()
             duplicateTarget.error.status,
           )
         }
-        duplicateTargetTaskId = duplicateTarget.taskId
+        duplicateTargetTaskId = duplicateTarget.id
       }
 
       // `existing.status` was read by requireTask outside this transaction,
@@ -319,7 +319,7 @@ export const tasksActionsApp = new Hono()
       let duplicateTargetTaskId: string | null = null
 
       if (reason === 'duplicate' && duplicateOfTaskId != null) {
-        const duplicateTarget = await checkDuplicateTarget(
+        const duplicateTarget = await resolveDuplicateTargetId(
           id,
           duplicateOfTaskId,
         )
@@ -329,7 +329,7 @@ export const tasksActionsApp = new Hono()
             duplicateTarget.error.status,
           )
         }
-        duplicateTargetTaskId = duplicateTarget.taskId
+        duplicateTargetTaskId = duplicateTarget.id
       }
 
       // `existing.status` was read by requireTask outside this transaction,

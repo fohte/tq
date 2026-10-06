@@ -998,11 +998,9 @@ describe('tasks actions API', () => {
     })
 
     describe('task_relations_no_self_relation constraint', () => {
-      // No route ever writes a same-id row (both handlers reject
-      // `duplicateOfTaskId === id` with a 400 before touching the
-      // database), so this constraint has no public-API path to exercise
-      // it — inserted directly to guard the schema invariant itself, as
-      // with `task_links_no_self_link` (task-content.ts).
+      // Both handlers resolve UUIDs and task numbers to UUIDs and reject a
+      // matching target before writing the relation, so insert directly to
+      // guard this schema invariant, as with `task_links_no_self_link`.
       it('rejects a raw same-id insert', async () => {
         const task = await createTask('Task')
 

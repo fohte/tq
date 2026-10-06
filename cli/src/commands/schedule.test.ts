@@ -85,8 +85,50 @@ describe('schedule time blocks list', () => {
 })
 
 describe('schedule time blocks create', () => {
-  it('creates an auto-scheduled block', async () => {
+  it('creates an auto-scheduled block for a task number', async () => {
     const taskId = '42'
+    const block = makeTimeBlock({
+      taskId,
+      startTime: '2026-12-18T08:30:00.000Z',
+      endTime: '2026-12-18T09:15:00.000Z',
+      isAutoScheduled: true,
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'time-blocks',
+          'create',
+          taskId,
+          '2026-12-18T08:30:00.000Z',
+          '2026-12-18T09:15:00.000Z',
+          '--auto-scheduled',
+        ],
+        new Response(JSON.stringify(block), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/time-blocks',
+          query: {},
+          body: {
+            taskId,
+            startTime: '2026-12-18T08:30:00.000Z',
+            endTime: '2026-12-18T09:15:00.000Z',
+            isAutoScheduled: true,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(block, null, 2)}\n`]],
+    })
+  })
+
+  it('creates an auto-scheduled block for a task UUID', async () => {
+    const taskId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     const block = makeTimeBlock({
       taskId,
       startTime: '2026-12-18T08:30:00.000Z',
