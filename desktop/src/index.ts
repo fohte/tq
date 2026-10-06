@@ -22,6 +22,10 @@ import {
   shouldOpenSideNavigationInMain,
 } from '#navigation'
 import {
+  createSideWindowSettingsStore,
+  type SideWindowSettingsStore,
+} from '#side-window-settings'
+import {
   clampWindowBounds,
   createDebouncedAction,
   createWindowBoundsStore,
@@ -35,6 +39,8 @@ let mainWindow: BrowserWindow | undefined
 let sideWindow: BrowserWindow | undefined
 let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
+let sideWindowAlwaysOnTop = false
+let sideWindowSettingsStore: SideWindowSettingsStore | undefined
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
@@ -119,6 +125,20 @@ const isMissingFile = (caughtErr: unknown): boolean =>
   'code' in caughtErr &&
   caughtErr.code === 'ENOENT'
 
+const setSideWindowAlwaysOnTop = (alwaysOnTop: boolean) => {
+  sideWindowAlwaysOnTop = alwaysOnTop
+  if (sideWindow !== undefined && !sideWindow.isDestroyed()) {
+    sideWindow.setAlwaysOnTop(alwaysOnTop)
+  }
+
+  sideWindowSettingsStore?.save({ alwaysOnTop }).match(
+    () => undefined,
+    (caughtErr) => {
+      console.error('failed to save side window settings', caughtErr)
+    },
+  )
+}
+
 const createSideWindow = (): BrowserWindow => {
   const boundsFile = join(app.getPath('userData'), 'side-window-bounds.json')
   const boundsStore: WindowBoundsStore = createWindowBoundsStore({
@@ -148,6 +168,7 @@ const createSideWindow = (): BrowserWindow => {
     ...bounds,
     webPreferences: { sandbox: true },
   })
+  win.setAlwaysOnTop(sideWindowAlwaysOnTop)
   setSideWindowTitle(win)
   sideWindow = win
 
@@ -295,6 +316,28 @@ app.on('window-all-closed', () => undefined)
 
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
+  const settingsFile = join(
+    app.getPath('userData'),
+    'side-window-settings.json',
+  )
+  sideWindowSettingsStore = createSideWindowSettingsStore({
+    read: () => readFileSync(settingsFile, 'utf8'),
+    write: (serialized) => {
+      mkdirSync(dirname(settingsFile), { recursive: true })
+      writeFileSync(settingsFile, serialized)
+    },
+  })
+  sideWindowSettingsStore.load().match(
+    (settings) => {
+      sideWindowAlwaysOnTop = settings?.alwaysOnTop ?? false
+    },
+    (caughtErr) => {
+      if (!isMissingFile(caughtErr)) {
+        console.error('failed to read side window settings', caughtErr)
+      }
+    },
+  )
+
   // Only a packaged app has the `tq` scheme in its Info.plist; in development
   // this would claim the scheme for the bare Electron binary.
   if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME)
@@ -313,7 +356,11 @@ void app.whenReady().then(() => {
         win.webContents.navigationHistory,
         win.webContents,
         clipboard,
-        openSideWindow,
+        {
+          open: openSideWindow,
+          alwaysOnTop: sideWindowAlwaysOnTop,
+          setAlwaysOnTop: setSideWindowAlwaysOnTop,
+        },
       ),
     ),
   )
