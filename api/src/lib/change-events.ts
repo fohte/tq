@@ -2,6 +2,7 @@ import type { Context, MiddlewareHandler } from 'hono'
 import { routePath } from 'hono/route'
 
 import type { ChangeEvent, ChangeResource } from '#lib/change-event-contract'
+import type { TaskEnv } from '#routes/tasks/shared'
 
 export type { ChangeEvent } from '#lib/change-event-contract'
 
@@ -35,6 +36,10 @@ const postQueryRoutes = new Set([
   '/api/github/sync',
   '/api/tasks/:taskId/github-link/sync',
 ])
+
+type ChangeEventEnv = {
+  Variables: Partial<TaskEnv['Variables']>
+}
 
 export function subscribeToChangeEvents(
   listener: ChangeEventListener,
@@ -73,24 +78,10 @@ function resourceFromRoute(routePattern: string): ChangeResource | null {
 function idFromRoute(
   routePattern: string,
   resource: ChangeResource,
-  c: Context,
+  c: Context<ChangeEventEnv>,
 ) {
   if (resource === 'task') {
-    const variables: unknown = c.var
-    if (
-      typeof variables !== 'object' ||
-      variables === null ||
-      !('task' in variables)
-    ) {
-      return null
-    }
-
-    const task = variables.task
-    if (typeof task !== 'object' || task === null || !('id' in task)) {
-      return null
-    }
-
-    return typeof task.id === 'string' ? task.id : null
+    return c.get('task')?.id ?? null
   }
 
   const paramName = routePattern
@@ -101,7 +92,10 @@ function idFromRoute(
   return paramName == null ? null : (c.req.param(paramName) ?? null)
 }
 
-export const changeEventMiddleware: MiddlewareHandler = async (c, next) => {
+export const changeEventMiddleware: MiddlewareHandler<ChangeEventEnv> = async (
+  c,
+  next,
+) => {
   const path = c.req.path
   if (
     c.req.method === 'GET' ||
