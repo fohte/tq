@@ -4,7 +4,6 @@ import { type ReactNode, useLayoutEffect, useRef } from 'react'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
-import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import {
   TaskSidebar,
   TaskSidebarMobile,
@@ -26,11 +25,9 @@ const baseTask = makeTaskDetail({
 
 function Providers({
   children,
-  task,
   project,
 }: {
   children: ReactNode
-  task: TaskDetail
   project?: ProjectDetail | undefined
 }) {
   const queryClient = new QueryClient({
@@ -51,23 +48,6 @@ function Providers({
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
   }
-  // An auto-scheduled time block's row fetches that day's queue (to know
-  // which task to drop on delete) — seed it so the story never hits the
-  // network.
-  for (const block of task.timeBlocks) {
-    if (!block.isAutoScheduled) continue
-    const date = formatLocalDate(new Date(block.startTime))
-    queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, date), [
-      makeQueueItem({
-        id: `queue-item-${block.id}`,
-        taskId: task.id,
-        periodStart: date,
-        createdAt: block.createdAt,
-        updatedAt: block.updatedAt,
-      }),
-    ])
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <StoryRouter
@@ -116,7 +96,7 @@ function SidebarStory({
   scrollToTimeBlocks?: boolean | undefined
 }) {
   return (
-    <Providers task={task} project={project}>
+    <Providers project={project}>
       <SidebarPanelStoryView
         task={task}
         defaultOpen={defaultOpen}
@@ -251,7 +231,7 @@ export const MobileSidebar: StoryObj<{
     task: { ...baseTask },
   },
   render: ({ task, project }) => (
-    <Providers task={task} project={project}>
+    <Providers project={project}>
       <div className="max-w-sm border-t border-border p-4">
         <TaskSidebarMobile task={task} />
       </div>

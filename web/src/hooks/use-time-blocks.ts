@@ -173,7 +173,7 @@ export function useUpdateTimeBlock() {
   })
 }
 
-function useDeleteTimeBlock() {
+function useDeleteTimeBlockMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -213,9 +213,9 @@ function useDeleteTimeBlock() {
   })
 }
 
-export function useDeleteManualTimeBlock(taskId: string, blockId: string) {
+export function useDeleteTimeBlock(taskId: string, blockId: string) {
   const queryClient = useQueryClient()
-  const deleteTimeBlock = useDeleteTimeBlock()
+  const deleteTimeBlock = useDeleteTimeBlockMutation()
 
   return {
     onDelete: () => {

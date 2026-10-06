@@ -83,7 +83,7 @@ export function QueueItemRowAppearance({
           onStartEditingEstimate()
         }}
         data-no-dnd=""
-        title="No estimate set — excluded from auto-scheduling"
+        title="Set an estimate"
         className="shrink-0 whitespace-nowrap border-destructive text-destructive"
       >
         No estimate
