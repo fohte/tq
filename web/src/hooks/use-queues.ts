@@ -231,29 +231,3 @@ export function useTaskPlan(taskId: string, date: string) {
       dayItems.isLoading || weekItems.isLoading || setQueueItems.isPending,
   }
 }
-
-export function useRemoveFromDayQueue(
-  taskId: string,
-  localDate: string,
-  options?: { enabled?: boolean },
-) {
-  const dayQueueItems = useQueueItems(DAY_QUEUE_KEY, localDate, options)
-  const setQueueItems = useSetQueueItems()
-
-  return {
-    onDelete: () => {
-      setQueueItems.mutate({
-        key: DAY_QUEUE_KEY,
-        date: localDate,
-        taskIds: (dayQueueItems.data ?? [])
-          .map((item) => item.taskId)
-          .filter((id) => id !== taskId),
-      })
-    },
-    isDeleting:
-      setQueueItems.isPending ||
-      dayQueueItems.isLoading ||
-      dayQueueItems.isError ||
-      dayQueueItems.data === undefined,
-  }
-}
