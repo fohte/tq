@@ -40,34 +40,37 @@ export function SidebarProjectField({
 
   return (
     <SidebarField label="PROJECT">
-      <Select
-        items={items}
-        value={projectId ?? NO_PROJECT}
-        onValueChange={selectValueHandler(
-          (value) => {
-            updateTask.mutate({
-              id: taskId,
-              input: { projectId: value === NO_PROJECT ? null : value },
-            })
-          },
-          [NO_PROJECT, ...projectItems.map((p) => p.value)],
-        )}
-      >
-        <SelectTrigger
-          size="sm"
-          className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+      <div className="px-1">
+        <Select
+          items={items}
+          value={projectId ?? NO_PROJECT}
+          onValueChange={selectValueHandler(
+            (value) => {
+              updateTask.mutate({
+                id: taskId,
+                input: { projectId: value === NO_PROJECT ? null : value },
+              })
+            },
+            [NO_PROJECT, ...projectItems.map((p) => p.value)],
+          )}
         >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NO_PROJECT}>—</SelectItem>
-          {(projects ?? []).map((project) => (
-            <SelectItem key={project.id} value={project.id}>
-              {project.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectTrigger
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-1"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_PROJECT}>—</SelectItem>
+            {(projects ?? []).map((project) => (
+              <SelectItem key={project.id} value={project.id}>
+                {project.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </SidebarField>
   )
 }

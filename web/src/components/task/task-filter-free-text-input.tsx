@@ -136,12 +136,13 @@ export function TaskFilterFreeTextInput({
   }
 
   return (
-    <div className="flex min-w-32 flex-1 items-center">
+    <div className="flex min-w-32 flex-1 items-center px-1">
       <Input
         id={id}
         ref={inputRef}
         autoFocus={autoFocus}
         type="text"
+        variant="ghost"
         value={value}
         onChange={(e) => {
           setValue(e.target.value)
@@ -156,7 +157,7 @@ export function TaskFilterFreeTextInput({
           setIsFocused(false)
         }}
         placeholder={placeholder}
-        className="h-auto min-w-0 flex-1 border-0 bg-transparent dark:bg-transparent p-0 font-mono text-sm outline-none placeholder:text-muted-foreground transition-none focus-visible:border-0 focus-visible:ring-0"
+        className="min-w-0 flex-1"
         aria-label="Filter query"
       />
       <Popover open={isFocused && hasSuggestions} anchor={inputRef}>

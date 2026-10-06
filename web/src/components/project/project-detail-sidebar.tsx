@@ -185,34 +185,34 @@ function StatusSelect({
   const statusValues = ['active', 'paused', 'completed', 'archived'] as const
 
   return (
-    <Select
-      items={statusValues.map((value) => ({
-        value,
-        label: statusLabels[value],
-      }))}
-      value={status}
-      onValueChange={selectValueHandler((value: ProjectDetail['status']) => {
-        updateProject.mutate({ id: projectId, input: { status: value } })
-      }, statusValues)}
-    >
-      <SelectTrigger
-        size="sm"
-        iconClassName="size-4 text-foreground native-select-caret-stroke native-select-status-caret-offset"
-        className={cn(
-          'h-auto data-[size=sm]:h-auto w-fit min-w-20 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
-          mobileLayout && 'min-h-5 translate-y-px',
-        )}
+    <div className="px-1">
+      <Select
+        items={statusValues.map((value) => ({
+          value,
+          label: statusLabels[value],
+        }))}
+        value={status}
+        onValueChange={selectValueHandler((value: ProjectDetail['status']) => {
+          updateProject.mutate({ id: projectId, input: { status: value } })
+        }, statusValues)}
       >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {statusValues.map((value) => (
-          <SelectItem key={value} value={value}>
-            {statusLabels[value]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+        <SelectTrigger
+          variant="ghost"
+          size="sm"
+          iconClassName="size-4 text-foreground native-select-caret-stroke native-select-status-caret-offset"
+          className={cn('w-fit min-w-20', mobileLayout && 'translate-y-px')}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {statusValues.map((value) => (
+            <SelectItem key={value} value={value}>
+              {statusLabels[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 
@@ -229,34 +229,34 @@ function ContextSelect({
   const contextValues = ['work', 'personal'] as const
 
   return (
-    <Select
-      items={contextValues.map((value) => ({
-        value,
-        label: contextLabels[value],
-      }))}
-      value={context}
-      onValueChange={selectValueHandler((value: ProjectDetail['context']) => {
-        updateProject.mutate({ id: projectId, input: { context: value } })
-      }, contextValues)}
-    >
-      <SelectTrigger
-        size="sm"
-        iconClassName="size-4 -translate-x-1.5 text-foreground native-select-caret-stroke"
-        className={cn(
-          'h-auto data-[size=sm]:h-auto w-fit min-w-20.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
-          mobileLayout && 'min-h-5 translate-y-px',
-        )}
+    <div className="px-1">
+      <Select
+        items={contextValues.map((value) => ({
+          value,
+          label: contextLabels[value],
+        }))}
+        value={context}
+        onValueChange={selectValueHandler((value: ProjectDetail['context']) => {
+          updateProject.mutate({ id: projectId, input: { context: value } })
+        }, contextValues)}
       >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {contextValues.map((value) => (
-          <SelectItem key={value} value={value}>
-            {contextLabels[value]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+        <SelectTrigger
+          variant="ghost"
+          size="sm"
+          iconClassName="size-4 -translate-x-1.5 text-foreground native-select-caret-stroke"
+          className={cn('w-fit min-w-20.5', mobileLayout && 'translate-y-px')}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {contextValues.map((value) => (
+            <SelectItem key={value} value={value}>
+              {contextLabels[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 

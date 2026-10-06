@@ -45,11 +45,7 @@ export function ExpandableContextChipDemo({
             close()
           }}
         >
-          <SelectTrigger
-            autoFocus
-            size="sm"
-            className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-          >
+          <SelectTrigger variant="ghost" autoFocus size="sm">
             <SelectValue placeholder="None" />
           </SelectTrigger>
           <SelectContent>

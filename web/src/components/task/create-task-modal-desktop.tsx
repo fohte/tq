@@ -117,7 +117,6 @@ export function CreateTaskModalDesktop({
           context={context}
           placeholder="Task title"
           autoFocus
-          className="h-auto border-0 bg-transparent p-0 text-xl font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 md:text-xl"
         />
 
         {descriptionTemplateSelector}
@@ -135,11 +134,12 @@ export function CreateTaskModalDesktop({
           >
             <Input
               type="date"
+              variant="ghost"
               value={startDate}
               onChange={(e) => {
                 setStartDate(e.target.value)
               }}
-              className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+              className="w-32"
             />
           </InlineFieldGroup>
           <InlineFieldGroup
@@ -148,11 +148,12 @@ export function CreateTaskModalDesktop({
           >
             <Input
               type="date"
+              variant="ghost"
               value={dueDate}
               onChange={(e) => {
                 setDueDate(e.target.value)
               }}
-              className="h-auto w-32 border-0 bg-transparent p-0 text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0"
+              className="w-32"
             />
           </InlineFieldGroup>
           <InlineFieldGroup
@@ -161,12 +162,13 @@ export function CreateTaskModalDesktop({
           >
             <Input
               type="text"
+              variant="ghost"
               value={estimateInput}
               onChange={(e) => {
                 setEstimateInput(e.target.value)
               }}
               placeholder="1h30m"
-              className="h-auto w-16 border-0 bg-transparent p-0 text-xs text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+              className="w-16"
             />
           </InlineFieldGroup>
           <InlineFieldGroup
@@ -177,10 +179,7 @@ export function CreateTaskModalDesktop({
               value={context}
               onValueChange={selectValueHandler(setContext, contextValues)}
             >
-              <SelectTrigger
-                size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-              >
+              <SelectTrigger variant="ghost" size="sm">
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
@@ -201,10 +200,7 @@ export function CreateTaskModalDesktop({
                 commitmentValues,
               )}
             >
-              <SelectTrigger
-                size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-              >
+              <SelectTrigger variant="ghost" size="sm">
                 <SelectValue placeholder="Inbox" />
               </SelectTrigger>
               <SelectContent>

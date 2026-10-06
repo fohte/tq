@@ -76,6 +76,7 @@ function EditableSessionLabel({
     return (
       <Input
         type="text"
+        variant="ghost"
         value={value}
         onChange={(e) => {
           setValue(e.target.value)
@@ -90,7 +91,7 @@ function EditableSessionLabel({
           }
         }}
         autoFocus
-        className="h-auto min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-xs text-muted-foreground shadow-none focus-visible:ring-0"
+        className="min-w-0 flex-1"
       />
     )
   }
