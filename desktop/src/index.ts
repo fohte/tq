@@ -46,7 +46,15 @@ const createDesktopWindow = (
 ) => {
   const win = new BrowserWindow({
     ...options,
-    ...(isMacOS ? { titleBarStyle: 'hidden' as const } : {}),
+    ...(isMacOS
+      ? {
+          titleBarStyle: 'hidden' as const,
+          // macOS 26 AppKit's 14 pt buttons and 9 pt gaps occupy 69 pt from
+          // the default 9 pt inset; the shared 80 px content inset leaves 11 px.
+          // A 13 pt top margin centers their 14 pt frame in the 40 px strip.
+          trafficLightPosition: { x: 9, y: 13 },
+        }
+      : {}),
   })
 
   if (isMacOS) {

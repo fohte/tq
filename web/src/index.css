@@ -90,6 +90,14 @@
   -webkit-app-region: drag;
 }
 
+.electron-titlebar-bar {
+  display: flex;
+  height: 2.5rem;
+  align-items: center;
+  padding-left: 5rem;
+  -webkit-app-region: drag;
+}
+
 .electron-no-drag-region {
   -webkit-app-region: no-drag;
 }

@@ -261,6 +261,7 @@ export const Loading: Story = {
 
 export const DesktopWindowControls: Story = {
   name: 'the Now panel reserves space for the desktop window controls',
+  tags: ['desktop-only'],
   args: {
     desktopWindowControls: true,
     now,
