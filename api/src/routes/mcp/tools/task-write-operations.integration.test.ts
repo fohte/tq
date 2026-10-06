@@ -763,6 +763,40 @@ describe('task_complete tool', () => {
       blocking: [],
     })
   })
+
+  it('accepts a task number as duplicate target', async () => {
+    const target = await createTask('Target')
+    const task = await createTask('Duplicate me')
+
+    const result = await callMcpTool(client, 'task_complete', {
+      taskId: task.id,
+      statusReason: 'duplicate',
+      duplicateOfTaskId: target.number,
+    })
+
+    const toolData = parseToolData(result)
+    const detailRes = await app.request(`/api/tasks/${task.id}`)
+    const detail = await jsonBody<Record<string, unknown>>(detailRes)
+    const duplicateOfTask = detail['duplicateOfTask']
+
+    const getActual = () => ({
+      status:
+        isRecord(toolData) && typeof toolData['status'] === 'string'
+          ? toolData['status']
+          : null,
+      duplicateOfNumber: detail['duplicateOfNumber'],
+      duplicateOfTaskId:
+        isRecord(duplicateOfTask) && typeof duplicateOfTask['id'] === 'string'
+          ? duplicateOfTask['id']
+          : null,
+    })
+
+    expect(getActual()).toEqual({
+      status: 'completed',
+      duplicateOfNumber: target.number,
+      duplicateOfTaskId: target.id,
+    })
+  })
 })
 
 describe('task_status tool', () => {

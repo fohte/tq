@@ -761,8 +761,8 @@ Options:
   --reason <reason>        Why the task is being closed (completed, not_planned,
                            duplicate); defaults to completed (choices:
                            "completed", "not_planned", "duplicate")
-  --duplicate-of <taskId>  Task id this task is a duplicate of (only used when
-                           --reason duplicate)
+  --duplicate-of <taskId>  Task id or number this task is a duplicate of (only
+                           used when --reason duplicate)
   -h, --help               display help for command
 `,
     )
@@ -822,7 +822,7 @@ Options:
     })
   })
 
-  it('sends --duplicate-of as duplicateOfTaskId', async () => {
+  it('sends --duplicate-of task number as duplicateOfTaskId', async () => {
     const completed = {
       id: 't1',
       number: 1,
@@ -833,26 +833,22 @@ Options:
     )
 
     const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'task',
-        'complete',
-        '42',
-        '--duplicate-of',
-        '11111111-1111-1111-1111-111111111111',
-      ],
+      ['--api-url', apiUrl, 'task', 'complete', '42', '--duplicate-of', '43'],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'POST',
-      pathname: '/api/tasks/42/complete',
-      query: {},
-      body: {
-        duplicateOfTaskId: '11111111-1111-1111-1111-111111111111',
+    const getActual = () => ({ exitCode, request: request(calls[0]) })
+
+    expect(getActual()).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks/42/complete',
+        query: {},
+        body: {
+          duplicateOfTaskId: '43',
+        },
       },
     })
   })

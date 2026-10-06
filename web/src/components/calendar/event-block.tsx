@@ -2,6 +2,10 @@ import type { EventContentArg } from '@fullcalendar/core'
 import { Headphones, LogOut, MapPin } from 'lucide-react'
 
 import {
+  type EventAccentStyle,
+  getEventAccentStyle,
+} from '#components/calendar/event-accent-style'
+import {
   getTaskDateEventProps,
   TaskDateEvent,
 } from '#components/calendar/task-date-event'
@@ -12,21 +16,16 @@ import {
   GCAL_OUT_OF_OFFICE_EVENT_TYPE,
   GCAL_WORKING_LOCATION_EVENT_TYPE,
   getEventProps,
-  isGcalEventType,
   isPendingGcalResponse,
 } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
 type EventKind = NonNullable<CalendarEventProps['type']>
 
-interface EventBlockStyle extends React.CSSProperties {
-  '--event-accent'?: string
-}
-
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
-  'day-queue': 'border-l-foreground',
-  manual: 'border-l-foreground',
+  'day-queue': 'border-l-muted-foreground',
+  manual: 'border-l-muted-foreground',
   auto: 'border-l-muted-foreground',
   'gcal-meeting': 'border-l-border',
   'gcal-status': 'border-l-border',
@@ -37,14 +36,14 @@ const RULE_CLASS: Record<EventKind, string> = {
 
 const BG_CLASS: Record<EventKind, string> = {
   schedule: 'bg-card',
-  'day-queue': 'bg-surface-strong',
+  'day-queue': 'bg-card',
   'gcal-meeting': 'bg-card',
   'gcal-status': 'bg-card',
   'gcal-info': 'bg-card',
   'gcal-solo': 'bg-transparent',
   auto: 'bg-transparent',
-  manual: 'bg-surface-strong',
-  'task-date': 'bg-surface-strong',
+  manual: 'bg-card',
+  'task-date': 'bg-card',
 }
 
 // Marks only the minority status/info categories, mirroring Google
@@ -79,8 +78,6 @@ export function EventBlock(arg: EventContentArg) {
   const props = getEventProps(event)
   const type = props.type ?? 'manual'
   const parentRef = props.parentRef
-  const scheduleAccent = props.color?.accent
-  const calendarColor = props.calendarColor
   const redacted = props.redacted ?? false
 
   if (type === 'task-date') {
@@ -130,16 +127,9 @@ export function EventBlock(arg: EventContentArg) {
 
   const badge = type === 'auto' ? 'auto' : undefined
 
-  // gcal-solo drops the calendar accent along with the fill, so it reads as
-  // one step weaker than a meeting rather than just another colored card.
-  const accentColor =
-    type === 'schedule'
-      ? scheduleAccent
-      : type === 'gcal-meeting' ||
-          type === 'gcal-status' ||
-          type === 'gcal-info'
-        ? calendarColor
-        : undefined
+  const accentStyle = getEventAccentStyle(props)
+  const accentColor = accentStyle?.['--event-accent']
+  const isColoredAppointment = accentStyle?.['--event-fill'] != null
 
   return (
     <EventBlockShell
@@ -147,6 +137,8 @@ export function EventBlock(arg: EventContentArg) {
       className={cn(
         RULE_CLASS[type],
         BG_CLASS[type],
+        isColoredAppointment && type !== 'gcal-solo' && 'border-l-4',
+        type === 'gcal-solo' && 'border-l-2',
         type === 'day-queue' && 'border-dashed',
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
@@ -157,19 +149,18 @@ export function EventBlock(arg: EventContentArg) {
       )}
       continuesBefore={continuesBefore}
       continuesAfter={continuesAfter}
-      style={
-        accentColor == null ? undefined : { '--event-accent': accentColor }
-      }
+      style={accentStyle}
       title={
         <span
           className={cn(
             'inline-flex min-w-0 items-center gap-1 text-2xs',
-            type === 'gcal-solo'
-              ? 'text-muted-foreground'
-              : isGcalEventType(type)
-                ? 'text-muted-foreground-strong'
-                : 'font-mono text-foreground',
-            type === 'manual' && 'font-medium',
+            isColoredAppointment
+              ? 'font-sans font-semibold text-foreground'
+              : type === 'manual' || type === 'auto' || type === 'day-queue'
+                ? 'font-mono text-muted-foreground-strong'
+                : type === 'gcal-status'
+                  ? 'text-muted-foreground-strong'
+                  : 'font-mono text-foreground',
           )}
         >
           <GcalEventIconTitle
@@ -219,7 +210,7 @@ function EventBlockShell({
   className?: string
   continuesBefore?: boolean
   continuesAfter?: boolean
-  style?: EventBlockStyle | undefined
+  style?: EventAccentStyle | undefined
   title: React.ReactNode
   badge?: string | undefined
   meta: React.ReactNode

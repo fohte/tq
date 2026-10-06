@@ -48,7 +48,7 @@ export interface TimeBlockEvent {
   isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string
-  /** Google Calendar's color for the event's calendar; used as an accent on gcal events except gcal-solo, which renders without a calendar accent */
+  /** Google Calendar's color for the event's calendar */
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
