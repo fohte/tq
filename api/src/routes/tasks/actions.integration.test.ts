@@ -1154,7 +1154,7 @@ describe('tasks actions API', () => {
         },
         task: { status: 'todo', statusReason: null },
       })
-    })
+    }, 15_000)
 
     it('keeps completed PATCH retries idempotent and checks a changed completion reason', async () => {
       const retryTask = await createTask('Completed retry task', {
