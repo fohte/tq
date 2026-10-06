@@ -193,6 +193,44 @@ describe('checklist item add', () => {
       output: [[`${JSON.stringify(response, null, 2)}\n`]],
     })
   })
+
+  it('maps --github to the checklist item API input', async () => {
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/57'
+    const response = { id: 'item-id', content: 'Build the feature' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 201 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'item',
+        'add',
+        'checklist-id',
+        'Build the feature',
+        '--github',
+        githubUrl,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/checklists/checklist-id/items',
+          query: {},
+          body: { content: 'Build the feature', github: githubUrl },
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
 })
 
 describe('checklist item update', () => {
@@ -225,6 +263,43 @@ describe('checklist item update', () => {
           pathname: '/api/checklist-items/item-id',
           query: {},
           body: { note: null },
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('maps --github to the checklist item API input', async () => {
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/61'
+    const response = { id: 'item-id', githubLinkId: 'link-id' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'item',
+        'update',
+        'item-id',
+        '--github',
+        githubUrl,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: '/api/checklist-items/item-id',
+          query: {},
+          body: { github: githubUrl },
         },
       ],
       output: [[`${JSON.stringify(response, null, 2)}\n`]],

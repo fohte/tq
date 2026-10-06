@@ -14,8 +14,8 @@ import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-quer
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
 import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
 import {
-  getVisualViewportStyle,
   useVisualViewportInsets,
+  type VisualViewportStyle,
 } from '#hooks/use-visual-viewport-insets'
 import { getSearchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
@@ -38,6 +38,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     setNewTaskOpen(true)
   }, [])
   const insets = useVisualViewportInsets()
+  const visualViewportStyle: VisualViewportStyle | undefined =
+    insets === null
+      ? undefined
+      : {
+          '--visual-viewport-top': `${String(insets.top)}px`,
+          '--visual-viewport-height': `${String(insets.height)}px`,
+        }
 
   useGlobalKeybindings({
     searchKeybinding,
@@ -64,7 +71,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           ? cn('top-0', isViewportPinned ? 'h-dvh' : 'min-h-dvh')
           : 'inset-x-0 top-(--visual-viewport-top) h-(--visual-viewport-height)',
       )}
-      style={getVisualViewportStyle(insets)}
+      style={visualViewportStyle}
     >
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">

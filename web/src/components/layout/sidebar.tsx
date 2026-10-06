@@ -1,7 +1,7 @@
 import { Button } from '@fohte/ui/button'
 import { Chip } from '@fohte/ui/chip'
 import { Link, useMatchRoute, useSearch } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useState } from 'react'
 
 import { SidebarActionableRow } from '#components/layout/sidebar-row'
@@ -32,6 +32,8 @@ import { cn } from '#lib/utils'
 
 const MAX_VISIBLE_VIEWS = 5
 const SIDEBAR_WIDTH_STORAGE_KEY = 'tq:sidebar-width'
+
+type SidebarWidthStyle = CSSProperties & { '--sidebar-width': string }
 
 interface NavItem {
   to: string
@@ -280,8 +282,8 @@ export function Sidebar({
 
   return (
     <aside
-      className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar md:flex"
-      style={{ width }}
+      className="sticky top-0 hidden h-screen w-(--sidebar-width) shrink-0 flex-col border-r border-border bg-sidebar md:flex"
+      style={{ '--sidebar-width': `${String(width)}px` } as SidebarWidthStyle}
     >
       <div
         className={cn(
