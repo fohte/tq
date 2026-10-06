@@ -173,7 +173,7 @@ export async function classifyGithubLinkConflict(
   throw cause
 }
 
-export async function lockGithubResource(
+async function lockGithubResource(
   tx: DbTransaction,
   ref: GithubResourceRef,
 ): Promise<void> {
