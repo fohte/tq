@@ -169,13 +169,14 @@ function FocusNotes({ taskId }: { taskId: string }) {
     <div className="flex flex-col gap-2">
       <FocusLabel>NOTES</FocusLabel>
       <Textarea
+        variant="code"
         value={notes}
         onChange={(e) => {
           setNotes(e.target.value)
         }}
         placeholder="Jot down notes while you work..."
         rows={5}
-        className="resize-y bg-card p-3 font-code text-xs leading-relaxed"
+        className="resize-y"
       />
     </div>
   )

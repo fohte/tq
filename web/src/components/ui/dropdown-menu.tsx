@@ -7,8 +7,22 @@ function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
 }
 
-function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />
+function DropdownMenuTrigger({
+  className,
+  variant = 'default',
+  ...props
+}: MenuPrimitive.Trigger.Props & { variant?: 'default' | 'quiet' }) {
+  return (
+    <MenuPrimitive.Trigger
+      data-slot="dropdown-menu-trigger"
+      className={cn(
+        variant === 'quiet' &&
+          'inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-1 font-mono text-2xs text-muted-foreground-faint outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50',
+        className,
+      )}
+      {...props}
+    />
+  )
 }
 
 function DropdownMenuContent({
@@ -45,12 +59,18 @@ function DropdownMenuContent({
   )
 }
 
-function DropdownMenuItem({ className, ...props }: MenuPrimitive.Item.Props) {
+function DropdownMenuItem({
+  className,
+  variant = 'default',
+  ...props
+}: MenuPrimitive.Item.Props & { variant?: 'default' | 'destructive' }) {
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
       className={cn(
         "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        variant === 'destructive' &&
+          'text-destructive focus:bg-destructive/10 focus:text-destructive focus:**:text-destructive',
         className,
       )}
       {...props}

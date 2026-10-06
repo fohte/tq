@@ -46,7 +46,7 @@ export function GitHubNotifyEventsPicker({
       <DropdownMenuTrigger
         aria-label={`Notify on: ${triggerLabel}`}
         disabled={disabled}
-        className="inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-1 font-mono text-2xs text-muted-foreground-faint outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+        variant="quiet"
       >
         {triggerLabel}
         <ChevronDown aria-hidden="true" className="size-3" />

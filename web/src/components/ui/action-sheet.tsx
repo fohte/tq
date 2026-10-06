@@ -42,14 +42,19 @@ function ActionSheetContent({
 function ActionSheetItem({
   className,
   icon,
+  variant = 'default',
   children,
   ...props
-}: DialogPrimitive.Close.Props & { icon?: React.ReactNode }) {
+}: DialogPrimitive.Close.Props & {
+  icon?: React.ReactNode
+  variant?: 'default' | 'destructive'
+}) {
   return (
     <DialogPrimitive.Close
       data-slot="action-sheet-item"
       className={cn(
         'flex min-h-11 w-full items-center gap-2.5 border-t border-border px-3.5 text-left text-sm text-popover-foreground first:border-t-0',
+        variant === 'destructive' && 'text-destructive',
         className,
       )}
       {...props}

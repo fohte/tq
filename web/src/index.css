@@ -16,6 +16,7 @@
   --github-open: #3fb950;
   --github-closed: #f85149;
   --github-merged: #a371f7;
+  --scrim: rgb(0 0 0 / 40%);
 
   --tabs-trigger-height: calc(100% - 1px);
   --width-preview-popup: min(28rem, calc(100vw - 2rem));
@@ -38,6 +39,7 @@
   --color-github-open: var(--github-open);
   --color-github-closed: var(--github-closed);
   --color-github-merged: var(--github-merged);
+  --color-scrim: var(--scrim);
   --radius-task-filter-value: 3px;
 
   /* Grid track definitions — see docs/design-system.md "Grid tracks". */

@@ -6,8 +6,11 @@ import { cn } from '#lib/utils'
 
 function BottomSheetOverlay({
   className,
+  backdrop = 'none',
   ...props
-}: Omit<React.ComponentProps<'div'>, 'style'>) {
+}: Omit<React.ComponentProps<'div'>, 'style'> & {
+  backdrop?: 'none' | 'dimmed'
+}) {
   const insets = useVisualViewportInsets()
   const visualViewportStyle: VisualViewportStyle | undefined =
     insets === null
@@ -22,6 +25,7 @@ function BottomSheetOverlay({
       data-slot="bottom-sheet-overlay"
       className={cn(
         'pointer-events-none fixed inset-x-0 z-50 flex items-end',
+        backdrop === 'dimmed' && 'bg-scrim',
         insets === null && 'inset-y-0',
         className,
         insets !== null &&

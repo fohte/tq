@@ -9,7 +9,7 @@ function renderDescription(defaultValue: string | null) {
   return render(
     <EditableMarkdownDescription
       defaultValue={defaultValue}
-      className="p-4"
+      variant="task"
       placeholder="Add description..."
       editButtonLabel="Edit description"
       onChange={() => {}}

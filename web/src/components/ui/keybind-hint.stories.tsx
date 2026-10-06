@@ -9,7 +9,7 @@ const meta = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['plain', 'boxed'],
+      options: ['plain', 'strong', 'muted', 'boxed'],
     },
   },
 } satisfies Meta<typeof KeybindHint>
@@ -24,13 +24,18 @@ export const Plain: Story = {
   },
 }
 
-// The plain variant defaults to the dimmest gray tier (sidebar nav hints).
-// Brighter contexts, like the status line's `⌘K search`, override the color
-// via className instead of a dedicated variant.
 export const PlainBright: Story = {
   name: 'shows a brighter shortcut for the command palette',
   args: {
-    className: 'text-muted-foreground-strong',
+    variant: 'strong',
+    children: '⌘K',
+  },
+}
+
+export const PlainMuted: Story = {
+  name: 'shows a muted shortcut in a button label',
+  args: {
+    variant: 'muted',
     children: '⌘K',
   },
 }

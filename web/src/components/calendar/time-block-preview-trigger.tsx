@@ -187,7 +187,7 @@ function TimeBlockPreviewPopup({
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>
-          <PreviewCardPopup className="w-auto p-0">
+          <PreviewCardPopup padding="none" className="w-auto">
             <TimeBlockPreviewCard
               task={task}
               isTaskError={isTaskError}

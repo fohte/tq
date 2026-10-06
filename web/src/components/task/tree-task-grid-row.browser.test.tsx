@@ -193,7 +193,24 @@ describe('TreeTaskGridRow', () => {
   it('shows child completion count', async () => {
     const node = makeNode({ childCompletionCount: { completed: 1, total: 3 } })
     await renderTree(node)
-    expect(screen.getByTestId('child-completion')).toHaveTextContent('1/3')
+    const childCompletion = screen.getByTestId('child-completion')
+    const expandButton = screen.queryByRole('button', { name: 'Expand' })
+    const actual = `${childCompletion.tagName}|${childCompletion.textContent}|${expandButton == null ? 'no expand button' : 'expand button'}`
+    expect(actual).toBe('SPAN|1/3|no expand button')
+  })
+
+  it('shows an expand affordance with child completion count', async () => {
+    const node = makeNode({
+      id: 'parent-1',
+      children: [makeNode({ id: 'child-1', title: 'Child task' })],
+      childCompletionCount: { completed: 1, total: 3 },
+    })
+    await renderTree(node)
+    const childCompletion = screen.getByTestId('child-completion')
+    const childCompletionCount =
+      screen.getAllByTestId('child-completion').length
+    const actual = `${childCompletion.tagName}|${childCompletion.textContent}|${String(childCompletion.getAttribute('aria-label'))}|${String(childCompletionCount)}`
+    expect(actual).toBe('BUTTON|▾1/31 of 3 child tasks completed|Collapse|1')
   })
 
   it('renders checklist progress after the subtask count', async () => {
@@ -388,12 +405,30 @@ describe('TreeTaskGridRow', () => {
       'desktop trigger not found',
     )
 
-    // opacity-0 by default (see desktopTriggerClassName in
-    // tree-row-actions-menu.tsx); revealed via `.group:hover` or its own
+    // opacity-0 by default (from hideDesktopTriggerUntilHover on
+    // TreeRowActionsMenu); revealed via `.group:hover` or its own
     // `:focus-visible`.
     expect(trigger).not.toBeVisible()
 
     trigger.focus()
     expect(trigger).toBeVisible()
+  })
+
+  it('reveals the desktop actions trigger when the row is hovered', async () => {
+    const { container } = await renderTree(makeNode())
+    const trigger = assertDefined(
+      container.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+      ),
+      'desktop trigger not found',
+    )
+    const row = assertDefined(
+      trigger.closest<HTMLElement>('.group'),
+      'task row not found',
+    )
+
+    await page.elementLocator(row).hover()
+
+    expect(getComputedStyle(trigger).opacity).toBe('1')
   })
 })

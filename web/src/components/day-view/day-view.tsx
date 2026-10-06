@@ -272,7 +272,7 @@ export function DayViewPresentation({
     // height for h-full to resolve against.
     <div className="flex h-full flex-col overflow-hidden">
       {!isCompactLayout && (
-        <ScreenHeaderBar className="gap-1.5 sm:gap-2.5">
+        <ScreenHeaderBar spacing="compact">
           <SectionHeading level={2}>queue</SectionHeading>
 
           <div className="md:hidden">

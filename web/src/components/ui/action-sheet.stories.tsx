@@ -1,6 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { CornerUpLeft, Plus, Search } from 'lucide-react'
+import { CornerUpLeft, Plus, Search, Trash2 } from 'lucide-react'
 import { fn } from 'storybook/test'
 
 import {
@@ -13,9 +13,11 @@ import {
 function ActionSheetDemo({
   open,
   onOpenChange,
+  showDestructiveAction = false,
 }: {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  showDestructiveAction?: boolean
 }) {
   return (
     <ActionSheet open={open} onOpenChange={onOpenChange}>
@@ -30,6 +32,14 @@ function ActionSheetDemo({
         <ActionSheetItem icon={<CornerUpLeft className="h-4 w-4" />}>
           move under…
         </ActionSheetItem>
+        {showDestructiveAction && (
+          <ActionSheetItem
+            icon={<Trash2 className="h-4 w-4" />}
+            variant="destructive"
+          >
+            delete task…
+          </ActionSheetItem>
+        )}
       </ActionSheetContent>
     </ActionSheet>
   )
@@ -60,5 +70,13 @@ export const Open: Story = {
   name: 'shows task actions in an open mobile sheet',
   args: {
     open: true,
+  },
+}
+
+export const DestructiveItem: Story = {
+  name: 'the open sheet marks the delete action as destructive',
+  args: {
+    open: true,
+    showDestructiveAction: true,
   },
 }

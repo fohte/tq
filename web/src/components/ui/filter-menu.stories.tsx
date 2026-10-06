@@ -36,3 +36,11 @@ export const MobileSheet: Story = {
     defaultOpen: true,
   },
 }
+
+export const FilterChipTrigger: Story = {
+  name: 'the filter menu shows a compact filter chip trigger',
+  args: {
+    trigger: 'status: open',
+    triggerVariant: 'filter-chip',
+  },
+}

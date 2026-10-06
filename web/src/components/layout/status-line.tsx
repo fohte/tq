@@ -62,9 +62,7 @@ export function StatusLine({
       <div className="ml-auto flex gap-3.5 whitespace-nowrap">
         {shortcuts.map((shortcut) => (
           <span key={shortcut.label}>
-            <KeybindHint className="text-muted-foreground-strong">
-              {shortcut.key}
-            </KeybindHint>{' '}
+            <KeybindHint variant="strong">{shortcut.key}</KeybindHint>{' '}
             {shortcut.label}
           </span>
         ))}

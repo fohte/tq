@@ -23,9 +23,10 @@ export const Default: Story = {
   name: 'shows a dimmed backdrop behind an open task sheet',
   args: {
     children: null,
+    backdrop: 'dimmed',
   },
-  render: () => (
-    <BottomSheetOverlay className="bg-black/40">
+  render: (args) => (
+    <BottomSheetOverlay backdrop={args.backdrop ?? 'none'}>
       <BottomSheetPanel>
         <BottomSheetHeader>
           <span className="text-base font-semibold text-foreground">

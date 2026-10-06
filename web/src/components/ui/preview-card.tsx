@@ -41,13 +41,15 @@ function PreviewCardPositioner({
 
 function PreviewCardPopup({
   className,
+  padding = 'default',
   ...props
-}: PreviewCardPrimitive.Popup.Props) {
+}: PreviewCardPrimitive.Popup.Props & { padding?: 'default' | 'none' }) {
   return (
     <PreviewCardPrimitive.Popup
       data-slot="preview-card-popup"
       className={cn(
-        'w-72 rounded-xl bg-background p-3 text-sm ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+        'w-72 rounded-xl bg-background text-sm ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+        padding === 'default' && 'p-3',
         className,
       )}
       {...props}
@@ -71,7 +73,7 @@ function PreviewListPopup({
     // `w-auto`, the popup's shrink-to-fit width is driven by its children's
     // untruncated max-content width regardless of any min-width, since
     // min-width only raises a floor and never caps growth.
-    <PreviewCardPopup className="w-(--width-preview-popup) p-0">
+    <PreviewCardPopup padding="none" className="w-(--width-preview-popup)">
       <div className="border-b border-border px-3 py-1.5 font-mono text-2xs tracking-widest text-muted-foreground-faint">
         {label} ({count})
       </div>

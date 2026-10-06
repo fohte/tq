@@ -26,9 +26,7 @@ export function TaskListToolbar({ onCreateNew }: TaskListToolbarProps) {
         onClick={onCreateNew}
       >
         + new
-        <KeybindHint className="text-muted-foreground">
-          {newTaskKeybinding.keys}
-        </KeybindHint>
+        <KeybindHint variant="muted">{newTaskKeybinding.keys}</KeybindHint>
       </Button>
     </div>
   )
