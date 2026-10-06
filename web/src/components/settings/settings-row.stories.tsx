@@ -20,10 +20,10 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'a settings row pairs a working hours field with its description',
+  name: 'a settings row pairs a reminder time with its description',
   args: {
-    label: 'Working hours',
-    description: 'auto-scheduler が予定を配置できる時間帯',
+    label: 'Reminder time',
+    description: 'Choose when to receive a reminder.',
     children: <Input type="time" defaultValue="09:00" className="h-7 w-28" />,
   },
 }

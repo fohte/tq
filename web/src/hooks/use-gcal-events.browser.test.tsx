@@ -4,11 +4,7 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeGcalEvent } from '#hooks/gcal-event-test-fixtures'
-import {
-  GcalAuthRequiredError,
-  useAutoRescheduleOnGcalChange,
-  useGcalEvents,
-} from '#hooks/use-gcal-events'
+import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
 import { getDayIsoRange } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 
@@ -235,99 +231,5 @@ describe('useGcalEvents', () => {
     } finally {
       vi.useRealTimers()
     }
-  })
-})
-
-describe('useAutoRescheduleOnGcalChange', () => {
-  it('does not call onChange on the first render', () => {
-    const onChange = vi.fn()
-    renderHook(
-      ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange, true)
-      },
-      { initialProps: { events: [sampleEvent] } },
-    )
-
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('calls onChange when the events change to a new value', () => {
-    const onChange = vi.fn()
-    const { rerender } = renderHook(
-      ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange, true)
-      },
-      { initialProps: { events: [sampleEvent] } },
-    )
-
-    rerender({
-      events: [sampleEvent, { ...sampleEvent, id: 'gcal-event-2' }],
-    })
-
-    expect(onChange).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not call onChange when rerendered with the same reference', () => {
-    const onChange = vi.fn()
-    const events = [sampleEvent]
-    const { rerender } = renderHook(
-      ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange, true)
-      },
-      { initialProps: { events } },
-    )
-
-    rerender({ events })
-
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('does not call onChange while events is still undefined', () => {
-    const onChange = vi.fn()
-    const { rerender } = renderHook(
-      ({ events }: { events: (typeof sampleEvent)[] | undefined }) => {
-        useAutoRescheduleOnGcalChange(events, onChange, true)
-      },
-      { initialProps: { events: undefined } },
-    )
-
-    rerender({ events: undefined })
-
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('does not call onChange when the initial query load resolves', () => {
-    const onChange = vi.fn()
-    const { rerender } = renderHook(
-      ({ events }: { events: (typeof sampleEvent)[] | undefined }) => {
-        useAutoRescheduleOnGcalChange(events, onChange, true)
-      },
-      {
-        initialProps: {
-          events: undefined as (typeof sampleEvent)[] | undefined,
-        },
-      },
-    )
-
-    // The query finishes loading and returns data for the first time
-    rerender({ events: [sampleEvent] })
-
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('does not call onChange when disabled, even if events change', () => {
-    const onChange = vi.fn()
-    const { rerender } = renderHook(
-      ({ events }) => {
-        useAutoRescheduleOnGcalChange(events, onChange, false)
-      },
-      { initialProps: { events: [sampleEvent] } },
-    )
-
-    rerender({
-      events: [sampleEvent, { ...sampleEvent, id: 'gcal-event-2' }],
-    })
-
-    expect(onChange).not.toHaveBeenCalled()
   })
 })

@@ -126,10 +126,6 @@ vi.mock('#components/layout/app-layout', () => ({
   ),
 }))
 
-vi.mock('#hooks/use-auto-assign', () => ({
-  useAutoAssign: () => ({ isPending: false, mutate: vi.fn() }),
-}))
-
 vi.mock('#hooks/use-calendar-change-feedback', () => ({
   useCalendarChangeFeedback: () => ({
     changeFeedback: null,
@@ -149,7 +145,6 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 
 vi.mock('#hooks/use-gcal-events', () => ({
   GcalAuthRequiredError: class extends Error {},
-  useAutoRescheduleOnGcalChange: vi.fn(),
   useGcalEvents: (...args: Parameters<GcalQueryMock>) => {
     mocks.useGcalEvents(...args)
     return { data: [], error: null }
@@ -214,12 +209,6 @@ vi.mock('#hooks/use-queues', () => ({
 vi.mock('#hooks/use-schedules', () => ({
   useScheduleList: (...args: Parameters<DateRangeQueryMock>) =>
     mocks.useScheduleList(...args),
-}))
-
-vi.mock('#hooks/use-scheduling-settings', () => ({
-  useSchedulingSettings: () => ({
-    data: { autoRescheduleOnGcalChange: false },
-  }),
 }))
 
 vi.mock('#hooks/use-selected-date', () => ({

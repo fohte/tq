@@ -47,9 +47,8 @@ function ManualTimeBlockRow({
   )
 }
 
-// A deleted-but-still-queued task gets a fresh auto block on the next
-// auto-assign run (api/src/routes/schedule-auto-assign.ts), so this drops
-// it from the queue instead of deleting the block record.
+// Automatically scheduled blocks come from queued tasks, so removing one
+// also removes the task from the day queue.
 function AutoTimeBlockRow({
   taskId,
   block,

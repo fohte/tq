@@ -8,7 +8,6 @@ import { db } from '#db/connection'
 import { recurrenceRules, schedules, tasks, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { localDateBoundsToUtc } from '#lib/timezone'
-import { autoAssignApp } from '#routes/schedule-auto-assign'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -405,5 +404,4 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  .route('/', autoAssignApp)
   .route('/', scheduleOverridesApp)

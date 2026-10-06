@@ -13,9 +13,7 @@ import { queueKeys } from '#lib/query-keys'
 
 export { queueKeys }
 
-// Auto-assign and the focus view (/today) depend on this key by name — see
-// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
-// the same special-casing.
+// The focus view addresses the today queue by key — see routes/today.tsx.
 export const DAY_QUEUE_KEY = 'day'
 
 // The only other queue the PLAN field writes to; unlike DAY_QUEUE_KEY, no

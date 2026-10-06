@@ -43,10 +43,7 @@ function matchesRequestedContext(
   )
 }
 
-// Strips a mismatched-context event down to only its busy time. An event
-// that carries no busy time to begin with — all-day, or marked free — is
-// filtered out by callers before this ever masks one (externalEventsToBusyRanges
-// in services/auto-scheduler.ts excludes both).
+// Strips a mismatched-context event down to only its busy time.
 function maskEvent(event: ProviderEvent): CalendarEvent {
   return {
     id: event.id,
