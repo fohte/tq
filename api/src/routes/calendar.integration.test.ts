@@ -275,7 +275,7 @@ describe('GET /api/calendar/events', () => {
     ])
   })
 
-  it('masks meetingUrl and other event details for a calendar with a mismatched context', async () => {
+  it('returns event details and masks them for a calendar with a mismatched context', async () => {
     await upsertGoogleCalendarToken({
       accountId: 'google-sub-1',
       accountLabel: 'user@example.com',
@@ -302,9 +302,68 @@ describe('GET /api/calendar/events', () => {
                 {
                   id: 'event-1',
                   summary: 'Standup',
-                  hangoutLink: 'https://meet.example.com/abc-defg-hij',
+                  htmlLink: 'https://calendar.example.net/event/one',
+                  location: 'Conference room A',
+                  description: '<b>Agenda</b> https://example.net/agenda',
+                  organizer: {
+                    email: 'host@example.net',
+                    displayName: 'Event host',
+                  },
+                  conferenceData: {
+                    entryPoints: [
+                      {
+                        entryPointType: 'phone',
+                        uri: 'tel:+15555550100',
+                      },
+                      {
+                        entryPointType: 'video',
+                        uri: 'https://zoom.example.net/j/123456',
+                      },
+                    ],
+                  },
+                  attendees: [
+                    {
+                      email: 'host@example.net',
+                      displayName: 'Event host',
+                      organizer: true,
+                      responseStatus: 'accepted',
+                    },
+                    {
+                      email: 'self@example.net',
+                      displayName: 'Calendar user',
+                      self: true,
+                      responseStatus: 'tentative',
+                    },
+                    {
+                      email: 'room@example.net',
+                      displayName: 'Conference room A',
+                      resource: true,
+                    },
+                  ],
                   start: { dateTime: '2026-03-22T09:00:00Z' },
                   end: { dateTime: '2026-03-22T09:30:00Z' },
+                },
+                {
+                  id: 'event-meet-priority',
+                  summary: 'Planning',
+                  hangoutLink: 'https://meet.example.net/room-code',
+                  conferenceData: {
+                    entryPoints: [
+                      {
+                        entryPointType: 'video',
+                        uri: 'https://zoom.example.net/j/654321',
+                      },
+                    ],
+                  },
+                  attendees: [
+                    {
+                      email: 'host@example.net',
+                      displayName: 'Planning host',
+                      organizer: true,
+                    },
+                  ],
+                  start: { dateTime: '2026-03-22T10:00:00Z' },
+                  end: { dateTime: '2026-03-22T10:30:00Z' },
                 },
               ],
             }),
@@ -321,6 +380,20 @@ describe('GET /api/calendar/events', () => {
                   id: 'event-2',
                   summary: 'Doctor appointment',
                   hangoutLink: 'https://meet.example.com/klm-nopq-rst',
+                  htmlLink: 'https://calendar.example.net/event/two',
+                  location: 'Medical office',
+                  description: 'Private appointment notes',
+                  organizer: {
+                    email: 'private@example.net',
+                    displayName: 'Private organizer',
+                  },
+                  attendees: [
+                    {
+                      email: 'private@example.net',
+                      displayName: 'Private organizer',
+                      organizer: true,
+                    },
+                  ],
                   start: { dateTime: '2026-03-22T14:00:00Z' },
                   end: { dateTime: '2026-03-22T14:30:00Z' },
                 },
@@ -342,7 +415,33 @@ describe('GET /api/calendar/events', () => {
     expect([...body].sort((a, b) => a.id.localeCompare(b.id))).toEqual([
       makeExternalEvent({
         summary: 'Standup',
-        meetingUrl: 'https://meet.example.com/abc-defg-hij',
+        meetingUrl: 'https://zoom.example.net/j/123456',
+        htmlLink: 'https://calendar.example.net/event/one',
+        location: 'Conference room A',
+        description: '<b>Agenda</b> https://example.net/agenda',
+        organizer: {
+          email: 'host@example.net',
+          displayName: 'Event host',
+        },
+        attendees: [
+          {
+            email: 'host@example.net',
+            displayName: 'Event host',
+            responseStatus: 'accepted',
+            isSelf: false,
+            isOrganizer: true,
+          },
+          {
+            email: 'self@example.net',
+            displayName: 'Calendar user',
+            responseStatus: 'tentative',
+            isSelf: true,
+            isOrganizer: false,
+          },
+        ],
+        responseStatus: 'tentative',
+        selfResponseStatus: 'tentative',
+        hasOtherAttendees: true,
       }),
       makeExternalEvent({
         id: 'event-2',
@@ -352,6 +451,28 @@ describe('GET /api/calendar/events', () => {
         endTime: '2026-03-22T14:30:00Z',
         calendarId: 'personal@example.com',
         redacted: true,
+      }),
+      makeExternalEvent({
+        id: 'event-meet-priority',
+        summary: 'Planning',
+        meetingUrl: 'https://meet.example.net/room-code',
+        startTime: '2026-03-22T10:00:00Z',
+        endTime: '2026-03-22T10:30:00Z',
+        organizer: {
+          email: 'host@example.net',
+          displayName: 'Planning host',
+        },
+        attendees: [
+          {
+            email: 'host@example.net',
+            displayName: 'Planning host',
+            responseStatus: null,
+            isSelf: false,
+            isOrganizer: true,
+          },
+        ],
+        selfResponseStatus: null,
+        hasOtherAttendees: true,
       }),
     ])
   })

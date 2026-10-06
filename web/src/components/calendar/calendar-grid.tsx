@@ -20,6 +20,11 @@ import {
   useState,
 } from 'react'
 
+import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
+import {
+  isCalendarEventClickable,
+  mapCalendarGridEvents,
+} from '#components/calendar/calendar-grid-event-data'
 import {
   type CalendarViewType,
   FULLCALENDAR_THREE_DAY_VIEW,
@@ -27,11 +32,14 @@ import {
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
+import { GcalEventDetailPopover } from '#components/calendar/gcal-event-detail-popover'
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { useIsDesktop } from '#hooks/use-is-desktop'
+import { formatHm, getDayRange, getScrollTime } from '#lib/calendar-grid-time'
 import {
   findHoveredSlot,
   getEventProps,
+  getGcalEventDetails,
   isClickableEvent,
   isGcalEventType,
   isPendingGcalResponse,
@@ -63,30 +71,6 @@ export interface CalendarDndCallbacks {
     start: Date
     end: Date
   }) => void
-}
-
-function formatHm(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-const DEFAULT_SCROLL_TIME = '08:00:00'
-
-function getScrollTime(rangeStart: Date, rangeEnd: Date): string {
-  const now = new Date()
-  if (now < rangeStart || now >= rangeEnd) return DEFAULT_SCROLL_TIME
-  // Without the floor, a time shortly after midnight would produce a
-  // negative-minutes string that FullCalendar's scrollToTime silently drops.
-  const minutes = Math.max(0, now.getHours() * 60 + now.getMinutes() - 60)
-  const shifted = new Date(now)
-  shifted.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0)
-  return `${formatHm(shifted)}:00`
-}
-
-function getDayRange(date: Date): [Date, Date] {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const end = new Date(start)
-  end.setDate(end.getDate() + 1)
-  return [start, end]
 }
 
 interface CalendarGridProps {
@@ -133,6 +117,11 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     // is still false for that call and only flips true for later navigation.
     const hasMountedRef = useRef(false)
     const [slotGhost, setSlotGhost] = useState<SlotGhostRect | null>(null)
+    const [selectedGcalEvent, setSelectedGcalEvent] =
+      useState<CalendarGcalEventDetails | null>(null)
+    const [gcalEventAnchorRect, setGcalEventAnchorRect] =
+      useState<DOMRect | null>(null)
+    const gcalEventAnchorRef = useRef<HTMLDivElement | null>(null)
     useImperativeHandle<FullCalendar | null, FullCalendar | null>(
       ref,
       () => fullCalendarRef.current,
@@ -200,38 +189,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       }
     }, [externalDragContainerRef])
 
-    const calendarEvents = events.map((event) => ({
-      id: event.id,
-      title: event.title,
-      start: event.start,
-      end: event.end,
-      allDay: event.allDay === true,
-      editable:
-        event.type !== 'schedule' &&
-        !isGcalEventType(event.type) &&
-        event.redacted !== true,
-      // Status events (out of office / focus time) render as a background
-      // band instead of a lane card, so they don't crowd out meetings and
-      // task blocks. Month view has no time slots to render a band into
-      // (FullCalendar only draws timed background events in TimeGrid views),
-      // so it keeps rendering them as the regular month pill.
-      ...(event.type === 'gcal-status' && activeView !== 'month'
-        ? { display: 'background' as const }
-        : {}),
-      extendedProps: {
-        type: event.type,
-        parentRef: event.parentRef,
-        color: event.color,
-        taskId: event.taskId,
-        isAutoScheduled: event.isAutoScheduled,
-        scheduleId: event.scheduleId,
-        scheduleStart: event.start,
-        redacted: event.redacted,
-        calendarColor: event.calendarColor,
-        responseStatus: event.responseStatus,
-        gcalEventType: event.gcalEventType,
-      },
-    }))
+    const calendarEvents = mapCalendarGridEvents(events, activeView)
 
     const handleEventDrop = (info: EventDropArg) => {
       if (!dndCallbacks?.onEventDrop) return
@@ -277,6 +235,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
 
     const handleEventClick = (info: EventClickArg) => {
       const props = getEventProps(info.event)
+      if (isGcalEventType(props.type)) {
+        const gcalDetails = getGcalEventDetails(props)
+        if (gcalDetails != null) {
+          setGcalEventAnchorRect(info.el.getBoundingClientRect())
+          setSelectedGcalEvent(gcalDetails)
+        }
+        return
+      }
       if (!isClickableEvent(props)) return
       const { type, scheduleId, scheduleStart, taskId } = props
       if (type === 'schedule') {
@@ -372,7 +338,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
           eventClassNames={(arg) =>
-            isClickableEvent(getEventProps(arg.event))
+            isCalendarEventClickable(getEventProps(arg.event))
               ? ['tq-event-clickable']
               : []
           }
@@ -494,6 +460,35 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
               } as SlotGhostStyle
             }
           />
+        )}
+        {selectedGcalEvent != null && gcalEventAnchorRect != null && (
+          <>
+            <div
+              ref={gcalEventAnchorRef}
+              aria-hidden="true"
+              data-gcal-event-popover-anchor
+              style={{
+                position: 'fixed',
+                left: gcalEventAnchorRect.left,
+                top: gcalEventAnchorRect.top,
+                width: gcalEventAnchorRect.width,
+                height: gcalEventAnchorRect.height,
+                opacity: 0,
+                pointerEvents: 'none',
+              }}
+            />
+            <GcalEventDetailPopover
+              anchor={gcalEventAnchorRef}
+              event={selectedGcalEvent}
+              open={true}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedGcalEvent(null)
+                  setGcalEventAnchorRect(null)
+                }
+              }}
+            />
+          </>
         )}
       </div>
     )

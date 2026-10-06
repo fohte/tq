@@ -1,5 +1,7 @@
 import type { EventApi } from '@fullcalendar/core'
 
+import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
+
 export interface CalendarEventProps {
   type?:
     | 'manual'
@@ -23,6 +25,8 @@ export interface CalendarEventProps {
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
   /** Google's raw eventType (e.g. `outOfOffice`), used to pick the status/info icon */
   gcalEventType?: string
+  /** Event data passed only for non-redacted Google Calendar events. */
+  gcalDetails?: CalendarGcalEventDetails
 }
 
 /**
@@ -38,6 +42,14 @@ export function getEventProps(event: EventApi): CalendarEventProps {
 /** True for any of the gcal-derived display types (kept in sync with the `'gcal-'` prefix below). */
 export function isGcalEventType(type: CalendarEventProps['type']): boolean {
   return type != null && type.startsWith('gcal')
+}
+
+export function getGcalEventDetails(
+  props: CalendarEventProps,
+): CalendarGcalEventDetails | null {
+  return isGcalEventType(props.type) && props.redacted !== true
+    ? (props.gcalDetails ?? null)
+    : null
 }
 
 const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([

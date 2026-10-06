@@ -59,18 +59,42 @@ function isInvalidGrantResponse(responseText: string): boolean {
 }
 
 const googleCalendarAttendeeSchema = z.object({
+  email: z.string().optional(),
+  displayName: z.string().optional(),
   self: z.boolean().optional(),
   // Google lists booked rooms and equipment among the attendees too.
   resource: z.boolean().optional(),
+  organizer: z.boolean().optional(),
   responseStatus: z
     .enum(['needsAction', 'declined', 'tentative', 'accepted'])
     .optional(),
+})
+
+const googleCalendarPersonSchema = z.object({
+  email: z.string().optional(),
+  displayName: z.string().optional(),
 })
 
 const googleCalendarEventSchema = z.object({
   id: z.string(),
   summary: z.string().optional(),
   hangoutLink: z.string().optional(),
+  htmlLink: z.string().optional(),
+  location: z.string().optional(),
+  description: z.string().optional(),
+  organizer: googleCalendarPersonSchema.optional(),
+  conferenceData: z
+    .object({
+      entryPoints: z
+        .array(
+          z.object({
+            entryPointType: z.string().optional(),
+            uri: z.string().optional(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
   start: z.object({
     dateTime: z.string().optional(),
     date: z.string().optional(),
@@ -203,26 +227,66 @@ export const googleCalendarProvider = {
               | 'calendarDisplayName'
               | 'calendarColor'
               | 'redacted'
-            > => ({
-              id: event.id,
-              summary: event.summary ?? '(No title)',
-              meetingUrl: event.hangoutLink ?? null,
-              startTime: event.start.dateTime ?? event.start.date ?? '',
-              endTime: event.end.dateTime ?? event.end.date ?? '',
-              isAllDay: event.start.dateTime == null,
-              source: PROVIDER_ID,
-              calendarId,
-              responseStatus:
-                event.attendees?.find((attendee) => attendee.self === true)
-                  ?.responseStatus ?? 'accepted',
-              eventType: event.eventType ?? 'default',
-              hasOtherAttendees:
-                event.attendees?.some(
+            > => {
+              const organizer =
+                event.organizer ??
+                event.attendees?.find(
                   (attendee) =>
-                    attendee.self !== true && attendee.resource !== true,
-                ) ?? false,
-              busy: event.transparency !== 'transparent',
-            }),
+                    attendee.organizer === true && attendee.resource !== true,
+                )
+              const selfAttendee = event.attendees?.find(
+                (attendee) => attendee.self === true,
+              )
+
+              return {
+                id: event.id,
+                summary: event.summary ?? '(No title)',
+                meetingUrl:
+                  event.hangoutLink ??
+                  event.conferenceData?.entryPoints?.find(
+                    (entryPoint) =>
+                      entryPoint.entryPointType === 'video' &&
+                      entryPoint.uri != null,
+                  )?.uri ??
+                  null,
+                htmlLink: event.htmlLink ?? null,
+                location: event.location ?? null,
+                description: event.description ?? null,
+                organizer:
+                  organizer == null
+                    ? null
+                    : {
+                        email: organizer.email ?? null,
+                        displayName: organizer.displayName ?? null,
+                      },
+                attendees: (event.attendees ?? [])
+                  .filter((attendee) => attendee.resource !== true)
+                  .map((attendee) => ({
+                    email: attendee.email ?? null,
+                    displayName: attendee.displayName ?? null,
+                    responseStatus: attendee.responseStatus ?? null,
+                    isSelf: attendee.self ?? false,
+                    isOrganizer:
+                      attendee.organizer === true ||
+                      (event.organizer?.email != null &&
+                        attendee.email === event.organizer.email),
+                  })),
+                startTime: event.start.dateTime ?? event.start.date ?? '',
+                endTime: event.end.dateTime ?? event.end.date ?? '',
+                isAllDay: event.start.dateTime == null,
+                source: PROVIDER_ID,
+                calendarId,
+                responseStatus: selfAttendee?.responseStatus ?? 'accepted',
+                selfResponseStatus: selfAttendee?.responseStatus ?? null,
+                eventType: event.eventType ?? 'default',
+                hasOtherAttendees:
+                  event.attendees?.some(
+                    (attendee) =>
+                      attendee.self !== true && attendee.resource !== true,
+                  ) ?? false,
+                busy: event.transparency !== 'transparent',
+              }
+            },
           ),
         )
       },

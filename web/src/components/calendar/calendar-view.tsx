@@ -1,6 +1,7 @@
 import type FullCalendarType from '@fullcalendar/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import {
   type CalendarDndCallbacks,
   CalendarGrid,
@@ -45,8 +46,10 @@ export interface TimeBlockEvent {
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
-  /** Google Meet URL; redacted and blank values are omitted by event mapping */
+  /** Google Calendar video conference URL; redacted and blank values are omitted */
   meetingUrl?: string
+  /** Details shown by the click popover; omitted for redacted events. */
+  gcalDetails?: CalendarGcalEventDetails
   /** Google's raw eventType (e.g. `outOfOffice`), used to pick the status/info icon */
   gcalEventType?: string
   /** When true, content is hidden and rendered as a generic "busy" block */
