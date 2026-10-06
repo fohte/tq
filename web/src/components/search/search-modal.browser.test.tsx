@@ -54,6 +54,7 @@ interface MockTask {
   createdAt: string
   updatedAt: string
   childCompletionCount: { completed: number; total: number }
+  checklistCompletionCount: { completed: number; total: number }
 }
 
 function makeTask(overrides: Partial<MockTask> = {}): MockTask {
@@ -79,6 +80,7 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
+    checklistCompletionCount: { completed: 0, total: 0 },
     ...overrides,
   }
 }

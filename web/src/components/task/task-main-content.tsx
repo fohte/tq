@@ -11,6 +11,7 @@ import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
+import { TaskChecklistSection } from '#components/task/task-checklist-section'
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
 import { TaskDuplicateOfSection } from '#components/task/task-duplicate-of-section'
 import { TaskGithubLinksSection } from '#components/task/task-github-links-section'
@@ -90,6 +91,8 @@ export function TaskMainContent({
         defaultValue={task.description}
         author={task.descriptionAuthor}
       />
+
+      <TaskChecklistSection taskId={task.id} />
 
       {/* Pages */}
       {pages ? (

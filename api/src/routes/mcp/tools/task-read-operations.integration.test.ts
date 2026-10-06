@@ -96,6 +96,52 @@ describe('task_list', () => {
         blockedByGithubRefs: [],
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
+  it('returns checklist progress in task list rows', async () => {
+    const task = await createTask('Checklist task')
+    const checklistResponse = await app.request(
+      `/api/tasks/${task.id}/checklists`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Review' }),
+      },
+    )
+    const checklist = await jsonBody<{ id: string }>(checklistResponse)
+    const completedItemResponse = await app.request(
+      `/api/checklists/${checklist.id}/items`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'Complete item' }),
+      },
+    )
+    const completedItem = await jsonBody<{ id: string }>(completedItemResponse)
+    await app.request(`/api/checklists/${checklist.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'Pending item' }),
+    })
+    await app.request(`/api/checklist-items/${completedItem.id}/check`, {
+      method: 'POST',
+    })
+
+    const toolResult = await callMcpTool(client, 'task_list', {})
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(task),
+        parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 2, completed: 1 },
       },
     ])
   })
@@ -117,6 +163,7 @@ describe('task_list', () => {
         blockedByGithubRefs: [],
         labels: [],
         childCompletionCount: { total: 1, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -137,6 +184,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -159,6 +207,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 1, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutLinkSync(grandchild),
@@ -167,6 +216,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -195,6 +245,7 @@ describe('task_list', () => {
         blockedByGithubRefs: [],
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutLinkSync(selectedById),
@@ -204,6 +255,7 @@ describe('task_list', () => {
         blockedByGithubRefs: [],
         labels: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutLinkSync(root),
@@ -213,6 +265,7 @@ describe('task_list', () => {
         blockedByGithubRefs: [],
         labels: [],
         childCompletionCount: { total: 2, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
         ancestorOnly: true,
       },
     ])
@@ -241,6 +294,8 @@ describe('task_get', () => {
       titleAuthor: { kind: 'human', agent: null },
       descriptionAuthor: { kind: 'human', agent: null },
       childCompletionCount: { total: 1, completed: 0 },
+      checklistCompletionCount: { total: 0, completed: 0 },
+      checklists: [],
       pages: [],
       timeBlocks: [],
       links: { outgoing: [], incoming: [] },
@@ -260,6 +315,7 @@ describe('task_get', () => {
           blockedByGithubRefs: [],
           children: [],
           childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
         },
       ],
     })
@@ -289,6 +345,8 @@ describe('task_get', () => {
           titleAuthor: { kind: 'human', agent: null },
           descriptionAuthor: { kind: 'human', agent: null },
           childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
+          checklists: [],
           pages: [
             {
               id: '<uuid>',
@@ -341,6 +399,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -362,6 +421,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -383,6 +443,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -405,6 +466,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -428,6 +490,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutLinkSync(root),
@@ -437,6 +500,7 @@ describe('task_search', () => {
         blockedByGithubRefs: [],
         labels: [],
         childCompletionCount: { total: 1, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
         ancestorOnly: true,
       },
     ])
@@ -458,6 +522,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -480,6 +545,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })

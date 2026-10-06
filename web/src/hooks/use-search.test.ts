@@ -86,6 +86,7 @@ describe('taskDetailToSearchResult', () => {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       childCompletionCount: task.childCompletionCount,
+      checklistCompletionCount: task.checklistCompletionCount,
       duplicateOfNumber: null,
       blockedByNumbers: [12, 18],
       blockedByGithubRefs: [
