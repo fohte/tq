@@ -1,4 +1,7 @@
-import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
+import {
+  useVisualViewportInsets,
+  type VisualViewportStyle,
+} from '#hooks/use-visual-viewport-insets'
 import { cn } from '#lib/utils'
 
 function BottomSheetOverlay({
@@ -6,6 +9,13 @@ function BottomSheetOverlay({
   ...props
 }: Omit<React.ComponentProps<'div'>, 'style'>) {
   const insets = useVisualViewportInsets()
+  const visualViewportStyle: VisualViewportStyle | undefined =
+    insets === null
+      ? undefined
+      : {
+          '--visual-viewport-top': `${String(insets.top)}px`,
+          '--visual-viewport-height': `${String(insets.height)}px`,
+        }
 
   return (
     <div
@@ -17,17 +27,7 @@ function BottomSheetOverlay({
         insets !== null &&
           'top-(--visual-viewport-top) h-(--visual-viewport-height)',
       )}
-      style={
-        insets === null
-          ? undefined
-          : ({
-              '--visual-viewport-top': `${String(insets.top)}px`,
-              '--visual-viewport-height': `${String(insets.height)}px`,
-            } as React.CSSProperties & {
-              '--visual-viewport-top': string
-              '--visual-viewport-height': string
-            })
-      }
+      style={visualViewportStyle}
       {...props}
     />
   )
