@@ -4,12 +4,12 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  timeBlockKeys,
   useCreateTimeBlock,
   useDeleteTimeBlock,
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
+import { timeBlockKeys } from '#lib/query-keys'
 import { assertDefined } from '#lib/test-utils'
 
 // Mock the API module

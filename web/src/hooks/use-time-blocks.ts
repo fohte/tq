@@ -6,8 +6,6 @@ import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 import { timeBlockKeys } from '#lib/query-keys'
 
-export { timeBlockKeys }
-
 type TimeBlock = InferResponseType<
   (typeof api.api.schedule)['time-blocks']['$get']
 >[number]
