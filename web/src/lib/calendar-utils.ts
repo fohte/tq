@@ -14,6 +14,7 @@ export interface CalendarEventProps {
     | 'gcal-status'
     | 'gcal-info'
     | 'schedule'
+    | 'day-queue'
     | 'task-date'
   parentRef?: string
   color?: { accent: string }
@@ -27,6 +28,9 @@ export interface CalendarEventProps {
   scheduleId?: string
   /** Raw start ISO string, used to disambiguate cross-midnight blocks sharing a scheduleId */
   scheduleStart?: string
+  queuePosition?: number
+  sourceQueueKey?: string
+  sourceDate?: string
   redacted?: boolean
   calendarColor?: string | null
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
@@ -63,12 +67,13 @@ const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
   'manual',
   'auto',
   'schedule',
+  'day-queue',
   'task-date',
 ])
 
 /**
  * True when a click on this event has a destination: task detail for
- * manual/auto/task-date, the edit modal for schedule. Shared by
+ * manual/auto/day-queue/task-date, the edit modal for schedule. Shared by
  * handleEventClick and the `cursor: pointer` affordance in
  * fullcalendar.css so the two can't drift apart.
  */

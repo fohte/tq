@@ -3,6 +3,23 @@ export function formatLocalDate(date: Date): string {
   return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+export function addLocalDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00`)
+  result.setDate(result.getDate() + days)
+  return formatLocalDate(result)
+}
+
+export function getLocalDateRangeDays(
+  startDate: string,
+  endDate: string,
+): string[] {
+  const dates: string[] = []
+  for (let date = startDate; date <= endDate; date = addLocalDays(date, 1)) {
+    dates.push(date)
+  }
+  return dates
+}
+
 /** Format a Date as local "MM-DD", for a queue section's date-range label. */
 export function formatShortDate(date: Date): string {
   return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`

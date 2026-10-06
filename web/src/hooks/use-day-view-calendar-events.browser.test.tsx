@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import { makeCalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail-test-fixtures'
+import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { makeGcalEvent } from '#hooks/gcal-event-test-fixtures'
@@ -130,6 +131,7 @@ describe('useDayViewCalendarEvents', () => {
           blankLinkMeeting,
           selfResponseMeeting,
         ],
+        dayQueueItems: [],
         taskMap: new Map(),
         context: 'work',
         taskDateTasks: [datedTask],
@@ -223,6 +225,83 @@ describe('useDayViewCalendarEvents', () => {
             isOrganizer: false,
           },
         ]),
+      },
+    ])
+  })
+
+  it('maps each queued task to an all-day event and omits completed tasks', () => {
+    const date = '2026-08-03'
+    const queuedTask = makeTask({
+      id: 'queued-task-a',
+      title: 'Prepare sample outline',
+      context: 'work',
+      dueDate: '2026-08-06',
+    })
+    const secondQueuedTask = makeTask({
+      id: 'queued-task-b',
+      title: 'Review sample outline',
+      context: 'work',
+    })
+    const completedTask = makeTask({
+      id: 'queued-task-c',
+      title: 'Finalize sample outline',
+      context: 'work',
+      status: 'completed',
+    })
+
+    const { result } = renderHook(() =>
+      useDayViewCalendarEvents({
+        timeBlocksData: undefined,
+        schedulesData: undefined,
+        gcalEventsData: undefined,
+        dayQueueItems: [
+          {
+            date,
+            item: makeQueueItem({ taskId: queuedTask.id }),
+            queuePosition: 0,
+          },
+          {
+            date,
+            item: makeQueueItem({ taskId: secondQueuedTask.id }),
+            queuePosition: 1,
+          },
+          {
+            date,
+            item: makeQueueItem({ taskId: completedTask.id }),
+            queuePosition: 2,
+          },
+        ],
+        taskMap: new Map([
+          [queuedTask.id, queuedTask],
+          [secondQueuedTask.id, secondQueuedTask],
+          [completedTask.id, completedTask],
+        ]),
+        context: 'work',
+      }),
+    )
+
+    expect(result.current).toEqual([
+      {
+        id: 'day-queue-2026-08-03-queued-task-a',
+        title: 'Prepare sample outline',
+        start: '2026-08-03',
+        end: '2026-08-04',
+        type: 'day-queue',
+        taskId: 'queued-task-a',
+        allDay: true,
+        queuePosition: 0,
+        redacted: false,
+      },
+      {
+        id: 'day-queue-2026-08-03-queued-task-b',
+        title: 'Review sample outline',
+        start: '2026-08-03',
+        end: '2026-08-04',
+        type: 'day-queue',
+        taskId: 'queued-task-b',
+        allDay: true,
+        queuePosition: 1,
+        redacted: false,
       },
     ])
   })
