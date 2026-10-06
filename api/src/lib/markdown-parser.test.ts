@@ -60,22 +60,31 @@ describe('parseMarkdown', () => {
   })
 
   it('recovers after a failed parse of pathologically deep Markdown', async () => {
-    const beforeFailure = await parseMarkdown('- [ ] Previous description')
+    const beforeFailure = await parseMarkdown('Recovered description')
     const failed = await parseMarkdown(
       `${'> '.repeat(5000)}x\n- [ ] Verify the result`,
     )
-    const afterFailure = await parseMarkdown('- [ ] Verify the result')
+    const afterFailure = await parseMarkdown('Recovered description')
 
+    const describeResult = (result: typeof beforeFailure) =>
+      result.isOk() ? describeDoc(result.value) : null
     const getActual = () => ({
-      beforeFailure: beforeFailure.isOk(),
+      beforeFailure: describeResult(beforeFailure),
       failureWasWrapped:
         failed.isErr() && failed.error instanceof MarkdownParseError,
-      afterFailure: afterFailure.isOk(),
+      afterFailure: describeResult(afterFailure),
     })
-    expect(getActual()).toEqual({
-      beforeFailure: true,
+    const recoveredDocument = {
+      docType: 'doc',
+      childCount: 1,
+      paragraphType: 'paragraph',
+      children: [{ text: 'Recovered description', marks: [] }],
+    }
+    const expected = {
+      beforeFailure: recoveredDocument,
       failureWasWrapped: true,
-      afterFailure: true,
-    })
+      afterFailure: recoveredDocument,
+    }
+    expect(getActual()).toEqual(expected)
   })
 })
