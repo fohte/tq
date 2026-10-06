@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendNotification } from 'web-push'
 
 import { db } from '#db/connection'
-import { pushSubscriptions, taskGithubLinks, tasks } from '#db/schema'
+import {
+  pushSubscriptions,
+  taskChecklistItems,
+  taskChecklists,
+  taskGithubLinks,
+  tasks,
+} from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import {
   makeGithubIssueResponse,
@@ -311,6 +317,60 @@ async function createScheduledLink(
       })
       .returning(),
   )
+}
+
+async function addChecklistItemsForGithubLink(taskId: string, linkId: string) {
+  const checklist = firstOrThrow(
+    await db.insert(taskChecklists).values({ taskId }).returning(),
+  )
+  const parent = firstOrThrow(
+    await db
+      .insert(taskChecklistItems)
+      .values({ checklistId: checklist.id, content: 'Build application' })
+      .returning(),
+  )
+  const child = firstOrThrow(
+    await db
+      .insert(taskChecklistItems)
+      .values({
+        checklistId: checklist.id,
+        parentItemId: parent.id,
+        content: 'Add route',
+        githubLinkId: linkId,
+      })
+      .returning(),
+  )
+  return { parent, child }
+}
+
+async function summarizeChecklistProgress(
+  linkId: string,
+  parentId: string,
+  childId: string,
+) {
+  const [syncedLink, syncedParent, syncedChild] = await Promise.all([
+    db
+      .select({ state: taskGithubLinks.state })
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.id, linkId))
+      .then(([row]) => row),
+    db
+      .select({ checkedAt: taskChecklistItems.checkedAt })
+      .from(taskChecklistItems)
+      .where(eq(taskChecklistItems.id, parentId))
+      .then(([row]) => row),
+    db
+      .select({ checkedAt: taskChecklistItems.checkedAt })
+      .from(taskChecklistItems)
+      .where(eq(taskChecklistItems.id, childId))
+      .then(([row]) => row),
+  ])
+
+  return {
+    linkState: syncedLink?.state,
+    parentCheckedAt: syncedParent?.checkedAt == null ? null : 'DATE',
+    childCheckedAt: syncedChild?.checkedAt == null ? null : 'DATE',
+  }
 }
 
 describe('syncLinkFromGithub', () => {
@@ -634,6 +694,60 @@ describe('syncLinkFromGithub', () => {
         task,
       ),
     )
+  })
+
+  it('checks linked checklist items and all ancestors when a pull request is merged', async () => {
+    const { task, link } = await createLinkedTask(ref, true)
+    const { parent, child } = await addChecklistItemsForGithubLink(
+      task.id,
+      link.id,
+    )
+    const syncLink = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({ notifyEvents: [] })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+    queueGithubIssueResponse({ state: 'closed', pull_request: {} })
+    queueGithubPullResponse(true)
+
+    ;(await syncLinkFromGithub(syncLink))._unsafeUnwrap()
+
+    expect(
+      await summarizeChecklistProgress(link.id, parent.id, child.id),
+    ).toEqual({
+      linkState: 'merged',
+      parentCheckedAt: 'DATE',
+      childCheckedAt: 'DATE',
+    })
+  })
+
+  it('does not check linked checklist items when a pull request closes without merging', async () => {
+    const { task, link } = await createLinkedTask(ref, true)
+    const { parent, child } = await addChecklistItemsForGithubLink(
+      task.id,
+      link.id,
+    )
+    const syncLink = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({ notifyEvents: [] })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+    queueGithubIssueResponse({ state: 'closed', pull_request: {} })
+    queueGithubPullResponse(false)
+
+    ;(await syncLinkFromGithub(syncLink))._unsafeUnwrap()
+
+    expect(
+      await summarizeChecklistProgress(link.id, parent.id, child.id),
+    ).toEqual({
+      linkState: 'closed',
+      parentCheckedAt: null,
+      childCheckedAt: null,
+    })
   })
 
   it('does not notify when the authenticated user merges a pull request', async () => {

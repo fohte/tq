@@ -1,7 +1,7 @@
 import { Button } from '@fohte/ui/button'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { ExternalLink, MapPin, Users, Video } from 'lucide-react'
-import type { RefObject } from 'react'
+import type { CSSProperties, RefObject } from 'react'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 
@@ -11,6 +11,10 @@ const RESPONSE_LABELS = {
   tentative: 'Tentative',
   accepted: 'Accepted',
 } as const
+
+type CalendarColorStyle = CSSProperties & {
+  '--gcal-calendar-color': string
+}
 
 const RESPONSE_ORDER = [
   'accepted',
@@ -211,8 +215,12 @@ export function GcalEventDetailPopover({
             <p className="flex items-center gap-2 text-muted-foreground">
               <span
                 aria-hidden="true"
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: event.calendarColor ?? undefined }}
+                className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--gcal-calendar-color)"
+                style={
+                  {
+                    '--gcal-calendar-color': event.calendarColor ?? 'initial',
+                  } as CalendarColorStyle
+                }
               />
               {calendarDisplayName}
             </p>

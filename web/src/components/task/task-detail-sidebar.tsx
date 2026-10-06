@@ -46,6 +46,8 @@ export function TaskSidebar({
   task: TaskDetail
   defaultOpen?: boolean | undefined
 }) {
+  const checklistProgress = task.checklistCompletionCount
+
   return (
     <DetailSidebarPanel>
       <SectionLabel>DETAILS</SectionLabel>
@@ -55,6 +57,11 @@ export function TaskSidebar({
         statusReason={task.statusReason}
         defaultOpen={defaultOpen}
       />
+      {checklistProgress.total > 0 && (
+        <SidebarField label="CHECKLIST">
+          {checklistProgress.completed}/{checklistProgress.total}
+        </SidebarField>
+      )}
       <SidebarPlanField taskId={task.id} commitment={task.commitment} />
       <SidebarEstimateField
         taskId={task.id}
@@ -113,6 +120,8 @@ function MobileFieldCell({
 }
 
 export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
+  const checklistProgress = task.checklistCompletionCount
+
   return (
     <div className="flex flex-col gap-3">
       <SectionLabel>DETAILS</SectionLabel>
@@ -124,6 +133,13 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
             statusReason={task.statusReason}
           />
         </MobileFieldCell>
+        {checklistProgress.total > 0 && (
+          <MobileFieldCell>
+            <SidebarField label="CHECKLIST">
+              {checklistProgress.completed}/{checklistProgress.total}
+            </SidebarField>
+          </MobileFieldCell>
+        )}
         <MobileFieldCell className="col-span-2">
           <SidebarPlanField taskId={task.id} commitment={task.commitment} />
         </MobileFieldCell>

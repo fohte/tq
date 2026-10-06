@@ -18,6 +18,10 @@ export const taskKeys = {
   detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
 }
 
+export const taskChecklistKeys = {
+  all: (taskId: string) => [...taskKeys.detail(taskId), 'checklists'] as const,
+}
+
 export const projectKeys = {
   all: ['projects'] as const,
   lists: ['projects', 'list'] as const,

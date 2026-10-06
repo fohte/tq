@@ -5,6 +5,7 @@ import { db } from '#db/connection'
 import { recurrenceRules, taskPages, tasks, timeBlocks } from '#db/schema'
 import { getPageAuthors, getTaskFieldAuthors } from '#lib/edits'
 import { pageToResponse } from '#routes/task-pages'
+import { getTaskChecklistData } from '#routes/tasks/checklist-data'
 import {
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
@@ -41,6 +42,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     duplicateOfTask,
     blockedByRelations,
     githubBlockers,
+    checklistData,
   ] = await Promise.all([
     db
       .select({
@@ -84,6 +86,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     getDuplicateOfTask(id),
     getTaskBlockedByRelations(id),
     getTaskGithubBlockers(id),
+    getTaskChecklistData(id),
   ])
 
   const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -118,6 +121,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       blockedBy: blockedByRelations.blockedBy,
       blocking: blockedByRelations.blocking,
       githubBlockers: githubBlockers.map(githubLinkToResponse),
+      ...checklistData,
     },
     200,
   )
