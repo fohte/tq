@@ -12,6 +12,7 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
+  type Queue,
   type QueueItem,
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
