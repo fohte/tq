@@ -165,11 +165,10 @@ async function summarizeJsonResponse(response: Response) {
   return { status: response.status, body: await response.json() }
 }
 
-async function summarizeTaskListRow(response: Response, taskId: string) {
-  const rows = await jsonBody<TaskListItemResponse[]>(response)
+async function summarizeTaskList(response: Response) {
   return {
     status: response.status,
-    task: rows.find((row) => row.id === taskId),
+    body: await jsonBody<TaskListItemResponse[]>(response),
   }
 }
 
@@ -322,11 +321,13 @@ describe('task checklists API', () => {
     await setChecked(secondCheckedLeaf.id, true)
 
     const response = await app.request('/api/tasks')
-    expect(await summarizeTaskListRow(response, task.id)).toEqual({
+    expect(await summarizeTaskList(response)).toEqual({
       status: 200,
-      task: toListItemResponse(task, {
-        checklistCompletionCount: { completed: 2, total: 3 },
-      }),
+      body: [
+        toListItemResponse(task, {
+          checklistCompletionCount: { completed: 2, total: 3 },
+        }),
+      ],
     })
   })
 
@@ -335,9 +336,9 @@ describe('task checklists API', () => {
     await createChecklist(task.id, { name: 'No items' })
 
     const response = await app.request('/api/tasks')
-    expect(await summarizeTaskListRow(response, task.id)).toEqual({
+    expect(await summarizeTaskList(response)).toEqual({
       status: 200,
-      task: toListItemResponse(task),
+      body: [toListItemResponse(task)],
     })
   })
 
