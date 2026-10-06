@@ -95,11 +95,11 @@ export function TreeTaskGridRow({
     childCount.total === 0 ? null : hasChildren ? (
       <Button
         type="button"
-        variant="ghost"
+        variant="plain"
         onClick={handleExpand}
         data-no-dnd=""
         data-testid="child-completion"
-        className="h-10 min-h-10 min-w-10 shrink-0 rounded-sm border-0 bg-transparent px-1.5 py-0 font-normal text-muted-foreground shadow-none transition-none hover:bg-transparent active:translate-y-0"
+        className="h-10 min-h-10 min-w-10 shrink-0 px-1.5 py-0"
         aria-label={expanded ? 'Collapse' : 'Expand'}
         aria-describedby={childCountDescriptionId}
         aria-expanded={expanded}

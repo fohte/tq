@@ -777,7 +777,13 @@ for a dimmer/secondary progress indicator).
 function Button(
   props: ButtonPrimitive.Props & {
     variant?:
-      'default' | 'outline' | 'secondary' | 'ghost' | 'destructive' | 'link'
+      | 'default'
+      | 'outline'
+      | 'secondary'
+      | 'ghost'
+      | 'plain'
+      | 'destructive'
+      | 'link'
     size?:
       | 'default'
       | 'xs'
@@ -799,12 +805,15 @@ Built on `@base-ui/react/button` + `cva`. Variant looks:
 | `outline`     | `border-border` + `bg-background`, `bg-muted` on hover                                                                                          |
 | `secondary`   | `border-border`, transparent, `border-border-strong` on hover                                                                                   |
 | `ghost`       | No border, `bg-muted` on hover                                                                                                                  |
+| `plain`       | No border or button geometry, `text-muted-foreground`, `text-destructive` on hover                                                              |
 | `destructive` | `border-border`, transparent, `border-destructive`/`text-destructive` on hover                                                                  |
 | `link`        | `text-primary`, underline on hover                                                                                                              |
 
 Use `default` for the primary action on a screen, `outline`/`secondary` for
-secondary actions, `ghost` for low-emphasis icon-only actions, `destructive`
-for delete/remove actions, `link` for inline text-styled actions.
+secondary actions, `ghost` for low-emphasis icon-only actions, `plain` for
+borderless text/icon actions, `destructive` for delete/remove actions, and
+`link` for inline text-styled actions. `plain` does not apply button sizing or
+typography; the label or icon keeps its surrounding typography.
 
 ```tsx
 <Button>Add Task</Button>

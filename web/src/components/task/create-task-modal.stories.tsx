@@ -31,6 +31,11 @@ function createTaskModalHandlers(
   return [
     http.get('/api/labels', () => HttpResponse.json([])),
     http.get('/api/description-templates', () => HttpResponse.json(templates)),
+    http.get('/api/tasks/:id', () => new HttpResponse(null, { status: 404 })),
+    http.post(
+      '/api/github/resolve',
+      () => new HttpResponse(null, { status: 404 }),
+    ),
     // Typing `^N` triggers TaskTitleInput's own suggestion menu (see
     // task-title-input.stories.tsx) in addition to the parent-preview
     // lookup these stories care about; an empty list keeps that menu out
@@ -113,13 +118,27 @@ export const WithoutTemplates: Story = {
 }
 
 export const AsSubtask: Story = {
-  name: 'creates a subtask under the selected parent',
+  name: 'the form creates a subtask under the selected parent',
   args: {
     parentId: 'parent-task-id',
     parentTaskNumber: 12,
     parentTaskTitle: 'Fix login bug',
     defaultContext: 'work',
     defaultLabels: ['dev:tq'],
+  },
+}
+
+export const WithRemovableParentOverride: Story = {
+  name: 'the form shows a removable parent override',
+  args: {
+    defaultParentOverrideNumber: 42,
+  },
+}
+
+export const WithRemovableGithubLink: Story = {
+  name: 'the form shows a removable GitHub link',
+  args: {
+    defaultGithubUrl: 'https://github.com/example/project/issues/42',
   },
 }
 

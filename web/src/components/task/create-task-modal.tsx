@@ -53,6 +53,8 @@ interface CreateTaskModalProps {
   defaultContext?: ContextValue
   defaultLabels?: string[]
   defaultEstimateMinutes?: number
+  defaultParentOverrideNumber?: number
+  defaultGithubUrl?: string
   projectId?: string
   /** When set, the created task becomes a child of this task. */
   parentId?: string
@@ -71,6 +73,8 @@ export function CreateTaskModal({
   defaultContext,
   defaultLabels,
   defaultEstimateMinutes,
+  defaultParentOverrideNumber,
+  defaultGithubUrl,
   projectId,
   parentId,
   parentTaskNumber,
@@ -101,10 +105,12 @@ export function CreateTaskModal({
   // parent passed in via props (e.g. from "Add subtask").
   const [parentOverrideNumber, setParentOverrideNumber] = useState<
     number | undefined
-  >(undefined)
+  >(defaultParentOverrideNumber)
   // Set when the user types (or pastes) a GitHub issue/PR URL shorthand
   // token in the title.
-  const [githubUrl, setGithubUrl] = useState<string | undefined>(undefined)
+  const [githubUrl, setGithubUrl] = useState<string | undefined>(
+    defaultGithubUrl,
+  )
   const [recurrenceRule, setRecurrenceRule] = useState<
     ShorthandRecurrenceRule | undefined
   >(undefined)
@@ -343,12 +349,12 @@ export function CreateTaskModal({
       {parentOverrideNumber != null && (
         <Button
           type="button"
-          variant="ghost"
+          variant="plain"
           onClick={() => {
             setParentOverrideNumber(undefined)
           }}
           aria-label="Remove parent override"
-          className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
+          className="shrink whitespace-normal"
         >
           <X className="size-2.5" />
         </Button>
@@ -376,12 +382,12 @@ export function CreateTaskModal({
       )}
       <Button
         type="button"
-        variant="ghost"
+        variant="plain"
         onClick={() => {
           setGithubUrl(undefined)
         }}
         aria-label="Remove GitHub link"
-        className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-muted-foreground-faint hover:text-destructive"
+        className="shrink whitespace-normal"
       >
         <X className="size-2.5" />
       </Button>
