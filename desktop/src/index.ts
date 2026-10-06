@@ -22,9 +22,10 @@ import {
   shouldOpenSideNavigationInMain,
 } from '#navigation'
 import {
-  createSideWindowSettingsStore,
-  type SideWindowSettingsStore,
-} from '#side-window-settings'
+  createSideWindowAlwaysOnTopController,
+  type SideWindowAlwaysOnTopController,
+} from '#side-window-always-on-top'
+import { createSideWindowSettingsStore } from '#side-window-settings'
 import {
   clampWindowBounds,
   createDebouncedAction,
@@ -38,8 +39,7 @@ let mainWindow: BrowserWindow | undefined
 let sideWindow: BrowserWindow | undefined
 let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
-let sideWindowAlwaysOnTop = false
-let sideWindowSettingsStore: SideWindowSettingsStore | undefined
+let sideWindowAlwaysOnTopController: SideWindowAlwaysOnTopController | undefined
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
@@ -125,12 +125,7 @@ const isMissingFile = (caughtErr: unknown): boolean =>
   caughtErr.code === 'ENOENT'
 
 const setSideWindowAlwaysOnTop = (alwaysOnTop: boolean) => {
-  sideWindowAlwaysOnTop = alwaysOnTop
-  if (sideWindow !== undefined && !sideWindow.isDestroyed()) {
-    sideWindow.setAlwaysOnTop(alwaysOnTop)
-  }
-
-  sideWindowSettingsStore?.save({ alwaysOnTop }).match(
+  sideWindowAlwaysOnTopController?.setEnabled(alwaysOnTop).match(
     () => undefined,
     (caughtErr) => {
       console.error('failed to save side window settings', caughtErr)
@@ -164,7 +159,7 @@ const createSideWindow = (): BrowserWindow => {
     ...bounds,
     webPreferences: { sandbox: true },
   })
-  win.setAlwaysOnTop(sideWindowAlwaysOnTop)
+  sideWindowAlwaysOnTopController?.applyTo(win)
   setSideWindowTitle(win)
   sideWindow = win
 
@@ -312,21 +307,25 @@ app.on('window-all-closed', () => undefined)
 
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
-  sideWindowSettingsStore = createSideWindowSettingsStore(
+  const sideWindowSettingsStore = createSideWindowSettingsStore(
     createJsonFileStorage(
       join(app.getPath('userData'), 'side-window-settings.json'),
     ),
   )
-  sideWindowSettingsStore.load().match(
-    (settings) => {
-      sideWindowAlwaysOnTop = settings?.alwaysOnTop ?? false
-    },
+  const initialSettings = sideWindowSettingsStore.load().match(
+    (settings) => settings,
     (caughtErr) => {
       if (!isMissingFile(caughtErr)) {
         console.error('failed to read side window settings', caughtErr)
       }
+      return undefined
     },
   )
+  const alwaysOnTopController = createSideWindowAlwaysOnTopController({
+    initialValue: initialSettings?.alwaysOnTop ?? false,
+    settingsStore: sideWindowSettingsStore,
+  })
+  sideWindowAlwaysOnTopController = alwaysOnTopController
 
   // Only a packaged app has the `tq` scheme in its Info.plist; in development
   // this would claim the scheme for the bare Electron binary.
@@ -348,7 +347,7 @@ void app.whenReady().then(() => {
         clipboard,
         {
           open: openSideWindow,
-          alwaysOnTop: sideWindowAlwaysOnTop,
+          alwaysOnTop: alwaysOnTopController.isEnabled(),
           setAlwaysOnTop: setSideWindowAlwaysOnTop,
         },
       ),
