@@ -16,7 +16,9 @@ const queueSetInputSchema = z.object({
   date: putQueueItemsSchema.shape.date,
   taskIds: putQueueItemsSchema.shape.taskIds
     .optional()
-    .describe('Task UUIDs in queue order. Omit to clear the queue.'),
+    .describe(
+      'Task UUIDs to retain or add. Existing items keep their position; new items append in request order. Queues display by due date, then position. Omit to clear the queue.',
+    ),
 })
 
 export const queueOperations = [
@@ -50,7 +52,7 @@ export const queueOperations = [
   defineOperation(queueSetInputSchema, {
     path: ['queue', 'set'],
     description:
-      'Replace a queue for a date (YYYY-MM-DD) with the given task UUIDs, in order. Omit taskIds to clear the queue.',
+      'Replace queue membership for a date (YYYY-MM-DD). Existing items keep their position and new items append in request order. Display order uses due date, then position. Omit taskIds to clear the queue.',
     positionalArgs: [
       'key',
       'date',

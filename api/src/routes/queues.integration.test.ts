@@ -46,8 +46,39 @@ async function getQueueItems(key: string, date: string) {
   return { res, body: await jsonBody<QueueItemResponse[]>(res) }
 }
 
+function normalizeQueueResponse(
+  result: Awaited<ReturnType<typeof getQueueItems>>,
+) {
+  return {
+    status: result.res.status,
+    body: result.body.map(normalizeItem),
+  }
+}
+
+async function updateTaskDueDate(taskId: string, dueDate: string | null) {
+  return app.request(`/api/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dueDate }),
+  })
+}
+
 function normalizeItem(item: QueueItemResponse) {
   return { ...item, id: 'ID', createdAt: 'TIMESTAMP', updatedAt: 'TIMESTAMP' }
+}
+
+function normalizeDueDateUpdate(
+  before: Awaited<ReturnType<typeof getQueueItems>>,
+  update: Awaited<ReturnType<typeof updateTaskDueDate>>,
+  after: Awaited<ReturnType<typeof getQueueItems>>,
+) {
+  return {
+    beforeStatus: before.res.status,
+    updateStatus: update.status,
+    afterStatus: after.res.status,
+    beforeItems: before.body.map(normalizeItem),
+    afterItems: after.body.map(normalizeItem),
+  }
 }
 
 describe('GET /api/queues', () => {
@@ -114,20 +145,81 @@ describe('PUT /api/queues/:key/items', () => {
     ])
   })
 
-  it('fully replaces the previous selection (reorder, add, remove)', async () => {
+  it('fully replaces the selection while preserving existing sort order', async () => {
     const taskA = await createTask('Task A')
     const taskB = await createTask('Task B')
     const taskC = await createTask('Task C')
 
     await putQueueItems('day', [taskA.id, taskB.id], '2026-03-22')
-    const { res, body } = await putQueueItems(
+    const response = await putQueueItems(
       'day',
       [taskC.id, taskA.id],
       '2026-03-22',
     )
 
-    expect(res.status).toBe(200)
-    expect(body.map((item) => item.taskId)).toEqual([taskC.id, taskA.id])
+    expect(normalizeQueueResponse(response)).toEqual({
+      status: 200,
+      body: [
+        {
+          id: 'ID',
+          taskId: taskC.id,
+          periodStart: '2026-03-22',
+          sortOrder: 1,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          periodStart: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
+  })
+
+  it('preserves retained sort order and appends new tasks after removal', async () => {
+    const taskA = await createTask('Task A', { dueDate: '2026-03-22' })
+    const taskB = await createTask('Task B', { dueDate: '2026-03-22' })
+    const taskC = await createTask('Task C', { dueDate: '2026-03-22' })
+    const taskD = await createTask('Task D', { dueDate: '2026-03-22' })
+
+    await putQueueItems('day', [taskA.id, taskB.id, taskC.id], '2026-03-22')
+    await putQueueItems('day', [taskB.id, taskA.id, taskD.id], '2026-03-22')
+
+    const response = await getQueueItems('day', '2026-03-22')
+
+    expect(normalizeQueueResponse(response)).toEqual({
+      status: 200,
+      body: [
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          periodStart: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskB.id,
+          periodStart: '2026-03-22',
+          sortOrder: 1,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskD.id,
+          periodStart: '2026-03-22',
+          sortOrder: 2,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
   })
 
   it('clears the queue when given an empty list', async () => {
@@ -212,6 +304,146 @@ describe('GET /api/queues/:key/items', () => {
 
     expect(res.status).toBe(200)
     expect(body.map((item) => item.taskId)).toEqual([taskB.id, taskA.id])
+  })
+
+  it.each([
+    ['day', '2026-03-22', '2026-03-22'],
+    ['week', '2026-03-22', '2026-03-16'],
+  ] as const)(
+    'orders the %s queue by due date and keeps insertion order for ties and missing dates',
+    async (key, date, periodStart) => {
+      const noDueFirst = await createTask('No due first')
+      const laterDue = await createTask('Later due', {
+        dueDate: '2026-03-29',
+      })
+      const sameDueFirst = await createTask('Same due first', {
+        dueDate: '2026-03-22',
+      })
+      const earliestDue = await createTask('Earliest due', {
+        dueDate: '2026-03-20',
+      })
+      const sameDueSecond = await createTask('Same due second', {
+        dueDate: '2026-03-22',
+      })
+      const noDueSecond = await createTask('No due second')
+      const taskIds = [
+        noDueFirst.id,
+        laterDue.id,
+        sameDueFirst.id,
+        earliestDue.id,
+        sameDueSecond.id,
+        noDueSecond.id,
+      ]
+      await putQueueItems(key, taskIds, date)
+
+      const response = await getQueueItems(key, date)
+
+      expect(normalizeQueueResponse(response)).toEqual({
+        status: 200,
+        body: [
+          {
+            id: 'ID',
+            taskId: earliestDue.id,
+            periodStart,
+            sortOrder: 3,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: sameDueFirst.id,
+            periodStart,
+            sortOrder: 2,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: sameDueSecond.id,
+            periodStart,
+            sortOrder: 4,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: laterDue.id,
+            periodStart,
+            sortOrder: 1,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: noDueFirst.id,
+            periodStart,
+            sortOrder: 0,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: noDueSecond.id,
+            periodStart,
+            sortOrder: 5,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+        ],
+      })
+    },
+  )
+
+  it('reflects a task due date update in the next queue read', async () => {
+    const taskA = await createTask('Task A', { dueDate: '2026-03-20' })
+    const taskB = await createTask('Task B', { dueDate: '2026-03-22' })
+    await putQueueItems('day', [taskA.id, taskB.id], '2026-03-22')
+
+    const before = await getQueueItems('day', '2026-03-22')
+    const update = await updateTaskDueDate(taskA.id, '2026-03-29')
+    const after = await getQueueItems('day', '2026-03-22')
+
+    expect(normalizeDueDateUpdate(before, update, after)).toEqual({
+      beforeStatus: 200,
+      updateStatus: 200,
+      afterStatus: 200,
+      beforeItems: [
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          periodStart: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskB.id,
+          periodStart: '2026-03-22',
+          sortOrder: 1,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+      afterItems: [
+        {
+          id: 'ID',
+          taskId: taskB.id,
+          periodStart: '2026-03-22',
+          sortOrder: 1,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          periodStart: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
   })
 
   it('returns an empty array when nothing is persisted for the period', async () => {

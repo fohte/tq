@@ -1,5 +1,14 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, inArray, isNull, or, type SQL } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNull,
+  notInArray,
+  or,
+  type SQL,
+} from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -57,17 +66,21 @@ export const queuesApp = new Hono()
     const periodStart = resolvePeriodStart(queue.periodUnit, date)
 
     const rows = await db
-      .select()
+      .select({ item: taskQueueItems })
       .from(taskQueueItems)
+      .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
       .where(
         and(
           eq(taskQueueItems.queueId, queue.id),
           periodStartCondition(periodStart),
         ),
       )
-      .orderBy(taskQueueItems.sortOrder)
+      .orderBy(asc(tasks.dueDate), taskQueueItems.sortOrder)
 
-    return c.json(rows.map(itemToResponse), 200)
+    return c.json(
+      rows.map(({ item }) => itemToResponse(item)),
+      200,
+    )
   })
   .put('/:key/items', zValidator('json', putQueueItemsSchema), async (c) => {
     const key = c.req.param('key')
@@ -109,13 +122,34 @@ export const queuesApp = new Hono()
       ),
     )
 
-    const inserted = await db.transaction(async (tx) => {
+    const updatedRows = await db.transaction(async (tx) => {
+      const existingRows = await tx
+        .select()
+        .from(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, queue.id),
+            periodStartCondition(periodStart),
+          ),
+        )
+      const existingByTaskId = new Map(
+        existingRows.map((row) => [row.taskId, row]),
+      )
+      const requestedTaskIds = new Set(uniqueTaskIds)
+
+      const retainedRows = existingRows.filter((row) =>
+        requestedTaskIds.has(row.taskId),
+      )
+
       await tx
         .delete(taskQueueItems)
         .where(
           and(
             eq(taskQueueItems.queueId, queue.id),
             periodStartCondition(periodStart),
+            uniqueTaskIds.length > 0
+              ? notInArray(taskQueueItems.taskId, uniqueTaskIds)
+              : undefined,
           ),
         )
 
@@ -130,25 +164,37 @@ export const queuesApp = new Hono()
           )
       }
 
-      if (uniqueTaskIds.length === 0) {
-        return []
-      }
+      const newTaskIds = uniqueTaskIds.filter(
+        (taskId) => !existingByTaskId.has(taskId),
+      )
+      const maxSortOrder = Math.max(
+        -1,
+        ...retainedRows.map((row) => row.sortOrder),
+      )
+      const insertedRows =
+        newTaskIds.length > 0
+          ? await tx
+              .insert(taskQueueItems)
+              .values(
+                newTaskIds.map((taskId, index) => ({
+                  queueId: queue.id,
+                  periodStart,
+                  taskId,
+                  sortOrder: maxSortOrder + index + 1,
+                })),
+              )
+              .returning()
+          : []
+      const rowsByTaskId = new Map([
+        ...retainedRows.map((row) => [row.taskId, row] as const),
+        ...insertedRows.map((row) => [row.taskId, row] as const),
+      ])
 
-      return tx
-        .insert(taskQueueItems)
-        .values(
-          uniqueTaskIds.map((taskId, index) => ({
-            queueId: queue.id,
-            periodStart,
-            taskId,
-            sortOrder: index,
-          })),
-        )
-        .returning()
+      return uniqueTaskIds.flatMap((taskId) => {
+        const row = rowsByTaskId.get(taskId)
+        return row == null ? [] : [row]
+      })
     })
 
-    return c.json(
-      inserted.sort((a, b) => a.sortOrder - b.sortOrder).map(itemToResponse),
-      200,
-    )
+    return c.json(updatedRows.map(itemToResponse), 200)
   })

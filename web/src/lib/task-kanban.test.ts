@@ -48,28 +48,19 @@ describe('resolveKanbanCardDrop', () => {
 })
 
 describe('resolveKanbanCandidateDrop', () => {
-  it('inserts before the target card when dropped on its top half', () => {
-    expect(resolveKanbanCandidateDrop(columns, 'b', false)).toEqual({
+  it('resolves the target column when dropped on a card', () => {
+    expect(resolveKanbanCandidateDrop(columns, 'b')).toEqual({
       columnId: 'inbox',
-      index: 1,
     })
   })
 
-  it('inserts after the target card when dropped on its bottom half', () => {
-    expect(resolveKanbanCandidateDrop(columns, 'b', true)).toEqual({
-      columnId: 'inbox',
-      index: 2,
-    })
-  })
-
-  it('appends to the end when dropped on the column itself', () => {
-    expect(resolveKanbanCandidateDrop(columns, 'active', false)).toEqual({
+  it('resolves the target column when dropped on a column', () => {
+    expect(resolveKanbanCandidateDrop(columns, 'active')).toEqual({
       columnId: 'active',
-      index: 1,
     })
   })
 
   it('returns null when dropped outside any column', () => {
-    expect(resolveKanbanCandidateDrop(columns, null, false)).toBeNull()
+    expect(resolveKanbanCandidateDrop(columns, null)).toBeNull()
   })
 })

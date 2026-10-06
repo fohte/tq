@@ -112,8 +112,11 @@ export function useSetQueueItems() {
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
-    onSuccess: (data, { key, date }) => {
-      queryClient.setQueryData(queueKeys.items(key, date), data)
+    onSuccess: (_data, { key, date }) => {
+      // PUT responses follow request order, while queue reads follow due date.
+      void queryClient.invalidateQueries({
+        queryKey: queueKeys.items(key, date),
+      })
     },
   })
 }

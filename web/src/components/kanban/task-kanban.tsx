@@ -61,7 +61,7 @@ export interface TaskKanbanProps {
   /** Rendered as a trailing column when `onAddCandidate` is set; cards can be dragged from it into any other column when `onInsertCandidate` is also set. */
   candidates?: QueueCandidate<Task>[]
   onAddCandidate?: (taskId: string) => void
-  onInsertCandidate?: (columnId: string, taskId: string, index: number) => void
+  onInsertCandidate?: (columnId: string, taskId: string) => void
 }
 
 interface CardDragData extends Record<string, unknown> {
@@ -331,15 +331,9 @@ export function TaskKanban({
 
       if (isCandidateDragData(data)) {
         if (onInsertCandidate != null) {
-          const activeTop = active.rect.current.translated?.top ?? over.rect.top
-          const isAfter = activeTop > over.rect.top + over.rect.height / 2
-          const result = resolveKanbanCandidateDrop(
-            columnTaskIds,
-            overId,
-            isAfter,
-          )
+          const result = resolveKanbanCandidateDrop(columnTaskIds, overId)
           if (result != null) {
-            onInsertCandidate(result.columnId, data.taskId, result.index)
+            onInsertCandidate(result.columnId, data.taskId)
           }
         }
       } else if (isCardDragData(data)) {

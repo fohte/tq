@@ -50,23 +50,16 @@ export function resolveKanbanCardDrop(
 }
 
 /**
- * Resolves a dnd-kit drag end for a queue candidate card into the column
- * and insertion index to add it at, or null when dropped outside any
- * column.
+ * Resolves a dnd-kit drag end for a queue candidate card into its target
+ * column, or null when dropped outside any column.
  */
 export function resolveKanbanCandidateDrop(
   columns: KanbanColumnTaskIds[],
   overId: string | null,
-  isAfter: boolean,
-): { columnId: string; index: number } | null {
+): { columnId: string } | null {
   if (overId == null) return null
   const column = findColumn(columns, overId)
   if (column == null) return null
 
-  const overIndex = column.taskIds.indexOf(overId)
-  return {
-    columnId: column.id,
-    index:
-      overIndex === -1 ? column.taskIds.length : overIndex + (isAfter ? 1 : 0),
-  }
+  return { columnId: column.id }
 }

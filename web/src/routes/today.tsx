@@ -11,6 +11,8 @@ import {
 import type { Task } from '#hooks/use-tasks'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { sortQueueTasksByDue } from '#lib/queue-task-due-order'
+import { sortQueueItemsBySortOrder } from '#lib/queue-task-order'
 
 export const Route = createFileRoute('/today')({
   component: TodayFocus,
@@ -29,13 +31,19 @@ export function TodayFocus() {
   const setQueueItems = useSetQueueItems()
 
   const taskMap = useTaskMap(categorized.all)
+  const queueItemsInSortOrder = useMemo(
+    () => sortQueueItemsBySortOrder(todayTasksData ?? []),
+    [todayTasksData],
+  )
 
   const queueTasks = useMemo(
     () =>
-      (todayTasksData ?? [])
-        .map((t) => taskMap.get(t.taskId))
-        .filter((t): t is Task => t != null),
-    [todayTasksData, taskMap],
+      sortQueueTasksByDue(
+        queueItemsInSortOrder
+          .map((t) => taskMap.get(t.taskId))
+          .filter((t): t is Task => t != null),
+      ),
+    [queueItemsInSortOrder, taskMap],
   )
 
   const focusTask = useMemo(
@@ -62,7 +70,7 @@ export function TodayFocus() {
     setQueueItems.mutate({
       key: DAY_QUEUE_KEY,
       date: todayStr,
-      taskIds: (todayTasksData ?? [])
+      taskIds: queueItemsInSortOrder
         .map((t) => t.taskId)
         .filter((id) => id !== taskId),
     })

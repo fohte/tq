@@ -1,6 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, gte, inArray, lte } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -76,7 +76,7 @@ export const autoAssignApp = new Hono().post(
           eq(taskQueueItems.periodStart, date),
         ),
       )
-      .orderBy(taskQueueItems.sortOrder)
+      .orderBy(asc(tasks.dueDate), taskQueueItems.sortOrder)
 
     const schedulableTasks = queueRows
       .filter(

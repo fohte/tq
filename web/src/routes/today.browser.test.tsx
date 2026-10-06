@@ -44,20 +44,29 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   })
 }
 
+function focusTransition(before: string | null, after: string | null) {
+  return { before, after }
+}
+
 function setup({
   all,
   queue,
+  queueSortOrders = queue.map((_, index) => index),
   isLoading = false,
   isTodayTasksLoading = false,
 }: {
   all: Task[]
   queue: Task[]
+  queueSortOrders?: number[]
   isLoading?: boolean
   isTodayTasksLoading?: boolean
 }) {
   mockUseTaskList.mockReturnValue({ isLoading, categorized: { all } })
   mockUseQueueItems.mockReturnValue({
-    data: queue.map((t) => ({ taskId: t.id })),
+    data: queue.map((t, index) => ({
+      taskId: t.id,
+      sortOrder: queueSortOrders[index],
+    })),
     isLoading: isTodayTasksLoading,
   })
   const mutate = vi.fn()
@@ -121,6 +130,66 @@ describe('TodayFocus', () => {
     await renderToday()
 
     expect(screen.getByText('Task A')).toBeInTheDocument()
+  })
+
+  it('focuses the task with the earliest due date before undated tasks', async () => {
+    const undated = makeTask({ id: 'undated', title: 'Undated task' })
+    const later = makeTask({
+      id: 'later',
+      title: 'Later task',
+      dueDate: '2026-03-22',
+    })
+    const earlier = makeTask({
+      id: 'earlier',
+      title: 'Earlier task',
+      dueDate: '2026-03-21',
+    })
+    setup({ all: [undated, later, earlier], queue: [undated, later, earlier] })
+
+    await renderToday()
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Earlier task',
+    )
+  })
+
+  it('keeps sortOrder as the tie-break when a due date changes without queue refetch', async () => {
+    const taskA = makeTask({
+      id: 'a',
+      title: 'Task A',
+      dueDate: '2026-03-22',
+    })
+    const taskB = makeTask({
+      id: 'b',
+      title: 'Task B',
+      dueDate: '2026-03-21',
+    })
+    setup({
+      all: [taskA, taskB],
+      queue: [taskB, taskA],
+      queueSortOrders: [1, 0],
+    })
+
+    const { rerender } = await renderToday()
+    const focusBeforeUpdate = screen.getByRole('heading', {
+      level: 1,
+    }).textContent
+    const updatedTaskA = { ...taskA, dueDate: '2026-03-21' }
+    setup({
+      all: [updatedTaskA, taskB],
+      queue: [taskB, updatedTaskA],
+      queueSortOrders: [1, 0],
+    })
+    await rerender()
+
+    const focusAfterUpdate = screen.getByRole('heading', {
+      level: 1,
+    }).textContent
+
+    expect(focusTransition(focusBeforeUpdate, focusAfterUpdate)).toEqual({
+      before: 'Task B',
+      after: 'Task A',
+    })
   })
 
   it('skips completed tasks when selecting the focus task', async () => {

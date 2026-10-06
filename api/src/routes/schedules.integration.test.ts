@@ -98,6 +98,15 @@ function normalizeTimeBlock(block: TimeBlockResponse) {
   return { ...block, id: 'ID', createdAt: 'TIMESTAMP', updatedAt: 'TIMESTAMP' }
 }
 
+function normalizeAutoAssignResult(
+  result: Awaited<ReturnType<typeof requestAutoAssign>>,
+) {
+  return {
+    status: result.res.status,
+    body: result.body.map(normalizeTimeBlock),
+  }
+}
+
 async function createTimeBlock(
   taskId: string,
   startTime: string,
@@ -888,6 +897,104 @@ describe('schedule/auto-assign API', () => {
       ])
     })
 
+    it('orders queued tasks by due date and keeps insertion order for ties and missing dates', async () => {
+      const noDueFirst = await createTask('No due first', {
+        estimatedMinutes: 30,
+      })
+      const laterDue = await createTask('Later due', {
+        dueDate: '2026-03-29',
+        estimatedMinutes: 30,
+      })
+      const sameDueFirst = await createTask('Same due first', {
+        dueDate: '2026-03-22',
+        estimatedMinutes: 30,
+      })
+      const earliestDue = await createTask('Earliest due', {
+        dueDate: '2026-03-20',
+        estimatedMinutes: 30,
+      })
+      const sameDueSecond = await createTask('Same due second', {
+        dueDate: '2026-03-22',
+        estimatedMinutes: 30,
+      })
+      const noDueSecond = await createTask('No due second', {
+        estimatedMinutes: 30,
+      })
+      await putDayQueueItems(
+        [
+          noDueFirst.id,
+          laterDue.id,
+          sameDueFirst.id,
+          earliestDue.id,
+          sameDueSecond.id,
+          noDueSecond.id,
+        ],
+        '2026-03-22',
+      )
+
+      const result = await requestAutoAssign('2026-03-22')
+
+      expect(normalizeAutoAssignResult(result)).toEqual({
+        status: 200,
+        body: [
+          {
+            id: 'ID',
+            taskId: earliestDue.id,
+            startTime: '2026-03-22T09:00:00.000Z',
+            endTime: '2026-03-22T09:30:00.000Z',
+            isAutoScheduled: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: sameDueFirst.id,
+            startTime: '2026-03-22T09:30:00.000Z',
+            endTime: '2026-03-22T10:00:00.000Z',
+            isAutoScheduled: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: sameDueSecond.id,
+            startTime: '2026-03-22T10:00:00.000Z',
+            endTime: '2026-03-22T10:30:00.000Z',
+            isAutoScheduled: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: laterDue.id,
+            startTime: '2026-03-22T10:30:00.000Z',
+            endTime: '2026-03-22T11:00:00.000Z',
+            isAutoScheduled: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: noDueFirst.id,
+            startTime: '2026-03-22T11:00:00.000Z',
+            endTime: '2026-03-22T11:30:00.000Z',
+            isAutoScheduled: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+          {
+            id: 'ID',
+            taskId: noDueSecond.id,
+            startTime: '2026-03-22T11:30:00.000Z',
+            endTime: '2026-03-22T12:00:00.000Z',
+            isAutoScheduled: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+        ],
+      })
+    })
+
     it('schedules around an existing manual time block', async () => {
       const busyTask = await createTask('Busy task')
       await createTimeBlock(
@@ -985,7 +1092,7 @@ describe('schedule/auto-assign API', () => {
       expect(blocks.map(normalizeTimeBlock)).toEqual([
         {
           id: 'ID',
-          taskId: taskB.id,
+          taskId: taskA.id,
           startTime: '2026-03-22T09:00:00.000Z',
           endTime: '2026-03-22T09:30:00.000Z',
           isAutoScheduled: true,
@@ -994,7 +1101,7 @@ describe('schedule/auto-assign API', () => {
         },
         {
           id: 'ID',
-          taskId: taskA.id,
+          taskId: taskB.id,
           startTime: '2026-03-22T09:30:00.000Z',
           endTime: '2026-03-22T10:00:00.000Z',
           isAutoScheduled: true,

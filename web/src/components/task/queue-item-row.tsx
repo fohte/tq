@@ -22,7 +22,7 @@ export function QueueItemRow({
   task: Task
   /** The queue this row belongs to, carried in drag data so a shared
    * DndContext across multiple sections can tell which queue a drag started
-   * in (needed to detect a cross-section move vs. a same-section reorder). */
+   * in. */
   queueKey: string
   onRemove: () => void
   secondLineExtras?: ReactNode[]
@@ -38,6 +38,8 @@ export function QueueItemRow({
   } = useSortable({
     id: task.id,
     data: { type: 'queue-task', queueKey } satisfies QueueTaskDragData,
+    // Queue rows stay draggable for cross-queue moves; drops target the section.
+    disabled: { droppable: true },
   })
   const updateTask = useUpdateTask()
   const [isEditingEstimate, setIsEditingEstimate] = useState(false)
