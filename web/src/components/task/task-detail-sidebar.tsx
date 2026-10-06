@@ -33,7 +33,6 @@ import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
 import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
-import { getChecklistCompletionCount } from '#lib/task-checklist-progress'
 import { cn } from '#lib/utils'
 
 const fieldValueClassName = 'w-full justify-start gap-1'
@@ -47,9 +46,7 @@ export function TaskSidebar({
   task: TaskDetail
   defaultOpen?: boolean | undefined
 }) {
-  const checklistProgress = getChecklistCompletionCount(
-    task.checklistCompletionCount,
-  )
+  const checklistProgress = task.checklistCompletionCount
 
   return (
     <DetailSidebarPanel>
@@ -123,9 +120,7 @@ function MobileFieldCell({
 }
 
 export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
-  const checklistProgress = getChecklistCompletionCount(
-    task.checklistCompletionCount,
-  )
+  const checklistProgress = task.checklistCompletionCount
 
   return (
     <div className="flex flex-col gap-3">

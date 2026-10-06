@@ -15,6 +15,7 @@ import {
 import { classifyNumericOrId } from '#lib/numeric-id'
 import {
   type ChecklistCompletionCount,
+  EMPTY_CHECKLIST_COMPLETION_COUNT,
   getChecklistCompletionCountsByTaskId,
 } from '#routes/tasks/checklist-data'
 import type { TaskSortBy } from '#schemas/task'
@@ -252,16 +253,13 @@ export type TaskSearchMatch =
 function taskListItemToResponse(
   task: typeof tasks.$inferSelect,
   parentNumber: number | null,
+  checklistCompletionCount: ChecklistCompletionCount,
   rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
   duplicateOfNumber: number | null = null,
   blockedByNumbers: number[] = [],
   blockedByGithubRefs: GithubBlockerRef[] = [],
-  checklistCompletionCount: ChecklistCompletionCount = {
-    completed: 0,
-    total: 0,
-  },
 ) {
   return {
     ...taskCoreToResponse(task, rule, githubLinks, labelNames),
@@ -334,6 +332,8 @@ export async function hydrateTaskListRows(
     ...taskListItemToResponse(
       r.task,
       r.parentNumber,
+      checklistCompletionCountsByTaskId.get(r.task.id) ??
+        EMPTY_CHECKLIST_COMPLETION_COUNT,
       r.task.templateId != null
         ? (recurrenceRulesByTemplateId.get(r.task.templateId) ?? null)
         : r.task.recurrenceRuleId != null
@@ -346,10 +346,6 @@ export async function hydrateTaskListRows(
         : null,
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
       openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
-      checklistCompletionCountsByTaskId.get(r.task.id) ?? {
-        completed: 0,
-        total: 0,
-      },
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

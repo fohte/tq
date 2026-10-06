@@ -24,7 +24,6 @@ import {
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task } from '#hooks/use-tasks'
-import { getChecklistCompletionCount } from '#lib/task-checklist-progress'
 import { cn } from '#lib/utils'
 
 export interface TaskRowAppearanceProps {
@@ -77,9 +76,7 @@ export function TaskRowAppearance({
     completedReason != null && completedReason !== 'completed'
       ? completedReason
       : null
-  const checklistProgress = getChecklistCompletionCount(
-    task.checklistCompletionCount,
-  )
+  const checklistProgress = task.checklistCompletionCount
   const checklistCompletionCount =
     checklistProgress.total === 0 ? null : (
       <span

@@ -191,10 +191,7 @@ async function summarizeChecklistUpdate(
       status: response.status,
       body: normalizeChecklist({ ...updated, items: [] }),
     },
-    list: {
-      status: 200,
-      body: await checklistList(taskId),
-    },
+    list: await checklistList(taskId),
   }
 }
 

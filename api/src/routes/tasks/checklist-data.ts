@@ -13,7 +13,7 @@ export interface ChecklistCompletionCount {
   total: number
 }
 
-const EMPTY_CHECKLIST_COMPLETION_COUNT: ChecklistCompletionCount = {
+export const EMPTY_CHECKLIST_COMPLETION_COUNT: ChecklistCompletionCount = {
   completed: 0,
   total: 0,
 }
@@ -50,7 +50,7 @@ export async function getChecklistCompletionCountsByTaskId(
   )
 }
 
-export async function getTaskChecklistData(taskId: string) {
+export async function getTaskChecklistsWithItems(taskId: string) {
   const checklists = await db
     .select()
     .from(taskChecklists)
@@ -61,27 +61,36 @@ export async function getTaskChecklistData(taskId: string) {
       asc(taskChecklists.id),
     )
 
+  const items =
+    checklists.length === 0
+      ? []
+      : await db
+          .select()
+          .from(taskChecklistItems)
+          .where(
+            inArray(
+              taskChecklistItems.checklistId,
+              checklists.map((checklist) => checklist.id),
+            ),
+          )
+          .orderBy(
+            asc(taskChecklistItems.sortOrder),
+            asc(taskChecklistItems.createdAt),
+            asc(taskChecklistItems.id),
+          )
+
+  return { checklists, items }
+}
+
+export async function getTaskChecklistData(taskId: string) {
+  const { checklists, items } = await getTaskChecklistsWithItems(taskId)
+
   if (checklists.length === 0) {
     return {
-      checklists: [],
+      checklists,
       checklistCompletionCount: EMPTY_CHECKLIST_COMPLETION_COUNT,
     }
   }
-
-  const items = await db
-    .select()
-    .from(taskChecklistItems)
-    .where(
-      inArray(
-        taskChecklistItems.checklistId,
-        checklists.map((checklist) => checklist.id),
-      ),
-    )
-    .orderBy(
-      asc(taskChecklistItems.sortOrder),
-      asc(taskChecklistItems.createdAt),
-      asc(taskChecklistItems.id),
-    )
 
   const parentItemIds = new Set(
     items.flatMap((item) =>

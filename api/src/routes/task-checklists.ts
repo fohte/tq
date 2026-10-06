@@ -1,13 +1,12 @@
 import { zValidator } from '@hono/zod-validator'
-import { asc, eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { taskChecklistItems, taskChecklists } from '#db/schema'
 import {
   checklistItemTree,
   checklistToResponse,
 } from '#routes/checklist-response'
+import { getTaskChecklistsWithItems } from '#routes/tasks/checklist-data'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createChecklistSchema } from '#schemas/task-checklist'
 import { createTaskChecklist } from '#services/task-checklists'
@@ -26,34 +25,9 @@ export const taskChecklistsApp = new Hono<TaskEnv>()
     return next()
   })
   .get('/', async (c) => {
-    const taskId = c.get('task').id
-    const checklists = await db
-      .select()
-      .from(taskChecklists)
-      .where(eq(taskChecklists.taskId, taskId))
-      .orderBy(
-        asc(taskChecklists.sortOrder),
-        asc(taskChecklists.createdAt),
-        asc(taskChecklists.id),
-      )
-
-    const items =
-      checklists.length === 0
-        ? []
-        : await db
-            .select()
-            .from(taskChecklistItems)
-            .where(
-              inArray(
-                taskChecklistItems.checklistId,
-                checklists.map((checklist) => checklist.id),
-              ),
-            )
-            .orderBy(
-              asc(taskChecklistItems.sortOrder),
-              asc(taskChecklistItems.createdAt),
-              asc(taskChecklistItems.id),
-            )
+    const { checklists, items } = await getTaskChecklistsWithItems(
+      c.get('task').id,
+    )
 
     return c.json(
       checklists.map((checklist) =>
