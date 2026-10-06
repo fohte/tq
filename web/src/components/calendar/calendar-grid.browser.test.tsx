@@ -226,7 +226,7 @@ describe('CalendarGrid', () => {
     render(<CalendarGrid events={[]} activeView="week" />)
 
     expect(capturedProps['eventOrder']).toBe(
-      '-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title',
+      'queueOrder,queuePosition,start,-duration,allDay,title',
     )
   })
 
