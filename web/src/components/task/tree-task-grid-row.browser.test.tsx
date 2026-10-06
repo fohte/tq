@@ -380,4 +380,22 @@ describe('TreeTaskGridRow', () => {
     trigger.focus()
     expect(trigger).toBeVisible()
   })
+
+  it('reveals the desktop actions trigger when the row is hovered', async () => {
+    const { container } = await renderTree(makeNode())
+    const trigger = assertDefined(
+      container.querySelector<HTMLElement>(
+        '[data-slot="dropdown-menu-trigger"][aria-label="Task actions"]',
+      ),
+      'desktop trigger not found',
+    )
+    const row = assertDefined(
+      trigger.closest<HTMLElement>('.group'),
+      'task row not found',
+    )
+
+    await page.elementLocator(row).hover()
+
+    expect(getComputedStyle(trigger).opacity).toBe('1')
+  })
 })

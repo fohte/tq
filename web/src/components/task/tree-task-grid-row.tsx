@@ -90,6 +90,15 @@ export function TreeTaskGridRow({
   const childCount = node.childCompletionCount
   const childCountText = `${String(childCount.completed)}/${String(childCount.total)}`
   const childCountDescriptionId = `child-count-description-${node.id}`
+  const childCountLabel = (
+    <span
+      className="pointer-events-none inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
+      data-testid="child-completion"
+    >
+      <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+      {childCountText}
+    </span>
+  )
   const childCompletion =
     childCount.total === 0 ? null : hasChildren ? (
       <Button
@@ -103,21 +112,13 @@ export function TreeTaskGridRow({
         aria-describedby={childCountDescriptionId}
         aria-expanded={expanded}
       >
-        <span className="pointer-events-none inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
-          {childCountText}
-        </span>
+        {childCountLabel}
         <span id={childCountDescriptionId} className="sr-only">
           {childCount.completed} of {childCount.total} child tasks completed
         </span>
       </Button>
     ) : (
-      <span
-        className="inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
-        data-testid="child-completion"
-      >
-        {childCountText}
-      </span>
+      childCountLabel
     )
 
   return (

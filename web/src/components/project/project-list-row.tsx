@@ -18,6 +18,7 @@ export function ProjectListRow({ project }: { project: Project }) {
   const total = project.taskCount.total
   const completed = project.taskCount.completed
   const percent = total > 0 ? (completed / total) * 100 : 0
+  const tone = status === 'active' ? 'foreground' : 'muted'
   const targetLabel = formatDate(project.targetDate) ?? '—'
 
   return (
@@ -41,11 +42,7 @@ export function ProjectListRow({ project }: { project: Project }) {
         </div>
         <ProjectStatusBadge status={project.status} />
         <div className="flex items-center gap-2.5">
-          <ProgressBar
-            percent={percent}
-            tone={status === 'active' ? 'foreground' : 'muted'}
-            className="flex-1"
-          />
+          <ProgressBar percent={percent} tone={tone} className="flex-1" />
           <span className="w-11 shrink-0 text-right font-mono text-2xs text-muted-foreground">
             {completed}/{total}
           </span>
@@ -74,10 +71,7 @@ export function ProjectListRow({ project }: { project: Project }) {
             {completed}/{total}
           </span>
         </div>
-        <ProgressBar
-          percent={percent}
-          tone={status === 'active' ? 'foreground' : 'muted'}
-        />
+        <ProgressBar percent={percent} tone={tone} />
       </div>
     </Link>
   )
