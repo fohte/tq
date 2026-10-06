@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { TaskSidebarMobile } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { TaskSidebarStoryProviders } from '#components/task/task-sidebar-story-providers'
+import { TaskSidebarStoryProviders } from '#components/task/task-sidebar-story-test-fixtures'
 import type { TaskDetail } from '#hooks/use-tasks'
 
 function MobileSidebarStory({ task }: { task: TaskDetail }) {
