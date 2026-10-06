@@ -62,7 +62,12 @@ describe('QueueItemRow', () => {
     const user = userEvent.setup()
     render(
       <Providers>
-        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+        <QueueItemRow
+          task={task}
+          queueKey="day"
+          queueDate="2026-01-01"
+          onRemove={vi.fn()}
+        />
       </Providers>,
     )
 
@@ -79,7 +84,12 @@ describe('QueueItemRow', () => {
     const user = userEvent.setup()
     render(
       <Providers>
-        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+        <QueueItemRow
+          task={task}
+          queueKey="day"
+          queueDate="2026-01-01"
+          onRemove={vi.fn()}
+        />
       </Providers>,
     )
 
@@ -100,7 +110,12 @@ describe('QueueItemRow', () => {
     const user = userEvent.setup()
     render(
       <Providers>
-        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+        <QueueItemRow
+          task={task}
+          queueKey="day"
+          queueDate="2026-01-01"
+          onRemove={vi.fn()}
+        />
       </Providers>,
     )
 
@@ -119,7 +134,12 @@ describe('QueueItemRow', () => {
     const user = userEvent.setup()
     render(
       <Providers>
-        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+        <QueueItemRow
+          task={task}
+          queueKey="day"
+          queueDate="2026-01-01"
+          onRemove={vi.fn()}
+        />
       </Providers>,
     )
 
@@ -137,7 +157,12 @@ describe('QueueItemRow', () => {
     const user = userEvent.setup()
     render(
       <Providers>
-        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+        <QueueItemRow
+          task={task}
+          queueKey="day"
+          queueDate="2026-01-01"
+          onRemove={vi.fn()}
+        />
       </Providers>,
     )
 
@@ -156,7 +181,12 @@ describe('QueueItemRow', () => {
     const user = userEvent.setup()
     render(
       <Providers>
-        <QueueItemRow task={task} queueKey="day" onRemove={vi.fn()} />
+        <QueueItemRow
+          task={task}
+          queueKey="day"
+          queueDate="2026-01-01"
+          onRemove={vi.fn()}
+        />
       </Providers>,
     )
 

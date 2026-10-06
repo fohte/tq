@@ -3,7 +3,6 @@ import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
-import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
   type DayViewMode,
   DayViewPresentation,
@@ -19,6 +18,7 @@ import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCompactMemoData } from '#hooks/use-compact-memo-data'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
 import { useCurrentContext } from '#hooks/use-current-context'
+import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import {
@@ -239,6 +239,15 @@ function DayView() {
 
   const setQueueItems = useSetQueueItems()
   const autoAssign = useAutoAssign()
+  const { dayQueueItems, dndCallbacks } = useDayQueueCalendar({
+    queues: queuesData,
+    startDate: visibleRange.startDate,
+    endDate: visibleRange.endDate,
+    ...(refetchInterval === undefined ? {} : { refetchInterval }),
+    createTimeBlock,
+    setQueueItems,
+    onTimeBlockChange: handleTimeBlockChange,
+  })
 
   // Queue updates replace the full list, so keep stored IDs separate from
   // filters applied to the displayed sections.
@@ -315,26 +324,12 @@ function DayView() {
     timeBlocksData,
     schedulesData,
     gcalEventsData: gcalEventsQuery.data,
+    dayQueueItems,
     taskMap,
     context,
     taskDateTasks: categorized.all,
     visibleRange,
   })
-
-  const dndCallbacks: CalendarDndCallbacks = useMemo(
-    () => ({
-      onEventDrop: handleTimeBlockChange,
-      onEventResize: handleTimeBlockChange,
-      onExternalDrop: ({ taskId, start, end }) => {
-        createTimeBlock.mutate({
-          taskId,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-        })
-      },
-    }),
-    [handleTimeBlockChange, createTimeBlock],
-  )
 
   const appendedTaskIdsFor = (queueKey: string, taskId: string) => {
     if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)

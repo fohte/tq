@@ -52,6 +52,7 @@ const meta = {
   ],
   args: {
     onRemove: fn(),
+    queueDate: '2026-01-01',
   },
 } satisfies Meta<typeof QueueSection>
 
