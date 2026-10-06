@@ -295,6 +295,38 @@ export const MonthView: Story = {
   },
 }
 
+export const MonthViewEventStyles: Story = {
+  name: 'the monthly calendar distinguishes private events and queued tasks',
+  args: {
+    initialView: 'month',
+    events: [
+      makeTimeBlockEvent({
+        id: 'sample-private-event',
+        title: 'Private sample appointment',
+        start: `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-02T09:00:00`,
+        end: `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-02T09:30:00`,
+        type: 'gcal-meeting',
+        calendarColor: '#039BE5',
+        redacted: true,
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-queued-task',
+        title: 'Queued sample task',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 3),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 4),
+        ),
+        type: 'day-queue',
+        taskId: 'sample-queued-task',
+        queuePosition: 0,
+        allDay: true,
+      }),
+    ],
+  },
+}
+
 export const MonthViewWithTaskDates: Story = {
   name: 'the monthly calendar shows task dates in date cells',
   args: {

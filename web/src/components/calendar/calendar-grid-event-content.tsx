@@ -1,5 +1,6 @@
 import type { EventContentArg } from '@fullcalendar/core'
 
+import { getEventAccentStyle } from '#components/calendar/event-accent-style'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import {
   getTaskDateEventProps,
@@ -8,10 +9,6 @@ import {
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { formatHm } from '#lib/calendar-grid-time'
 import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
-
-interface MonthEventStyle extends React.CSSProperties {
-  '--event-accent'?: string
-}
 
 export function renderCalendarGridEventContent(
   arg: EventContentArg,
@@ -30,23 +27,12 @@ export function renderCalendarGridEventContent(
         />
       )
     }
-    const monthAccent =
-      eventProps.type === 'schedule'
-        ? eventProps.color?.accent
-        : eventProps.type === 'gcal-meeting' ||
-            eventProps.type === 'gcal-info' ||
-            eventProps.type === 'gcal-solo'
-          ? eventProps.calendarColor
-          : undefined
-    const monthEventStyle: MonthEventStyle | undefined =
-      monthAccent == null || eventProps.redacted === true
-        ? undefined
-        : { '--event-accent': monthAccent }
+    const eventAccentStyle = getEventAccentStyle(eventProps)
 
     return (
       <div
         className="tq-month-event"
-        style={monthEventStyle}
+        style={eventAccentStyle}
         data-event-type={eventProps.type}
         data-redacted={eventProps.redacted === true}
         data-pending-response={isPendingGcalResponse(eventProps)}

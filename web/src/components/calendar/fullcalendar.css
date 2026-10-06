@@ -284,7 +284,7 @@
 
 .tq-month-event[data-event-type^='gcal-'] {
   background-color: var(--card);
-  border-left-color: var(--border);
+  border-left-color: var(--event-accent, var(--border));
 }
 
 .tq-month-event[data-event-type='manual'],
@@ -298,29 +298,24 @@
 }
 
 .tq-month-event[data-event-type='gcal-meeting'],
-.tq-month-event[data-event-type='gcal-info'],
-.tq-month-event[data-event-type='schedule'] {
-  background-color: color-mix(
-    in srgb,
-    var(--event-accent, var(--border)) 32%,
-    var(--card)
-  );
+.tq-month-event[data-event-type='gcal-info'] {
   border-left-color: var(--event-accent, var(--border));
   border-left-width: 4px;
 }
 
+.tq-month-event[data-event-type='schedule'] {
+  border-left-color: var(--event-accent, var(--primary));
+  border-left-width: 4px;
+}
+
 .tq-month-event[data-event-type='gcal-solo'] {
-  background-color: color-mix(
-    in srgb,
-    var(--event-accent, var(--border)) 14%,
-    var(--card)
-  );
   border-left-color: var(--event-accent, var(--border));
+  border-left-width: 2px;
 }
 
 .tq-month-event[data-event-type='gcal-status'] {
   background-color: var(--card);
-  border-left-color: var(--border);
+  border-left-color: var(--event-accent, var(--border));
 }
 
 .tq-month-event[data-redacted='true'] {

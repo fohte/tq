@@ -198,7 +198,7 @@ export const GoogleCalendarMeetingTentative: Story = {
   },
 }
 
-// 自分だけの予定 (default eventType, no other attendees): fill dropped, still unmarked.
+// Personal events use the appointment colors with a subtler fill and thinner accent.
 export const GoogleCalendarSolo: Story = {
   name: 'a personal Google Calendar event appears in the timeline',
   args: {

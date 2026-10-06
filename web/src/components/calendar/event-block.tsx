@@ -2,6 +2,10 @@ import type { EventContentArg } from '@fullcalendar/core'
 import { Headphones, LogOut, MapPin } from 'lucide-react'
 
 import {
+  type EventAccentStyle,
+  getEventAccentStyle,
+} from '#components/calendar/event-accent-style'
+import {
   getTaskDateEventProps,
   TaskDateEvent,
 } from '#components/calendar/task-date-event'
@@ -12,16 +16,11 @@ import {
   GCAL_OUT_OF_OFFICE_EVENT_TYPE,
   GCAL_WORKING_LOCATION_EVENT_TYPE,
   getEventProps,
-  isGcalEventType,
   isPendingGcalResponse,
 } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
 type EventKind = NonNullable<CalendarEventProps['type']>
-
-interface EventBlockStyle extends React.CSSProperties {
-  '--event-accent'?: string
-}
 
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
@@ -81,8 +80,6 @@ export function EventBlock(arg: EventContentArg) {
   const props = getEventProps(event)
   const type = props.type ?? 'manual'
   const parentRef = props.parentRef
-  const scheduleAccent = props.color?.accent
-  const calendarColor = props.calendarColor
   const redacted = props.redacted ?? false
 
   if (type === 'task-date') {
@@ -133,21 +130,9 @@ export function EventBlock(arg: EventContentArg) {
 
   const badge = type === 'auto' ? 'auto' : undefined
 
-  const accentColor =
-    type === 'schedule'
-      ? scheduleAccent
-      : type === 'gcal-meeting' ||
-          type === 'gcal-info' ||
-          type === 'gcal-solo' ||
-          type === 'gcal-status'
-        ? calendarColor
-        : undefined
-  const fillPercent = type === 'gcal-solo' ? 14 : 32
-  const isColoredAppointment =
-    type === 'schedule' ||
-    type === 'gcal-meeting' ||
-    type === 'gcal-info' ||
-    type === 'gcal-solo'
+  const accentStyle = getEventAccentStyle(props)
+  const accentColor = accentStyle?.['--event-accent']
+  const isColoredAppointment = accentStyle?.['--event-fill'] != null
 
   return (
     <EventBlockShell
@@ -167,18 +152,7 @@ export function EventBlock(arg: EventContentArg) {
       )}
       continuesBefore={continuesBefore}
       continuesAfter={continuesAfter}
-      style={
-        accentColor == null
-          ? undefined
-          : {
-              '--event-accent': accentColor,
-              ...(isColoredAppointment
-                ? {
-                    backgroundColor: `color-mix(in srgb, var(--event-accent) ${String(fillPercent)}%, var(--card))`,
-                  }
-                : {}),
-            }
-      }
+      style={accentStyle}
       title={
         <span
           className={cn(
@@ -187,7 +161,7 @@ export function EventBlock(arg: EventContentArg) {
               ? 'font-sans font-semibold text-foreground'
               : type === 'manual' || type === 'auto' || type === 'day-queue'
                 ? 'font-mono text-muted-foreground-strong'
-                : isGcalEventType(type)
+                : type === 'gcal-status'
                   ? 'text-muted-foreground-strong'
                   : 'font-mono text-foreground',
             isCompleted && 'line-through',
@@ -240,7 +214,7 @@ function EventBlockShell({
   className?: string
   continuesBefore?: boolean
   continuesAfter?: boolean
-  style?: EventBlockStyle | undefined
+  style?: EventAccentStyle | undefined
   title: React.ReactNode
   badge?: string | undefined
   meta: React.ReactNode
