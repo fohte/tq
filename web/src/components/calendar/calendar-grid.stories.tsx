@@ -42,6 +42,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T11:00:00`,
     end: `${dateStr}T11:30:00`,
     type: 'gcal-meeting',
+    calendarColor: '#039BE5',
   },
   {
     id: '4',
@@ -59,6 +60,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: tomorrowStr,
     type: 'gcal-info',
     allDay: true,
+    calendarColor: '#F6BF26',
   },
   {
     id: '6',

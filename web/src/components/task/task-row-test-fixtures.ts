@@ -30,6 +30,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     createdAt: '2026-03-20T00:00:00.000Z',
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
+    checklistCompletionCount: { completed: 0, total: 0 },
     ...overrides,
   }
 }
@@ -68,6 +69,8 @@ export function makeTaskDetail(
     titleAuthor: null,
     descriptionAuthor: null,
     childCompletionCount: { completed: 0, total: 0 },
+    checklistCompletionCount: { completed: 0, total: 0 },
+    checklists: [],
     pages: [],
     timeBlocks: [],
     links: { outgoing: [], incoming: [] },
@@ -117,6 +120,7 @@ export function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     updatedAt: '2026-03-20T00:00:00.000Z',
     children: [],
     childCompletionCount: { completed: 0, total: 0 },
+    checklistCompletionCount: { completed: 0, total: 0 },
     ...overrides,
   }
 }

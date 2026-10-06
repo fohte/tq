@@ -105,6 +105,7 @@ function generateMonthEvents(): TimeBlockEvent[] {
         start: `${ds}T14:00:00`,
         end: `${ds}T15:00:00`,
         type: 'gcal-meeting',
+        calendarColor: '#8E24AA',
       })
     }
     if (day % 3 === 0) {
@@ -115,6 +116,30 @@ function generateMonthEvents(): TimeBlockEvent[] {
         end: `${ds}T17:00:00`,
         type: 'auto',
       })
+    }
+    if (day % 5 === 0) {
+      events.push(
+        makeTimeBlockEvent({
+          id: `m-${String(day)}-4`,
+          title: 'Gym',
+          start: `${ds}T18:00:00`,
+          end: `${ds}T19:00:00`,
+          type: 'schedule',
+          color: { accent: '#52B788' },
+        }),
+      )
+    }
+    if (day % 7 === 0) {
+      events.push(
+        makeTimeBlockEvent({
+          id: `m-${String(day)}-5`,
+          title: 'Dentist',
+          start: `${ds}T11:00:00`,
+          end: `${ds}T12:00:00`,
+          type: 'gcal-solo',
+          calendarColor: '#039BE5',
+        }),
+      )
     }
   }
   return events
@@ -267,6 +292,38 @@ export const MonthView: Story = {
   args: {
     events: generateMonthEvents(),
     initialView: 'month',
+  },
+}
+
+export const MonthViewEventStyles: Story = {
+  name: 'the monthly calendar distinguishes private events and queued tasks',
+  args: {
+    initialView: 'month',
+    events: [
+      makeTimeBlockEvent({
+        id: 'sample-private-event',
+        title: 'Private sample appointment',
+        start: `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-02T09:00:00`,
+        end: `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-02T09:30:00`,
+        type: 'gcal-meeting',
+        calendarColor: '#039BE5',
+        redacted: true,
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-queued-task',
+        title: 'Queued sample task',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 3),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 4),
+        ),
+        type: 'day-queue',
+        taskId: 'sample-queued-task',
+        queuePosition: 0,
+        allDay: true,
+      }),
+    ],
   },
 }
 

@@ -81,6 +81,7 @@ export function useCreateTask() {
         createdAt: now,
         updatedAt: now,
         childCompletionCount: { completed: 0, total: 0 },
+        checklistCompletionCount: { completed: 0, total: 0 },
         blockedByNumbers: [],
         blockedByGithubRefs: [],
       }

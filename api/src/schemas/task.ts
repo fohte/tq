@@ -128,8 +128,13 @@ export const listTasksQuerySchema = z.object({
   commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
   templateId: z.uuid().optional(),
-  parentId: z.union([z.literal('root'), z.uuid()]).optional(),
-  descendantOf: z.uuid().optional(),
+  parentId: z
+    .union([z.literal('root'), taskIdOrNumber])
+    .describe("Parent task UUID or number, or 'root' for tasks with no parent.")
+    .optional(),
+  descendantOf: taskIdOrNumber
+    .describe('Return descendants of this task UUID or number.')
+    .optional(),
   includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
   sortBy: taskSortBy.optional(),

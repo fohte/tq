@@ -55,8 +55,8 @@ export function TaskDateEvent({
         'tq-task-date-event tq-all-day-content @container/task-date flex h-full min-w-0 items-center gap-1 overflow-hidden border border-transparent border-l-2 px-2 py-px font-mono text-2xs whitespace-nowrap',
         variant === 'month' && 'px-1',
         dateTaskOverdue
-          ? 'bg-primary/20 border-l-primary/70'
-          : 'bg-surface-strong border-l-muted-foreground',
+          ? 'bg-primary/20 border-l-primary/70 text-foreground'
+          : 'bg-card border-l-muted-foreground text-muted-foreground-strong',
         !isStart && 'border-l-0',
       )}
       data-date-task-kind={dateTaskKind}
@@ -72,7 +72,7 @@ export function TaskDateEvent({
           )}
         />
       )}
-      <span className="min-w-0 flex-1 truncate text-foreground">{title}</span>
+      <span className="min-w-0 flex-1 truncate">{title}</span>
       {dateTaskDueDateLabel != null && (
         <span className="ml-auto hidden shrink-0 text-primary/70 @min-[100px]/task-date:inline">
           {dateTaskDueDateLabel}

@@ -35,6 +35,8 @@ const mockTask = {
   createdAt: '2026-03-20T00:00:00.000Z',
   updatedAt: '2026-03-20T00:00:00.000Z',
   childCompletionCount: { completed: 0, total: 0 },
+  checklistCompletionCount: { completed: 0, total: 0 },
+  checklists: [],
   timeBlocks: [],
   links: { outgoing: [], incoming: [] },
   blockedBy: [],
@@ -288,6 +290,7 @@ describe('TaskPage', () => {
       createdAt: '2026-03-20T00:00:00.000Z',
       updatedAt: '2026-03-20T00:00:00.000Z',
       childCompletionCount: { completed: 0, total: 0 },
+      checklistCompletionCount: { completed: 0, total: 0 },
     }
     const subtasks = [
       {

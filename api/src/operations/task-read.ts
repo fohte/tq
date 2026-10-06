@@ -82,7 +82,7 @@ const taskListInputSchema = listTasksQuerySchema
       'Only return tasks belonging to this project id.',
     ),
     parentId: listTasksQuerySchema.shape.parentId.describe(
-      "Only return direct subtasks of this task id, or 'root' for tasks with no parent.",
+      "Only return direct subtasks of this task UUID or number, or 'root' for tasks with no parent.",
     ),
     context: contextEnum
       .optional()
@@ -213,7 +213,7 @@ export const taskReadOperations = [
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
     description:
-      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content.",
+      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content.",
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id', 'GET /api/tasks'],
@@ -223,7 +223,7 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers, parent:<uuid>|root, project:<uuid|title>, and sort:due|created|updated|estimate. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|estimate. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],

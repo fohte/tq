@@ -116,6 +116,23 @@ function normalizeTaskListItem(
   }
 }
 
+function expectedTaskListItem(
+  task: Parameters<typeof toListItemResponse>[0],
+  parentNumber: number | null,
+  childCompletionCount = { completed: 0, total: 0 },
+) {
+  return normalizeTaskListItem({
+    ...toListItemResponse(task, { childCompletionCount }),
+    parentNumber,
+  })
+}
+
+function normalizeTaskListItems(tasks: TaskListItemResponse[]) {
+  return tasks
+    .map(normalizeTaskListItem)
+    .toSorted((left, right) => left.title.localeCompare(right.title))
+}
+
 function responseSnapshot<T>(status: number, body: T) {
   return { status, body }
 }
@@ -920,16 +937,76 @@ describe('tasks CRUD API', () => {
 
     it('filters by parentId', async () => {
       const parent = await createTask('Parent')
-      await createTask('Child 1', { parentId: parent.id })
-      await createTask('Child 2', { parentId: parent.id })
+      const child1 = await createTask('Child 1', { parentId: parent.id })
+      const child2 = await createTask('Child 2', { parentId: parent.id })
       await createTask('Orphan')
 
-      const res = await app.request(`/api/tasks?parentId=${parent.id}`)
+      const [uuidRes, numberRes] = await Promise.all([
+        app.request(`/api/tasks?parentId=${parent.id}`),
+        app.request(`/api/tasks?parentId=${String(parent.number)}`),
+      ])
+      const [uuidBody, numberBody] = await Promise.all([
+        jsonBody<TaskListItemResponse[]>(uuidRes),
+        jsonBody<TaskListItemResponse[]>(numberRes),
+      ])
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(2)
-      expect(body.every((t) => t.parentId === parent.id)).toBe(true)
+      const getOutput = () => ({
+        byUuid: responseSnapshot(
+          uuidRes.status,
+          normalizeTaskListItems(uuidBody),
+        ),
+        byNumber: responseSnapshot(
+          numberRes.status,
+          normalizeTaskListItems(numberBody),
+        ),
+      })
+
+      expect(getOutput()).toEqual({
+        byUuid: {
+          status: 200,
+          body: [
+            expectedTaskListItem(child1, parent.number),
+            expectedTaskListItem(child2, parent.number),
+          ].toSorted((left, right) => left.title.localeCompare(right.title)),
+        },
+        byNumber: {
+          status: 200,
+          body: [
+            expectedTaskListItem(child1, parent.number),
+            expectedTaskListItem(child2, parent.number),
+          ].toSorted((left, right) => left.title.localeCompare(right.title)),
+        },
+      })
+    })
+
+    it('returns no tasks when parentId is an unknown task number', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request(
+        `/api/tasks?parentId=${String(parent.number + 100_000)}`,
+      )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('returns no tasks when parentId exceeds the task-number range', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request('/api/tasks?parentId=2147483648')
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
     })
 
     it('filters by templateId', async () => {
@@ -1028,6 +1105,7 @@ describe('tasks CRUD API', () => {
           blockedByNumbers: [],
           blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
+          checklistCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(withoutLinkSync(taskB)),
@@ -1036,6 +1114,7 @@ describe('tasks CRUD API', () => {
           blockedByNumbers: [],
           blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
+          checklistCompletionCount: { completed: 0, total: 0 },
         },
       ])
     })
@@ -1117,6 +1196,7 @@ describe('tasks CRUD API', () => {
           blockedByNumbers: [],
           blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
+          checklistCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(patchedTaskC),
@@ -1125,6 +1205,7 @@ describe('tasks CRUD API', () => {
           blockedByNumbers: [],
           blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
+          checklistCompletionCount: { completed: 0, total: 0 },
         },
         {
           ...normalizeTask(patchedTaskA),
@@ -1133,6 +1214,7 @@ describe('tasks CRUD API', () => {
           blockedByNumbers: [],
           blockedByGithubRefs: [],
           childCompletionCount: { completed: 0, total: 0 },
+          checklistCompletionCount: { completed: 0, total: 0 },
         },
       ])
     })
@@ -1574,18 +1656,77 @@ describe('tasks CRUD API', () => {
 
     it('filters by parent: prefix in q parameter', async () => {
       const parent = await createTask('Parent')
-      await createTask('Child', { parentId: parent.id })
+      const child = await createTask('Child', { parentId: parent.id })
       await createTask('Orphan')
 
+      const [uuidRes, numberRes] = await Promise.all([
+        app.request(
+          '/api/tasks?q=' + encodeURIComponent(`parent:${parent.id}`),
+        ),
+        app.request(
+          '/api/tasks?q=' +
+            encodeURIComponent(`parent:${String(parent.number)}`),
+        ),
+      ])
+      const [uuidBody, numberBody] = await Promise.all([
+        jsonBody<TaskListItemResponse[]>(uuidRes),
+        jsonBody<TaskListItemResponse[]>(numberRes),
+      ])
+
+      const getOutput = () => ({
+        byUuid: responseSnapshot(
+          uuidRes.status,
+          normalizeTaskListItems(uuidBody),
+        ),
+        byNumber: responseSnapshot(
+          numberRes.status,
+          normalizeTaskListItems(numberBody),
+        ),
+      })
+
+      expect(getOutput()).toEqual({
+        byUuid: {
+          status: 200,
+          body: [expectedTaskListItem(child, parent.number)],
+        },
+        byNumber: {
+          status: 200,
+          body: [expectedTaskListItem(child, parent.number)],
+        },
+      })
+    })
+
+    it('returns no tasks when parent: contains an unknown task number', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
       const res = await app.request(
-        '/api/tasks?q=' + encodeURIComponent(`parent:${parent.id}`),
+        '/api/tasks?q=' +
+          encodeURIComponent(`parent:${String(parent.number + 100_000)}`),
       )
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].title).toBe('Child')
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('returns no tasks when parent: exceeds the task-number range', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('parent:2147483648'),
+      )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
     })
 
     it('filters by parent:root prefix in q parameter', async () => {
@@ -1724,13 +1865,78 @@ describe('tasks CRUD API', () => {
       const grandchild = await createTask('Grandchild', { parentId: child.id })
       await createTask('Unrelated')
 
-      const res = await app.request(`/api/tasks?descendantOf=${root.id}`)
+      const [uuidRes, numberRes] = await Promise.all([
+        app.request(`/api/tasks?descendantOf=${root.id}`),
+        app.request(`/api/tasks?descendantOf=${String(root.number)}`),
+      ])
+      const [uuidBody, numberBody] = await Promise.all([
+        jsonBody<TaskListItemResponse[]>(uuidRes),
+        jsonBody<TaskListItemResponse[]>(numberRes),
+      ])
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id).toSorted()).toEqual(
-        [child.id, grandchild.id].toSorted(),
+      const getOutput = () => ({
+        byUuid: responseSnapshot(
+          uuidRes.status,
+          normalizeTaskListItems(uuidBody),
+        ),
+        byNumber: responseSnapshot(
+          numberRes.status,
+          normalizeTaskListItems(numberBody),
+        ),
+      })
+
+      expect(getOutput()).toEqual({
+        byUuid: {
+          status: 200,
+          body: [
+            expectedTaskListItem(child, root.number, {
+              completed: 0,
+              total: 1,
+            }),
+            expectedTaskListItem(grandchild, child.number),
+          ].toSorted((left, right) => left.title.localeCompare(right.title)),
+        },
+        byNumber: {
+          status: 200,
+          body: [
+            expectedTaskListItem(child, root.number, {
+              completed: 0,
+              total: 1,
+            }),
+            expectedTaskListItem(grandchild, child.number),
+          ].toSorted((left, right) => left.title.localeCompare(right.title)),
+        },
+      })
+    })
+
+    it('returns no tasks when descendantOf is an unknown task number', async () => {
+      const root = await createTask('Root')
+      await createTask('Child', { parentId: root.id })
+
+      const res = await app.request(
+        `/api/tasks?descendantOf=${String(root.number + 100_000)}`,
       )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('returns no tasks when descendantOf exceeds the task-number range', async () => {
+      const root = await createTask('Root')
+      await createTask('Child', { parentId: root.id })
+
+      const res = await app.request('/api/tasks?descendantOf=2147483648')
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
     })
 
     it('filters by mixed task identifiers and includes their ancestors', async () => {
@@ -1940,6 +2146,8 @@ describe('tasks CRUD API', () => {
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
+        checklists: [],
         pages: [],
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
@@ -1970,6 +2178,8 @@ describe('tasks CRUD API', () => {
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
+        checklists: [],
         pages: [],
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
@@ -3111,6 +3321,8 @@ describe('tasks CRUD API', () => {
           titleAuthor: { kind: 'human', agent: null },
           descriptionAuthor: { kind: 'human', agent: null },
           childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
+          checklists: [],
           pages: [],
           timeBlocks: [],
           links: { outgoing: [], incoming: [] },
@@ -3146,6 +3358,8 @@ describe('tasks CRUD API', () => {
           titleAuthor: { kind: 'human', agent: null },
           descriptionAuthor: { kind: 'human', agent: null },
           childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
+          checklists: [],
           pages: [],
           timeBlocks: [],
           links: { outgoing: [], incoming: [] },
@@ -3382,6 +3596,8 @@ describe('tasks CRUD API', () => {
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
+        checklists: [],
         pages: [],
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
@@ -3413,6 +3629,8 @@ describe('tasks CRUD API', () => {
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
+        checklists: [],
         pages: [],
         timeBlocks: [],
         links: { outgoing: [], incoming: [] },
@@ -3771,6 +3989,8 @@ describe('tasks CRUD API', () => {
           titleAuthor: { kind: 'human', agent: null },
           descriptionAuthor: { kind: 'human', agent: null },
           childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
+          checklists: [],
           pages: [],
           timeBlocks: [],
           links: { outgoing: [], incoming: [] },

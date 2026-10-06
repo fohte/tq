@@ -17,7 +17,7 @@ const queueSetInputSchema = z.object({
   taskIds: putQueueItemsSchema.shape.taskIds
     .optional()
     .describe(
-      'Task UUIDs to retain or add. Existing items keep their position; new items append in request order. Queues display by due date, then position. Omit to clear the queue.',
+      'Task ids or numbers to retain or add. Existing items keep their position; new items append in request order. Queues display by due date, then position. Omit to clear the queue.',
     ),
 })
 

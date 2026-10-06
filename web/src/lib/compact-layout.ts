@@ -3,10 +3,22 @@ import { formatLocalDate } from '#lib/date-range'
 const COMPACT_REFRESH_INTERVAL_MS = 60_000
 const NOW_PANEL_LOOKAHEAD_DAYS = 30
 
-export function isCompactDayLayoutSearch(search: {
-  layout?: unknown
-}): boolean {
-  return search['layout'] === 'compact'
+export function isCompactDayLayoutSearch(search: unknown): boolean {
+  return (
+    typeof search === 'object' &&
+    search !== null &&
+    'layout' in search &&
+    search['layout'] === 'compact'
+  )
+}
+
+export function isCompactDayLayoutMatch(
+  routeId: string,
+  search: unknown,
+): boolean {
+  return (
+    (routeId === '/' || routeId === '/memo') && isCompactDayLayoutSearch(search)
+  )
 }
 
 export function getCompactRefetchInterval(

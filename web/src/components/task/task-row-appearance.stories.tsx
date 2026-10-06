@@ -472,6 +472,18 @@ export const WithCompletionCount: Story = {
   },
 }
 
+export const WithChecklistProgress: Story = {
+  name: 'the row shows checklist progress after the subtask count',
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Prepare the release',
+      childCompletionCount: { completed: 2, total: 5 },
+      checklistCompletionCount: { completed: 1, total: 4 },
+    },
+  },
+}
+
 export const AllVariants: Story = {
   name: 'the rows show personal, completed, work, and parent tasks',
   args: { task: baseTask },

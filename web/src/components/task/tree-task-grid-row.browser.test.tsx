@@ -196,6 +196,22 @@ describe('TreeTaskGridRow', () => {
     expect(screen.getByTestId('child-completion')).toHaveTextContent('1/3')
   })
 
+  it('renders checklist progress after the subtask count', async () => {
+    const node = makeNode({
+      childCompletionCount: { completed: 2, total: 5 },
+      checklistCompletionCount: { completed: 1, total: 4 },
+    })
+    const { container } = await renderTree(node)
+
+    expect(
+      [
+        ...container.querySelectorAll(
+          '[data-testid="child-completion"], [data-testid="checklist-completion"]',
+        ),
+      ].map((element) => element.textContent),
+    ).toEqual(['2/5', '1/4'])
+  })
+
   it('does not show child completion count when no children', async () => {
     await renderTree(makeNode())
     expect(screen.queryByTestId('child-completion')).not.toBeInTheDocument()

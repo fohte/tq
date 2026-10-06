@@ -178,9 +178,8 @@ export async function getTaskLinks(taskId: string): Promise<TaskLinks> {
       .orderBy(tasks.number),
   ])
 
-  // Hydrated together (not per-direction) so labels/child-completion counts
-  // are still fetched in 2 queries total regardless of how many outgoing vs.
-  // incoming links exist.
+  // Hydrated together (not per-direction) so labels and progress counts are
+  // fetched in a fixed number of queries regardless of link direction.
   const hydrated = await hydrateTaskListRows([...outgoingRows, ...incomingRows])
 
   return {

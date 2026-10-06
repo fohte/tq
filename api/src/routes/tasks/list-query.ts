@@ -25,6 +25,7 @@ import {
   taskRelations,
   tasks,
 } from '#db/schema'
+import { classifyNumericOrId } from '#lib/numeric-id'
 import {
   buildTitleMatchCondition,
   queryTaskSearchMatches,
@@ -52,6 +53,25 @@ function freeTextWords(freeText: string | undefined) {
       .filter((word) => word !== '')
       .slice(0, MAX_FREE_TEXT_WORDS) ?? []
   )
+}
+
+function taskNumberIdentifier(value: string | undefined) {
+  return value != null &&
+    isNumericTaskIdentifier(value) &&
+    classifyNumericOrId(value).kind === 'number'
+    ? value
+    : undefined
+}
+
+function isNumericTaskIdentifier(value: string) {
+  return /^\d+$/.test(value)
+}
+
+type ResolvedTaskFilter = { id: string | null }
+
+type ResolvedTaskFilters = {
+  parent: 'root' | ResolvedTaskFilter | undefined
+  descendantOf: ResolvedTaskFilter | undefined
 }
 
 // Extracted so `exists`/`notExists` can both wrap the same predicate for
@@ -118,8 +138,9 @@ export type TaskListRow = Awaited<ReturnType<typeof selectTaskListRows>>[number]
 function buildConditions(
   query: Omit<ListTasksQuery, 'ids'>,
   ids: string[] | undefined,
+  parsed: ReturnType<typeof parseSearchQuery> | null,
+  resolvedFilters: ResolvedTaskFilters,
 ) {
-  const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const conditions = []
 
   if (ids != null) {
@@ -234,8 +255,8 @@ function buildConditions(
   // stray `project:` token typed into `q`.
   const projectIdentifier = query.projectId ?? parsed?.projectId
 
-  const parentId = parsed?.parentId ?? query.parentId
-  if (parentId === 'root') {
+  const parent = resolvedFilters.parent
+  if (parent === 'root') {
     // A task in this project whose actual parent belongs to a different
     // project (or none) has no visible parent within this project's task
     // list, so it needs to count as a root here too — otherwise it would
@@ -248,8 +269,10 @@ function buildConditions(
           )
         : isNull(tasks.parentId),
     )
-  } else if (parentId != null) {
-    conditions.push(eq(tasks.parentId, parentId))
+  } else if (parent != null) {
+    conditions.push(
+      parent.id == null ? sql`false` : eq(tasks.parentId, parent.id),
+    )
   }
 
   if (query.templateId != null) {
@@ -311,15 +334,18 @@ function buildConditions(
   }
 
   if (query.descendantOf != null) {
+    const descendantId = resolvedFilters.descendantOf?.id
     conditions.push(
-      sql`${tasks.id} IN (
-        WITH RECURSIVE descendant_ids AS (
-          SELECT id FROM ${tasks} WHERE parent_id = ${query.descendantOf}
-          UNION ALL
-          SELECT t.id FROM ${tasks} t INNER JOIN descendant_ids d ON t.parent_id = d.id
-        )
-        SELECT id FROM descendant_ids
-      )`,
+      descendantId == null
+        ? sql`false`
+        : sql`${tasks.id} IN (
+            WITH RECURSIVE descendant_ids AS (
+              SELECT id FROM ${tasks} WHERE parent_id = ${descendantId}
+              UNION ALL
+              SELECT t.id FROM ${tasks} t INNER JOIN descendant_ids d ON t.parent_id = d.id
+            )
+            SELECT id FROM descendant_ids
+          )`,
     )
   }
 
@@ -344,6 +370,32 @@ export async function queryTaskList(
   matchByTaskId: Map<string, TaskSearchMatch> | undefined
 }> {
   const { ids: rawIds, ...filters } = query
+  const parsed = query.q != null ? parseSearchQuery(query.q) : null
+  const parentIdentifier = parsed?.parentId ?? filters.parentId
+  const parentIdentifierString =
+    parentIdentifier == null || parentIdentifier === 'root'
+      ? undefined
+      : String(parentIdentifier)
+  const descendantIdentifierString =
+    filters.descendantOf == null ? undefined : String(filters.descendantOf)
+  const numericIdentifiers = [
+    taskNumberIdentifier(parentIdentifierString),
+    taskNumberIdentifier(descendantIdentifierString),
+  ].filter((identifier): identifier is string => identifier != null)
+  const resolvedFilterNumbers =
+    await resolveTasksByIdsOrNumbers(numericIdentifiers)
+  const resolveFilterIdentifier = (identifier: string | undefined) => {
+    if (identifier == null) return undefined
+    if (!isNumericTaskIdentifier(identifier)) return { id: identifier }
+    return { id: resolvedFilterNumbers.byParam.get(identifier)?.id ?? null }
+  }
+  const resolvedFilters: ResolvedTaskFilters = {
+    parent:
+      parentIdentifier === 'root'
+        ? 'root'
+        : resolveFilterIdentifier(parentIdentifierString),
+    descendantOf: resolveFilterIdentifier(descendantIdentifierString),
+  }
   const ids =
     rawIds === undefined
       ? undefined
@@ -352,7 +404,7 @@ export async function queryTaskList(
     conditions,
     sortBy,
     freeTextWords: words,
-  } = buildConditions(filters, ids)
+  } = buildConditions(filters, ids, parsed, resolvedFilters)
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
     sortBy == null &&
