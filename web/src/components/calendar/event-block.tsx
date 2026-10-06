@@ -25,6 +25,7 @@ interface EventBlockStyle extends React.CSSProperties {
 
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
+  'day-queue': 'border-l-muted-foreground',
   manual: 'border-l-muted-foreground',
   completed: 'border-l-foreground',
   auto: 'border-l-muted-foreground',
@@ -37,6 +38,7 @@ const RULE_CLASS: Record<EventKind, string> = {
 
 const BG_CLASS: Record<EventKind, string> = {
   schedule: 'bg-card',
+  'day-queue': 'bg-card',
   'gcal-meeting': 'bg-card',
   'gcal-status': 'bg-card',
   'gcal-info': 'bg-card',
@@ -155,6 +157,7 @@ export function EventBlock(arg: EventContentArg) {
         BG_CLASS[type],
         isColoredAppointment && type !== 'gcal-solo' && 'border-l-4',
         type === 'gcal-solo' && 'border-l-2',
+        type === 'day-queue' && 'border-dashed',
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
@@ -182,7 +185,7 @@ export function EventBlock(arg: EventContentArg) {
             'inline-flex min-w-0 items-center gap-1 text-2xs',
             isColoredAppointment
               ? 'font-sans font-semibold text-foreground'
-              : type === 'manual' || type === 'auto'
+              : type === 'manual' || type === 'auto' || type === 'day-queue'
                 ? 'font-mono text-muted-foreground-strong'
                 : isGcalEventType(type)
                   ? 'text-muted-foreground-strong'

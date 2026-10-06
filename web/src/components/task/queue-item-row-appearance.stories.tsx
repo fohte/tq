@@ -71,6 +71,8 @@ const meta = {
   args: {
     ...stubDndProps,
     onRemove: fn(),
+    queueKey: 'day',
+    queueDate: '2026-01-01',
     isDragging: false,
     isEditingEstimate: false,
     estimateInput: '',

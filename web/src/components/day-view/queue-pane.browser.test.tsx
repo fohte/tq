@@ -48,6 +48,7 @@ function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
       <div style={{ height: 600, width: 480 }}>
         <QueuePane
           isLoading={false}
+          queueDate="2026-01-01"
           queueSections={[
             {
               key: 'day',

@@ -287,9 +287,14 @@
   border-left-color: var(--border);
 }
 
-.tq-month-event[data-event-type='manual'] {
+.tq-month-event[data-event-type='manual'],
+.tq-month-event[data-event-type='day-queue'] {
   background-color: var(--card);
   border-left-color: var(--muted-foreground);
+}
+
+.tq-month-event[data-event-type='day-queue'] {
+  border-left-style: dashed;
 }
 
 .tq-month-event[data-event-type='gcal-meeting'],
@@ -355,7 +360,8 @@
 }
 
 .tq-month-event[data-event-type='manual'] .tq-month-event-title,
-.tq-month-event[data-event-type='auto'] .tq-month-event-title {
+.tq-month-event[data-event-type='auto'] .tq-month-event-title,
+.tq-month-event[data-event-type='day-queue'] .tq-month-event-title {
   color: var(--muted-foreground-strong);
 }
 
