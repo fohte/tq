@@ -1,5 +1,12 @@
-import { and, eq } from 'drizzle-orm'
-import { err, errAsync, okAsync, type Result, ResultAsync } from 'neverthrow'
+import { and, eq, sql } from 'drizzle-orm'
+import {
+  err,
+  errAsync,
+  ok,
+  okAsync,
+  type Result,
+  ResultAsync,
+} from 'neverthrow'
 
 import { db, type DbTransaction } from '#db/connection'
 import type { GithubNotifyEvent } from '#db/schema'
@@ -55,6 +62,8 @@ export class GithubLinkConsistencyError extends Error {
 
 type TaskRow = typeof tasks.$inferSelect
 type LinkRow = typeof taskGithubLinks.$inferSelect
+type Executor = typeof db | DbTransaction
+type LinkConflictError = GithubResourceAlreadyLinkedError | RowNotFoundError
 
 function linkInsertValues(
   taskId: string,
@@ -80,10 +89,11 @@ function linkInsertValues(
 }
 
 function findLinkByRef(
+  executor: Executor,
   ref: GithubResourceRef,
 ): ResultAsync<LinkRow | null, never> {
   return ResultAsync.fromSafePromise(
-    db.query.taskGithubLinks.findFirst({
+    executor.query.taskGithubLinks.findFirst({
       where: and(
         eq(taskGithubLinks.owner, ref.owner),
         eq(taskGithubLinks.repo, ref.repo),
@@ -129,15 +139,6 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
   )
 }
 
-// Accepted by unlinkTask so it can run standalone (against
-// `db`) or as part of a larger transaction (against the `tx` handed to
-// `db.transaction`). createTaskFromIssueData needs the latter to make its
-// task insert and link insert atomic; linkTaskToGithubUrl/unlinkTask need it
-// to make their link write and its task_events row atomic.
-type Executor = typeof db | DbTransaction
-
-type LinkConflictError = GithubResourceAlreadyLinkedError | RowNotFoundError
-
 // Converts a concurrent insert conflict on either GitHub-link uniqueness
 // rule into GithubResourceAlreadyLinkedError; a cause already in
 // LinkConflictError passes through unchanged.
@@ -156,13 +157,95 @@ async function classifyLinkConflict(
     isUniqueViolation(cause, 'uq_task_github_links_subject_repo_number') ||
     isUniqueViolation(cause, 'uq_task_github_links_task_repo_number')
   ) {
-    const existing = await findLinkByRef(ref).unwrapOr(null)
+    const existing = await findLinkByRef(db, ref).unwrapOr(null)
     return err(new GithubResourceAlreadyLinkedError(existing?.taskId ?? taskId))
   }
   // Not a recognized conflict; rethrow so the app-level error boundary
   // reports it.
   // eslint-disable-next-line no-restricted-syntax -- interop boundary: caught by this function's Promise-based callers (the try/catch below, or ResultAsync.fromSafePromise in createTaskFromIssueData)
   throw cause
+}
+
+export function classifyGithubLinkConflict(
+  cause: unknown,
+  taskId: string,
+  ref: GithubResourceRef,
+): Promise<Result<never, GithubResourceAlreadyLinkedError | RowNotFoundError>> {
+  return classifyLinkConflict(cause, taskId, ref)
+}
+
+export async function lockGithubResource(
+  tx: DbTransaction,
+  ref: GithubResourceRef,
+): Promise<void> {
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext('task_github_resource:' || ${ref.owner} || '/' || ${ref.repo} || '#' || ${String(ref.number)}))`,
+  )
+}
+
+export async function getOrCreateTaskGithubLink(
+  tx: DbTransaction,
+  taskId: string,
+  issue: GithubIssueData,
+  author: EditAuthor,
+): Promise<Result<LinkRow, LinkConflictError>> {
+  await lockGithubResource(tx, issue)
+  await lockTaskGithubLinks(tx, taskId)
+
+  const existing = await tx.query.taskGithubLinks.findFirst({
+    where: and(
+      eq(taskGithubLinks.owner, issue.owner),
+      eq(taskGithubLinks.repo, issue.repo),
+      eq(taskGithubLinks.number, issue.number),
+      eq(taskGithubLinks.role, 'subject'),
+    ),
+  })
+  if (existing != null && existing.taskId !== taskId) {
+    return err(new GithubResourceAlreadyLinkedError(existing.taskId))
+  }
+
+  const now = new Date()
+  if (existing != null) {
+    const state = existing.state === 'merged' ? 'merged' : issue.state
+    const [updated] = await tx
+      .update(taskGithubLinks)
+      .set({
+        url: issue.url,
+        kind: issue.kind,
+        state,
+        title: issue.title,
+        commentsCount: issue.commentsCount,
+        githubUpdatedAt: new Date(issue.githubUpdatedAt),
+        stateReason: issue.stateReason,
+        lastSyncedAt: now,
+        updatedAt: now,
+      })
+      .where(eq(taskGithubLinks.id, existing.id))
+      .returning()
+    return ok(updated ?? existing)
+  }
+
+  const inserted = firstOrErr(
+    await tx
+      .insert(taskGithubLinks)
+      .values(linkInsertValues(taskId, issue))
+      .returning(),
+  )
+  if (inserted.isErr()) return err(inserted.error)
+
+  const link = inserted.value
+  await recordGithubLinked(
+    tx,
+    taskId,
+    {
+      owner: link.owner,
+      repo: link.repo,
+      number: link.number,
+      kind: link.kind,
+    },
+    author,
+  )
+  return ok(link)
 }
 
 export function resolveGithubUrl(
@@ -176,7 +259,7 @@ export function resolveGithubUrl(
   | TokenRefreshError
   | GithubLinkConsistencyError
 > {
-  return findLinkByRef(ref).andThen((link) => {
+  return findLinkByRef(db, ref).andThen((link) => {
     if (!link) {
       return fetchGithubIssue(ref).map((preview) => ({ preview }))
     }
@@ -196,7 +279,7 @@ export function findTaskByGithubRef(
   { task: TaskRow; link: LinkRow } | null,
   GithubLinkConsistencyError
 > {
-  return findLinkByRef(ref).andThen((link) => {
+  return findLinkByRef(db, ref).andThen((link) => {
     if (!link) return okAsync(null)
     return findTaskForLink(link).map((task) => ({ task, link }))
   })
@@ -231,6 +314,7 @@ export function createTaskFromIssueData(
       const task = taskResult.value
       insertedTaskId = task.id
 
+      await lockGithubResource(tx, issue)
       const linkResult = firstOrErr(
         await tx
           .insert(taskGithubLinks)
@@ -264,7 +348,7 @@ export function createTaskFromGithubUrl(
   | RowNotFoundError
   | GithubResourceAlreadyLinkedError
 > {
-  return findLinkByRef(ref).andThen((existing) => {
+  return findLinkByRef(db, ref).andThen((existing) => {
     if (existing) {
       return findTaskForLink(existing).map((task) => ({
         task,
@@ -314,7 +398,7 @@ export function linkTaskToGithubUrl(
   ).andThen((task) => {
     if (!task) return errAsync(new TaskNotFoundError())
 
-    return findLinkByRef(ref).andThen((existingResourceLink) => {
+    return findLinkByRef(db, ref).andThen((existingResourceLink) => {
       if (existingResourceLink) {
         return errAsync(
           new GithubResourceAlreadyLinkedError(existingResourceLink.taskId),
@@ -324,6 +408,7 @@ export function linkTaskToGithubUrl(
       return fetchGithubIssue(ref).andThen((issue) =>
         ResultAsync.fromPromise<LinkRow, unknown>(
           db.transaction(async (tx) => {
+            await lockGithubResource(tx, issue)
             await lockTaskGithubLinks(tx, taskId)
             const linkResult = firstOrErr(
               await tx

@@ -1,13 +1,22 @@
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskChecklistItems } from '#db/schema'
+import { taskChecklistItems, taskGithubLinks } from '#db/schema'
+import {
+  mockGithubIssueResponse,
+  mockGithubPullResponse,
+  upsertGithubToken,
+} from '#integrations/github/testing'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 interface ItemResponse {
   id: string
@@ -149,6 +158,42 @@ async function setChecked(itemId: string, checked: boolean) {
 
 async function summarizeJsonResponse(response: Response) {
   return { status: response.status, body: await response.json() }
+}
+
+async function summarizeGithubChecklistMutation(input: {
+  status: number
+  taskId: string
+  checklistId: string
+  itemId: string
+  parentItemId?: string
+  firstLinkStatus?: number
+  initiallyChecked?: boolean
+  responseBody?: unknown
+}) {
+  const [items, links] = await Promise.all([
+    db
+      .select()
+      .from(taskChecklistItems)
+      .where(eq(taskChecklistItems.checklistId, input.checklistId)),
+    db
+      .select()
+      .from(taskGithubLinks)
+      .where(eq(taskGithubLinks.taskId, input.taskId)),
+  ])
+  const item = items.find(({ id }) => id === input.itemId)
+  const parent = items.find(({ id }) => id === input.parentItemId)
+
+  return {
+    status: input.status,
+    firstLinkStatus: input.firstLinkStatus ?? null,
+    initiallyChecked: input.initiallyChecked ?? null,
+    responseBody: input.responseBody ?? null,
+    itemChecked: item?.checkedAt != null,
+    itemUsesTaskLink: links.length === 1 && item?.githubLinkId === links[0]?.id,
+    parentChecked:
+      input.parentItemId == null ? null : parent?.checkedAt != null,
+    links: links.map(({ url, state }) => [url, state]),
+  }
 }
 
 async function summarizeChecklistDeletion(response: Response, taskId: string) {
@@ -847,6 +892,175 @@ describe('task checklists API', () => {
       body: {
         error: 'Items with linked tasks or pull requests cannot have children',
       },
+    })
+  })
+
+  it('links an already merged pull request when creating an item and checks its parent', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const parent = await addItem(checklist.id, 'Build the feature')
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/57'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      html_url: githubUrl,
+      pull_request: {},
+      state: 'closed',
+    })
+    mockGithubPullResponse(true)
+
+    const response = await app.request(
+      `/api/checklists/${checklist.id}/items`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: 'Add the API route',
+          parentItemId: parent.id,
+          github: githubUrl,
+        }),
+      },
+    )
+    const body = await jsonBody<ItemResponse>(response)
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: body.id,
+        parentItemId: parent.id,
+      }),
+    ).toEqual({
+      status: 201,
+      firstLinkStatus: null,
+      initiallyChecked: null,
+      responseBody: null,
+      itemChecked: true,
+      itemUsesTaskLink: true,
+      parentChecked: true,
+      links: [[githubUrl, 'merged']],
+    })
+  })
+
+  it('keeps an existing merged link terminal when a stale open response is fetched', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Implement the feature')
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/59'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      html_url: githubUrl,
+      pull_request: {},
+      state: 'closed',
+    })
+    mockGithubPullResponse(true)
+
+    const linkResponse = await app.request(
+      `/api/tasks/${task.id}/github-link`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: githubUrl }),
+      },
+    )
+    mockGithubIssueResponse({
+      html_url: githubUrl,
+      pull_request: {},
+      state: 'open',
+    })
+
+    const response = await app.request(`/api/checklist-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github: githubUrl }),
+    })
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: item.id,
+        firstLinkStatus: linkResponse.status,
+      }),
+    ).toEqual({
+      status: 200,
+      firstLinkStatus: 201,
+      initiallyChecked: null,
+      responseBody: null,
+      itemChecked: true,
+      itemUsesTaskLink: true,
+      parentChecked: null,
+      links: [[githubUrl, 'merged']],
+    })
+  })
+
+  it('clears a manual check when an open pull request is linked to an item', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Implement the feature')
+    await setChecked(item.id, true)
+    const beforeUpdate = await db.query.taskChecklistItems.findFirst({
+      where: eq(taskChecklistItems.id, item.id),
+    })
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/61'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: githubUrl, pull_request: {} })
+
+    const response = await app.request(`/api/checklist-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github: githubUrl }),
+    })
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: item.id,
+        initiallyChecked: beforeUpdate?.checkedAt != null,
+      }),
+    ).toEqual({
+      status: 200,
+      firstLinkStatus: null,
+      initiallyChecked: true,
+      responseBody: null,
+      itemChecked: false,
+      itemUsesTaskLink: true,
+      parentChecked: null,
+      links: [[githubUrl, 'open']],
+    })
+  })
+
+  it('rejects an issue URL as a checklist pull request link', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Implement the feature')
+
+    const response = await app.request(`/api/checklist-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        github: 'https://github.com/example-owner/example-repo/issues/64',
+      }),
+    })
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: item.id,
+        responseBody: await response.json(),
+      }),
+    ).toEqual({
+      status: 400,
+      firstLinkStatus: null,
+      initiallyChecked: null,
+      responseBody: {
+        error: 'Only GitHub pull requests can be linked to checklist items',
+      },
+      itemChecked: false,
+      itemUsesTaskLink: false,
+      parentChecked: null,
+      links: [],
     })
   })
 })

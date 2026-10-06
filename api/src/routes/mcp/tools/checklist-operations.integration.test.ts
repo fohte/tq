@@ -1,7 +1,11 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
+import {
+  mockGithubIssueResponse,
+  upsertGithubToken,
+} from '#integrations/github/testing'
 import {
   callMcpTool,
   connectMcpClient,
@@ -21,6 +25,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await client.close()
+  vi.restoreAllMocks()
 })
 
 describe('checklist MCP operations', () => {
@@ -94,6 +99,42 @@ describe('checklist MCP operations', () => {
           ],
         },
       ],
+    })
+  })
+
+  it('accepts a pull request URL when adding an item', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = z.object({ id: z.uuid() }).parse(
+      parseToolJson(
+        await callMcpTool(client, 'checklist_create', {
+          taskId: task.number,
+        }),
+      ),
+    )
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/73'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: githubUrl, pull_request: {} })
+
+    const item = parseToolJson(
+      await callMcpTool(client, 'checklist_item_add', {
+        checklistId: checklist.id,
+        content: 'Add the API route',
+        github: githubUrl,
+      }),
+    )
+
+    expect(normalizeDynamicValues(item)).toEqual({
+      id: '<uuid>',
+      checklistId: '<uuid>',
+      parentItemId: null,
+      content: 'Add the API route',
+      note: null,
+      checkedAt: null,
+      sortOrder: 0,
+      githubLinkId: '<uuid>',
+      subtaskId: null,
+      createdAt: '<timestamp>',
+      updatedAt: '<timestamp>',
     })
   })
 })

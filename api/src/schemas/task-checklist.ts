@@ -20,6 +20,7 @@ export const updateChecklistSchema = z.object({
 export const createChecklistItemSchema = z.object({
   content: itemContent,
   note: z.string().nullable().optional(),
+  github: z.string().min(1).optional(),
   parentItemId: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
 })
@@ -27,6 +28,7 @@ export const createChecklistItemSchema = z.object({
 export const updateChecklistItemSchema = z.object({
   content: itemContent.optional(),
   note: z.string().nullable().optional(),
+  github: z.string().min(1).optional(),
 })
 
 export const moveChecklistItemSchema = z.object({

@@ -127,7 +127,7 @@ export const checklistOperations = [
   defineOperation(addChecklistItemInputSchema, {
     path: ['checklist', 'item', 'add'],
     description:
-      'Add a one-line checklist item, optionally nesting it under a parent. Provide Markdown detail with --note-file or stdin.',
+      'Add a one-line checklist item, optionally nesting it under a parent. Use --github to link a pull request and --note-file or stdin for Markdown detail.',
     positionalArgs: ['checklistId', 'content'],
     kind: 'write',
     attribution: 'agent',
@@ -155,7 +155,7 @@ export const checklistOperations = [
   defineOperation(updateChecklistItemInputSchema, {
     path: ['checklist', 'item', 'update'],
     description:
-      'Update a checklist item’s one-line content or Markdown detail. Use --clear-note in the CLI to remove detail.',
+      'Update a checklist item’s one-line content or Markdown detail, or link a pull request with --github. Use --clear-note in the CLI to remove detail.',
     positionalArgs: ['itemId'],
     kind: 'write',
     attribution: 'agent',
