@@ -17,6 +17,10 @@ import {
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
 import {
+  checkTaskComplete,
+  taskConventionViolationBody,
+} from '#services/task-conventions'
+import {
   getIncompleteGithubBlockerRefs,
   type GithubBlockerRef,
 } from '#services/task-github-blockers'
@@ -135,11 +139,28 @@ export const tasksActionsApp = new Hono()
       const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
-            .select({ status: tasks.status })
+            .select({ status: tasks.status, description: tasks.description })
             .from(tasks)
             .where(eq(tasks.id, id))
             .for('update'),
         )
+
+        if (status === 'completed') {
+          const conventionViolation = await checkTaskComplete(
+            author,
+            current,
+            nextStatusReason ?? undefined,
+          )
+          if (conventionViolation !== null) {
+            return {
+              kind: 'criteria-error' as const,
+              body: taskConventionViolationBody(
+                conventionViolation,
+                'completion',
+              ),
+            }
+          }
+        }
 
         if (status === 'completed' && current.status !== 'completed') {
           const blockedError = await checkNotBlocked(tx, id)
@@ -176,6 +197,9 @@ export const tasksActionsApp = new Hono()
         return { kind: 'ok' as const, task: updated }
       })
 
+      if (result.kind === 'criteria-error') {
+        return c.json(result.body, 400)
+      }
       if (result.kind === 'error') {
         return c.json(result.body, result.status)
       }
@@ -288,7 +312,7 @@ export const tasksActionsApp = new Hono()
       const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
-            .select({ status: tasks.status })
+            .select({ status: tasks.status, description: tasks.description })
             .from(tasks)
             .where(eq(tasks.id, id))
             .for('update'),
@@ -299,6 +323,21 @@ export const tasksActionsApp = new Hono()
             kind: 'error' as const,
             body: { error: 'Task is already completed' },
             status: 409 as const,
+          }
+        }
+
+        const conventionViolation = await checkTaskComplete(
+          author,
+          current,
+          reason,
+        )
+        if (conventionViolation !== null) {
+          return {
+            kind: 'criteria-error' as const,
+            body: taskConventionViolationBody(
+              conventionViolation,
+              'completion',
+            ),
           }
         }
 
@@ -333,6 +372,9 @@ export const tasksActionsApp = new Hono()
         return { kind: 'ok' as const, task: updatedTask }
       })
 
+      if (result.kind === 'criteria-error') {
+        return c.json(result.body, 400)
+      }
       if (result.kind === 'error') {
         return c.json(result.body, result.status)
       }

@@ -887,6 +887,247 @@ describe('tasks actions API', () => {
     })
   })
 
+  describe('unchecked completion criteria guard', () => {
+    async function completeTask(
+      taskId: string,
+      method: 'PATCH' | 'POST',
+      statusReason?: 'completed' | 'not_planned' | 'duplicate',
+      author = 'llm:completion-checker',
+    ) {
+      const body =
+        method === 'PATCH'
+          ? {
+              status: 'completed',
+              ...(statusReason === undefined ? {} : { statusReason }),
+            }
+          : statusReason === undefined
+            ? {}
+            : { statusReason }
+      const route =
+        method === 'PATCH'
+          ? `/api/tasks/${taskId}/status`
+          : `/api/tasks/${taskId}/complete`
+      return app.request(route, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': author,
+        },
+        body: JSON.stringify(body),
+      })
+    }
+
+    it('returns unchecked criteria for LLM completion through both routes', async () => {
+      const description = [
+        '- [ ] Verify the result',
+        '* [ ] Confirm the handoff',
+        '',
+        '```md',
+        '- [ ] This example is not a criterion',
+        '```',
+      ].join('\n')
+      const attempts = [
+        { method: 'PATCH' as const, title: 'Status route task' },
+        { method: 'POST' as const, title: 'Complete route task' },
+      ]
+      const actual = []
+      for (const attempt of attempts) {
+        const task = await createTask(attempt.title, { description })
+        const res = await completeTask(task.id, attempt.method)
+        const body = await jsonBody<{
+          error: string
+          uncheckedCompletionCriteria: string[]
+        }>(res)
+        const [storedTask] = await db
+          .select({ status: tasks.status, statusReason: tasks.statusReason })
+          .from(tasks)
+          .where(eq(tasks.id, task.id))
+        actual.push({
+          method: attempt.method,
+          status: res.status,
+          body,
+          task: storedTask,
+        })
+      }
+
+      const uncheckedCompletionCriteria = [
+        '- [ ] Verify the result',
+        '- [ ] Confirm the handoff',
+      ]
+      expect(actual).toEqual([
+        {
+          method: 'PATCH',
+          status: 400,
+          body: {
+            error: [
+              'Unchecked completion criteria:',
+              ...uncheckedCompletionCriteria,
+              'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+            ].join('\n'),
+            uncheckedCompletionCriteria,
+          },
+          task: { status: 'todo', statusReason: null },
+        },
+        {
+          method: 'POST',
+          status: 400,
+          body: {
+            error: [
+              'Unchecked completion criteria:',
+              ...uncheckedCompletionCriteria,
+              'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+            ].join('\n'),
+            uncheckedCompletionCriteria,
+          },
+          task: { status: 'todo', statusReason: null },
+        },
+      ])
+    })
+
+    it('ignores checked criteria and task lists inside fenced or indented code blocks', async () => {
+      const attempts = [
+        {
+          method: 'PATCH' as const,
+          title: 'Checked criteria task',
+          description: '- [x] Verify the result',
+        },
+        {
+          method: 'POST' as const,
+          title: 'Fenced code task',
+          description: '```md\n- [ ] Example only\n```',
+        },
+        {
+          method: 'PATCH' as const,
+          title: 'Indented code task',
+          description: '    * [ ] Example only',
+        },
+        {
+          method: 'POST' as const,
+          title: 'No description task',
+          description: undefined,
+        },
+      ]
+      const actual = []
+      for (const attempt of attempts) {
+        const task = await createTask(attempt.title, {
+          ...(attempt.description === undefined
+            ? {}
+            : { description: attempt.description }),
+        })
+        const res = await completeTask(task.id, attempt.method)
+        const [storedTask] = await db
+          .select({ status: tasks.status, statusReason: tasks.statusReason })
+          .from(tasks)
+          .where(eq(tasks.id, task.id))
+        actual.push({
+          method: attempt.method,
+          status: res.status,
+          task: storedTask,
+        })
+      }
+
+      expect(actual).toEqual([
+        {
+          method: 'PATCH',
+          status: 200,
+          task: { status: 'completed', statusReason: 'completed' },
+        },
+        {
+          method: 'POST',
+          status: 200,
+          task: { status: 'completed', statusReason: 'completed' },
+        },
+        {
+          method: 'PATCH',
+          status: 200,
+          task: { status: 'completed', statusReason: 'completed' },
+        },
+        {
+          method: 'POST',
+          status: 200,
+          task: { status: 'completed', statusReason: 'completed' },
+        },
+      ])
+    })
+
+    it('allows human and non-completion reasons to close tasks with unchecked criteria', async () => {
+      const attempts = [
+        {
+          method: 'PATCH' as const,
+          title: 'Human status task',
+          author: 'human',
+          statusReason: undefined,
+        },
+        {
+          method: 'POST' as const,
+          title: 'Human complete task',
+          author: 'human',
+          statusReason: undefined,
+        },
+        {
+          method: 'PATCH' as const,
+          title: 'Not planned status task',
+          author: 'llm:completion-checker',
+          statusReason: 'not_planned' as const,
+        },
+        {
+          method: 'POST' as const,
+          title: 'Not planned complete task',
+          author: 'llm:completion-checker',
+          statusReason: 'not_planned' as const,
+        },
+        {
+          method: 'PATCH' as const,
+          title: 'Duplicate status task',
+          author: 'llm:completion-checker',
+          statusReason: 'duplicate' as const,
+        },
+        {
+          method: 'POST' as const,
+          title: 'Duplicate complete task',
+          author: 'llm:completion-checker',
+          statusReason: 'duplicate' as const,
+        },
+      ]
+      const actual = []
+      for (const attempt of attempts) {
+        const task = await createTask(attempt.title, {
+          description: '- [ ] Verify the result',
+        })
+        const res = await completeTask(
+          task.id,
+          attempt.method,
+          attempt.statusReason,
+          attempt.author,
+        )
+        const [storedTask] = await db
+          .select({ status: tasks.status, statusReason: tasks.statusReason })
+          .from(tasks)
+          .where(eq(tasks.id, task.id))
+        actual.push({
+          method: attempt.method,
+          author: attempt.author,
+          statusReason: attempt.statusReason ?? 'completed',
+          responseStatus: res.status,
+          task: storedTask,
+        })
+      }
+
+      expect(actual).toEqual(
+        attempts.map((attempt) => ({
+          method: attempt.method,
+          author: attempt.author,
+          statusReason: attempt.statusReason ?? 'completed',
+          responseStatus: 200,
+          task: {
+            status: 'completed',
+            statusReason: attempt.statusReason ?? 'completed',
+          },
+        })),
+      )
+    })
+  })
+
   describe('blocked_by completion guard', () => {
     function setBlockedBy(taskId: string, blockedBy: string[]) {
       return app.request(`/api/tasks/${taskId}`, {
