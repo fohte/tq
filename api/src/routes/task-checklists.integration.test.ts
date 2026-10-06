@@ -123,6 +123,16 @@ async function checklistList(taskId: string) {
   }
 }
 
+async function summarizeChecklistItemOrder(taskId: string) {
+  const list = await checklistList(taskId)
+  return {
+    status: list.status,
+    items: list.body.flatMap((checklist) =>
+      checklist.items.map(({ content, sortOrder }) => ({ content, sortOrder })),
+    ),
+  }
+}
+
 async function itemMutation(response: Response) {
   return {
     status: response.status,
@@ -198,24 +208,11 @@ async function summarizeItemMove(
   return { moved: await itemMutation(response), list }
 }
 
-async function summarizeInvalidMoveResponses(
-  crossChecklist: Response,
-  cycle: Response,
+function summarizeFirstMove(
+  response: Response,
+  order: Awaited<ReturnType<typeof summarizeChecklistItemOrder>>,
 ) {
-  return {
-    crossChecklist: {
-      status: crossChecklist.status,
-      body: await crossChecklist.json(),
-    },
-    cycle: { status: cycle.status, body: await cycle.json() },
-  }
-}
-
-async function summarizeLinkedItemErrors(check: Response, nest: Response) {
-  return {
-    check: { status: check.status, body: await check.json() },
-    nest: { status: nest.status, body: await nest.json() },
-  }
+  return { status: response.status, order }
 }
 
 describe('task checklists API', () => {
@@ -303,6 +300,25 @@ describe('task checklists API', () => {
       status: 204,
       body: '',
       remaining: { status: 200, body: [] },
+    })
+  })
+
+  it('places new items at a clamped sortOrder and shifts sibling positions', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    await addItem(checklist.id, 'First')
+    await addItem(checklist.id, 'Second')
+    await addItem(checklist.id, 'Inserted first', { sortOrder: -1 })
+    await addItem(checklist.id, 'Inserted last', { sortOrder: 100 })
+
+    expect(await summarizeChecklistItemOrder(task.id)).toEqual({
+      status: 200,
+      items: [
+        { content: 'Inserted first', sortOrder: 0 },
+        { content: 'First', sortOrder: 1 },
+        { content: 'Second', sortOrder: 2 },
+        { content: 'Inserted last', sortOrder: 3 },
+      ],
     })
   })
 
@@ -711,16 +727,41 @@ describe('task checklists API', () => {
     })
   })
 
-  it('rejects cross-checklist parents and cycles', async () => {
+  it('moves a sibling to the first position', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    await addItem(checklist.id, 'First')
+    await addItem(checklist.id, 'Second')
+    const last = await addItem(checklist.id, 'Last')
+
+    const moved = await app.request(`/api/checklist-items/${last.id}/move`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ afterItemId: null }),
+    })
+
+    expect(
+      summarizeFirstMove(moved, await summarizeChecklistItemOrder(task.id)),
+    ).toEqual({
+      status: 200,
+      order: {
+        status: 200,
+        items: [
+          { content: 'Last', sortOrder: 0 },
+          { content: 'First', sortOrder: 1 },
+          { content: 'Second', sortOrder: 2 },
+        ],
+      },
+    })
+  })
+
+  it('rejects a parent from another checklist', async () => {
     const task = await createTask('Checklist task')
     const firstChecklist = await createChecklist(task.id)
     const secondChecklist = await createChecklist(task.id)
     const parent = await addItem(firstChecklist.id, 'Parent')
-    const child = await addItem(firstChecklist.id, 'Child', {
-      parentItemId: parent.id,
-    })
 
-    const crossChecklist = await app.request(
+    const response = await app.request(
       `/api/checklists/${secondChecklist.id}/items`,
       {
         method: 'POST',
@@ -731,28 +772,37 @@ describe('task checklists API', () => {
         }),
       },
     )
-    const cycle = await app.request(`/api/checklist-items/${parent.id}/move`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ parentItemId: child.id }),
-    })
 
-    expect(await summarizeInvalidMoveResponses(crossChecklist, cycle)).toEqual({
-      crossChecklist: {
-        status: 400,
-        body: {
-          error:
-            'Parent item must be in this checklist and have no linked task or pull request',
-        },
-      },
-      cycle: {
-        status: 400,
-        body: { error: 'Moving this item would create a cycle' },
-      },
+    expect(await summarizeJsonResponse(response)).toEqual({
+      status: 400,
+      body: { error: 'Parent item must belong to the same checklist' },
     })
   })
 
-  it('rejects manual checking and nesting for an item linked to a subtask', async () => {
+  it('rejects a move that would create a cycle', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const parent = await addItem(checklist.id, 'Parent')
+    const child = await addItem(checklist.id, 'Child', {
+      parentItemId: parent.id,
+    })
+
+    const response = await app.request(
+      `/api/checklist-items/${parent.id}/move`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentItemId: child.id }),
+      },
+    )
+
+    expect(await summarizeJsonResponse(response)).toEqual({
+      status: 400,
+      body: { error: 'Moving this item would create a cycle' },
+    })
+  })
+
+  it('rejects manual checking of a subtask-linked item', async () => {
     const task = await createTask('Checklist task')
     const subtask = await createTask('Subtask', { parentId: task.id })
     const checklist = await createChecklist(task.id)
@@ -762,27 +812,40 @@ describe('task checklists API', () => {
       .set({ subtaskId: subtask.id })
       .where(eq(taskChecklistItems.id, linked.id))
 
-    const check = await setChecked(linked.id, true)
-    const nest = await app.request(`/api/checklists/${checklist.id}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: 'Child', parentItemId: linked.id }),
-    })
+    const response = await setChecked(linked.id, true)
 
-    expect(await summarizeLinkedItemErrors(check, nest)).toEqual({
-      check: {
-        status: 400,
-        body: {
-          error:
-            'Items with children or linked tasks or pull requests cannot be checked manually',
-        },
+    expect(await summarizeJsonResponse(response)).toEqual({
+      status: 400,
+      body: {
+        error:
+          'Items with children or linked tasks or pull requests cannot be checked manually',
       },
-      nest: {
-        status: 400,
-        body: {
-          error:
-            'Parent item must be in this checklist and have no linked task or pull request',
-        },
+    })
+  })
+
+  it('rejects children for a subtask-linked item', async () => {
+    const task = await createTask('Checklist task')
+    const subtask = await createTask('Subtask', { parentId: task.id })
+    const checklist = await createChecklist(task.id)
+    const linked = await addItem(checklist.id, 'Linked')
+    await db
+      .update(taskChecklistItems)
+      .set({ subtaskId: subtask.id })
+      .where(eq(taskChecklistItems.id, linked.id))
+
+    const response = await app.request(
+      `/api/checklists/${checklist.id}/items`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'Child', parentItemId: linked.id }),
+      },
+    )
+
+    expect(await summarizeJsonResponse(response)).toEqual({
+      status: 400,
+      body: {
+        error: 'Items with linked tasks or pull requests cannot have children',
       },
     })
   })

@@ -2,7 +2,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { taskChecklistItems } from '#db/schema'
+import { checklistItemToResponse } from '#routes/checklist-response'
 import {
   moveChecklistItemSchema,
   updateChecklistItemSchema,
@@ -12,23 +12,7 @@ import {
   moveChecklistItem,
   setChecklistItemChecked,
   updateChecklistItem,
-} from '#services/task-checklists'
-
-function itemToResponse(item: typeof taskChecklistItems.$inferSelect) {
-  return {
-    id: item.id,
-    checklistId: item.checklistId,
-    parentItemId: item.parentItemId,
-    content: item.content,
-    note: item.note,
-    checkedAt: item.checkedAt?.toISOString() ?? null,
-    sortOrder: item.sortOrder,
-    githubLinkId: item.githubLinkId,
-    subtaskId: item.subtaskId,
-    createdAt: item.createdAt.toISOString(),
-    updatedAt: item.updatedAt.toISOString(),
-  }
-}
+} from '#services/task-checklist-items'
 
 export const checklistItemsByIdApp = new Hono()
   .patch(
@@ -40,7 +24,7 @@ export const checklistItemsByIdApp = new Hono()
       )
 
       return result.match(
-        (item) => c.json(itemToResponse(item), 200),
+        (item) => c.json(checklistItemToResponse(item), 200),
         (error) => c.json({ error: error.message }, error.status),
       )
     },
@@ -61,7 +45,7 @@ export const checklistItemsByIdApp = new Hono()
     )
 
     return result.match(
-      (item) => c.json(itemToResponse(item), 200),
+      (item) => c.json(checklistItemToResponse(item), 200),
       (error) => c.json({ error: error.message }, error.status),
     )
   })
@@ -71,7 +55,7 @@ export const checklistItemsByIdApp = new Hono()
     )
 
     return result.match(
-      (item) => c.json(itemToResponse(item), 200),
+      (item) => c.json(checklistItemToResponse(item), 200),
       (error) => c.json({ error: error.message }, error.status),
     )
   })
@@ -84,7 +68,7 @@ export const checklistItemsByIdApp = new Hono()
       )
 
       return result.match(
-        (item) => c.json(itemToResponse(item), 200),
+        (item) => c.json(checklistItemToResponse(item), 200),
         (error) => c.json({ error: error.message }, error.status),
       )
     },

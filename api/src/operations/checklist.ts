@@ -208,7 +208,7 @@ export const checklistOperations = [
   defineOperation(itemRefSchema, {
     path: ['checklist', 'item', 'check'],
     description:
-      'Check a leaf checklist item. Items with children or linked tasks or pull requests are checked automatically.',
+      'Manually check a leaf checklist item without a linked task or pull request. Parent items are checked automatically when all their children are checked.',
     positionalArgs: ['itemId'],
     kind: 'write',
     attribution: 'agent',
@@ -224,7 +224,7 @@ export const checklistOperations = [
   defineOperation(itemRefSchema, {
     path: ['checklist', 'item', 'uncheck'],
     description:
-      'Uncheck a leaf checklist item. Items with children or linked tasks or pull requests are checked automatically.',
+      'Manually uncheck a leaf checklist item without a linked task or pull request. Parent items are unchecked automatically when any child is unchecked.',
     positionalArgs: ['itemId'],
     kind: 'write',
     attribution: 'agent',
@@ -240,7 +240,7 @@ export const checklistOperations = [
   defineOperation(moveChecklistItemInputSchema, {
     path: ['checklist', 'item', 'move'],
     description:
-      'Move an item within its checklist by changing its parent and/or placing it after a sibling. Use --root in the CLI to move it to the root.',
+      'Move an item within its checklist by changing its parent and/or placing it after a sibling. Use --first to place it first, or --root to move it to the root.',
     positionalArgs: ['itemId'],
     kind: 'write',
     attribution: 'agent',
@@ -248,14 +248,24 @@ export const checklistOperations = [
     cli: {
       customOptions: [
         { flags: '--root', description: 'Move the item to the checklist root' },
+        {
+          flags: '--first',
+          description: 'Place the item first among siblings',
+        },
       ],
       optionNames: { parentItemId: 'parent', afterItemId: 'after' },
       mapInput: (input, options) => {
-        if (options['root'] !== true) return ok(input)
-        if (input['parentItemId'] !== undefined) {
+        if (options['root'] === true && input['parentItemId'] !== undefined) {
           return err(new Error('Use either --parent or --root, not both.'))
         }
-        return ok({ ...input, parentItemId: null })
+        if (options['first'] === true && input['afterItemId'] !== undefined) {
+          return err(new Error('Use either --after or --first, not both.'))
+        }
+        return ok({
+          ...input,
+          ...(options['root'] === true ? { parentItemId: null } : {}),
+          ...(options['first'] === true ? { afterItemId: null } : {}),
+        })
       },
       output: { kind: 'json' },
     },

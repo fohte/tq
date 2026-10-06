@@ -10,6 +10,7 @@ import {
   captureFetch,
   fakeStdin,
   request,
+  spyStderr,
   spyStdout,
 } from '#commands/test-support'
 
@@ -24,8 +25,20 @@ function summarizeCliRun(
 ) {
   return {
     exitCode,
-    request: request(calls[0]),
+    requests: calls.map(request),
     output: output.mock.calls,
+  }
+}
+
+function summarizeCliFailure(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  stderr: ReturnType<typeof spyStderr>,
+) {
+  return {
+    exitCode,
+    requests: calls.map(request),
+    stderr: stderr.mock.calls.map(([message]) => String(message)),
   }
 }
 
@@ -55,13 +68,72 @@ describe('checklist list', () => {
 
     expect(summarizeCliRun(exitCode, calls, write)).toEqual({
       exitCode: 0,
-      request: {
-        method: 'GET',
-        pathname: '/api/tasks/42/checklists',
-        query: {},
-        body: undefined,
-      },
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/42/checklists',
+          query: {},
+          body: undefined,
+        },
+      ],
       output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+})
+
+describe('checklist update', () => {
+  it('maps --unnamed to an explicit null name', async () => {
+    const response = { id: 'checklist-id', name: null }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'checklist', 'update', 'checklist-id', '--unnamed'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: '/api/checklists/checklist-id',
+          query: {},
+          body: { name: null },
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects --unnamed together with --name without sending a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 500 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'update',
+        'checklist-id',
+        '--name',
+        'Release',
+        '--unnamed',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliFailure(exitCode, calls, stderr)).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: ['Error: Use either --name or --unnamed, not both.\n'],
     })
   })
 })
@@ -106,17 +178,85 @@ describe('checklist item add', () => {
 
     expect(summarizeCliRun(exitCode, calls, write)).toEqual({
       exitCode: 0,
-      request: {
-        method: 'POST',
-        pathname: '/api/checklists/checklist-id/items',
-        query: {},
-        body: {
-          content: 'Prepare materials',
-          parentItemId: 'parent-id',
-          note: 'A short detail',
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/checklists/checklist-id/items',
+          query: {},
+          body: {
+            content: 'Prepare materials',
+            parentItemId: 'parent-id',
+            note: 'A short detail',
+          },
         },
-      },
+      ],
       output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+})
+
+describe('checklist item update', () => {
+  it('maps --clear-note to an explicit null note', async () => {
+    const response = { id: 'item-id', note: null }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'item',
+        'update',
+        'item-id',
+        '--clear-note',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: '/api/checklist-items/item-id',
+          query: {},
+          body: { note: null },
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects --note-file together with --clear-note without sending a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 500 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'item',
+        'update',
+        'item-id',
+        '--clear-note',
+        '--note-file',
+        'unused.md',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliFailure(exitCode, calls, stderr)).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: ['Error: Use either --note-file or --clear-note, not both.\n'],
     })
   })
 })
@@ -137,13 +277,71 @@ describe('checklist item move', () => {
 
     expect(summarizeCliRun(exitCode, calls, write)).toEqual({
       exitCode: 0,
-      request: {
-        method: 'PATCH',
-        pathname: '/api/checklist-items/item-id/move',
-        query: {},
-        body: { parentItemId: null },
-      },
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: '/api/checklist-items/item-id/move',
+          query: {},
+          body: { parentItemId: null },
+        },
+      ],
       output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('maps --first to an explicit null afterItemId', async () => {
+    const response = { id: 'item-id', sortOrder: 0 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'checklist', 'item', 'move', 'item-id', '--first'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: '/api/checklist-items/item-id/move',
+          query: {},
+          body: { afterItemId: null },
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects --first together with --after without sending a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(null, { status: 500 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'item',
+        'move',
+        'item-id',
+        '--first',
+        '--after',
+        'sibling-id',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliFailure(exitCode, calls, stderr)).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: ['Error: Use either --after or --first, not both.\n'],
     })
   })
 })

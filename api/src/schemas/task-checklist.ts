@@ -31,5 +31,5 @@ export const updateChecklistItemSchema = z.object({
 
 export const moveChecklistItemSchema = z.object({
   parentItemId: z.string().nullable().optional(),
-  afterItemId: z.string().optional(),
+  afterItemId: z.string().nullable().optional(),
 })

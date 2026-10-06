@@ -1,13 +1,40 @@
 import { zValidator } from '@hono/zod-validator'
-import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { taskChecklists } from '#db/schema'
-import { updateChecklistSchema } from '#schemas/task-checklist'
-import { updateTaskChecklist } from '#services/task-checklist-ordering'
+import {
+  checklistItemToResponse,
+  checklistToResponse,
+} from '#routes/checklist-response'
+import {
+  createChecklistItemSchema,
+  updateChecklistSchema,
+} from '#schemas/task-checklist'
+import { createChecklistItem } from '#services/task-checklist-items'
+import {
+  deleteTaskChecklist,
+  updateTaskChecklist,
+} from '#services/task-checklists'
 
 export const checklistsApp = new Hono()
+  .post(
+    '/:checklistId/items',
+    zValidator('json', createChecklistItemSchema),
+    async (c) => {
+      const result = await db.transaction((tx) =>
+        createChecklistItem(
+          tx,
+          c.req.param('checklistId'),
+          c.req.valid('json'),
+        ),
+      )
+
+      return result.match(
+        (item) => c.json(checklistItemToResponse(item), 201),
+        (error) => c.json({ error: error.message }, error.status),
+      )
+    },
+  )
   .patch(
     '/:checklistId',
     zValidator('json', updateChecklistSchema),
@@ -18,24 +45,13 @@ export const checklistsApp = new Hono()
       )
 
       if (!updated) return c.json({ error: 'Checklist not found' }, 404)
-      return c.json(
-        {
-          id: updated.id,
-          taskId: updated.taskId,
-          name: updated.name,
-          sortOrder: updated.sortOrder,
-          createdAt: updated.createdAt.toISOString(),
-          updatedAt: updated.updatedAt.toISOString(),
-        },
-        200,
-      )
+      return c.json(checklistToResponse(updated), 200)
     },
   )
   .delete('/:checklistId', async (c) => {
-    const [deleted] = await db
-      .delete(taskChecklists)
-      .where(eq(taskChecklists.id, c.req.param('checklistId')))
-      .returning({ id: taskChecklists.id })
+    const deleted = await db.transaction((tx) =>
+      deleteTaskChecklist(tx, c.req.param('checklistId')),
+    )
 
     if (!deleted) return c.json({ error: 'Checklist not found' }, 404)
     return c.body(null, 204)

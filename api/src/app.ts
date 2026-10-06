@@ -25,7 +25,7 @@ import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
 import { schedulingSettingsApp } from '#routes/scheduling-settings'
 import { taskAgentSessionsApp } from '#routes/task-agent-sessions'
-import { checklistItemsApp, taskChecklistsApp } from '#routes/task-checklists'
+import { taskChecklistsApp } from '#routes/task-checklists'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
@@ -65,7 +65,6 @@ const app = new Hono()
   .route('/api/tasks/:taskId/pages', taskPagesApp)
   .route('/api/tasks/:taskId/checklists', taskChecklistsApp)
   .route('/api/checklists', checklistsApp)
-  .route('/api/checklists', checklistItemsApp)
   .route('/api/checklist-items', checklistItemsByIdApp)
   .route('/api/tasks/:taskId/github-link', taskGithubLinkApp)
   .route('/api/tasks/:taskId/agent-sessions', taskAgentSessionsApp)
