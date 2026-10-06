@@ -28,6 +28,7 @@ import {
   initialWindowBounds,
   type WindowBoundsStore,
 } from '#window-state'
+import { setSideWindowTitle } from '#window-title'
 
 let isQuitting = false
 let mainWindow: BrowserWindow | undefined
@@ -147,6 +148,7 @@ const createSideWindow = (): BrowserWindow => {
     ...bounds,
     webPreferences: { sandbox: true },
   })
+  setSideWindowTitle(win)
   sideWindow = win
 
   const saveBounds = () => {
