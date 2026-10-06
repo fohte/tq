@@ -107,6 +107,7 @@ export type PositionalArgument<Key extends string = string> =
 export type CliContentInput = {
   field: string
   required?: boolean
+  fileOption?: { name: string; description: string }
 }
 
 export type CliFileInput = {

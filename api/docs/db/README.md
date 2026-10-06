@@ -35,6 +35,8 @@
 | [public.task_description_templates](public.task_description_templates.md)           | 8       | Templates for structuring task descriptions.                                         | BASE TABLE |
 | [public.memos](public.memos.md)                                                     | 4       | Markdown scratchpads stored once per work or personal context.                       | BASE TABLE |
 | [public.schedule_overrides](public.schedule_overrides.md)                           | 5       | One-day time changes and skipped schedule occurrences.                               | BASE TABLE |
+| [public.task_checklist_items](public.task_checklist_items.md)                       | 11      | Nested checklist items with completion state and optional Markdown detail.           | BASE TABLE |
+| [public.task_checklists](public.task_checklists.md)                                 | 6       | Named or unnamed checklists associated with tasks.                                   | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -110,6 +112,11 @@ erDiagram
 "public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
+"public.task_checklist_items" }o--|| "public.task_checklist_items" : "FOREIGN KEY (parent_item_id, checklist_id) REFERENCES task_checklist_items(id, checklist_id) ON DELETE CASCADE"
+"public.task_checklist_items" }o--|| "public.task_checklists" : "FOREIGN KEY (checklist_id) REFERENCES task_checklists(id) ON DELETE CASCADE"
+"public.task_checklist_items" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE SET NULL"
+"public.task_checklist_items" }o--o| "public.tasks" : "FOREIGN KEY (subtask_id) REFERENCES tasks(id) ON DELETE SET NULL"
+"public.task_checklists" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
@@ -419,6 +426,27 @@ erDiagram
   text start_time
   text end_time
   boolean skipped
+}
+"public.task_checklist_items" {
+  text id
+  text checklist_id FK
+  text parent_item_id FK
+  text content
+  text note
+  timestamp_with_time_zone checked_at
+  integer sort_order
+  text github_link_id FK
+  text subtask_id FK
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.task_checklists" {
+  text id
+  text task_id FK
+  text name
+  integer sort_order
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 
