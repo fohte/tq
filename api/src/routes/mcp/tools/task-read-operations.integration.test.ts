@@ -139,6 +139,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -161,6 +162,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 1, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutLinkSync(grandchild),
@@ -169,6 +171,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -373,6 +376,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -394,6 +398,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -416,6 +421,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
