@@ -1126,6 +1126,96 @@ describe('tasks actions API', () => {
         })),
       )
     })
+
+    it('rejects completion when the task description cannot be parsed', async () => {
+      const task = await createTask('Unparseable criteria task', {
+        description: `${'> '.repeat(5000)}x\n- [ ] Verify the result`,
+      })
+
+      const res = await completeTask(task.id, 'POST')
+      const body = await jsonBody<{
+        error: string
+        uncheckedCompletionCriteria: string[]
+      }>(res)
+      const [storedTask] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, task.id))
+
+      const getActual = () => ({ status: res.status, body, task: storedTask })
+      expect(getActual()).toEqual({
+        status: 400,
+        body: {
+          error: [
+            'Could not inspect completion criteria because the description could not be parsed as Markdown.',
+            'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".',
+          ].join('\n'),
+          uncheckedCompletionCriteria: [],
+        },
+        task: { status: 'todo', statusReason: null },
+      })
+    })
+
+    it('keeps completed PATCH retries idempotent and checks a changed completion reason', async () => {
+      const retryTask = await createTask('Completed retry task', {
+        description: '- [ ] Verify the result',
+      })
+      await completeTask(retryTask.id, 'PATCH', undefined, 'human')
+      const retryRes = await completeTask(retryTask.id, 'PATCH')
+      const [retryTaskState] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, retryTask.id))
+
+      const notPlannedTask = await createTask('Not planned task', {
+        description: '- [ ] Verify the result',
+      })
+      const notPlannedRes = await completeTask(
+        notPlannedTask.id,
+        'PATCH',
+        'not_planned',
+      )
+      const completedReasonRes = await completeTask(
+        notPlannedTask.id,
+        'PATCH',
+        'completed',
+      )
+      const completedReasonBody = await jsonBody<{
+        error: string
+        uncheckedCompletionCriteria: string[]
+      }>(completedReasonRes)
+      const [notPlannedTaskState] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, notPlannedTask.id))
+
+      const getActual = () => ({
+        retryStatus: retryRes.status,
+        retryTaskState,
+        notPlannedStatus: notPlannedRes.status,
+        completedReasonStatus: completedReasonRes.status,
+        completedReasonBody,
+        notPlannedTaskState,
+      })
+      expect(getActual()).toEqual({
+        retryStatus: 200,
+        retryTaskState: { status: 'completed', statusReason: 'completed' },
+        notPlannedStatus: 200,
+        completedReasonStatus: 400,
+        completedReasonBody: {
+          error: [
+            'Unchecked completion criteria:',
+            '- [ ] Verify the result',
+            'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+          ].join('\n'),
+          uncheckedCompletionCriteria: ['- [ ] Verify the result'],
+        },
+        notPlannedTaskState: {
+          status: 'completed',
+          statusReason: 'not_planned',
+        },
+      })
+    })
   })
 
   describe('blocked_by completion guard', () => {

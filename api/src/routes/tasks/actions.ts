@@ -139,13 +139,21 @@ export const tasksActionsApp = new Hono()
       const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
-            .select({ status: tasks.status, description: tasks.description })
+            .select({
+              status: tasks.status,
+              statusReason: tasks.statusReason,
+              description: tasks.description,
+            })
             .from(tasks)
             .where(eq(tasks.id, id))
             .for('update'),
         )
 
-        if (status === 'completed') {
+        if (
+          status === 'completed' &&
+          (current.status !== 'completed' ||
+            current.statusReason !== nextStatusReason)
+        ) {
           const conventionViolation = await checkTaskComplete(
             author,
             current,
@@ -153,11 +161,12 @@ export const tasksActionsApp = new Hono()
           )
           if (conventionViolation !== null) {
             return {
-              kind: 'criteria-error' as const,
+              kind: 'error' as const,
               body: taskConventionViolationBody(
                 conventionViolation,
                 'completion',
               ),
+              status: 400 as const,
             }
           }
         }
@@ -197,9 +206,6 @@ export const tasksActionsApp = new Hono()
         return { kind: 'ok' as const, task: updated }
       })
 
-      if (result.kind === 'criteria-error') {
-        return c.json(result.body, 400)
-      }
       if (result.kind === 'error') {
         return c.json(result.body, result.status)
       }
@@ -333,11 +339,12 @@ export const tasksActionsApp = new Hono()
         )
         if (conventionViolation !== null) {
           return {
-            kind: 'criteria-error' as const,
+            kind: 'error' as const,
             body: taskConventionViolationBody(
               conventionViolation,
               'completion',
             ),
+            status: 400 as const,
           }
         }
 
@@ -372,9 +379,6 @@ export const tasksActionsApp = new Hono()
         return { kind: 'ok' as const, task: updatedTask }
       })
 
-      if (result.kind === 'criteria-error') {
-        return c.json(result.body, 400)
-      }
       if (result.kind === 'error') {
         return c.json(result.body, result.status)
       }

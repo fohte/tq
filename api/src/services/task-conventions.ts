@@ -1,3 +1,4 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import type { Node } from '@milkdown/kit/prose/model'
 import { asc, desc, eq } from 'drizzle-orm'
 
@@ -23,6 +24,7 @@ export type TaskConventionViolation =
   | {
       kind: 'unchecked-completion-criteria'
       items: string[]
+      descriptionParseFailed: boolean
     }
 
 type DescriptionTemplate = typeof taskDescriptionTemplates.$inferSelect
@@ -147,49 +149,6 @@ function collectUncheckedCompletionCriteria(node: Node): string[] {
   return items
 }
 
-function collectUncheckedCompletionCriteriaFromText(
-  markdown: string,
-): string[] {
-  const items: string[] = []
-  let codeFence: { marker: string; length: number } | undefined
-
-  for (const line of markdown.split(/\r?\n/)) {
-    const fence = line.match(/^ {0,3}(`{3,}|~{3,})/)
-    const fenceText = fence?.[1]
-    const fenceMarker = fenceText?.[0]
-
-    if (codeFence !== undefined) {
-      const closingFence = line.match(/^ {0,3}(`{3,}|~{3,})[ \t]*$/)?.[1]
-      if (
-        closingFence !== undefined &&
-        closingFence[0] === codeFence.marker &&
-        closingFence.length >= codeFence.length
-      ) {
-        codeFence = undefined
-      }
-      continue
-    }
-
-    if (fenceText !== undefined && fenceMarker !== undefined) {
-      codeFence = { marker: fenceMarker, length: fenceText.length }
-      continue
-    }
-
-    if (/^(?: {4,}|\t)/.test(line)) continue
-
-    const match = line.match(/^ {0,3}([-*])[ \t]+\[ \](?:[ \t]+(.*))?$/)
-    if (match === null) continue
-
-    const bullet = match[1]
-    if (bullet === undefined) continue
-
-    const text = match[2]?.trim() ?? ''
-    items.push(text === '' ? `${bullet} [ ]` : `${bullet} [ ] ${text}`)
-  }
-
-  return items
-}
-
 export async function checkTaskComplete(
   author: Author,
   task: { description: string | null },
@@ -204,13 +163,26 @@ export async function checkTaskComplete(
   }
 
   const parsed = await parseMarkdown(task.description)
-  // Keep the guard closed when the Markdown parser cannot read the description.
-  const items = parsed.isErr()
-    ? collectUncheckedCompletionCriteriaFromText(task.description)
-    : collectUncheckedCompletionCriteria(parsed.value)
+  if (parsed.isErr()) {
+    captureWithFingerprint(
+      parsed.error,
+      'api.task-conventions.completion-parse-failed',
+    )
+    return {
+      kind: 'unchecked-completion-criteria',
+      items: [],
+      descriptionParseFailed: true,
+    }
+  }
+
+  const items = collectUncheckedCompletionCriteria(parsed.value)
   return items.length === 0
     ? null
-    : { kind: 'unchecked-completion-criteria', items }
+    : {
+        kind: 'unchecked-completion-criteria',
+        items,
+        descriptionParseFailed: false,
+      }
 }
 
 export function taskConventionViolationBody(
@@ -235,9 +207,13 @@ export function taskConventionViolationBody(
   if (violation.kind === 'unchecked-completion-criteria') {
     return {
       error: [
-        'Unchecked completion criteria:',
+        violation.descriptionParseFailed
+          ? 'Could not inspect completion criteria because the description could not be parsed as Markdown.'
+          : 'Unchecked completion criteria:',
         ...violation.items,
-        'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+        violation.descriptionParseFailed
+          ? 'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".'
+          : 'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
       ].join('\n'),
       uncheckedCompletionCriteria: violation.items,
     }
