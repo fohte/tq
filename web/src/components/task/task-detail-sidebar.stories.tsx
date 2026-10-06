@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import { type ReactNode, useLayoutEffect, useRef } from 'react'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
@@ -10,6 +10,7 @@ import {
   TaskSidebarMobile,
 } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
@@ -77,18 +78,50 @@ function Providers({
   )
 }
 
+function SidebarPanelStoryView({
+  task,
+  defaultOpen,
+  scrollToTimeBlocks,
+}: {
+  task: TaskDetail
+  defaultOpen?: boolean | undefined
+  scrollToTimeBlocks: boolean
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (!scrollToTimeBlocks) return
+    const panel = containerRef.current?.querySelector<HTMLElement>(
+      '[data-slot="detail-sidebar-panel"]',
+    )
+    if (panel) panel.scrollTop = panel.scrollHeight
+  }, [scrollToTimeBlocks])
+
+  return (
+    <div ref={containerRef}>
+      <TaskSidebar task={task} defaultOpen={defaultOpen} />
+    </div>
+  )
+}
+
 function SidebarStory({
   task,
   project,
   defaultOpen,
+  scrollToTimeBlocks = false,
 }: {
   task: TaskDetail
   project?: ProjectDetail | undefined
   defaultOpen?: boolean | undefined
+  scrollToTimeBlocks?: boolean | undefined
 }) {
   return (
     <Providers task={task} project={project}>
-      <TaskSidebar task={task} defaultOpen={defaultOpen} />
+      <SidebarPanelStoryView
+        task={task}
+        defaultOpen={defaultOpen}
+        scrollToTimeBlocks={scrollToTimeBlocks}
+      />
     </Providers>
   )
 }
@@ -152,6 +185,33 @@ export const SidebarWithProject: Story = {
   args: {
     task: { ...baseTask, projectId: sampleProject.id },
     project: sampleProject,
+  },
+}
+
+export const SidebarWithTimeBlocks: Story = {
+  name: 'scheduled and manual time blocks appear in the task sidebar',
+  tags: ['desktop-only'],
+  args: {
+    task: {
+      ...baseTask,
+      timeBlocks: [
+        makeTimeBlock({
+          id: 'block-1',
+          taskId: baseTask.id,
+          startTime: '2026-07-30T10:00:00.000Z',
+          endTime: '2026-07-30T11:30:00.000Z',
+          isAutoScheduled: true,
+        }),
+        makeTimeBlock({
+          id: 'block-2',
+          taskId: baseTask.id,
+          startTime: '2026-07-29T16:00:00.000Z',
+          endTime: '2026-07-29T16:45:00.000Z',
+          isAutoScheduled: false,
+        }),
+      ],
+    },
+    scrollToTimeBlocks: true,
   },
 }
 
