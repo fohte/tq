@@ -11,6 +11,7 @@ import {
 import { eventsApp } from '#routes/events'
 
 describe('change events', () => {
+  const taskId = '00000000-0000-4000-8000-000000000001'
   let events: ChangeEvent[] = []
   let unsubscribe: (() => void) | undefined
 
@@ -22,7 +23,11 @@ describe('change events', () => {
   })
 
   function makeApp() {
-    const routes = new Hono()
+    const routes = new Hono<{ Variables: { task: { id: string } } }>()
+      .use('*', async (c, next) => {
+        c.set('task', { id: taskId })
+        return next()
+      })
       .patch('/:id', (c) => c.json({ author: c.get('author') }))
       .patch('/failed/:id', (c) => c.json({ error: 'failed' }, 409))
       .get('/:id', (c) => c.json({ id: c.req.param('id') }))
@@ -60,16 +65,16 @@ describe('change events', () => {
     }
   }
 
-  it('uses the screen ID in human author headers as the event origin', async () => {
+  it('uses the resolved task ID for numeric task routes', async () => {
     expect(
-      await request('/api/tasks/task-id', {
+      await request('/api/tasks/901234', {
         method: 'PATCH',
         headers: { 'X-Author': 'human:screen-id' },
       }),
     ).toEqual({
       status: 200,
       body: { author: { kind: 'human', agent: null } },
-      events: [{ resource: 'task', id: 'task-id', origin: 'screen-id' }],
+      events: [{ resource: 'task', id: taskId, origin: 'screen-id' }],
     })
   })
 
@@ -82,7 +87,7 @@ describe('change events', () => {
     ).toEqual({
       status: 200,
       body: { author: { kind: 'llm', agent: 'agent' } },
-      events: [{ resource: 'task', id: 'task-id', origin: null }],
+      events: [{ resource: 'task', id: taskId, origin: null }],
     })
   })
 
@@ -90,7 +95,7 @@ describe('change events', () => {
     expect(await request('/api/tasks/task-id', { method: 'PATCH' })).toEqual({
       status: 200,
       body: { author: { kind: 'human', agent: null } },
-      events: [{ resource: 'task', id: 'task-id', origin: null }],
+      events: [{ resource: 'task', id: taskId, origin: null }],
     })
   })
 

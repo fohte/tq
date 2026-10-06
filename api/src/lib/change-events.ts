@@ -70,7 +70,29 @@ function resourceFromRoute(routePattern: string): ChangeResource | null {
   return routeResources[rootResource] ?? 'unknown'
 }
 
-function idFromRoute(routePattern: string, c: Context) {
+function idFromRoute(
+  routePattern: string,
+  resource: ChangeResource,
+  c: Context,
+) {
+  if (resource === 'task') {
+    const variables: unknown = c.var
+    if (
+      typeof variables !== 'object' ||
+      variables === null ||
+      !('task' in variables)
+    ) {
+      return null
+    }
+
+    const task = variables.task
+    if (typeof task !== 'object' || task === null || !('id' in task)) {
+      return null
+    }
+
+    return typeof task.id === 'string' ? task.id : null
+  }
+
   const paramName = routePattern
     .split('/')
     .find((segment) => segment.startsWith(':'))
@@ -101,7 +123,7 @@ export const changeEventMiddleware: MiddlewareHandler = async (c, next) => {
 
   publishChangeEvent({
     resource,
-    id: idFromRoute(routePattern, c),
+    id: idFromRoute(routePattern, resource, c),
     origin: c.get('origin'),
   })
 }

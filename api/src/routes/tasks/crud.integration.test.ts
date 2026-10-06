@@ -15,6 +15,7 @@ import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { makeDescriptionTemplate } from '#routes/tasks/description-template-test-fixtures'
 import {
@@ -34,7 +35,11 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+let stopWatchingChanges: (() => void) | undefined
+
 afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
   vi.useRealTimers()
 })
 
@@ -2115,6 +2120,30 @@ describe('tasks CRUD API', () => {
   })
 
   describe('PATCH /api/tasks/:id', () => {
+    it('publishes the resolved task UUID when the route uses a task number', async () => {
+      const task = await createTask('Task')
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/tasks/${String(task.number)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated task title' }),
+      })
+
+      const eventSnapshot = events.map((event) => ({
+        ...event,
+        id: event.id === task.id ? 'TASK_ID' : event.id,
+      }))
+      const snapshot = () => ({ status: res.status, events: eventSnapshot })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [{ resource: 'task', id: 'TASK_ID', origin: null }],
+      })
+    })
+
     it('validates LLM description edits against the saved default template', async () => {
       const guide =
         'Explain why the task matters, how to do it, and how to verify the result.'
