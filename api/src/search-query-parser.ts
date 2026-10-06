@@ -174,9 +174,10 @@ const searchQueryTokenDefinitions = new Map(
     },
     parent: {
       display: 'Parent task',
-      description: 'Limit results to children of this task UUID or number.',
+      description:
+        "Limit results to children of this task UUID or number, or use 'root' for tasks with no parent.",
       taskFilter: true,
-      valuePlaceholder: 'task-id-or-number',
+      valuePlaceholder: 'task-id-or-number|root',
       parse: (result: ParsedQuery, value: string) => {
         result.parentId = value
       },

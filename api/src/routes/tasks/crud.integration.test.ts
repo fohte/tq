@@ -995,6 +995,20 @@ describe('tasks CRUD API', () => {
       ).toEqual({ status: 200, body: [] })
     })
 
+    it('returns no tasks when parentId exceeds the task-number range', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request('/api/tasks?parentId=2147483648')
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
     it('filters by templateId', async () => {
       const templateTask = await createRecurringTask('Recurring', {
         type: 'daily',
@@ -1694,6 +1708,22 @@ describe('tasks CRUD API', () => {
       ).toEqual({ status: 200, body: [] })
     })
 
+    it('returns no tasks when parent: exceeds the task-number range', async () => {
+      const parent = await createTask('Parent')
+      await createTask('Child', { parentId: parent.id })
+
+      const res = await app.request(
+        '/api/tasks?q=' + encodeURIComponent('parent:2147483648'),
+      )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
     it('filters by parent:root prefix in q parameter', async () => {
       const parent = await createTask('Parent')
       await createTask('Child', { parentId: parent.id })
@@ -1881,6 +1911,20 @@ describe('tasks CRUD API', () => {
       const res = await app.request(
         `/api/tasks?descendantOf=${String(root.number + 100_000)}`,
       )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          await jsonBody<TaskListItemResponse[]>(res),
+        ),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('returns no tasks when descendantOf exceeds the task-number range', async () => {
+      const root = await createTask('Root')
+      await createTask('Child', { parentId: root.id })
+
+      const res = await app.request('/api/tasks?descendantOf=2147483648')
 
       expect(
         responseSnapshot(
