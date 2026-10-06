@@ -90,6 +90,7 @@ const meta = {
         'gcal-info',
         'completed',
         'schedule',
+        'day-queue',
       ] satisfies EventType[],
     },
   },
@@ -123,6 +124,16 @@ export const AutoScheduled: Story = {
     type: 'auto',
     title: 'コードレビュー',
     timeText: '13:00–13:45',
+  },
+}
+
+export const DayQueue: Story = {
+  name: 'a queued task appears in the all-day row with a dashed border',
+  args: {
+    type: 'day-queue',
+    title: 'Prepare a sample outline',
+    timeText: '',
+    allDay: true,
   },
 }
 

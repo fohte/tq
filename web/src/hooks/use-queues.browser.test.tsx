@@ -10,6 +10,7 @@ import {
   DAY_QUEUE_KEY,
   type Queue,
   useQueueItems,
+  useQueueItemsForDates,
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
@@ -260,5 +261,42 @@ describe('queue polling', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('queue items by date', () => {
+  it('fetches each requested date under its own queue query key', async () => {
+    const mockGet = assertDefined((await getMocks())['mockGet'])
+    const dates = ['2026-08-03', '2026-08-04']
+    const itemsByDate = [
+      [makeQueueItem({ id: 'queue-item-first', taskId })],
+      [makeQueueItem({ id: 'queue-item-second', taskId: earlierTaskId })],
+    ]
+    mockGet.mockImplementation(({ query }: { query: { date: string } }) =>
+      Promise.resolve(
+        jsonResponse(itemsByDate[dates.indexOf(query.date)] ?? []),
+      ),
+    )
+
+    const { result } = renderHook(
+      () => useQueueItemsForDates(DAY_QUEUE_KEY, dates),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(result.current.map((query) => query.data)).toEqual(itemsByDate)
+    })
+    expect(
+      mockGet.mock.calls.map((call) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- vi.fn() call args are the queue item GET signature
+        const [{ param, query }] = call as [
+          { param: { key: string }; query: { date: string } },
+        ]
+        return { key: param.key, date: query.date }
+      }),
+    ).toEqual([
+      { key: DAY_QUEUE_KEY, date: dates[0] },
+      { key: DAY_QUEUE_KEY, date: dates[1] },
+    ])
   })
 })

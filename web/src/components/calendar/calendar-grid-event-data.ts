@@ -23,6 +23,8 @@ export function mapCalendarGridEvents(
       start: event.start,
       end: event.end,
       allDay: event.allDay === true,
+      queueOrder: event.type === 'day-queue' ? 0 : 1,
+      queuePosition: event.queuePosition,
       editable:
         event.type !== 'schedule' &&
         !isGcalEventType(event.type) &&
@@ -43,6 +45,7 @@ export function mapCalendarGridEvents(
         isAutoScheduled: event.isAutoScheduled,
         scheduleId: event.scheduleId,
         scheduleStart: event.start,
+        queuePosition: event.queuePosition,
         redacted: event.redacted,
         calendarColor: event.calendarColor,
         responseStatus: event.responseStatus,

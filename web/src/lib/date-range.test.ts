@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  addLocalDays,
   formatWeekRangeLabel,
   getDayIsoRange,
+  getLocalDateRangeDays,
   toLocalDateRange,
 } from '#lib/date-range'
 
@@ -44,5 +46,23 @@ describe('toLocalDateRange', () => {
     expect(
       toLocalDateRange(new Date(2026, 2, 16), new Date(2026, 2, 17)),
     ).toEqual({ startDate: '2026-03-16', endDate: '2026-03-16' })
+  })
+})
+
+describe('getLocalDateRangeDays', () => {
+  it('returns every visible date, including both boundaries', () => {
+    expect(getLocalDateRangeDays('2026-07-19', '2026-07-25')).toEqual([
+      '2026-07-19',
+      '2026-07-20',
+      '2026-07-21',
+      '2026-07-22',
+      '2026-07-23',
+      '2026-07-24',
+      '2026-07-25',
+    ])
+  })
+
+  it('advances local dates across month boundaries', () => {
+    expect(addLocalDays('2026-07-31', 1)).toBe('2026-08-01')
   })
 })

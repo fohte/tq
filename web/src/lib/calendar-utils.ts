@@ -12,6 +12,7 @@ export interface CalendarEventProps {
     | 'gcal-info'
     | 'completed'
     | 'schedule'
+    | 'day-queue'
   parentRef?: string
   color?: { accent: string }
   taskId?: string
@@ -20,6 +21,9 @@ export interface CalendarEventProps {
   scheduleId?: string
   /** Raw start ISO string, used to disambiguate cross-midnight blocks sharing a scheduleId */
   scheduleStart?: string
+  queuePosition?: number
+  sourceQueueKey?: string
+  sourceDate?: string
   redacted?: boolean
   calendarColor?: string | null
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
@@ -57,6 +61,7 @@ const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
   'auto',
   'completed',
   'schedule',
+  'day-queue',
 ])
 
 /**

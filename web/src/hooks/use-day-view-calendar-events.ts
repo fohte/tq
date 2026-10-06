@@ -2,17 +2,26 @@ import { useMemo } from 'react'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import type { GcalEvent } from '#hooks/use-gcal-events'
+import type { QueueItem } from '#hooks/use-queues'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
 import { classifyGcalEvent } from '#lib/calendar-utils'
 import { matchesContextFilter } from '#lib/context-filter'
+import { addLocalDays } from '#lib/date-range'
 import { scheduleColorToEventColor } from '#lib/schedule-color'
+
+interface DayQueueCalendarItem {
+  date: string
+  item: QueueItem
+  queuePosition: number
+}
 
 interface UseDayViewCalendarEventsOptions {
   timeBlocksData: TimeBlock[] | undefined
   schedulesData: Schedule[] | undefined
   gcalEventsData: GcalEvent[] | undefined
+  dayQueueItems: DayQueueCalendarItem[]
   taskMap: Map<string, Task>
   context: 'work' | 'personal'
 }
@@ -21,6 +30,7 @@ export function useDayViewCalendarEvents({
   timeBlocksData,
   schedulesData,
   gcalEventsData,
+  dayQueueItems,
   taskMap,
   context,
 }: UseDayViewCalendarEventsOptions): TimeBlockEvent[] {
@@ -68,6 +78,29 @@ export function useDayViewCalendarEvents({
     })
   }, [schedulesData, context])
 
+  const dayQueueEvents: TimeBlockEvent[] = useMemo(
+    () =>
+      dayQueueItems.flatMap(({ date, item, queuePosition }) => {
+        const task = taskMap.get(item.taskId)
+        if (task == null || task.status === 'completed') return []
+
+        return [
+          {
+            id: `day-queue-${date}-${task.id}`,
+            title: task.title,
+            start: date,
+            end: addLocalDays(date, 1),
+            type: 'day-queue',
+            taskId: task.id,
+            allDay: true,
+            queuePosition,
+            redacted: !matchesContextFilter(task.context, context),
+          },
+        ]
+      }),
+    [dayQueueItems, taskMap, context],
+  )
+
   const gcalEvents: TimeBlockEvent[] = useMemo(() => {
     if (!gcalEventsData) return []
     return gcalEventsData.map((event) => {
@@ -112,8 +145,8 @@ export function useDayViewCalendarEvents({
   }, [gcalEventsData])
 
   const calendarEvents: TimeBlockEvent[] = useMemo(
-    () => [...taskEvents, ...scheduleEvents, ...gcalEvents],
-    [taskEvents, scheduleEvents, gcalEvents],
+    () => [...dayQueueEvents, ...taskEvents, ...scheduleEvents, ...gcalEvents],
+    [dayQueueEvents, taskEvents, scheduleEvents, gcalEvents],
   )
 
   return calendarEvents
