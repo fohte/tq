@@ -1,10 +1,12 @@
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   app,
   BrowserWindow,
   clipboard,
   globalShortcut,
+  ipcMain,
   Menu,
   screen,
   shell,
@@ -17,9 +19,16 @@ import { buildMenuTemplate } from '#menu'
 import {
   classifyNavigation,
   DEEP_LINK_SCHEME,
+  isInternalUrl,
+  NAVIGATION_LISTENER_STATE_CHANNEL,
+  NAVIGATION_REQUEST_CHANNEL,
   type NavigationSource,
+  OPEN_IN_MAIN_WINDOW_CHANNEL,
   resolveDeepLink,
+  resolveInternalUrl,
+  resolveOpenInMainWindowPath,
   shouldOpenSideNavigationInMain,
+  shouldUseNavigationRequest,
 } from '#navigation'
 import {
   createSideWindowAlwaysOnTopController,
@@ -40,11 +49,13 @@ let sideWindow: BrowserWindow | undefined
 let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
 let sideWindowAlwaysOnTopController: SideWindowAlwaysOnTopController | undefined
+let mainNavigationRequestListenerRegistered = false
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
 const SIDE_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/?layout=compact`
 const MEMO_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/memo?layout=compact`
+const PRELOAD_PATH = fileURLToPath(new URL('./preload.cjs', import.meta.url))
 const isMacOS = process.platform === 'darwin'
 
 const createDesktopWindow = (
@@ -52,6 +63,12 @@ const createDesktopWindow = (
 ) => {
   const win = new BrowserWindow({
     ...options,
+    webPreferences: {
+      ...options.webPreferences,
+      preload: PRELOAD_PATH,
+      contextIsolation: true,
+      sandbox: true,
+    },
     ...(isMacOS
       ? {
           titleBarStyle: 'hidden' as const,
@@ -103,11 +120,29 @@ const openMainWindow = (url: string) => {
   showWindow(mainWindow)
 }
 
+const trustedMainFrameUrl = (
+  event: Electron.IpcMainEvent,
+  allowedWindows: readonly (BrowserWindow | undefined)[],
+): string | undefined => {
+  const frame = event.senderFrame
+  if (
+    frame === null ||
+    frame !== event.sender.mainFrame ||
+    !isInternalUrl(frame.url, TQ_ORIGIN)
+  ) {
+    return undefined
+  }
+
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return win !== null && allowedWindows.includes(win) && !win.isDestroyed()
+    ? frame.url
+    : undefined
+}
+
 const createWindow = (url: string): BrowserWindow => {
   const win = createDesktopWindow({
     // The sidebar provides the main window's titlebar spacing and drag region.
     ...(isMacOS ? { minWidth: 768 } : {}),
-    webPreferences: { sandbox: true },
   })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
@@ -123,6 +158,38 @@ const showWindow = (win: BrowserWindow) => {
   app.show()
   win.show()
 }
+
+ipcMain.on(NAVIGATION_LISTENER_STATE_CHANNEL, (event, registered: unknown) => {
+  if (trustedMainFrameUrl(event, [mainWindow]) === undefined) return
+  mainNavigationRequestListenerRegistered = registered === true
+})
+
+ipcMain.on(OPEN_IN_MAIN_WINDOW_CHANNEL, (event, rawPath: unknown) => {
+  const senderUrl = trustedMainFrameUrl(event, [sideWindow, memoWindow])
+  if (senderUrl === undefined) return
+
+  const path = resolveOpenInMainWindowPath(rawPath, senderUrl, TQ_ORIGIN)
+  if (path === undefined) return
+
+  const targetWindow = mainWindow
+  if (targetWindow === undefined || targetWindow.isDestroyed()) return
+
+  if (
+    shouldUseNavigationRequest(
+      mainNavigationRequestListenerRegistered,
+      targetWindow.webContents.getURL(),
+      TQ_ORIGIN,
+      targetWindow.webContents.isLoadingMainFrame(),
+    )
+  ) {
+    targetWindow.webContents.send(NAVIGATION_REQUEST_CHANNEL, path)
+    showWindow(targetWindow)
+    return
+  }
+
+  const url = resolveInternalUrl(path, TQ_ORIGIN)
+  if (url !== undefined) openMainWindow(url)
+})
 
 const isMissingFile = (caughtErr: unknown): boolean =>
   typeof caughtErr === 'object' &&
@@ -163,7 +230,6 @@ const createSideWindow = (): BrowserWindow => {
         )
   const win = createDesktopWindow({
     ...bounds,
-    webPreferences: { sandbox: true },
   })
   sideWindowAlwaysOnTopController?.applyTo(win)
   setSideWindowTitle(win)
@@ -209,7 +275,6 @@ const createMemoWindow = (): BrowserWindow => {
     minWidth: 360,
     minHeight: 320,
     title: 'Memo',
-    webPreferences: { sandbox: true },
   })
   memoWindow = win
 
@@ -295,6 +360,15 @@ app.on('web-contents-created', (_event, contents) => {
     if (action === 'open-memo') openMemoWindow()
     return { action: action === 'allow' ? 'allow' : 'deny' }
   })
+
+  const resetMainNavigationListener = () => {
+    if (BrowserWindow.fromWebContents(contents) === mainWindow) {
+      mainNavigationRequestListenerRegistered = false
+    }
+  }
+
+  contents.on('did-navigate', resetMainNavigationListener)
+  contents.on('render-process-gone', resetMainNavigationListener)
 
   contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
     if (!isMainFrame || navigationSource() !== 'side') return

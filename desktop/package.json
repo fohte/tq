@@ -6,10 +6,11 @@
   "type": "module",
   "main": "dist/index.js",
   "imports": {
+    "#tsup-config": "./tsup.config.ts",
     "#*": "./src/*.ts"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsup --config tsup.preload.config.ts",
     "start": "pnpm run build && electron .",
     "package": "pnpm run build && electron-builder",
     "test": "conc pnpm:test:type pnpm:test:unit",
