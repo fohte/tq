@@ -37,26 +37,29 @@ export function SidebarParentFieldAppearance({
   return (
     <SidebarField label="PARENT">
       {isEditing ? (
-        <Input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={(e) => {
-            onQueryChange(e.target.value)
-          }}
-          onBlur={() => {
-            onOpenChange(false)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault()
+        <div className="px-1">
+          <Input
+            ref={inputRef}
+            type="text"
+            variant="ghost"
+            value={query}
+            onChange={(e) => {
+              onQueryChange(e.target.value)
+            }}
+            onBlur={() => {
               onOpenChange(false)
-            }
-          }}
-          placeholder="Search tasks..."
-          autoFocus
-          className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
-        />
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                onOpenChange(false)
+              }
+            }}
+            placeholder="Search tasks..."
+            autoFocus
+            className="w-full"
+          />
+        </div>
       ) : (
         <Button
           type="button"

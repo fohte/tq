@@ -35,8 +35,7 @@ import { formatMinutes } from '#lib/format'
 import { parseDurationToMinutes } from '#lib/parse-duration'
 import { cn } from '#lib/utils'
 
-const fieldValueClassName =
-  'h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0'
+const fieldValueClassName = 'w-full justify-start gap-1'
 
 // --- Sidebar (PC) ---
 
@@ -216,31 +215,37 @@ function SidebarStatusField({
         ])}
         defaultOpen={defaultOpen}
       >
-        <SelectTrigger size="sm" className={fieldValueClassName}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="todo">
-            <StatusIcon status="todo" statusReason={null} />
-            todo
-          </SelectItem>
-          <SelectSeparator />
-          <SelectGroup>
-            <SelectLabel>Close as</SelectLabel>
-            <SelectItem value="completed">
-              <StatusIcon status="completed" statusReason="completed" />
-              completed
+        <div className="px-1">
+          <SelectTrigger
+            size="sm"
+            variant="ghost"
+            className={fieldValueClassName}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todo">
+              <StatusIcon status="todo" statusReason={null} />
+              todo
             </SelectItem>
-            <SelectItem value="not_planned">
-              <StatusIcon status="completed" statusReason="not_planned" />
-              not planned
-            </SelectItem>
-            <SelectItem value="duplicate">
-              <StatusIcon status="completed" statusReason="duplicate" />
-              duplicate
-            </SelectItem>
-          </SelectGroup>
-        </SelectContent>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel>Close as</SelectLabel>
+              <SelectItem value="completed">
+                <StatusIcon status="completed" statusReason="completed" />
+                completed
+              </SelectItem>
+              <SelectItem value="not_planned">
+                <StatusIcon status="completed" statusReason="not_planned" />
+                not planned
+              </SelectItem>
+              <SelectItem value="duplicate">
+                <StatusIcon status="completed" statusReason="duplicate" />
+                duplicate
+              </SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </div>
       </Select>
       {duplicatePicker}
     </SidebarField>
@@ -284,27 +289,32 @@ function SidebarEstimateField({
   return (
     <SidebarField label="ESTIMATE">
       {isEditing ? (
-        <Input
-          type="text"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value)
-          }}
-          onBlur={save}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur()
-            if (e.key === 'Escape') {
-              savingRef.current = true
-              setInput(
-                estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '',
-              )
-              setIsEditing(false)
-            }
-          }}
-          placeholder="1h30m"
-          autoFocus
-          className={fieldValueClassName}
-        />
+        <div className="px-1">
+          <Input
+            type="text"
+            variant="ghost"
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value)
+            }}
+            onBlur={save}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur()
+              if (e.key === 'Escape') {
+                savingRef.current = true
+                setInput(
+                  estimatedMinutes != null
+                    ? formatMinutes(estimatedMinutes)
+                    : '',
+                )
+                setIsEditing(false)
+              }
+            }}
+            placeholder="1h30m"
+            autoFocus
+            className={fieldValueClassName}
+          />
+        </div>
       ) : (
         <Button
           type="button"
@@ -344,12 +354,15 @@ function SidebarDateField({
 
   return (
     <SidebarField label={label}>
-      <Input
-        type="date"
-        value={value ?? ''}
-        onChange={handleChange}
-        className={fieldValueClassName}
-      />
+      <div className="px-1">
+        <Input
+          type="date"
+          variant="ghost"
+          value={value ?? ''}
+          onChange={handleChange}
+          className={fieldValueClassName}
+        />
+      </div>
     </SidebarField>
   )
 }
@@ -374,13 +387,19 @@ function SidebarContextField({
           ['work', 'personal'],
         )}
       >
-        <SelectTrigger size="sm" className={fieldValueClassName}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="work">work</SelectItem>
-          <SelectItem value="personal">personal</SelectItem>
-        </SelectContent>
+        <div className="px-1">
+          <SelectTrigger
+            size="sm"
+            variant="ghost"
+            className={fieldValueClassName}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="work">work</SelectItem>
+            <SelectItem value="personal">personal</SelectItem>
+          </SelectContent>
+        </div>
       </Select>
     </SidebarField>
   )
@@ -406,14 +425,20 @@ function SidebarCommitmentField({
           ['inbox', 'active', 'someday'],
         )}
       >
-        <SelectTrigger size="sm" className={fieldValueClassName}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="inbox">inbox</SelectItem>
-          <SelectItem value="active">active</SelectItem>
-          <SelectItem value="someday">someday</SelectItem>
-        </SelectContent>
+        <div className="px-1">
+          <SelectTrigger
+            size="sm"
+            variant="ghost"
+            className={fieldValueClassName}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="inbox">inbox</SelectItem>
+            <SelectItem value="active">active</SelectItem>
+            <SelectItem value="someday">someday</SelectItem>
+          </SelectContent>
+        </div>
       </Select>
     </SidebarField>
   )

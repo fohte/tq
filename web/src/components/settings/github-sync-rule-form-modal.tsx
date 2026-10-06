@@ -211,8 +211,9 @@ export function GithubSyncRuleFormModal({
               onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
               <SelectTrigger
+                variant="ghost"
                 iconClassName="size-4 translate-x-0.5 text-foreground stroke-2"
-                className="h-4.5 data-[size=default]:h-4.5 w-full gap-0.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pr-0.5 pl-1 text-sm leading-4 text-foreground data-placeholder:text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+                className="w-full gap-0.5"
               >
                 <SelectValue placeholder="選択してください" />
               </SelectTrigger>

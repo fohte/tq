@@ -24,14 +24,12 @@ export function TaskTitleInput({
   onChange,
   placeholder,
   autoFocus,
-  className,
   detectInitialTrigger = false,
 }: {
   value: string
   onChange: (value: string) => void
   placeholder?: string
   autoFocus?: boolean
-  className?: string
   /** Lets a story render the suggestion-menu-open state from `value` alone,
    * without a play function. Real callers never set this — they always
    * mount with an empty title, so the popup only opens once the user types. */
@@ -136,31 +134,33 @@ export function TaskTitleInput({
 
   return (
     <>
-      <div className="relative">
-        <Input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value)
-            updateTrigger(
-              e.target.value,
-              e.target.selectionStart ?? e.target.value.length,
-            )
-          }}
-          onKeyDown={handleKeyDown}
-          onSelect={(e) => {
-            updateTrigger(
-              e.currentTarget.value,
-              e.currentTarget.selectionStart ?? e.currentTarget.value.length,
-            )
-          }}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          className={cn(className, 'pr-9')}
-        />
+      <div className="flex min-w-0 items-center gap-2">
+        <div className="min-w-0 flex-1 px-1">
+          <Input
+            ref={inputRef}
+            type="text"
+            variant="ghost"
+            value={value}
+            onChange={(e) => {
+              onChange(e.target.value)
+              updateTrigger(
+                e.target.value,
+                e.target.selectionStart ?? e.target.value.length,
+              )
+            }}
+            onKeyDown={handleKeyDown}
+            onSelect={(e) => {
+              updateTrigger(
+                e.currentTarget.value,
+                e.currentTarget.selectionStart ?? e.currentTarget.value.length,
+              )
+            }}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+          />
+        </div>
         <TaskShorthandHelp
-          className="absolute top-1/2 right-0.5 -translate-y-1/2 text-muted-foreground"
+          className="shrink-0 text-muted-foreground"
           onOpenChange={(open) => {
             if (open) setCursorTrigger(null)
           }}

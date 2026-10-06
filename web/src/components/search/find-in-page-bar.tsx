@@ -59,6 +59,7 @@ export function FindInPageBar({
       <Input
         ref={inputRef}
         type="text"
+        variant="ghost"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value)
@@ -74,7 +75,7 @@ export function FindInPageBar({
         }}
         placeholder="Find in page..."
         aria-label="Find in page"
-        className="h-8 min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 font-mono text-sm outline-none focus-visible:ring-0"
+        className="min-w-0 flex-1"
       />
       <Button
         type="button"

@@ -183,36 +183,39 @@ function StateSelect({
   const stateValues = ['active', 'paused'] as const
 
   return (
-    <Select
-      items={stateValues.map((value) => ({
-        value,
-        label: value === 'active' ? 'Active' : 'Paused',
-      }))}
-      value={enabled ? 'active' : 'paused'}
-      onValueChange={selectValueHandler(
-        (value: (typeof stateValues)[number]) => {
-          updateTemplate.mutate({
-            id: templateId,
-            input: { enabled: value === 'active' },
-          })
-        },
-        stateValues,
-      )}
-    >
-      <SelectTrigger
-        size="sm"
-        iconClassName="size-4 -translate-x-0.5 text-foreground native-select-caret-stroke"
-        className={cn(
-          'h-auto data-[size=sm]:h-auto w-fit min-w-0 gap-0.5 border-0 bg-transparent dark:bg-transparent hover:bg-transparent dark:hover:bg-transparent p-0 pl-1 py-px font-mono text-xs text-foreground shadow-none focus-visible:border-0 focus-visible:ring-0',
-          mobileLayout && 'min-h-5 translate-y-px',
+    <div className="px-1">
+      <Select
+        items={stateValues.map((value) => ({
+          value,
+          label: value === 'active' ? 'Active' : 'Paused',
+        }))}
+        value={enabled ? 'active' : 'paused'}
+        onValueChange={selectValueHandler(
+          (value: (typeof stateValues)[number]) => {
+            updateTemplate.mutate({
+              id: templateId,
+              input: { enabled: value === 'active' },
+            })
+          },
+          stateValues,
         )}
       >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="active">Active</SelectItem>
-        <SelectItem value="paused">Paused</SelectItem>
-      </SelectContent>
-    </Select>
+        <SelectTrigger
+          variant="ghost"
+          size="sm"
+          iconClassName="size-4 -translate-x-0.5 text-foreground native-select-caret-stroke"
+          className={cn(
+            'w-fit min-w-0 gap-0.5',
+            mobileLayout && 'translate-y-px',
+          )}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="paused">Paused</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   )
 }

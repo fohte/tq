@@ -54,6 +54,7 @@ export function ExpandableFieldChip({
       {icon}
       {isEditing && expanded != null ? (
         <div
+          className="px-1"
           onBlur={(e) => {
             // A Select's popup mounts in a portal, so it sits outside this
             // div in the DOM — ignore blur events caused by focus moving

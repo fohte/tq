@@ -296,6 +296,7 @@ function EditableTitle({
       {isEditing ? (
         <Input
           type="text"
+          variant="ghost"
           value={value}
           onChange={(e) => {
             setValue(e.target.value)
@@ -310,7 +311,7 @@ function EditableTitle({
             }
           }}
           autoFocus
-          className="h-auto flex-1 border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none focus-visible:ring-0"
+          className="flex-1"
         />
       ) : (
         <Button
