@@ -41,21 +41,54 @@ function schemaDescription(field: unknown): string | undefined {
 
 type SupportedLeaf = z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber
 
+type FlagValueParse =
+  { success: true; value: unknown } | { success: false; message: string }
+
 type ArrayOptionMode = 'comma-separated' | 'repeatable'
 
-function parseValue(inner: SupportedLeaf, raw: string): unknown {
-  const value = inner instanceof z.ZodNumber ? Number(raw) : raw
-  const result = inner.safeParse(value)
+function parseFlagValue(field: z.core.$ZodType, raw: string): FlagValueParse {
+  if (field instanceof z.ZodUnion) {
+    let firstSupportedError: string | undefined
+    let firstError: string | undefined
+    for (const option of field.options) {
+      const result = parseFlagValue(option, raw)
+      if (result.success) return result
+      firstError ??= result.message
+      if (firstSupportedLeaf(option) !== undefined) {
+        firstSupportedError ??= result.message
+      }
+    }
+    return {
+      success: false,
+      message: firstSupportedError ?? firstError ?? 'Invalid value',
+    }
+  }
+
+  const value = field instanceof z.ZodNumber ? Number(raw) : raw
+  const result = z.safeParse(field, value)
+  if (result.success) return { success: true, value: result.data }
+  return {
+    success: false,
+    message: result.error.issues[0]?.message ?? 'Invalid value',
+  }
+}
+
+function parseValue(field: z.core.$ZodType, raw: string): unknown {
+  const result = parseFlagValue(field, raw)
   if (!result.success) {
     // commander's argParser contract requires throwing InvalidArgumentError;
     // commander itself catches it and converts it into user-facing CLI error
     // output, so this can't return a Result.
     // eslint-disable-next-line no-restricted-syntax -- commander's argParser contract requires a synchronous throw
-    throw new InvalidArgumentError(
-      result.error.issues[0]?.message ?? 'Invalid value',
-    )
+    throw new InvalidArgumentError(result.message)
   }
-  return result.data
+  return result.value
+}
+
+function parseArrayUnionValue(field: z.ZodUnion, raw: string): unknown {
+  const result = field.safeParse(raw)
+  if (result.success) return raw
+  return parseValue(field, raw)
 }
 
 function parseDefaultValue(
@@ -109,10 +142,16 @@ function resolveOptionParser(
     if (valueType instanceof z.ZodUnion) {
       if (arrayMode === 'repeatable') {
         return ok({
-          parse: (raw, previous) => appendValue(previous, raw),
+          parse: (raw, previous) =>
+            appendValue(previous, parseArrayUnionValue(valueType, raw)),
         })
       }
-      return ok({ parse: splitCommaList })
+      return ok({
+        parse: (raw) =>
+          splitCommaList(raw).map((value) =>
+            parseArrayUnionValue(valueType, value),
+          ),
+      })
     }
     return err(unsupportedSchemaType(key))
   }
@@ -122,6 +161,15 @@ function resolveOptionParser(
       leafType: valueType,
       parse: (raw) => parseValue(valueType, raw),
     })
+  }
+  if (valueType instanceof z.ZodUnion) {
+    const leafType = firstSupportedLeaf(valueType)
+    if (leafType !== undefined) {
+      return ok({
+        leafType,
+        parse: (raw) => parseValue(valueType, raw),
+      })
+    }
   }
   return err(unsupportedSchemaType(key))
 }
@@ -135,14 +183,22 @@ function isSupportedLeaf(field: unknown): field is SupportedLeaf {
   )
 }
 
+function firstSupportedLeaf(field: z.core.$ZodType): SupportedLeaf | undefined {
+  if (isSupportedLeaf(field)) return field
+  if (field instanceof z.ZodUnion) {
+    for (const option of field.options) {
+      const leaf = firstSupportedLeaf(option)
+      if (leaf !== undefined) return leaf
+    }
+  }
+  return undefined
+}
+
 /**
  * Unwraps `z.optional()`, `z.optional(z.nullable())`, and a trailing
- * `.transform()` (e.g. `status`'s single-or-array-to-array normalization)
- * into the leaf type used for flag validation and choices. For a
- * transform's pre-transform union (e.g. `z.union([taskStatus,
- * z.array(taskStatus)])`), the first supported member is used, since
- * `parseValue` only needs to validate a single raw flag value — the full
- * schema (with transform) re-validates it again in `pickSchemaFields`.
+ * `.transform()` (e.g. `status`'s single-or-array-to-array normalization).
+ * Union alternatives remain intact so each can validate a raw flag value;
+ * the first supported leaf supplies metadata such as enum choices.
  * There is no way to send an explicit `null` through a flag, so a nullable
  * field (e.g. a project's `description`/`startDate`/`targetDate`/`color`)
  * cannot be cleared via the CLI yet — a known, accepted gap.
@@ -152,9 +208,6 @@ function unwrapOptional(field: z.core.$ZodType): z.core.$ZodType | undefined {
   let inner = field.unwrap()
   if (inner instanceof z.ZodNullable) inner = inner.unwrap()
   if (inner instanceof z.ZodPipe) inner = inner.in
-  if (inner instanceof z.ZodUnion) {
-    inner = inner.options.find(isSupportedLeaf) ?? inner
-  }
   return inner
 }
 
@@ -262,8 +315,9 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       `--${toKebabCase(optionName)} <${metavar}>`,
       description,
     )
-    if (!isArray && inner instanceof z.ZodEnum) {
-      option.choices(inner.options.map(String))
+    const choiceType = isArray ? undefined : firstSupportedLeaf(inner)
+    if (choiceType instanceof z.ZodEnum) {
+      option.choices(choiceType.options.map(String))
     }
 
     option.argParser(parseOptionValue)
