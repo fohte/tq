@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { ListChecks } from 'lucide-react'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
@@ -23,6 +24,7 @@ import {
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task } from '#hooks/use-tasks'
+import { getChecklistCompletionCount } from '#lib/task-checklist-progress'
 import { cn } from '#lib/utils'
 
 export interface TaskRowAppearanceProps {
@@ -43,6 +45,7 @@ export interface TaskRowAppearanceProps {
   secondLineExtras?: React.ReactNode[]
   isCurrentTimeBlock?: boolean
   size?: 'default' | 'large'
+  checklistCompletionCountPlacement?: 'title' | 'metadata'
 }
 
 // Shared row body: status glyph + number/title line + a dot-separated
@@ -64,6 +67,7 @@ export function TaskRowAppearance({
   secondLineExtras = [],
   isCurrentTimeBlock = false,
   size = 'default',
+  checklistCompletionCountPlacement = 'title',
 }: TaskRowAppearanceProps) {
   const isCompleted = task.status === 'completed'
   const completedReason = isCompleted
@@ -73,6 +77,20 @@ export function TaskRowAppearance({
     completedReason != null && completedReason !== 'completed'
       ? completedReason
       : null
+  const checklistProgress = getChecklistCompletionCount(
+    task.checklistCompletionCount,
+  )
+  const checklistCompletionCount =
+    checklistProgress.total === 0 ? null : (
+      <span
+        className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground"
+        data-testid="checklist-completion"
+        aria-label={`${String(checklistProgress.completed)} of ${String(checklistProgress.total)} checklist items completed`}
+      >
+        <ListChecks className="size-3.5" aria-hidden="true" />
+        {checklistProgress.completed}/{checklistProgress.total}
+      </span>
+    )
 
   const secondLineItems: React.ReactNode[] = [
     task.labels.length > 0 ? (
@@ -180,11 +198,15 @@ export function TaskRowAppearance({
                     {task.childCompletionCount.total}
                   </span>
                 )}
+              {checklistCompletionCountPlacement === 'title' &&
+                checklistCompletionCount}
               <SessionIndicator sessions={sessions} />
             </div>
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               {metadataLeading}
+              {checklistCompletionCountPlacement === 'metadata' &&
+                checklistCompletionCount}
               <DotSeparatedList items={secondLineItems} />
             </div>
             {belowMetadata}

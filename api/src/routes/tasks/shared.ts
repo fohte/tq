@@ -13,6 +13,10 @@ import {
   timeBlocks,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import {
+  type ChecklistCompletionCount,
+  getChecklistCompletionCountsByTaskId,
+} from '#routes/tasks/checklist-data'
 import type { TaskSortBy } from '#schemas/task'
 import {
   getOpenGithubBlockerRefsByTaskId,
@@ -254,6 +258,10 @@ function taskListItemToResponse(
   duplicateOfNumber: number | null = null,
   blockedByNumbers: number[] = [],
   blockedByGithubRefs: GithubBlockerRef[] = [],
+  checklistCompletionCount: ChecklistCompletionCount = {
+    completed: 0,
+    total: 0,
+  },
 ) {
   return {
     ...taskCoreToResponse(task, rule, githubLinks, labelNames),
@@ -261,6 +269,7 @@ function taskListItemToResponse(
     duplicateOfNumber,
     blockedByNumbers,
     blockedByGithubRefs,
+    checklistCompletionCount,
   }
 }
 
@@ -302,6 +311,7 @@ export async function hydrateTaskListRows(
   const [
     labelsByTaskId,
     childCompletionCountsByTaskId,
+    checklistCompletionCountsByTaskId,
     githubLinksByTaskId,
     duplicateOfNumbersByTaskId,
     blockedByNumbersByTaskId,
@@ -311,6 +321,7 @@ export async function hydrateTaskListRows(
   ] = await Promise.all([
     getLabelNamesByTaskId(ids),
     getChildCompletionCountsByTaskId(ids),
+    getChecklistCompletionCountsByTaskId(ids),
     getGithubLinksByTaskId(ids, { role: 'subject' }),
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
@@ -335,6 +346,10 @@ export async function hydrateTaskListRows(
         : null,
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
       openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
+      checklistCompletionCountsByTaskId.get(r.task.id) ?? {
+        completed: 0,
+        total: 0,
+      },
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

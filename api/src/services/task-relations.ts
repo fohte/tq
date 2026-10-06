@@ -159,9 +159,8 @@ export async function getTaskBlockedByRelations(
       .orderBy(tasks.number),
   ])
 
-  // Hydrated together (not per-direction) so labels/child-completion counts
-  // are still fetched in a fixed number of queries regardless of how many
-  // blockedBy vs. blocking relations exist. Mirrors `getTaskLinks`.
+  // Hydrated together (not per-direction) so labels and progress counts are
+  // fetched in a fixed number of queries regardless of relation direction.
   const hydrated = await hydrateTaskListRows([
     ...blockedByRows,
     ...blockingRows,

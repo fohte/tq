@@ -35,6 +35,7 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     childCompletionCount: task.childCompletionCount,
+    checklistCompletionCount: task.checklistCompletionCount,
     duplicateOfNumber: task.duplicateOfNumber ?? null,
     blockedByNumbers: task.blockedBy.map(({ number }) => number),
     blockedByGithubRefs: task.githubBlockers

@@ -4,7 +4,12 @@ import { describe, expect, it } from 'vitest'
 import { app } from '#app'
 import { db } from '#db/connection'
 import { taskChecklistItems } from '#db/schema'
-import { createTask, TEST_UUID } from '#routes/tasks/testing'
+import type { TaskListItemResponse, TaskResponse } from '#routes/tasks/testing'
+import {
+  createTask,
+  TEST_UUID,
+  toListItemResponse,
+} from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -151,6 +156,23 @@ async function summarizeJsonResponse(response: Response) {
   return { status: response.status, body: await response.json() }
 }
 
+async function summarizeTaskListRow(response: Response, taskId: string) {
+  const rows = await jsonBody<TaskListItemResponse[]>(response)
+  return {
+    status: response.status,
+    task: rows.find((row) => row.id === taskId),
+  }
+}
+
+async function summarizeTaskDetail(response: Response) {
+  const detail = await jsonBody<TaskResponse>(response)
+  return {
+    status: response.status,
+    checklistCompletionCount: detail.checklistCompletionCount,
+    checklists: detail.checklists?.map(normalizeChecklist),
+  }
+}
+
 async function summarizeChecklistDeletion(response: Response, taskId: string) {
   return {
     status: response.status,
@@ -159,17 +181,20 @@ async function summarizeChecklistDeletion(response: Response, taskId: string) {
   }
 }
 
-function summarizeChecklistUpdate(
+async function summarizeChecklistUpdate(
   response: Response,
   updated: ChecklistResponse,
-  list: Awaited<ReturnType<typeof checklistList>>,
+  taskId: string,
 ) {
   return {
     update: {
       status: response.status,
       body: normalizeChecklist({ ...updated, items: [] }),
     },
-    list,
+    list: {
+      status: 200,
+      body: await checklistList(taskId),
+    },
   }
 }
 
@@ -234,6 +259,174 @@ describe('task checklists API', () => {
     })
   })
 
+  it('returns checklist progress for leaf items on task list rows', async () => {
+    const task = await createTask('Checklist progress')
+    const firstChecklist = await createChecklist(task.id, { name: 'Build' })
+    await createChecklist(task.id, { name: 'Empty' })
+    const parent = await addItem(firstChecklist.id, 'Implementation')
+    const checkedLeaf = await addItem(firstChecklist.id, 'Write docs', {
+      parentItemId: parent.id,
+    })
+    const nestedParent = await addItem(firstChecklist.id, 'Validation', {
+      parentItemId: parent.id,
+    })
+    await addItem(firstChecklist.id, 'Add tests', {
+      parentItemId: nestedParent.id,
+    })
+    const secondChecklist = await createChecklist(task.id, { name: 'Review' })
+    const secondCheckedLeaf = await addItem(secondChecklist.id, 'Review diff')
+    await setChecked(checkedLeaf.id, true)
+    await setChecked(secondCheckedLeaf.id, true)
+
+    const response = await app.request('/api/tasks')
+    expect(await summarizeTaskListRow(response, task.id)).toEqual({
+      status: 200,
+      task: toListItemResponse(task, {
+        checklistCompletionCount: { completed: 2, total: 3 },
+      }),
+    })
+  })
+
+  it('returns zero checklist progress when all checklists are empty', async () => {
+    const task = await createTask('Empty checklist')
+    await createChecklist(task.id, { name: 'No items' })
+
+    const response = await app.request('/api/tasks')
+    expect(await summarizeTaskListRow(response, task.id)).toEqual({
+      status: 200,
+      task: toListItemResponse(task),
+    })
+  })
+
+  it('returns checklists and leaf progress in task detail', async () => {
+    const task = await createTask('Checklist detail')
+    const firstChecklist = await createChecklist(task.id, { name: 'Build' })
+    const parent = await addItem(firstChecklist.id, 'Implementation')
+    const checkedLeaf = await addItem(firstChecklist.id, 'Write docs', {
+      parentItemId: parent.id,
+    })
+    const nestedParent = await addItem(firstChecklist.id, 'Validation', {
+      parentItemId: parent.id,
+    })
+    await addItem(firstChecklist.id, 'Add tests', {
+      parentItemId: nestedParent.id,
+    })
+    const secondChecklist = await createChecklist(task.id, { name: 'Review' })
+    const secondCheckedLeaf = await addItem(secondChecklist.id, 'Review diff')
+    await createChecklist(task.id, { name: 'Later' })
+    await setChecked(checkedLeaf.id, true)
+    await setChecked(secondCheckedLeaf.id, true)
+
+    const response = await app.request(`/api/tasks/${String(task.number)}`)
+    expect(await summarizeTaskDetail(response)).toEqual({
+      status: 200,
+      checklistCompletionCount: { completed: 2, total: 3 },
+      checklists: [
+        {
+          id: 'CHECKLIST',
+          taskId: task.id,
+          name: 'Build',
+          sortOrder: 0,
+          createdAt: 'DATE',
+          updatedAt: 'DATE',
+          items: [
+            {
+              id: 'ITEM',
+              checklistId: 'CHECKLIST',
+              parentItemId: null,
+              content: 'Implementation',
+              note: null,
+              checkedAt: null,
+              sortOrder: 0,
+              githubLinkId: null,
+              subtaskId: null,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+              children: [
+                {
+                  id: 'ITEM',
+                  checklistId: 'CHECKLIST',
+                  parentItemId: 'ITEM',
+                  content: 'Write docs',
+                  note: null,
+                  checkedAt: 'DATE',
+                  sortOrder: 0,
+                  githubLinkId: null,
+                  subtaskId: null,
+                  createdAt: 'DATE',
+                  updatedAt: 'DATE',
+                  children: [],
+                },
+                {
+                  id: 'ITEM',
+                  checklistId: 'CHECKLIST',
+                  parentItemId: 'ITEM',
+                  content: 'Validation',
+                  note: null,
+                  checkedAt: null,
+                  sortOrder: 1,
+                  githubLinkId: null,
+                  subtaskId: null,
+                  createdAt: 'DATE',
+                  updatedAt: 'DATE',
+                  children: [
+                    {
+                      id: 'ITEM',
+                      checklistId: 'CHECKLIST',
+                      parentItemId: 'ITEM',
+                      content: 'Add tests',
+                      note: null,
+                      checkedAt: null,
+                      sortOrder: 0,
+                      githubLinkId: null,
+                      subtaskId: null,
+                      createdAt: 'DATE',
+                      updatedAt: 'DATE',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'CHECKLIST',
+          taskId: task.id,
+          name: 'Review',
+          sortOrder: 1,
+          createdAt: 'DATE',
+          updatedAt: 'DATE',
+          items: [
+            {
+              id: 'ITEM',
+              checklistId: 'CHECKLIST',
+              parentItemId: null,
+              content: 'Review diff',
+              note: null,
+              checkedAt: 'DATE',
+              sortOrder: 0,
+              githubLinkId: null,
+              subtaskId: null,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+              children: [],
+            },
+          ],
+        },
+        {
+          id: 'CHECKLIST',
+          taskId: task.id,
+          name: 'Later',
+          sortOrder: 2,
+          createdAt: 'DATE',
+          updatedAt: 'DATE',
+          items: [],
+        },
+      ],
+    })
+  })
+
   it('updates checklist names and order reflected in the tree listing', async () => {
     const task = await createTask('Checklist task')
     await createChecklist(task.id, { name: 'Setup' })
@@ -245,9 +438,7 @@ describe('task checklists API', () => {
       body: JSON.stringify({ name: 'Review', sortOrder: 0 }),
     })
     const updated = await jsonBody<ChecklistResponse>(update)
-    const listed = await checklistList(task.id)
-
-    expect(summarizeChecklistUpdate(update, updated, listed)).toEqual({
+    expect(await summarizeChecklistUpdate(update, updated, task.id)).toEqual({
       update: {
         status: 200,
         body: {

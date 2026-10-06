@@ -5,10 +5,7 @@ import { type ReactNode, useLayoutEffect, useRef } from 'react'
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
-import {
-  TaskSidebar,
-  TaskSidebarMobile,
-} from '#components/task/task-detail-sidebar'
+import { TaskSidebar } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { ProjectDetail } from '#hooks/use-projects'
@@ -158,6 +155,15 @@ export const SidebarMinimal: Story = {
   },
 }
 
+export const SidebarWithChecklistProgress: Story = {
+  name: 'the sidebar shows checklist progress',
+  args: {
+    task: makeTaskDetail({
+      checklistCompletionCount: { completed: 1, total: 4 },
+    }),
+  },
+}
+
 // Desktop only: at the mobile viewport the sidebar's fields already fill the
 // frame, pushing the GitHub link section below the fold and leaving this
 // screenshot identical to Sidebar.
@@ -240,21 +246,4 @@ export const SidebarDuplicateOpen: Story = {
     task: { ...baseTask, status: 'completed', statusReason: 'duplicate' },
     defaultOpen: true,
   },
-}
-
-export const MobileSidebar: StoryObj<{
-  task: TaskDetail
-  project?: ProjectDetail | undefined
-}> = {
-  name: 'task details appear in the compact mobile sidebar',
-  args: {
-    task: { ...baseTask },
-  },
-  render: ({ task, project }) => (
-    <Providers task={task} project={project}>
-      <div className="max-w-sm border-t border-border p-4">
-        <TaskSidebarMobile task={task} />
-      </div>
-    </Providers>
-  ),
 }

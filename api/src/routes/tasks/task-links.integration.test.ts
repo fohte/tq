@@ -41,8 +41,15 @@ function linkedTaskDetail(
     completed: 0,
     total: 0,
   },
+  checklistCompletionCount: { completed: number; total: number } = {
+    completed: 0,
+    total: 0,
+  },
 ): TaskListItemResponse {
-  return toListItemResponse(task, { childCompletionCount })
+  return toListItemResponse(task, {
+    childCompletionCount,
+    checklistCompletionCount,
+  })
 }
 
 async function patchTask(id: string, body: Record<string, unknown>) {
@@ -109,6 +116,46 @@ describe('task mention links', () => {
 
     expect(await getLinks(source.id)).toEqual({
       outgoing: [linkedTaskDetail(target, { completed: 0, total: 1 })],
+      incoming: [],
+    })
+  })
+
+  it("reflects a linked task's checklist completion count", async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+    const checklistRes = await app.request(
+      `/api/tasks/${target.id}/checklists`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Review' }),
+      },
+    )
+    const checklist = await jsonBody<{ id: string }>(checklistRes)
+    const firstItemRes = await app.request(
+      `/api/checklists/${checklist.id}/items`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'Review changes' }),
+      },
+    )
+    const firstItem = await jsonBody<{ id: string }>(firstItemRes)
+    await app.request(`/api/checklists/${checklist.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'Confirm behavior' }),
+    })
+    await app.request(`/api/checklist-items/${firstItem.id}/check`, {
+      method: 'POST',
+    })
+
+    await patchTask(source.id, { description: `See #${String(target.number)}` })
+
+    expect(await getLinks(source.id)).toEqual({
+      outgoing: [
+        linkedTaskDetail(target, undefined, { completed: 1, total: 2 }),
+      ],
       incoming: [],
     })
   })
