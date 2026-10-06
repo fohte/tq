@@ -10,6 +10,7 @@ import {
   makeGithubTimelineEvent,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { createTask } from '#routes/tasks/testing'
 import {
@@ -31,6 +32,8 @@ vi.mock('web-push', async (importOriginal) => {
 })
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
 
 beforeEach(() => {
   queuedResponses.clear()
@@ -73,6 +76,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
   vi.restoreAllMocks()
 })
 
@@ -1096,6 +1101,8 @@ describe('syncDueGithubLinks', () => {
       new Date(now - 2 * 60 * 60 * 1000),
       'merged',
     )
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     queueGithubIssueResponse()
     queueGithubIssueResponse()
@@ -1108,6 +1115,17 @@ describe('syncDueGithubLinks', () => {
       ),
     )
 
-    expect(synced).toEqual([true, false, true, false, false])
+    const snapshot = () => ({
+      synced,
+      events: events.toSorted((left, right) =>
+        String(left.id).localeCompare(String(right.id)),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      synced: [true, false, true, false, false],
+      events: [subjectDue.taskId, blockerDue.taskId]
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((id) => ({ resource: 'task', id, origin: null })),
+    })
   })
 })

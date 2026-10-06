@@ -5,11 +5,13 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { connectLiveQuerySync } from '#lib/live-query-sync'
 import { queryClient } from '#lib/query-client'
 import { applyStandaloneViewport } from '#lib/standalone-viewport'
 import { routeTree } from '#routeTree.gen'
 
 applyStandaloneViewport()
+connectLiveQuerySync(queryClient)
 
 const router = createRouter({
   routeTree,

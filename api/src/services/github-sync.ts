@@ -22,6 +22,7 @@ import {
 } from '#integrations/github/issues'
 import { getValidAccessToken } from '#integrations/oauth'
 import { isQuietProviderError } from '#integrations/quiet-errors'
+import { publishChangeEvent } from '#lib/change-events'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
 import { sendPush } from '#services/push'
 
@@ -214,6 +215,7 @@ function isTaskTodo(
 export function syncLinkFromGithub(
   link: LinkRow,
   syncStartedAt = new Date(),
+  onWrite?: (taskId: string) => void,
 ): ResultAsync<void, SyncLinkError> {
   if (link.state === 'merged') {
     return okAsync(undefined)
@@ -241,8 +243,11 @@ export function syncLinkFromGithub(
               matchesStoredGithubState(link),
               lt(taskGithubLinks.lastSyncedAt, lastSyncedAt),
             ),
-          ),
-      ).map(() => undefined)
+          )
+          .returning({ id: taskGithubLinks.id }),
+      ).map((updatedLinks) => {
+        if (updatedLinks.length > 0) onWrite?.(link.taskId)
+      })
     }
 
     const { issue, etag } = result
@@ -264,9 +269,11 @@ export function syncLinkFromGithub(
           .where(matchesStoredGithubState(link))
           .returning({ id: taskGithubLinks.id }),
       ).andThen((updatedLinks) => {
-        if (updatedLinks.length === 0 || notification === null) {
+        if (updatedLinks.length === 0) {
           return okAsync(undefined)
         }
+        onWrite?.(link.taskId)
+        if (notification === null) return okAsync(undefined)
 
         return notifyLinkChange(link, notification)
       })
@@ -312,9 +319,10 @@ async function hasGithubAccess(): Promise<boolean> {
 async function syncLinks(
   links: LinkRow[],
   syncStartedAt?: Date,
+  onWrite?: (taskId: string) => void,
 ): Promise<void> {
   for (const link of links) {
-    const result = await syncLinkFromGithub(link, syncStartedAt)
+    const result = await syncLinkFromGithub(link, syncStartedAt, onWrite)
     if (result.isErr() && !isQuietProviderError(result.error)) {
       captureWithFingerprint(result.error, 'api.github-sync.sync-link-failed', {
         extras: { linkId: link.id },
@@ -361,7 +369,11 @@ export async function syncDueGithubLinks(): Promise<void> {
     return
   }
 
-  await syncLinks(links, now)
+  const changedTaskIds = new Set<string>()
+  await syncLinks(links, now, (taskId) => changedTaskIds.add(taskId))
+  for (const id of changedTaskIds) {
+    publishChangeEvent({ resource: 'task', id, origin: null })
+  }
 }
 
 let inFlightSync: Promise<void> | null = null
