@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 
 import {
   app,
@@ -13,6 +12,7 @@ import {
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
+import { createJsonFileStorage } from '#json-store'
 import { buildMenuTemplate } from '#menu'
 import {
   classifyNavigation,
@@ -30,7 +30,6 @@ import {
   createDebouncedAction,
   createWindowBoundsStore,
   initialWindowBounds,
-  type WindowBoundsStore,
 } from '#window-state'
 import { setSideWindowTitle } from '#window-title'
 
@@ -140,14 +139,11 @@ const setSideWindowAlwaysOnTop = (alwaysOnTop: boolean) => {
 }
 
 const createSideWindow = (): BrowserWindow => {
-  const boundsFile = join(app.getPath('userData'), 'side-window-bounds.json')
-  const boundsStore: WindowBoundsStore = createWindowBoundsStore({
-    read: () => readFileSync(boundsFile, 'utf8'),
-    write: (serialized) => {
-      mkdirSync(dirname(boundsFile), { recursive: true })
-      writeFileSync(boundsFile, serialized)
-    },
-  })
+  const boundsStore = createWindowBoundsStore(
+    createJsonFileStorage(
+      join(app.getPath('userData'), 'side-window-bounds.json'),
+    ),
+  )
   const loadedBounds = boundsStore.load().match(
     (bounds) => bounds,
     (caughtErr) => {
@@ -316,17 +312,11 @@ app.on('window-all-closed', () => undefined)
 
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
-  const settingsFile = join(
-    app.getPath('userData'),
-    'side-window-settings.json',
+  sideWindowSettingsStore = createSideWindowSettingsStore(
+    createJsonFileStorage(
+      join(app.getPath('userData'), 'side-window-settings.json'),
+    ),
   )
-  sideWindowSettingsStore = createSideWindowSettingsStore({
-    read: () => readFileSync(settingsFile, 'utf8'),
-    write: (serialized) => {
-      mkdirSync(dirname(settingsFile), { recursive: true })
-      writeFileSync(settingsFile, serialized)
-    },
-  })
   sideWindowSettingsStore.load().match(
     (settings) => {
       sideWindowAlwaysOnTop = settings?.alwaysOnTop ?? false

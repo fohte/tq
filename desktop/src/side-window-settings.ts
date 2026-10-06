@@ -1,18 +1,14 @@
-import { Result } from 'neverthrow'
+import {
+  createJsonStore,
+  type JsonStore,
+  type JsonStoreStorage,
+} from '#json-store'
 
 export type SideWindowSettings = {
   alwaysOnTop: boolean
 }
 
-export type SideWindowSettingsStore = {
-  load: () => Result<SideWindowSettings | undefined, unknown>
-  save: (settings: SideWindowSettings) => Result<void, unknown>
-}
-
-type SideWindowSettingsStorage = {
-  read: () => string
-  write: (serialized: string) => void
-}
+export type SideWindowSettingsStore = JsonStore<SideWindowSettings>
 
 const parseSideWindowSettings = (
   value: unknown,
@@ -29,26 +25,6 @@ const parseSideWindowSettings = (
   return { alwaysOnTop: value.alwaysOnTop }
 }
 
-export const createSideWindowSettingsStore = ({
-  read,
-  write,
-}: SideWindowSettingsStorage): SideWindowSettingsStore => {
-  const parse = Result.fromThrowable(
-    (serialized: string): unknown => JSON.parse(serialized),
-    (caughtErr) => caughtErr,
-  )
-
-  return {
-    load: () =>
-      Result.fromThrowable(read, (caughtErr) => caughtErr)().andThen(
-        (serialized) => parse(serialized).map(parseSideWindowSettings),
-      ),
-    save: (settings) =>
-      Result.fromThrowable(
-        () => {
-          write(JSON.stringify(settings))
-        },
-        (caughtErr) => caughtErr,
-      )(),
-  }
-}
+export const createSideWindowSettingsStore = (
+  storage: JsonStoreStorage,
+): SideWindowSettingsStore => createJsonStore(storage, parseSideWindowSettings)
