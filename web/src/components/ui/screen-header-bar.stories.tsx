@@ -50,7 +50,7 @@ export const WithScreenTitle: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the header keeps the queue controls close together on compact layouts',
+  name: 'the compact queue header fits status and task actions together',
   args: {
     children: null,
     spacing: 'compact',
@@ -60,9 +60,18 @@ export const Compact: Story = {
       <ScreenHeaderBar spacing={args.spacing ?? 'normal'}>
         <span className="font-mono text-xs font-bold text-primary">##</span>
         <span className="font-mono text-xs font-medium">queue</span>
+        <span className="ml-auto font-mono text-2xs text-muted-foreground">
+          3 tasks
+        </span>
         <button
           type="button"
-          className="ml-auto font-mono text-xs text-muted-foreground hover:text-foreground"
+          className="font-mono text-2xs text-muted-foreground hover:text-foreground"
+        >
+          auto
+        </button>
+        <button
+          type="button"
+          className="font-mono text-2xs text-muted-foreground hover:text-foreground"
         >
           + new
         </button>

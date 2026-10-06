@@ -49,7 +49,10 @@ export function HelpPopover({
         onClick={() => {
           updateOpen(!open)
         }}
-        className={cn(tone === 'muted' && 'text-muted-foreground', className)}
+        className={cn(
+          tone === 'muted' ? 'text-muted-foreground' : 'text-foreground',
+          className,
+        )}
       >
         <CircleHelp aria-hidden="true" />
       </Button>
