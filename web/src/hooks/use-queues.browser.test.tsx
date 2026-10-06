@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
   type Queue,
@@ -221,12 +222,7 @@ describe('queue polling', () => {
       const queueGet = assertDefined(mocks['mockQueueGet'])
       const itemGet = assertDefined(mocks['mockGet'])
       const queues = [
-        {
-          key: DAY_QUEUE_KEY,
-          name: 'today',
-          periodUnit: 'day',
-          position: 0,
-        },
+        makeQueue({ key: DAY_QUEUE_KEY, name: 'today' }),
       ] satisfies Queue[]
       queueGet.mockResolvedValue(jsonResponse(queues))
       itemGet.mockResolvedValue(jsonResponse([]))
@@ -276,12 +272,7 @@ describe('queue carry-over', () => {
     let resolveCarryOver: (() => void) | undefined
     const today = formatLocalDate(new Date())
     const queues = [
-      {
-        key: DAY_QUEUE_KEY,
-        name: 'today',
-        periodUnit: 'day',
-        position: 0,
-      },
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'today' }),
     ] satisfies Queue[]
     mockCarryOver.mockImplementation(() => {
       calls.push('carry-over')
@@ -300,7 +291,7 @@ describe('queue carry-over', () => {
       () => {
         const carryOver = useQueueCarryOver(today)
         const items = useQueueItemsForQueues(queues, today, undefined, {
-          enabled: carryOver.isSuccess,
+          enabled: carryOver.canReadQueueItems,
         })
         return { carryOver, items }
       },
@@ -308,8 +299,16 @@ describe('queue carry-over', () => {
     )
 
     await waitFor(() => {
-      const getOutput = () => [calls, result.current.carryOver.isPending]
-      expect(getOutput()).toEqual([['carry-over'], true])
+      const getOutput = () => [
+        calls,
+        result.current.carryOver.isPending,
+        mockCarryOver.mock.calls,
+      ]
+      expect(getOutput()).toEqual([
+        ['carry-over'],
+        true,
+        [[{ json: { date: today } }]],
+      ])
     })
 
     act(() => {

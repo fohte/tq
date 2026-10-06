@@ -69,6 +69,8 @@ function setup({
     isPending: false,
     isError: false,
     error: null,
+    isToday: true,
+    canReadQueueItems: true,
   })
   mockUseQueueItems.mockReturnValue({
     data: queue.map((t, index) => ({
@@ -137,6 +139,8 @@ describe('TodayFocus', () => {
       isPending: true,
       isError: false,
       error: null,
+      isToday: true,
+      canReadQueueItems: false,
     })
 
     await renderToday()
@@ -159,6 +163,8 @@ describe('TodayFocus', () => {
       isPending: false,
       isError: true,
       error: new Error('carry-over unavailable'),
+      isToday: true,
+      canReadQueueItems: true,
     })
 
     await renderToday()

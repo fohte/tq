@@ -9,6 +9,12 @@ import {
 import { putQueueItemsSchema, queueDateSchema } from '#schemas/queue'
 
 const queueKeySchema = pathSegmentSchema('Queue key')
+const queueTzOffsetSchema = z
+  .number()
+  .int()
+  .describe(
+    'Timezone offset in minutes using the Date.getTimezoneOffset() convention. Required by MCP clients to identify local today.',
+  )
 
 const queueGetInputSchema = z.object({
   key: queueKeySchema,
@@ -17,6 +23,11 @@ const queueGetInputSchema = z.object({
     .describe(
       'Date to fetch the queue for, as YYYY-MM-DD. Defaults to today in the local timezone.',
     ),
+  tzOffset: queueTzOffsetSchema.optional(),
+})
+
+const queueGetMcpInputSchema = queueGetInputSchema.extend({
+  tzOffset: queueTzOffsetSchema,
 })
 
 const queueSetInputSchema = z.object({
@@ -45,13 +56,20 @@ export const queueOperations = [
   defineOperation(queueGetInputSchema, {
     path: ['queue', 'get'],
     description:
-      "List a queue for a date (YYYY-MM-DD). Defaults to today in the local timezone; reading today's queue first carries unfinished items forward.",
+      "List a queue for a date (YYYY-MM-DD). Defaults to today in the local timezone; reading today's queue first carries unfinished items forward. MCP callers must pass their local timezone offset.",
     positionalArgs: ['key', { name: 'date', optional: true }],
+    mcpInputSchema: queueGetMcpInputSchema,
     kind: 'write',
     routes: ['POST /api/queues/carry-over', 'GET /api/queues/:key/items'],
-    cli: { output: { kind: 'json' } },
-    run: (client, { key, date }) => {
-      const today = formatLocalDate(new Date())
+    cli: {
+      excludeFields: ['tzOffset'],
+      output: { kind: 'json' },
+    },
+    run: (client, { key, date, tzOffset }) => {
+      const today =
+        tzOffset === undefined
+          ? formatLocalDate(new Date())
+          : formatDateAtOffset(new Date(), tzOffset)
       const requestedDate = date ?? today
       const getItems = () =>
         requestJson(
@@ -94,4 +112,9 @@ export const queueOperations = [
 
 function formatLocalDate(date: Date): string {
   return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function formatDateAtOffset(date: Date, tzOffset: number): string {
+  const localDate = new Date(date.getTime() - tzOffset * 60_000)
+  return `${String(localDate.getUTCFullYear())}-${String(localDate.getUTCMonth() + 1).padStart(2, '0')}-${String(localDate.getUTCDate()).padStart(2, '0')}`
 }

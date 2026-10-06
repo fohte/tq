@@ -142,17 +142,8 @@ function DayView() {
     () => formatLocalDate(selectedDate),
     [selectedDate],
   )
-  const shouldCarryOverQueues = selectedDateStr === formatLocalDate(new Date())
-  const queueCarryOver = useQueueCarryOver(
-    selectedDateStr,
-    shouldCarryOverQueues,
-  )
-  const canReadQueueItems =
-    !shouldCarryOverQueues || queueCarryOver.isSuccess || queueCarryOver.isError
-  useEffect(() => {
-    if (!shouldCarryOverQueues || queueCarryOver.error == null) return
-    console.error('Failed to carry over queue items', queueCarryOver.error)
-  }, [queueCarryOver.error, shouldCarryOverQueues])
+  const queueCarryOver = useQueueCarryOver(selectedDateStr)
+  const canReadQueueItems = queueCarryOver.canReadQueueItems
   const [visibleRange, setVisibleRange] = useState(() => ({
     startDate: selectedDateStr,
     endDate: selectedDateStr,
@@ -442,7 +433,7 @@ function DayView() {
         compactMemo={compactMemoProps}
         isLoading={
           isLoading ||
-          (shouldCarryOverQueues && queueCarryOver.isPending) ||
+          (queueCarryOver.isToday && queueCarryOver.isPending) ||
           (isCompactLayout && dueDateTasksQuery.isLoading) ||
           (isKanbanFiltering && filteredTasksQuery.isLoading)
         }

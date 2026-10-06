@@ -8,6 +8,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeQueue } from '#hooks/queue-test-fixtures'
 import { getNowPanelQueryDateRange } from '#lib/compact-layout'
 import { formatLocalDate } from '#lib/date-range'
 import { Route as RootRoute } from '#routes/__root'
@@ -36,14 +37,13 @@ type QueueItemsMock = (
   refetchInterval?: number,
   options?: { enabled?: boolean },
 ) => unknown
-type QueueCarryOverMock = (
-  date: string,
-  enabled?: boolean,
-) => {
+type QueueCarryOverMock = (date: string) => {
   isSuccess: boolean
   isPending: boolean
-  isError?: boolean
+  isError: boolean
   error: unknown
+  isToday: boolean
+  canReadQueueItems: boolean
 }
 type MemosMock = (
   context: 'work' | 'personal',
@@ -246,11 +246,16 @@ beforeEach(() => {
   })
   mocks.useQueues.mockReturnValue({ data: [] })
   mocks.useQueueItemsForQueues.mockReturnValue([])
-  mocks.useQueueCarryOver.mockReturnValue({
-    isSuccess: true,
-    isPending: false,
-    isError: false,
-    error: null,
+  mocks.useQueueCarryOver.mockImplementation((date) => {
+    const isToday = date === formatLocalDate(new Date())
+    return {
+      isSuccess: true,
+      isPending: false,
+      isError: false,
+      error: null,
+      isToday,
+      canReadQueueItems: true,
+    }
   })
   mocks.selectedDate = null
 })
@@ -265,20 +270,15 @@ describe('day-view route compact layout', () => {
     const todayStr = formatLocalDate(today)
     mocks.selectedDate = today
     mocks.useQueues.mockReturnValue({
-      data: [
-        {
-          key: 'day',
-          name: 'today',
-          periodUnit: 'day',
-          position: 0,
-        },
-      ],
+      data: [makeQueue({ name: 'today' })],
     })
     mocks.useQueueCarryOver.mockReturnValue({
       isSuccess: false,
       isPending: true,
       isError: false,
       error: null,
+      isToday: true,
+      canReadQueueItems: false,
     })
 
     const { queryClient } = await renderDayRoute('/')
@@ -289,16 +289,9 @@ describe('day-view route compact layout', () => {
         mocks.useQueueItemsForQueues.mock.calls.at(-1),
       ]
       expect(getOutput()).toEqual([
-        [todayStr, true],
+        [todayStr],
         [
-          [
-            {
-              key: 'day',
-              name: 'today',
-              periodUnit: 'day',
-              position: 0,
-            },
-          ],
+          [makeQueue({ name: 'today' })],
           todayStr,
           undefined,
           { enabled: false },
@@ -320,6 +313,8 @@ describe('day-view route compact layout', () => {
       isPending: false,
       isError: true,
       error,
+      isToday: true,
+      canReadQueueItems: true,
     })
 
     const { queryClient } = await renderDayRoute('/')
@@ -350,7 +345,7 @@ describe('day-view route compact layout', () => {
         mocks.useQueueItemsForQueues.mock.calls.at(-1),
       ]
       expect(getOutput()).toEqual([
-        [pastDateStr, false],
+        [pastDateStr],
         [[], pastDateStr, undefined, { enabled: true }],
       ])
     })
@@ -372,7 +367,7 @@ describe('day-view route compact layout', () => {
         mocks.useQueueItemsForQueues.mock.calls.at(-1),
       ]
       expect(getOutput()).toEqual([
-        [futureDateStr, false],
+        [futureDateStr],
         [[], futureDateStr, undefined, { enabled: true }],
       ])
     })

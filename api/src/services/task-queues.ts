@@ -7,8 +7,8 @@ import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
 
-// The "today" queue is the only one auto-assign and the focus view depend on
-// by name; every other queue is addressed generically via the queues API.
+// Auto-assign and the focus view depend on the day queue by name. Carry-over
+// processing also addresses the day and week queues by name.
 const DAY_QUEUE_KEY = 'day'
 
 export type TaskQueue = typeof taskQueues.$inferSelect
@@ -110,15 +110,76 @@ export function carryOverTaskQueueItems(
         return err(new RowNotFoundError())
       }
 
-      const pastDayCondition = and(
-        eq(taskQueueItems.queueId, dayQueue.id),
-        lt(taskQueueItems.periodStart, date),
-      )
-      await tx
-        .select({ id: taskQueueItems.id })
-        .from(taskQueueItems)
-        .where(pastDayCondition)
-        .for('update')
+      const carryOverPeriod = async (
+        queueId: string,
+        targetPeriodStart: string,
+        forwardTaskIds: ReadonlySet<string>,
+      ): Promise<Set<string>> => {
+        const pastPeriodCondition = and(
+          eq(taskQueueItems.queueId, queueId),
+          lt(taskQueueItems.periodStart, targetPeriodStart),
+        )
+        await tx
+          .select({ id: taskQueueItems.id })
+          .from(taskQueueItems)
+          .where(pastPeriodCondition)
+          .for('update')
+
+        const candidates = await tx
+          .select({ item: taskQueueItems })
+          .from(taskQueueItems)
+          .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
+          .where(and(pastPeriodCondition, eq(tasks.status, 'todo')))
+          .orderBy(
+            asc(taskQueueItems.periodStart),
+            asc(taskQueueItems.sortOrder),
+            asc(taskQueueItems.id),
+          )
+        const rowsByTaskId = new Map<
+          string,
+          (typeof candidates)[number]['item'][]
+        >()
+        for (const { item } of candidates) {
+          if (forwardTaskIds.has(item.taskId)) continue
+          const rows = rowsByTaskId.get(item.taskId) ?? []
+          rows.push(item)
+          rowsByTaskId.set(item.taskId, rows)
+        }
+
+        const targetRows = await tx
+          .select({ sortOrder: taskQueueItems.sortOrder })
+          .from(taskQueueItems)
+          .where(
+            and(
+              eq(taskQueueItems.queueId, queueId),
+              eq(taskQueueItems.periodStart, targetPeriodStart),
+            ),
+          )
+        let nextSortOrder = maxSortOrder(targetRows) + 1
+        const duplicateIds: string[] = []
+
+        for (const rows of rowsByTaskId.values()) {
+          const [row, ...duplicates] = rows
+          if (row == null) continue
+          duplicateIds.push(...duplicates.map((duplicate) => duplicate.id))
+          await tx
+            .update(taskQueueItems)
+            .set({
+              periodStart: targetPeriodStart,
+              sortOrder: nextSortOrder,
+              updatedAt: new Date(),
+            })
+            .where(eq(taskQueueItems.id, row.id))
+          nextSortOrder += 1
+        }
+        if (duplicateIds.length > 0) {
+          await tx
+            .delete(taskQueueItems)
+            .where(inArray(taskQueueItems.id, duplicateIds))
+        }
+
+        return new Set(rowsByTaskId.keys())
+      }
 
       const forwardDayRows = await tx
         .select({ taskId: taskQueueItems.taskId })
@@ -138,75 +199,15 @@ export function carryOverTaskQueueItems(
             gte(taskQueueItems.periodStart, weekStart),
           ),
         )
-      const forwardTaskIds = new Set([
+      const forwardDayTaskIds = new Set([
         ...forwardDayRows.map((row) => row.taskId),
         ...forwardWeekRows.map((row) => row.taskId),
       ])
-
-      const dayCandidates = await tx
-        .select({ item: taskQueueItems })
-        .from(taskQueueItems)
-        .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
-        .where(and(pastDayCondition, eq(tasks.status, 'todo')))
-        .orderBy(
-          asc(taskQueueItems.periodStart),
-          asc(taskQueueItems.sortOrder),
-          asc(taskQueueItems.id),
-        )
-      const dayRowsByTaskId = new Map<
-        string,
-        (typeof dayCandidates)[number]['item'][]
-      >()
-      for (const { item } of dayCandidates) {
-        if (forwardTaskIds.has(item.taskId)) continue
-        const rows = dayRowsByTaskId.get(item.taskId) ?? []
-        rows.push(item)
-        dayRowsByTaskId.set(item.taskId, rows)
-      }
-
-      const todayRows = await tx
-        .select({ sortOrder: taskQueueItems.sortOrder })
-        .from(taskQueueItems)
-        .where(
-          and(
-            eq(taskQueueItems.queueId, dayQueue.id),
-            eq(taskQueueItems.periodStart, date),
-          ),
-        )
-      let nextDaySortOrder = maxSortOrder(todayRows) + 1
-      const movedDayTaskIds = new Set<string>()
-      const duplicateDayIds: string[] = []
-
-      for (const [taskId, rows] of dayRowsByTaskId) {
-        const [row, ...duplicates] = rows
-        if (row == null) continue
-        movedDayTaskIds.add(taskId)
-        duplicateDayIds.push(...duplicates.map((duplicate) => duplicate.id))
-        await tx
-          .update(taskQueueItems)
-          .set({
-            periodStart: date,
-            sortOrder: nextDaySortOrder,
-            updatedAt: new Date(),
-          })
-          .where(eq(taskQueueItems.id, row.id))
-        nextDaySortOrder += 1
-      }
-      if (duplicateDayIds.length > 0) {
-        await tx
-          .delete(taskQueueItems)
-          .where(inArray(taskQueueItems.id, duplicateDayIds))
-      }
-
-      const pastWeekCondition = and(
-        eq(taskQueueItems.queueId, weekQueue.id),
-        lt(taskQueueItems.periodStart, weekStart),
+      const movedDayTaskIds = await carryOverPeriod(
+        dayQueue.id,
+        date,
+        forwardDayTaskIds,
       )
-      await tx
-        .select({ id: taskQueueItems.id })
-        .from(taskQueueItems)
-        .where(pastWeekCondition)
-        .for('update')
 
       const forwardWeekRowsAfterDay = await tx
         .select({ taskId: taskQueueItems.taskId })
@@ -231,59 +232,7 @@ export function carryOverTaskQueueItems(
         ...forwardDayRowsAfterDay.map((row) => row.taskId),
         ...movedDayTaskIds,
       ])
-
-      const weekCandidates = await tx
-        .select({ item: taskQueueItems })
-        .from(taskQueueItems)
-        .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
-        .where(and(pastWeekCondition, eq(tasks.status, 'todo')))
-        .orderBy(
-          asc(taskQueueItems.periodStart),
-          asc(taskQueueItems.sortOrder),
-          asc(taskQueueItems.id),
-        )
-      const weekRowsByTaskId = new Map<
-        string,
-        (typeof weekCandidates)[number]['item'][]
-      >()
-      for (const { item } of weekCandidates) {
-        if (forwardWeekTaskIds.has(item.taskId)) continue
-        const rows = weekRowsByTaskId.get(item.taskId) ?? []
-        rows.push(item)
-        weekRowsByTaskId.set(item.taskId, rows)
-      }
-
-      const currentWeekRows = await tx
-        .select({ sortOrder: taskQueueItems.sortOrder })
-        .from(taskQueueItems)
-        .where(
-          and(
-            eq(taskQueueItems.queueId, weekQueue.id),
-            eq(taskQueueItems.periodStart, weekStart),
-          ),
-        )
-      let nextWeekSortOrder = maxSortOrder(currentWeekRows) + 1
-      const duplicateWeekIds: string[] = []
-
-      for (const rows of weekRowsByTaskId.values()) {
-        const [row, ...duplicates] = rows
-        if (row == null) continue
-        duplicateWeekIds.push(...duplicates.map((duplicate) => duplicate.id))
-        await tx
-          .update(taskQueueItems)
-          .set({
-            periodStart: weekStart,
-            sortOrder: nextWeekSortOrder,
-            updatedAt: new Date(),
-          })
-          .where(eq(taskQueueItems.id, row.id))
-        nextWeekSortOrder += 1
-      }
-      if (duplicateWeekIds.length > 0) {
-        await tx
-          .delete(taskQueueItems)
-          .where(inArray(taskQueueItems.id, duplicateWeekIds))
-      }
+      await carryOverPeriod(weekQueue.id, weekStart, forwardWeekTaskIds)
 
       return ok(undefined)
     },

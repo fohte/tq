@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
+import { useEffect } from 'react'
 
 import type { PlanValue } from '#components/task/create-task-modal-fields'
 import { api } from '#lib/api'
@@ -14,13 +15,11 @@ import { queueKeys } from '#lib/query-keys'
 
 export { queueKeys }
 
-// Auto-assign and the focus view (/today) depend on this key by name — see
-// api/src/services/task-queues.ts's DAY_QUEUE_KEY for the backend side of
-// the same special-casing.
+// Auto-assign and the focus view (/today) depend on this key by name.
+// Carry-over processing also addresses the day and week queues by name.
 export const DAY_QUEUE_KEY = 'day'
 
-// The only other queue the PLAN field writes to; unlike DAY_QUEUE_KEY, no
-// backend code depends on this name specifically.
+// Carry-over processing and the PLAN field depend on this key by name.
 export const WEEK_QUEUE_KEY = 'week'
 
 export type Queue = InferResponseType<
@@ -44,13 +43,13 @@ export function useQueues(refetchInterval?: number) {
   })
 }
 
-export function useQueueCarryOver(date: string, enabled = true) {
+export function useQueueCarryOver(date: string) {
   const queryClient = useQueryClient()
   const isToday = date === formatLocalDate(new Date())
 
-  return useQuery({
+  const query = useQuery({
     queryKey: queueKeys.carryOver(date),
-    enabled: enabled && isToday,
+    enabled: isToday,
     staleTime: Infinity,
     queryFn: async () => {
       const res = await api.api.queues['carry-over'].$post({ json: { date } })
@@ -62,6 +61,17 @@ export function useQueueCarryOver(date: string, enabled = true) {
       return date
     },
   })
+
+  useEffect(() => {
+    if (!isToday || query.error == null) return
+    console.error('Failed to carry over queue items', query.error)
+  }, [isToday, query.error])
+
+  return {
+    ...query,
+    isToday,
+    canReadQueueItems: !isToday || query.isSuccess || query.isError,
+  }
 }
 
 export function useQueueItems(

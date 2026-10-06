@@ -27,6 +27,10 @@ function localDate(date: Date) {
   return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+function dateAtOffset(date: Date, tzOffset: number) {
+  return new Date(date.getTime() - tzOffset * 60_000).toISOString().slice(0, 10)
+}
+
 function expectedToolValidationError(
   name: string,
   field: string,
@@ -86,6 +90,7 @@ describe('queue operation tools', () => {
     const result = await callMcpTool(client, 'queue_get', {
       key: 'day',
       date: 'not-a-date',
+      tzOffset: 0,
     })
 
     expect(result).toEqual(
@@ -97,11 +102,27 @@ describe('queue operation tools', () => {
     )
   })
 
+  it('requires a timezone offset when getting a queue', async () => {
+    const result = await callMcpTool(client, 'queue_get', { key: 'day' })
+
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'queue_get',
+        'tzOffset',
+        'Invalid input: expected number, received undefined',
+      ),
+    )
+  })
+
   it('rejects malformed queue keys before making a request', async () => {
     const invalidKeys = ['', '.', '..', '\uD800']
     const results = await Promise.all(
       invalidKeys.flatMap((key) => [
-        callMcpTool(client, 'queue_get', { key, date: '2026-08-06' }),
+        callMcpTool(client, 'queue_get', {
+          key,
+          date: '2026-08-06',
+          tzOffset: 0,
+        }),
         callMcpTool(client, 'queue_set', {
           key,
           date: '2026-08-06',
@@ -163,6 +184,7 @@ describe('queue operation tools', () => {
     const result = await callMcpTool(client, 'queue_get', {
       key: 'day',
       date: '2026-08-06',
+      tzOffset: 0,
     })
 
     expect(parseToolJson(result)).toEqual(expected)
@@ -176,7 +198,46 @@ describe('queue operation tools', () => {
     const today = localDate(todayDate)
     await putDayQueueItems([task.id], localDate(yesterdayDate))
 
-    const result = await callMcpTool(client, 'queue_get', { key: 'day' })
+    const result = await callMcpTool(client, 'queue_get', {
+      key: 'day',
+      tzOffset: new Date().getTimezoneOffset(),
+    })
+
+    expect(
+      normalizeDynamicValues(parseToolJson(result), { skipKeys: ['taskId'] }),
+    ).toEqual([
+      {
+        id: '<uuid>',
+        taskId: task.id,
+        periodStart: today,
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+    ])
+  })
+
+  it("uses the caller's timezone when defaulting to today's queue", async () => {
+    const task = await createTask('Timezone carry-over task')
+    const now = new Date()
+    const serverToday = localDate(now)
+    const tzOffset = Array.from(
+      { length: 1561 },
+      (_, index) => index - 720,
+    ).find((offset) => dateAtOffset(now, offset) !== serverToday)
+    if (tzOffset === undefined)
+      throw new Error('Expected a distinct local date')
+    const today = dateAtOffset(now, tzOffset)
+    const yesterday = dateAtOffset(
+      new Date(now.getTime() - 86_400_000),
+      tzOffset,
+    )
+    await putDayQueueItems([task.id], yesterday)
+
+    const result = await callMcpTool(client, 'queue_get', {
+      key: 'day',
+      tzOffset,
+    })
 
     expect(
       normalizeDynamicValues(parseToolJson(result), { skipKeys: ['taskId'] }),

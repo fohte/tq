@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
@@ -27,17 +27,15 @@ export function TodayFocus() {
   const liveToday = useLiveToday()
   const todayStr = useMemo(() => formatLocalDate(liveToday), [liveToday])
   const queueCarryOver = useQueueCarryOver(todayStr)
-  useEffect(() => {
-    if (queueCarryOver.error == null) return
-    console.error('Failed to carry over queue items', queueCarryOver.error)
-  }, [queueCarryOver.error])
 
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
     useQueueItems(DAY_QUEUE_KEY, todayStr, {
-      enabled: queueCarryOver.isSuccess || queueCarryOver.isError,
+      enabled: queueCarryOver.canReadQueueItems,
     })
   const isLoading =
-    isTaskListLoading || queueCarryOver.isPending || isTodayTasksLoading
+    isTaskListLoading ||
+    (queueCarryOver.isToday && queueCarryOver.isPending) ||
+    isTodayTasksLoading
 
   const setQueueItems = useSetQueueItems()
 

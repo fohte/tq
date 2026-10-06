@@ -440,6 +440,7 @@ describe('POST /api/queues/carry-over', () => {
     const existingTask = await createTask('Existing task')
     const carriedTask = await createTask('Carried task')
     const secondCarriedTask = await createTask('Second carried task')
+    const completedTask = await createTask('Completed prior-week task')
     const currentWeekRow = await putQueueItems(
       'week',
       [existingTask.id],
@@ -451,11 +452,13 @@ describe('POST /api/queues/carry-over', () => {
       '2026-03-02',
     )
     await putQueueItems('week', [carriedTask.id], '2026-03-09')
-    const secondCarriedRow = await putQueueItems(
+    const priorWeekRows = await putQueueItems(
       'week',
-      [secondCarriedTask.id],
+      [secondCarriedTask.id, completedTask.id],
       '2026-03-09',
     )
+    const secondCarriedRow = priorWeekRows.body[0]
+    await updateTaskStatus(completedTask.id, 'completed')
 
     const firstRun = await carryOverQueueItems('2026-03-20')
     const secondRun = await carryOverQueueItems('2026-03-20')
@@ -487,13 +490,13 @@ describe('POST /api/queues/carry-over', () => {
           sortOrder: 1,
         },
         {
-          id: secondCarriedRow.body[0]?.id,
+          id: secondCarriedRow?.id,
           taskId: secondCarriedTask.id,
           periodStart: '2026-03-16',
           sortOrder: 2,
         },
       ],
-      [[], []],
+      [[completedTask.id], []],
     ])
   })
 
