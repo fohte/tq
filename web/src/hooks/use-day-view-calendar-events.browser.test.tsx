@@ -51,6 +51,7 @@ describe('useDayViewCalendarEvents', () => {
           timeBlocksData: [timeBlock],
           schedulesData: undefined,
           gcalEventsData: undefined,
+          dayQueueItems: [],
           taskMap: tasks,
           context: 'personal',
         }),
