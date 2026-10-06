@@ -1,9 +1,14 @@
 import { zValidator } from '@hono/zod-validator'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { recurrenceRules, taskRelations, tasks } from '#db/schema'
+import {
+  recurrenceRules,
+  taskDescriptionTemplates,
+  taskRelations,
+  tasks,
+} from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
@@ -11,27 +16,25 @@ import {
   resolveCreateBlockedByInputs,
   resolveUpdateBlockedByInputs,
 } from '#routes/tasks/blocked-by'
-import {
-  taskDescriptionTemplateErrorBody,
-  validateTaskDescriptionTemplate,
-} from '#routes/tasks/description-template-validation'
-import { queryTaskList } from '#routes/tasks/list-query'
+import { tasksDeleteApp } from '#routes/tasks/delete'
+import { tasksListApp } from '#routes/tasks/list'
 import {
   getGithubLinksByTaskId,
   getLabelNamesByTaskId,
   getRecurrenceRulesByTemplateIds,
-  hydrateTaskListRows,
   requireTask,
   resolveParentId,
   taskToResponse,
 } from '#routes/tasks/shared'
-import {
-  createTaskSchema,
-  listTasksQuerySchema,
-  updateTaskSchema,
-} from '#schemas/task'
+import { createTaskSchema, updateTaskSchema } from '#schemas/task'
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
+import {
+  checkTaskCreate,
+  checkTaskUpdate,
+  resolveTaskCreateTemplate,
+  taskConventionViolationBody,
+} from '#services/task-conventions'
 import {
   GithubBlockerSubjectConflictError,
   insertTaskGithubBlockers,
@@ -46,13 +49,19 @@ export const tasksCrudApp = new Hono()
     const input = c.req.valid('json')
     const author = c.get('author')
 
-    if (author.kind === 'llm') {
-      const validation = await validateTaskDescriptionTemplate(input)
-      if (validation !== null) {
-        return c.json(taskDescriptionTemplateErrorBody(validation), 400)
-      }
+    const templateSelection = await resolveTaskCreateTemplate(author, {
+      template: input.template,
+    })
+    const conventionViolation = checkTaskCreate(author, {
+      template: templateSelection,
+      description: input.description,
+    })
+    if (conventionViolation !== null) {
+      return c.json(
+        taskConventionViolationBody(conventionViolation, 'creation'),
+        400,
+      )
     }
-
     let parentId: string | null = null
     if (input.parentId != null) {
       const resolved = await resolveParentId(input.parentId)
@@ -82,6 +91,17 @@ export const tasksCrudApp = new Hono()
 
     const { task, createdRule, labelNames } = await db.transaction(
       async (tx) => {
+        let descriptionTemplateId = templateSelection?.selected?.id ?? null
+        if (descriptionTemplateId !== null) {
+          // Keep deletion from racing between template selection and insertion.
+          const [selectedTemplate] = await tx
+            .select({ id: taskDescriptionTemplates.id })
+            .from(taskDescriptionTemplates)
+            .where(eq(taskDescriptionTemplates.id, descriptionTemplateId))
+            .for('key share')
+          descriptionTemplateId = selectedTemplate?.id ?? null
+        }
+
         // Setting recurrence creates a template and links the task as its first instance.
         let templateFields: {
           templateId: string
@@ -122,6 +142,7 @@ export const tasksCrudApp = new Hono()
             .values({
               title: input.title,
               description: input.description ?? null,
+              descriptionTemplateId,
               startDate: input.startDate ?? null,
               dueDate: templateFields?.occurrenceDate ?? input.dueDate ?? null,
               estimatedMinutes: input.estimatedMinutes ?? null,
@@ -174,30 +195,7 @@ export const tasksCrudApp = new Hono()
       201,
     )
   })
-  .get('/', zValidator('query', listTasksQuerySchema), async (c) => {
-    const query = c.req.valid('query')
-    const { rows, ancestorOnlyIds, matchByTaskId } = await queryTaskList(
-      query,
-      {
-        includeSearchMatch: query.includeMatch === true,
-        prioritizeTitleMatches: query.includeMatch === true,
-      },
-    )
-
-    const hydratedRows = await hydrateTaskListRows(rows)
-
-    return c.json(
-      hydratedRows.map((item) => {
-        const match = matchByTaskId?.get(item.id)
-        return {
-          ...item,
-          ...(match === undefined ? {} : { match }),
-          ...(ancestorOnlyIds.has(item.id) ? { ancestorOnly: true } : {}),
-        }
-      }),
-      200,
-    )
-  })
+  .route('/', tasksListApp)
   .patch(
     '/:id',
     requireTask,
@@ -219,6 +217,20 @@ export const tasksCrudApp = new Hono()
           {
             error: 'Cannot edit recurrence on a task generated from a template',
           },
+          400,
+        )
+      }
+
+      const conventionViolation = await checkTaskUpdate(
+        author,
+        existing,
+        'description' in taskFields
+          ? { description: taskFields.description }
+          : {},
+      )
+      if (conventionViolation !== null) {
+        return c.json(
+          taskConventionViolationBody(conventionViolation, 'update'),
           400,
         )
       }
@@ -467,32 +479,4 @@ export const tasksCrudApp = new Hono()
       )
     },
   )
-  .delete('/:id', requireTask, async (c) => {
-    const existing = c.get('task')
-    const id = existing.id
-
-    await db.transaction(async (tx) => {
-      // Reparent children to the deleted task's parent (or top-level if
-      // none) before deleting, so the tree structure above the deleted task
-      // is preserved. The parent is re-read from the row here rather than
-      // taken from `existing` so a concurrent delete of an ancestor (which
-      // takes the same row lock via its own reparent update) can't leave
-      // this pointing at an already-deleted parent.
-      await tx
-        .update(tasks)
-        .set({
-          parentId: sql`(select ${tasks.parentId} from ${tasks} where ${tasks.id} = ${id})`,
-          updatedAt: new Date(),
-        })
-        .where(eq(tasks.parentId, id))
-
-      await tx.delete(tasks).where(eq(tasks.id, id))
-
-      // Clean up orphaned recurrence rule
-      if (existing.recurrenceRuleId != null) {
-        await deleteRecurrenceRuleIfUnreferenced(tx, existing.recurrenceRuleId)
-      }
-    })
-
-    return c.body(null, 204)
-  })
+  .route('/', tasksDeleteApp)

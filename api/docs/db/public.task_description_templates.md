@@ -6,16 +6,16 @@ Templates for structuring task descriptions.
 
 ## Columns
 
-| Name        | Type                     | Default           | Nullable | Children | Parents | Comment                                                                           |
-| ----------- | ------------------------ | ----------------- | -------- | -------- | ------- | --------------------------------------------------------------------------------- |
-| id          | uuid                     | gen_random_uuid() | false    |          |         |                                                                                   |
-| name        | text                     |                   | false    |          |         | Unique name used to look up a description template.                               |
-| when_to_use | text                     |                   | false    |          |         | Type of work for which the template should be selected.                           |
-| body        | text                     |                   | false    |          |         | Markdown skeleton intended for a task description.                                |
-| guide       | text                     |                   | false    |          |         | Writing instructions for completing each section of the body.                     |
-| is_default  | boolean                  | false             | false    |          |         | Whether the template is selected by default; at most one template may be default. |
-| created_at  | timestamp with time zone | now()             | false    |          |         |                                                                                   |
-| updated_at  | timestamp with time zone | now()             | false    |          |         |                                                                                   |
+| Name        | Type                     | Default           | Nullable | Children                        | Parents | Comment                                                                           |
+| ----------- | ------------------------ | ----------------- | -------- | ------------------------------- | ------- | --------------------------------------------------------------------------------- |
+| id          | uuid                     | gen_random_uuid() | false    | [public.tasks](public.tasks.md) |         |                                                                                   |
+| name        | text                     |                   | false    |                                 |         | Unique name used to look up a description template.                               |
+| when_to_use | text                     |                   | false    |                                 |         | Type of work for which the template should be selected.                           |
+| body        | text                     |                   | false    |                                 |         | Markdown skeleton intended for a task description.                                |
+| guide       | text                     |                   | false    |                                 |         | Writing instructions for completing each section of the body.                     |
+| is_default  | boolean                  | false             | false    |                                 |         | Whether the template is selected by default; at most one template may be default. |
+| created_at  | timestamp with time zone | now()             | false    |                                 |         |                                                                                   |
+| updated_at  | timestamp with time zone | now()             | false    |                                 |         |                                                                                   |
 
 ## Constraints
 
@@ -45,6 +45,7 @@ Templates for structuring task descriptions.
 ```mermaid
 erDiagram
 
+"public.tasks" }o--o| "public.task_description_templates" : "FOREIGN KEY (description_template_id) REFERENCES task_description_templates(id) ON DELETE SET NULL"
 
 "public.task_description_templates" {
   uuid id
@@ -55,6 +56,28 @@ erDiagram
   boolean is_default
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.tasks" {
+  text id
+  text title
+  text description
+  text status
+  date start_date
+  date due_date
+  integer estimated_minutes
+  text parent_id FK
+  text project_id FK
+  text recurrence_rule_id FK
+  text context
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  integer number
+  text commitment
+  text status_reason
+  timestamp_with_time_zone remind_at
+  text template_id FK
+  date occurrence_date
+  uuid description_template_id FK
 }
 ```
 

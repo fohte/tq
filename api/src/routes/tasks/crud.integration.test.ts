@@ -120,6 +120,12 @@ function responseSnapshot<T>(status: number, body: T) {
   return { status, body }
 }
 
+function taskConventionSnapshot(
+  ...entries: (readonly [string, unknown])[]
+): Record<string, unknown> {
+  return Object.fromEntries<unknown>(entries)
+}
+
 async function taskResponseSnapshot(res: Response) {
   return responseSnapshot(
     res.status,
@@ -127,7 +133,10 @@ async function taskResponseSnapshot(res: Response) {
   )
 }
 
-function createdTaskResponse(title: string, description: string) {
+function createdTaskResponse(
+  title: string,
+  description: string,
+): { status: number; body: TaskResponse } {
   return responseSnapshot(201, {
     id: 'ID',
     number: -1,
@@ -155,12 +164,48 @@ function createdTaskResponse(title: string, description: string) {
   })
 }
 
+function updatedTaskResponse(
+  title: string,
+  description: string,
+  includeLinkSync = true,
+) {
+  const createdResponse = createdTaskResponse(title, description)
+  return responseSnapshot(
+    200,
+    includeLinkSync
+      ? createdResponse.body
+      : withoutLinkSync(createdResponse.body),
+  )
+}
+
 async function insertDescriptionTemplate(
   template: Parameters<typeof makeDescriptionTemplate>[0],
 ) {
   await db
     .insert(taskDescriptionTemplates)
     .values(makeDescriptionTemplate(template))
+}
+
+function createLlmTask(body: Record<string, unknown>) {
+  return app.request('/api/tasks', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Author': 'llm:agent',
+    },
+    body: JSON.stringify(body),
+  })
+}
+
+function updateLlmTask(taskId: string, body: Record<string, unknown>) {
+  return app.request(`/api/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Author': 'llm:agent',
+    },
+    body: JSON.stringify(body),
+  })
 }
 
 // Simulates a legacy task where recurrenceRuleId is owned directly without a template.
@@ -301,9 +346,34 @@ describe('tasks CRUD API', () => {
         }),
       })
 
-      expect(await taskResponseSnapshot(res)).toEqual(
-        createdTaskResponse('Unstructured task', 'A short note.'),
+      const body = await jsonBody<TaskResponse>(res)
+      const updatedDescription = 'A replacement note.'
+      const updateRes = await updateLlmTask(body.id, {
+        description: updatedDescription,
+      })
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, body.id)),
       )
+
+      expect(
+        taskConventionSnapshot(
+          ['response', responseSnapshot(res.status, normalizeTask(body))],
+          ['update', await taskResponseSnapshot(updateRes)],
+          ['savedDescription', savedTask.description],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+        ),
+      ).toEqual({
+        response: createdTaskResponse('Unstructured task', 'A short note.'),
+        update: updatedTaskResponse('Unstructured task', updatedDescription),
+        savedDescription: updatedDescription,
+        descriptionTemplateId: null,
+      })
     })
 
     it('does not use a non-default template when no template is selected', async () => {
@@ -326,9 +396,23 @@ describe('tasks CRUD API', () => {
         }),
       })
 
-      expect(await taskResponseSnapshot(res)).toEqual(
-        createdTaskResponse('Unstructured task', 'A short note.'),
+      const body = await jsonBody<TaskResponse>(res)
+      const savedTask = firstOrThrow(
+        await db
+          .select({ descriptionTemplateId: tasks.descriptionTemplateId })
+          .from(tasks)
+          .where(eq(tasks.id, body.id)),
       )
+
+      expect(
+        taskConventionSnapshot(
+          ['response', responseSnapshot(res.status, normalizeTask(body))],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+        ),
+      ).toEqual({
+        response: createdTaskResponse('Unstructured task', 'A short note.'),
+        descriptionTemplateId: null,
+      })
     })
 
     it('validates an LLM description against the default template', async () => {
@@ -402,9 +486,32 @@ describe('tasks CRUD API', () => {
         }),
       })
 
-      expect(await taskResponseSnapshot(res)).toEqual(
-        createdTaskResponse('Focused task', '## Goal\n- [ ] Explain the goal'),
+      const body = await jsonBody<TaskResponse>(res)
+      const selectedTemplate = firstOrThrow(
+        await db
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.name, 'focused-plan')),
       )
+      const savedTask = firstOrThrow(
+        await db
+          .select({ descriptionTemplateId: tasks.descriptionTemplateId })
+          .from(tasks)
+          .where(eq(tasks.id, body.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['response', responseSnapshot(res.status, normalizeTask(body))],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+        ),
+      ).toEqual({
+        response: createdTaskResponse(
+          'Focused task',
+          '## Goal\n- [ ] Explain the goal',
+        ),
+        descriptionTemplateId: selectedTemplate.id,
+      })
     })
 
     it('accepts code examples as section content', async () => {
@@ -554,19 +661,43 @@ describe('tasks CRUD API', () => {
     })
 
     it('does not validate descriptions from human authors', async () => {
+      await insertDescriptionTemplate({
+        name: 'human-plan',
+        whenToUse: 'Use for structured tasks',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+      })
+
       const res = await app.request('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: 'Human task',
           description: 'No template sections are present.',
-          template: 'missing-plan',
+          template: 'human-plan',
         }),
       })
 
-      expect(await taskResponseSnapshot(res)).toEqual(
-        createdTaskResponse('Human task', 'No template sections are present.'),
+      const body = await jsonBody<TaskResponse>(res)
+      const savedTask = firstOrThrow(
+        await db
+          .select({ descriptionTemplateId: tasks.descriptionTemplateId })
+          .from(tasks)
+          .where(eq(tasks.id, body.id)),
       )
+
+      expect(
+        taskConventionSnapshot(
+          ['response', responseSnapshot(res.status, normalizeTask(body))],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+        ),
+      ).toEqual({
+        response: createdTaskResponse(
+          'Human task',
+          'No template sections are present.',
+        ),
+        descriptionTemplateId: null,
+      })
     })
 
     it('creates a task with all optional fields', async () => {
@@ -1984,6 +2115,381 @@ describe('tasks CRUD API', () => {
   })
 
   describe('PATCH /api/tasks/:id', () => {
+    it('validates LLM description edits against the saved default template', async () => {
+      const guide =
+        'Explain why the task matters, how to do it, and how to verify the result.'
+      const originalDescription =
+        '## Goal\nExplain the goal.\n\n## Steps\nComplete the work.\n\n## Result\nVerify the result.'
+      await insertDescriptionTemplate({
+        name: 'update-plan',
+        whenToUse: 'Use for planned work',
+        body: '## Goal\n\n## Steps\n\n## Result',
+        guide,
+        isDefault: true,
+      })
+
+      const createRes = await createLlmTask({
+        title: 'Template-bound task',
+        description: originalDescription,
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const template = firstOrThrow(
+        await db
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.name, 'update-plan')),
+      )
+
+      const updateRes = await updateLlmTask(createdTask.id, {
+        description: '## Goal\nExplain the goal.\n\n## Steps\n- [ ]',
+      })
+      const updateBody = await jsonBody<Record<string, unknown>>(updateRes)
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['createStatus', createRes.status],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+          ['update', responseSnapshot(updateRes.status, updateBody)],
+          ['savedDescription', savedTask.description],
+        ),
+      ).toEqual({
+        createStatus: 201,
+        descriptionTemplateId: template.id,
+        update: responseSnapshot(400, {
+          error:
+            'Missing sections: ## Result.\n' +
+            'Empty sections: ## Steps.\n' +
+            `Guide:\n${guide}\n` +
+            'Fill the sections and retry the task update.',
+          missingSections: ['## Result'],
+          emptySections: ['## Steps'],
+          guide,
+        }),
+        savedDescription: originalDescription,
+      })
+    })
+
+    it('rejects clearing an LLM description on a template-bound task', async () => {
+      const guide = 'Describe the goal.'
+      const originalDescription = '## Goal\nExplain the goal.'
+      await insertDescriptionTemplate({
+        name: 'clear-description-plan',
+        whenToUse: 'Use for tasks with a goal',
+        body: '## Goal',
+        guide,
+        isDefault: true,
+      })
+
+      const createRes = await createLlmTask({
+        title: 'Task with a required goal',
+        description: originalDescription,
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const template = firstOrThrow(
+        await db
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.name, 'clear-description-plan')),
+      )
+      const updateRes = await updateLlmTask(createdTask.id, {
+        description: null,
+      })
+      const updateBody = await jsonBody<Record<string, unknown>>(updateRes)
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['createStatus', createRes.status],
+          ['update', responseSnapshot(updateRes.status, updateBody)],
+          ['savedTask', savedTask],
+        ),
+      ).toEqual({
+        createStatus: 201,
+        update: responseSnapshot(400, {
+          error:
+            `Missing sections: ## Goal.\nGuide:\n${guide}\n` +
+            'Fill the sections and retry the task update.',
+          missingSections: ['## Goal'],
+          emptySections: [],
+          guide,
+        }),
+        savedTask: {
+          description: originalDescription,
+          descriptionTemplateId: template.id,
+        },
+      })
+    })
+
+    it('accepts an LLM description edit when all saved template sections are filled', async () => {
+      await insertDescriptionTemplate({
+        name: 'complete-plan',
+        whenToUse: 'Use for complete work plans',
+        body: '## Goal\n\n## Steps',
+        guide: 'Explain the goal and steps.',
+        isDefault: true,
+      })
+      const createRes = await createLlmTask({
+        title: 'Structured task',
+        description: '## Goal\nOriginal goal.\n\n## Steps\nOriginal steps.',
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const updatedDescription =
+        '## Goal\nUpdated goal.\n\n## Steps\nUpdated steps.'
+
+      const updateRes = await updateLlmTask(createdTask.id, {
+        description: updatedDescription,
+      })
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['createStatus', createRes.status],
+          ['update', await taskResponseSnapshot(updateRes)],
+          ['savedDescription', savedTask.description],
+          ['hasTemplate', savedTask.descriptionTemplateId !== null],
+        ),
+      ).toEqual({
+        createStatus: 201,
+        update: updatedTaskResponse('Structured task', updatedDescription),
+        savedDescription: updatedDescription,
+        hasTemplate: true,
+      })
+    })
+
+    it('continues validating the saved template after it is renamed', async () => {
+      const guide = 'Describe the goal.'
+      await insertDescriptionTemplate({
+        name: 'original-plan',
+        whenToUse: 'Use for planned work',
+        body: '## Goal',
+        guide,
+        isDefault: true,
+      })
+      const createRes = await createLlmTask({
+        title: 'Renamed-template task',
+        description: '## Goal\nExplain the goal.',
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const template = firstOrThrow(
+        await db
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.name, 'original-plan')),
+      )
+      await db
+        .update(taskDescriptionTemplates)
+        .set({ name: 'renamed-plan' })
+        .where(eq(taskDescriptionTemplates.id, template.id))
+
+      const updateRes = await updateLlmTask(createdTask.id, {
+        description: 'A note without template sections.',
+      })
+      const updateBody = await jsonBody<Record<string, unknown>>(updateRes)
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['update', responseSnapshot(updateRes.status, updateBody)],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+          ['savedDescription', savedTask.description],
+        ),
+      ).toEqual({
+        update: responseSnapshot(400, {
+          error:
+            `Missing sections: ## Goal.\nGuide:\n${guide}\n` +
+            'Fill the sections and retry the task update.',
+          missingSections: ['## Goal'],
+          emptySections: [],
+          guide,
+        }),
+        descriptionTemplateId: template.id,
+        savedDescription: '## Goal\nExplain the goal.',
+      })
+    })
+
+    it('does not validate an LLM task update that omits the description', async () => {
+      await insertDescriptionTemplate({
+        name: 'title-plan',
+        whenToUse: 'Use for planned work',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+        isDefault: true,
+      })
+      const originalDescription = '## Goal\nExplain the goal.'
+      const createRes = await createLlmTask({
+        title: 'Original title',
+        description: originalDescription,
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+
+      const updateRes = await updateLlmTask(createdTask.id, {
+        title: 'Updated title',
+      })
+      const savedTask = firstOrThrow(
+        await db
+          .select({ title: tasks.title, description: tasks.description })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['update', await taskResponseSnapshot(updateRes)],
+          ['savedTask', savedTask],
+        ),
+      ).toEqual({
+        update: updatedTaskResponse(
+          'Updated title',
+          originalDescription,
+          false,
+        ),
+        savedTask: {
+          title: 'Updated title',
+          description: originalDescription,
+        },
+      })
+    })
+
+    it('does not validate a human description edit on a template-bound task', async () => {
+      await insertDescriptionTemplate({
+        name: 'human-update-plan',
+        whenToUse: 'Use for planned work',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+        isDefault: true,
+      })
+      const createRes = await createLlmTask({
+        title: 'Human-edit task',
+        description: '## Goal\nExplain the goal.',
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const updatedDescription = 'A human-written note.'
+
+      const updateRes = await app.request(`/api/tasks/${createdTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: updatedDescription }),
+      })
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          ['update', await taskResponseSnapshot(updateRes)],
+          ['savedDescription', savedTask.description],
+          ['hasTemplate', savedTask.descriptionTemplateId !== null],
+        ),
+      ).toEqual({
+        update: updatedTaskResponse('Human-edit task', updatedDescription),
+        savedDescription: updatedDescription,
+        hasTemplate: true,
+      })
+    })
+
+    it('does not validate an LLM task update after its template is deleted', async () => {
+      await insertDescriptionTemplate({
+        name: 'deletable-plan',
+        whenToUse: 'Use for planned work',
+        body: '## Goal',
+        guide: 'Describe the goal.',
+        isDefault: true,
+      })
+      const createRes = await createLlmTask({
+        title: 'Deleted-template task',
+        description: '## Goal\nExplain the goal.',
+      })
+      const createdTask = await jsonBody<TaskResponse>(createRes)
+      const template = firstOrThrow(
+        await db
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.name, 'deletable-plan')),
+      )
+      await db
+        .delete(taskDescriptionTemplates)
+        .where(eq(taskDescriptionTemplates.id, template.id))
+
+      const afterDelete = firstOrThrow(
+        await db
+          .select({ descriptionTemplateId: tasks.descriptionTemplateId })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+      const updatedDescription = 'A note after deleting the template.'
+      const updateRes = await updateLlmTask(createdTask.id, {
+        description: updatedDescription,
+      })
+      const savedTask = firstOrThrow(
+        await db
+          .select({
+            description: tasks.description,
+            descriptionTemplateId: tasks.descriptionTemplateId,
+          })
+          .from(tasks)
+          .where(eq(tasks.id, createdTask.id)),
+      )
+
+      expect(
+        taskConventionSnapshot(
+          [
+            'descriptionTemplateIdAfterDelete',
+            afterDelete.descriptionTemplateId,
+          ],
+          ['update', await taskResponseSnapshot(updateRes)],
+          ['savedDescription', savedTask.description],
+          ['descriptionTemplateId', savedTask.descriptionTemplateId],
+        ),
+      ).toEqual({
+        descriptionTemplateIdAfterDelete: null,
+        update: updatedTaskResponse(
+          'Deleted-template task',
+          updatedDescription,
+        ),
+        savedDescription: updatedDescription,
+        descriptionTemplateId: null,
+      })
+    })
+
     it('updates task fields', async () => {
       const created = await createTask('Original')
 

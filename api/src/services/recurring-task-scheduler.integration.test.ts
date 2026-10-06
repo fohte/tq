@@ -75,6 +75,7 @@ function expectedTask(
     startDate: null,
     dueDate: null,
     estimatedMinutes: template.estimatedMinutes,
+    descriptionTemplateId: null,
     parentId: template.parentId,
     projectId: template.projectId,
     recurrenceRuleId: null,

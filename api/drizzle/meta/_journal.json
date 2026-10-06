@@ -365,6 +365,20 @@
       "when": 1791118114855,
       "tag": "0051_agent-session-archive",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1791213207771,
+      "tag": "0052_task-description-template-id",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1791216207047,
+      "tag": "0053_task-description-template-index",
+      "breakpoints": true
     }
   ]
 }

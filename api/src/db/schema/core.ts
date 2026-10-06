@@ -12,8 +12,10 @@ import {
   timestamp,
   unique,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core'
 
+import { taskDescriptionTemplates } from '#db/schema/description-templates'
 import { recurringTaskTemplates } from '#db/schema/recurring-task-templates'
 
 export const projects = pgTable(
@@ -95,6 +97,10 @@ export const tasks = pgTable(
     startDate: date('start_date'),
     dueDate: date('due_date'),
     estimatedMinutes: integer('estimated_minutes'),
+    descriptionTemplateId: uuid('description_template_id').references(
+      () => taskDescriptionTemplates.id,
+      { onDelete: 'set null' },
+    ),
     parentId: text('parent_id').references((): AnyPgColumn => tasks.id, {
       onDelete: 'set null',
     }),
@@ -155,6 +161,11 @@ export const tasks = pgTable(
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
     index('idx_tasks_template_id').on(table.templateId),
+    // Only LLM tasks with a validated template reference this column, so a
+    // partial index avoids entries for the majority of task rows.
+    index('idx_tasks_description_template_id')
+      .on(table.descriptionTemplateId)
+      .where(sql`${table.descriptionTemplateId} IS NOT NULL`),
     // Partial, like `idx_tasks_remind_at` below: `template_id` is NULL on
     // every task except scheduler-generated ones.
     uniqueIndex('tasks_template_id_occurrence_date_unique')

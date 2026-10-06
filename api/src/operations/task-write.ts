@@ -205,7 +205,9 @@ export const taskWriteOperations = [
     description:
       'Partially update a task by id or number. Only provided fields change; ' +
       'omit a field to leave it as-is. Nullable fields can be cleared with ' +
-      'null. `labels` replaces the full set; an empty array clears it, and ' +
+      'null. LLM description updates on template-bound tasks must preserve ' +
+      'every required section; clearing the description is rejected. ' +
+      '`labels` replaces the full set; an empty array clears it, and ' +
       "new labels inherit the task's possibly updated context while existing " +
       'label contexts stay unchanged. `blockedBy` also replaces the full ' +
       'set (task ids/numbers or GitHub issue/pull request URLs); an empty ' +

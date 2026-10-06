@@ -264,6 +264,7 @@ comments:
       number: 'Globally unique, human-facing sequential task number.'
       title: 'Human-readable task title.'
       description: 'Optional task details.'
+      description_template_id: 'Description template that validated an LLM-authored task; null if no template was used, the task was human-authored, or the template was deleted.'
       status: 'Task status: todo or completed.'
       status_reason: 'Reason for the completed status: completed, not_planned, or duplicate.'
       start_date: 'Date when work on the task is planned to start.'

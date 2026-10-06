@@ -13,7 +13,7 @@
 | [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 19      | Tasks with optional parent, project, recurrence, and template relationships.         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 20      | Tasks with optional parent, project, recurrence, and template relationships.         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       | Scheduled time intervals assigned to tasks.                                          | BASE TABLE |
 | [public.task_queue_items](public.task_queue_items.md)                               | 7       | Tasks placed in a queue, optionally for a specific period.                           | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      | Records for task, page, or comment creation and field updates.                       | BASE TABLE |
@@ -86,6 +86,7 @@ erDiagram
 "public.tasks" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.tasks" }o--o| "public.recurring_task_templates" : "FOREIGN KEY (template_id) REFERENCES recurring_task_templates(id) ON DELETE SET NULL"
+"public.tasks" }o--o| "public.task_description_templates" : "FOREIGN KEY (description_template_id) REFERENCES task_description_templates(id) ON DELETE SET NULL"
 "public.time_blocks" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_queue_items" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_queue_items" }o--|| "public.task_queues" : "FOREIGN KEY (queue_id) REFERENCES task_queues(id) ON DELETE CASCADE"
@@ -209,6 +210,7 @@ erDiagram
   timestamp_with_time_zone remind_at
   text template_id FK
   date occurrence_date
+  uuid description_template_id FK
 }
 "public.time_blocks" {
   text id
