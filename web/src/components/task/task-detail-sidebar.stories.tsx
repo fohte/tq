@@ -10,7 +10,6 @@ import {
   TaskSidebarMobile,
 } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
@@ -146,40 +145,13 @@ const sampleProject: ProjectDetail = makeProjectDetail({
   taskCount: { total: 10, completed: 4 },
 })
 
+// Desktop only: the project row is below the fold at the mobile viewport.
 export const SidebarWithProject: Story = {
   name: 'the linked project appears in the task sidebar',
+  tags: ['desktop-only'],
   args: {
     task: { ...baseTask, projectId: sampleProject.id },
     project: sampleProject,
-  },
-}
-
-// Desktop only: at the mobile viewport the sidebar's fields already fill the
-// frame, pushing TIME BLOCKS — the one thing this story adds — out of the
-// screenshot and leaving it identical to Sidebar.
-export const SidebarWithTimeBlocks: Story = {
-  name: 'scheduled and manual time blocks appear in the task sidebar',
-  tags: ['desktop-only'],
-  args: {
-    task: {
-      ...baseTask,
-      timeBlocks: [
-        makeTimeBlock({
-          id: 'block-1',
-          taskId: baseTask.id,
-          startTime: '2026-07-30T10:00:00.000Z',
-          endTime: '2026-07-30T11:30:00.000Z',
-          isAutoScheduled: true,
-        }),
-        makeTimeBlock({
-          id: 'block-2',
-          taskId: baseTask.id,
-          startTime: '2026-07-29T16:00:00.000Z',
-          endTime: '2026-07-29T16:45:00.000Z',
-          isAutoScheduled: false,
-        }),
-      ],
-    },
   },
 }
 
