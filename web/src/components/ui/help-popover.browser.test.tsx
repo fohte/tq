@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { HelpPopover } from '#components/ui/help-popover'
 
@@ -16,7 +17,7 @@ describe('HelpPopover', () => {
     const initialColor = getComputedStyle(button).color
     const initialExpanded = String(button.getAttribute('aria-expanded'))
 
-    await user.hover(button)
+    await page.elementLocator(button).hover()
     const hoveredColor = getComputedStyle(button).color
     const hoveredExpanded = String(button.getAttribute('aria-expanded'))
 
@@ -26,7 +27,7 @@ describe('HelpPopover', () => {
 
     const actual = `${initialExpanded}|${initialColor}|${hoveredExpanded}|${hoveredColor}|${expanded}|${expandedColor}`
     expect(actual).toBe(
-      `false|${initialColor}|false|${initialColor}|true|${initialColor}`,
+      'false|rgb(82, 82, 91)|false|rgb(82, 82, 91)|true|rgb(82, 82, 91)',
     )
   })
 })

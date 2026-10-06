@@ -32,3 +32,8 @@ export const Muted: Story = {
   name: 'the help button uses muted text',
   args: { tone: 'muted' },
 }
+
+export const MutedOpen: Story = {
+  name: 'the muted help button stays muted while its popover is open',
+  args: { tone: 'muted', defaultOpen: true },
+}
