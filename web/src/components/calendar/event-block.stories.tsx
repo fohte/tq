@@ -143,6 +143,7 @@ export const GoogleCalendarMeeting: Story = {
     type: 'gcal-meeting',
     title: 'Team standup',
     timeText: '11:00–11:30',
+    calendarColor: '#039BE5',
   },
 }
 
@@ -193,6 +194,7 @@ export const GoogleCalendarSolo: Story = {
     type: 'gcal-solo',
     title: '歯医者',
     timeText: '17:00–18:00',
+    calendarColor: '#039BE5',
   },
 }
 
@@ -225,6 +227,7 @@ export const GoogleCalendarInfoAllDay: Story = {
     title: 'Company holiday',
     timeText: '',
     allDay: true,
+    calendarColor: '#8E24AA',
   },
 }
 
@@ -258,6 +261,7 @@ export const GoogleCalendarRedacted: Story = {
     type: 'gcal-solo',
     title: '',
     timeText: '11:00–11:30',
+    calendarColor: '#039BE5',
     redacted: true,
   },
 }

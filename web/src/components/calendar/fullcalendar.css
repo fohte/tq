@@ -264,8 +264,8 @@
   display: flex;
   align-items: center;
   padding: 1px 4px;
-  background-color: var(--surface-strong);
-  border-left: 2px solid var(--foreground);
+  background-color: var(--card);
+  border-left: 2px solid var(--muted-foreground);
   overflow: hidden;
 }
 
@@ -287,9 +287,41 @@
   border-left-color: var(--border);
 }
 
-.tq-month-event[data-event-type='schedule'] {
+.tq-month-event[data-event-type='manual'] {
   background-color: var(--card);
-  border-left-color: var(--primary);
+  border-left-color: var(--muted-foreground);
+}
+
+.tq-month-event[data-event-type='gcal-meeting'],
+.tq-month-event[data-event-type='gcal-info'],
+.tq-month-event[data-event-type='schedule'] {
+  background-color: color-mix(
+    in srgb,
+    var(--event-accent, var(--border)) 32%,
+    var(--card)
+  );
+  border-left-color: var(--event-accent, var(--border));
+  border-left-width: 4px;
+}
+
+.tq-month-event[data-event-type='gcal-solo'] {
+  background-color: color-mix(
+    in srgb,
+    var(--event-accent, var(--border)) 14%,
+    var(--card)
+  );
+  border-left-color: var(--event-accent, var(--border));
+}
+
+.tq-month-event[data-event-type='gcal-status'] {
+  background-color: var(--card);
+  border-left-color: var(--border);
+}
+
+.tq-month-event[data-redacted='true'] {
+  background-color: var(--card);
+  border-left-color: var(--border);
+  border-left-width: 2px;
 }
 
 .tq-month-event[data-event-type='auto'] {
@@ -299,6 +331,8 @@
 }
 
 .tq-month-event[data-event-type='completed'] {
+  background-color: var(--surface-strong);
+  border-left-color: var(--foreground);
   opacity: 0.5;
 }
 
@@ -318,6 +352,26 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tq-month-event[data-event-type='manual'] .tq-month-event-title,
+.tq-month-event[data-event-type='auto'] .tq-month-event-title {
+  color: var(--muted-foreground-strong);
+}
+
+.tq-month-event[data-event-type='gcal-meeting'] .tq-month-event-title,
+.tq-month-event[data-event-type='gcal-info'] .tq-month-event-title,
+.tq-month-event[data-event-type='gcal-solo'] .tq-month-event-title,
+.tq-month-event[data-event-type='schedule'] .tq-month-event-title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.tq-month-event[data-redacted='true'] .tq-month-event-title {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  color: var(--foreground);
 }
 
 /* Month view day cell event container */

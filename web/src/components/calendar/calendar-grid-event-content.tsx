@@ -9,6 +9,10 @@ import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview
 import { formatHm } from '#lib/calendar-grid-time'
 import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
 
+interface MonthEventStyle extends React.CSSProperties {
+  '--event-accent'?: string
+}
+
 export function renderCalendarGridEventContent(
   arg: EventContentArg,
 ): React.ReactNode {
@@ -26,10 +30,25 @@ export function renderCalendarGridEventContent(
         />
       )
     }
+    const monthAccent =
+      eventProps.type === 'schedule'
+        ? eventProps.color?.accent
+        : eventProps.type === 'gcal-meeting' ||
+            eventProps.type === 'gcal-info' ||
+            eventProps.type === 'gcal-solo'
+          ? eventProps.calendarColor
+          : undefined
+    const monthEventStyle: MonthEventStyle | undefined =
+      monthAccent == null || eventProps.redacted === true
+        ? undefined
+        : { '--event-accent': monthAccent }
+
     return (
       <div
         className="tq-month-event"
+        style={monthEventStyle}
         data-event-type={eventProps.type}
+        data-redacted={eventProps.redacted === true}
         data-pending-response={isPendingGcalResponse(eventProps)}
         data-continues-before={arg.event.allDay && !arg.isStart}
         data-continues-after={arg.event.allDay && !arg.isEnd}

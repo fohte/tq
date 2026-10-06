@@ -25,7 +25,7 @@ interface EventBlockStyle extends React.CSSProperties {
 
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
-  manual: 'border-l-foreground',
+  manual: 'border-l-muted-foreground',
   completed: 'border-l-foreground',
   auto: 'border-l-muted-foreground',
   'gcal-meeting': 'border-l-border',
@@ -42,9 +42,9 @@ const BG_CLASS: Record<EventKind, string> = {
   'gcal-info': 'bg-card',
   'gcal-solo': 'bg-transparent',
   auto: 'bg-transparent',
-  manual: 'bg-surface-strong',
+  manual: 'bg-card',
   completed: 'bg-surface-strong',
-  'task-date': 'bg-surface-strong',
+  'task-date': 'bg-card',
 }
 
 // Marks only the minority status/info categories, mirroring Google
@@ -131,16 +131,21 @@ export function EventBlock(arg: EventContentArg) {
 
   const badge = type === 'auto' ? 'auto' : undefined
 
-  // gcal-solo drops the calendar accent along with the fill, so it reads as
-  // one step weaker than a meeting rather than just another colored card.
   const accentColor =
     type === 'schedule'
       ? scheduleAccent
       : type === 'gcal-meeting' ||
-          type === 'gcal-status' ||
-          type === 'gcal-info'
+          type === 'gcal-info' ||
+          type === 'gcal-solo' ||
+          type === 'gcal-status'
         ? calendarColor
         : undefined
+  const fillPercent = type === 'gcal-solo' ? 14 : 32
+  const isColoredAppointment =
+    type === 'schedule' ||
+    type === 'gcal-meeting' ||
+    type === 'gcal-info' ||
+    type === 'gcal-solo'
 
   return (
     <EventBlockShell
@@ -148,6 +153,8 @@ export function EventBlock(arg: EventContentArg) {
       className={cn(
         RULE_CLASS[type],
         BG_CLASS[type],
+        isColoredAppointment && type !== 'gcal-solo' && 'border-l-4',
+        type === 'gcal-solo' && 'border-l-2',
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
@@ -158,18 +165,28 @@ export function EventBlock(arg: EventContentArg) {
       continuesBefore={continuesBefore}
       continuesAfter={continuesAfter}
       style={
-        accentColor == null ? undefined : { '--event-accent': accentColor }
+        accentColor == null
+          ? undefined
+          : {
+              '--event-accent': accentColor,
+              ...(isColoredAppointment
+                ? {
+                    backgroundColor: `color-mix(in srgb, var(--event-accent) ${String(fillPercent)}%, var(--card))`,
+                  }
+                : {}),
+            }
       }
       title={
         <span
           className={cn(
             'inline-flex min-w-0 items-center gap-1 text-2xs',
-            type === 'gcal-solo'
-              ? 'text-muted-foreground'
-              : isGcalEventType(type)
-                ? 'text-muted-foreground-strong'
-                : 'font-mono text-foreground',
-            type === 'manual' && 'font-medium',
+            isColoredAppointment
+              ? 'font-sans font-semibold text-foreground'
+              : type === 'manual' || type === 'auto'
+                ? 'font-mono text-muted-foreground-strong'
+                : isGcalEventType(type)
+                  ? 'text-muted-foreground-strong'
+                  : 'font-mono text-foreground',
             isCompleted && 'line-through',
           )}
         >
