@@ -5,8 +5,9 @@ import { createFactory } from 'hono/factory'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { recurrenceRules, schedules, tasks, timeBlocks } from '#db/schema'
+import { recurrenceRules, schedules, timeBlocks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { localDateBoundsToUtc } from '#lib/timezone'
 import { autoAssignApp } from '#routes/schedule-auto-assign'
 import {
@@ -18,13 +19,13 @@ import {
   loadScheduleOverridesForExpansion,
   loadSchedulesWithRules,
 } from '#routes/schedule-shared'
-import { timeBlockToResponse } from '#routes/tasks/shared'
+import { findTaskByIdOrNumber, timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 const timePattern = /^\d{2}:\d{2}$/
 
 const createTimeBlockSchema = z.object({
-  taskId: z.uuid(),
+  taskId: taskIdOrNumber,
   startTime: z.iso.datetime(),
   endTime: z.iso.datetime(),
   isAutoScheduled: z.boolean().optional(),
@@ -135,9 +136,7 @@ export const schedulesApp = new Hono()
       const input = c.req.valid('json')
 
       // Verify task exists
-      const task = await db.query.tasks.findFirst({
-        where: eq(tasks.id, input.taskId),
-      })
+      const task = await findTaskByIdOrNumber(String(input.taskId))
       if (!task) {
         return c.json({ error: 'Task not found' }, 404)
       }
@@ -146,7 +145,7 @@ export const schedulesApp = new Hono()
         await db
           .insert(timeBlocks)
           .values({
-            taskId: input.taskId,
+            taskId: task.id,
             startTime: new Date(input.startTime),
             endTime: new Date(input.endTime),
             isAutoScheduled: input.isAutoScheduled ?? false,

@@ -396,6 +396,7 @@ export function DayViewPresentation({
             <QueuePane
               isLoading={isLoading}
               queueSections={visibleQueueSections}
+              queueDate={formatLocalDate(selectedDate)}
               queueCandidates={isCompactLayout ? [] : queueCandidates}
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}

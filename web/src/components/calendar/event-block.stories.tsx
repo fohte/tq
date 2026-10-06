@@ -100,6 +100,7 @@ const meta = {
         'gcal-info',
         'completed',
         'schedule',
+        'day-queue',
       ] satisfies EventType[],
     },
   },
@@ -136,6 +137,16 @@ export const AutoScheduled: Story = {
   },
 }
 
+export const DayQueue: Story = {
+  name: 'a queued task appears in the all-day row with a dashed border',
+  args: {
+    type: 'day-queue',
+    title: 'Prepare a sample outline',
+    timeText: '',
+    allDay: true,
+  },
+}
+
 // 約束 (default eventType, other attendees present): today's card, unmarked.
 export const GoogleCalendarMeeting: Story = {
   name: 'a Google Calendar meeting appears with its title and time',
@@ -143,6 +154,7 @@ export const GoogleCalendarMeeting: Story = {
     type: 'gcal-meeting',
     title: 'Team standup',
     timeText: '11:00–11:30',
+    calendarColor: '#039BE5',
   },
 }
 
@@ -186,13 +198,14 @@ export const GoogleCalendarMeetingTentative: Story = {
   },
 }
 
-// 自分だけの予定 (default eventType, no other attendees): fill dropped, still unmarked.
+// Personal events use the appointment colors with a subtler fill and thinner accent.
 export const GoogleCalendarSolo: Story = {
   name: 'a personal Google Calendar event appears in the timeline',
   args: {
     type: 'gcal-solo',
     title: '歯医者',
     timeText: '17:00–18:00',
+    calendarColor: '#039BE5',
   },
 }
 
@@ -225,6 +238,7 @@ export const GoogleCalendarInfoAllDay: Story = {
     title: 'Company holiday',
     timeText: '',
     allDay: true,
+    calendarColor: '#8E24AA',
   },
 }
 
@@ -258,6 +272,7 @@ export const GoogleCalendarRedacted: Story = {
     type: 'gcal-solo',
     title: '',
     timeText: '11:00–11:30',
+    calendarColor: '#039BE5',
     redacted: true,
   },
 }

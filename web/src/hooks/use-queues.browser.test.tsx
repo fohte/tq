@@ -6,10 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
-  type Queue,
   useQueueItems,
+  useQueueItemsForDates,
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
@@ -216,14 +217,7 @@ describe('queue polling', () => {
       const mocks = await getMocks()
       const queueGet = assertDefined(mocks['mockQueueGet'])
       const itemGet = assertDefined(mocks['mockGet'])
-      const queues = [
-        {
-          key: DAY_QUEUE_KEY,
-          name: 'today',
-          periodUnit: 'day',
-          position: 0,
-        },
-      ] satisfies Queue[]
+      const queues = [makeQueue({ key: DAY_QUEUE_KEY, name: 'today' })]
       queueGet.mockResolvedValue(jsonResponse(queues))
       itemGet.mockResolvedValue(jsonResponse([]))
 
@@ -260,5 +254,42 @@ describe('queue polling', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('queue items by date', () => {
+  it('fetches each requested date under its own queue query key', async () => {
+    const mockGet = assertDefined((await getMocks())['mockGet'])
+    const dates = ['2026-08-03', '2026-08-04']
+    const itemsByDate = [
+      [makeQueueItem({ id: 'queue-item-first', taskId })],
+      [makeQueueItem({ id: 'queue-item-second', taskId: earlierTaskId })],
+    ]
+    mockGet.mockImplementation(({ query }: { query: { date: string } }) =>
+      Promise.resolve(
+        jsonResponse(itemsByDate[dates.indexOf(query.date)] ?? []),
+      ),
+    )
+
+    const { result } = renderHook(
+      () => useQueueItemsForDates(DAY_QUEUE_KEY, dates),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(result.current.map((query) => query.data)).toEqual(itemsByDate)
+    })
+    expect(
+      mockGet.mock.calls.map((call) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- vi.fn() call args are the queue item GET signature
+        const [{ param, query }] = call as [
+          { param: { key: string }; query: { date: string } },
+        ]
+        return { key: param.key, date: query.date }
+      }),
+    ).toEqual([
+      { key: DAY_QUEUE_KEY, date: dates[0] },
+      { key: DAY_QUEUE_KEY, date: dates[1] },
+    ])
   })
 })

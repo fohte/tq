@@ -29,10 +29,14 @@ async function createTask(title: string, extra: Record<string, unknown> = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, ...extra }),
   })
-  return jsonBody<{ id: string }>(res)
+  return jsonBody<{ id: string; number: number }>(res)
 }
 
-async function putQueueItems(key: string, taskIds: string[], date: string) {
+async function putQueueItems(
+  key: string,
+  taskIds: (string | number)[],
+  date: string,
+) {
   const res = await app.request(`/api/queues/${key}/items`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -124,6 +128,44 @@ describe('PUT /api/queues/:key/items', () => {
         updatedAt: 'TIMESTAMP',
       },
     ])
+  })
+
+  it('resolves task numbers and deduplicates UUID aliases in input order', async () => {
+    const taskA = await createTask('First numbered task')
+    const taskB = await createTask('Second numbered task')
+
+    const { res, body } = await putQueueItems(
+      'day',
+      [String(taskB.number), taskA.number, taskB.id],
+      '2026-03-22',
+    )
+
+    const getActual = () => ({
+      status: res.status,
+      body: body.map(normalizeItem),
+    })
+
+    expect(getActual()).toEqual({
+      status: 200,
+      body: [
+        {
+          id: 'ID',
+          taskId: taskB.id,
+          periodStart: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: taskA.id,
+          periodStart: '2026-03-22',
+          sortOrder: 1,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
   })
 
   it('rounds the date down to the Monday of its week for a week queue', async () => {
@@ -245,9 +287,25 @@ describe('PUT /api/queues/:key/items', () => {
     expect(body.map((item) => item.taskId)).toEqual([taskA.id])
   })
 
-  it('returns 404 for a non-existent task id', async () => {
-    const { res } = await putQueueItems('day', [TEST_UUID], '2026-03-22')
-    expect(res.status).toBe(404)
+  it('returns the same not-found response for a missing UUID or task number', async () => {
+    const results = await Promise.all(
+      [TEST_UUID, '2147483647'].map(async (taskId) => {
+        const res = await app.request('/api/queues/day/items', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskIds: [taskId], date: '2026-03-22' }),
+        })
+        return {
+          status: res.status,
+          body: await jsonBody<{ error: string }>(res),
+        }
+      }),
+    )
+
+    expect(results).toEqual([
+      { status: 404, body: { error: 'Task not found' } },
+      { status: 404, body: { error: 'Task not found' } },
+    ])
   })
 
   it('returns 404 for a non-existent queue key', async () => {
