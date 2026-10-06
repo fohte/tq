@@ -16,36 +16,28 @@ export const eventsApp = new Hono().get('/events', (c) =>
         clearTimeout(heartbeatTimer)
         heartbeatTimer = null
       }
-      wakeListener?.()
+      const resolveWait = wakeListener
       wakeListener = null
+      resolveWait?.()
     }
     const unsubscribe = subscribeToChangeEvents((event) => {
       pending.push(event)
       wake()
     })
 
-    stream.onAbort(() => {
-      unsubscribe()
-      wake()
-    })
+    stream.onAbort(wake)
 
     const isAborted = () => stream.aborted
     const takeNextEvent = () => pending.shift()
 
     while (!isAborted()) {
       if (pending.length === 0) {
-        let wake!: () => void
         const waiting = new Promise<void>((resolve) => {
-          wake = resolve
+          wakeListener = resolve
         })
-        wakeListener = wake
-        const timer = setTimeout(wake, HEARTBEAT_INTERVAL_MS)
-        heartbeatTimer = timer
+        heartbeatTimer = setTimeout(wake, HEARTBEAT_INTERVAL_MS)
         await waiting
 
-        clearTimeout(timer)
-        wakeListener = null
-        heartbeatTimer = null
         if (isAborted()) break
       }
 
@@ -59,5 +51,6 @@ export const eventsApp = new Hono().get('/events', (c) =>
     }
 
     unsubscribe()
+    wake()
   }),
 )

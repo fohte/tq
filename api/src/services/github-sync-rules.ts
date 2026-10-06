@@ -19,6 +19,11 @@ import {
 
 type SyncRuleRow = typeof githubSyncRules.$inferSelect
 
+interface SyncChangeCallbacks {
+  onTaskCreated?: (taskId: string) => void
+  onRuleUpdated?: (ruleId: string) => void
+}
+
 function issueKey(owner: string, repo: string, number: number): string {
   return `${owner.toLowerCase()}/${repo.toLowerCase()}/${String(number)}`
 }
@@ -58,6 +63,7 @@ function isQuietRuleSyncError(error: Error): boolean {
 async function seedIgnoredIssues(
   rule: SyncRuleRow,
   matches: GithubIssueData[],
+  onRuleUpdated?: (ruleId: string) => void,
 ): Promise<void> {
   if (matches.length > 0) {
     await db
@@ -72,10 +78,12 @@ async function seedIgnoredIssues(
       )
       .onConflictDoNothing()
   }
-  await db
+  const updatedRules = await db
     .update(githubSyncRules)
     .set({ seedIgnoreOnNextSync: false, updatedAt: new Date() })
     .where(eq(githubSyncRules.id, rule.id))
+    .returning({ id: githubSyncRules.id })
+  if (updatedRules.length > 0) onRuleUpdated?.(rule.id)
 }
 
 // Runs alongside syncAllGithubLinks (see github-sync.ts) so new-assignment
@@ -83,7 +91,9 @@ async function seedIgnoredIssues(
 // a dedicated poll: `GET /issues` only ever returns currently-assigned
 // issues, so anything in it that isn't linked or ignored yet is a fresh
 // assignment.
-export async function syncGithubAssignedIssues(): Promise<void> {
+export async function syncGithubAssignedIssues(
+  callbacks: SyncChangeCallbacks = {},
+): Promise<void> {
   const rules = await db
     .select()
     .from(githubSyncRules)
@@ -120,7 +130,7 @@ export async function syncGithubAssignedIssues(): Promise<void> {
     )
 
     if (rule.seedIgnoreOnNextSync) {
-      await seedIgnoredIssues(rule, matches)
+      await seedIgnoredIssues(rule, matches, callbacks.onRuleUpdated)
       continue
     }
 
@@ -160,6 +170,7 @@ export async function syncGithubAssignedIssues(): Promise<void> {
         }
         continue
       }
+      callbacks.onTaskCreated?.(result.value.task.id)
       linkedKeys.add(key)
     }
   }

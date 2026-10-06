@@ -1,23 +1,28 @@
 import type { QueryClient, QueryFilters } from '@tanstack/react-query'
+import {
+  type ChangeEvent,
+  type ChangeResource,
+  isChangeResource,
+} from 'api/lib/change-event-contract'
 import { Result } from 'neverthrow'
 
 import {
+  descriptionTemplateKeys,
+  githubSyncRuleKeys,
   labelKeys,
   projectKeys,
   queueKeys,
+  recurringTemplateKeys,
+  savedViewKeys,
+  scheduleKeys,
   taskKeys,
   timeBlockKeys,
 } from '#lib/query-keys'
 import { getScreenId } from '#lib/screen-id'
 import { isRecord } from '#lib/type-guards'
 
-interface ChangeEvent {
-  resource: string
-  id: string | null
-  origin: string | null
-}
-
 interface EventStream {
+  readyState: number
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
@@ -33,6 +38,10 @@ interface EventStream {
 
 type EventSourceFactory = (url: string) => EventStream
 
+const EVENT_SOURCE_CLOSED = 2
+const INITIAL_RECONNECT_DELAY_MS = 1_000
+const MAX_RECONNECT_DELAY_MS = 30_000
+
 interface LiveQuerySyncOptions {
   origin?: string
   createEventSource?: EventSourceFactory
@@ -44,7 +53,7 @@ function parseChangeEvent(raw: string): ChangeEvent | null {
     (data: string) => JSON.parse(data) as unknown,
     () => null,
   )(raw).unwrapOr(null)
-  if (!isRecord(parsed) || typeof parsed['resource'] !== 'string') return null
+  if (!isRecord(parsed) || !isChangeResource(parsed['resource'])) return null
 
   const id = parsed['id']
   const origin = parsed['origin']
@@ -55,37 +64,53 @@ function parseChangeEvent(raw: string): ChangeEvent | null {
   }
 }
 
-function filtersForResourceChange({
-  resource,
-}: ChangeEvent): QueryFilters[] | null {
-  switch (resource) {
-    case 'task':
-      return [
-        { queryKey: taskKeys.all },
-        { queryKey: projectKeys.all },
-        { queryKey: queueKeys.all },
-      ]
-    case 'project':
-      return [{ queryKey: projectKeys.all }]
-    case 'label':
-      return [{ queryKey: labelKeys.all }, { queryKey: taskKeys.all }]
-    case 'queue':
-      return [{ queryKey: queueKeys.all }]
-    case 'time_block':
-      return [{ queryKey: timeBlockKeys.all }, { queryKey: taskKeys.all }]
-    case 'schedule':
-      return [{ queryKey: ['schedules'] }]
-    case 'saved_view':
-      return [{ queryKey: ['saved-views'] }]
-    case 'description_template':
-      return [{ queryKey: ['description-templates'] }]
-    case 'recurring_task_template':
-      return [{ queryKey: ['recurring-templates'] }]
-    case 'github_sync_rule':
-      return [{ queryKey: ['github-sync-rules'] }]
-    default:
-      return null
-  }
+const resourceQueryFilters: Record<
+  ChangeResource,
+  (event: ChangeEvent) => QueryFilters[] | null
+> = {
+  task: () => [
+    { queryKey: taskKeys.all },
+    { queryKey: projectKeys.all },
+    { queryKey: queueKeys.all },
+  ],
+  project: () => [{ queryKey: projectKeys.all }],
+  label: () => [{ queryKey: labelKeys.all }, { queryKey: taskKeys.all }],
+  queue: () => [{ queryKey: queueKeys.all }],
+  time_block: () => [
+    { queryKey: timeBlockKeys.all },
+    { queryKey: taskKeys.all },
+  ],
+  schedule: () => [{ queryKey: scheduleKeys.all }],
+  saved_view: () => [{ queryKey: savedViewKeys.all }],
+  description_template: () => [{ queryKey: descriptionTemplateKeys.all }],
+  recurring_task_template: () => [{ queryKey: recurringTemplateKeys.all }],
+  github_sync_rule: () => [{ queryKey: githubSyncRuleKeys.list }],
+  agent_session: () => [
+    { queryKey: ['agent-sessions'] },
+    { queryKey: taskKeys.all },
+  ],
+  checklist: () => [{ queryKey: taskKeys.all }],
+  checklist_item: () => [{ queryKey: taskKeys.all }],
+  scheduling_setting: () => [{ queryKey: ['scheduling-settings'] }],
+  memo: ({ id }) => [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
+  push: () => [],
+  calendar: () => [
+    { queryKey: ['gcal-calendars'] },
+    { queryKey: ['gcal-events'] },
+  ],
+  github: () => [],
+  asset: () => [],
+  integration: () => [
+    { queryKey: ['integrations'] },
+    { queryKey: ['gcal-calendars'] },
+    { queryKey: ['gcal-events'] },
+    { queryKey: ['github-sync'] },
+  ],
+  unknown: () => null,
+}
+
+function filtersForResourceChange(event: ChangeEvent): QueryFilters[] | null {
+  return resourceQueryFilters[event.resource](event)
 }
 
 function invalidate(queryClient: QueryClient, filters: QueryFilters[]): void {
@@ -107,11 +132,15 @@ export function connectLiveQuerySync(
   const createEventSource =
     options.createEventSource ?? ((url: string) => new EventSource(url))
   const requestSessionCheck = options.checkSession ?? checkSession
-  const eventSource = createEventSource('/api/events')
   const pendingFilters = new Map<string, QueryFilters>()
   let pendingAll = false
   let hasConnected = false
   let sessionCheckRequested = false
+  let shouldInvalidateOnOpen = false
+  let reconnectAttempt = 0
+  let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+  let disconnected = false
+  let eventSource: EventStream
 
   const flushPendingInvalidations = () => {
     if (queryClient.isMutating() > 0) return
@@ -157,33 +186,65 @@ export function connectLiveQuerySync(
   }
 
   const onOpen = () => {
-    if (hasConnected) queueInvalidation(null)
+    if (hasConnected || shouldInvalidateOnOpen) queueInvalidation(null)
     hasConnected = true
+    shouldInvalidateOnOpen = false
+    reconnectAttempt = 0
     sessionCheckRequested = false
   }
 
-  const onError = () => {
-    if (sessionCheckRequested) return
-    sessionCheckRequested = true
-    void requestSessionCheck().catch(() => undefined)
+  const detachEventSource = (source: EventStream) => {
+    source.removeEventListener('change', onChange)
+    source.onopen = null
+    source.onerror = null
+    source.close()
+  }
+
+  const attachEventSource = () => {
+    const source = createEventSource('/api/events')
+    eventSource = source
+    source.addEventListener('change', onChange)
+    source.onopen = onOpen
+    source.onerror = () => {
+      onError(source)
+    }
+  }
+
+  const onError = (source: EventStream) => {
+    if (disconnected || source !== eventSource) return
+    if (!sessionCheckRequested) {
+      sessionCheckRequested = true
+      void requestSessionCheck().catch(() => undefined)
+    }
+    if (source.readyState !== EVENT_SOURCE_CLOSED || reconnectTimer != null) {
+      return
+    }
+
+    shouldInvalidateOnOpen = true
+    const delay = Math.min(
+      INITIAL_RECONNECT_DELAY_MS * 2 ** reconnectAttempt,
+      MAX_RECONNECT_DELAY_MS,
+    )
+    reconnectAttempt += 1
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined
+      if (disconnected || source !== eventSource) return
+      detachEventSource(source)
+      attachEventSource()
+    }, delay)
   }
 
   const unsubscribeFromMutations = queryClient
     .getMutationCache()
     .subscribe(flushPendingInvalidations)
-  let disconnected = false
 
-  eventSource.addEventListener('change', onChange)
-  eventSource.onopen = onOpen
-  eventSource.onerror = onError
+  attachEventSource()
 
   return () => {
     if (disconnected) return
     disconnected = true
     unsubscribeFromMutations()
-    eventSource.removeEventListener('change', onChange)
-    eventSource.onopen = null
-    eventSource.onerror = null
-    eventSource.close()
+    if (reconnectTimer != null) clearTimeout(reconnectTimer)
+    detachEventSource(eventSource)
   }
 }

@@ -1069,6 +1069,27 @@ describe('syncAllGithubLinks', () => {
     const updatedTask = await loadTask(task.id)
     expect(updatedTask.title).toBe(task.title)
   })
+
+  it('publishes task changes with the triggering screen as origin', async () => {
+    const first = await createLinkedTask()
+    const second = await createLinkedTask({ ...ref, number: 43 })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    await syncAllGithubLinks('screen-id')
+
+    const snapshot = () =>
+      events.toSorted((left, right) =>
+        String(left.id).localeCompare(String(right.id)),
+      )
+    expect(snapshot()).toEqual(
+      [first.task.id, second.task.id]
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((id) => ({ resource: 'task', id, origin: 'screen-id' })),
+    )
+  })
 })
 
 describe('syncDueGithubLinks', () => {

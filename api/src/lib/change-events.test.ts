@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { authorMiddleware } from '#lib/author'
 import {
@@ -18,6 +18,7 @@ describe('change events', () => {
     unsubscribe?.()
     unsubscribe = undefined
     events = []
+    vi.useRealTimers()
   })
 
   function makeApp() {
@@ -35,6 +36,16 @@ describe('change events', () => {
         '/api/mcp',
         new Hono().post('/', (c) => c.json({ ok: true })),
       )
+      .route(
+        '/api/github',
+        new Hono()
+          .post('/resolve', (c) => c.json({ preview: true }))
+          .post('/sync', (c) => c.body(null, 204)),
+      )
+      .route(
+        '/api/tasks/:taskId/github-link',
+        new Hono().post('/sync', (c) => c.body(null, 204)),
+      )
   }
 
   async function request(
@@ -44,7 +55,7 @@ describe('change events', () => {
     const response = await makeApp().request(path, init)
     return {
       status: response.status,
-      body: await response.json(),
+      body: response.status === 204 ? null : await response.json(),
       events,
     }
   }
@@ -107,33 +118,67 @@ describe('change events', () => {
     })
   })
 
-  it('does not emit for invalid headers, failed responses, GET, or MCP writes', async () => {
-    const app = makeApp()
-    const invalid = await app.request('/api/tasks/task-id', {
-      method: 'PATCH',
-      headers: { 'X-Author': 'robot' },
+  it('does not emit for invalid author headers', async () => {
+    expect(
+      await request('/api/tasks/task-id', {
+        method: 'PATCH',
+        headers: { 'X-Author': 'robot' },
+      }),
+    ).toEqual({
+      status: 400,
+      body: { error: 'Invalid X-Author header' },
+      events: [],
     })
-    const failed = await app.request('/api/tasks/failed/task-id', {
-      method: 'PATCH',
-    })
-    const read = await app.request('/api/tasks/task-id')
-    const mcp = await app.request('/api/mcp', { method: 'POST' })
+  })
 
-    const snapshot = async () => ({
-      invalid: { status: invalid.status, body: await invalid.json() },
-      failed: { status: failed.status, body: await failed.json() },
-      read: { status: read.status, body: await read.json() },
-      mcp: { status: mcp.status, body: await mcp.json() },
-      events,
+  it('does not emit for failed writes', async () => {
+    expect(
+      await request('/api/tasks/failed/task-id', { method: 'PATCH' }),
+    ).toEqual({
+      status: 409,
+      body: { error: 'failed' },
+      events: [],
     })
-    expect(await snapshot()).toEqual({
-      invalid: {
-        status: 400,
-        body: { error: 'Invalid X-Author header' },
-      },
-      failed: { status: 409, body: { error: 'failed' } },
-      read: { status: 200, body: { id: 'task-id' } },
-      mcp: { status: 200, body: { ok: true } },
+  })
+
+  it('does not emit for GET requests', async () => {
+    expect(await request('/api/tasks/task-id', { method: 'GET' })).toEqual({
+      status: 200,
+      body: { id: 'task-id' },
+      events: [],
+    })
+  })
+
+  it('does not emit for MCP writes', async () => {
+    expect(await request('/api/mcp', { method: 'POST' })).toEqual({
+      status: 200,
+      body: { ok: true },
+      events: [],
+    })
+  })
+
+  it('does not emit generic events for GitHub URL previews', async () => {
+    expect(await request('/api/github/resolve', { method: 'POST' })).toEqual({
+      status: 200,
+      body: { preview: true },
+      events: [],
+    })
+  })
+
+  it('does not emit generic events for client-triggered GitHub sync', async () => {
+    expect(await request('/api/github/sync', { method: 'POST' })).toEqual({
+      status: 204,
+      body: null,
+      events: [],
+    })
+  })
+
+  it('does not emit generic events for task GitHub link sync', async () => {
+    expect(
+      await request('/api/tasks/task-id/github-link/sync', { method: 'POST' }),
+    ).toEqual({
+      status: 204,
+      body: null,
       events: [],
     })
   })
@@ -162,5 +207,23 @@ describe('change events', () => {
       chunk:
         'event: change\ndata: {"resource":"task","id":"task-id","origin":null}\n\n',
     })
+  })
+
+  it('sends a heartbeat after 30 seconds without changes', async () => {
+    vi.useFakeTimers()
+    const response = await new Hono()
+      .route('/api', eventsApp)
+      .request('/api/events')
+    const reader = response.body?.getReader() as
+      ReadableStreamDefaultReader<Uint8Array> | undefined
+    const nextChunk = reader?.read()
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    const chunk = await nextChunk
+    await reader?.cancel()
+
+    const snapshot = () =>
+      chunk?.value == null ? null : new TextDecoder().decode(chunk.value)
+    expect(snapshot()).toEqual(': heartbeat\n\n')
   })
 })

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { connectLiveQuerySync } from '#lib/live-query-sync'
 
 interface EventStream {
+  readyState: number
   addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
@@ -20,18 +21,28 @@ interface EventStream {
 class TestEventStream extends EventTarget implements EventStream {
   onopen: ((event: Event) => void) | null = null
   onerror: ((event: Event) => void) | null = null
+  readyState = 0
   closed = false
+  opened = false
 
   close(): void {
     this.closed = true
+    this.readyState = 2
   }
 
   open(): void {
+    this.readyState = 1
+    this.opened = true
     this.onopen?.(new Event('open'))
   }
 
   fail(): void {
     this.onerror?.(new Event('error'))
+  }
+
+  failPermanently(): void {
+    this.readyState = 2
+    this.fail()
   }
 
   sendChange(data: string): void {
@@ -50,6 +61,7 @@ function createConnection(
 ) {
   const queryClient = new QueryClient()
   const eventStream = new TestEventStream()
+  const eventStreams = [eventStream]
   const invalidations = vi
     .spyOn(queryClient, 'invalidateQueries')
     .mockResolvedValue(undefined)
@@ -58,7 +70,10 @@ function createConnection(
     origin: options.origin ?? 'screen-one',
     createEventSource: (url) => {
       urls.push(url)
-      return eventStream
+      if (urls.length === 1) return eventStream
+      const replacement = new TestEventStream()
+      eventStreams.push(replacement)
+      return replacement
     },
     ...(options.checkSession === undefined
       ? {}
@@ -66,7 +81,14 @@ function createConnection(
   })
   clients.push(queryClient)
   disconnectors.push(disconnect)
-  return { disconnect, eventStream, invalidations, queryClient, urls }
+  return {
+    disconnect,
+    eventStream,
+    eventStreams,
+    invalidations,
+    queryClient,
+    urls,
+  }
 }
 
 afterEach(() => {
@@ -75,6 +97,7 @@ afterEach(() => {
   disconnectors.length = 0
   clients.length = 0
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 describe('connectLiveQuerySync', () => {
@@ -120,6 +143,16 @@ describe('connectLiveQuerySync', () => {
     expect(invalidations.mock.calls.map(([filters]) => filters)).toEqual([
       undefined,
     ])
+  })
+
+  it('ignores known resources without query consumers', () => {
+    const { eventStream, invalidations } = createConnection()
+
+    eventStream.sendChange(
+      JSON.stringify({ resource: 'github', id: null, origin: null }),
+    )
+
+    expect(invalidations.mock.calls).toEqual([])
   })
 
   it('waits for a local mutation before applying queued invalidations', async () => {
@@ -186,6 +219,39 @@ describe('connectLiveQuerySync', () => {
     eventStream.fail()
 
     expect(checkSession.mock.calls).toEqual([[], []])
+  })
+
+  it('recreates a permanently closed stream and invalidates after recovery', async () => {
+    vi.useFakeTimers()
+    const checkSession = vi.fn(() => Promise.resolve())
+    const { eventStream, eventStreams, invalidations, urls } = createConnection(
+      {
+        checkSession,
+      },
+    )
+
+    eventStream.failPermanently()
+    await vi.advanceTimersByTimeAsync(1_000)
+    eventStreams[1]?.open()
+
+    const snapshot = () => ({
+      urls,
+      streamStates: eventStreams.map(({ closed, opened }) => ({
+        closed,
+        opened,
+      })),
+      sessionChecks: checkSession.mock.calls,
+      invalidations: invalidations.mock.calls.map(([filters]) => filters),
+    })
+    expect(snapshot()).toEqual({
+      urls: ['/api/events', '/api/events'],
+      streamStates: [
+        { closed: true, opened: false },
+        { closed: false, opened: true },
+      ],
+      sessionChecks: [[]],
+      invalidations: [undefined],
+    })
   })
 
   it('closes the event stream when disconnected', () => {

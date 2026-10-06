@@ -331,15 +331,27 @@ async function syncLinks(
   }
 }
 
-async function runSync(): Promise<void> {
+async function runSync(origin: string | null): Promise<void> {
   if (!(await hasGithubAccess())) {
     return
   }
 
   const links = await db.select().from(taskGithubLinks)
-  await syncLinks(links)
+  const changedTaskIds = new Set<string>()
+  const changedRuleIds = new Set<string>()
+  await syncLinks(links, undefined, (taskId) => changedTaskIds.add(taskId))
 
-  await syncGithubAssignedIssues()
+  await syncGithubAssignedIssues({
+    onTaskCreated: (taskId) => changedTaskIds.add(taskId),
+    onRuleUpdated: (ruleId) => changedRuleIds.add(ruleId),
+  })
+
+  for (const id of changedTaskIds) {
+    publishChangeEvent({ resource: 'task', id, origin })
+  }
+  for (const id of changedRuleIds) {
+    publishChangeEvent({ resource: 'github_sync_rule', id, origin })
+  }
 }
 
 export async function syncDueGithubLinks(): Promise<void> {
@@ -380,8 +392,10 @@ let inFlightSync: Promise<void> | null = null
 
 // The client-triggered pass refreshes links while the app is open; the
 // server-side scheduler also checks links when no client is active.
-export function syncAllGithubLinks(): Promise<void> {
-  inFlightSync ??= runSync().finally(() => {
+export function syncAllGithubLinks(
+  origin: string | null = null,
+): Promise<void> {
+  inFlightSync ??= runSync(origin).finally(() => {
     inFlightSync = null
   })
   return inFlightSync

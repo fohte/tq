@@ -98,6 +98,6 @@ export const githubApp = new Hono()
   // The client keeps links fresh while the app is open; the hourly server
   // scheduler handles links while no client is active.
   .post('/sync', async (c) => {
-    await syncAllGithubLinks()
+    await syncAllGithubLinks(c.get('origin'))
     return c.body(null, 204)
   })

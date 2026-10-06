@@ -1,17 +1,15 @@
 import type { Context, MiddlewareHandler } from 'hono'
 import { routePath } from 'hono/route'
 
-export interface ChangeEvent {
-  resource: string
-  id: string | null
-  origin: string | null
-}
+import type { ChangeEvent, ChangeResource } from '#lib/change-event-contract'
+
+export type { ChangeEvent } from '#lib/change-event-contract'
 
 type ChangeEventListener = (event: ChangeEvent) => void
 
 const listeners = new Set<ChangeEventListener>()
 
-const singularResources: Record<string, string> = {
+const routeResources: Record<string, ChangeResource> = {
   tasks: 'task',
   projects: 'project',
   labels: 'label',
@@ -23,7 +21,20 @@ const singularResources: Record<string, string> = {
   'description-templates': 'description_template',
   'saved-views': 'saved_view',
   'scheduling-settings': 'scheduling_setting',
+  memos: 'memo',
+  push: 'push',
+  calendar: 'calendar',
+  github: 'github',
+  assets: 'asset',
+  integrations: 'integration',
 }
+
+// React Query uses these POST routes for reads or syncs; sync writes publish targeted events separately.
+const postQueryRoutes = new Set([
+  '/api/github/resolve',
+  '/api/github/sync',
+  '/api/tasks/:taskId/github-link/sync',
+])
 
 export function subscribeToChangeEvents(
   listener: ChangeEventListener,
@@ -40,7 +51,7 @@ export function publishChangeEvent(event: ChangeEvent): void {
   }
 }
 
-function resourceFromRoute(routePattern: string): string | null {
+function resourceFromRoute(routePattern: string): ChangeResource | null {
   const segments = routePattern.split('/').filter(Boolean)
   if (segments[0] !== 'api' || segments[1] == null || segments[1] === 'mcp') {
     return null
@@ -56,10 +67,7 @@ function resourceFromRoute(routePattern: string): string | null {
     return 'github_sync_rule'
   }
 
-  return (
-    singularResources[rootResource] ??
-    rootResource.replace(/s$/, '').replaceAll('-', '_')
-  )
+  return routeResources[rootResource] ?? 'unknown'
 }
 
 function idFromRoute(routePattern: string, c: Context) {
@@ -86,6 +94,8 @@ export const changeEventMiddleware: MiddlewareHandler = async (c, next) => {
   if (c.res.status < 200 || c.res.status >= 300) return
 
   const routePattern = routePath(c, -1)
+  if (postQueryRoutes.has(routePattern)) return
+
   const resource = resourceFromRoute(routePattern)
   if (resource == null) return
 
