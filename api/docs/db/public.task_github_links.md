@@ -6,27 +6,27 @@ GitHub issues and pull requests linked to tasks.
 
 ## Columns
 
-| Name              | Type                     | Default | Nullable | Children | Parents                         | Comment                                                                                |
-| ----------------- | ------------------------ | ------- | -------- | -------- | ------------------------------- | -------------------------------------------------------------------------------------- |
-| id                | text                     |         | false    |          |                                 |                                                                                        |
-| task_id           | text                     |         | false    |          | [public.tasks](public.tasks.md) | Task linked to this GitHub item.                                                       |
-| owner             | text                     |         | false    |          |                                 | Owner of the repository containing this item.                                          |
-| repo              | text                     |         | false    |          |                                 | Repository containing this item.                                                       |
-| number            | integer                  |         | false    |          |                                 | GitHub issue or pull request number.                                                   |
-| kind              | text                     |         | false    |          |                                 | GitHub item type: issue or pull_request.                                               |
-| url               | text                     |         | false    |          |                                 | URL of the linked GitHub item.                                                         |
-| state             | text                     |         | false    |          |                                 | Cached item state: open, closed, or merged.                                            |
-| title             | text                     |         | false    |          |                                 | Cached title of the linked GitHub item.                                                |
-| last_synced_at    | timestamp with time zone | now()   | false    |          |                                 | Time when the linked item's cached GitHub state was last synchronized.                 |
-| created_at        | timestamp with time zone | now()   | false    |          |                                 |                                                                                        |
-| updated_at        | timestamp with time zone | now()   | false    |          |                                 |                                                                                        |
-| etag              | text                     |         | true     |          |                                 | ETag from the latest GitHub response, used for conditional synchronization.            |
-| seq               | bigint                   |         | false    |          |                                 | Insertion-order sequence used to break ties between links created at the same time.    |
-| role              | text                     |         | false    |          |                                 | Whether this item is the task subject or a GitHub blocker.                             |
-| notify_events     | text[]                   |         | false    |          |                                 | GitHub change events selected for notifications: closed, reopened, comments, or other. |
-| comments_count    | integer                  |         | true     |          |                                 | Cached number of comments on the linked GitHub item.                                   |
-| github_updated_at | timestamp with time zone |         | true     |          |                                 | GitHub updated_at timestamp observed during the latest fetch.                          |
-| state_reason      | text                     |         | true     |          |                                 | Cached GitHub reason for closing or reopening the item.                                |
+| Name              | Type                     | Default | Nullable | Children                                                      | Parents                         | Comment                                                                                |
+| ----------------- | ------------------------ | ------- | -------- | ------------------------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------- |
+| id                | text                     |         | false    | [public.task_checklist_items](public.task_checklist_items.md) |                                 |                                                                                        |
+| task_id           | text                     |         | false    |                                                               | [public.tasks](public.tasks.md) | Task linked to this GitHub item.                                                       |
+| owner             | text                     |         | false    |                                                               |                                 | Owner of the repository containing this item.                                          |
+| repo              | text                     |         | false    |                                                               |                                 | Repository containing this item.                                                       |
+| number            | integer                  |         | false    |                                                               |                                 | GitHub issue or pull request number.                                                   |
+| kind              | text                     |         | false    |                                                               |                                 | GitHub item type: issue or pull_request.                                               |
+| url               | text                     |         | false    |                                                               |                                 | URL of the linked GitHub item.                                                         |
+| state             | text                     |         | false    |                                                               |                                 | Cached item state: open, closed, or merged.                                            |
+| title             | text                     |         | false    |                                                               |                                 | Cached title of the linked GitHub item.                                                |
+| last_synced_at    | timestamp with time zone | now()   | false    |                                                               |                                 | Time when the linked item's cached GitHub state was last synchronized.                 |
+| created_at        | timestamp with time zone | now()   | false    |                                                               |                                 |                                                                                        |
+| updated_at        | timestamp with time zone | now()   | false    |                                                               |                                 |                                                                                        |
+| etag              | text                     |         | true     |                                                               |                                 | ETag from the latest GitHub response, used for conditional synchronization.            |
+| seq               | bigint                   |         | false    |                                                               |                                 | Insertion-order sequence used to break ties between links created at the same time.    |
+| role              | text                     |         | false    |                                                               |                                 | Whether this item is the task subject or a GitHub blocker.                             |
+| notify_events     | text[]                   |         | false    |                                                               |                                 | GitHub change events selected for notifications: closed, reopened, comments, or other. |
+| comments_count    | integer                  |         | true     |                                                               |                                 | Cached number of comments on the linked GitHub item.                                   |
+| github_updated_at | timestamp with time zone |         | true     |                                                               |                                 | GitHub updated_at timestamp observed during the latest fetch.                          |
+| state_reason      | text                     |         | true     |                                                               |                                 | Cached GitHub reason for closing or reopening the item.                                |
 
 ## Constraints
 
@@ -68,6 +68,7 @@ GitHub issues and pull requests linked to tasks.
 erDiagram
 
 "public.task_github_links" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_checklist_items" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE SET NULL"
 
 "public.task_github_links" {
   text id
@@ -111,6 +112,19 @@ erDiagram
   text template_id FK
   date occurrence_date
   uuid description_template_id FK
+}
+"public.task_checklist_items" {
+  text id
+  text checklist_id FK
+  text parent_item_id FK
+  text content
+  text note
+  timestamp_with_time_zone checked_at
+  integer sort_order
+  text github_link_id FK
+  text subtask_id FK
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

@@ -8,6 +8,8 @@ import { authorMiddleware } from '#lib/author'
 import { agentSessionsApp } from '#routes/agent-sessions'
 import { assetsApp } from '#routes/assets'
 import { calendarApp } from '#routes/calendar'
+import { checklistItemsByIdApp } from '#routes/checklist-items'
+import { checklistsApp } from '#routes/checklists'
 import { descriptionTemplatesApp } from '#routes/description-templates'
 import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
@@ -23,6 +25,7 @@ import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
 import { schedulingSettingsApp } from '#routes/scheduling-settings'
 import { taskAgentSessionsApp } from '#routes/task-agent-sessions'
+import { checklistItemsApp, taskChecklistsApp } from '#routes/task-checklists'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
@@ -60,6 +63,10 @@ const app = new Hono()
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
+  .route('/api/tasks/:taskId/checklists', taskChecklistsApp)
+  .route('/api/checklists', checklistsApp)
+  .route('/api/checklists', checklistItemsApp)
+  .route('/api/checklist-items', checklistItemsByIdApp)
   .route('/api/tasks/:taskId/github-link', taskGithubLinkApp)
   .route('/api/tasks/:taskId/agent-sessions', taskAgentSessionsApp)
   .route('/api/projects', projectsApp)

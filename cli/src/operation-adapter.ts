@@ -190,9 +190,10 @@ async function executeCommandOperation(
 
   const contentInput = operation.cli.contentInput
   if (contentInput != null) {
+    const fileOptionName = contentInput.fileOption?.name ?? 'file'
     const filePath =
-      'file' in options && typeof options['file'] === 'string'
-        ? options['file']
+      fileOptionName in options && typeof options[fileOptionName] === 'string'
+        ? options[fileOptionName]
         : undefined
     const content = await readContentInput(filePath, stdin)
     if (content.isErr()) {
@@ -203,7 +204,7 @@ async function executeCommandOperation(
       reportError(
         actionCommand,
         new Error(
-          'Content is required. Provide --file <path> or pipe content via stdin.',
+          `Content is required. Provide --${toKebabCase(contentInput.fileOption?.name ?? 'file')} <path> or pipe content via stdin.`,
         ),
         ignoreErrors,
       )
@@ -329,9 +330,11 @@ function registerOperationsInGroup(
 
     const contentInput = operation.cli.contentInput
     if (contentInput != null) {
+      const optionName = contentInput.fileOption?.name ?? 'file'
       command = command.option(
-        '--file <path>',
-        'Read content from a file instead of stdin',
+        `--${toKebabCase(optionName)} <path>`,
+        contentInput.fileOption?.description ??
+          'Read content from a file instead of stdin',
       )
     }
 
