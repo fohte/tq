@@ -10,7 +10,7 @@ import {
   isGcalEventType,
 } from '#lib/calendar-utils'
 
-export function isCalendarEventClickable(props: CalendarEventProps): boolean {
+function isCalendarEventClickable(props: CalendarEventProps): boolean {
   return isClickableEvent(props) || getGcalEventDetails(props) != null
 }
 
