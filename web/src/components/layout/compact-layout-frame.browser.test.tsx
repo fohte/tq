@@ -29,6 +29,13 @@ function controlClickResult(requests: NavigationRequests, actionCalls: number) {
   return { requests, actionCalls }
 }
 
+function modifierClickResult(
+  requests: NavigationRequests,
+  clickDefaultPrevented: boolean[],
+) {
+  return { requests, clickDefaultPrevented }
+}
+
 describe('CompactLayoutFrame', () => {
   beforeEach(() => {
     setDesktopApi()
@@ -45,9 +52,11 @@ describe('CompactLayoutFrame', () => {
     const user = userEvent.setup()
     render(
       <CompactLayoutFrame>
-        <a href="/tasks/task-123?source=compact#comments">
-          <span>open task</span>
-        </a>
+        <div role="button" tabIndex={0}>
+          <a href="/tasks/task-123?source=compact#comments">
+            <span>open task</span>
+          </a>
+        </div>
       </CompactLayoutFrame>,
     )
 
@@ -55,6 +64,7 @@ describe('CompactLayoutFrame', () => {
     const clickDefaultPrevented: boolean[] = []
     link.addEventListener('click', (event) => {
       clickDefaultPrevented.push(event.defaultPrevented)
+      event.preventDefault()
     })
     await user.click(link)
 
@@ -112,8 +122,42 @@ describe('CompactLayoutFrame', () => {
       cancelable: true,
       button: 0,
     })
+    const clickDefaultPrevented: boolean[] = []
+    link.addEventListener('click', (event) => {
+      clickDefaultPrevented.push(event.defaultPrevented)
+      event.preventDefault()
+    })
     link.dispatchEvent(clickEvent)
 
-    expect(clickEvent.defaultPrevented).toBe(false)
+    expect(clickDefaultPrevented).toEqual([false])
+  })
+
+  it('preserves modifier-click behavior for same-origin links', () => {
+    const openInMainWindow = vi.fn<(path: string) => void>()
+    setDesktopApi(openInMainWindow)
+
+    render(
+      <CompactLayoutFrame>
+        <a href="/tasks/task-123">open task</a>
+      </CompactLayoutFrame>,
+    )
+
+    const link = screen.getByRole('link', { name: 'open task' })
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      metaKey: true,
+    })
+    const clickDefaultPrevented: boolean[] = []
+    link.addEventListener('click', (event) => {
+      clickDefaultPrevented.push(event.defaultPrevented)
+      event.preventDefault()
+    })
+    link.dispatchEvent(clickEvent)
+
+    expect(
+      modifierClickResult(openInMainWindow.mock.calls, clickDefaultPrevented),
+    ).toEqual({ requests: [], clickDefaultPrevented: [false] })
   })
 })

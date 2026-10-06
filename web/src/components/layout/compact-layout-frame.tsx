@@ -2,6 +2,17 @@ import type { MouseEvent, ReactNode } from 'react'
 
 import { getTqDesktopApi } from '#lib/tq-desktop'
 
+const INTERACTIVE_CONTROL_SELECTOR = [
+  'button',
+  'input',
+  'select',
+  'textarea',
+  '[role="button"]',
+  '[tabindex]',
+  '[data-slot="preview-card-trigger"]',
+  '[contenteditable]:not([contenteditable="false"])',
+].join(', ')
+
 function handleClickCapture(event: MouseEvent<HTMLDivElement>) {
   const desktop = getTqDesktopApi()
   if (
@@ -18,17 +29,14 @@ function handleClickCapture(event: MouseEvent<HTMLDivElement>) {
 
   const target = event.target
   if (!(target instanceof Element)) return
-  if (
-    target.closest(
-      'button, input, select, textarea, [role="button"], [tabindex], [data-slot="preview-card-trigger"], [contenteditable]:not([contenteditable="false"])',
-    ) != null
-  ) {
-    return
-  }
 
   const link = target.closest('a[href]')
+  if (!(link instanceof HTMLAnchorElement)) return
+
+  const control = target.closest(INTERACTIVE_CONTROL_SELECTOR)
+  if (control != null && control !== link && link.contains(control)) return
+
   if (
-    !(link instanceof HTMLAnchorElement) ||
     link.hasAttribute('download') ||
     (link.target !== '' && link.target.toLowerCase() !== '_self') ||
     link.origin !== window.location.origin
