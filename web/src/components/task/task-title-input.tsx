@@ -5,8 +5,7 @@ import { useMemo, useRef, useState } from 'react'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
 import { TaskShorthandHelp } from '#components/task/task-shorthand-help'
-import { useCurrentContext } from '#hooks/use-current-context'
-import { useLabels } from '#hooks/use-labels'
+import { type LabelFilter, useLabelsForContext } from '#hooks/use-labels'
 import {
   type MentionSuggestion,
   useTaskMentionSuggestions,
@@ -25,6 +24,7 @@ export function TaskTitleInput({
   placeholder,
   autoFocus,
   className,
+  context,
   detectInitialTrigger = false,
 }: {
   value: string
@@ -32,13 +32,13 @@ export function TaskTitleInput({
   placeholder?: string
   autoFocus?: boolean
   className?: string
+  context?: LabelFilter['context'] | ''
   /** Lets a story render the suggestion-menu-open state from `value` alone,
    * without a play function. Real callers never set this — they always
    * mount with an empty title, so the popup only opens once the user types. */
   detectInitialTrigger?: boolean
 }) {
-  const context = useCurrentContext()
-  const { data: labelsData } = useLabels({ context })
+  const { data: labelsData } = useLabelsForContext(context)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [cursorTrigger, setCursorTrigger] = useState<{
     trigger: TriggerChar

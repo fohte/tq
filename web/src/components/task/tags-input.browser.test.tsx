@@ -1,21 +1,39 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import {
+  makeLabel,
+  seedContextLabels,
+} from '#components/label/label-test-fixtures'
 import { TagsInput } from '#components/task/tags-input'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import { labelKeys } from '#lib/query-keys'
 
-function renderTagsInput(initialLabels: string[] = []) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
+function renderTagsInput(
+  initialLabels: string[] = [],
+  options: {
+    queryClient?: QueryClient
+    context?: 'work' | 'personal' | ''
+  } = {},
+) {
+  const queryClient =
+    options.queryClient ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
 
   function Managed() {
     const [labels, setLabels] = useState(initialLabels)
-    return <TagsInput labels={labels} onLabelsChange={setLabels} />
+    return (
+      <TagsInput
+        labels={labels}
+        onLabelsChange={setLabels}
+        context={options.context}
+      />
+    )
   }
 
   return {
@@ -29,6 +47,26 @@ function renderTagsInput(initialLabels: string[] = []) {
 }
 
 describe('TagsInput', () => {
+  it('uses the current context when no label context is selected', async () => {
+    resetSessionOpenSettings({ localContext: 'work' })
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    seedContextLabels(queryClient)
+    const user = userEvent.setup()
+    renderTagsInput([], { queryClient, context: '' })
+
+    await user.click(screen.getByRole('button', { name: '+ add tag' }))
+
+    await waitFor(() => {
+      expect(
+        screen
+          .getAllByRole('button', { name: /^#/ })
+          .map((button) => button.innerText),
+      ).toEqual(['#work-only'])
+    })
+  })
+
   it('opens the input on "+ add tag" click', async () => {
     const user = userEvent.setup()
     renderTagsInput()
