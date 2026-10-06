@@ -8,6 +8,7 @@ import {
 } from '#components/calendar/calendar-grid'
 import type { CalendarViewType } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
 import { formatLocalDate } from '#lib/date-range'
 
 const today = new Date()
@@ -41,6 +42,7 @@ const sampleEvents: TimeBlockEvent[] = [
     start: `${dateStr}T11:00:00`,
     end: `${dateStr}T11:30:00`,
     type: 'gcal-meeting',
+    calendarColor: '#039BE5',
   },
   {
     id: '4',
@@ -58,6 +60,7 @@ const sampleEvents: TimeBlockEvent[] = [
     end: tomorrowStr,
     type: 'gcal-info',
     allDay: true,
+    calendarColor: '#F6BF26',
   },
   {
     id: '6',
@@ -138,6 +141,26 @@ export const WeekView: Story = {
   name: 'the calendar grid lays out hourly slots across a week',
   args: {
     activeView: 'week',
+  },
+}
+
+export const WeekViewWithDayQueue: Story = {
+  name: 'the weekly calendar shows a queued task in the all-day row',
+  args: {
+    activeView: 'week',
+    events: [
+      ...sampleEvents,
+      makeTimeBlockEvent({
+        id: `day-queue-${dateStr}-sample-task`,
+        title: 'Prepare a sample outline',
+        start: dateStr,
+        end: tomorrowStr,
+        type: 'day-queue',
+        taskId: 'sample-task',
+        allDay: true,
+        queuePosition: 0,
+      }),
+    ],
   },
 }
 

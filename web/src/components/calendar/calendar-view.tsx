@@ -31,6 +31,7 @@ export interface TimeBlockEvent {
     | 'gcal-info'
     | 'completed'
     | 'schedule'
+    | 'day-queue'
     | 'task-date'
   /** Parent task reference (e.g. "#488 tq 作成") */
   parentRef?: string
@@ -38,7 +39,7 @@ export interface TimeBlockEvent {
   color?: {
     accent: string
   }
-  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' | 'task-date' */
+  /** Underlying task id, present for task-backed events. */
   taskId?: string
   dateTaskKind?: DateTaskCalendarEventKind
   dateTaskOverdue?: boolean
@@ -48,7 +49,7 @@ export interface TimeBlockEvent {
   isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string
-  /** Google Calendar's color for the event's calendar; used as an accent on gcal events except gcal-solo, which renders without a calendar accent */
+  /** Google Calendar's color for the event's calendar */
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
   responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted'
@@ -62,6 +63,8 @@ export interface TimeBlockEvent {
   redacted?: boolean
   /** When true, rendered in FullCalendar's all-day row instead of a time slot */
   allDay?: boolean
+  /** Position in the day's queue, used to keep all-day tasks in queue order */
+  queuePosition?: number
 }
 
 interface CalendarViewProps {

@@ -26,6 +26,8 @@ type GithubStateReason = (typeof GITHUB_STATE_REASONS)[number]
 // to determine the resource kind (see fetchGithubIssue).
 const GITHUB_ISSUE_URL_PATTERN =
   /^https:\/\/github\.com\/(?<owner>[^/\s]+)\/(?<repo>[^/\s]+)\/(?:issues|pull)\/(?<number>\d+)\/?$/
+const GITHUB_PULL_REQUEST_URL_PATTERN =
+  /^https:\/\/github\.com\/(?<owner>[^/\s]+)\/(?<repo>[^/\s]+)\/pull\/(?<number>\d+)\/?$/
 
 export interface GithubResourceRef {
   owner: string
@@ -38,6 +40,27 @@ export class InvalidGithubUrlError extends Error {
     super(`Not a GitHub issue or pull request URL: ${url}`)
     this.name = 'InvalidGithubUrlError'
   }
+}
+
+export class GithubPullRequestRequiredError extends Error {
+  constructor() {
+    super('Only GitHub pull requests can be linked to checklist items')
+    this.name = 'GithubPullRequestRequiredError'
+  }
+}
+
+export function parseGithubPullRequestUrl(
+  url: string,
+): Result<
+  GithubResourceRef,
+  InvalidGithubUrlError | GithubPullRequestRequiredError
+> {
+  const normalizedUrl = url.trim().split(/[?#]/)[0] ?? ''
+  return parseGithubIssueUrl(url).andThen((ref) =>
+    GITHUB_PULL_REQUEST_URL_PATTERN.test(normalizedUrl)
+      ? ok(ref)
+      : err(new GithubPullRequestRequiredError()),
+  )
 }
 
 export function parseGithubIssueUrl(

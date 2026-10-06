@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
 import type { DbTransaction } from '#db/connection'
 import { taskChecklistItems } from '#db/schema'
@@ -47,4 +47,30 @@ export async function recalculateChecklistAncestors(
       itemId = item.parentItemId
     }
   }
+}
+
+export async function checkChecklistItemsForGithubLink(
+  tx: DbTransaction,
+  githubLinkId: string,
+): Promise<void> {
+  const linkedItems = await tx
+    .select({ parentItemId: taskChecklistItems.parentItemId })
+    .from(taskChecklistItems)
+    .where(eq(taskChecklistItems.githubLinkId, githubLinkId))
+
+  const now = new Date()
+  await tx
+    .update(taskChecklistItems)
+    .set({ checkedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(taskChecklistItems.githubLinkId, githubLinkId),
+        isNull(taskChecklistItems.checkedAt),
+      ),
+    )
+
+  await recalculateChecklistAncestors(
+    tx,
+    linkedItems.map((item) => item.parentItemId),
+  )
 }

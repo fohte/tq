@@ -2,11 +2,13 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
+import { checklistItemErrorResponse } from '#routes/checklist-item-error'
 import { checklistItemToResponse } from '#routes/checklist-response'
 import {
   moveChecklistItemSchema,
   updateChecklistItemSchema,
 } from '#schemas/task-checklist'
+import { updateChecklistItemWithGithubUrl } from '#services/task-checklist-github-links'
 import {
   deleteChecklistItem,
   moveChecklistItem,
@@ -19,13 +21,22 @@ export const checklistItemsByIdApp = new Hono()
     '/:itemId',
     zValidator('json', updateChecklistItemSchema),
     async (c) => {
-      const result = await db.transaction((tx) =>
-        updateChecklistItem(tx, c.req.param('itemId'), c.req.valid('json')),
-      )
+      const itemId = c.req.param('itemId')
+      const { github, ...input } = c.req.valid('json')
+      const result =
+        github == null
+          ? await db.transaction((tx) => updateChecklistItem(tx, itemId, input))
+          : await updateChecklistItemWithGithubUrl(
+              itemId,
+              input,
+              github,
+              c.get('author'),
+            )
 
       return result.match(
         (item) => c.json(checklistItemToResponse(item), 200),
-        (error) => c.json({ error: error.message }, error.status),
+        (error) =>
+          checklistItemErrorResponse(c, error, 'checklist-item.update'),
       )
     },
   )

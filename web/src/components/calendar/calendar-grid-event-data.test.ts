@@ -27,7 +27,10 @@ describe('mapCalendarGridEvents', () => {
         end: '2026-10-07',
         allDay: true,
         displayPriority: 1,
+        queueOrder: 1,
+        queuePosition: undefined,
         editable: false,
+        durationEditable: true,
         extendedProps: {
           type: 'task-date',
           parentRef: undefined,
@@ -40,6 +43,7 @@ describe('mapCalendarGridEvents', () => {
           isAutoScheduled: undefined,
           scheduleId: undefined,
           scheduleStart: '2026-10-06',
+          queuePosition: undefined,
           redacted: undefined,
           calendarColor: undefined,
           responseStatus: undefined,
