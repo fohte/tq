@@ -1,7 +1,17 @@
 import type { QueueSectionData } from '#components/day-view/queue-pane'
-import { DAY_QUEUE_KEY, type Queue, type QueueItem } from '#hooks/use-queues'
+import {
+  DAY_QUEUE_KEY,
+  type Queue,
+  type QueueItem,
+  WEEK_QUEUE_KEY,
+} from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
-import { formatShortDate, formatWeekRangeLabel } from '#lib/date-range'
+import {
+  formatLocalDate,
+  formatShortDate,
+  formatWeekRangeLabel,
+  getLocalWeekDateRange,
+} from '#lib/date-range'
 import { sortQueueTasksByDue } from '#lib/queue-task-due-order'
 import { sortQueueItemsBySortOrder } from '#lib/queue-task-order'
 
@@ -21,11 +31,58 @@ function dateRangeLabelFor(
   }
 }
 
+function dayGroupLabel(date: string): string {
+  const localDate = new Date(`${date}T00:00:00`)
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+  }).format(localDate)
+  return `${weekday} ${formatShortDate(localDate)}`
+}
+
+function buildFutureDayGroups(
+  dayQueueItems: readonly { date: string; item: QueueItem }[],
+  selectedDate: Date,
+  taskMap: ReadonlyMap<string, Task>,
+  weekTaskIds: ReadonlySet<string>,
+): NonNullable<QueueSectionData['dayGroups']> {
+  const selectedDateString = formatLocalDate(selectedDate)
+  const { endDate } = getLocalWeekDateRange(selectedDate)
+  const itemsByDate = new Map<string, QueueItem[]>()
+
+  for (const { date, item } of dayQueueItems) {
+    if (date <= selectedDateString || date > endDate) continue
+    const items = itemsByDate.get(date) ?? []
+    items.push(item)
+    itemsByDate.set(date, items)
+  }
+
+  return [...itemsByDate.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, items]) => {
+      const tasks = sortQueueItemsBySortOrder(items)
+        .map((item) => taskMap.get(item.taskId))
+        .filter(
+          (task): task is Task =>
+            task != null &&
+            task.status !== 'completed' &&
+            !weekTaskIds.has(task.id),
+        )
+
+      return {
+        date,
+        label: dayGroupLabel(date),
+        items: sortQueueTasksByDue(tasks),
+      }
+    })
+    .filter((group) => group.items.length > 0)
+}
+
 export function buildQueueSections(
   queues: Queue[] | undefined,
   rawItemsByKey: ReadonlyMap<string, QueueItem[]>,
   taskMap: ReadonlyMap<string, Task>,
   selectedDate: Date,
+  dayQueueItems?: readonly { date: string; item: QueueItem }[],
 ): QueueSectionData[] {
   return (queues ?? []).map((queue) => {
     const rawTasks = sortQueueItemsBySortOrder(
@@ -42,11 +99,29 @@ export function buildQueueSections(
         ? visibleTasks
         : sortQueueTasksByDue(visibleTasks)
     const dateRangeLabel = dateRangeLabelFor(queue.periodUnit, selectedDate)
+    const weekTaskIds = new Set(visibleTasks.map((task) => task.id))
+    const dayGroups =
+      queue.key === WEEK_QUEUE_KEY && dayQueueItems != null
+        ? buildFutureDayGroups(
+            dayQueueItems,
+            selectedDate,
+            taskMap,
+            weekTaskIds,
+          )
+        : undefined
+    const countLabel =
+      queue.key === WEEK_QUEUE_KEY && dayGroups != null
+        ? `${String(orderedTasks.length)} + ${String(
+            dayGroups.reduce((total, group) => total + group.items.length, 0),
+          )}`
+        : undefined
 
     return {
       key: queue.key,
       title: queue.name,
       items: orderedTasks,
+      ...(countLabel == null ? {} : { countLabel }),
+      ...(dayGroups == null || dayGroups.length === 0 ? {} : { dayGroups }),
       ...(dateRangeLabel != null ? { dateRangeLabel } : {}),
       emptyMessage: `No tasks in ${queue.name}'s queue`,
     }

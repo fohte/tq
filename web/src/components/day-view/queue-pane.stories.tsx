@@ -61,6 +61,7 @@ const meta = {
     onMoveTask: fn(),
     onInsertCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onRemoveDayFromWeek: fn(),
   },
 } satisfies Meta<typeof QueuePane>
 
@@ -68,7 +69,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the queue pane groups tasks into today and this week',
+  name: 'the queue pane shows future scheduled tasks beneath this week',
   args: {
     isLoading: false,
     queueSections: [
@@ -83,6 +84,20 @@ export const Default: Story = {
         key: 'week',
         title: 'this week',
         items: weekTasks,
+        countLabel: '1 + 1',
+        dayGroups: [
+          {
+            date: '2026-09-02',
+            label: 'Wed 09-02',
+            items: [
+              makeTask({
+                id: '5',
+                title: 'Review the release checklist',
+                estimatedMinutes: 45,
+              }),
+            ],
+          },
+        ],
         dateRangeLabel: '08-31 – 09-06',
         emptyMessage: "No tasks in this week's queue",
       },

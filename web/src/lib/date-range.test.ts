@@ -5,6 +5,7 @@ import {
   formatWeekRangeLabel,
   getDayIsoRange,
   getLocalDateRangeDays,
+  getLocalWeekDateRange,
   toLocalDateRange,
 } from '#lib/date-range'
 
@@ -32,6 +33,15 @@ describe('formatWeekRangeLabel', () => {
 
   it('returns the same week for a Sunday, the last day of the week', () => {
     expect(formatWeekRangeLabel(new Date(2026, 2, 22))).toBe('03-16 – 03-22')
+  })
+})
+
+describe('getLocalWeekDateRange', () => {
+  it('returns the Monday-to-Sunday dates for a mid-week date', () => {
+    expect(getLocalWeekDateRange(new Date(2026, 2, 18))).toEqual({
+      startDate: '2026-03-16',
+      endDate: '2026-03-22',
+    })
   })
 })
 

@@ -80,6 +80,7 @@ async function renderDayView(
     onInsertCandidate: vi.fn(),
     onAddCandidate: vi.fn(),
     onRemoveFromQueue: vi.fn(),
+    onRemoveDayFromWeek: vi.fn(),
     onAutoAssign: vi.fn(),
     isAutoAssigning: false,
     selectedDate: new Date('2026-07-20T00:00:00'),

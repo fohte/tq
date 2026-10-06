@@ -23,6 +23,11 @@ const weekTask = makeTask({
   title: 'Week task',
   estimatedMinutes: 30,
 })
+const scheduledTask = makeTask({
+  id: 'scheduled-task',
+  title: 'Scheduled task',
+  estimatedMinutes: 90,
+})
 const candidateTask = makeTask({
   id: 'candidate-task',
   title: 'Candidate task',
@@ -42,7 +47,11 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
+function renderQueuePane(
+  onMoveTask = vi.fn(),
+  onInsertCandidate = vi.fn(),
+  onRemoveDayFromWeek = vi.fn(),
+) {
   render(
     <Providers>
       <div style={{ height: 600, width: 480 }}>
@@ -60,6 +69,14 @@ function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
               key: 'week',
               title: 'this week',
               items: [weekTask],
+              countLabel: '1 + 1',
+              dayGroups: [
+                {
+                  date: '2026-01-03',
+                  label: 'Sat 01-03',
+                  items: [scheduledTask],
+                },
+              ],
               emptyMessage: "No tasks in this week's queue",
             },
           ]}
@@ -67,11 +84,12 @@ function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
           onMoveTask={onMoveTask}
           onInsertCandidate={onInsertCandidate}
           onRemoveFromQueue={vi.fn()}
+          onRemoveDayFromWeek={onRemoveDayFromWeek}
         />
       </div>
     </Providers>,
   )
-  return { onMoveTask, onInsertCandidate }
+  return { onMoveTask, onInsertCandidate, onRemoveDayFromWeek }
 }
 
 async function dragByTitle(sourceTitle: string, targetTitle: string) {
@@ -130,6 +148,41 @@ describe('QueuePane dragging', () => {
 
     await waitFor(() => {
       expect(onInsertCandidate.mock.calls).toEqual([['week', 'candidate-task']])
+    })
+  })
+
+  it('passes the scheduled date when a task is returned to the week queue', async () => {
+    const onRemoveDayFromWeek = vi.fn()
+    renderQueuePane(vi.fn(), vi.fn(), onRemoveDayFromWeek)
+
+    const removeButton = await screen.findByRole('button', {
+      name: 'Remove day from Scheduled task',
+    })
+    const row = removeButton.closest('[data-queue-key]')
+    fireEvent.click(removeButton)
+
+    const readResult = () => ({
+      callbackCalls: onRemoveDayFromWeek.mock.calls,
+      queueSource: {
+        key: row?.getAttribute('data-queue-key'),
+        date: row?.getAttribute('data-queue-date'),
+        taskId: row
+          ?.querySelector('[data-task-id]')
+          ?.getAttribute('data-task-id'),
+      },
+      rowText: row?.textContent,
+      weekCount: screen.getByText('1 + 1').textContent,
+    })
+
+    expect(readResult()).toEqual({
+      callbackCalls: [[scheduledTask.id, '2026-01-03']],
+      queueSource: {
+        key: 'day',
+        date: '2026-01-03',
+        taskId: scheduledTask.id,
+      },
+      rowText: 'Scheduled task',
+      weekCount: '1 + 1',
     })
   })
 })

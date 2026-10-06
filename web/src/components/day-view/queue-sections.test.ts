@@ -175,6 +175,128 @@ describe('buildQueueSections', () => {
     ])
   })
 
+  it('shows only incomplete tasks on later days in the selected week', () => {
+    const todayTask = makeTask({ id: 'today-task' })
+    const pastTask = makeTask({ id: 'past-task' })
+    const weekTask = makeTask({ id: 'week-task' })
+    const scheduledDuplicate = makeTask({ id: 'scheduled-duplicate' })
+    const tuesdayNoDue = makeTask({ id: 'tuesday-no-due' })
+    const tuesdayLater = makeTask({
+      id: 'tuesday-later',
+      dueDate: '2026-08-01',
+    })
+    const tuesdayEarlier = makeTask({
+      id: 'tuesday-earlier',
+      dueDate: '2026-07-28',
+    })
+    const wednesdayTask = makeTask({ id: 'wednesday-task' })
+    const sundayTask = makeTask({ id: 'sunday-task' })
+    const completedTask = makeTask({
+      id: 'completed-task',
+      status: 'completed',
+    })
+    const nextWeekTask = makeTask({ id: 'next-week-task' })
+    const tasks = [
+      todayTask,
+      pastTask,
+      weekTask,
+      scheduledDuplicate,
+      tuesdayNoDue,
+      tuesdayLater,
+      tuesdayEarlier,
+      wednesdayTask,
+      sundayTask,
+      completedTask,
+      nextWeekTask,
+    ]
+    const taskMap = new Map(tasks.map((task) => [task.id, task]))
+    const queues = [
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' }),
+      makeQueue({
+        key: WEEK_QUEUE_KEY,
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    const rawItemsByKey = new Map<string, QueueItem[]>([
+      [DAY_QUEUE_KEY, [makeQueueItem({ taskId: todayTask.id })]],
+      [
+        WEEK_QUEUE_KEY,
+        [weekTask, scheduledDuplicate].map((task, sortOrder) =>
+          makeQueueItem({ taskId: task.id, sortOrder }),
+        ),
+      ],
+    ])
+    const dayQueueItems = [
+      { date: '2026-07-29', item: makeQueueItem({ taskId: wednesdayTask.id }) },
+      { date: '2026-07-28', item: makeQueueItem({ taskId: tuesdayNoDue.id }) },
+      {
+        date: '2026-07-28',
+        item: makeQueueItem({ taskId: scheduledDuplicate.id, sortOrder: 1 }),
+      },
+      {
+        date: '2026-07-28',
+        item: makeQueueItem({ taskId: tuesdayLater.id, sortOrder: 2 }),
+      },
+      {
+        date: '2026-07-28',
+        item: makeQueueItem({ taskId: tuesdayEarlier.id, sortOrder: 3 }),
+      },
+      {
+        date: '2026-07-28',
+        item: makeQueueItem({ taskId: completedTask.id, sortOrder: 4 }),
+      },
+      { date: '2026-07-27', item: makeQueueItem({ taskId: todayTask.id }) },
+      { date: '2026-07-26', item: makeQueueItem({ taskId: pastTask.id }) },
+      { date: '2026-08-02', item: makeQueueItem({ taskId: sundayTask.id }) },
+      { date: '2026-08-03', item: makeQueueItem({ taskId: nextWeekTask.id }) },
+    ]
+
+    expect(
+      buildQueueSections(
+        queues,
+        rawItemsByKey,
+        taskMap,
+        new Date(2026, 6, 27),
+        dayQueueItems,
+      ),
+    ).toEqual([
+      {
+        key: DAY_QUEUE_KEY,
+        title: 'Today',
+        items: [todayTask],
+        dateRangeLabel: '07-27',
+        emptyMessage: "No tasks in Today's queue",
+      },
+      {
+        key: WEEK_QUEUE_KEY,
+        title: 'This week',
+        items: [weekTask, scheduledDuplicate],
+        countLabel: '2 + 5',
+        dayGroups: [
+          {
+            date: '2026-07-28',
+            label: 'Tue 07-28',
+            items: [tuesdayEarlier, tuesdayLater, tuesdayNoDue],
+          },
+          {
+            date: '2026-07-29',
+            label: 'Wed 07-29',
+            items: [wednesdayTask],
+          },
+          {
+            date: '2026-08-02',
+            label: 'Sun 08-02',
+            items: [sundayTask],
+          },
+        ],
+        dateRangeLabel: '07-27 – 08-02',
+        emptyMessage: "No tasks in This week's queue",
+      },
+    ])
+  })
+
   it('keeps sortOrder as the tie-break after a due date changes without queue refetch', () => {
     const taskA = makeTask({ id: 'task-a', dueDate: '2026-08-01' })
     const taskB = makeTask({ id: 'task-b', dueDate: '2026-07-31' })

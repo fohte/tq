@@ -434,8 +434,13 @@ type Story = StoryObj<typeof meta>
 
 const queuedTasks = sampleTasks.slice(0, 4)
 const weekQueuedTasks = sampleTasks.slice(4, 6)
+const scheduledWeekdayTask = makeTask({
+  id: 'scheduled-weekday-task',
+  title: 'Review the release checklist',
+  estimatedMinutes: 45,
+})
 const queuedTaskIds = new Set(
-  [...queuedTasks, ...weekQueuedTasks].map((t) => t.id),
+  [...queuedTasks, ...weekQueuedTasks, scheduledWeekdayTask].map((t) => t.id),
 )
 const queueCandidates = getQueueCandidates(
   sampleCategorized.all,
@@ -455,6 +460,14 @@ const sampleQueueSections = [
     key: 'week',
     title: 'this week',
     items: weekQueuedTasks,
+    countLabel: '2 + 1',
+    dayGroups: [
+      {
+        date: '2026-09-02',
+        label: 'Wed 09-02',
+        items: [scheduledWeekdayTask],
+      },
+    ],
     dateRangeLabel: '08-31 – 09-06',
     emptyMessage: "No tasks in this week's queue",
   },
@@ -478,6 +491,7 @@ export const Default: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onRemoveDayFromWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
@@ -588,6 +602,7 @@ export const Loading: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onRemoveDayFromWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
@@ -608,6 +623,7 @@ export const Empty: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onRemoveDayFromWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
@@ -632,6 +648,7 @@ export const EmptyQueueWithCandidates: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onRemoveDayFromWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,

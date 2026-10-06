@@ -52,6 +52,7 @@ const meta = {
   ],
   args: {
     onRemove: fn(),
+    onRemoveDayFromWeek: fn(),
     queueDate: '2026-01-01',
   },
 } satisfies Meta<typeof QueueSection>
@@ -124,6 +125,63 @@ export const ScheduledTask: Story = {
         makeTaskRowTimeBlockState({ timeRanges: ['10:00–10:30'] }),
       ],
     ]),
+  },
+}
+
+export const WeekWithScheduledDays: Story = {
+  name: 'this week keeps undated tasks above its scheduled day groups',
+  args: {
+    queueKey: 'week',
+    title: 'this week',
+    countLabel: '1 + 2',
+    items: [
+      makeTask({
+        id: 'week-task',
+        title: 'Prepare the weekly summary',
+        estimatedMinutes: 30,
+      }),
+    ],
+    dayGroups: [
+      {
+        date: '2026-08-11',
+        label: 'Tue 08-11',
+        items: [
+          makeTask({
+            id: 'tuesday-task',
+            title: 'Review the release notes',
+            estimatedMinutes: 45,
+          }),
+          makeTask({
+            id: 'tuesday-task-2',
+            title: 'Check the dashboard',
+          }),
+        ],
+      },
+    ],
+    emptyMessage: "No tasks in this week's queue",
+  },
+}
+
+export const WeekWithOnlyScheduledDays: Story = {
+  name: 'the week shows scheduled day groups when it has no undated tasks',
+  args: {
+    queueKey: 'week',
+    title: 'this week',
+    countLabel: '0 + 1',
+    items: [],
+    dayGroups: [
+      {
+        date: '2026-08-12',
+        label: 'Wed 08-12',
+        items: [
+          makeTask({
+            id: 'wednesday-task',
+            title: 'Check the deployment notes',
+          }),
+        ],
+      },
+    ],
+    emptyMessage: "No tasks in this week's queue",
   },
 }
 
