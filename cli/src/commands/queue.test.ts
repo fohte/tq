@@ -10,8 +10,12 @@ import {
   spyStdout,
 } from '#commands/test-support'
 
-async function runQueueCli(args: string[], response: Response) {
-  const { fetchStub, calls } = captureFetch(() => response)
+async function runQueueCli(
+  args: string[],
+  response: Response | (() => Response),
+) {
+  const respond = typeof response === 'function' ? response : () => response
+  const { fetchStub, calls } = captureFetch(respond)
   const stderr = spyStderr()
   const stdout = spyStdout()
   const exitCode = await runCli(
@@ -57,6 +61,8 @@ describe('queue list', () => {
 
 describe('queue get', () => {
   it('requests the given queue key and date and prints the response array', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 7, 9))
     const rows = [
       {
         id: 'tt1',
@@ -88,17 +94,101 @@ describe('queue get', () => {
     })
   })
 
-  it('requires an explicit date', async () => {
+  it('defaults to today and carries over before reading the queue', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 6, 9))
+    const rows = [
+      {
+        id: 'tt1',
+        taskId: 'task1',
+        periodStart: '2026-08-06',
+        sortOrder: 0,
+        createdAt: '2026-08-06T00:00:00.000Z',
+        updatedAt: '2026-08-06T00:00:00.000Z',
+      },
+    ]
+    let responseIndex = 0
+
+    expect(
+      await runQueueCli(['queue', 'get', 'day'], () =>
+        responseIndex++ === 0
+          ? new Response(null, { status: 204 })
+          : new Response(JSON.stringify(rows), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/queues/carry-over',
+          query: {},
+          body: { date: '2026-08-06' },
+        },
+        {
+          method: 'GET',
+          pathname: '/api/queues/day/items',
+          query: { date: '2026-08-06' },
+          body: undefined,
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(rows, null, 2)}\n`]],
+    })
+  })
+
+  it('carries over when an explicit date matches local today', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 6, 9))
+    let responseIndex = 0
+
+    expect(
+      await runQueueCli(['queue', 'get', 'day', '2026-08-06'], () =>
+        responseIndex++ === 0
+          ? new Response(null, { status: 204 })
+          : new Response(JSON.stringify([]), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/queues/carry-over',
+          query: {},
+          body: { date: '2026-08-06' },
+        },
+        {
+          method: 'GET',
+          pathname: '/api/queues/day/items',
+          query: { date: '2026-08-06' },
+          body: undefined,
+        },
+      ],
+      stderr: [],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('does not carry over when an explicit date is in the future', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 7, 6, 9))
+
     expect(
       await runQueueCli(
-        ['queue', 'get', 'day'],
+        ['queue', 'get', 'day', '2026-08-07'],
         new Response(JSON.stringify([]), { status: 200 }),
       ),
     ).toEqual({
-      exitCode: 1,
-      requests: [],
-      stderr: [["error: missing required argument 'date'\n"]],
-      stdout: [],
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/queues/day/items',
+          query: { date: '2026-08-07' },
+          body: undefined,
+        },
+      ],
+      stderr: [],
+      stdout: [['[]\n']],
     })
   })
 })

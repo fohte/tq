@@ -23,6 +23,10 @@ async function putDayQueueItems(taskIds: string[], date: string) {
   return jsonBody<Record<string, unknown>[]>(response)
 }
 
+function localDate(date: Date) {
+  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
 function expectedToolValidationError(
   name: string,
   field: string,
@@ -59,7 +63,10 @@ describe('queue operation tools', () => {
         .map((tool) => ({ name: tool.name, annotations: tool.annotations }))
         .sort((left, right) => left.name.localeCompare(right.name)),
     ).toEqual([
-      { name: 'queue_get', annotations: { readOnlyHint: true } },
+      {
+        name: 'queue_get',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
       { name: 'queue_list', annotations: { readOnlyHint: true } },
       {
         name: 'queue_set',
@@ -161,16 +168,28 @@ describe('queue operation tools', () => {
     expect(parseToolJson(result)).toEqual(expected)
   })
 
-  it('requires an explicit date', async () => {
+  it("defaults to today's queue and carries unfinished items forward", async () => {
+    const task = await createTask('Carry-over task')
+    const todayDate = new Date()
+    const yesterdayDate = new Date(todayDate)
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+    const today = localDate(todayDate)
+    await putDayQueueItems([task.id], localDate(yesterdayDate))
+
     const result = await callMcpTool(client, 'queue_get', { key: 'day' })
 
-    expect(result).toEqual(
-      expectedToolValidationError(
-        'queue_get',
-        'date',
-        'Invalid input: expected string, received undefined',
-      ),
-    )
+    expect(
+      normalizeDynamicValues(parseToolJson(result), { skipKeys: ['taskId'] }),
+    ).toEqual([
+      {
+        id: '<uuid>',
+        taskId: task.id,
+        periodStart: today,
+        sortOrder: 0,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+    ])
   })
 
   it('replaces queue items in the supplied order', async () => {

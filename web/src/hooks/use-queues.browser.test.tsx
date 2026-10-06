@@ -9,6 +9,7 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
   DAY_QUEUE_KEY,
   type Queue,
+  useQueueCarryOver,
   useQueueItems,
   useQueueItemsForQueues,
   useQueues,
@@ -17,9 +18,11 @@ import {
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import { useUpdateTask } from '#hooks/use-task-mutations'
+import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
+  const mockCarryOver = vi.fn()
   const mockQueueGet = vi.fn()
   const mockGet = vi.fn()
   const mockPut = vi.fn()
@@ -29,6 +32,7 @@ vi.mock('#lib/api', () => {
       api: {
         queues: {
           $get: mockQueueGet,
+          'carry-over': { $post: mockCarryOver },
           ':key': {
             items: { $get: mockGet, $put: mockPut },
           },
@@ -36,7 +40,7 @@ vi.mock('#lib/api', () => {
         tasks: { ':id': { $patch: mockTaskPatch } },
       },
     },
-    __mocks: { mockQueueGet, mockGet, mockPut, mockTaskPatch },
+    __mocks: { mockCarryOver, mockQueueGet, mockGet, mockPut, mockTaskPatch },
   }
 })
 
@@ -260,5 +264,65 @@ describe('queue polling', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('queue carry-over', () => {
+  it('finishes carrying over today before reading its queue items', async () => {
+    const mocks = await getMocks()
+    const mockCarryOver = assertDefined(mocks['mockCarryOver'])
+    const mockGet = assertDefined(mocks['mockGet'])
+    const calls: string[] = []
+    let resolveCarryOver: (() => void) | undefined
+    const today = formatLocalDate(new Date())
+    const queues = [
+      {
+        key: DAY_QUEUE_KEY,
+        name: 'today',
+        periodUnit: 'day',
+        position: 0,
+      },
+    ] satisfies Queue[]
+    mockCarryOver.mockImplementation(() => {
+      calls.push('carry-over')
+      return new Promise<Response>((resolve) => {
+        resolveCarryOver = () => {
+          resolve(new Response(null, { status: 204 }))
+        }
+      })
+    })
+    mockGet.mockImplementation(() => {
+      calls.push('items')
+      return Promise.resolve(jsonResponse([]))
+    })
+
+    const { result } = renderHook(
+      () => {
+        const carryOver = useQueueCarryOver(today)
+        const items = useQueueItemsForQueues(queues, today, undefined, {
+          enabled: carryOver.isSuccess,
+        })
+        return { carryOver, items }
+      },
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      const getOutput = () => [calls, result.current.carryOver.isPending]
+      expect(getOutput()).toEqual([['carry-over'], true])
+    })
+
+    act(() => {
+      assertDefined(resolveCarryOver)()
+    })
+
+    await waitFor(() => {
+      const getOutput = () => [
+        calls,
+        result.current.carryOver.isSuccess,
+        result.current.items[0]?.data,
+      ]
+      expect(getOutput()).toEqual([['carry-over', 'items'], true, []])
+    })
   })
 })

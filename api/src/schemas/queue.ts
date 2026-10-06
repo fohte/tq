@@ -8,3 +8,7 @@ export const putQueueItemsSchema = z.object({
   taskIds: z.array(z.uuid()),
   date: queueDateSchema,
 })
+
+export const carryOverQueueItemsSchema = z.object({
+  date: queueDateSchema,
+})

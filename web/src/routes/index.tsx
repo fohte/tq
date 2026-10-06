@@ -33,6 +33,7 @@ import {
   DAY_QUEUE_KEY,
   type QueueItem,
   queueKeys,
+  useQueueCarryOver,
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
@@ -141,6 +142,17 @@ function DayView() {
     () => formatLocalDate(selectedDate),
     [selectedDate],
   )
+  const shouldCarryOverQueues = selectedDateStr === formatLocalDate(new Date())
+  const queueCarryOver = useQueueCarryOver(
+    selectedDateStr,
+    shouldCarryOverQueues,
+  )
+  const canReadQueueItems =
+    !shouldCarryOverQueues || queueCarryOver.isSuccess || queueCarryOver.isError
+  useEffect(() => {
+    if (!shouldCarryOverQueues || queueCarryOver.error == null) return
+    console.error('Failed to carry over queue items', queueCarryOver.error)
+  }, [queueCarryOver.error, shouldCarryOverQueues])
   const [visibleRange, setVisibleRange] = useState(() => ({
     startDate: selectedDateStr,
     endDate: selectedDateStr,
@@ -182,6 +194,7 @@ function DayView() {
     queuesData,
     selectedDateStr,
     refetchInterval,
+    { enabled: canReadQueueItems },
   )
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
@@ -241,10 +254,13 @@ function DayView() {
   const rawItemsByKey = useMemo(() => {
     const map = new Map<string, QueueItem[]>()
     ;(queuesData ?? []).forEach((queue, i) => {
-      map.set(queue.key, queueItemsResults[i]?.data ?? [])
+      map.set(
+        queue.key,
+        canReadQueueItems ? (queueItemsResults[i]?.data ?? []) : [],
+      )
     })
     return map
-  }, [queuesData, queueItemsResults])
+  }, [canReadQueueItems, queuesData, queueItemsResults])
 
   // Completed tasks remain stored but are omitted from non-day queue sections.
   const queueSections = useMemo(
@@ -426,6 +442,7 @@ function DayView() {
         compactMemo={compactMemoProps}
         isLoading={
           isLoading ||
+          (shouldCarryOverQueues && queueCarryOver.isPending) ||
           (isCompactLayout && dueDateTasksQuery.isLoading) ||
           (isKanbanFiltering && filteredTasksQuery.isLoading)
         }

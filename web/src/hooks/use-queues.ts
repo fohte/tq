@@ -8,7 +8,8 @@ import type { InferResponseType } from 'hono/client'
 
 import type { PlanValue } from '#components/task/create-task-modal-fields'
 import { api } from '#lib/api'
-import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { formatLocalDate } from '#lib/date-range'
 import { queueKeys } from '#lib/query-keys'
 
 export { queueKeys }
@@ -39,6 +40,26 @@ export function useQueues(refetchInterval?: number) {
     queryFn: async () => {
       const res = await api.api.queues.$get()
       return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useQueueCarryOver(date: string, enabled = true) {
+  const queryClient = useQueryClient()
+  const isToday = date === formatLocalDate(new Date())
+
+  return useQuery({
+    queryKey: queueKeys.carryOver(date),
+    enabled: enabled && isToday,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const res = await api.api.queues['carry-over'].$post({ json: { date } })
+      assertOkOrThrow(res)
+      await queryClient.invalidateQueries({
+        queryKey: queueKeys.all,
+        predicate: ({ queryKey }) => queryKey[2] === 'items',
+      })
+      return date
     },
   })
 }
@@ -77,10 +98,12 @@ export function useQueueItemsForQueues(
   queues: Queue[] | undefined,
   date: string,
   refetchInterval?: number,
+  options?: { enabled?: boolean },
 ) {
   return useQueries({
     queries: (queues ?? []).map((queue) => ({
       queryKey: queueKeys.items(queue.key, date),
+      ...(options?.enabled === undefined ? {} : { enabled: options.enabled }),
       ...(refetchInterval === undefined ? {} : { refetchInterval }),
       queryFn: async () => {
         const res = await api.api.queues[':key'].items.$get({

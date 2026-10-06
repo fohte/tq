@@ -1,14 +1,22 @@
 import { z } from 'zod'
 
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
-import { defineOperation, requestJson } from '#operations/types'
+import {
+  defineOperation,
+  requestJson,
+  requestNoContent,
+} from '#operations/types'
 import { putQueueItemsSchema, queueDateSchema } from '#schemas/queue'
 
 const queueKeySchema = pathSegmentSchema('Queue key')
 
 const queueGetInputSchema = z.object({
   key: queueKeySchema,
-  date: queueDateSchema.describe('Date to fetch the queue for, as YYYY-MM-DD.'),
+  date: queueDateSchema
+    .optional()
+    .describe(
+      'Date to fetch the queue for, as YYYY-MM-DD. Defaults to today in the local timezone.',
+    ),
 })
 
 const queueSetInputSchema = z.object({
@@ -36,18 +44,31 @@ export const queueOperations = [
   }),
   defineOperation(queueGetInputSchema, {
     path: ['queue', 'get'],
-    description: 'List a queue for a date (YYYY-MM-DD).',
-    positionalArgs: ['key', 'date'],
-    kind: 'read',
-    routes: ['GET /api/queues/:key/items'],
+    description:
+      "List a queue for a date (YYYY-MM-DD). Defaults to today in the local timezone; reading today's queue first carries unfinished items forward.",
+    positionalArgs: ['key', { name: 'date', optional: true }],
+    kind: 'write',
+    routes: ['POST /api/queues/carry-over', 'GET /api/queues/:key/items'],
     cli: { output: { kind: 'json' } },
-    run: (client, { key, date }) =>
-      requestJson(
-        client.api.queues[':key'].items.$get({
-          param: { key: encodePathSegment(key) },
-          query: { date },
-        }),
-      ),
+    run: (client, { key, date }) => {
+      const today = formatLocalDate(new Date())
+      const requestedDate = date ?? today
+      const getItems = () =>
+        requestJson(
+          client.api.queues[':key'].items.$get({
+            param: { key: encodePathSegment(key) },
+            query: { date: requestedDate },
+          }),
+        )
+
+      return requestedDate === today
+        ? requestNoContent(
+            client.api.queues['carry-over'].$post({
+              json: { date: requestedDate },
+            }),
+          ).andThen(getItems)
+        : getItems()
+    },
   }),
   defineOperation(queueSetInputSchema, {
     path: ['queue', 'set'],
@@ -70,3 +91,7 @@ export const queueOperations = [
       ),
   }),
 ] as const
+
+function formatLocalDate(date: Date): string {
+  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
