@@ -5,8 +5,8 @@ import { taskChecklistItems } from '#db/schema'
 
 type ChecklistItem = typeof taskChecklistItems.$inferSelect
 
-// Recalculate after child changes, including checked-state updates from GitHub
-// or subtask sync.
+// Pass affected parent IDs so every ancestor reflects the changed child state
+// or structure.
 export async function recalculateChecklistAncestors(
   tx: DbTransaction,
   parentItemIds: readonly (string | null)[],
