@@ -1,11 +1,12 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   app,
   BrowserWindow,
   clipboard,
   globalShortcut,
+  ipcMain,
   Menu,
   screen,
   shell,
@@ -13,20 +14,32 @@ import {
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
+import { createJsonFileStorage } from '#json-store'
 import { buildMenuTemplate } from '#menu'
 import {
   classifyNavigation,
   DEEP_LINK_SCHEME,
+  isInternalUrl,
+  NAVIGATION_LISTENER_STATE_CHANNEL,
+  NAVIGATION_REQUEST_CHANNEL,
   type NavigationSource,
+  OPEN_IN_MAIN_WINDOW_CHANNEL,
   resolveDeepLink,
+  resolveInternalUrl,
+  resolveOpenInMainWindowPath,
   shouldOpenSideNavigationInMain,
+  shouldUseNavigationRequest,
 } from '#navigation'
+import {
+  createSideWindowAlwaysOnTopController,
+  type SideWindowAlwaysOnTopController,
+} from '#side-window-always-on-top'
+import { createSideWindowSettingsStore } from '#side-window-settings'
 import {
   clampWindowBounds,
   createDebouncedAction,
   createWindowBoundsStore,
   initialWindowBounds,
-  type WindowBoundsStore,
 } from '#window-state'
 import { setSideWindowTitle } from '#window-title'
 
@@ -35,11 +48,14 @@ let mainWindow: BrowserWindow | undefined
 let sideWindow: BrowserWindow | undefined
 let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
+let sideWindowAlwaysOnTopController: SideWindowAlwaysOnTopController | undefined
+let mainNavigationRequestListenerRegistered = false
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
 const SIDE_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/?layout=compact`
 const MEMO_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/memo?layout=compact`
+const PRELOAD_PATH = fileURLToPath(new URL('./preload.cjs', import.meta.url))
 const isMacOS = process.platform === 'darwin'
 
 const createDesktopWindow = (
@@ -47,6 +63,12 @@ const createDesktopWindow = (
 ) => {
   const win = new BrowserWindow({
     ...options,
+    webPreferences: {
+      ...options.webPreferences,
+      preload: PRELOAD_PATH,
+      contextIsolation: true,
+      sandbox: true,
+    },
     ...(isMacOS
       ? {
           titleBarStyle: 'hidden' as const,
@@ -98,11 +120,29 @@ const openMainWindow = (url: string) => {
   showWindow(mainWindow)
 }
 
+const trustedMainFrameUrl = (
+  event: Electron.IpcMainEvent,
+  allowedWindows: readonly (BrowserWindow | undefined)[],
+): string | undefined => {
+  const frame = event.senderFrame
+  if (
+    frame === null ||
+    frame !== event.sender.mainFrame ||
+    !isInternalUrl(frame.url, TQ_ORIGIN)
+  ) {
+    return undefined
+  }
+
+  const win = BrowserWindow.fromWebContents(event.sender)
+  return win !== null && allowedWindows.includes(win) && !win.isDestroyed()
+    ? frame.url
+    : undefined
+}
+
 const createWindow = (url: string): BrowserWindow => {
   const win = createDesktopWindow({
     // The sidebar provides the main window's titlebar spacing and drag region.
     ...(isMacOS ? { minWidth: 768 } : {}),
-    webPreferences: { sandbox: true },
   })
 
   // Hide instead of closing so that reopening from the Dock keeps the page
@@ -119,21 +159,59 @@ const showWindow = (win: BrowserWindow) => {
   win.show()
 }
 
+ipcMain.on(NAVIGATION_LISTENER_STATE_CHANNEL, (event, registered: unknown) => {
+  if (trustedMainFrameUrl(event, [mainWindow]) === undefined) return
+  mainNavigationRequestListenerRegistered = registered === true
+})
+
+ipcMain.on(OPEN_IN_MAIN_WINDOW_CHANNEL, (event, rawPath: unknown) => {
+  const senderUrl = trustedMainFrameUrl(event, [sideWindow, memoWindow])
+  if (senderUrl === undefined) return
+
+  const path = resolveOpenInMainWindowPath(rawPath, senderUrl, TQ_ORIGIN)
+  if (path === undefined) return
+
+  const targetWindow = mainWindow
+  if (targetWindow === undefined || targetWindow.isDestroyed()) return
+
+  if (
+    shouldUseNavigationRequest(
+      mainNavigationRequestListenerRegistered,
+      targetWindow.webContents.getURL(),
+      TQ_ORIGIN,
+      targetWindow.webContents.isLoadingMainFrame(),
+    )
+  ) {
+    targetWindow.webContents.send(NAVIGATION_REQUEST_CHANNEL, path)
+    showWindow(targetWindow)
+    return
+  }
+
+  const url = resolveInternalUrl(path, TQ_ORIGIN)
+  if (url !== undefined) openMainWindow(url)
+})
+
 const isMissingFile = (caughtErr: unknown): boolean =>
   typeof caughtErr === 'object' &&
   caughtErr !== null &&
   'code' in caughtErr &&
   caughtErr.code === 'ENOENT'
 
-const createSideWindow = (): BrowserWindow => {
-  const boundsFile = join(app.getPath('userData'), 'side-window-bounds.json')
-  const boundsStore: WindowBoundsStore = createWindowBoundsStore({
-    read: () => readFileSync(boundsFile, 'utf8'),
-    write: (serialized) => {
-      mkdirSync(dirname(boundsFile), { recursive: true })
-      writeFileSync(boundsFile, serialized)
+const setSideWindowAlwaysOnTop = (alwaysOnTop: boolean) => {
+  sideWindowAlwaysOnTopController?.setEnabled(alwaysOnTop).match(
+    () => undefined,
+    (caughtErr) => {
+      console.error('failed to save side window settings', caughtErr)
     },
-  })
+  )
+}
+
+const createSideWindow = (): BrowserWindow => {
+  const boundsStore = createWindowBoundsStore(
+    createJsonFileStorage(
+      join(app.getPath('userData'), 'side-window-bounds.json'),
+    ),
+  )
   const loadedBounds = boundsStore.load().match(
     (bounds) => bounds,
     (caughtErr) => {
@@ -152,8 +230,8 @@ const createSideWindow = (): BrowserWindow => {
         )
   const win = createDesktopWindow({
     ...bounds,
-    webPreferences: { sandbox: true },
   })
+  sideWindowAlwaysOnTopController?.applyTo(win)
   setSideWindowTitle(win)
   sideWindow = win
 
@@ -197,7 +275,6 @@ const createMemoWindow = (): BrowserWindow => {
     minWidth: 360,
     minHeight: 320,
     title: 'Memo',
-    webPreferences: { sandbox: true },
   })
   memoWindow = win
 
@@ -284,6 +361,15 @@ app.on('web-contents-created', (_event, contents) => {
     return { action: action === 'allow' ? 'allow' : 'deny' }
   })
 
+  const resetMainNavigationListener = () => {
+    if (BrowserWindow.fromWebContents(contents) === mainWindow) {
+      mainNavigationRequestListenerRegistered = false
+    }
+  }
+
+  contents.on('did-navigate', resetMainNavigationListener)
+  contents.on('render-process-gone', resetMainNavigationListener)
+
   contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
     if (!isMainFrame || navigationSource() !== 'side') return
     if (!shouldOpenSideNavigationInMain(url, SIDE_WINDOW_URL, TQ_ORIGIN)) return
@@ -301,6 +387,26 @@ app.on('window-all-closed', () => undefined)
 
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
+  const sideWindowSettingsStore = createSideWindowSettingsStore(
+    createJsonFileStorage(
+      join(app.getPath('userData'), 'side-window-settings.json'),
+    ),
+  )
+  const initialSettings = sideWindowSettingsStore.load().match(
+    (settings) => settings,
+    (caughtErr) => {
+      if (!isMissingFile(caughtErr)) {
+        console.error('failed to read side window settings', caughtErr)
+      }
+      return undefined
+    },
+  )
+  const alwaysOnTopController = createSideWindowAlwaysOnTopController({
+    initialValue: initialSettings?.alwaysOnTop ?? false,
+    settingsStore: sideWindowSettingsStore,
+  })
+  sideWindowAlwaysOnTopController = alwaysOnTopController
+
   // Only a packaged app has the `tq` scheme in its Info.plist; in development
   // this would claim the scheme for the bare Electron binary.
   if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME)
@@ -319,7 +425,11 @@ void app.whenReady().then(() => {
         win.webContents.navigationHistory,
         win.webContents,
         clipboard,
-        openSideWindow,
+        {
+          open: openSideWindow,
+          alwaysOnTop: alwaysOnTopController.isEnabled(),
+          setAlwaysOnTop: setSideWindowAlwaysOnTop,
+        },
       ),
     ),
   )

@@ -1,14 +1,34 @@
+import type { EventContentArg } from '@fullcalendar/core'
+
 import type { CalendarViewType } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import {
   type CalendarEventProps,
+  getEventProps,
   getGcalEventDetails,
   isClickableEvent,
   isGcalEventType,
 } from '#lib/calendar-utils'
 
-export function isCalendarEventClickable(props: CalendarEventProps): boolean {
+function isCalendarEventClickable(props: CalendarEventProps): boolean {
   return isClickableEvent(props) || getGcalEventDetails(props) != null
+}
+
+export function getCalendarGridEventClassNames(arg: EventContentArg): string[] {
+  const classNames: string[] = isCalendarEventClickable(
+    getEventProps(arg.event),
+  )
+    ? ['tq-event-clickable']
+    : []
+
+  if (arg.event.allDay && !arg.isStart) {
+    classNames.push('tq-all-day-continues-left')
+  }
+  if (arg.event.allDay && !arg.isEnd) {
+    classNames.push('tq-all-day-continues-right')
+  }
+
+  return classNames
 }
 
 export function mapCalendarGridEvents(
@@ -25,8 +45,10 @@ export function mapCalendarGridEvents(
       allDay: event.allDay === true,
       queueOrder: event.type === 'day-queue' ? 0 : 1,
       queuePosition: event.queuePosition,
+      displayPriority: event.displayPriority ?? 0,
       editable:
         event.type !== 'schedule' &&
+        event.type !== 'task-date' &&
         !isGcalEventType(event.type) &&
         event.redacted !== true,
       durationEditable: event.type !== 'day-queue',
@@ -43,6 +65,10 @@ export function mapCalendarGridEvents(
         parentRef: event.parentRef,
         color: event.color,
         taskId: event.taskId,
+        dateTaskKind: event.dateTaskKind,
+        dateTaskOverdue: event.dateTaskOverdue,
+        dateTaskDueDateLabel: event.dateTaskDueDateLabel,
+        displayPriority: event.displayPriority ?? 0,
         isAutoScheduled: event.isAutoScheduled,
         scheduleId: event.scheduleId,
         scheduleStart: event.start,

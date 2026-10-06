@@ -126,7 +126,6 @@ export function CreateTaskModalMobile({
             context={context}
             placeholder="タスクのタイトル"
             autoFocus
-            className="h-auto border-0 bg-transparent p-0 text-lg font-medium text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
           />
 
           {descriptionTemplateSelector}
@@ -147,12 +146,13 @@ export function CreateTaskModalMobile({
               expanded={() => (
                 <Input
                   type="date"
+                  variant="ghost"
                   value={startDate}
                   onChange={(e) => {
                     setStartDate(e.target.value)
                   }}
                   autoFocus
-                  className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
+                  className="w-28"
                 />
               )}
             />
@@ -163,13 +163,14 @@ export function CreateTaskModalMobile({
               expanded={() => (
                 <Input
                   type="text"
+                  variant="ghost"
                   value={estimateInput}
                   onChange={(e) => {
                     setEstimateInput(e.target.value)
                   }}
                   placeholder="1h30m"
                   autoFocus
-                  className="h-auto w-14 border-0 bg-transparent p-0 text-xs shadow-none placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0"
+                  className="w-14"
                 />
               )}
             />
@@ -180,12 +181,13 @@ export function CreateTaskModalMobile({
               expanded={() => (
                 <Input
                   type="date"
+                  variant="ghost"
                   value={dueDate}
                   onChange={(e) => {
                     setDueDate(e.target.value)
                   }}
                   autoFocus
-                  className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
+                  className="w-28"
                 />
               )}
             />
@@ -201,11 +203,7 @@ export function CreateTaskModalMobile({
                     close()
                   }}
                 >
-                  <SelectTrigger
-                    autoFocus
-                    size="sm"
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-                  >
+                  <SelectTrigger variant="ghost" autoFocus size="sm">
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
@@ -228,11 +226,7 @@ export function CreateTaskModalMobile({
                     close()
                   }}
                 >
-                  <SelectTrigger
-                    autoFocus
-                    size="sm"
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-                  >
+                  <SelectTrigger variant="ghost" autoFocus size="sm">
                     <SelectValue placeholder="Inbox" />
                   </SelectTrigger>
                   <SelectContent>

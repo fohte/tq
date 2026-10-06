@@ -166,13 +166,13 @@ export function ProjectFormModal({
       {/* Title */}
       <Input
         type="text"
+        variant="ghost"
         value={title}
         onChange={(e) => {
           setTitle(e.target.value)
         }}
         placeholder="Project name"
         autoFocus
-        className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:border-0 focus-visible:ring-0"
       />
 
       {/* Description */}
@@ -192,10 +192,7 @@ export function ProjectFormModal({
             value={status}
             onValueChange={selectValueHandler(setStatus, statusValues)}
           >
-            <SelectTrigger
-              size="sm"
-              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-            >
+            <SelectTrigger variant="ghost" size="sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -213,10 +210,7 @@ export function ProjectFormModal({
             value={context}
             onValueChange={selectValueHandler(setContext, contextValues)}
           >
-            <SelectTrigger
-              size="sm"
-              className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
-            >
+            <SelectTrigger variant="ghost" size="sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -235,22 +229,24 @@ export function ProjectFormModal({
         >
           <Input
             type="date"
+            variant="ghost"
             value={startDate}
             onChange={(e) => {
               setStartDate(e.target.value)
             }}
-            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent dark:bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+            className="w-auto min-w-0"
           />
         </FieldRow>
 
         <FieldRow label="Target date" icon={<Calendar className="size-3.5" />}>
           <Input
             type="date"
+            variant="ghost"
             value={targetDate}
             onChange={(e) => {
               setTargetDate(e.target.value)
             }}
-            className="h-auto w-auto min-w-0 rounded-none border-0 bg-transparent dark:bg-transparent p-0 text-sm text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0"
+            className="w-auto min-w-0"
           />
         </FieldRow>
 

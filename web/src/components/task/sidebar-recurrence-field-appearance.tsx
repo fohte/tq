@@ -138,12 +138,13 @@ export function SidebarRecurrenceFieldAppearance({
           <div className="flex flex-col gap-3">
             <Input
               type="text"
+              variant="ghost"
               value={shorthandInput}
               onChange={(e) => {
                 onShorthandInputChange(e.target.value)
               }}
               placeholder="*weekly, *sun, *毎週 ..."
-              className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+              className="w-full"
             />
 
             <Select
@@ -154,8 +155,9 @@ export function SidebarRecurrenceFieldAppearance({
               )}
             >
               <SelectTrigger
+                variant="ghost"
                 size="sm"
-                className="h-auto w-full justify-start gap-1 border-0 bg-transparent p-0 font-mono text-xs text-foreground shadow-none hover:text-muted-foreground-strong focus-visible:ring-0"
+                className="w-full justify-start gap-1"
               >
                 <SelectValue placeholder="None" />
               </SelectTrigger>
@@ -172,12 +174,13 @@ export function SidebarRecurrenceFieldAppearance({
                 Every
                 <Input
                   type="number"
+                  variant="ghost"
                   min="1"
                   value={intervalInput}
                   onChange={(e) => {
                     onIntervalInputChange(e.target.value)
                   }}
-                  className="h-auto w-12 border-0 bg-transparent p-0 text-center shadow-none focus-visible:ring-0"
+                  className="w-12"
                 />
                 {intervalUnitLabel(type, intervalValue ?? 1)}
               </div>
@@ -193,6 +196,7 @@ export function SidebarRecurrenceFieldAppearance({
             {type === 'monthly' && (
               <Input
                 type="number"
+                variant="ghost"
                 min="1"
                 max="31"
                 value={dayOfMonth}
@@ -200,7 +204,7 @@ export function SidebarRecurrenceFieldAppearance({
                   onDayOfMonthChange(e.target.value)
                 }}
                 placeholder="Day of month (1-31)"
-                className="h-auto w-full border-0 border-b border-border bg-transparent p-0 pb-1 text-xs shadow-none focus-visible:ring-0"
+                className="w-full"
               />
             )}
 

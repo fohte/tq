@@ -1,4 +1,8 @@
-import type { MenuItemConstructorOptions, WebContents } from 'electron'
+import type {
+  MenuItem,
+  MenuItemConstructorOptions,
+  WebContents,
+} from 'electron'
 
 export type NavigationHistory = Pick<
   WebContents['navigationHistory'],
@@ -21,8 +25,14 @@ type MenuTemplateItem = Omit<
   MenuItemConstructorOptions,
   'click' | 'submenu'
 > & {
-  click?: () => void
+  click?: (menuItem: Pick<MenuItem, 'checked'>) => void
   submenu?: MenuTemplateItem[]
+}
+
+export type SideWindowMenuActions = {
+  open: () => void
+  alwaysOnTop: boolean
+  setAlwaysOnTop: (alwaysOnTop: boolean) => void
 }
 
 const historyItems = (history: NavigationHistory): ShortcutItem[] => [
@@ -81,7 +91,7 @@ export const buildMenuTemplate = (
   history: NavigationHistory,
   webContents: CurrentPage,
   clipboard: ClipboardWriter,
-  openSideWindow: () => void,
+  sideWindow: SideWindowMenuActions,
 ): MenuTemplateItem[] => [
   { role: 'appMenu' },
   { role: 'fileMenu' },
@@ -92,7 +102,20 @@ export const buildMenuTemplate = (
   {
     label: 'Window',
     submenu: [
-      { label: 'Open Side Window', click: openSideWindow },
+      {
+        label: 'Open Side Window',
+        click: () => {
+          sideWindow.open()
+        },
+      },
+      {
+        label: 'Keep Side Window on Top',
+        type: 'checkbox',
+        checked: sideWindow.alwaysOnTop,
+        click: (menuItem) => {
+          sideWindow.setAlwaysOnTop(menuItem.checked)
+        },
+      },
       { type: 'separator' },
       { role: 'minimize' },
       { role: 'zoom' },

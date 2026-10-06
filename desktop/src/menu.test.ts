@@ -2,7 +2,11 @@ import { runInNewContext } from 'node:vm'
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildMenuTemplate, type NavigationHistory } from '#menu'
+import {
+  buildMenuTemplate,
+  type NavigationHistory,
+  type SideWindowMenuActions,
+} from '#menu'
 
 type Can = { back: boolean; forward: boolean }
 
@@ -41,8 +45,13 @@ function buildTestMenuTemplate(
   history: NavigationHistory,
   webContents: ReturnType<typeof fakePage>,
   clipboard: { writeText: (text: string) => void },
+  sideWindow: SideWindowMenuActions = {
+    open: () => {},
+    alwaysOnTop: false,
+    setAlwaysOnTop: () => {},
+  },
 ) {
-  return buildMenuTemplate(history, webContents, clipboard, () => {})
+  return buildMenuTemplate(history, webContents, clipboard, sideWindow)
 }
 
 type MenuTemplateItem = ReturnType<typeof buildMenuTemplate>[number]
@@ -63,7 +72,9 @@ const clickMenuItem = (
   const item = menuItems(menu, menuLabel).find(
     (menuItem) => menuItem.label === itemLabel,
   )
-  item?.click?.()
+  item?.click?.({
+    checked: item.type === 'checkbox' ? !(item.checked ?? false) : false,
+  })
 }
 
 describe('History menu', () => {
@@ -261,7 +272,11 @@ describe('Window menu', () => {
       history,
       fakePage(),
       { writeText: () => {} },
-      () => {},
+      {
+        open: () => {},
+        alwaysOnTop: false,
+        setAlwaysOnTop: () => {},
+      },
     )
 
     expect(
@@ -270,6 +285,7 @@ describe('Window menu', () => {
       ),
     ).toEqual([
       'Open Side Window',
+      'Keep Side Window on Top',
       'separator',
       'minimize',
       'zoom',
@@ -287,10 +303,56 @@ describe('Window menu', () => {
       history,
       fakePage(),
       { writeText: () => {} },
-      openSideWindow,
+      {
+        open: openSideWindow,
+        alwaysOnTop: false,
+        setAlwaysOnTop: () => {},
+      },
     )
     clickMenuItem(menu, 'Window', 'Open Side Window')
 
     expect(openSideWindow.mock.calls).toEqual([[]])
+  })
+
+  it('shows the saved always-on-top state in the checkbox', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const menu = buildTestMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      {
+        open: () => {},
+        alwaysOnTop: true,
+        setAlwaysOnTop: () => {},
+      },
+    )
+    const item = menuItems(menu, 'Window').find(
+      (menuItem) => menuItem.label === 'Keep Side Window on Top',
+    )
+
+    expect(
+      menuItems(menu, 'Window')
+        .filter((menuItem) => menuItem.label === item?.label)
+        .map(({ label, type, checked }) => [label, type, checked]),
+    ).toEqual([['Keep Side Window on Top', 'checkbox', true]])
+  })
+
+  it('applies the checkbox state when the setting is selected', () => {
+    const { history } = fakeHistory({ back: false, forward: false })
+    const setAlwaysOnTop = vi.fn()
+    const menu = buildTestMenuTemplate(
+      history,
+      fakePage(),
+      { writeText: () => {} },
+      {
+        open: () => {},
+        alwaysOnTop: false,
+        setAlwaysOnTop,
+      },
+    )
+
+    clickMenuItem(menu, 'Window', 'Keep Side Window on Top')
+
+    expect(setAlwaysOnTop.mock.calls).toEqual([[true]])
   })
 })

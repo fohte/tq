@@ -188,20 +188,23 @@ export function TagsInput({
 
       {isAdding ? (
         <>
-          <Input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              setSelectedIndex(0)
-            }}
-            onKeyDown={handleKeyDown}
-            onBlur={closeAdding}
-            placeholder="tag name"
-            autoFocus
-            className="h-auto w-24 border-0 bg-transparent p-0 font-mono text-xs shadow-none focus-visible:ring-0"
-          />
+          <div className="px-1">
+            <Input
+              ref={inputRef}
+              type="text"
+              variant="ghost"
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value)
+                setSelectedIndex(0)
+              }}
+              onKeyDown={handleKeyDown}
+              onBlur={closeAdding}
+              placeholder="tag name"
+              autoFocus
+              className="w-24"
+            />
+          </div>
           <Popover open={suggestions.length > 0} anchor={inputRef}>
             <PopoverContent
               initialFocus={false}

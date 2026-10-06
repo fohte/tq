@@ -2,6 +2,9 @@ import type { EventApi } from '@fullcalendar/core'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 
+export type DateTaskCalendarEventKind =
+  'range' | 'due' | 'start' | 'overdue-today'
+
 export interface CalendarEventProps {
   type?:
     | 'manual'
@@ -13,9 +16,14 @@ export interface CalendarEventProps {
     | 'completed'
     | 'schedule'
     | 'day-queue'
+    | 'task-date'
   parentRef?: string
   color?: { accent: string }
   taskId?: string
+  dateTaskKind?: DateTaskCalendarEventKind
+  dateTaskOverdue?: boolean
+  dateTaskDueDateLabel?: string
+  displayPriority?: number
   /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed'. Independent of `type`, since a completed task's block can have been either. */
   isAutoScheduled?: boolean
   scheduleId?: string
@@ -62,11 +70,12 @@ const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
   'completed',
   'schedule',
   'day-queue',
+  'task-date',
 ])
 
 /**
  * True when a click on this event has a destination: task detail for
- * manual/auto/completed, the edit modal for schedule. Shared by
+ * manual/auto/completed/day-queue/task-date, the edit modal for schedule. Shared by
  * handleEventClick and the `cursor: pointer` affordance in
  * fullcalendar.css so the two can't drift apart.
  */

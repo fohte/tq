@@ -23,7 +23,7 @@ import {
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import { renderCalendarGridEventContent } from '#components/calendar/calendar-grid-event-content'
 import {
-  isCalendarEventClickable,
+  getCalendarGridEventClassNames,
   mapCalendarGridEvents,
 } from '#components/calendar/calendar-grid-event-data'
 import {
@@ -366,14 +366,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           }}
           {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
-          eventClassNames={(arg) =>
-            isCalendarEventClickable(getEventProps(arg.event))
-              ? ['tq-event-clickable']
-              : []
-          }
+          eventClassNames={getCalendarGridEventClassNames}
           events={calendarEvents}
-          eventOrder="queueOrder,queuePosition,start,-duration,allDay,title"
           eventContent={renderCalendarGridEventContent}
+          eventOrder="-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title"
           nowIndicator={true}
           nowIndicatorContent={(arg) => {
             // arg.date is the column's day-start marker, not the current

@@ -59,12 +59,32 @@ describe('parseMarkdown', () => {
     expect(actual).toEqual(expected)
   })
 
-  it('returns an Err instead of throwing on pathologically deep nested input', async () => {
-    // Thousands of nested blockquote markers overflow remark's recursive
-    // descent parser (`RangeError: Maximum call stack size exceeded`).
-    const result = await parseMarkdown('> '.repeat(5000) + 'x')
+  it('recovers after a failed parse of pathologically deep Markdown', async () => {
+    const beforeFailure = await parseMarkdown('Recovered description')
+    const failed = await parseMarkdown(
+      `${'> '.repeat(5000)}x\n- [ ] Verify the result`,
+    )
+    const afterFailure = await parseMarkdown('Recovered description')
 
-    expect(result.isErr()).toBe(true)
-    expect(result._unsafeUnwrapErr()).toBeInstanceOf(MarkdownParseError)
+    const describeResult = (result: typeof beforeFailure) =>
+      result.isOk() ? describeDoc(result.value) : null
+    const getActual = () => ({
+      beforeFailure: describeResult(beforeFailure),
+      failureWasWrapped:
+        failed.isErr() && failed.error instanceof MarkdownParseError,
+      afterFailure: describeResult(afterFailure),
+    })
+    const recoveredDocument = {
+      docType: 'doc',
+      childCount: 1,
+      paragraphType: 'paragraph',
+      children: [{ text: 'Recovered description', marks: [] }],
+    }
+    const expected = {
+      beforeFailure: recoveredDocument,
+      failureWasWrapped: true,
+      afterFailure: recoveredDocument,
+    }
+    expect(getActual()).toEqual(expected)
   })
 })

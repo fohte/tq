@@ -320,6 +320,8 @@ function DayView() {
     dayQueueItems,
     taskMap,
     context,
+    taskDateTasks: categorized.all,
+    visibleRange,
   })
 
   const appendedTaskIdsFor = (queueKey: string, taskId: string) => {

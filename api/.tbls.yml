@@ -152,6 +152,23 @@ comments:
       body: 'Markdown skeleton intended for a task description.'
       guide: 'Writing instructions for completing each section of the body.'
       is_default: 'Whether the template is selected by default; at most one template may be default.'
+  - table: task_checklists
+    tableComment: 'Named or unnamed checklists associated with tasks.'
+    columnComments:
+      task_id: 'Task that owns this checklist.'
+      name: 'Optional display name for the checklist.'
+      sort_order: 'Position used to order the task checklists.'
+  - table: task_checklist_items
+    tableComment: 'Nested checklist items with completion state and optional Markdown detail.'
+    columnComments:
+      checklist_id: 'Checklist that owns this item.'
+      parent_item_id: 'Parent item in the same checklist; null for a root item.'
+      content: 'Single-line item text.'
+      note: 'Optional Markdown detail for the item.'
+      checked_at: 'Time when the item was checked; null while unchecked.'
+      sort_order: 'Position among items with the same parent.'
+      github_link_id: 'Optional GitHub issue or pull request linked to this item.'
+      subtask_id: 'Optional task linked to this item as a subtask.'
   - table: schedules
     tableComment: 'Recurring calendar schedules with a local time range and optional recurrence rule.'
     columnComments:

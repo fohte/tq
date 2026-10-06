@@ -71,13 +71,13 @@ export function ScheduleModalDesktopPanel({
         {/* Title */}
         <Input
           type="text"
+          variant="ghost"
           value={title}
           onChange={(e) => {
             setTitle(e.target.value)
           }}
           placeholder="Schedule title"
           autoFocus
-          className="h-auto border-0 bg-transparent p-0 text-xl font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
         />
 
         {/* Time fields */}
@@ -85,23 +85,25 @@ export function ScheduleModalDesktopPanel({
           <InlineFieldGroup label="Start" icon={<Clock className="size-3.5" />}>
             <Input
               type="time"
+              variant="ghost"
               value={startTime}
               onChange={(e) => {
                 setStartTime(e.target.value)
               }}
               aria-label="Start time"
-              className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+              className="w-24"
             />
           </InlineFieldGroup>
           <InlineFieldGroup label="End" icon={<Clock className="size-3.5" />}>
             <Input
               type="time"
+              variant="ghost"
               value={endTime}
               onChange={(e) => {
                 setEndTime(e.target.value)
               }}
               aria-label="End time"
-              className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+              className="w-24"
             />
           </InlineFieldGroup>
         </div>
@@ -125,10 +127,7 @@ export function ScheduleModalDesktopPanel({
                 recurrenceValues,
               )}
             >
-              <SelectTrigger
-                size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-              >
+              <SelectTrigger variant="ghost" size="sm">
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
@@ -148,6 +147,7 @@ export function ScheduleModalDesktopPanel({
             <InlineFieldGroup label="Day of month" icon={null}>
               <Input
                 type="number"
+                variant="ghost"
                 min="1"
                 max="31"
                 value={dayOfMonth}
@@ -155,7 +155,7 @@ export function ScheduleModalDesktopPanel({
                   setDayOfMonth(e.target.value)
                 }}
                 placeholder="1-31"
-                className="h-auto w-16 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+                className="w-16"
               />
             </InlineFieldGroup>
           )}
@@ -171,10 +171,7 @@ export function ScheduleModalDesktopPanel({
               value={context}
               onValueChange={selectValueHandler(setContext, contextValues)}
             >
-              <SelectTrigger
-                size="sm"
-                className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-              >
+              <SelectTrigger variant="ghost" size="sm">
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>

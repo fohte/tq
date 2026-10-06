@@ -1,16 +1,13 @@
-import { defineConfig } from 'tsup'
+import { defineConfig, type Options } from 'tsup'
 
 // Importing this validates TQ_ORIGIN, so a build without it fails here.
 import { TQ_ORIGIN } from '#config'
 
-export default defineConfig({
-  entry: ['src/index.ts'],
-  format: ['esm'],
+export const sharedBuildConfig = {
   // Keep in sync with the node version bundled in Electron (Electron 44 → Node 24).
   target: 'node24',
   platform: 'node',
   outDir: 'dist',
-  clean: true,
   define: {
     'process.env.TQ_ORIGIN': JSON.stringify(TQ_ORIGIN),
     'process.env.TQ_EXTERNAL_SCHEMES': JSON.stringify(
@@ -22,4 +19,11 @@ export default defineConfig({
   // is bundled because runtime libraries live in devDependencies, so the
   // packaged app needs no node_modules.
   external: ['electron'],
+} satisfies Partial<Options>
+
+export default defineConfig({
+  ...sharedBuildConfig,
+  entry: ['src/index.ts'],
+  format: ['esm'],
+  clean: true,
 })

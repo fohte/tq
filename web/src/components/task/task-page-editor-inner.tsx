@@ -59,6 +59,7 @@ export function PageEditorInner({
   const titleInput = (
     <Input
       value={title}
+      variant="ghost"
       onChange={(e) => {
         setTitle(e.target.value)
       }}
@@ -71,7 +72,6 @@ export function PageEditorInner({
           e.currentTarget.blur()
         }
       }}
-      className="h-auto border-0 bg-transparent p-0 text-2xl font-bold text-foreground shadow-none outline-none focus-visible:border-0 focus-visible:ring-0 md:text-2xl"
       placeholder="Page title"
     />
   )

@@ -77,9 +77,10 @@ export const ExpandableFieldChipExpanded: Story = {
       expanded={() => (
         <Input
           type="date"
+          variant="ghost"
           defaultValue="2026-08-01"
           autoFocus
-          className="h-auto w-28 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:border-0 focus-visible:ring-0"
+          className="w-28"
         />
       )}
     />

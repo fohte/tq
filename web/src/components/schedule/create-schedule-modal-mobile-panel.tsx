@@ -74,13 +74,13 @@ export function ScheduleModalMobilePanel({
           {/* Title */}
           <Input
             type="text"
+            variant="ghost"
             value={title}
             onChange={(e) => {
               setTitle(e.target.value)
             }}
             placeholder="Schedule title"
             autoFocus
-            className="h-auto border-0 bg-transparent p-0 text-lg font-medium shadow-none focus-visible:ring-0 focus-visible:border-0"
           />
 
           <div className="h-px bg-border" />
@@ -94,13 +94,14 @@ export function ScheduleModalMobilePanel({
               expanded={() => (
                 <Input
                   type="time"
+                  variant="ghost"
                   value={startTime}
                   onChange={(e) => {
                     setStartTime(e.target.value)
                   }}
                   autoFocus
                   aria-label="Start time"
-                  className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+                  className="w-24"
                 />
               )}
             />
@@ -111,13 +112,14 @@ export function ScheduleModalMobilePanel({
               expanded={() => (
                 <Input
                   type="time"
+                  variant="ghost"
                   value={endTime}
                   onChange={(e) => {
                     setEndTime(e.target.value)
                   }}
                   autoFocus
                   aria-label="End time"
-                  className="h-auto w-24 border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0 focus-visible:border-0"
+                  className="w-24"
                 />
               )}
             />
@@ -136,11 +138,7 @@ export function ScheduleModalMobilePanel({
                     close()
                   }}
                 >
-                  <SelectTrigger
-                    size="sm"
-                    autoFocus
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-                  >
+                  <SelectTrigger variant="ghost" size="sm" autoFocus>
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
@@ -164,11 +162,7 @@ export function ScheduleModalMobilePanel({
                     close()
                   }}
                 >
-                  <SelectTrigger
-                    size="sm"
-                    autoFocus
-                    className="h-auto border-0 bg-transparent p-0 text-xs shadow-none focus-visible:ring-0"
-                  >
+                  <SelectTrigger variant="ghost" size="sm" autoFocus>
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
