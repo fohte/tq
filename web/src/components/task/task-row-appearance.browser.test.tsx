@@ -90,6 +90,29 @@ describe('TaskRowAppearance', () => {
     )
   })
 
+  it('renders checklist progress after the subtask count', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        childCompletionCount: { completed: 2, total: 5 },
+        checklistCompletionCount: { completed: 1, total: 4 },
+      }),
+    )
+
+    expect(
+      [
+        ...container.querySelectorAll(
+          '[data-testid="child-completion"], [data-testid="checklist-completion"]',
+        ),
+      ].map((element) => element.textContent),
+    ).toEqual(['2/5', '1/4'])
+  })
+
+  it('hides checklist progress when the task has no checklist items', async () => {
+    await renderTaskRow(makeTask())
+
+    expect(screen.queryByTestId('checklist-completion')).toEqual(null)
+  })
+
   it('opens a sole GitHub blocker without navigating away from the task row', async () => {
     const blockerRef = makeBlockedByGithubRef()
     const blockedTask = makeTask({ blockedByGithubRefs: [blockerRef] })

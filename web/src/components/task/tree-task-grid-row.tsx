@@ -133,6 +133,7 @@ export function TreeTaskGridRow({
           depth={depth}
           selected={isSelected || isOver}
           metadataLeading={childCompletion}
+          checklistCompletionCountPlacement="metadata"
           showChildCompletionCount={false}
           trailing={
             <TreeRowActionsMenu

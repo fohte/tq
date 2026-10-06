@@ -340,6 +340,17 @@ export const FilteredWithCompletionCount: Story = {
   },
 }
 
+export const WithChecklistProgress: Story = {
+  name: 'the tree row shows checklist progress after its subtask count',
+  args: {
+    node: makeNode({
+      title: 'Prepare the release',
+      childCompletionCount: { completed: 2, total: 5 },
+      checklistCompletionCount: { completed: 1, total: 4 },
+    }),
+  },
+}
+
 export const AllVariants: Story = {
   name: 'the list compares personal completed work and parent task rows',
   args: { node: baseTreeNode },
