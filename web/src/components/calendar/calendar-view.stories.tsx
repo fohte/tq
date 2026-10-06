@@ -148,13 +148,6 @@ const sampleEvents: TimeBlockEvent[] = [
     type: 'gcal-meeting',
   },
   {
-    id: '4',
-    title: 'CI パイプライン構築',
-    start: `${dateStr}T14:00:00`,
-    end: `${dateStr}T15:00:00`,
-    type: 'completed',
-  },
-  {
     id: '5',
     title: 'Gym',
     start: `${dateStr}T07:00:00`,

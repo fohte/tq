@@ -90,20 +90,18 @@ describe('isGcalEventType', () => {
 
   it('is false for non-gcal types and undefined', () => {
     expect(
-      (['manual', 'auto', 'completed', 'schedule', undefined] as const).map(
-        isGcalEventType,
-      ),
-    ).toEqual([false, false, false, false, false])
+      (['manual', 'auto', 'schedule', undefined] as const).map(isGcalEventType),
+    ).toEqual([false, false, false, false])
   })
 })
 
 describe('isClickableEvent', () => {
   it('is true for every type with a click destination', () => {
     expect(
-      (['manual', 'auto', 'completed', 'schedule'] as const).map((type) =>
+      (['manual', 'auto', 'schedule'] as const).map((type) =>
         isClickableEvent({ type }),
       ),
-    ).toEqual([true, true, true, true])
+    ).toEqual([true, true, true])
   })
 
   it('is false for gcal types and undefined', () => {

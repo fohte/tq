@@ -29,7 +29,6 @@ export interface TimeBlockEvent {
     | 'gcal-solo'
     | 'gcal-status'
     | 'gcal-info'
-    | 'completed'
     | 'schedule'
     | 'task-date'
   /** Parent task reference (e.g. "#488 tq 作成") */
@@ -38,13 +37,13 @@ export interface TimeBlockEvent {
   color?: {
     accent: string
   }
-  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' | 'task-date' */
+  /** Underlying task id, present when type is 'manual' | 'auto' | 'task-date' */
   taskId?: string
   dateTaskKind?: DateTaskCalendarEventKind
   dateTaskOverdue?: boolean
   dateTaskDueDateLabel?: string
   displayPriority?: number
-  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed' */
+  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' */
   isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string
