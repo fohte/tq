@@ -56,20 +56,11 @@ export function parseGithubPullRequestUrl(
   InvalidGithubUrlError | GithubPullRequestRequiredError
 > {
   const normalizedUrl = url.trim().split(/[?#]/)[0] ?? ''
-  const match = GITHUB_PULL_REQUEST_URL_PATTERN.exec(normalizedUrl)
-  const groups = match?.groups
-  if (!groups) {
-    if (GITHUB_ISSUE_URL_PATTERN.test(normalizedUrl)) {
-      return err(new GithubPullRequestRequiredError())
-    }
-    return err(new InvalidGithubUrlError(url))
-  }
-
-  return ok({
-    owner: (groups['owner'] ?? '').toLowerCase(),
-    repo: (groups['repo'] ?? '').toLowerCase(),
-    number: Number(groups['number']),
-  })
+  return parseGithubIssueUrl(url).andThen((ref) =>
+    GITHUB_PULL_REQUEST_URL_PATTERN.test(normalizedUrl)
+      ? ok(ref)
+      : err(new GithubPullRequestRequiredError()),
+  )
 }
 
 export function parseGithubIssueUrl(

@@ -91,17 +91,24 @@ function linkInsertValues(
 function findLinkByRef(
   executor: Executor,
   ref: GithubResourceRef,
+  forUpdate = false,
 ): ResultAsync<LinkRow | null, never> {
-  return ResultAsync.fromSafePromise(
-    executor.query.taskGithubLinks.findFirst({
-      where: and(
+  const query = executor
+    .select()
+    .from(taskGithubLinks)
+    .where(
+      and(
         eq(taskGithubLinks.owner, ref.owner),
         eq(taskGithubLinks.repo, ref.repo),
         eq(taskGithubLinks.number, ref.number),
         eq(taskGithubLinks.role, 'subject'),
       ),
-    }),
-  ).map((link) => link ?? null)
+    )
+    .limit(1)
+
+  return ResultAsync.fromSafePromise(
+    (forUpdate ? query.for('update') : query).then((links) => links[0] ?? null),
+  )
 }
 
 function findTaskForLink(
@@ -142,7 +149,7 @@ function isUniqueViolation(cause: unknown, constraintName: string): boolean {
 // Converts a concurrent insert conflict on either GitHub-link uniqueness
 // rule into GithubResourceAlreadyLinkedError; a cause already in
 // LinkConflictError passes through unchanged.
-async function classifyLinkConflict(
+export async function classifyGithubLinkConflict(
   cause: unknown,
   taskId: string,
   ref: GithubResourceRef,
@@ -166,14 +173,6 @@ async function classifyLinkConflict(
   throw cause
 }
 
-export function classifyGithubLinkConflict(
-  cause: unknown,
-  taskId: string,
-  ref: GithubResourceRef,
-): Promise<Result<never, GithubResourceAlreadyLinkedError | RowNotFoundError>> {
-  return classifyLinkConflict(cause, taskId, ref)
-}
-
 export async function lockGithubResource(
   tx: DbTransaction,
   ref: GithubResourceRef,
@@ -192,37 +191,15 @@ export async function getOrCreateTaskGithubLink(
   await lockGithubResource(tx, issue)
   await lockTaskGithubLinks(tx, taskId)
 
-  const existing = await tx.query.taskGithubLinks.findFirst({
-    where: and(
-      eq(taskGithubLinks.owner, issue.owner),
-      eq(taskGithubLinks.repo, issue.repo),
-      eq(taskGithubLinks.number, issue.number),
-      eq(taskGithubLinks.role, 'subject'),
-    ),
-  })
+  // Serialize attachment with sync so a merge is either observed here or
+  // sees the newly attached checklist item after this transaction commits.
+  const existing = await findLinkByRef(tx, issue, true).unwrapOr(null)
   if (existing != null && existing.taskId !== taskId) {
     return err(new GithubResourceAlreadyLinkedError(existing.taskId))
   }
 
-  const now = new Date()
   if (existing != null) {
-    const state = existing.state === 'merged' ? 'merged' : issue.state
-    const [updated] = await tx
-      .update(taskGithubLinks)
-      .set({
-        url: issue.url,
-        kind: issue.kind,
-        state,
-        title: issue.title,
-        commentsCount: issue.commentsCount,
-        githubUpdatedAt: new Date(issue.githubUpdatedAt),
-        stateReason: issue.stateReason,
-        lastSyncedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(taskGithubLinks.id, existing.id))
-      .returning()
-    return ok(updated ?? existing)
+    return ok(existing)
   }
 
   const inserted = firstOrErr(
@@ -331,7 +308,7 @@ export function createTaskFromIssueData(
     (cause) => cause,
   ).orElse((cause) =>
     ResultAsync.fromSafePromise(
-      classifyLinkConflict(cause, insertedTaskId ?? '', issue),
+      classifyGithubLinkConflict(cause, insertedTaskId ?? '', issue),
     ).andThen((result) => result),
   )
 }
@@ -437,7 +414,7 @@ export function linkTaskToGithubUrl(
           (cause) => cause,
         ).orElse((cause) =>
           ResultAsync.fromSafePromise(
-            classifyLinkConflict(cause, taskId, ref),
+            classifyGithubLinkConflict(cause, taskId, ref),
           ).andThen((result) => result),
         ),
       )

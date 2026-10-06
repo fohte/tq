@@ -190,6 +190,7 @@ async function summarizeGithubChecklistMutation(input: {
     responseBody: input.responseBody ?? null,
     itemChecked: item?.checkedAt != null,
     itemUsesTaskLink: links.length === 1 && item?.githubLinkId === links[0]?.id,
+    itemSubtaskLinked: item?.subtaskId != null,
     parentChecked:
       input.parentItemId == null ? null : parent?.checkedAt != null,
     links: links.map(({ url, state }) => [url, state]),
@@ -928,14 +929,29 @@ describe('task checklists API', () => {
         checklistId: checklist.id,
         itemId: body.id,
         parentItemId: parent.id,
+        responseBody: normalizeItem(body),
       }),
     ).toEqual({
       status: 201,
       firstLinkStatus: null,
       initiallyChecked: null,
-      responseBody: null,
+      responseBody: {
+        id: 'ITEM',
+        checklistId: 'CHECKLIST',
+        parentItemId: 'ITEM',
+        content: 'Add the API route',
+        note: null,
+        checkedAt: 'DATE',
+        sortOrder: 0,
+        githubLinkId: 'GITHUB_LINK',
+        subtaskId: null,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        children: [],
+      },
       itemChecked: true,
       itemUsesTaskLink: true,
+      itemSubtaskLinked: false,
       parentChecked: true,
       links: [[githubUrl, 'merged']],
     })
@@ -973,6 +989,7 @@ describe('task checklists API', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ github: githubUrl }),
     })
+    const body = await jsonBody<ItemResponse>(response)
     expect(
       await summarizeGithubChecklistMutation({
         status: response.status,
@@ -980,14 +997,29 @@ describe('task checklists API', () => {
         checklistId: checklist.id,
         itemId: item.id,
         firstLinkStatus: linkResponse.status,
+        responseBody: normalizeItem(body),
       }),
     ).toEqual({
       status: 200,
       firstLinkStatus: 201,
       initiallyChecked: null,
-      responseBody: null,
+      responseBody: {
+        id: 'ITEM',
+        checklistId: 'CHECKLIST',
+        parentItemId: null,
+        content: 'Implement the feature',
+        note: null,
+        checkedAt: 'DATE',
+        sortOrder: 0,
+        githubLinkId: 'GITHUB_LINK',
+        subtaskId: null,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        children: [],
+      },
       itemChecked: true,
       itemUsesTaskLink: true,
+      itemSubtaskLinked: false,
       parentChecked: null,
       links: [[githubUrl, 'merged']],
     })
@@ -1010,6 +1042,7 @@ describe('task checklists API', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ github: githubUrl }),
     })
+    const body = await jsonBody<ItemResponse>(response)
     expect(
       await summarizeGithubChecklistMutation({
         status: response.status,
@@ -1017,14 +1050,29 @@ describe('task checklists API', () => {
         checklistId: checklist.id,
         itemId: item.id,
         initiallyChecked: beforeUpdate?.checkedAt != null,
+        responseBody: normalizeItem(body),
       }),
     ).toEqual({
       status: 200,
       firstLinkStatus: null,
       initiallyChecked: true,
-      responseBody: null,
+      responseBody: {
+        id: 'ITEM',
+        checklistId: 'CHECKLIST',
+        parentItemId: null,
+        content: 'Implement the feature',
+        note: null,
+        checkedAt: null,
+        sortOrder: 0,
+        githubLinkId: 'GITHUB_LINK',
+        subtaskId: null,
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        children: [],
+      },
       itemChecked: false,
       itemUsesTaskLink: true,
+      itemSubtaskLinked: false,
       parentChecked: null,
       links: [[githubUrl, 'open']],
     })
@@ -1059,6 +1107,125 @@ describe('task checklists API', () => {
       },
       itemChecked: false,
       itemUsesTaskLink: false,
+      itemSubtaskLinked: false,
+      parentChecked: null,
+      links: [],
+    })
+  })
+
+  it('rejects a pull request URL when GitHub returns an issue', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Implement the feature')
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/67'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: githubUrl })
+
+    const response = await app.request(`/api/checklist-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github: githubUrl }),
+    })
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: item.id,
+        responseBody: await response.json(),
+      }),
+    ).toEqual({
+      status: 400,
+      firstLinkStatus: null,
+      initiallyChecked: null,
+      responseBody: {
+        error: 'Only GitHub pull requests can be linked to checklist items',
+      },
+      itemChecked: false,
+      itemUsesTaskLink: false,
+      itemSubtaskLinked: false,
+      parentChecked: null,
+      links: [],
+    })
+  })
+
+  it('rejects linking a parent checklist item to a pull request', async () => {
+    const task = await createTask('Checklist task')
+    const checklist = await createChecklist(task.id)
+    const parent = await addItem(checklist.id, 'Build the feature')
+    await addItem(checklist.id, 'Add the API route', {
+      parentItemId: parent.id,
+    })
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/69'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: githubUrl, pull_request: {} })
+
+    const response = await app.request(`/api/checklist-items/${parent.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github: githubUrl }),
+    })
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: parent.id,
+        responseBody: await response.json(),
+      }),
+    ).toEqual({
+      status: 400,
+      firstLinkStatus: null,
+      initiallyChecked: null,
+      responseBody: {
+        error:
+          'Items with children or linked tasks cannot be linked to a pull request',
+      },
+      itemChecked: false,
+      itemUsesTaskLink: false,
+      itemSubtaskLinked: false,
+      parentChecked: null,
+      links: [],
+    })
+  })
+
+  it('rejects linking a subtask checklist item to a pull request', async () => {
+    const task = await createTask('Checklist task')
+    const subtask = await createTask('Subtask', { parentId: task.id })
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Implement the feature')
+    await db
+      .update(taskChecklistItems)
+      .set({ subtaskId: subtask.id })
+      .where(eq(taskChecklistItems.id, item.id))
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/71'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: githubUrl, pull_request: {} })
+
+    const response = await app.request(`/api/checklist-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github: githubUrl }),
+    })
+    expect(
+      await summarizeGithubChecklistMutation({
+        status: response.status,
+        taskId: task.id,
+        checklistId: checklist.id,
+        itemId: item.id,
+        responseBody: await response.json(),
+      }),
+    ).toEqual({
+      status: 400,
+      firstLinkStatus: null,
+      initiallyChecked: null,
+      responseBody: {
+        error:
+          'Items with children or linked tasks cannot be linked to a pull request',
+      },
+      itemChecked: false,
+      itemUsesTaskLink: false,
+      itemSubtaskLinked: true,
       parentChecked: null,
       links: [],
     })

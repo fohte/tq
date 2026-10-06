@@ -17,7 +17,6 @@ import {
   InvalidGithubUrlError,
   parseGithubPullRequestUrl,
 } from '#integrations/github/issues'
-import { RowNotFoundError } from '#lib/drizzle-utils'
 import type { EditAuthor } from '#lib/edits'
 import {
   createChecklistItemWithGithubLink,
@@ -76,11 +75,7 @@ function linkTransaction<T>(
         : okAsync<T, GithubItemError>(result.value),
     )
     .orElse((cause) => {
-      if (
-        cause instanceof GithubResourceAlreadyLinkedError ||
-        cause instanceof RowNotFoundError ||
-        isChecklistWriteError(cause)
-      ) {
+      if (isChecklistWriteError(cause)) {
         return errAsync(cause)
       }
 
