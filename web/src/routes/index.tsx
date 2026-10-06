@@ -21,6 +21,7 @@ import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
+import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
 import {
   GcalAuthRequiredError,
   useAutoRescheduleOnGcalChange,
@@ -33,7 +34,6 @@ import {
   DAY_QUEUE_KEY,
   type QueueItem,
   queueKeys,
-  useQueueItemsForDates,
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
@@ -52,13 +52,7 @@ import {
   getCompactRefetchInterval,
   isCompactDayLayoutSearch,
 } from '#lib/compact-layout'
-import {
-  addLocalDays,
-  formatLocalDate,
-  getLocalDateRangeDays,
-  getLocalWeekDateRange,
-  toLocalDateRange,
-} from '#lib/date-range'
+import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { appendQueueTaskId } from '#lib/queue-task-order'
@@ -253,27 +247,12 @@ function DayView() {
     onTimeBlockChange: handleTimeBlockChange,
   })
 
-  const futureDayQueueDates = useMemo(() => {
-    const { endDate } = getLocalWeekDateRange(selectedDate)
-    return getLocalDateRangeDays(addLocalDays(selectedDateStr, 1), endDate)
-  }, [selectedDate, selectedDateStr])
-  const futureDayQueueItemsResults = useQueueItemsForDates(
-    queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true
-      ? DAY_QUEUE_KEY
-      : undefined,
-    futureDayQueueDates,
+  const futureDayQueueItems = useFutureDayQueueItems({
+    selectedDate,
+    hasDayQueue:
+      queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
     refetchInterval,
-  )
-  const futureDayQueueItems = useMemo(
-    () =>
-      futureDayQueueDates.flatMap((date, index) =>
-        (futureDayQueueItemsResults[index]?.data ?? []).map((item) => ({
-          date,
-          item,
-        })),
-      ),
-    [futureDayQueueDates, futureDayQueueItemsResults],
-  )
+  })
 
   // Queue updates replace the full list, so keep stored IDs separate from
   // filters applied to the displayed sections.
