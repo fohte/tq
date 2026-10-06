@@ -47,7 +47,13 @@ const createDesktopWindow = (
 ) => {
   const win = new BrowserWindow({
     ...options,
-    ...(isMacOS ? { titleBarStyle: 'hidden' as const } : {}),
+    ...(isMacOS
+      ? {
+          titleBarStyle: 'hidden' as const,
+          // y=13 centers the 14 pt AppKit button frame in the shared 40 px title strip.
+          trafficLightPosition: { x: 9, y: 13 },
+        }
+      : {}),
   })
 
   if (isMacOS) {

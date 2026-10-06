@@ -33,20 +33,13 @@ export function MemoWindow({
     <section className="flex h-full min-h-0 flex-col bg-background px-3 pb-3 pt-2">
       <header
         className={cn(
-          'flex shrink-0 items-center justify-between gap-2',
+          'shrink-0 justify-between gap-2',
           desktopWindowControls
-            ? 'electron-drag-region -mx-3 -mt-2 h-10 px-3'
-            : 'h-8',
+            ? 'electron-titlebar-bar -mx-3 -mt-2 pr-3'
+            : 'flex h-8 items-center',
         )}
       >
-        <h1
-          className={cn(
-            'text-sm font-medium text-foreground',
-            desktopWindowControls && 'pl-16',
-          )}
-        >
-          {title}
-        </h1>
+        <h1 className="text-sm font-medium text-foreground">{title}</h1>
         <span
           aria-live="polite"
           className={cn(

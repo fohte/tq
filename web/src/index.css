@@ -86,7 +86,16 @@
   padding-top: 15vh;
 }
 
-.electron-drag-region {
+/*
+ * Three 14 pt AppKit button frames, two 9 pt gaps, and a 9 pt inset occupy
+ * 69 pt; the 80 px heading inset leaves 11 px. Keep these dimensions aligned
+ * with `trafficLightPosition` in desktop/src/index.ts to prevent overlap.
+ */
+.electron-titlebar-bar {
+  display: flex;
+  height: 2.5rem;
+  align-items: center;
+  padding-left: 5rem;
   -webkit-app-region: drag;
 }
 

@@ -285,8 +285,10 @@ export function Sidebar({
     >
       <div
         className={cn(
-          'flex h-10 shrink-0 items-center gap-2 border-b border-border pr-3.5',
-          desktopWindowControls ? 'electron-drag-region pl-20' : 'px-3.5',
+          'shrink-0 gap-2 border-b border-border pr-3.5',
+          desktopWindowControls
+            ? 'electron-titlebar-bar'
+            : 'flex h-10 items-center px-3.5',
         )}
       >
         <Link

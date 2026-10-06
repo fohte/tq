@@ -47,6 +47,7 @@ export const Personal: Story = {
 
 export const DesktopWindowControls: Story = {
   name: 'the window reserves space for desktop window controls',
+  tags: ['desktop-only'],
   args: {
     desktopWindowControls: true,
   },

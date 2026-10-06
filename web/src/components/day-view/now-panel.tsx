@@ -51,16 +51,10 @@ export function NowPanel({
       <div
         className={cn(
           'mb-1',
-          desktopWindowControls &&
-            'electron-drag-region -mx-3 -mt-2 flex h-7 items-center px-3',
+          desktopWindowControls && 'electron-titlebar-bar -mx-3 -mt-2',
         )}
       >
-        <h2
-          className={cn(
-            'text-xs font-semibold uppercase tracking-wide text-muted-foreground',
-            desktopWindowControls && 'pl-16',
-          )}
-        >
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Now
         </h2>
       </div>
