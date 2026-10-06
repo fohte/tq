@@ -141,6 +141,58 @@ describe('task list', () => {
     })
   })
 
+  it('sends a task number as the parent filter', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--parent-id', '731'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { parentId: '731' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('sends a task number as the descendant filter', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--descendant-of', '731'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { descendantOf: '731' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
   it('rejects an invalid include-ancestors value without making a request', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify([]), { status: 200 }),
@@ -498,6 +550,67 @@ describe('task search', () => {
         },
       ],
       stdout: [[`${JSON.stringify(results, null, 2)}\n`]],
+    })
+  })
+
+  it('passes a numeric parent filter in the query to the REST request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'search', 'parent:731'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { q: 'parent:731', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('sends numeric parent and descendant filters to the REST request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'search',
+        '--parent-id',
+        '731',
+        '--descendant-of',
+        '731',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { parentId: '731', descendantOf: '731', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
     })
   })
 
