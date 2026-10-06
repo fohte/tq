@@ -33,8 +33,6 @@ interface TaskChecklistListProps {
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
-  initiallyCollapsedItemIds?: string[] | undefined
-  initiallyExpandedNoteItemIds?: string[] | undefined
 }
 
 export function TaskChecklistList({
@@ -48,8 +46,6 @@ export function TaskChecklistList({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
-  initiallyCollapsedItemIds = [],
-  initiallyExpandedNoteItemIds = [],
 }: TaskChecklistListProps) {
   const counts = countChecklistLeaves(
     checklists.flatMap((checklist) => checklist.items),
@@ -80,8 +76,6 @@ export function TaskChecklistList({
               checklist={checklist}
               checklistIndex={index}
               checklistCount={checklists.length}
-              initiallyCollapsedItemIds={initiallyCollapsedItemIds}
-              initiallyExpandedNoteItemIds={initiallyExpandedNoteItemIds}
               onCreateItem={onCreateItem}
               onUpdateItem={onUpdateItem}
               onDeleteChecklist={onDeleteChecklist}
@@ -112,8 +106,6 @@ function ChecklistPanel({
   checklist,
   checklistIndex,
   checklistCount,
-  initiallyCollapsedItemIds,
-  initiallyExpandedNoteItemIds,
   onCreateItem,
   onUpdateItem,
   onDeleteChecklist,
@@ -126,8 +118,6 @@ function ChecklistPanel({
   checklist: TaskChecklist
   checklistIndex: number
   checklistCount: number
-  initiallyCollapsedItemIds: string[]
-  initiallyExpandedNoteItemIds: string[]
   onCreateItem: (
     checklistId: string,
     input: CreateTaskChecklistItemInput,
@@ -222,6 +212,8 @@ function ChecklistPanel({
               }}
               onBlur={saveName}
               onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing) return
+
                 if (event.key === 'Enter') event.currentTarget.blur()
                 if (event.key === 'Escape') {
                   setNameDraft(checklist.name ?? '')
@@ -264,8 +256,6 @@ function ChecklistPanel({
           onStartAddingItem={(itemId) => {
             setAddingItemParentId(itemId)
           }}
-          initiallyCollapsedItemIds={initiallyCollapsedItemIds}
-          initiallyExpandedNoteItemIds={initiallyExpandedNoteItemIds}
         />
         <div className="flex min-h-11 items-center border-t border-dashed border-border">
           <Button

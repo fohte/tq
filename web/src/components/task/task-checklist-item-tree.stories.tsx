@@ -52,11 +52,9 @@ function Providers({ children }: { children: ReactNode }) {
 function ItemTreeStory({
   items: storyItems,
   initiallyCollapsedItemIds,
-  initiallyExpandedNoteItemIds,
 }: {
   items: typeof items
   initiallyCollapsedItemIds?: string[]
-  initiallyExpandedNoteItemIds?: string[]
 }) {
   return (
     <Providers>
@@ -73,7 +71,6 @@ function ItemTreeStory({
             onSetItemChecked={() => {}}
             onStartAddingItem={() => {}}
             initiallyCollapsedItemIds={initiallyCollapsedItemIds}
-            initiallyExpandedNoteItemIds={initiallyExpandedNoteItemIds}
           />
         </Panel>
       </div>

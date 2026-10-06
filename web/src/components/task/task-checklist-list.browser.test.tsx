@@ -96,6 +96,18 @@ function getRenderedChecklistState() {
   }
 }
 
+function getNoteEditorState(
+  container: HTMLElement,
+  onUpdateItem: ReturnType<typeof vi.fn>,
+) {
+  return {
+    mode: container
+      .querySelector('.milkdown-wrapper')
+      ?.getAttribute('data-view-mode'),
+    updateCalls: onUpdateItem.mock.calls,
+  }
+}
+
 describe('TaskChecklistList', () => {
   it('counts only leaf items and locks a parent checkbox', () => {
     renderChecklist()
@@ -124,6 +136,15 @@ describe('TaskChecklistList', () => {
     expect(actions.onSetItemChecked.mock.calls).toEqual([[jacketId, true]])
   })
 
+  it('unchecks a completed leaf item through the checklist action callback', async () => {
+    const user = userEvent.setup()
+    const actions = renderChecklist()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Uncheck Gloves' }))
+
+    expect(actions.onSetItemChecked.mock.calls).toEqual([[glovesId, false]])
+  })
+
   it('adds an item to the selected checklist', async () => {
     const user = userEvent.setup()
     const actions = renderChecklist()
@@ -137,6 +158,27 @@ describe('TaskChecklistList', () => {
 
     expect(actions.onCreateItem.mock.calls).toEqual([
       [checklistId, { content: 'Bring a lantern' }],
+    ])
+  })
+
+  it('adds a nested item under the selected parent', async () => {
+    const user = userEvent.setup()
+    const actions = renderChecklist()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Actions for Backpack' }),
+    )
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'add subitem' }),
+    )
+    await user.type(
+      screen.getByRole('textbox', { name: 'New checklist item' }),
+      'First aid kit',
+    )
+    await user.keyboard('{Enter}')
+
+    expect(actions.onCreateItem.mock.calls).toEqual([
+      [checklistId, { content: 'First aid kit', parentItemId: backpackId }],
     ])
   })
 
@@ -287,21 +329,23 @@ describe('TaskChecklistList', () => {
 
     await user.click(screen.getByRole('button', { name: /add details/i }))
     await waitFor(() => {
-      expect(
+      if (
         container
           .querySelector('.milkdown-wrapper')
-          ?.getAttribute('data-view-mode'),
-      ).toEqual('edit')
+          ?.getAttribute('data-view-mode') !== 'edit'
+      ) {
+        throw new Error('The details editor is still mounting')
+      }
     })
-
     await focusDescriptionEditor(user, container)
     await user.keyboard('Pack a compass')
 
     await waitFor(
       () => {
-        expect(onUpdateItem.mock.calls).toEqual([
-          [jacketId, { note: 'Pack a compass\n' }],
-        ])
+        expect(getNoteEditorState(container, onUpdateItem)).toEqual({
+          mode: 'edit',
+          updateCalls: [[jacketId, { note: 'Pack a compass\n' }]],
+        })
       },
       { timeout: 3_000 },
     )

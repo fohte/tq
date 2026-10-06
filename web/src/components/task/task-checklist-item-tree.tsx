@@ -38,7 +38,6 @@ interface TaskChecklistItemTreeProps {
   onSetItemChecked: (itemId: string, checked: boolean) => void
   onStartAddingItem: (parentItemId: string) => void
   initiallyCollapsedItemIds?: string[] | undefined
-  initiallyExpandedNoteItemIds?: string[] | undefined
 }
 
 export function TaskChecklistItemTree({
@@ -54,7 +53,6 @@ export function TaskChecklistItemTree({
   onSetItemChecked,
   onStartAddingItem,
   initiallyCollapsedItemIds = [],
-  initiallyExpandedNoteItemIds = [],
 }: TaskChecklistItemTreeProps) {
   const currentParentId = parentItem?.id ?? null
 
@@ -77,9 +75,6 @@ export function TaskChecklistItemTree({
           onCancelAddingItem={onCancelAddingItem}
           onCreateItem={onCreateItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
-          initiallyExpandedNoteItemIds={initiallyExpandedNoteItemIds}
-          initiallyCollapsed={initiallyCollapsedItemIds.includes(item.id)}
-          initiallyExpandedNote={initiallyExpandedNoteItemIds.includes(item.id)}
         />
       ))}
       {addingItemParentId === currentParentId && (
@@ -110,9 +105,6 @@ function ChecklistItemRow({
   onCancelAddingItem,
   onCreateItem,
   initiallyCollapsedItemIds,
-  initiallyExpandedNoteItemIds,
-  initiallyCollapsed,
-  initiallyExpandedNote,
 }: {
   item: TaskChecklistItem
   siblings: TaskChecklistItem[]
@@ -128,14 +120,13 @@ function ChecklistItemRow({
   onCancelAddingItem: () => void
   onCreateItem: (content: string, parentItemId: string | null) => void
   initiallyCollapsedItemIds: string[]
-  initiallyExpandedNoteItemIds: string[]
-  initiallyCollapsed: boolean
-  initiallyExpandedNote: boolean
 }) {
-  const [collapsed, setCollapsed] = useState(initiallyCollapsed)
+  const [collapsed, setCollapsed] = useState(
+    initiallyCollapsedItemIds.includes(item.id),
+  )
   const [editingContent, setEditingContent] = useState(false)
   const [contentDraft, setContentDraft] = useState(item.content)
-  const [detailsOpen, setDetailsOpen] = useState(initiallyExpandedNote)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const { onChange: onNoteChange, flush: flushNoteChange } = useDebouncedSave(
@@ -154,6 +145,19 @@ function ChecklistItemRow({
   const previousSibling = index > 0 ? siblings[index - 1] : undefined
   const nextSibling = siblings[index + 1]
   const previousBeforeItem = index > 1 ? siblings[index - 2] : undefined
+  const indentMove =
+    previousSibling == null ||
+    previousSibling.githubLinkId != null ||
+    previousSibling.subtaskId != null
+      ? undefined
+      : { parentItemId: previousSibling.id }
+  const outdentMove =
+    parentItem == null
+      ? undefined
+      : {
+          parentItemId: parentItem.parentItemId,
+          afterItemId: parentItem.id,
+        }
   const counts = countChecklistLeaves([item])
 
   const itemActions = [
@@ -213,29 +217,24 @@ function ChecklistItemRow({
           },
         ]
       : []),
-    ...(previousSibling != null &&
-    previousSibling.githubLinkId == null &&
-    previousSibling.subtaskId == null
+    ...(indentMove != null
       ? [
           {
             icon: <CornerDownRight className="size-4" />,
             label: 'indent',
             onClick: () => {
-              onMoveItem(item.id, { parentItemId: previousSibling.id })
+              onMoveItem(item.id, indentMove)
             },
           },
         ]
       : []),
-    ...(parentItem != null
+    ...(outdentMove != null
       ? [
           {
             icon: <CornerUpLeft className="size-4" />,
             label: 'outdent',
             onClick: () => {
-              onMoveItem(item.id, {
-                parentItemId: parentItem.parentItemId,
-                afterItemId: parentItem.id,
-              })
+              onMoveItem(item.id, outdentMove)
             },
           },
         ]
@@ -259,6 +258,8 @@ function ChecklistItemRow({
   }
 
   const handleContentKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.nativeEvent.isComposing) return
+
     if (event.key === 'Enter') {
       event.currentTarget.blur()
       return
@@ -270,18 +271,7 @@ function ChecklistItemRow({
     }
     if (event.key !== 'Tab') return
 
-    const move = event.shiftKey
-      ? item.parentItemId == null
-        ? undefined
-        : {
-            parentItemId: parentItem?.parentItemId ?? null,
-            afterItemId: parentItem?.id ?? null,
-          }
-      : previousSibling == null ||
-          previousSibling.githubLinkId != null ||
-          previousSibling.subtaskId != null
-        ? undefined
-        : { parentItemId: previousSibling.id }
+    const move = event.shiftKey ? outdentMove : indentMove
 
     if (move == null) return
     event.preventDefault()
@@ -401,7 +391,6 @@ function ChecklistItemRow({
           onSetItemChecked={onSetItemChecked}
           onStartAddingItem={onStartAddingItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
-          initiallyExpandedNoteItemIds={initiallyExpandedNoteItemIds}
         />
       )}
 
@@ -469,6 +458,8 @@ function ChecklistItemComposer({
         }}
         onBlur={save}
         onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) return
+
           if (event.key === 'Enter') event.currentTarget.blur()
           if (event.key === 'Escape') {
             onCancel()

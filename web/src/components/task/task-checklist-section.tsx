@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { TaskChecklistList } from '#components/task/task-checklist-list'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import {
@@ -14,6 +16,7 @@ import {
 } from '#hooks/use-task-checklists'
 
 export function TaskChecklistSection({ taskId }: { taskId: string }) {
+  const [mutationError, setMutationError] = useState(false)
   const { data: checklists, isLoading, isError } = useTaskChecklists(taskId)
   const createChecklist = useCreateTaskChecklist(taskId)
   const updateChecklist = useUpdateTaskChecklist(taskId)
@@ -24,6 +27,14 @@ export function TaskChecklistSection({ taskId }: { taskId: string }) {
   const deleteItem = useDeleteTaskChecklistItem(taskId)
   const moveItem = useMoveTaskChecklistItem(taskId)
   const setItemChecked = useSetTaskChecklistItemChecked(taskId)
+  const mutationCallbacks = {
+    onError: () => {
+      setMutationError(true)
+    },
+    onSuccess: () => {
+      setMutationError(false)
+    },
+  }
 
   if (isLoading) {
     return <SectionLoadingIndicator label="checklists" />
@@ -38,35 +49,42 @@ export function TaskChecklistSection({ taskId }: { taskId: string }) {
   }
 
   return (
-    <TaskChecklistList
-      checklists={checklists ?? []}
-      onCreateChecklist={() => {
-        createChecklist.mutate({ name: null })
-      }}
-      onUpdateChecklist={(checklistId, input) => {
-        updateChecklist.mutate({ checklistId, input })
-      }}
-      onReorderChecklists={(checklistIds) => {
-        reorderChecklists.mutate(checklistIds)
-      }}
-      onDeleteChecklist={(checklistId) => {
-        deleteChecklist.mutate(checklistId)
-      }}
-      onCreateItem={(checklistId, input) => {
-        createItem.mutate({ checklistId, input })
-      }}
-      onUpdateItem={(itemId, input) => {
-        updateItem.mutate({ itemId, input })
-      }}
-      onDeleteItem={(itemId) => {
-        deleteItem.mutate(itemId)
-      }}
-      onMoveItem={(itemId, input) => {
-        moveItem.mutate({ itemId, input })
-      }}
-      onSetItemChecked={(itemId, checked) => {
-        setItemChecked.mutate({ itemId, checked })
-      }}
-    />
+    <>
+      {mutationError && (
+        <p role="alert" className="font-mono text-xs text-destructive">
+          Failed to save checklist changes.
+        </p>
+      )}
+      <TaskChecklistList
+        checklists={checklists ?? []}
+        onCreateChecklist={() => {
+          createChecklist.mutate({ name: null }, mutationCallbacks)
+        }}
+        onUpdateChecklist={(checklistId, input) => {
+          updateChecklist.mutate({ checklistId, input }, mutationCallbacks)
+        }}
+        onReorderChecklists={(checklistIds) => {
+          reorderChecklists.mutate(checklistIds, mutationCallbacks)
+        }}
+        onDeleteChecklist={(checklistId) => {
+          deleteChecklist.mutate(checklistId, mutationCallbacks)
+        }}
+        onCreateItem={(checklistId, input) => {
+          createItem.mutate({ checklistId, input }, mutationCallbacks)
+        }}
+        onUpdateItem={(itemId, input) => {
+          updateItem.mutate({ itemId, input }, mutationCallbacks)
+        }}
+        onDeleteItem={(itemId) => {
+          deleteItem.mutate(itemId, mutationCallbacks)
+        }}
+        onMoveItem={(itemId, input) => {
+          moveItem.mutate({ itemId, input }, mutationCallbacks)
+        }}
+        onSetItemChecked={(itemId, checked) => {
+          setItemChecked.mutate({ itemId, checked }, mutationCallbacks)
+        }}
+      />
+    </>
   )
 }
