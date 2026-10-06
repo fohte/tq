@@ -778,8 +778,8 @@ describe('day queue calendar interactions', () => {
       onExternalDrop({
         taskId,
         taskTitle: 'Prepare sample outline',
-        start: new Date('2026-07-22T00:00:00+09:00'),
-        end: new Date('2026-07-23T00:00:00+09:00'),
+        start: new Date(2026, 6, 22),
+        end: new Date(2026, 6, 23),
         allDay: true,
         sourceQueueKey: 'week',
         sourceDate: '2026-07-20',
