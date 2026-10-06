@@ -25,6 +25,7 @@ interface EventBlockStyle extends React.CSSProperties {
 
 const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
+  'day-queue': 'border-l-foreground',
   manual: 'border-l-foreground',
   completed: 'border-l-foreground',
   auto: 'border-l-muted-foreground',
@@ -37,6 +38,7 @@ const RULE_CLASS: Record<EventKind, string> = {
 
 const BG_CLASS: Record<EventKind, string> = {
   schedule: 'bg-card',
+  'day-queue': 'bg-surface-strong',
   'gcal-meeting': 'bg-card',
   'gcal-status': 'bg-card',
   'gcal-info': 'bg-card',
@@ -148,6 +150,7 @@ export function EventBlock(arg: EventContentArg) {
       className={cn(
         RULE_CLASS[type],
         BG_CLASS[type],
+        type === 'day-queue' && 'border-dashed',
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',

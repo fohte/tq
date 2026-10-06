@@ -81,6 +81,7 @@ export function useNowPanelData({
     timeBlocksData: timeBlocksQuery.data,
     schedulesData: schedulesQuery.data,
     gcalEventsData: gcalEventsQuery.data,
+    dayQueueItems: [],
     taskMap,
     context,
   })

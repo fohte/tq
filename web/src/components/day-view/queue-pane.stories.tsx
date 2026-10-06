@@ -57,6 +57,7 @@ const meta = {
     ),
   ],
   args: {
+    queueDate: '2026-01-01',
     onMoveTask: fn(),
     onInsertCandidate: fn(),
     onRemoveFromQueue: fn(),

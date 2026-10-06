@@ -47,6 +47,10 @@ import {
 export interface CalendarDndCallbacks {
   onEventDrop?: (info: {
     eventId: string
+    eventType: string | undefined
+    taskId: string | undefined
+    isAllDay: boolean
+    wasAllDay: boolean
     newStart: Date
     newEnd: Date
     oldStart: Date
@@ -68,6 +72,9 @@ export interface CalendarDndCallbacks {
     taskTitle: string
     start: Date
     end: Date
+    allDay: boolean
+    sourceQueueKey: string | undefined
+    sourceDate: string | undefined
   }) => void
 }
 
@@ -163,6 +170,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           const taskId = el.getAttribute('data-task-id') ?? ''
           const taskTitle = el.getAttribute('data-task-title') ?? ''
           const estimatedMinutes = el.getAttribute('data-estimated-minutes')
+          const queueSource = el.closest<HTMLElement>('[data-queue-key]')
           const durationMinutes =
             estimatedMinutes != null && estimatedMinutes !== ''
               ? Number.parseInt(estimatedMinutes, 10)
@@ -177,6 +185,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
             extendedProps: {
               taskId,
               type: 'manual',
+              sourceQueueKey:
+                queueSource?.getAttribute('data-queue-key') ?? undefined,
+              sourceDate:
+                queueSource?.getAttribute('data-queue-date') ?? undefined,
             },
           }
         },
@@ -192,18 +204,26 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleEventDrop = (info: EventDropArg) => {
       if (!dndCallbacks?.onEventDrop) return
       const { event, oldEvent, revert, el } = info
+      const eventType = getEventProps(event).type
+      const oldEventType = getEventProps(oldEvent).type
+      const isDayQueueEvent =
+        eventType === 'day-queue' && oldEventType === 'day-queue'
       if (
         !event.start ||
         !event.end ||
-        event.allDay ||
         !oldEvent.start ||
-        !oldEvent.end
+        !oldEvent.end ||
+        ((event.allDay || oldEvent.allDay) && !isDayQueueEvent)
       ) {
         revert()
         return
       }
       dndCallbacks.onEventDrop({
         eventId: event.id,
+        eventType,
+        taskId: getEventProps(event).taskId,
+        isAllDay: event.allDay,
+        wasAllDay: oldEvent.allDay,
         newStart: event.start,
         newEnd: event.end,
         oldStart: oldEvent.start,
@@ -216,6 +236,14 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
     const handleEventResize = (info: EventResizeDoneArg) => {
       if (!dndCallbacks?.onEventResize) return
       const { event, oldEvent, revert, el } = info
+      if (
+        event.allDay ||
+        getEventProps(event).type === 'day-queue' ||
+        getEventProps(oldEvent).type === 'day-queue'
+      ) {
+        revert()
+        return
+      }
       if (!event.start || !event.end || !oldEvent.start || !oldEvent.end) {
         revert()
         return
@@ -300,7 +328,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
       if (!dndCallbacks?.onExternalDrop) return
       const { event } = info
       const taskId = getEventProps(event).taskId
-      if (!event.start || !event.end || taskId == null || event.allDay) {
+      if (!event.start || !event.end || taskId == null) {
         event.remove()
         return
       }
@@ -311,6 +339,9 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         taskTitle: event.title,
         start: event.start,
         end: event.end,
+        allDay: event.allDay,
+        sourceQueueKey: getEventProps(event).sourceQueueKey,
+        sourceDate: getEventProps(event).sourceDate,
       })
     }
 
