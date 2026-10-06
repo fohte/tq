@@ -70,7 +70,7 @@ const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
 
 /**
  * True when a click on this event has a destination: task detail for
- * manual/auto/completed, the edit modal for schedule. Shared by
+ * manual/auto/completed/task-date, the edit modal for schedule. Shared by
  * handleEventClick and the `cursor: pointer` affordance in
  * fullcalendar.css so the two can't drift apart.
  */

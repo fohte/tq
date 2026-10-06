@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { TaskDateEvent } from '#components/calendar/task-date-event'
+import { cn } from '#lib/utils'
 
 const meta = {
   title: 'Calendar/TaskDateEvent',
@@ -9,8 +10,14 @@ const meta = {
     layout: 'centered',
   },
   decorators: [
-    (Story) => (
-      <div className="h-8 w-80">
+    (Story, { args }) => (
+      <div
+        className={cn(
+          'h-8 w-80',
+          args.isStart === false && 'tq-all-day-continues-left',
+          args.isEnd === false && 'tq-all-day-continues-right',
+        )}
+      >
         <Story />
       </div>
     ),

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock } from '#components/calendar/event-block'
+import { cn } from '#lib/utils'
 
 type EventType = TimeBlockEvent['type']
 
@@ -62,7 +63,11 @@ function EventBlockPreview({
 
   return (
     <div
-      className="w-(--event-block-width)"
+      className={cn(
+        'w-(--event-block-width)',
+        allDay && !isStart && 'tq-all-day-continues-left',
+        allDay && !isEnd && 'tq-all-day-continues-right',
+      )}
       style={
         {
           '--event-block-width': `${String(widthPx)}px`,

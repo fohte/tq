@@ -4,7 +4,7 @@ import { mapCalendarGridEvents } from '#components/calendar/calendar-grid-event-
 import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
 
 describe('mapCalendarGridEvents', () => {
-  it('keeps task-date reminders all-day, read-only, and ordered ahead of other events', () => {
+  it('preserves all-day, read-only, and priority metadata for task-date reminders', () => {
     const event = makeTimeBlockEvent({
       id: 'task-date-reminder',
       title: 'Review a sample note',

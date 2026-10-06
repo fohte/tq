@@ -1,7 +1,10 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { Headphones, LogOut, MapPin } from 'lucide-react'
 
-import { TaskDateEvent } from '#components/calendar/task-date-event'
+import {
+  getTaskDateEventProps,
+  TaskDateEvent,
+} from '#components/calendar/task-date-event'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import {
   type CalendarEventProps,
@@ -84,13 +87,7 @@ export function EventBlock(arg: EventContentArg) {
     return (
       <TaskDateEvent
         title={event.title}
-        dateTaskKind={props.dateTaskKind ?? 'range'}
-        {...(props.dateTaskOverdue == null
-          ? {}
-          : { dateTaskOverdue: props.dateTaskOverdue })}
-        {...(props.dateTaskDueDateLabel == null
-          ? {}
-          : { dateTaskDueDateLabel: props.dateTaskDueDateLabel })}
+        {...getTaskDateEventProps(props)}
         isStart={arg.isStart}
         isEnd={arg.isEnd}
       />
@@ -100,6 +97,8 @@ export function EventBlock(arg: EventContentArg) {
   const isShort = event.allDay || (arg.isStart && isShortEvent(event))
   const isCompleted = type === 'completed'
   const isPendingResponse = isPendingGcalResponse(props)
+  const continuesBefore = event.allDay && !arg.isStart
+  const continuesAfter = event.allDay && !arg.isEnd
 
   const timeDetails = (
     <span className="inline-flex items-center gap-x-1">
@@ -113,7 +112,13 @@ export function EventBlock(arg: EventContentArg) {
     return (
       <EventBlockShell
         isShort={isShort}
-        className="border-dashed border-l-muted-foreground-faint bg-transparent"
+        className={cn(
+          'border-dashed border-l-muted-foreground-faint bg-transparent',
+          event.allDay && 'tq-all-day-content',
+          continuesBefore && 'border-l-0',
+        )}
+        continuesBefore={continuesBefore}
+        continuesAfter={continuesAfter}
         title={
           <span className="min-w-0 truncate font-mono text-2xs text-muted-foreground">
             予定あり
@@ -147,11 +152,11 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
         (isCompleted || isPendingResponse) && 'opacity-50',
-        event.allDay &&
-          !arg.isStart &&
-          'tq-all-day-continues-left border-l-0 pl-3',
-        event.allDay && !arg.isEnd && 'tq-all-day-continues-right pr-3',
+        event.allDay && 'tq-all-day-content',
+        continuesBefore && 'border-l-0',
       )}
+      continuesBefore={continuesBefore}
+      continuesAfter={continuesAfter}
       style={
         accentColor == null ? undefined : { '--event-accent': accentColor }
       }
@@ -203,6 +208,8 @@ export function GcalStatusBand({ event }: EventContentArg) {
 function EventBlockShell({
   isShort,
   className,
+  continuesBefore = false,
+  continuesAfter = false,
   style,
   title,
   badge,
@@ -211,6 +218,8 @@ function EventBlockShell({
 }: {
   isShort: boolean
   className?: string
+  continuesBefore?: boolean
+  continuesAfter?: boolean
   style?: EventBlockStyle | undefined
   title: React.ReactNode
   badge?: string | undefined
@@ -225,6 +234,8 @@ function EventBlockShell({
         className,
       )}
       style={style}
+      data-continues-before={continuesBefore}
+      data-continues-after={continuesAfter}
     >
       <div className="flex min-w-0 items-center gap-1.5">
         {title}

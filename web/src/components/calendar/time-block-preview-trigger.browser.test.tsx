@@ -7,6 +7,7 @@ import {
   autoEvent,
   manualEvent,
   redactedEvent,
+  taskDateEvent,
   taskFixture,
   taskId,
 } from '#components/calendar/time-block-preview-trigger-test-fixtures'
@@ -56,6 +57,15 @@ const mockUseDeleteManualTimeBlock = vi.mocked(useDeleteManualTimeBlock)
 const mockUseRemoveFromDayQueue = vi.mocked(useRemoveFromDayQueue)
 
 type UseTaskResult = ReturnType<typeof useTask>
+
+function getTaskDatePreviewOutput() {
+  return {
+    text: screen.getByText('Dated task').textContent,
+    taskCalls: mockUseTask.mock.calls,
+    manualDeleteCalls: mockUseDeleteManualTimeBlock.mock.calls,
+    queueRemovalCalls: mockUseRemoveFromDayQueue.mock.calls,
+  }
+}
 
 function Chip({ label }: { label: string }) {
   return <div>{label}</div>
@@ -173,6 +183,26 @@ describe('TimeBlockPreviewTrigger', () => {
     await user.hover(screen.getByText('Busy'))
 
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('renders task-date events without loading a time-block preview', () => {
+    mockUseTask.mockClear()
+    mockUseDeleteManualTimeBlock.mockClear()
+    mockUseRemoveFromDayQueue.mockClear()
+    render(
+      <TimeBlockPreviewTrigger event={taskDateEvent}>
+        <Chip label="Dated task" />
+      </TimeBlockPreviewTrigger>,
+    )
+
+    const expected = {
+      text: 'Dated task',
+      taskCalls: [],
+      manualDeleteCalls: [],
+      queueRemovalCalls: [],
+    }
+
+    expect(getTaskDatePreviewOutput()).toEqual(expected)
   })
 
   it('closes an open popup on pointerdown on the trigger', async () => {

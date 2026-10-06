@@ -321,6 +321,35 @@ export const MonthViewWithTaskDates: Story = {
   },
 }
 
+export const OverdueReminderPriority: Story = {
+  name: 'the overdue reminder appears before other all-day events',
+  args: {
+    events: [
+      {
+        id: 'sample-calendar-event',
+        title: 'A sample calendar event',
+        start: dateStr,
+        end: tomorrowStr,
+        type: 'gcal-info',
+        allDay: true,
+      },
+      makeTimeBlockEvent({
+        id: 'sample-overdue-reminder',
+        title: 'Review a sample note',
+        start: dateStr,
+        end: tomorrowStr,
+        type: 'task-date',
+        taskId: 'sample-overdue-task',
+        allDay: true,
+        dateTaskKind: 'overdue-today',
+        dateTaskOverdue: true,
+        dateTaskDueDateLabel: 'Oct 5',
+        displayPriority: 1,
+      }),
+    ],
+  },
+}
+
 export const WeekViewWithDayEvents: Story = {
   name: 'the weekly calendar combines timed events with all-day items',
   args: {

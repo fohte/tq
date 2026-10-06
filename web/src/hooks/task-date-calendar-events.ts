@@ -97,7 +97,7 @@ function datesOverlap(
   endDate: string,
   visibleRange: CalendarDateRange,
 ): boolean {
-  return startDate <= visibleRange.endDate && endDate > visibleRange.startDate
+  return startDate <= visibleRange.endDate && endDate >= visibleRange.startDate
 }
 
 function isDateVisible(date: string, visibleRange: CalendarDateRange): boolean {

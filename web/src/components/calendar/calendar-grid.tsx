@@ -338,7 +338,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           eventClassNames={getCalendarGridEventClassNames}
           events={calendarEvents}
           eventContent={renderCalendarGridEventContent}
-          eventOrder="-displayPriority,start,-duration,allDay,title"
+          eventOrder="-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title"
           nowIndicator={true}
           nowIndicatorContent={(arg) => {
             // arg.date is the column's day-start marker, not the current

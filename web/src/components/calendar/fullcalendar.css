@@ -8,6 +8,7 @@
     transparent 0 6px,
     rgba(255, 255, 255, 0.035) 6px 12px
   );
+  --tq-all-day-arrow-size: 10px;
 }
 
 .tq-calendar {
@@ -212,26 +213,32 @@
 
 /* FullCalendar splits multi-day all-day events at week and range boundaries. */
 .tq-all-day-continues-left {
-  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+  clip-path: polygon(
+    var(--tq-all-day-arrow-size) 0,
+    100% 0,
+    100% 100%,
+    var(--tq-all-day-arrow-size) 100%,
+    0 50%
+  );
 }
 
 .tq-all-day-continues-right {
   clip-path: polygon(
     0 0,
-    calc(100% - 10px) 0,
+    calc(100% - var(--tq-all-day-arrow-size)) 0,
     100% 50%,
-    calc(100% - 10px) 100%,
+    calc(100% - var(--tq-all-day-arrow-size)) 100%,
     0 100%
   );
 }
 
 .tq-all-day-continues-left.tq-all-day-continues-right {
   clip-path: polygon(
-    10px 0,
-    calc(100% - 10px) 0,
+    var(--tq-all-day-arrow-size) 0,
+    calc(100% - var(--tq-all-day-arrow-size)) 0,
     100% 50%,
-    calc(100% - 10px) 100%,
-    10px 100%,
+    calc(100% - var(--tq-all-day-arrow-size)) 100%,
+    var(--tq-all-day-arrow-size) 100%,
     0 50%
   );
 }
@@ -242,6 +249,14 @@
 
 .tq-calendar .fc-event.tq-all-day-continues-right {
   margin-right: 0 !important;
+}
+
+.tq-all-day-content[data-continues-before='true'] {
+  padding-left: calc(var(--tq-all-day-arrow-size) + 2px);
+}
+
+.tq-all-day-content[data-continues-after='true'] {
+  padding-right: calc(var(--tq-all-day-arrow-size) + 2px);
 }
 
 /* Custom month event pill — same kind -> color mapping as the day view's EventBlock */
@@ -257,14 +272,14 @@
 .tq-calendar
   .fc-dayGridMonth-view
   .tq-month-event[data-continues-before='true'] {
-  padding-left: 14px;
+  padding-left: calc(var(--tq-all-day-arrow-size) + 4px);
   border-left: 0;
 }
 
 .tq-calendar
   .fc-dayGridMonth-view
   .tq-month-event[data-continues-after='true'] {
-  padding-right: 14px;
+  padding-right: calc(var(--tq-all-day-arrow-size) + 4px);
 }
 
 .tq-month-event[data-event-type^='gcal-'] {
@@ -292,12 +307,7 @@
 }
 
 .tq-task-date-event {
-  font-size: 10px;
   line-height: 1.4;
-}
-
-.tq-task-date-event[data-date-task-overdue='true'] {
-  background-color: color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .tq-month-event-title {

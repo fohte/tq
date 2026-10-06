@@ -1,7 +1,10 @@
 import type { EventContentArg } from '@fullcalendar/core'
 
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
-import { TaskDateEvent } from '#components/calendar/task-date-event'
+import {
+  getTaskDateEventProps,
+  TaskDateEvent,
+} from '#components/calendar/task-date-event'
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { formatHm } from '#lib/calendar-grid-time'
 import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
@@ -16,13 +19,7 @@ export function renderCalendarGridEventContent(
       return (
         <TaskDateEvent
           title={arg.event.title}
-          dateTaskKind={eventProps.dateTaskKind ?? 'range'}
-          {...(eventProps.dateTaskOverdue == null
-            ? {}
-            : { dateTaskOverdue: eventProps.dateTaskOverdue })}
-          {...(eventProps.dateTaskDueDateLabel == null
-            ? {}
-            : { dateTaskDueDateLabel: eventProps.dateTaskDueDateLabel })}
+          {...getTaskDateEventProps(eventProps)}
           isStart={arg.isStart}
           isEnd={arg.isEnd}
           variant="month"

@@ -131,6 +131,11 @@ function renderAndGetEventClassNames() {
   return capturedProps['eventClassNames'] as (arg: EventContentArg) => string[]
 }
 
+function renderAndGetEventOrder() {
+  render(<CalendarGrid events={[]} activeView="day" />)
+  return capturedProps['eventOrder']
+}
+
 function getTaskAndScheduleClickCalls(
   taskClick: ReturnType<typeof vi.fn>,
   scheduleClick: ReturnType<typeof vi.fn>,
@@ -430,6 +435,12 @@ describe('CalendarGrid', () => {
     expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
       'tq-event-clickable',
     ])
+  })
+
+  it('prioritizes overdue reminders in FullCalendar event order', () => {
+    expect(renderAndGetEventOrder()).toBe(
+      '-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title',
+    )
   })
 
   it('adds continuation arrows only to clipped all-day event segments', () => {

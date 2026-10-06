@@ -38,7 +38,7 @@ export interface TimeBlockEvent {
   color?: {
     accent: string
   }
-  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' */
+  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' | 'task-date' */
   taskId?: string
   dateTaskKind?: DateTaskCalendarEventKind
   dateTaskOverdue?: boolean
