@@ -232,7 +232,6 @@ export function GithubSyncRuleFormModal({
               <Checkbox
                 checked={includeExisting}
                 onCheckedChange={setIncludeExisting}
-                className="rounded border-border bg-white dark:bg-white"
               />
               現在アサイン済みの open issue も取り込む
             </label>

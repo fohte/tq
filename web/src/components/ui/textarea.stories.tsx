@@ -37,3 +37,21 @@ export const Placeholder: Story = {
     placeholder: 'Add description...',
   },
 }
+
+export const Code: Story = {
+  name: 'the text area shows compact code notes',
+  args: {
+    variant: 'code',
+    defaultValue: 'Notes for this focus session',
+    rows: 5,
+  },
+}
+
+export const Monospace: Story = {
+  name: 'the text area shows HTML source in a monospace style',
+  args: {
+    variant: 'monospace',
+    defaultValue: '<main>Page source</main>',
+    rows: 5,
+  },
+}

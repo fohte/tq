@@ -48,3 +48,34 @@ export const WithScreenTitle: Story = {
     </div>
   ),
 }
+
+export const Compact: Story = {
+  name: 'the compact queue header fits status and task actions together',
+  args: {
+    children: null,
+    spacing: 'compact',
+  },
+  render: (args) => (
+    <div className="w-full max-w-96 border border-border">
+      <ScreenHeaderBar spacing={args.spacing ?? 'normal'}>
+        <span className="font-mono text-xs font-bold text-primary">##</span>
+        <span className="font-mono text-xs font-medium">queue</span>
+        <span className="ml-auto font-mono text-2xs text-muted-foreground">
+          3 tasks
+        </span>
+        <button
+          type="button"
+          className="font-mono text-2xs text-muted-foreground hover:text-foreground"
+        >
+          auto
+        </button>
+        <button
+          type="button"
+          className="font-mono text-2xs text-muted-foreground hover:text-foreground"
+        >
+          + new
+        </button>
+      </ScreenHeaderBar>
+    </div>
+  ),
+}

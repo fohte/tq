@@ -2,11 +2,11 @@ import { cn } from '#lib/utils'
 
 function ProgressBar({
   percent,
-  fillClassName = 'bg-foreground',
+  tone = 'foreground',
   className,
 }: {
   percent: number
-  fillClassName?: string
+  tone?: 'foreground' | 'muted'
   className?: string
 }) {
   const clamped = Math.min(100, Math.max(0, percent))
@@ -14,7 +14,10 @@ function ProgressBar({
   return (
     <div className={cn('h-0.5 w-full bg-surface-strong', className)}>
       <div
-        className={cn('h-full w-(--progress-width)', fillClassName)}
+        className={cn(
+          'h-full w-(--progress-width)',
+          tone === 'muted' ? 'bg-muted-foreground' : 'bg-foreground',
+        )}
         style={
           {
             '--progress-width': `${String(clamped)}%`,
