@@ -129,7 +129,7 @@ export const listTasksQuerySchema = z.object({
   projectId: z.uuid().optional(),
   templateId: z.uuid().optional(),
   parentId: z
-    .union([z.literal('root'), taskIdOrNumber])
+    .union([z.literal('root'), ...taskIdOrNumber.options])
     .describe("Parent task UUID or number, or 'root' for tasks with no parent.")
     .optional(),
   descendantOf: taskIdOrNumber
