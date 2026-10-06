@@ -6,6 +6,7 @@
   "type": "module",
   "main": "dist/index.js",
   "imports": {
+    "#tsup-config": "./tsup.config.ts",
     "#*": "./src/*.ts"
   },
   "scripts": {

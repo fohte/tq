@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsup'
 
-import { sharedBuildConfig } from '#build-config'
+import { sharedBuildConfig } from '#tsup-config'
 
 export default defineConfig({
   ...sharedBuildConfig,
