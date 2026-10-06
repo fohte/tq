@@ -25,7 +25,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-const githubIcon = <GithubMarkIcon className="size-5 text-foreground" />
+const githubIcon = <GithubMarkIcon className="size-5" />
 const googleCalendarIcon = <Calendar className="size-5 text-foreground" />
 
 export const NotConfigured: Story = {

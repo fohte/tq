@@ -19,8 +19,6 @@ export function ProjectListRow({ project }: { project: Project }) {
   const completed = project.taskCount.completed
   const percent = total > 0 ? (completed / total) * 100 : 0
   const targetLabel = formatDate(project.targetDate) ?? '—'
-  const fillClassName =
-    status === 'active' ? 'bg-foreground' : 'bg-muted-foreground'
 
   return (
     <Link
@@ -45,7 +43,7 @@ export function ProjectListRow({ project }: { project: Project }) {
         <div className="flex items-center gap-2.5">
           <ProgressBar
             percent={percent}
-            fillClassName={fillClassName}
+            tone={status === 'active' ? 'foreground' : 'muted'}
             className="flex-1"
           />
           <span className="w-11 shrink-0 text-right font-mono text-2xs text-muted-foreground">
@@ -76,7 +74,10 @@ export function ProjectListRow({ project }: { project: Project }) {
             {completed}/{total}
           </span>
         </div>
-        <ProgressBar percent={percent} fillClassName={fillClassName} />
+        <ProgressBar
+          percent={percent}
+          tone={status === 'active' ? 'foreground' : 'muted'}
+        />
       </div>
     </Link>
   )

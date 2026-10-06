@@ -17,10 +17,11 @@ import {
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
 import { useIsDesktop } from '#hooks/use-is-desktop'
+import { cn } from '#lib/utils'
 
 interface FilterMenuProps {
   trigger: React.ReactNode
-  triggerClassName?: string
+  triggerVariant?: 'default' | 'filter-chip'
   triggerAriaLabel?: string | undefined
   title: string
   children: React.ReactNode
@@ -35,7 +36,7 @@ interface FilterMenuProps {
 // Checkbox or a <button> aren't.
 export function FilterMenu({
   trigger,
-  triggerClassName,
+  triggerVariant = 'default',
   triggerAriaLabel,
   title,
   children,
@@ -44,6 +45,10 @@ export function FilterMenu({
   const isDesktop = useIsDesktop()
   const [open, setOpen] = useState(defaultOpen)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const triggerClassName = cn(
+    triggerVariant === 'filter-chip' &&
+      'inline-flex h-5 min-w-0 cursor-pointer items-center gap-1 font-mono text-xs outline-none hover:opacity-80 focus-visible:underline',
+  )
 
   if (isDesktop) {
     return (

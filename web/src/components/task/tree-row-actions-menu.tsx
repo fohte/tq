@@ -20,7 +20,7 @@ export function TreeRowActionsMenu({
   return (
     <ActionsMenu
       aria-label="Task actions"
-      desktopTriggerClassName="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100"
+      hideDesktopTriggerUntilHover
       defaultOpen={defaultOpen}
       mobileItems={[]}
       items={[

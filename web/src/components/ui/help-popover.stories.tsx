@@ -27,3 +27,8 @@ export const Open: Story = {
   name: 'shows example guidance in the help popover',
   args: { defaultOpen: true },
 }
+
+export const Muted: Story = {
+  name: 'the help button uses muted text',
+  args: { tone: 'muted' },
+}

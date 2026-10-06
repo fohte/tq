@@ -12,9 +12,11 @@ import {
 function PreviewCardDemo({
   open,
   onOpenChange,
+  padding,
 }: {
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  padding?: 'default' | 'none'
 }) {
   return (
     <PreviewCard open={open} onOpenChange={onOpenChange}>
@@ -26,7 +28,9 @@ function PreviewCardDemo({
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>
-          <PreviewCardPopup>Preview card content</PreviewCardPopup>
+          <PreviewCardPopup padding={padding ?? 'default'}>
+            Preview card content
+          </PreviewCardPopup>
         </PreviewCardPositioner>
       </PreviewCardPortal>
     </PreviewCard>
@@ -58,5 +62,13 @@ export const Open: Story = {
   name: 'shows preview content beside its trigger',
   args: {
     open: true,
+  },
+}
+
+export const OpenWithoutPadding: Story = {
+  name: 'the preview card shows content flush with its edge',
+  args: {
+    open: true,
+    padding: 'none',
   },
 }

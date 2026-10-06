@@ -57,13 +57,14 @@ export function HtmlPageEditor({
       </div>
       {mode === 'source' ? (
         <Textarea
+          variant="monospace"
           value={value}
           placeholder={placeholder}
           onChange={(e) => {
             setValue(e.target.value)
             onChange?.(e.target.value)
           }}
-          className="min-h-0 flex-1 resize-none font-mono"
+          className="min-h-0 flex-1 resize-none"
         />
       ) : (
         <HtmlPageViewer content={value} size="fill" />

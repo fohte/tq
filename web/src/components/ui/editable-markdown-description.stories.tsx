@@ -39,25 +39,23 @@ const llmHeader = (
 const projectHeader = (
   <span className="text-xs text-muted-foreground">Description</span>
 )
-const taskClassName = 'p-4 focus-within:border-ring'
-const projectClassName = 'px-1 pb-1 pt-3 focus-within:border-primary/50'
 const projectDescription =
   '## Goal\n\nTrack a small project from planning to delivery.'
 
 export const TaskWithContent: Story = {
   name: 'the task description shows the LLM author chip and a pencil button above the box',
-  args: { className: taskClassName, header: llmHeader },
+  args: { variant: 'task', header: llmHeader },
 }
 
 export const EmptyTask: Story = {
   name: 'an empty task description shows its placeholder and a pencil button',
-  args: { className: taskClassName, defaultValue: null },
+  args: { variant: 'task', defaultValue: null },
 }
 
 export const EditingTask: Story = {
   name: 'the task description is open in edit mode without the pencil button',
   args: {
-    className: taskClassName,
+    variant: 'task',
     header: llmHeader,
     initiallyEditing: true,
   },
@@ -66,7 +64,7 @@ export const EditingTask: Story = {
 export const ProjectWithContent: Story = {
   name: 'the project description shows its label and a pencil button above the box',
   args: {
-    className: projectClassName,
+    variant: 'project',
     header: projectHeader,
     defaultValue: projectDescription,
   },
@@ -75,7 +73,7 @@ export const ProjectWithContent: Story = {
 export const EmptyProject: Story = {
   name: 'an empty project description shows its placeholder and a pencil button',
   args: {
-    className: projectClassName,
+    variant: 'project',
     header: projectHeader,
     defaultValue: null,
   },
@@ -84,7 +82,7 @@ export const EmptyProject: Story = {
 export const EditingProject: Story = {
   name: 'the project description is open in edit mode without the pencil button',
   args: {
-    className: projectClassName,
+    variant: 'project',
     header: projectHeader,
     defaultValue: projectDescription,
     initiallyEditing: true,

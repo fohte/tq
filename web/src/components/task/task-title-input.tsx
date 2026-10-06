@@ -163,7 +163,7 @@ export function TaskTitleInput({
           />
         </div>
         <TaskShorthandHelp
-          className="shrink-0 text-muted-foreground"
+          className="shrink-0"
           onOpenChange={(open) => {
             if (open) setCursorTrigger(null)
           }}

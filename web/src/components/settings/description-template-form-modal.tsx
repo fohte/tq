@@ -140,7 +140,6 @@ export function DescriptionTemplateFormModal({
               onCheckedChange={(checked) => {
                 setIsDefault(checked)
               }}
-              className="rounded border-border bg-white dark:bg-white"
             />
             新規作成時の既定にする
           </label>

@@ -372,8 +372,8 @@ describe('TreeTaskGridRow', () => {
       'desktop trigger not found',
     )
 
-    // opacity-0 by default (see desktopTriggerClassName in
-    // tree-row-actions-menu.tsx); revealed via `.group:hover` or its own
+    // opacity-0 by default (from hideDesktopTriggerUntilHover on
+    // TreeRowActionsMenu); revealed via `.group:hover` or its own
     // `:focus-visible`.
     expect(trigger).not.toBeVisible()
 

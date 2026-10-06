@@ -9,7 +9,6 @@ import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
-import { Chip } from '#components/ui/chip'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 
@@ -104,18 +103,21 @@ export function TreeTaskGridRow({
         aria-describedby={childCountDescriptionId}
         aria-expanded={expanded}
       >
-        <Chip size="md" className="pointer-events-none text-xs">
+        <span className="pointer-events-none inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
           <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
           {childCountText}
-        </Chip>
+        </span>
         <span id={childCountDescriptionId} className="sr-only">
           {childCount.completed} of {childCount.total} child tasks completed
         </span>
       </Button>
     ) : (
-      <Chip size="md" className="text-xs" data-testid="child-completion">
+      <span
+        className="inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
+        data-testid="child-completion"
+      >
         {childCountText}
-      </Chip>
+      </span>
     )
 
   return (

@@ -48,3 +48,25 @@ export const WithScreenTitle: Story = {
     </div>
   ),
 }
+
+export const Compact: Story = {
+  name: 'the header keeps the queue controls close together on compact layouts',
+  args: {
+    children: null,
+    spacing: 'compact',
+  },
+  render: (args) => (
+    <div className="w-full max-w-96 border border-border">
+      <ScreenHeaderBar spacing={args.spacing ?? 'normal'}>
+        <span className="font-mono text-xs font-bold text-primary">##</span>
+        <span className="font-mono text-xs font-medium">queue</span>
+        <button
+          type="button"
+          className="ml-auto font-mono text-xs text-muted-foreground hover:text-foreground"
+        >
+          + new
+        </button>
+      </ScreenHeaderBar>
+    </div>
+  ),
+}

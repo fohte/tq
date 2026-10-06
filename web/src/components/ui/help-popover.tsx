@@ -4,10 +4,13 @@ import { CircleHelp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useId, useRef, useState } from 'react'
 
+import { cn } from '#lib/utils'
+
 interface HelpPopoverProps {
   label: string
   children: ReactNode
   className?: string | undefined
+  tone?: 'default' | 'muted'
   defaultOpen?: boolean
   onOpenChange?: ((open: boolean) => void) | undefined
   tabIndex?: number
@@ -17,6 +20,7 @@ export function HelpPopover({
   label,
   children,
   className,
+  tone = 'default',
   defaultOpen = false,
   onOpenChange,
   tabIndex,
@@ -45,7 +49,7 @@ export function HelpPopover({
         onClick={() => {
           updateOpen(!open)
         }}
-        className={className}
+        className={cn(tone === 'muted' && 'text-muted-foreground', className)}
       >
         <CircleHelp aria-hidden="true" />
       </Button>

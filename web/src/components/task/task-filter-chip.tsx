@@ -37,6 +37,7 @@ export function TaskFilterChip({
       )}
     >
       <FilterMenu
+        triggerVariant="filter-chip"
         trigger={
           <>
             <Icon
@@ -49,7 +50,6 @@ export function TaskFilterChip({
             </span>
           </>
         }
-        triggerClassName="inline-flex h-5 min-w-0 cursor-pointer items-center gap-1 font-mono text-xs outline-none hover:opacity-80 focus-visible:underline"
         triggerAriaLabel={ariaLabel}
         title={menuTitle}
         defaultOpen={defaultOpen}
