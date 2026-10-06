@@ -50,7 +50,9 @@ export function HelpPopover({
           updateOpen(!open)
         }}
         className={cn(
-          tone === 'muted' ? 'text-muted-foreground' : 'text-foreground',
+          tone === 'muted'
+            ? 'text-muted-foreground hover:text-muted-foreground aria-expanded:text-muted-foreground'
+            : 'text-foreground',
           className,
         )}
       >
