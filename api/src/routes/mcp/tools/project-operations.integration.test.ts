@@ -250,6 +250,7 @@ describe('project operation tools', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { completed: 0, total: 0 },
+        checklistCompletionCount: { completed: 0, total: 0 },
       },
     ])
   })

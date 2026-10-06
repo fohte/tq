@@ -1,82 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { type ReactNode, useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
-import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
-import {
-  TaskSidebar,
-  TaskSidebarMobile,
-} from '#components/task/task-detail-sidebar'
+import { TaskSidebar } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import { TaskSidebarStoryProviders } from '#components/task/task-sidebar-story-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { ProjectDetail } from '#hooks/use-projects'
-import { projectKeys } from '#hooks/use-projects'
-import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
-import { formatLocalDate } from '#lib/date-range'
-import { labelKeys } from '#lib/query-keys'
-import { StoryRouter } from '#storybook-config/story-router'
 
 const baseTask = makeTaskDetail({
   childCompletionCount: { completed: 1, total: 3 },
 })
-
-function Providers({
-  children,
-  task,
-  project,
-}: {
-  children: ReactNode
-  task: TaskDetail
-  project?: ProjectDetail | undefined
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-  })
-  // TaskSidebar/TaskSidebarMobile always mount SidebarParentField,
-  // SidebarProjectField, SidebarTagsField, and SidebarPlanField, which read
-  // these regardless of the story's task.
-  queryClient.setQueryData(taskKeys.list(undefined), [])
-  queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
-  queryClient.setQueryData(
-    projectKeys.list(undefined),
-    project ? [project] : [],
-  )
-  const todayStr = formatLocalDate(new Date())
-  queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, todayStr), [])
-  queryClient.setQueryData(queueKeys.items(WEEK_QUEUE_KEY, todayStr), [])
-  if (project) {
-    queryClient.setQueryData(projectKeys.detail(project.id), project)
-  }
-  // An auto-scheduled time block's row fetches that day's queue (to know
-  // which task to drop on delete) — seed it so the story never hits the
-  // network.
-  for (const block of task.timeBlocks) {
-    if (!block.isAutoScheduled) continue
-    const date = formatLocalDate(new Date(block.startTime))
-    queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, date), [
-      makeQueueItem({
-        id: `queue-item-${block.id}`,
-        taskId: task.id,
-        periodStart: date,
-        createdAt: block.createdAt,
-        updatedAt: block.updatedAt,
-      }),
-    ])
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <StoryRouter
-        component={() => <>{children}</>}
-        paths={['/tasks', '/tasks/$taskId', '/projects/$projectId']}
-      />
-    </QueryClientProvider>
-  )
-}
 
 function SidebarPanelStoryView({
   task,
@@ -116,13 +52,13 @@ function SidebarStory({
   scrollToTimeBlocks?: boolean | undefined
 }) {
   return (
-    <Providers task={task} project={project}>
+    <TaskSidebarStoryProviders task={task} project={project}>
       <SidebarPanelStoryView
         task={task}
         defaultOpen={defaultOpen}
         scrollToTimeBlocks={scrollToTimeBlocks}
       />
-    </Providers>
+    </TaskSidebarStoryProviders>
   )
 }
 
@@ -155,6 +91,15 @@ export const SidebarMinimal: Story = {
       parentId: null,
       context: 'personal',
     },
+  },
+}
+
+export const SidebarWithChecklistProgress: Story = {
+  name: 'the sidebar shows checklist progress',
+  args: {
+    task: makeTaskDetail({
+      checklistCompletionCount: { completed: 1, total: 4 },
+    }),
   },
 }
 
@@ -240,21 +185,4 @@ export const SidebarDuplicateOpen: Story = {
     task: { ...baseTask, status: 'completed', statusReason: 'duplicate' },
     defaultOpen: true,
   },
-}
-
-export const MobileSidebar: StoryObj<{
-  task: TaskDetail
-  project?: ProjectDetail | undefined
-}> = {
-  name: 'task details appear in the compact mobile sidebar',
-  args: {
-    task: { ...baseTask },
-  },
-  render: ({ task, project }) => (
-    <Providers task={task} project={project}>
-      <div className="max-w-sm border-t border-border p-4">
-        <TaskSidebarMobile task={task} />
-      </div>
-    </Providers>
-  ),
 }

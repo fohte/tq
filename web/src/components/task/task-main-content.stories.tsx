@@ -7,6 +7,10 @@ import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import {
+  makeTaskChecklist,
+  makeTaskChecklistItem,
+} from '#components/task/task-checklist-test-fixtures'
+import {
   TaskMainContent,
   TaskSidebar,
   TaskSidebarMobile,
@@ -20,11 +24,17 @@ import type { AgentSession } from '#hooks/use-agent-sessions'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
+import type { TaskChecklist } from '#hooks/use-task-checklists'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { activityKeys, commentKeys, labelKeys } from '#lib/query-keys'
+import {
+  activityKeys,
+  commentKeys,
+  labelKeys,
+  taskChecklistKeys,
+} from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const samplePages: TaskPage[] = [
@@ -42,6 +52,32 @@ const samplePages: TaskPage[] = [
 ]
 
 const baseTask = makeTaskDetail()
+
+const sampleChecklists: TaskChecklist[] = [
+  makeTaskChecklist({
+    taskId: baseTask.id,
+    name: 'Build',
+    items: [
+      makeTaskChecklistItem({
+        content: 'Add the API',
+        children: [
+          makeTaskChecklistItem({
+            id: '30000000-0000-4000-8000-000000000401',
+            parentItemId: '30000000-0000-4000-8000-000000000001',
+            content: 'Create the route',
+            checkedAt: '2026-01-02T00:00:00.000Z',
+          }),
+          makeTaskChecklistItem({
+            id: '30000000-0000-4000-8000-000000000402',
+            parentItemId: '30000000-0000-4000-8000-000000000001',
+            content: 'Document the response',
+            note: 'Keep the response concise and include its status.',
+          }),
+        ],
+      }),
+    ],
+  }),
+]
 
 const sampleSubtasks: Task[] = [
   makeTask({
@@ -80,9 +116,11 @@ const sampleSessions: AgentSession[] = [
 function Providers({
   children,
   project,
+  checklists = [],
 }: {
   children: ReactNode
   project?: ProjectDetail | undefined
+  checklists?: TaskChecklist[] | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -93,6 +131,7 @@ function Providers({
   // individual story needs its own seeding.
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
+  queryClient.setQueryData(taskChecklistKeys.all(baseTask.id), checklists)
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
@@ -124,15 +163,17 @@ function MainContentStory({
   subtasks,
   sessions,
   project,
+  checklists,
 }: {
   task: TaskDetail
   pages: TaskPage[]
   subtasks: Task[]
   sessions: AgentSession[]
   project?: ProjectDetail | undefined
+  checklists?: TaskChecklist[] | undefined
 }) {
   return (
-    <Providers project={project}>
+    <Providers project={project} checklists={checklists}>
       <div className="max-w-2xl p-6">
         <TaskMainContent
           task={task}
@@ -249,6 +290,16 @@ export const WithPages: Story = {
     task: { ...baseTask, title: 'Task with pages' },
     pages: samplePages,
     subtasks: [],
+  },
+}
+
+export const WithChecklists: Story = {
+  name: 'shows nested checklists below the task description',
+  args: {
+    task: { ...baseTask },
+    pages: [],
+    subtasks: [],
+    checklists: sampleChecklists,
   },
 }
 

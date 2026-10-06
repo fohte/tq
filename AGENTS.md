@@ -106,6 +106,7 @@ A type needs a shared factory once its fixture is hand-written as a full object 
 Existing factories, one file per type-family, each exporting a `make<Type>(overrides: Partial<T> = {}): T` function:
 
 - `web/src/components/task/task-row-test-fixtures.ts`: `makeTask`/`makeTaskDetail`/`makeNode`, covering `Task`/`TaskDetail`/`TreeNode` and their structurally-identical aliases (`SearchResult`, `LinkedTaskSummary`, `ProjectTask`, ...)
+- `web/src/components/task/task-checklist-test-fixtures.ts`: `makeTaskChecklist`/`makeTaskChecklistItem`, covering `TaskChecklist`/`TaskChecklistItem`
 - `web/src/components/task/github-link-test-fixtures.ts`: `makeGithubLink`
 - `web/src/components/task/task-page-test-fixtures.ts`: `makeTaskPage`
 - `web/src/components/project/project-test-fixtures.ts`: `makeProject`/`makeProjectDetail`, covering `Project`/`ProjectDetail`

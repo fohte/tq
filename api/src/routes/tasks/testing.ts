@@ -92,6 +92,8 @@ export interface TaskResponse {
   createdAt: string
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
+  checklistCompletionCount?: { completed: number; total: number }
+  checklists?: ChecklistResponse[]
   children?: TaskResponse[]
   links?: { outgoing: TaskListItemResponse[]; incoming: TaskListItemResponse[] }
   linkSync?: LinkSyncResponse
@@ -142,7 +144,33 @@ export interface TaskListItemResponse {
     url: string
   }[]
   childCompletionCount?: { completed: number; total: number }
+  checklistCompletionCount: { completed: number; total: number }
   children?: TaskListItemResponse[]
+}
+
+interface ChecklistResponse {
+  id: string
+  taskId: string
+  name: string | null
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  items: ChecklistItemResponse[]
+}
+
+interface ChecklistItemResponse {
+  id: string
+  checklistId: string
+  parentItemId: string | null
+  content: string
+  note: string | null
+  checkedAt: string | null
+  sortOrder: number
+  githubLinkId: string | null
+  subtaskId: string | null
+  createdAt: string
+  updatedAt: string
+  children: ChecklistItemResponse[]
 }
 
 // create/update responses carry a `linkSync` key (see
@@ -187,6 +215,7 @@ export function toListItemResponse(
   >,
   opts: {
     childCompletionCount?: { completed: number; total: number }
+    checklistCompletionCount?: { completed: number; total: number }
     blockedByNumbers?: number[]
     blockedByGithubRefs?: TaskListItemResponse['blockedByGithubRefs']
   } = {},
@@ -219,6 +248,10 @@ export function toListItemResponse(
     blockedByNumbers: opts.blockedByNumbers ?? [],
     blockedByGithubRefs: opts.blockedByGithubRefs ?? [],
     childCompletionCount: opts.childCompletionCount ?? {
+      completed: 0,
+      total: 0,
+    },
+    checklistCompletionCount: opts.checklistCompletionCount ?? {
       completed: 0,
       total: 0,
     },
@@ -315,6 +348,10 @@ const taskListItemResponseSchema = z.object({
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
+  checklistCompletionCount: z.object({
+    completed: z.number(),
+    total: z.number(),
+  }),
 })
 
 const taskResponseSchema = z.object({
@@ -344,6 +381,10 @@ const taskResponseSchema = z.object({
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
+  checklistCompletionCount: z
+    .object({ completed: z.number(), total: z.number() })
+    .optional(),
+  checklists: z.array(z.any()).optional(),
   children: z.array(z.any()).optional(),
   links: z
     .object({
