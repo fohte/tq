@@ -7,7 +7,10 @@ import {
   TokenRefreshError,
 } from '#integrations/errors'
 import { GithubApiError } from '#integrations/github/index'
-import { InvalidGithubUrlError } from '#integrations/github/issues'
+import {
+  GithubPullRequestRequiredError,
+  InvalidGithubUrlError,
+} from '#integrations/github/issues'
 import { GithubBlockerSubjectConflictError } from '#services/task-github-blockers'
 import {
   GithubLinkNotFoundError,
@@ -24,7 +27,10 @@ export function githubLinkErrorResponse(
   error: Error,
   fingerprintPrefix: string,
 ) {
-  if (error instanceof InvalidGithubUrlError) {
+  if (
+    error instanceof InvalidGithubUrlError ||
+    error instanceof GithubPullRequestRequiredError
+  ) {
     return c.json({ error: error.message }, 400)
   }
   if (
