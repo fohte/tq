@@ -4,16 +4,17 @@ import {
   Editor,
   init,
   keymap,
-  parser,
-  parserCtx,
   pasteRule,
+  remarkCtx,
   schema,
+  schemaCtx,
 } from '@milkdown/kit/core'
 import type { MilkdownPlugin } from '@milkdown/kit/ctx'
 import { Clock, Container, Ctx } from '@milkdown/kit/ctx'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import type { Node } from '@milkdown/kit/prose/model'
+import { ParserState } from '@milkdown/kit/transformer'
 import { fromThrowable, type Result } from 'neverthrow'
 
 import { BoundaryError } from '#errors'
@@ -53,8 +54,8 @@ export class MarkdownParseError extends BoundaryError {}
 let ctxPromise: Promise<Ctx> | undefined
 
 // Drives milkdown's plugin system with only the DOM-free internal plugins
-// needed to build a working `parserCtx` (schema + commonmark/gfm parsing
-// rules), skipping `editorState`/`editorView`/`serializer`, which touch
+// needed to build the schema and commonmark/gfm parsing rules, skipping
+// `editorState`/`editorView`/`serializer`, which touch
 // `document` and would throw outside a browser. Memoized: building the
 // ctx/plugin chain is stateless once done, so it only needs to happen once
 // per process, lazily on first call.
@@ -64,7 +65,6 @@ async function getCtx(): Promise<Ctx> {
       const ctx = new Ctx(new Container(), new Clock())
       const plugins: MilkdownPlugin[] = [
         schema,
-        parser,
         commands,
         keymap,
         pasteRule,
@@ -94,15 +94,15 @@ async function getCtx(): Promise<Ctx> {
 
 // Parses markdown into the same ProseMirror `Node` shape the frontend
 // editor (Crepe, commonmark+gfm presets) produces, so `collectTextBlockRuns`
-// can run identically on both sides. `ctx.get(parserCtx)` is a synchronous,
-// stateless function (see @milkdown/transformer's `ParserState.create`), so
-// it's safe to call repeatedly/concurrently once the ctx is built.
+// can run identically on both sides. The schema and remark processor are
+// reusable, but each parser closure owns a mutable ParserState stack.
 export async function parseMarkdown(
   markdown: string,
 ): Promise<Result<Node, MarkdownParseError>> {
   const ctx = await getCtx()
   const parse = fromThrowable(
-    ctx.get(parserCtx),
+    // A failed parse can leave nodes on this stack, so discard the closure.
+    ParserState.create(ctx.get(schemaCtx), ctx.get(remarkCtx)),
     (cause) => new MarkdownParseError('failed to parse markdown', cause),
   )
   return parse(markdown)

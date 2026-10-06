@@ -17,6 +17,10 @@ import {
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
 import {
+  checkTaskComplete,
+  taskConventionViolationBody,
+} from '#services/task-conventions'
+import {
   getIncompleteGithubBlockerRefs,
   type GithubBlockerRef,
 } from '#services/task-github-blockers'
@@ -135,11 +139,37 @@ export const tasksActionsApp = new Hono()
       const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
-            .select({ status: tasks.status })
+            .select({
+              status: tasks.status,
+              statusReason: tasks.statusReason,
+              description: tasks.description,
+            })
             .from(tasks)
             .where(eq(tasks.id, id))
             .for('update'),
         )
+
+        if (
+          status === 'completed' &&
+          (current.status !== 'completed' ||
+            current.statusReason !== nextStatusReason)
+        ) {
+          const conventionViolation = await checkTaskComplete(
+            author,
+            current,
+            nextStatusReason ?? undefined,
+          )
+          if (conventionViolation !== null) {
+            return {
+              kind: 'error' as const,
+              body: taskConventionViolationBody(
+                conventionViolation,
+                'completion',
+              ),
+              status: 400 as const,
+            }
+          }
+        }
 
         if (status === 'completed' && current.status !== 'completed') {
           const blockedError = await checkNotBlocked(tx, id)
@@ -288,7 +318,7 @@ export const tasksActionsApp = new Hono()
       const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
-            .select({ status: tasks.status })
+            .select({ status: tasks.status, description: tasks.description })
             .from(tasks)
             .where(eq(tasks.id, id))
             .for('update'),
@@ -299,6 +329,22 @@ export const tasksActionsApp = new Hono()
             kind: 'error' as const,
             body: { error: 'Task is already completed' },
             status: 409 as const,
+          }
+        }
+
+        const conventionViolation = await checkTaskComplete(
+          author,
+          current,
+          reason,
+        )
+        if (conventionViolation !== null) {
+          return {
+            kind: 'error' as const,
+            body: taskConventionViolationBody(
+              conventionViolation,
+              'completion',
+            ),
+            status: 400 as const,
           }
         }
 
