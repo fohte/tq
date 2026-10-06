@@ -25,11 +25,11 @@ describe('AppType for Hono RPC', () => {
 
   it('does not expose removed scheduling endpoints', () => {
     expectTypeOf<
-      'auto-assign' extends keyof Client['api']['schedule'] ? true : false
-    >().toEqualTypeOf<false>()
-    expectTypeOf<
-      'scheduling-settings' extends keyof Client['api'] ? true : false
-    >().toEqualTypeOf<false>()
+      [
+        'auto-assign' extends keyof Client['api']['schedule'] ? true : false,
+        'scheduling-settings' extends keyof Client['api'] ? true : false,
+      ]
+    >().toEqualTypeOf<[false, false]>()
   })
 
   it('has api.calendar route', () => {
