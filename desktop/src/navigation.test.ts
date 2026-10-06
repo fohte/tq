@@ -3,11 +3,112 @@ import { describe, expect, it } from 'vitest'
 import {
   classifyNavigation,
   type NavigationAction,
+  type NavigationSource,
   resolveDeepLink,
+  resolveOpenInMainWindowPath,
   shouldOpenSideNavigationInMain,
+  shouldUseNavigationRequest,
 } from '#navigation'
 
 const ORIGIN = 'https://tq.example.com'
+
+describe('resolveOpenInMainWindowPath', () => {
+  it.each<[string, unknown, NavigationSource, string, string | undefined]>([
+    [
+      'side window path with search and hash',
+      '/tasks/42?tab=activity#comments',
+      'side',
+      `${ORIGIN}/?layout=compact`,
+      '/tasks/42?tab=activity#comments',
+    ],
+    [
+      'relative memo window path',
+      'tasks/42',
+      'memo',
+      `${ORIGIN}/memo?layout=compact`,
+      '/tasks/42',
+    ],
+    [
+      'absolute path at the configured origin',
+      `${ORIGIN}/tasks/42?tab=details`,
+      'side',
+      `${ORIGIN}/?layout=compact`,
+      '/tasks/42?tab=details',
+    ],
+    ['main window sender', '/tasks/42', 'main', `${ORIGIN}/tasks/1`, undefined],
+    [
+      'sender outside the configured origin',
+      '/tasks/42',
+      'side',
+      'https://login.example.test/',
+      undefined,
+    ],
+    [
+      'absolute path at another origin',
+      'https://tq.example.com.evil.test/tasks/42',
+      'side',
+      `${ORIGIN}/?layout=compact`,
+      undefined,
+    ],
+    [
+      'protocol-relative path at another origin',
+      '//tq.example.com.evil.test/tasks/42',
+      'memo',
+      `${ORIGIN}/memo?layout=compact`,
+      undefined,
+    ],
+    [
+      'unparseable path',
+      'http://[',
+      'side',
+      `${ORIGIN}/?layout=compact`,
+      undefined,
+    ],
+  ])('%s', (_name, path, source, senderUrl, expected) => {
+    expect(resolveOpenInMainWindowPath(path, source, senderUrl, ORIGIN)).toBe(
+      expected,
+    )
+  })
+})
+
+describe('shouldUseNavigationRequest', () => {
+  it.each<[string, boolean, string, boolean, boolean]>([
+    [
+      'registered listener on loaded tq page',
+      true,
+      `${ORIGIN}/tasks/1`,
+      false,
+      true,
+    ],
+    ['missing listener on tq page', false, `${ORIGIN}/tasks/1`, false, false],
+    [
+      'registered listener on external page',
+      true,
+      'https://login.example.test/',
+      false,
+      false,
+    ],
+    [
+      'registered listener while tq page loads',
+      true,
+      `${ORIGIN}/tasks/1`,
+      true,
+      false,
+    ],
+  ])(
+    '%s',
+    (_name, listenerRegistered, mainWindowUrl, mainWindowLoading, expected) => {
+      expect(
+        shouldUseNavigationRequest(
+          listenerRegistered,
+          mainWindowUrl,
+          ORIGIN,
+          mainWindowLoading,
+        ),
+      ).toBe(expected)
+    },
+  )
+})
 
 describe('classifyNavigation', () => {
   describe('from a tq page', () => {

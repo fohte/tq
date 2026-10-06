@@ -1,11 +1,11 @@
 import { defineConfig } from 'tsup'
 
-// Importing this validates TQ_ORIGIN, so a build without it fails here.
 import { sharedBuildConfig } from '#build-config'
 
 export default defineConfig({
   ...sharedBuildConfig,
-  entry: ['src/index.ts'],
-  format: ['esm'],
-  clean: true,
+  entry: ['src/preload.ts'],
+  format: ['cjs'],
+  clean: false,
+  outExtension: () => ({ js: '.cjs' }),
 })

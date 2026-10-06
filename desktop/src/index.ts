@@ -1,10 +1,12 @@
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   app,
   BrowserWindow,
   clipboard,
   globalShortcut,
+  ipcMain,
   Menu,
   screen,
   shell,
@@ -17,9 +19,15 @@ import { buildMenuTemplate } from '#menu'
 import {
   classifyNavigation,
   DEEP_LINK_SCHEME,
+  isInternalUrl,
+  NAVIGATION_LISTENER_STATE_CHANNEL,
+  NAVIGATION_REQUEST_CHANNEL,
   type NavigationSource,
+  OPEN_IN_MAIN_WINDOW_CHANNEL,
   resolveDeepLink,
+  resolveOpenInMainWindowPath,
   shouldOpenSideNavigationInMain,
+  shouldUseNavigationRequest,
 } from '#navigation'
 import {
   createSideWindowAlwaysOnTopController,
@@ -40,11 +48,13 @@ let sideWindow: BrowserWindow | undefined
 let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
 let sideWindowAlwaysOnTopController: SideWindowAlwaysOnTopController | undefined
+let mainNavigationRequestListenerRegistered = false
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
 const SIDE_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/?layout=compact`
 const MEMO_WINDOW_URL = `${TQ_ORIGIN.replace(/\/+$/, '')}/memo?layout=compact`
+const PRELOAD_PATH = fileURLToPath(new URL('./preload.cjs', import.meta.url))
 const isMacOS = process.platform === 'darwin'
 
 const createDesktopWindow = (
@@ -52,6 +62,12 @@ const createDesktopWindow = (
 ) => {
   const win = new BrowserWindow({
     ...options,
+    webPreferences: {
+      ...options.webPreferences,
+      preload: PRELOAD_PATH,
+      contextIsolation: true,
+      sandbox: true,
+    },
     ...(isMacOS
       ? {
           titleBarStyle: 'hidden' as const,
@@ -103,6 +119,21 @@ const openMainWindow = (url: string) => {
   showWindow(mainWindow)
 }
 
+const isTrustedMainFrame = (
+  event: Electron.IpcMainEvent,
+  win: BrowserWindow | undefined,
+): boolean => {
+  const frame = event.senderFrame
+  return (
+    win !== undefined &&
+    !win.isDestroyed() &&
+    BrowserWindow.fromWebContents(event.sender) === win &&
+    frame !== null &&
+    frame === event.sender.mainFrame &&
+    isInternalUrl(frame.url, TQ_ORIGIN)
+  )
+}
+
 const createWindow = (url: string): BrowserWindow => {
   const win = createDesktopWindow({
     // The sidebar provides the main window's titlebar spacing and drag region.
@@ -123,6 +154,46 @@ const showWindow = (win: BrowserWindow) => {
   app.show()
   win.show()
 }
+
+ipcMain.on(NAVIGATION_LISTENER_STATE_CHANNEL, (event, registered: unknown) => {
+  if (!isTrustedMainFrame(event, mainWindow)) return
+  mainNavigationRequestListenerRegistered = registered === true
+})
+
+ipcMain.on(OPEN_IN_MAIN_WINDOW_CHANNEL, (event, rawPath: unknown) => {
+  const sourceWindow = BrowserWindow.fromWebContents(event.sender)
+  if (sourceWindow !== sideWindow && sourceWindow !== memoWindow) return
+
+  const frame = event.senderFrame
+  if (frame === null || frame !== event.sender.mainFrame) return
+
+  const source: NavigationSource = sourceWindow === sideWindow ? 'side' : 'memo'
+  const path = resolveOpenInMainWindowPath(
+    rawPath,
+    source,
+    frame.url,
+    TQ_ORIGIN,
+  )
+  if (path === undefined) return
+
+  const targetWindow = mainWindow
+  if (targetWindow === undefined || targetWindow.isDestroyed()) return
+
+  if (
+    shouldUseNavigationRequest(
+      mainNavigationRequestListenerRegistered,
+      targetWindow.webContents.getURL(),
+      TQ_ORIGIN,
+      targetWindow.webContents.isLoadingMainFrame(),
+    )
+  ) {
+    targetWindow.webContents.send(NAVIGATION_REQUEST_CHANNEL, path)
+    showWindow(targetWindow)
+    return
+  }
+
+  openMainWindow(new URL(path, TQ_ORIGIN).href)
+})
 
 const isMissingFile = (caughtErr: unknown): boolean =>
   typeof caughtErr === 'object' &&
@@ -294,6 +365,18 @@ app.on('web-contents-created', (_event, contents) => {
     if (action === 'open-main') openMainWindow(url)
     if (action === 'open-memo') openMemoWindow()
     return { action: action === 'allow' ? 'allow' : 'deny' }
+  })
+
+  contents.on('did-navigate', () => {
+    if (BrowserWindow.fromWebContents(contents) === mainWindow) {
+      mainNavigationRequestListenerRegistered = false
+    }
+  })
+
+  contents.on('render-process-gone', () => {
+    if (BrowserWindow.fromWebContents(contents) === mainWindow) {
+      mainNavigationRequestListenerRegistered = false
+    }
   })
 
   contents.on('did-navigate-in-page', (_event, url, isMainFrame) => {

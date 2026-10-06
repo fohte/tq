@@ -10,6 +10,11 @@ const parseUrl = Result.fromThrowable(
   (caughtErr) => caughtErr,
 )
 
+const resolveUrl = Result.fromThrowable(
+  ({ path, base }: { path: string; base: string }) => new URL(path, base),
+  (caughtErr) => caughtErr,
+)
+
 const originOf = (url: string): string | undefined =>
   parseUrl(url).match(
     (parsed) => parsed.origin,
@@ -28,17 +33,60 @@ const isMemoPath = (url: string): boolean =>
 // Compare origins for equality, never by prefix: a prefix match lets
 // `https://tq.example.com.evil.test` through. `origin` may carry a path or
 // trailing slash; only its origin part counts.
-const isInternal = (url: string, origin: string): boolean => {
+export const isInternalUrl = (url: string, origin: string): boolean => {
   const urlOrigin = originOf(url)
   return urlOrigin !== undefined && urlOrigin === originOf(origin)
 }
+
+export const resolveOpenInMainWindowPath = (
+  path: unknown,
+  source: NavigationSource,
+  senderUrl: string,
+  origin: string,
+): string | undefined => {
+  if (
+    (source !== 'side' && source !== 'memo') ||
+    typeof path !== 'string' ||
+    !isInternalUrl(senderUrl, origin)
+  ) {
+    return undefined
+  }
+
+  const base = parseUrl(origin).match(
+    (parsed) => `${parsed.origin}/`,
+    () => undefined,
+  )
+  if (base === undefined) return undefined
+
+  return resolveUrl({ path, base }).match(
+    (parsed) =>
+      isInternalUrl(parsed.href, origin)
+        ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+        : undefined,
+    () => undefined,
+  )
+}
+
+export const shouldUseNavigationRequest = (
+  listenerRegistered: boolean,
+  mainWindowUrl: string,
+  origin: string,
+  mainWindowLoading: boolean,
+): boolean =>
+  !mainWindowLoading &&
+  listenerRegistered &&
+  isInternalUrl(mainWindowUrl, origin)
+
+export const OPEN_IN_MAIN_WINDOW_CHANNEL = 'tq:open-in-main-window'
+export const NAVIGATION_REQUEST_CHANNEL = 'tq:navigation-request'
+export const NAVIGATION_LISTENER_STATE_CHANNEL = 'tq:navigation-listener-state'
 
 export const shouldOpenSideNavigationInMain = (
   targetUrl: string,
   sideWindowUrl: string,
   origin: string,
 ): boolean => {
-  if (!isInternal(targetUrl, origin)) return false
+  if (!isInternalUrl(targetUrl, origin)) return false
 
   const targetPath = pathOf(targetUrl)
   const sideWindowPath = pathOf(sideWindowUrl)
@@ -73,7 +121,7 @@ export const resolveDeepLink = (
       const target = `${originProtocol}${parsed.href.slice(DEEP_LINK_PROTOCOL.length)}`
       // Reparse as http(s), unlike the opaque host of `tq:`, to lowercase it.
       return parseUrl(target).match(
-        (url) => (isInternal(url.href, origin) ? url.href : undefined),
+        (url) => (isInternalUrl(url.href, origin) ? url.href : undefined),
         () => undefined,
       )
     },
@@ -105,17 +153,17 @@ export const classifyNavigation = (
 ): NavigationAction => {
   // Leave pages outside tq (e.g. the Cloudflare Access / IdP login) alone;
   // otherwise the first sign-in can never complete inside the app.
-  if (!isInternal(currentUrl, origin)) return 'allow'
-  if (isInternal(targetUrl, origin) && isMemoPath(targetUrl)) {
+  if (!isInternalUrl(currentUrl, origin)) return 'allow'
+  if (isInternalUrl(targetUrl, origin) && isMemoPath(targetUrl)) {
     return 'open-memo'
   }
   if (
     (source === 'side' || source === 'memo') &&
-    isInternal(targetUrl, origin)
+    isInternalUrl(targetUrl, origin)
   ) {
     return 'open-main'
   }
-  if (isInternal(targetUrl, origin)) return 'allow'
+  if (isInternalUrl(targetUrl, origin)) return 'allow'
   // `shell.openExternal` launches whatever handler is registered for the
   // scheme, so only hand it schemes known to be safe to open.
   return isOpenableExternally(targetUrl, externalSchemes)
