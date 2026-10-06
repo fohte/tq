@@ -261,6 +261,39 @@ describe('checklist item update', () => {
   })
 })
 
+describe('checklist item promote', () => {
+  it('promotes an item through the API and prints the linked item', async () => {
+    const response = {
+      id: 'item-id',
+      content: 'Build feature',
+      subtaskId: 'subtask-id',
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'checklist', 'item', 'promote', 'item-id'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/checklist-items/item-id/promote',
+          query: {},
+          body: undefined,
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+})
+
 describe('checklist item move', () => {
   it('maps --root to an explicit null parent', async () => {
     const response = { id: 'item-id', parentItemId: null }

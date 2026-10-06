@@ -13,6 +13,8 @@ import {
   setChecklistItemChecked,
   updateChecklistItem,
 } from '#services/task-checklist-items'
+import { promoteChecklistItemToSubtask } from '#services/task-checklist-subtasks'
+import { syncTaskLinks } from '#services/task-links'
 
 export const checklistItemsByIdApp = new Hono()
   .patch(
@@ -53,6 +55,19 @@ export const checklistItemsByIdApp = new Hono()
     const result = await db.transaction((tx) =>
       setChecklistItemChecked(tx, c.req.param('itemId'), false),
     )
+
+    return result.match(
+      (item) => c.json(checklistItemToResponse(item), 200),
+      (error) => c.json({ error: error.message }, error.status),
+    )
+  })
+  .post('/:itemId/promote', async (c) => {
+    const result = await db.transaction((tx) =>
+      promoteChecklistItemToSubtask(tx, c.req.param('itemId'), c.get('author')),
+    )
+    if (result.isOk() && result.value.subtaskId != null) {
+      await syncTaskLinks(result.value.subtaskId)
+    }
 
     return result.match(
       (item) => c.json(checklistItemToResponse(item), 200),

@@ -16,6 +16,7 @@ import {
   taskToResponse,
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
+import { syncChecklistItemWithSubtaskStatus } from '#services/task-checklist-subtasks'
 import {
   checkTaskComplete,
   taskConventionViolationBody,
@@ -197,6 +198,7 @@ export const tasksActionsApp = new Hono()
             nextStatusReason,
             author,
           )
+          await syncChecklistItemWithSubtaskStatus(tx, id, status)
         }
 
         if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
@@ -371,6 +373,7 @@ export const tasksActionsApp = new Hono()
           reason,
           author,
         )
+        await syncChecklistItemWithSubtaskStatus(tx, id, 'completed')
 
         if (reason === 'duplicate' && duplicateOfTaskId != null) {
           await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
