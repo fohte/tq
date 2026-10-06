@@ -3,9 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import {
+  makeLabel,
+  seedContextLabels,
+} from '#components/label/label-test-fixtures'
 import { makeMentionSuggestion } from '#components/task/task-mention-test-fixtures'
 import { TaskTitleInput } from '#components/task/task-title-input'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { MentionSuggestion } from '#hooks/use-task-mentions'
 import { labelKeys, taskMentionKeys } from '#lib/query-keys'
 
@@ -20,6 +24,11 @@ labelsQueryClient.setQueryData(labelKeys.list({ context: 'personal' }), [
   makeLabel({ id: '1', name: 'urgent' }),
   makeLabel({ id: '2', name: 'urgent-work' }),
 ])
+
+const selectedContextLabelsQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+seedContextLabels(selectedContextLabelsQueryClient)
 
 const parentSuggestions: MentionSuggestion[] = [
   makeMentionSuggestion(),
@@ -47,15 +56,18 @@ parentSuggestionsQueryClient.setQueryData(
 function TaskTitleInputHarness({
   initialValue,
   detectInitialTrigger,
+  context,
 }: {
   initialValue: string
   detectInitialTrigger?: boolean
+  context?: 'work' | 'personal' | ''
 }) {
   const [value, setValue] = useState(initialValue)
   return (
     <TaskTitleInput
       value={value}
       onChange={setValue}
+      context={context}
       detectInitialTrigger={detectInitialTrigger ?? false}
     />
   )
@@ -132,6 +144,25 @@ export const ShowsLabelSuggestionsOnHash: Story = {
         <Story />
       </QueryClientProvider>
     ),
+  ],
+}
+
+export const UsesSelectedContextForLabelSuggestions: Story = {
+  name: 'the title suggestions use the selected context',
+  args: {
+    initialValue: 'Buy milk #',
+    detectInitialTrigger: true,
+    context: 'personal',
+  },
+  decorators: [
+    (Story) => {
+      resetSessionOpenSettings({ localContext: 'work' })
+      return (
+        <QueryClientProvider client={selectedContextLabelsQueryClient}>
+          <Story />
+        </QueryClientProvider>
+      )
+    },
   ],
 }
 

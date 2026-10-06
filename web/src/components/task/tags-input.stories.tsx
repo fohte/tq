@@ -3,8 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { useState } from 'react'
 
-import { makeLabel } from '#components/label/label-test-fixtures'
+import {
+  makeLabel,
+  seedContextLabels,
+} from '#components/label/label-test-fixtures'
 import { TagsInput } from '#components/task/tags-input'
+import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import { labelKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
@@ -28,20 +32,28 @@ attachedAncestorQueryClient.setQueryData(
   [makeLabel({ id: '1', name: 'dev' }), makeLabel({ id: '2', name: 'dev/tq' })],
 )
 
+const selectedContextQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+seedContextLabels(selectedContextQueryClient)
+
 function TagsInputHarness({
   initialLabels,
   defaultIsAdding,
   defaultInput,
+  context,
 }: {
   initialLabels: string[]
   defaultIsAdding?: boolean
   defaultInput?: string
+  context?: 'work' | 'personal' | ''
 }) {
   const [labels, setLabels] = useState(initialLabels)
   return (
     <TagsInput
       labels={labels}
       onLabelsChange={setLabels}
+      context={context}
       defaultIsAdding={defaultIsAdding ?? false}
       defaultInput={defaultInput ?? ''}
     />
@@ -120,5 +132,24 @@ export const HidesSuggestionAlreadyAttachedAsAncestor: Story = {
         <Story />
       </QueryClientProvider>
     ),
+  ],
+}
+
+export const UsesSelectedContextForSuggestions: Story = {
+  name: 'the label suggestions use the selected context',
+  args: {
+    initialLabels: [],
+    defaultIsAdding: true,
+    context: 'personal',
+  },
+  decorators: [
+    (Story) => {
+      resetSessionOpenSettings({ localContext: 'work' })
+      return (
+        <QueryClientProvider client={selectedContextQueryClient}>
+          <Story />
+        </QueryClientProvider>
+      )
+    },
   ],
 }

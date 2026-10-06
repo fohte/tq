@@ -4,9 +4,11 @@ import { useUpdateTask } from '#hooks/use-tasks'
 
 export function SidebarTagsField({
   taskId,
+  context,
   labels,
 }: {
   taskId: string
+  context: 'work' | 'personal'
   labels: string[]
 }) {
   const updateTask = useUpdateTask()
@@ -15,6 +17,7 @@ export function SidebarTagsField({
     <SidebarField label="TAGS">
       <TagsInput
         labels={labels}
+        context={context}
         onLabelsChange={(next) => {
           updateTask.mutate({ id: taskId, input: { labels: next } })
         }}
