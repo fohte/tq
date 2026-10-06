@@ -9,6 +9,15 @@ export function isCompactDayLayoutSearch(search: {
   return search['layout'] === 'compact'
 }
 
+export function isCompactDayLayoutMatch(
+  routeId: string,
+  search: { layout?: unknown },
+): boolean {
+  return (
+    (routeId === '/' || routeId === '/memo') && isCompactDayLayoutSearch(search)
+  )
+}
+
 export function getCompactRefetchInterval(
   isCompactLayout: boolean,
 ): number | undefined {

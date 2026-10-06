@@ -181,4 +181,24 @@ describe('RootRoute desktop navigation', () => {
       ),
     ).toEqual({ requests: [], href: '/tasks/task-123' })
   })
+
+  it('allows navigations from non-compact routes with a compact search parameter', async () => {
+    const router = await renderRootRoute('/tasks/task-current?layout=compact')
+
+    await act(async () => {
+      await router.navigate({
+        href: '/tasks/task-next?layout=compact',
+      })
+    })
+
+    expect(
+      compactNavigationResult(
+        openInMainWindow.mock.calls,
+        router.state.location.href,
+      ),
+    ).toEqual({
+      requests: [],
+      href: '/tasks/task-next?layout=compact',
+    })
+  })
 })

@@ -12,7 +12,7 @@ import { CompactLayoutFrame } from '#components/layout/compact-layout-frame'
 import { useGithubSync } from '#hooks/use-github-link'
 import { usePushResubscribe } from '#hooks/use-push-notifications'
 import { useServiceWorkerUpdate } from '#hooks/use-service-worker-update'
-import { isCompactDayLayoutSearch } from '#lib/compact-layout'
+import { isCompactDayLayoutMatch } from '#lib/compact-layout'
 import { getTqDesktopApi } from '#lib/tq-desktop'
 
 export const Route = createRootRoute({
@@ -26,7 +26,7 @@ function RootComponent() {
     shouldBlockFn: ({ current, next }) => {
       if (
         current.pathname === next.pathname ||
-        !isCompactDayLayoutSearch(current.search)
+        !isCompactDayLayoutMatch(current.routeId, current.search)
       ) {
         return false
       }
@@ -49,10 +49,8 @@ function RootComponent() {
 
   const isCompactLayout = useRouterState({
     select: (state) =>
-      state.matches.some(
-        (match) =>
-          (match.routeId === '/' || match.routeId === '/memo') &&
-          isCompactDayLayoutSearch(match.search),
+      state.matches.some((match) =>
+        isCompactDayLayoutMatch(match.routeId, match.search),
       ),
   })
 
