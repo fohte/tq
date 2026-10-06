@@ -5,10 +5,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TaskChecklistSection } from '#components/task/task-checklist-section'
-import {
-  taskChecklistKeys,
-  useSetTaskChecklistItemChecked,
-} from '#hooks/use-task-checklists'
+import { useSetTaskChecklistItemChecked } from '#hooks/use-task-checklists'
 
 const { mockGetChecklists, mockCreateChecklist, mockCheck, mockUncheck } =
   vi.hoisted(() => ({
@@ -121,8 +118,8 @@ describe('useSetTaskChecklistItemChecked', () => {
       checkCalls: [[{ param: { itemId } }]],
       uncheckCalls: [[{ param: { itemId } }]],
       invalidationKeys: [
-        taskChecklistKeys.all(taskId),
-        taskChecklistKeys.all(taskId),
+        ['tasks', 'detail', taskId, 'checklists'],
+        ['tasks', 'detail', taskId, 'checklists'],
       ],
     })
   })

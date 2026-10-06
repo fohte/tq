@@ -37,7 +37,7 @@ export type MoveTaskChecklistItemInput = InferRequestType<
   (typeof api.api)['checklist-items'][':itemId']['move']['$patch']
 >['json']
 
-export const taskChecklistKeys = {
+const taskChecklistKeys = {
   all: (taskId: string) => ['tasks', 'detail', taskId, 'checklists'] as const,
 }
 

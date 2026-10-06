@@ -25,7 +25,6 @@ import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskChecklist } from '#hooks/use-task-checklists'
-import { taskChecklistKeys } from '#hooks/use-task-checklists'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
@@ -127,7 +126,10 @@ function Providers({
   // individual story needs its own seeding.
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
-  queryClient.setQueryData(taskChecklistKeys.all(baseTask.id), checklists)
+  queryClient.setQueryData(
+    ['tasks', 'detail', baseTask.id, 'checklists'],
+    checklists,
+  )
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
