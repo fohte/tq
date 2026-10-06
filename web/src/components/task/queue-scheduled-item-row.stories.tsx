@@ -1,4 +1,3 @@
-import { DndContext } from '@dnd-kit/core'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
@@ -14,9 +13,7 @@ const meta = {
     (Story) => (
       <MemoizedStoryRouter paths={['/tasks/$taskId']}>
         <div className="w-full max-w-96 border border-border">
-          <DndContext>
-            <Story />
-          </DndContext>
+          <Story />
         </div>
       </MemoizedStoryRouter>
     ),

@@ -16,6 +16,7 @@ import { makeQueue } from '#hooks/queue-test-fixtures'
 import type { QueueItem } from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
 import { getNowPanelQueryDateRange } from '#lib/compact-layout'
+import type { QueueCandidate } from '#lib/queue-candidates'
 import { assertDefined } from '#lib/test-utils'
 import { Route as RootRoute } from '#routes/__root'
 import { Route as DayRoute } from '#routes/index'
@@ -63,7 +64,8 @@ type DayViewMockProps = {
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
   queueSections?: QueueSectionData[]
-  onRemoveDayFromWeek?: (taskId: string, date: string) => void
+  queueCandidates?: QueueCandidate<Task>[]
+  onMoveScheduledTaskToWeek?: (taskId: string, date: string) => void
 }
 type MemosMock = (
   context: 'work' | 'personal',
@@ -502,6 +504,7 @@ describe('day-view route scheduled week tasks', () => {
     const scheduledTask = makeTask({
       id: 'scheduled-task',
       title: 'Review the release notes',
+      commitment: 'active',
     })
     const queues = [
       makeQueue({ key: 'day', name: 'Today' }),
@@ -512,6 +515,11 @@ describe('day-view route scheduled week tasks', () => {
         position: 1,
       }),
     ]
+    mocks.useTaskList.mockReturnValue({
+      data: [scheduledTask],
+      isLoading: false,
+      categorized: { all: [scheduledTask] },
+    })
     mocks.useQueues.mockReturnValue({ data: queues })
     mocks.useQueueItemsForQueues.mockReturnValue([{ data: [] }, { data: [] }])
     mocks.useTaskMap.mockReturnValue(
@@ -539,11 +547,14 @@ describe('day-view route scheduled week tasks', () => {
     const presentationProps = assertDefined(
       mocks.dayViewProps.mock.lastCall?.[0],
     )
-    const onRemoveDayFromWeek = assertDefined(
-      presentationProps.onRemoveDayFromWeek,
+    const onMoveScheduledTaskToWeek = assertDefined(
+      presentationProps.onMoveScheduledTaskToWeek,
     )
+    const queueCandidateTaskIds = assertDefined(
+      presentationProps.queueCandidates,
+    ).map(({ task }) => task.id)
     act(() => {
-      onRemoveDayFromWeek(scheduledTask.id, scheduledDate)
+      onMoveScheduledTaskToWeek(scheduledTask.id, scheduledDate)
     })
     const mutationOptions = assertDefined(
       mocks.setQueueItems.mock.calls[0]?.[1],
@@ -555,6 +566,7 @@ describe('day-view route scheduled week tasks', () => {
     const readResult = () => ({
       fetchedDates: mocks.useQueueItemsForDates.mock.calls.at(-1)?.[1],
       queueSections: presentationProps.queueSections,
+      queueCandidateTaskIds,
       mutationVariables: mocks.setQueueItems.mock.calls.map(
         ([variables]) => variables,
       ),
@@ -584,7 +596,6 @@ describe('day-view route scheduled week tasks', () => {
           key: 'week',
           title: 'This week',
           items: [],
-          countLabel: '0 + 1',
           dayGroups: [
             {
               date: scheduledDate,
@@ -596,10 +607,42 @@ describe('day-view route scheduled week tasks', () => {
           emptyMessage: "No tasks in This week's queue",
         },
       ],
+      queueCandidateTaskIds: [],
       mutationVariables: [
         { key: 'week', date: scheduledDate, taskIds: [scheduledTask.id] },
       ],
       cacheInvalidation: [true, true],
+    })
+    queryClient.clear()
+  })
+
+  it('logs failures while loading future day queues', async () => {
+    const error = new Error('queue request failed')
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.useQueues.mockReturnValue({
+      data: [makeQueue({ key: 'day', name: 'Today' })],
+    })
+    mocks.useQueueItemsForDates.mockImplementation((_key, dates) =>
+      dates.map((date) => ({
+        data: [],
+        error: date === '2026-07-21' ? error : null,
+        errorUpdatedAt: date === '2026-07-21' ? 123 : 0,
+      })),
+    )
+
+    const { queryClient } = await renderDayRoute('/')
+    const readQueueErrorLogs = () =>
+      consoleError.mock.calls.filter(
+        ([message]) => message === 'Failed to refresh future day queue items',
+      )
+
+    await waitFor(() => {
+      expect(readQueueErrorLogs()).toEqual([
+        [
+          'Failed to refresh future day queue items',
+          { date: '2026-07-21', error },
+        ],
+      ])
     })
     queryClient.clear()
   })
@@ -650,7 +693,10 @@ describe('day queue calendar interactions', () => {
     )
 
     const { queryClient } = await renderDayRoute('/')
-    const getActual = () => consoleError.mock.calls
+    const getActual = () =>
+      consoleError.mock.calls.filter(
+        ([message]) => message === 'Failed to refresh calendar day queue items',
+      )
 
     await waitFor(() => {
       const dates = assertDefined(

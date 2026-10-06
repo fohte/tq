@@ -15,6 +15,7 @@ import {
   DayViewPresentation,
   type DayViewPresentationProps,
 } from '#components/day-view/day-view'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import {
   makeQueueCandidate,
@@ -80,7 +81,7 @@ async function renderDayView(
     onInsertCandidate: vi.fn(),
     onAddCandidate: vi.fn(),
     onRemoveFromQueue: vi.fn(),
-    onRemoveDayFromWeek: vi.fn(),
+    onMoveScheduledTaskToWeek: vi.fn(),
     onAutoAssign: vi.fn(),
     isAutoAssigning: false,
     selectedDate: new Date('2026-07-20T00:00:00'),
@@ -284,18 +285,19 @@ describe('DayViewPresentation', () => {
       viewMode: 'kanban',
       kanbanFilterRow: <div data-testid="kanban-filter" />,
       queueSections: [
-        {
+        makeQueueSectionData({
           key: 'day',
           title: 'today',
           items: [todayTask],
           emptyMessage: "No tasks in today's queue",
-        },
-        {
+        }),
+        makeQueueSectionData({
           key: 'week',
           title: 'this week',
           items: [weekTask],
+          dayGroups: [],
           emptyMessage: "No tasks in this week's queue",
-        },
+        }),
       ],
       dayQueueTasks: [todayTask],
       queueCandidates: [candidate],

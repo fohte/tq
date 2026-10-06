@@ -52,7 +52,7 @@ const meta = {
   ],
   args: {
     onRemove: fn(),
-    onRemoveDayFromWeek: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     queueDate: '2026-01-01',
   },
 } satisfies Meta<typeof QueueSection>
@@ -133,7 +133,6 @@ export const WeekWithScheduledDays: Story = {
   args: {
     queueKey: 'week',
     title: 'this week',
-    countLabel: '1 + 2',
     items: [
       makeTask({
         id: 'week-task',
@@ -167,7 +166,6 @@ export const WeekWithOnlyScheduledDays: Story = {
   args: {
     queueKey: 'week',
     title: 'this week',
-    countLabel: '0 + 1',
     items: [],
     dayGroups: [
       {

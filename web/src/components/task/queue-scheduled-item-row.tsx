@@ -1,12 +1,9 @@
-import { useDraggable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import { X } from 'lucide-react'
 
 import { DAY_QUEUE_KEY } from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
-import { cn } from '#lib/utils'
 
 export function QueueScheduledItemRow({
   task,
@@ -17,26 +14,11 @@ export function QueueScheduledItemRow({
   date: string
   onRemove: () => void
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: task.id,
-      data: { type: 'scheduled-day-queue-task', queueKey: DAY_QUEUE_KEY },
-    })
-
   return (
     <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-      }}
-      {...attributes}
-      {...listeners}
       data-queue-key={DAY_QUEUE_KEY}
       data-queue-date={date}
-      className={cn(
-        'flex min-h-8 cursor-grab items-center gap-2 border-b border-border px-3 py-1 text-sm active:cursor-grabbing',
-        isDragging && 'opacity-50',
-      )}
+      className="flex min-h-8 cursor-grab items-center gap-2 border-b border-border px-3 py-1 text-sm"
     >
       <Link
         to="/tasks/$taskId"

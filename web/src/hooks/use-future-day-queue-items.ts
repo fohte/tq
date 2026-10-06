@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { DAY_QUEUE_KEY, useQueueItemsForDates } from '#hooks/use-queues'
 import {
@@ -27,6 +27,23 @@ export function useFutureDayQueueItems({
     futureDayQueueDates,
     refetchInterval,
   )
+  const loggedQueryErrors = useRef(new Map<string, number>())
+  useEffect(() => {
+    const futureDateSet = new Set(futureDayQueueDates)
+    for (const date of loggedQueryErrors.current.keys()) {
+      if (!futureDateSet.has(date)) loggedQueryErrors.current.delete(date)
+    }
+    futureDayQueueItemsResults.forEach((result, index) => {
+      const date = futureDayQueueDates[index]
+      if (date == null || result.error == null) return
+      if (loggedQueryErrors.current.get(date) === result.errorUpdatedAt) return
+      loggedQueryErrors.current.set(date, result.errorUpdatedAt)
+      console.error('Failed to refresh future day queue items', {
+        date,
+        error: result.error,
+      })
+    })
+  }, [futureDayQueueItemsResults, futureDayQueueDates])
 
   return useMemo(
     () =>

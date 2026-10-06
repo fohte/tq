@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { QueuePane } from '#components/day-view/queue-pane'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -50,7 +52,7 @@ function Providers({ children }: { children: ReactNode }) {
 function renderQueuePane(
   onMoveTask = vi.fn(),
   onInsertCandidate = vi.fn(),
-  onRemoveDayFromWeek = vi.fn(),
+  onMoveScheduledTaskToWeek = vi.fn(),
 ) {
   render(
     <Providers>
@@ -59,17 +61,16 @@ function renderQueuePane(
           isLoading={false}
           queueDate="2026-01-01"
           queueSections={[
-            {
+            makeQueueSectionData({
               key: 'day',
               title: 'today',
               items: [dayTask, anotherDayTask],
               emptyMessage: "No tasks in today's queue",
-            },
-            {
+            }),
+            makeQueueSectionData({
               key: 'week',
               title: 'this week',
               items: [weekTask],
-              countLabel: '1 + 1',
               dayGroups: [
                 {
                   date: '2026-01-03',
@@ -78,18 +79,18 @@ function renderQueuePane(
                 },
               ],
               emptyMessage: "No tasks in this week's queue",
-            },
+            }),
           ]}
           queueCandidates={getQueueCandidates([candidateTask], new Set())}
           onMoveTask={onMoveTask}
           onInsertCandidate={onInsertCandidate}
           onRemoveFromQueue={vi.fn()}
-          onRemoveDayFromWeek={onRemoveDayFromWeek}
+          onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
         />
       </div>
     </Providers>,
   )
-  return { onMoveTask, onInsertCandidate, onRemoveDayFromWeek }
+  return { onMoveTask, onInsertCandidate, onMoveScheduledTaskToWeek }
 }
 
 async function dragByTitle(sourceTitle: string, targetTitle: string) {
@@ -152,17 +153,18 @@ describe('QueuePane dragging', () => {
   })
 
   it('passes the scheduled date when a task is returned to the week queue', async () => {
-    const onRemoveDayFromWeek = vi.fn()
-    renderQueuePane(vi.fn(), vi.fn(), onRemoveDayFromWeek)
+    const onMoveScheduledTaskToWeek = vi.fn()
+    const user = userEvent.setup()
+    renderQueuePane(vi.fn(), vi.fn(), onMoveScheduledTaskToWeek)
 
     const removeButton = await screen.findByRole('button', {
       name: 'Remove day from Scheduled task',
     })
     const row = removeButton.closest('[data-queue-key]')
-    fireEvent.click(removeButton)
+    await user.click(removeButton)
 
     const readResult = () => ({
-      callbackCalls: onRemoveDayFromWeek.mock.calls,
+      callbackCalls: onMoveScheduledTaskToWeek.mock.calls,
       queueSource: {
         key: row?.getAttribute('data-queue-key'),
         date: row?.getAttribute('data-queue-date'),

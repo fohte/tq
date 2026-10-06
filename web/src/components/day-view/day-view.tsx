@@ -105,7 +105,7 @@ export interface DayViewPresentationProps {
    * onInsertCandidate instead. */
   onAddCandidate: (taskId: string) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
-  onRemoveDayFromWeek: (taskId: string, date: string) => void
+  onMoveScheduledTaskToWeek: (taskId: string, date: string) => void
   onAutoAssign: () => void
   isAutoAssigning: boolean
   selectedDate: Date
@@ -144,7 +144,7 @@ export function DayViewPresentation({
   onInsertCandidate,
   onAddCandidate,
   onRemoveFromQueue,
-  onRemoveDayFromWeek,
+  onMoveScheduledTaskToWeek,
   onAutoAssign,
   isAutoAssigning,
   selectedDate,
@@ -405,7 +405,7 @@ export function DayViewPresentation({
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
               onRemoveFromQueue={onRemoveFromQueue}
-              onRemoveDayFromWeek={onRemoveDayFromWeek}
+              onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
               {...(isCompactLayout && taskRowStates != null
                 ? { taskRowStates }
                 : {})}

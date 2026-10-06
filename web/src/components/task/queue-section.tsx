@@ -18,14 +18,13 @@ export interface QueueSectionProps {
   queueDate: string
   title: string
   items: Task[]
-  countLabel?: string
   dayGroups?: { date: string; label: string; items: Task[] }[]
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
   isReadOnly?: boolean
   taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   onRemove: (taskId: string) => void
-  onRemoveDayFromWeek: (taskId: string, date: string) => void
+  onMoveScheduledTaskToWeek: (taskId: string, date: string) => void
   emptyMessage: string
 }
 
@@ -34,25 +33,31 @@ export function QueueSection({
   queueDate,
   title,
   items,
-  countLabel,
-  dayGroups = [],
+  dayGroups: scheduledDayGroups,
   dateRangeLabel,
   isReadOnly = false,
   taskRowStates,
   onRemove,
-  onRemoveDayFromWeek,
+  onMoveScheduledTaskToWeek,
   emptyMessage,
 }: QueueSectionProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: queueKey,
     disabled: isReadOnly,
   })
+  const dayGroups = scheduledDayGroups ?? []
+  const countLabel =
+    scheduledDayGroups == null
+      ? String(items.length)
+      : `${String(items.length)} + ${String(
+          dayGroups.reduce((total, group) => total + group.items.length, 0),
+        )}`
 
   return (
     <div className="border-b border-border">
       <div className="flex items-center gap-2 px-3 py-2 font-mono text-xs text-muted-foreground">
         <span>{title}</span>
-        <Chip>{countLabel ?? items.length}</Chip>
+        <Chip>{countLabel}</Chip>
         {dateRangeLabel != null && (
           <span className="ml-auto">{dateRangeLabel}</span>
         )}
@@ -111,7 +116,7 @@ export function QueueSection({
                       task={task}
                       date={group.date}
                       onRemove={() => {
-                        onRemoveDayFromWeek(task.id, group.date)
+                        onMoveScheduledTaskToWeek(task.id, group.date)
                       }}
                     />
                   ))}

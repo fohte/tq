@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
 
 import { QueuePane } from '#components/day-view/queue-pane'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -61,7 +62,7 @@ const meta = {
     onMoveTask: fn(),
     onInsertCandidate: fn(),
     onRemoveFromQueue: fn(),
-    onRemoveDayFromWeek: fn(),
+    onMoveScheduledTaskToWeek: fn(),
   },
 } satisfies Meta<typeof QueuePane>
 
@@ -73,18 +74,17 @@ export const Default: Story = {
   args: {
     isLoading: false,
     queueSections: [
-      {
+      makeQueueSectionData({
         key: 'day',
         title: 'today',
         items: dayTasks,
         dateRangeLabel: '09-01',
         emptyMessage: "No tasks in today's queue",
-      },
-      {
+      }),
+      makeQueueSectionData({
         key: 'week',
         title: 'this week',
         items: weekTasks,
-        countLabel: '1 + 1',
         dayGroups: [
           {
             date: '2026-09-02',
@@ -100,7 +100,7 @@ export const Default: Story = {
         ],
         dateRangeLabel: '08-31 – 09-06',
         emptyMessage: "No tasks in this week's queue",
-      },
+      }),
     ],
     queueCandidates: getQueueCandidates(candidateTasks, new Set()),
   },
@@ -111,20 +111,21 @@ export const Empty: Story = {
   args: {
     isLoading: false,
     queueSections: [
-      {
+      makeQueueSectionData({
         key: 'day',
         title: 'today',
         items: [],
         dateRangeLabel: '09-01',
         emptyMessage: "No tasks in today's queue",
-      },
-      {
+      }),
+      makeQueueSectionData({
         key: 'week',
         title: 'this week',
         items: [],
+        dayGroups: [],
         dateRangeLabel: '08-31 – 09-06',
         emptyMessage: "No tasks in this week's queue",
-      },
+      }),
     ],
     queueCandidates: [],
   },

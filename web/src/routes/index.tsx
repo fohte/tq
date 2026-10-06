@@ -251,7 +251,7 @@ function DayView() {
     selectedDate,
     hasDayQueue:
       queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
-    refetchInterval,
+    ...(refetchInterval === undefined ? {} : { refetchInterval }),
   })
 
   // Queue updates replace the full list, so keep stored IDs separate from
@@ -296,16 +296,6 @@ function DayView() {
               ...section,
               items,
               ...(dayGroups == null ? {} : { dayGroups }),
-              ...(section.countLabel == null
-                ? {}
-                : {
-                    countLabel: `${String(items.length)} + ${String(
-                      dayGroups?.reduce(
-                        (total, group) => total + group.items.length,
-                        0,
-                      ) ?? 0,
-                    )}`,
-                  }),
             }
           }),
     [queueSections, filterTaskIds],
@@ -402,7 +392,7 @@ function DayView() {
     })
   }
 
-  const handleRemoveDayFromWeek = (taskId: string, date: string) => {
+  const handleMoveScheduledTaskToWeek = (taskId: string, date: string) => {
     const weekQueueIndex =
       queuesData?.findIndex((queue) => queue.key === WEEK_QUEUE_KEY) ?? -1
     if (
@@ -505,7 +495,7 @@ function DayView() {
         onInsertCandidate={handleInsertCandidate}
         onAddCandidate={handleAddCandidate}
         onRemoveFromQueue={handleRemoveFromQueue}
-        onRemoveDayFromWeek={handleRemoveDayFromWeek}
+        onMoveScheduledTaskToWeek={handleMoveScheduledTaskToWeek}
         onAutoAssign={handleAutoAssign}
         isAutoAssigning={autoAssign.isPending}
         selectedDate={selectedDate}

@@ -109,19 +109,11 @@ export function buildQueueSections(
             weekTaskIds,
           )
         : undefined
-    const countLabel =
-      queue.key === WEEK_QUEUE_KEY && dayGroups != null
-        ? `${String(orderedTasks.length)} + ${String(
-            dayGroups.reduce((total, group) => total + group.items.length, 0),
-          )}`
-        : undefined
-
     return {
       key: queue.key,
       title: queue.name,
       items: orderedTasks,
-      ...(countLabel == null ? {} : { countLabel }),
-      ...(dayGroups == null || dayGroups.length === 0 ? {} : { dayGroups }),
+      ...(dayGroups == null ? {} : { dayGroups }),
       ...(dateRangeLabel != null ? { dateRangeLabel } : {}),
       emptyMessage: `No tasks in ${queue.name}'s queue`,
     }

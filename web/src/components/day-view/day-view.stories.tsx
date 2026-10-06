@@ -8,6 +8,7 @@ import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { buildNowPanelModel } from '#components/day-view/now-panel-model'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -449,18 +450,17 @@ const queueCandidates = getQueueCandidates(
 )
 
 const sampleQueueSections = [
-  {
+  makeQueueSectionData({
     key: 'day',
     title: 'today',
     items: queuedTasks,
     dateRangeLabel: '09-01',
     emptyMessage: "No tasks in today's queue",
-  },
-  {
+  }),
+  makeQueueSectionData({
     key: 'week',
     title: 'this week',
     items: weekQueuedTasks,
-    countLabel: '2 + 1',
     dayGroups: [
       {
         date: '2026-09-02',
@@ -470,7 +470,7 @@ const sampleQueueSections = [
     ],
     dateRangeLabel: '08-31 – 09-06',
     emptyMessage: "No tasks in this week's queue",
-  },
+  }),
 ]
 
 export const Default: Story = {
@@ -491,7 +491,7 @@ export const Default: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
-    onRemoveDayFromWeek: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
@@ -602,7 +602,7 @@ export const Loading: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
-    onRemoveDayFromWeek: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
@@ -623,7 +623,7 @@ export const Empty: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
-    onRemoveDayFromWeek: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,
@@ -648,7 +648,7 @@ export const EmptyQueueWithCandidates: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
-    onRemoveDayFromWeek: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
     isAutoAssigning: false,

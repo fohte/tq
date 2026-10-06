@@ -273,7 +273,6 @@ describe('buildQueueSections', () => {
         key: WEEK_QUEUE_KEY,
         title: 'This week',
         items: [weekTask, scheduledDuplicate],
-        countLabel: '2 + 5',
         dayGroups: [
           {
             date: '2026-07-28',
