@@ -44,14 +44,28 @@ type SupportedLeaf = z.ZodEnum | z.ZodString | z.ZodStringFormat | z.ZodNumber
 type FlagValueParse =
   { success: true; value: unknown } | { success: false; message: string }
 
+type FlagValueContext = 'scalar' | 'array-element'
+
 type ArrayOptionMode = 'comma-separated' | 'repeatable'
 
-function parseFlagValue(field: z.core.$ZodType, raw: string): FlagValueParse {
+function parseFlagValue(
+  field: z.core.$ZodType,
+  raw: string,
+  context: FlagValueContext,
+): FlagValueParse {
   if (field instanceof z.ZodUnion) {
+    if (context === 'array-element') {
+      const rawResult = z.safeParse(field, raw)
+      if (rawResult.success) {
+        // Keep a numeric-looking value in its string branch for full parsing.
+        return { success: true, value: raw }
+      }
+    }
+
     let firstSupportedError: string | undefined
     let firstError: string | undefined
     for (const option of field.options) {
-      const result = parseFlagValue(option, raw)
+      const result = parseFlagValue(option, raw, context)
       if (result.success) return result
       firstError ??= result.message
       if (firstSupportedLeaf(option) !== undefined) {
@@ -73,8 +87,12 @@ function parseFlagValue(field: z.core.$ZodType, raw: string): FlagValueParse {
   }
 }
 
-function parseValue(field: z.core.$ZodType, raw: string): unknown {
-  const result = parseFlagValue(field, raw)
+function parseValue(
+  field: z.core.$ZodType,
+  raw: string,
+  context: FlagValueContext = 'scalar',
+): unknown {
+  const result = parseFlagValue(field, raw, context)
   if (!result.success) {
     // commander's argParser contract requires throwing InvalidArgumentError;
     // commander itself catches it and converts it into user-facing CLI error
@@ -83,12 +101,6 @@ function parseValue(field: z.core.$ZodType, raw: string): unknown {
     throw new InvalidArgumentError(result.message)
   }
   return result.value
-}
-
-function parseArrayUnionValue(field: z.ZodUnion, raw: string): unknown {
-  const result = field.safeParse(raw)
-  if (result.success) return raw
-  return parseValue(field, raw)
 }
 
 function parseDefaultValue(
@@ -130,26 +142,28 @@ function resolveOptionParser(
         return ok({
           leafType: valueType,
           parse: (raw, previous) =>
-            appendValue(previous, parseValue(valueType, raw)),
+            appendValue(previous, parseValue(valueType, raw, 'array-element')),
         })
       }
       return ok({
         leafType: valueType,
         parse: (raw) =>
-          splitCommaList(raw).map((value) => parseValue(valueType, value)),
+          splitCommaList(raw).map((value) =>
+            parseValue(valueType, value, 'array-element'),
+          ),
       })
     }
     if (valueType instanceof z.ZodUnion) {
       if (arrayMode === 'repeatable') {
         return ok({
           parse: (raw, previous) =>
-            appendValue(previous, parseArrayUnionValue(valueType, raw)),
+            appendValue(previous, parseValue(valueType, raw, 'array-element')),
         })
       }
       return ok({
         parse: (raw) =>
           splitCommaList(raw).map((value) =>
-            parseArrayUnionValue(valueType, value),
+            parseValue(valueType, value, 'array-element'),
           ),
       })
     }
@@ -315,7 +329,7 @@ export function addSchemaOptions<Shape extends z.core.$ZodShape>(
       `--${toKebabCase(optionName)} <${metavar}>`,
       description,
     )
-    const choiceType = isArray ? undefined : firstSupportedLeaf(inner)
+    const choiceType = isArray ? undefined : leafType
     if (choiceType instanceof z.ZodEnum) {
       option.choices(choiceType.options.map(String))
     }
