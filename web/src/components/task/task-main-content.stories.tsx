@@ -29,7 +29,12 @@ import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { activityKeys, commentKeys, labelKeys } from '#lib/query-keys'
+import {
+  activityKeys,
+  commentKeys,
+  labelKeys,
+  taskChecklistKeys,
+} from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const samplePages: TaskPage[] = [
@@ -126,10 +131,7 @@ function Providers({
   // individual story needs its own seeding.
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
-  queryClient.setQueryData(
-    ['tasks', 'detail', baseTask.id, 'checklists'],
-    checklists,
-  )
+  queryClient.setQueryData(taskChecklistKeys.all(baseTask.id), checklists)
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(

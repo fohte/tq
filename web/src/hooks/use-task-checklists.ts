@@ -3,6 +3,7 @@ import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { taskChecklistKeys } from '#lib/query-keys'
 
 type TaskChecklistResponse = InferResponseType<
   (typeof api.api.tasks)[':taskId']['checklists']['$get'],
@@ -36,10 +37,6 @@ export type UpdateTaskChecklistItemInput = InferRequestType<
 export type MoveTaskChecklistItemInput = InferRequestType<
   (typeof api.api)['checklist-items'][':itemId']['move']['$patch']
 >['json']
-
-const taskChecklistKeys = {
-  all: (taskId: string) => ['tasks', 'detail', taskId, 'checklists'] as const,
-}
 
 function invalidateTaskChecklists(
   taskId: string,
