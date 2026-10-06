@@ -112,16 +112,22 @@ function formatExpectedTime(date: Date): string {
   }).format(date)
 }
 
+function roundedPixelValue(value: number | string): string {
+  const pixels = typeof value === 'number' ? value : Number.parseFloat(value)
+  return `${String(Number(pixels.toFixed(2)))}px`
+}
+
 function readAnchorPosition(anchor: HTMLElement | null) {
-  return anchor == null
-    ? null
-    : {
-        position: anchor.style.position,
-        left: anchor.style.left,
-        top: anchor.style.top,
-        width: anchor.style.width,
-        height: anchor.style.height,
-      }
+  if (anchor == null) return null
+
+  const style = getComputedStyle(anchor)
+  return {
+    position: style.position,
+    left: roundedPixelValue(style.left),
+    top: roundedPixelValue(style.top),
+    width: roundedPixelValue(style.width),
+    height: roundedPixelValue(style.height),
+  }
 }
 
 function readDescription(description: HTMLElement) {
@@ -487,10 +493,10 @@ describe('Google Calendar event clicks', () => {
       ),
     ).toEqual({
       position: 'fixed',
-      left: `${String(Number(rect.left.toFixed(2)))}px`,
-      top: `${String(Number(rect.top.toFixed(2)))}px`,
-      width: `${String(Number(rect.width.toFixed(2)))}px`,
-      height: `${String(Number(rect.height.toFixed(2)))}px`,
+      left: roundedPixelValue(rect.left),
+      top: roundedPixelValue(rect.top),
+      width: roundedPixelValue(rect.width),
+      height: roundedPixelValue(rect.height),
     })
   })
 

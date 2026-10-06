@@ -136,6 +136,56 @@ function renderCalendarGrid(
 }
 
 describe('CalendarGrid interactions', () => {
+  it('renders day queue events before calendar events in queue order', async () => {
+    const events = [
+      makeTimeBlockEvent({
+        id: 'calendar-event',
+        title: 'A calendar event',
+        start: dateStr,
+        end: tomorrowStr,
+        type: 'gcal-info',
+        allDay: true,
+      }),
+      makeTimeBlockEvent({
+        id: 'queue-second',
+        title: 'A second queued task',
+        start: dateStr,
+        end: tomorrowStr,
+        type: 'day-queue',
+        taskId: 'queue-task-b',
+        allDay: true,
+        queuePosition: 1,
+      }),
+      makeTimeBlockEvent({
+        id: 'queue-first',
+        title: 'Z first queued task',
+        start: dateStr,
+        end: tomorrowStr,
+        type: 'day-queue',
+        taskId: 'queue-task-a',
+        allDay: true,
+        queuePosition: 0,
+      }),
+    ]
+    const { container } = renderCalendarGrid({ events, activeView: 'week' })
+
+    await screen.findByText('Z first queued task')
+    await screen.findByText('A second queued task')
+    await screen.findByText('A calendar event')
+
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          '.fc-daygrid-day-events .fc-event',
+        ),
+      ).map((event) => event.textContent.trim()),
+    ).toEqual([
+      'Z first queued task',
+      'A second queued task',
+      'A calendar event',
+    ])
+  })
+
   // The 1280x800 viewport (web/src/browser-test-setup.ts) only leaves ~745px
   // of scrollable height for the 24h time grid (~1248px), so any target past
   // ~10:40 can't be reached and scrollTop clamps to the bottom of the

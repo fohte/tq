@@ -41,11 +41,13 @@ const taskParentToolInputSchema = taskIdToolSchema.extend({
 })
 const taskCompleteInputSchema = taskIdSchema.extend({
   statusReason: taskStatusReason.optional(),
-  duplicateOfTaskId: z.string().optional(),
+  duplicateOfTaskId: cliTaskIdentifier.optional(),
 })
 const taskCompleteToolInputSchema = taskIdToolSchema.extend({
   statusReason: taskStatusReason.optional(),
-  duplicateOfTaskId: z.uuid().optional(),
+  duplicateOfTaskId: taskIdOrNumber
+    .describe('Task id or task number this task duplicates.')
+    .optional(),
 })
 const fromGithubInputSchema = z.object({ url: z.string() })
 const fromGithubToolInputSchema = z.object({ url: z.string().min(1) })
@@ -336,7 +338,7 @@ export const taskWriteOperations = [
       optionDescriptions: {
         statusReason: `Why the task is being closed (${taskStatusReason.options.join(', ')}); defaults to completed`,
         duplicateOfTaskId:
-          'Task id this task is a duplicate of (only used when --reason duplicate)',
+          'Task id or number this task is a duplicate of (only used when --reason duplicate)',
       },
       optionMetavars: {
         statusReason: 'reason',

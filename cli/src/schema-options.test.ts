@@ -1,8 +1,11 @@
+import { createTaskSchema } from 'api/schemas/task'
 import { Command } from 'commander'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
 import { addSchemaOptions, pickSchemaFields } from '#schema-options'
+
+const taskIdOrNumber = createTaskSchema.shape.parentId.unwrap()
 
 const testSchema = z.object({
   name: z.string().min(1),
@@ -377,6 +380,192 @@ Options:
     expect(error.message).toBe(
       "error: option '--id <value>' argument 'not-a-uuid' is invalid. Invalid UUID",
     )
+  })
+
+  it('accepts a UUID from a nullable optional task identifier union', () => {
+    const schema = z.object({
+      taskId: taskIdOrNumber.nullable().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+
+    command.parse(['--task-id', '123e4567-e89b-12d3-a456-426614174000'], {
+      from: 'user',
+    })
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      taskId: '123e4567-e89b-12d3-a456-426614174000',
+    })
+  })
+
+  it('accepts a numeric string from a nullable optional task identifier union', () => {
+    const schema = z.object({
+      taskId: taskIdOrNumber.nullable().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+
+    command.parse(['--task-id', '820'], { from: 'user' })
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      taskId: '820',
+    })
+  })
+
+  it('converts a number-first union value with its numeric schema', () => {
+    const schema = z.object({
+      value: z.union([z.number().int(), z.literal('none')]).optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+
+    command.parse(['--value', '3'], { from: 'user' })
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      value: 3,
+    })
+  })
+
+  it('rejects a value outside a nullable optional task identifier union', () => {
+    const schema = z.object({
+      taskId: taskIdOrNumber.nullable().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+    const error = captureError(() =>
+      command.parse(['--task-id', 'not-an-identifier'], { from: 'user' }),
+    )
+
+    expect(error.message).toBe(
+      "error: option '--task-id <value>' argument 'not-an-identifier' is invalid. Invalid UUID",
+    )
+  })
+
+  it('accepts a literal alternative alongside task identifiers', () => {
+    const schema = z.object({
+      parentId: z
+        .union([z.literal('root'), taskIdOrNumber])
+        .nullable()
+        .optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+
+    command.parse(['--parent-id', 'root'], { from: 'user' })
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      parentId: 'root',
+    })
+  })
+
+  it('accepts UUIDs and numeric strings in an array of task identifiers', () => {
+    const schema = z.object({
+      taskIds: z.array(taskIdOrNumber).nullable().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      { commaSeparatedOptions: ['taskIds'] },
+    )._unsafeUnwrap()
+
+    command.parse(['--task-ids', '123e4567-e89b-12d3-a456-426614174000,820'], {
+      from: 'user',
+    })
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      taskIds: ['123e4567-e89b-12d3-a456-426614174000', '820'],
+    })
+  })
+
+  it('accepts UUIDs and numeric strings in repeatable task identifier options', () => {
+    const schema = z.object({
+      taskIds: z.array(taskIdOrNumber).optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      { repeatableOptions: ['taskIds'] },
+    )._unsafeUnwrap()
+
+    command.parse(
+      [
+        '--task-ids',
+        '123e4567-e89b-12d3-a456-426614174000',
+        '--task-ids',
+        '820',
+      ],
+      { from: 'user' },
+    )
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      taskIds: ['123e4567-e89b-12d3-a456-426614174000', '820'],
+    })
+  })
+
+  it('rejects an invalid element in an array of task identifiers', () => {
+    const schema = z.object({
+      taskIds: z.array(taskIdOrNumber).nullable().optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+      { commaSeparatedOptions: ['taskIds'] },
+    )._unsafeUnwrap()
+    const error = captureError(() =>
+      command.parse(['--task-ids', 'not-an-identifier'], { from: 'user' }),
+    )
+
+    expect(error.message).toBe(
+      "error: option '--task-ids <value>' argument 'not-an-identifier' is invalid. Invalid UUID",
+    )
+  })
+
+  it('shows enum choices for a transformed union', () => {
+    const status = z.enum(['queued', 'running'])
+    const schema = z.object({
+      status: z
+        .union([status, z.array(status)])
+        .transform((value) => (Array.isArray(value) ? value : [value]))
+        .optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+
+    expect(command.helpInformation()).toBe(
+      `Usage: test [options]\n\nOptions:\n  --status <value>  Status (choices: "queued", "running")\n  -h, --help        display help for command\n`,
+    )
+  })
+
+  it('normalizes a scalar passed to a transformed union', () => {
+    const status = z.enum(['queued', 'running'])
+    const schema = z.object({
+      status: z
+        .union([status, z.array(status)])
+        .transform((value) => (Array.isArray(value) ? value : [value]))
+        .optional(),
+    })
+    const command = addSchemaOptions(
+      new Command('test').exitOverride(),
+      schema,
+    )._unsafeUnwrap()
+
+    command.parse(['--status', 'queued'], { from: 'user' })
+
+    expect(pickSchemaFields(schema, command.opts())._unsafeUnwrap()).toEqual({
+      status: ['queued'],
+    })
   })
 
   it('unwraps a .nullable().optional() field into a working flag', () => {

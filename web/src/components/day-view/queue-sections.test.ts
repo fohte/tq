@@ -9,9 +9,9 @@ import {
 } from '#components/day-view/queue-sections'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
-  type Queue,
   type QueueItem,
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
@@ -32,9 +32,14 @@ describe('buildQueueSections', () => {
       [openTask.id, openTask],
       [completedTask.id, completedTask],
     ])
-    const queues: Queue[] = [
-      { key: DAY_QUEUE_KEY, name: 'Today', periodUnit: 'day', position: 0 },
-      { key: 'backlog', name: 'Backlog', periodUnit: null, position: 1 },
+    const queues = [
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' }),
+      makeQueue({
+        key: 'backlog',
+        name: 'Backlog',
+        periodUnit: null,
+        position: 1,
+      }),
     ]
     const rawItemsByKey = new Map<string, QueueItem[]>([
       [
@@ -112,14 +117,14 @@ describe('buildQueueSections', () => {
       weekEarlier,
     ]
     const taskMap = new Map(tasks.map((task) => [task.id, task]))
-    const queues: Queue[] = [
-      { key: DAY_QUEUE_KEY, name: 'Today', periodUnit: 'day', position: 0 },
-      {
+    const queues = [
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' }),
+      makeQueue({
         key: WEEK_QUEUE_KEY,
         name: 'This week',
         periodUnit: 'week',
         position: 1,
-      },
+      }),
     ]
     const rawItemsByKey = new Map<string, QueueItem[]>([
       [
@@ -177,9 +182,7 @@ describe('buildQueueSections', () => {
       [taskA.id, taskA],
       [taskB.id, taskB],
     ])
-    const queues: Queue[] = [
-      { key: DAY_QUEUE_KEY, name: 'Today', periodUnit: 'day', position: 0 },
-    ]
+    const queues = [makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' })]
     const rawItemsByKey = new Map<string, QueueItem[]>([
       [
         DAY_QUEUE_KEY,

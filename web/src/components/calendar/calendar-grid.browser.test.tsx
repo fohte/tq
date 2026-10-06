@@ -5,13 +5,39 @@ import type {
   EventContentArg,
   EventDropArg,
 } from '@fullcalendar/core'
-import type { EventResizeDoneArg } from '@fullcalendar/interaction'
+import type {
+  EventReceiveArg,
+  EventResizeDoneArg,
+} from '@fullcalendar/interaction'
 import { render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CalendarGrid } from '#components/calendar/calendar-grid'
+import {
+  type CalendarDndCallbacks,
+  CalendarGrid,
+} from '#components/calendar/calendar-grid'
+import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
+import { assertDefined } from '#lib/test-utils'
+
+type ExternalEventData = {
+  id: string
+  title: string
+  duration: { minutes: number }
+  extendedProps: {
+    taskId: string
+    type: string
+    sourceQueueKey: string | undefined
+    sourceDate: string | undefined
+  }
+}
+
+type DraggableOptions = {
+  itemSelector: string
+  eventData: (element: HTMLElement) => ExternalEventData
+}
 
 let capturedProps: Record<string, unknown> = {}
+let capturedDraggableOptions: DraggableOptions | undefined
 const scrollToTimeSpy = vi.fn()
 
 vi.mock('@fullcalendar/react', async () => {
@@ -49,19 +75,17 @@ vi.mock('@fullcalendar/daygrid', () => ({ default: {} }))
 // though this test never exercises the external-drag code path.
 vi.mock('@fullcalendar/interaction', () => ({
   default: {},
-  Draggable: function Draggable() {},
+  Draggable: class {
+    constructor(_container: HTMLElement, options: DraggableOptions) {
+      capturedDraggableOptions = options
+    }
+
+    destroy() {}
+  },
 }))
 
 function renderAndGetEventDrop(
-  onEventDrop: (info: {
-    eventId: string
-    newStart: Date
-    newEnd: Date
-    oldStart: Date
-    oldEnd: Date
-    el: HTMLElement
-    revert: () => void
-  }) => void,
+  onEventDrop: NonNullable<CalendarDndCallbacks['onEventDrop']>,
 ) {
   render(
     <CalendarGrid
@@ -72,6 +96,20 @@ function renderAndGetEventDrop(
   )
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventDrop handler
   return capturedProps['eventDrop'] as (info: EventDropArg) => void
+}
+
+function renderAndGetEventReceive(
+  onExternalDrop: NonNullable<CalendarDndCallbacks['onExternalDrop']>,
+) {
+  render(
+    <CalendarGrid
+      events={[]}
+      activeView="day"
+      dndCallbacks={{ onExternalDrop }}
+    />,
+  )
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventReceive handler
+  return capturedProps['eventReceive'] as (info: EventReceiveArg) => void
 }
 
 function renderAndGetEventResize(
@@ -164,6 +202,7 @@ function renderAndGetDatesSet(
 describe('CalendarGrid', () => {
   beforeEach(() => {
     capturedProps = {}
+    capturedDraggableOptions = undefined
     scrollToTimeSpy.mockClear()
   })
 
@@ -177,7 +216,15 @@ describe('CalendarGrid', () => {
         start: new Date('2026-07-20T00:00:00'),
         end: new Date('2026-07-21T00:00:00'),
         allDay: true,
+        extendedProps: { type: 'manual', taskId: 'task-1' },
       },
+      oldEvent: {
+        start: new Date('2026-07-20T09:00:00'),
+        end: new Date('2026-07-20T10:00:00'),
+        allDay: false,
+        extendedProps: { type: 'manual', taskId: 'task-1' },
+      },
+      el: document.createElement('div'),
       revert,
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventDrop reads
@@ -185,6 +232,61 @@ describe('CalendarGrid', () => {
 
     expect(onEventDrop).not.toHaveBeenCalled()
     expect(revert).toHaveBeenCalledTimes(1)
+  })
+
+  it('sorts day queue events before title-based calendar events', () => {
+    render(<CalendarGrid events={[]} activeView="week" />)
+
+    expect(capturedProps['eventOrder']).toBe(
+      '-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title',
+    )
+  })
+
+  it('keeps day queue events draggable without allowing resize', () => {
+    const event = makeTimeBlockEvent({
+      id: 'day-queue-2026-07-20-queued-sample-a',
+      title: 'Sample task',
+      start: '2026-07-20',
+      end: '2026-07-21',
+      type: 'day-queue',
+      taskId: 'queued-sample-a',
+      allDay: true,
+      queuePosition: 2,
+    })
+    render(<CalendarGrid events={[event]} activeView="week" />)
+
+    expect(capturedProps['events']).toEqual([
+      {
+        id: event.id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        allDay: true,
+        displayPriority: 0,
+        queueOrder: 0,
+        queuePosition: 2,
+        editable: true,
+        durationEditable: false,
+        extendedProps: {
+          type: 'day-queue',
+          parentRef: undefined,
+          color: undefined,
+          taskId: 'queued-sample-a',
+          dateTaskKind: undefined,
+          dateTaskOverdue: undefined,
+          dateTaskDueDateLabel: undefined,
+          displayPriority: 0,
+          isAutoScheduled: undefined,
+          scheduleId: undefined,
+          scheduleStart: event.start,
+          queuePosition: 2,
+          redacted: undefined,
+          calendarColor: undefined,
+          responseStatus: undefined,
+          gcalEventType: undefined,
+        },
+      },
+    ])
   })
 
   it('reverts the drag when the pre-drag event has no start/end', () => {
@@ -197,10 +299,13 @@ describe('CalendarGrid', () => {
         start: new Date('2026-07-20T09:00:00'),
         end: new Date('2026-07-20T10:00:00'),
         allDay: false,
+        extendedProps: { type: 'manual', taskId: 'task-1' },
       },
       oldEvent: {
         start: null,
         end: null,
+        allDay: false,
+        extendedProps: { type: 'manual', taskId: 'task-1' },
       },
       revert,
     }
@@ -226,10 +331,13 @@ describe('CalendarGrid', () => {
         start: newStart,
         end: newEnd,
         allDay: false,
+        extendedProps: { type: 'manual', taskId: 'task-1' },
       },
       oldEvent: {
         start: oldStart,
         end: oldEnd,
+        allDay: false,
+        extendedProps: { type: 'manual', taskId: 'task-1' },
       },
       el,
       revert,
@@ -237,15 +345,242 @@ describe('CalendarGrid', () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventDrop reads
     eventDrop(dropInfo as unknown as EventDropArg)
 
-    expect(revert).not.toHaveBeenCalled()
-    expect(onEventDrop).toHaveBeenCalledWith({
-      eventId: 'task-1',
-      newStart,
-      newEnd,
-      oldStart,
-      oldEnd,
+    const getActual = () => ({
+      calls: onEventDrop.mock.calls,
+      revertCalls: revert.mock.calls,
+    })
+    expect(getActual()).toEqual({
+      calls: [
+        [
+          {
+            eventId: 'task-1',
+            eventType: 'manual',
+            taskId: 'task-1',
+            isAllDay: false,
+            wasAllDay: false,
+            newStart,
+            newEnd,
+            oldStart,
+            oldEnd,
+            el,
+            revert,
+          },
+        ],
+      ],
+      revertCalls: [],
+    })
+  })
+
+  it('forwards a day queue event moved to a different all-day date', () => {
+    const onEventDrop = vi.fn()
+    const revert = vi.fn()
+    const eventDrop = renderAndGetEventDrop(onEventDrop)
+    const newStart = new Date('2026-07-21T00:00:00')
+    const newEnd = new Date('2026-07-22T00:00:00')
+    const oldStart = new Date('2026-07-20T00:00:00')
+    const oldEnd = new Date('2026-07-21T00:00:00')
+    const el = document.createElement('div')
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventDrop reads
+    eventDrop({
+      event: {
+        id: 'day-queue-2026-07-21-queued-sample-a',
+        start: newStart,
+        end: newEnd,
+        allDay: true,
+        extendedProps: { type: 'day-queue', taskId: 'queued-sample-a' },
+      },
+      oldEvent: {
+        start: oldStart,
+        end: oldEnd,
+        allDay: true,
+        extendedProps: { type: 'day-queue', taskId: 'queued-sample-a' },
+      },
       el,
       revert,
+    } as unknown as EventDropArg)
+
+    const getActual = () => ({
+      calls: onEventDrop.mock.calls,
+      revertCalls: revert.mock.calls,
+    })
+    expect(getActual()).toEqual({
+      calls: [
+        [
+          {
+            eventId: 'day-queue-2026-07-21-queued-sample-a',
+            eventType: 'day-queue',
+            taskId: 'queued-sample-a',
+            isAllDay: true,
+            wasAllDay: true,
+            newStart,
+            newEnd,
+            oldStart,
+            oldEnd,
+            el,
+            revert,
+          },
+        ],
+      ],
+      revertCalls: [],
+    })
+  })
+
+  it('reverts a Google Calendar all-day event drop', () => {
+    const onEventDrop = vi.fn()
+    const revert = vi.fn()
+    const eventDrop = renderAndGetEventDrop(onEventDrop)
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventDrop reads
+    eventDrop({
+      event: {
+        id: 'gcal-sample',
+        start: new Date('2026-07-21T00:00:00'),
+        end: new Date('2026-07-22T00:00:00'),
+        allDay: true,
+        extendedProps: { type: 'gcal-info' },
+      },
+      oldEvent: {
+        start: new Date('2026-07-20T00:00:00'),
+        end: new Date('2026-07-21T00:00:00'),
+        allDay: true,
+        extendedProps: { type: 'gcal-info' },
+      },
+      el: document.createElement('div'),
+      revert,
+    } as unknown as EventDropArg)
+
+    const getActual = () => ({
+      callbackCalls: onEventDrop.mock.calls,
+      revertCalls: revert.mock.calls,
+    })
+    expect(getActual()).toEqual({ callbackCalls: [], revertCalls: [[]] })
+  })
+
+  it('forwards an external all-day drop to the queue callback', () => {
+    const onExternalDrop = vi.fn()
+    const eventReceive = renderAndGetEventReceive(onExternalDrop)
+    const start = new Date('2026-07-22T00:00:00')
+    const end = new Date('2026-07-23T00:00:00')
+    const remove = vi.fn()
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleReceive reads
+    eventReceive({
+      event: {
+        id: 'external-queued-sample-a',
+        title: 'Prepare a sample outline',
+        start,
+        end,
+        allDay: true,
+        extendedProps: { taskId: 'queued-sample-a' },
+        remove,
+      },
+    } as unknown as EventReceiveArg)
+
+    const getActual = () => ({
+      removeCalls: remove.mock.calls,
+      dropCalls: onExternalDrop.mock.calls,
+    })
+    expect(getActual()).toEqual({
+      removeCalls: [[]],
+      dropCalls: [
+        [
+          {
+            taskId: 'queued-sample-a',
+            taskTitle: 'Prepare a sample outline',
+            start,
+            end,
+            allDay: true,
+            sourceQueueKey: undefined,
+            sourceDate: undefined,
+          },
+        ],
+      ],
+    })
+  })
+
+  it('forwards the queue source metadata from the draggable row to the drop callback', () => {
+    const dragContainer = document.createElement('div')
+    const queueElement = document.createElement('div')
+    queueElement.dataset['queueKey'] = 'week'
+    queueElement.dataset['queueDate'] = '2026-07-20'
+    const taskElement = document.createElement('div')
+    taskElement.dataset['taskId'] = 'queued-sample-a'
+    taskElement.dataset['taskTitle'] = 'Prepare a sample outline'
+    taskElement.dataset['estimatedMinutes'] = '45'
+    queueElement.append(taskElement)
+    dragContainer.append(queueElement)
+
+    const onExternalDrop = vi.fn()
+    const externalDragContainerRef = { current: dragContainer }
+    render(
+      <CalendarGrid
+        events={[]}
+        activeView="day"
+        externalDragContainerRef={externalDragContainerRef}
+        dndCallbacks={{ onExternalDrop }}
+      />,
+    )
+
+    const draggableOptions = assertDefined(capturedDraggableOptions)
+    const eventData = draggableOptions.eventData(taskElement)
+    const start = new Date('2026-07-22T00:00:00')
+    const end = new Date('2026-07-23T00:00:00')
+    const remove = vi.fn()
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- captured prop is the real FullCalendar eventReceive handler
+    const eventReceive = capturedProps['eventReceive'] as (
+      info: EventReceiveArg,
+    ) => void
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the test uses eventData output with eventReceive fields consumed by CalendarGrid
+    eventReceive({
+      event: {
+        id: eventData.id,
+        title: eventData.title,
+        start,
+        end,
+        allDay: true,
+        extendedProps: eventData.extendedProps,
+        remove,
+      },
+    } as unknown as EventReceiveArg)
+
+    const getActual = () => ({
+      draggable: {
+        itemSelector: draggableOptions.itemSelector,
+        eventData,
+      },
+      removeCalls: remove.mock.calls,
+      dropCalls: onExternalDrop.mock.calls,
+    })
+    expect(getActual()).toEqual({
+      draggable: {
+        itemSelector: '[data-task-id]',
+        eventData: {
+          id: 'external-queued-sample-a',
+          title: 'Prepare a sample outline',
+          duration: { minutes: 45 },
+          extendedProps: {
+            taskId: 'queued-sample-a',
+            type: 'manual',
+            sourceQueueKey: 'week',
+            sourceDate: '2026-07-20',
+          },
+        },
+      },
+      removeCalls: [[]],
+      dropCalls: [
+        [
+          {
+            taskId: 'queued-sample-a',
+            taskTitle: 'Prepare a sample outline',
+            start,
+            end,
+            allDay: true,
+            sourceQueueKey: 'week',
+            sourceDate: '2026-07-20',
+          },
+        ],
+      ],
     })
   })
 
@@ -258,10 +593,12 @@ describe('CalendarGrid', () => {
         id: 'task-1',
         start: new Date('2026-07-20T09:00:00'),
         end: new Date('2026-07-20T11:00:00'),
+        extendedProps: { type: 'manual' },
       },
       oldEvent: {
         start: null,
         end: null,
+        extendedProps: { type: 'manual' },
       },
       revert,
     }
@@ -286,10 +623,12 @@ describe('CalendarGrid', () => {
         id: 'task-1',
         start: newStart,
         end: newEnd,
+        extendedProps: { type: 'manual' },
       },
       oldEvent: {
         start: oldStart,
         end: oldEnd,
+        extendedProps: { type: 'manual' },
       },
       el,
       revert,
@@ -297,16 +636,59 @@ describe('CalendarGrid', () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventResize reads
     eventResize(resizeInfo as unknown as EventResizeDoneArg)
 
-    expect(revert).not.toHaveBeenCalled()
-    expect(onEventResize).toHaveBeenCalledWith({
-      eventId: 'task-1',
-      newStart,
-      newEnd,
-      oldStart,
-      oldEnd,
-      el,
-      revert,
+    const getActual = () => ({
+      calls: onEventResize.mock.calls,
+      revertCalls: revert.mock.calls,
     })
+    expect(getActual()).toEqual({
+      calls: [
+        [
+          {
+            eventId: 'task-1',
+            newStart,
+            newEnd,
+            oldStart,
+            oldEnd,
+            el,
+            revert,
+          },
+        ],
+      ],
+      revertCalls: [],
+    })
+  })
+
+  it('reverts a resize of a day queue event', () => {
+    const onEventResize = vi.fn()
+    const revert = vi.fn()
+    const eventResize = renderAndGetEventResize(onEventResize)
+    const start = new Date('2026-07-20T00:00:00')
+    const end = new Date('2026-07-21T00:00:00')
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- the test exercises day queue fields consumed by CalendarGrid
+    eventResize({
+      event: {
+        id: 'day-queue-2026-07-20-queued-sample-a',
+        start,
+        end,
+        allDay: true,
+        extendedProps: { type: 'day-queue', taskId: 'queued-sample-a' },
+      },
+      oldEvent: {
+        id: 'day-queue-2026-07-20-queued-sample-a',
+        start,
+        end,
+        allDay: true,
+        extendedProps: { type: 'day-queue', taskId: 'queued-sample-a' },
+      },
+      revert,
+    } as unknown as EventResizeDoneArg)
+
+    const getActual = () => ({
+      calls: onEventResize.mock.calls,
+      revertCalls: revert.mock.calls,
+    })
+    expect(getActual()).toEqual({ calls: [], revertCalls: [[]] })
   })
 
   it('reports the selected range when a time-grid selection is made', () => {
