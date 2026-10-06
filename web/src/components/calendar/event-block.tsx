@@ -1,6 +1,7 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { Headphones, LogOut, MapPin } from 'lucide-react'
 
+import { TaskDateEvent } from '#components/calendar/task-date-event'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import {
   type CalendarEventProps,
@@ -28,6 +29,7 @@ const RULE_CLASS: Record<EventKind, string> = {
   'gcal-status': 'border-l-border',
   'gcal-info': 'border-l-border',
   'gcal-solo': 'border-l-muted-foreground-ghost',
+  'task-date': 'border-l-muted-foreground',
 }
 
 const BG_CLASS: Record<EventKind, string> = {
@@ -39,6 +41,7 @@ const BG_CLASS: Record<EventKind, string> = {
   auto: 'bg-transparent',
   manual: 'bg-surface-strong',
   completed: 'bg-surface-strong',
+  'task-date': 'bg-surface-strong',
 }
 
 // Marks only the minority status/info categories, mirroring Google
@@ -77,7 +80,24 @@ export function EventBlock(arg: EventContentArg) {
   const calendarColor = props.calendarColor
   const redacted = props.redacted ?? false
 
-  const isShort = arg.isStart && (event.allDay || isShortEvent(event))
+  if (type === 'task-date') {
+    return (
+      <TaskDateEvent
+        title={event.title}
+        dateTaskKind={props.dateTaskKind ?? 'range'}
+        {...(props.dateTaskOverdue == null
+          ? {}
+          : { dateTaskOverdue: props.dateTaskOverdue })}
+        {...(props.dateTaskDueDateLabel == null
+          ? {}
+          : { dateTaskDueDateLabel: props.dateTaskDueDateLabel })}
+        isStart={arg.isStart}
+        isEnd={arg.isEnd}
+      />
+    )
+  }
+
+  const isShort = event.allDay || (arg.isStart && isShortEvent(event))
   const isCompleted = type === 'completed'
   const isPendingResponse = isPendingGcalResponse(props)
 
@@ -127,6 +147,10 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
         (isCompleted || isPendingResponse) && 'opacity-50',
+        event.allDay &&
+          !arg.isStart &&
+          'tq-all-day-continues-left border-l-0 pl-3',
+        event.allDay && !arg.isEnd && 'tq-all-day-continues-right pr-3',
       )}
       style={
         accentColor == null ? undefined : { '--event-accent': accentColor }

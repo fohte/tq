@@ -310,6 +310,8 @@ function DayView() {
     gcalEventsData: gcalEventsQuery.data,
     taskMap,
     context,
+    taskDateTasks: categorized.all,
+    visibleRange,
   })
 
   const dndCallbacks: CalendarDndCallbacks = useMemo(

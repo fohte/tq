@@ -210,6 +210,40 @@
   display: none;
 }
 
+/* FullCalendar splits multi-day all-day events at week and range boundaries. */
+.tq-all-day-continues-left {
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+}
+
+.tq-all-day-continues-right {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 50%,
+    calc(100% - 10px) 100%,
+    0 100%
+  );
+}
+
+.tq-all-day-continues-left.tq-all-day-continues-right {
+  clip-path: polygon(
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 50%,
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 50%
+  );
+}
+
+.tq-calendar .fc-event.tq-all-day-continues-left {
+  margin-left: 0 !important;
+}
+
+.tq-calendar .fc-event.tq-all-day-continues-right {
+  margin-right: 0 !important;
+}
+
 /* Custom month event pill — same kind -> color mapping as the day view's EventBlock */
 .tq-month-event {
   display: flex;
@@ -218,6 +252,19 @@
   background-color: var(--surface-strong);
   border-left: 2px solid var(--foreground);
   overflow: hidden;
+}
+
+.tq-calendar
+  .fc-dayGridMonth-view
+  .tq-month-event[data-continues-before='true'] {
+  padding-left: 14px;
+  border-left: 0;
+}
+
+.tq-calendar
+  .fc-dayGridMonth-view
+  .tq-month-event[data-continues-after='true'] {
+  padding-right: 14px;
 }
 
 .tq-month-event[data-event-type^='gcal-'] {
@@ -242,6 +289,15 @@
 
 .tq-month-event[data-pending-response='true'] {
   opacity: 0.5;
+}
+
+.tq-task-date-event {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.tq-task-date-event[data-date-task-overdue='true'] {
+  background-color: color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .tq-month-event-title {

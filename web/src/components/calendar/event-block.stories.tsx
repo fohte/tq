@@ -16,6 +16,8 @@ function EventBlockPreview({
   gcalEventType,
   redacted = false,
   allDay = false,
+  isStart = true,
+  isEnd = true,
   widthPx = 288,
   short = false,
   isMirror = false,
@@ -30,6 +32,8 @@ function EventBlockPreview({
   gcalEventType?: string
   redacted?: boolean
   allDay?: boolean
+  isStart?: boolean
+  isEnd?: boolean
   widthPx?: number
   short?: boolean
   isMirror?: boolean
@@ -51,7 +55,8 @@ function EventBlockPreview({
       },
     },
     timeText,
-    isStart: true,
+    isStart,
+    isEnd,
     isMirror,
   }
 
@@ -215,6 +220,18 @@ export const GoogleCalendarInfoAllDay: Story = {
     title: 'Company holiday',
     timeText: '',
     allDay: true,
+  },
+}
+
+export const GoogleCalendarInfoContinuesIntoNextDate: Story = {
+  name: 'an all-day Google Calendar event points into the next date',
+  args: {
+    type: 'gcal-info',
+    title: 'Company holiday',
+    timeText: '',
+    allDay: true,
+    isStart: true,
+    isEnd: false,
   },
 }
 

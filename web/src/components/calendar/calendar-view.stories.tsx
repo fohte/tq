@@ -5,6 +5,8 @@ import {
   CalendarView,
   type TimeBlockEvent,
 } from '#components/calendar/calendar-view'
+import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
+import { formatLocalDate } from '#lib/date-range'
 
 const today = new Date()
 const dateStr = `${String(today.getFullYear())}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -265,6 +267,57 @@ export const MonthView: Story = {
   args: {
     events: generateMonthEvents(),
     initialView: 'month',
+  },
+}
+
+export const MonthViewWithTaskDates: Story = {
+  name: 'the monthly calendar shows task dates in date cells',
+  args: {
+    initialView: 'month',
+    events: [
+      makeTimeBlockEvent({
+        id: 'sample-launch-due',
+        title: 'Plan a sample launch',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 24),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 25),
+        ),
+        type: 'task-date',
+        taskId: 'sample-launch',
+        allDay: true,
+        dateTaskKind: 'due',
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-date-due',
+        title: 'Send a sample draft',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 10),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 11),
+        ),
+        type: 'task-date',
+        taskId: 'sample-date-due',
+        allDay: true,
+        dateTaskKind: 'due',
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-date-start',
+        title: 'Begin a sample review',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 16),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 17),
+        ),
+        type: 'task-date',
+        taskId: 'sample-date-start',
+        allDay: true,
+        dateTaskKind: 'start',
+      }),
+    ],
   },
 }
 
