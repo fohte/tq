@@ -372,7 +372,7 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
               : []
           }
           events={calendarEvents}
-          eventOrder="queueOrder,queuePosition,title"
+          eventOrder="-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title"
           eventContent={renderCalendarGridEventContent}
           nowIndicator={true}
           nowIndicatorContent={(arg) => {

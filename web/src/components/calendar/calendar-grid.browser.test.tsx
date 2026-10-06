@@ -225,7 +225,9 @@ describe('CalendarGrid', () => {
   it('sorts day queue events before title-based calendar events', () => {
     render(<CalendarGrid events={[]} activeView="week" />)
 
-    expect(capturedProps['eventOrder']).toBe('queueOrder,queuePosition,title')
+    expect(capturedProps['eventOrder']).toBe(
+      '-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title',
+    )
   })
 
   it('keeps day queue events draggable without allowing resize', () => {
