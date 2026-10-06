@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { Mock } from 'vitest'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -74,6 +74,10 @@ beforeEach(async () => {
   for (const mock of Object.values(mocks)) {
     mock.mockReset()
   }
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 const taskId = '00000000-0000-0000-0000-000000000001'
@@ -264,6 +268,45 @@ describe('queue polling', () => {
   })
 })
 describe('queue carry-over', () => {
+  it('reads today queue items if carry-over fails', async () => {
+    const mocks = await getMocks()
+    const mockCarryOver = assertDefined(mocks['mockCarryOver'])
+    const mockGet = assertDefined(mocks['mockGet'])
+    const today = formatLocalDate(new Date())
+    const queues = [
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'today' }),
+    ] satisfies Queue[]
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockCarryOver.mockResolvedValue(new Response(null, { status: 500 }))
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () => {
+        const carryOver = useQueueCarryOver(today)
+        const items = useQueueItemsForQueues(queues, today, undefined, {
+          enabled: carryOver.canReadQueueItems,
+        })
+        return { carryOver, items }
+      },
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      const getOutput = () => ({
+        canReadQueueItems: result.current.carryOver.canReadQueueItems,
+        carryOverFailed: result.current.carryOver.isError,
+        queueReads: mockGet.mock.calls,
+      })
+      expect(getOutput()).toEqual({
+        canReadQueueItems: true,
+        carryOverFailed: true,
+        queueReads: [
+          [{ param: { key: DAY_QUEUE_KEY }, query: { date: today } }],
+        ],
+      })
+    })
+  })
+
   it('finishes carrying over today before reading its queue items', async () => {
     const mocks = await getMocks()
     const mockCarryOver = assertDefined(mocks['mockCarryOver'])

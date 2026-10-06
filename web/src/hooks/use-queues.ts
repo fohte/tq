@@ -80,7 +80,7 @@ export function useQueueCarryOver(date: string) {
 
   return {
     ...query,
-    isToday,
+    isCarryingOver: isToday && query.isPending,
     canReadQueueItems: !isToday || query.isSuccess || query.isError,
   }
 }

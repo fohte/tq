@@ -69,7 +69,7 @@ function setup({
     isPending: false,
     isError: false,
     error: null,
-    isToday: true,
+    isCarryingOver: false,
     canReadQueueItems: true,
   })
   mockUseQueueItems.mockReturnValue({
@@ -139,7 +139,7 @@ describe('TodayFocus', () => {
       isPending: true,
       isError: false,
       error: null,
-      isToday: true,
+      isCarryingOver: true,
       canReadQueueItems: false,
     })
 
@@ -163,7 +163,7 @@ describe('TodayFocus', () => {
       isPending: false,
       isError: true,
       error: new Error('carry-over unavailable'),
-      isToday: true,
+      isCarryingOver: false,
       canReadQueueItems: true,
     })
 

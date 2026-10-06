@@ -46,7 +46,7 @@ type QueueCarryOverMock = (date: string) => {
   isPending: boolean
   isError: boolean
   error: unknown
-  isToday: boolean
+  isCarryingOver: boolean
   canReadQueueItems: boolean
 }
 type QueueDatesMock = (
@@ -307,17 +307,14 @@ beforeEach(() => {
   })
   mocks.useQueues.mockReturnValue({ data: [] })
   mocks.useQueueItemsForQueues.mockReturnValue([])
-  mocks.useQueueCarryOver.mockImplementation((date) => {
-    const isToday = date === formatLocalDate(new Date())
-    return {
-      isSuccess: true,
-      isPending: false,
-      isError: false,
-      error: null,
-      isToday,
-      canReadQueueItems: true,
-    }
-  })
+  mocks.useQueueCarryOver.mockImplementation(() => ({
+    isSuccess: true,
+    isPending: false,
+    isError: false,
+    error: null,
+    isCarryingOver: false,
+    canReadQueueItems: true,
+  }))
   mocks.selectedDate = null
   mocks.useQueueItemsForDates.mockReturnValue([])
   mocks.fetchQueueItems.mockResolvedValue([])
@@ -340,7 +337,7 @@ describe('day-view route compact layout', () => {
       isPending: true,
       isError: false,
       error: null,
-      isToday: true,
+      isCarryingOver: true,
       canReadQueueItems: false,
     })
 
@@ -376,7 +373,7 @@ describe('day-view route compact layout', () => {
       isPending: false,
       isError: true,
       error,
-      isToday: true,
+      isCarryingOver: false,
       canReadQueueItems: true,
     })
 

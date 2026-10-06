@@ -33,9 +33,7 @@ export function TodayFocus() {
       enabled: queueCarryOver.canReadQueueItems,
     })
   const isLoading =
-    isTaskListLoading ||
-    (queueCarryOver.isToday && queueCarryOver.isPending) ||
-    isTodayTasksLoading
+    isTaskListLoading || queueCarryOver.isCarryingOver || isTodayTasksLoading
 
   const setQueueItems = useSetQueueItems()
 

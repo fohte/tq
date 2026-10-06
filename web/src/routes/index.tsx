@@ -428,7 +428,7 @@ function DayView() {
         compactMemo={compactMemoProps}
         isLoading={
           isLoading ||
-          (queueCarryOver.isToday && queueCarryOver.isPending) ||
+          queueCarryOver.isCarryingOver ||
           (isCompactLayout && dueDateTasksQuery.isLoading) ||
           (isKanbanFiltering && filteredTasksQuery.isLoading)
         }
