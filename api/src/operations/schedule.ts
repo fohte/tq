@@ -1,6 +1,7 @@
 import { err, errAsync, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment } from '#operations/path-segment'
 import {
   defineOperation,
@@ -24,7 +25,7 @@ const timeBlockListInputSchema = z.object({
 })
 
 const createTimeBlockInputSchema = z.object({
-  taskId: z.uuid(),
+  taskId: taskIdOrNumber.describe('Task id or task number.'),
   startTime: z.iso.datetime().describe('ISO 8601 UTC datetime ending in Z.'),
   endTime: z.iso.datetime().describe('ISO 8601 UTC datetime ending in Z.'),
   isAutoScheduled: z.boolean().optional(),

@@ -587,6 +587,36 @@ describe('tasks actions API', () => {
         ])
       })
 
+      it('resolves a task number before recording the duplicate target', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: target.number,
+          }),
+        })
+
+        const getActual = async () => ({
+          status: res.status,
+          relations: await fetchDuplicateOfRelations(task.id),
+        })
+
+        expect(await getActual()).toEqual({
+          status: 200,
+          relations: [
+            {
+              sourceTaskId: task.id,
+              targetTaskId: target.id,
+              type: 'duplicate_of',
+            },
+          ],
+        })
+      })
+
       it('surfaces duplicateOfNumber/duplicateOfTask in the detail response', async () => {
         const target = await createTask('Target')
         const task = await createTask('Duplicate me')
@@ -661,6 +691,26 @@ describe('tasks actions API', () => {
         expect(await fetchDuplicateOfRelations(task.id)).toEqual([])
       })
 
+      it('returns 400 when duplicateOfTaskId is its own task number', async () => {
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: task.number,
+          }),
+        })
+
+        const getActual = async () => ({
+          status: res.status,
+          relations: await fetchDuplicateOfRelations(task.id),
+        })
+
+        expect(await getActual()).toEqual({ status: 400, relations: [] })
+      })
+
       it('returns 404 when duplicateOfTaskId does not reference an existing task', async () => {
         const task = await createTask('Duplicate me')
 
@@ -674,6 +724,34 @@ describe('tasks actions API', () => {
         })
 
         expect(res.status).toBe(404)
+      })
+
+      it('returns the same not-found response for a missing UUID or task number', async () => {
+        const task = await createTask('Duplicate me')
+        const results = await Promise.all(
+          [TEST_UUID, 2147483647].map(async (duplicateOfTaskId) => {
+            const res = await app.request(`/api/tasks/${task.id}/complete`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                statusReason: 'duplicate',
+                duplicateOfTaskId,
+              }),
+            })
+
+            return {
+              status: res.status,
+              body: await jsonBody<{ error: string }>(res),
+            }
+          }),
+        )
+
+        const expected = [
+          { status: 404, body: { error: 'Duplicate target task not found' } },
+          { status: 404, body: { error: 'Duplicate target task not found' } },
+        ]
+
+        expect(results).toEqual(expected)
       })
 
       it('ignores duplicateOfTaskId when the reason is not duplicate', async () => {
@@ -717,6 +795,58 @@ describe('tasks actions API', () => {
             type: 'duplicate_of',
           },
         ])
+      })
+
+      it('resolves a task number before recording the duplicate target', async () => {
+        const target = await createTask('Target')
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'duplicate',
+            duplicateOfTaskId: String(target.number),
+          }),
+        })
+
+        const getActual = async () => ({
+          status: res.status,
+          relations: await fetchDuplicateOfRelations(task.id),
+        })
+
+        expect(await getActual()).toEqual({
+          status: 200,
+          relations: [
+            {
+              sourceTaskId: task.id,
+              targetTaskId: target.id,
+              type: 'duplicate_of',
+            },
+          ],
+        })
+      })
+
+      it('returns 400 when duplicateOfTaskId is its own task number', async () => {
+        const task = await createTask('Duplicate me')
+
+        const res = await app.request(`/api/tasks/${task.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'completed',
+            statusReason: 'duplicate',
+            duplicateOfTaskId: String(task.number),
+          }),
+        })
+
+        const getActual = async () => ({
+          status: res.status,
+          relations: await fetchDuplicateOfRelations(task.id),
+        })
+
+        expect(await getActual()).toEqual({ status: 400, relations: [] })
       })
 
       // Re-closing a task as a duplicate of the same target is a realistic
@@ -868,11 +998,9 @@ describe('tasks actions API', () => {
     })
 
     describe('task_relations_no_self_relation constraint', () => {
-      // No route ever writes a same-id row (both handlers reject
-      // `duplicateOfTaskId === id` with a 400 before touching the
-      // database), so this constraint has no public-API path to exercise
-      // it — inserted directly to guard the schema invariant itself, as
-      // with `task_links_no_self_link` (task-content.ts).
+      // Both handlers resolve UUIDs and task numbers to UUIDs and reject a
+      // matching target before writing the relation, so insert directly to
+      // guard this schema invariant, as with `task_links_no_self_link`.
       it('rejects a raw same-id insert', async () => {
         const task = await createTask('Task')
 
