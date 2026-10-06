@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 
 export interface VisualViewportInsets {
   top: number
   height: number
+}
+
+export type VisualViewportStyle = CSSProperties & {
+  '--visual-viewport-top': string
+  '--visual-viewport-height': string
 }
 
 // Browser zoom leaves sub-pixel gaps between the (rounded) integer
