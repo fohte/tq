@@ -21,8 +21,9 @@ import {
 } from 'react'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
+import { renderCalendarGridEventContent } from '#components/calendar/calendar-grid-event-content'
 import {
-  isCalendarEventClickable,
+  getCalendarGridEventClassNames,
   mapCalendarGridEvents,
 } from '#components/calendar/calendar-grid-event-data'
 import {
@@ -31,9 +32,7 @@ import {
   resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
-import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import { GcalEventDetailPopover } from '#components/calendar/gcal-event-detail-popover'
-import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import { useIsDesktop } from '#hooks/use-is-desktop'
 import { formatHm, getDayRange, getScrollTime } from '#lib/calendar-grid-time'
 import {
@@ -42,7 +41,6 @@ import {
   getGcalEventDetails,
   isClickableEvent,
   isGcalEventType,
-  isPendingGcalResponse,
   type SlotGhostRect,
 } from '#lib/calendar-utils'
 
@@ -337,56 +335,10 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
           }}
           {...(initialDate ? { initialDate } : {})}
           headerToolbar={false}
-          eventClassNames={(arg) =>
-            isCalendarEventClickable(getEventProps(arg.event))
-              ? ['tq-event-clickable']
-              : []
-          }
+          eventClassNames={getCalendarGridEventClassNames}
           events={calendarEvents}
-          eventContent={(arg) => {
-            // In month view, render compact event pill with title
-            if (arg.view.type === 'dayGridMonth') {
-              const eventProps = getEventProps(arg.event)
-              return (
-                <div
-                  className="tq-month-event"
-                  data-event-type={eventProps.type}
-                  data-pending-response={isPendingGcalResponse(eventProps)}
-                >
-                  <span className="tq-month-event-title">
-                    {eventProps.redacted === true
-                      ? '予定あり'
-                      : arg.event.title}
-                  </span>
-                </div>
-              )
-            }
-            if (arg.event.display === 'background') {
-              return <GcalStatusBand {...arg} />
-            }
-            // Override timeText for overnight events to show actual end time
-            // FullCalendar clips end to midnight for display, so we use the
-            // real event.end to show the correct cross-day time range
-            const startDate = arg.event.start
-            const endDate = arg.event.end
-            const content =
-              !arg.event.allDay &&
-              startDate &&
-              endDate &&
-              endDate.getDate() !== startDate.getDate() ? (
-                <EventBlock
-                  {...arg}
-                  timeText={`${formatHm(startDate)}–${formatHm(endDate)}`}
-                />
-              ) : (
-                <EventBlock {...arg} />
-              )
-            return (
-              <TimeBlockPreviewTrigger event={arg.event}>
-                {content}
-              </TimeBlockPreviewTrigger>
-            )
-          }}
+          eventContent={renderCalendarGridEventContent}
+          eventOrder="-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title"
           nowIndicator={true}
           nowIndicatorContent={(arg) => {
             // arg.date is the column's day-start marker, not the current

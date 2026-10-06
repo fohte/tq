@@ -41,3 +41,13 @@ export const redactedEvent = {
     redacted: true,
   },
 }
+
+export const taskDateEvent = {
+  id: 'task-date',
+  start: new Date('2026-07-29T00:00:00.000Z'),
+  end: new Date('2026-07-30T00:00:00.000Z'),
+  extendedProps: {
+    type: 'task-date' as const,
+    taskId,
+  },
+}

@@ -131,6 +131,18 @@ function renderAndGetEventClassNames() {
   return capturedProps['eventClassNames'] as (arg: EventContentArg) => string[]
 }
 
+function renderAndGetEventOrder() {
+  render(<CalendarGrid events={[]} activeView="day" />)
+  return capturedProps['eventOrder']
+}
+
+function getTaskAndScheduleClickCalls(
+  taskClick: ReturnType<typeof vi.fn>,
+  scheduleClick: ReturnType<typeof vi.fn>,
+) {
+  return [taskClick.mock.calls, scheduleClick.mock.calls]
+}
+
 function renderAndGetDatesSet(
   onDatesSet?: (info: {
     start: Date
@@ -335,6 +347,22 @@ describe('CalendarGrid', () => {
     expect(onScheduleClick).not.toHaveBeenCalled()
   })
 
+  it('routes a task-date event click to onTaskClick', () => {
+    const onScheduleClick = vi.fn()
+    const onTaskClick = vi.fn()
+    const eventClick = renderAndGetEventClick({ onScheduleClick, onTaskClick })
+    const info = {
+      event: { extendedProps: { type: 'task-date', taskId: 'task-1' } },
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields handleEventClick reads
+    eventClick(info as unknown as EventClickArg)
+
+    expect(getTaskAndScheduleClickCalls(onTaskClick, onScheduleClick)).toEqual([
+      [['task-1']],
+      [],
+    ])
+  })
+
   it('routes a schedule event click to onScheduleClick', () => {
     const onScheduleClick = vi.fn()
     const onTaskClick = vi.fn()
@@ -393,6 +421,39 @@ describe('CalendarGrid', () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
     expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
       'tq-event-clickable',
+    ])
+  })
+
+  it('marks an all-day task-date event as clickable', () => {
+    const eventClassNames = renderAndGetEventClassNames()
+    const arg = {
+      event: { allDay: true, extendedProps: { type: 'task-date' } },
+      isStart: true,
+      isEnd: true,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
+    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
+      'tq-event-clickable',
+    ])
+  })
+
+  it('prioritizes overdue reminders in FullCalendar event order', () => {
+    expect(renderAndGetEventOrder()).toBe(
+      '-displayPriority,queueOrder,queuePosition,start,-duration,allDay,title',
+    )
+  })
+
+  it('adds continuation arrows only to clipped all-day event segments', () => {
+    const eventClassNames = renderAndGetEventClassNames()
+    const arg = {
+      event: { allDay: true, extendedProps: { type: 'gcal-info' } },
+      isStart: false,
+      isEnd: false,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test only exercises the fields eventClassNames reads
+    expect(eventClassNames(arg as unknown as EventContentArg)).toEqual([
+      'tq-all-day-continues-left',
+      'tq-all-day-continues-right',
     ])
   })
 

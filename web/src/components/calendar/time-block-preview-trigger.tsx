@@ -42,9 +42,10 @@ export function TimeBlockPreviewTrigger({
   children: React.ReactNode
   defaultOpen?: boolean | undefined
 }) {
-  const { taskId, redacted, isAutoScheduled } = event.extendedProps
+  const { type, taskId, redacted, isAutoScheduled } = event.extendedProps
 
   if (
+    (type !== 'manual' && type !== 'auto' && type !== 'completed') ||
     taskId == null ||
     redacted === true ||
     event.start == null ||

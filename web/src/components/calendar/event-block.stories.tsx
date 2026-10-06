@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { EventBlock } from '#components/calendar/event-block'
+import { cn } from '#lib/utils'
 
 type EventType = TimeBlockEvent['type']
 
@@ -16,6 +17,8 @@ function EventBlockPreview({
   gcalEventType,
   redacted = false,
   allDay = false,
+  isStart = true,
+  isEnd = true,
   widthPx = 288,
   short = false,
   isMirror = false,
@@ -30,6 +33,8 @@ function EventBlockPreview({
   gcalEventType?: string
   redacted?: boolean
   allDay?: boolean
+  isStart?: boolean
+  isEnd?: boolean
   widthPx?: number
   short?: boolean
   isMirror?: boolean
@@ -51,13 +56,18 @@ function EventBlockPreview({
       },
     },
     timeText,
-    isStart: true,
+    isStart,
+    isEnd,
     isMirror,
   }
 
   return (
     <div
-      className="w-(--event-block-width)"
+      className={cn(
+        'w-(--event-block-width)',
+        allDay && !isStart && 'tq-all-day-continues-left',
+        allDay && !isEnd && 'tq-all-day-continues-right',
+      )}
       style={
         {
           '--event-block-width': `${String(widthPx)}px`,
@@ -215,6 +225,18 @@ export const GoogleCalendarInfoAllDay: Story = {
     title: 'Company holiday',
     timeText: '',
     allDay: true,
+  },
+}
+
+export const GoogleCalendarInfoContinuesIntoNextDate: Story = {
+  name: 'an all-day Google Calendar event points into the next date',
+  args: {
+    type: 'gcal-info',
+    title: 'Company holiday',
+    timeText: '',
+    allDay: true,
+    isStart: true,
+    isEnd: false,
   },
 }
 

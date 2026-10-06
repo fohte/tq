@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import { makeCalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail-test-fixtures'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeGcalEvent } from '#hooks/gcal-event-test-fixtures'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 
@@ -30,7 +31,13 @@ function expectedDetails(
 }
 
 describe('useDayViewCalendarEvents', () => {
-  it('maps details only for visible events and omits blank meeting URLs', () => {
+  it('maps task dates alongside visible events and omits blank meeting URLs', () => {
+    const datedTask = makeTask({
+      id: 'dated-task',
+      title: 'Prepare a sample outline',
+      startDate: '2031-04-09',
+      dueDate: '2031-04-09',
+    })
     const visibleMeeting = makeGcalEvent({
       id: 'visible-meeting',
       summary: 'Product review',
@@ -79,10 +86,22 @@ describe('useDayViewCalendarEvents', () => {
         ],
         taskMap: new Map(),
         context: 'work',
+        taskDateTasks: [datedTask],
+        visibleRange: { startDate: '2031-04-09', endDate: '2031-04-09' },
       }),
     )
 
     expect(result.current).toEqual([
+      {
+        id: 'task-date-dated-task-range',
+        title: 'Prepare a sample outline',
+        start: '2031-04-09',
+        end: '2031-04-10',
+        type: 'task-date',
+        taskId: 'dated-task',
+        allDay: true,
+        dateTaskKind: 'range',
+      },
       {
         id: 'gcal-visible-meeting',
         title: 'Product review',

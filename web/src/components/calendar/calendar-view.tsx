@@ -14,6 +14,7 @@ import {
 import { useCalendarKeybindings } from '#hooks/use-calendar-keybindings'
 import { useCalendarSwipeNavigation } from '#hooks/use-calendar-swipe-navigation'
 import { useIsDesktop } from '#hooks/use-is-desktop'
+import type { DateTaskCalendarEventKind } from '#lib/calendar-utils'
 import { formatLocalDate } from '#lib/date-range'
 
 export interface TimeBlockEvent {
@@ -30,14 +31,19 @@ export interface TimeBlockEvent {
     | 'gcal-info'
     | 'completed'
     | 'schedule'
+    | 'task-date'
   /** Parent task reference (e.g. "#488 tq 作成") */
   parentRef?: string
   /** Custom accent color for schedule events */
   color?: {
     accent: string
   }
-  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' */
+  /** Underlying task id, present when type is 'manual' | 'auto' | 'completed' | 'task-date' */
   taskId?: string
+  dateTaskKind?: DateTaskCalendarEventKind
+  dateTaskOverdue?: boolean
+  dateTaskDueDateLabel?: string
+  displayPriority?: number
   /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed' */
   isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */

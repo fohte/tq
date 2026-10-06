@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import { mapTaskDateCalendarEvents } from '#hooks/task-date-calendar-events'
 import type { GcalEvent } from '#hooks/use-gcal-events'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
@@ -15,6 +16,8 @@ interface UseDayViewCalendarEventsOptions {
   gcalEventsData: GcalEvent[] | undefined
   taskMap: Map<string, Task>
   context: 'work' | 'personal'
+  taskDateTasks?: Task[]
+  visibleRange?: { startDate: string; endDate: string }
 }
 
 export function useDayViewCalendarEvents({
@@ -23,6 +26,8 @@ export function useDayViewCalendarEvents({
   gcalEventsData,
   taskMap,
   context,
+  taskDateTasks,
+  visibleRange,
 }: UseDayViewCalendarEventsOptions): TimeBlockEvent[] {
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
@@ -111,9 +116,17 @@ export function useDayViewCalendarEvents({
     })
   }, [gcalEventsData])
 
+  const taskDateEvents = useMemo(
+    () =>
+      taskDateTasks == null || visibleRange == null
+        ? []
+        : mapTaskDateCalendarEvents(taskDateTasks, visibleRange),
+    [taskDateTasks, visibleRange],
+  )
+
   const calendarEvents: TimeBlockEvent[] = useMemo(
-    () => [...taskEvents, ...scheduleEvents, ...gcalEvents],
-    [taskEvents, scheduleEvents, gcalEvents],
+    () => [...taskEvents, ...taskDateEvents, ...scheduleEvents, ...gcalEvents],
+    [taskEvents, taskDateEvents, scheduleEvents, gcalEvents],
   )
 
   return calendarEvents

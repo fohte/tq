@@ -1,6 +1,10 @@
 import type { EventContentArg } from '@fullcalendar/core'
 import { Headphones, LogOut, MapPin } from 'lucide-react'
 
+import {
+  getTaskDateEventProps,
+  TaskDateEvent,
+} from '#components/calendar/task-date-event'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import {
   type CalendarEventProps,
@@ -28,6 +32,7 @@ const RULE_CLASS: Record<EventKind, string> = {
   'gcal-status': 'border-l-border',
   'gcal-info': 'border-l-border',
   'gcal-solo': 'border-l-muted-foreground-ghost',
+  'task-date': 'border-l-muted-foreground',
 }
 
 const BG_CLASS: Record<EventKind, string> = {
@@ -39,6 +44,7 @@ const BG_CLASS: Record<EventKind, string> = {
   auto: 'bg-transparent',
   manual: 'bg-surface-strong',
   completed: 'bg-surface-strong',
+  'task-date': 'bg-surface-strong',
 }
 
 // Marks only the minority status/info categories, mirroring Google
@@ -77,9 +83,22 @@ export function EventBlock(arg: EventContentArg) {
   const calendarColor = props.calendarColor
   const redacted = props.redacted ?? false
 
-  const isShort = arg.isStart && (event.allDay || isShortEvent(event))
+  if (type === 'task-date') {
+    return (
+      <TaskDateEvent
+        title={event.title}
+        {...getTaskDateEventProps(props)}
+        isStart={arg.isStart}
+        isEnd={arg.isEnd}
+      />
+    )
+  }
+
+  const isShort = event.allDay || (arg.isStart && isShortEvent(event))
   const isCompleted = type === 'completed'
   const isPendingResponse = isPendingGcalResponse(props)
+  const continuesBefore = event.allDay && !arg.isStart
+  const continuesAfter = event.allDay && !arg.isEnd
 
   const timeDetails = (
     <span className="inline-flex items-center gap-x-1">
@@ -93,7 +112,13 @@ export function EventBlock(arg: EventContentArg) {
     return (
       <EventBlockShell
         isShort={isShort}
-        className="border-dashed border-l-muted-foreground-faint bg-transparent"
+        className={cn(
+          'border-dashed border-l-muted-foreground-faint bg-transparent',
+          event.allDay && 'tq-all-day-content',
+          continuesBefore && 'border-l-0',
+        )}
+        continuesBefore={continuesBefore}
+        continuesAfter={continuesAfter}
         title={
           <span className="min-w-0 truncate font-mono text-2xs text-muted-foreground">
             予定あり
@@ -127,7 +152,11 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
         (isCompleted || isPendingResponse) && 'opacity-50',
+        event.allDay && 'tq-all-day-content',
+        continuesBefore && 'border-l-0',
       )}
+      continuesBefore={continuesBefore}
+      continuesAfter={continuesAfter}
       style={
         accentColor == null ? undefined : { '--event-accent': accentColor }
       }
@@ -179,6 +208,8 @@ export function GcalStatusBand({ event }: EventContentArg) {
 function EventBlockShell({
   isShort,
   className,
+  continuesBefore = false,
+  continuesAfter = false,
   style,
   title,
   badge,
@@ -187,6 +218,8 @@ function EventBlockShell({
 }: {
   isShort: boolean
   className?: string
+  continuesBefore?: boolean
+  continuesAfter?: boolean
   style?: EventBlockStyle | undefined
   title: React.ReactNode
   badge?: string | undefined
@@ -201,6 +234,8 @@ function EventBlockShell({
         className,
       )}
       style={style}
+      data-continues-before={continuesBefore}
+      data-continues-after={continuesAfter}
     >
       <div className="flex min-w-0 items-center gap-1.5">
         {title}
