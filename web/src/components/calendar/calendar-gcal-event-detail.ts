@@ -1,4 +1,4 @@
-export interface CalendarGcalAttendee {
+interface CalendarGcalAttendee {
   email: string | null
   displayName: string | null
   responseStatus: 'needsAction' | 'declined' | 'tentative' | 'accepted' | null
