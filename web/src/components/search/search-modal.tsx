@@ -1,5 +1,12 @@
 import { parseSearchQuery } from 'api/search-query-parser'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { createPortal } from 'react-dom'
 
 import { SearchModalFooter } from '#components/search/search-modal-footer'
@@ -37,10 +44,7 @@ import {
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
 import { useTask } from '#hooks/use-tasks'
-import {
-  getVisualViewportStyle,
-  useVisualViewportInsets,
-} from '#hooks/use-visual-viewport-insets'
+import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import {
   getRecentSearchItems,
   type RecentSearchItem,
@@ -383,7 +387,17 @@ export function SearchModal({
             ? 'inset-y-0'
             : 'top-(--visual-viewport-top) h-(--visual-viewport-height)',
         )}
-        style={getVisualViewportStyle(visualViewportInsets)}
+        style={
+          visualViewportInsets === null
+            ? undefined
+            : ({
+                '--visual-viewport-top': `${String(visualViewportInsets.top)}px`,
+                '--visual-viewport-height': `${String(visualViewportInsets.height)}px`,
+              } as CSSProperties & {
+                '--visual-viewport-top': string
+                '--visual-viewport-height': string
+              })
+        }
         data-testid="search-overlay"
         onKeyDown={handleKeyDown}
         onClick={(e) => {

@@ -90,6 +90,12 @@ interface CalendarGridProps {
 }
 
 type SlotGhostStyle = React.CSSProperties & Record<`--slot-${string}`, string>
+type GcalEventAnchorStyle = React.CSSProperties & {
+  '--gcal-event-anchor-left': string
+  '--gcal-event-anchor-top': string
+  '--gcal-event-anchor-width': string
+  '--gcal-event-anchor-height': string
+}
 
 export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
   function CalendarGrid(
@@ -419,15 +425,15 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
               ref={gcalEventAnchorRef}
               aria-hidden="true"
               data-gcal-event-popover-anchor
-              style={{
-                position: 'fixed',
-                left: gcalEventAnchorRect.left,
-                top: gcalEventAnchorRect.top,
-                width: gcalEventAnchorRect.width,
-                height: gcalEventAnchorRect.height,
-                opacity: 0,
-                pointerEvents: 'none',
-              }}
+              className="pointer-events-none fixed top-(--gcal-event-anchor-top) left-(--gcal-event-anchor-left) h-(--gcal-event-anchor-height) w-(--gcal-event-anchor-width) opacity-0"
+              style={
+                {
+                  '--gcal-event-anchor-left': `${String(gcalEventAnchorRect.left)}px`,
+                  '--gcal-event-anchor-top': `${String(gcalEventAnchorRect.top)}px`,
+                  '--gcal-event-anchor-width': `${String(gcalEventAnchorRect.width)}px`,
+                  '--gcal-event-anchor-height': `${String(gcalEventAnchorRect.height)}px`,
+                } as GcalEventAnchorStyle
+              }
             />
             <GcalEventDetailPopover
               anchor={gcalEventAnchorRef}

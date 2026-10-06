@@ -1,5 +1,11 @@
 import { useMatchRoute, useNavigate } from '@tanstack/react-router'
-import { type ReactNode, useCallback, useMemo, useState } from 'react'
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react'
 
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
@@ -13,10 +19,7 @@ import { useGlobalKeybindings } from '#hooks/use-global-keybindings'
 import { useSearchModalDefaultQuery } from '#hooks/use-search-modal-default-query'
 import { SearchModalOpenContext } from '#hooks/use-search-modal-open'
 import { useUrlCopiedToast } from '#hooks/use-url-copied-toast'
-import {
-  getVisualViewportStyle,
-  useVisualViewportInsets,
-} from '#hooks/use-visual-viewport-insets'
+import { useVisualViewportInsets } from '#hooks/use-visual-viewport-insets'
 import { getSearchKeybinding } from '#lib/keybindings'
 import { cn } from '#lib/utils'
 
@@ -64,7 +67,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
           ? cn('top-0', isViewportPinned ? 'h-dvh' : 'min-h-dvh')
           : 'inset-x-0 top-(--visual-viewport-top) h-(--visual-viewport-height)',
       )}
-      style={getVisualViewportStyle(insets)}
+      style={
+        insets === null
+          ? undefined
+          : ({
+              '--visual-viewport-top': `${String(insets.top)}px`,
+              '--visual-viewport-height': `${String(insets.height)}px`,
+            } as CSSProperties & {
+              '--visual-viewport-top': string
+              '--visual-viewport-height': string
+            })
+      }
     >
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">

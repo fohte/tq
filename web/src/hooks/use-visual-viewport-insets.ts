@@ -5,22 +5,6 @@ export interface VisualViewportInsets {
   height: number
 }
 
-interface VisualViewportStyle extends React.CSSProperties {
-  '--visual-viewport-top': string
-  '--visual-viewport-height': string
-}
-
-export function getVisualViewportStyle(
-  insets: VisualViewportInsets | null,
-): VisualViewportStyle | undefined {
-  if (insets === null) return undefined
-
-  return {
-    '--visual-viewport-top': `${String(insets.top)}px`,
-    '--visual-viewport-height': `${String(insets.height)}px`,
-  }
-}
-
 // Browser zoom leaves sub-pixel gaps between the (rounded) integer
 // `window.innerHeight` and the float `visualViewport.height` even when
 // nothing is actually shrinking the visual viewport; keyboard/pinch-zoom
