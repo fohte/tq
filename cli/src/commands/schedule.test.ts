@@ -86,7 +86,7 @@ describe('schedule time blocks list', () => {
 
 describe('schedule time blocks create', () => {
   it('creates an auto-scheduled block', async () => {
-    const taskId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const taskId = '42'
     const block = makeTimeBlock({
       taskId,
       startTime: '2026-12-18T08:30:00.000Z',

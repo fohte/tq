@@ -9,6 +9,7 @@ import { firstOrThrow } from '#lib/drizzle-utils'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { recordStatusChanged } from '#lib/task-events'
 import {
+  findTaskByIdOrNumber,
   getLabelNamesByTaskId,
   getRecurrenceRulesByTemplateIds,
   requireTask,
@@ -29,36 +30,41 @@ import { getIncompleteBlockerNumbers } from '#services/task-relations'
 const updateStatusSchema = z.object({
   status: taskStatus,
   statusReason: taskStatusReason.optional(),
-  duplicateOfTaskId: z.uuid().optional(),
+  duplicateOfTaskId: taskIdOrNumber.optional(),
 })
 
 const updateParentSchema = z.object({
   parentId: taskIdOrNumber.nullable(),
 })
 
-// Rejects a `duplicateOfTaskId` that self-references or names a
-// non-existent task, before either close-as-duplicate handler touches the
-// database. Returns the error response body/status to send, or `null` when
-// the target is valid.
+// Both close-as-duplicate routes need the target UUID for self-reference
+// checks and relation writes.
 async function checkDuplicateTarget(
   id: string,
-  duplicateOfTaskId: string,
-): Promise<{ body: { error: string }; status: 400 | 404 } | null> {
-  if (duplicateOfTaskId === id) {
+  duplicateOfTaskId: string | number,
+): Promise<
+  { taskId: string } | { error: { body: { error: string }; status: 400 | 404 } }
+> {
+  const duplicateTarget = await findTaskByIdOrNumber(String(duplicateOfTaskId))
+  if (!duplicateTarget) {
     return {
-      body: { error: 'A task cannot be a duplicate of itself' },
-      status: 400,
+      error: {
+        body: { error: 'Duplicate target task not found' },
+        status: 404,
+      },
     }
   }
 
-  const duplicateTarget = await db.query.tasks.findFirst({
-    where: eq(tasks.id, duplicateOfTaskId),
-  })
-  if (!duplicateTarget) {
-    return { body: { error: 'Duplicate target task not found' }, status: 404 }
+  if (duplicateTarget.id === id) {
+    return {
+      error: {
+        body: { error: 'A task cannot be a duplicate of itself' },
+        status: 400,
+      },
+    }
   }
 
-  return null
+  return { taskId: duplicateTarget.id }
 }
 
 // Must run against the same `tx` as the status update it gates.
@@ -124,12 +130,20 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       const nextStatusReason =
         status === 'completed' ? (statusReason ?? 'completed') : null
+      let duplicateTargetTaskId: string | null = null
 
       if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-        const targetError = await checkDuplicateTarget(id, duplicateOfTaskId)
-        if (targetError) {
-          return c.json(targetError.body, targetError.status)
+        const duplicateTarget = await checkDuplicateTarget(
+          id,
+          duplicateOfTaskId,
+        )
+        if ('error' in duplicateTarget) {
+          return c.json(
+            duplicateTarget.error.body,
+            duplicateTarget.error.status,
+          )
         }
+        duplicateTargetTaskId = duplicateTarget.taskId
       }
 
       // `existing.status` was read by requireTask outside this transaction,
@@ -199,8 +213,8 @@ export const tasksActionsApp = new Hono()
           )
         }
 
-        if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-          await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
+        if (duplicateTargetTaskId != null) {
+          await insertDuplicateOfRelation(tx, id, duplicateTargetTaskId)
         }
 
         return { kind: 'ok' as const, task: updated }
@@ -293,7 +307,7 @@ export const tasksActionsApp = new Hono()
       'json',
       z.object({
         statusReason: taskStatusReason.optional(),
-        duplicateOfTaskId: z.uuid().optional(),
+        duplicateOfTaskId: taskIdOrNumber.optional(),
       }),
     ),
     async (c) => {
@@ -302,12 +316,20 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       const { statusReason, duplicateOfTaskId } = c.req.valid('json')
       const reason = statusReason ?? 'completed'
+      let duplicateTargetTaskId: string | null = null
 
       if (reason === 'duplicate' && duplicateOfTaskId != null) {
-        const targetError = await checkDuplicateTarget(id, duplicateOfTaskId)
-        if (targetError) {
-          return c.json(targetError.body, targetError.status)
+        const duplicateTarget = await checkDuplicateTarget(
+          id,
+          duplicateOfTaskId,
+        )
+        if ('error' in duplicateTarget) {
+          return c.json(
+            duplicateTarget.error.body,
+            duplicateTarget.error.status,
+          )
         }
+        duplicateTargetTaskId = duplicateTarget.taskId
       }
 
       // `existing.status` was read by requireTask outside this transaction,
@@ -372,8 +394,8 @@ export const tasksActionsApp = new Hono()
           author,
         )
 
-        if (reason === 'duplicate' && duplicateOfTaskId != null) {
-          await insertDuplicateOfRelation(tx, id, duplicateOfTaskId)
+        if (duplicateTargetTaskId != null) {
+          await insertDuplicateOfRelation(tx, id, duplicateTargetTaskId)
         }
 
         return { kind: 'ok' as const, task: updatedTask }

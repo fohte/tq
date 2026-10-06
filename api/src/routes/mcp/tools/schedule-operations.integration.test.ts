@@ -139,7 +139,7 @@ describe('schedule operation tools', () => {
     const task = await createTask('Focused work')
 
     const result = await callMcpTool(client, 'schedule_time_blocks_create', {
-      taskId: task.id,
+      taskId: task.number,
       startTime: '2026-12-18T08:30:00.000Z',
       endTime: '2026-12-18T09:15:00.000Z',
       isAutoScheduled: true,
