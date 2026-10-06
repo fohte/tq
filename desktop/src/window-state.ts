@@ -1,4 +1,8 @@
-import { Result } from 'neverthrow'
+import {
+  createJsonStore,
+  type JsonStore,
+  type JsonStoreStorage,
+} from '#json-store'
 
 export type WindowBounds = {
   x: number
@@ -7,10 +11,7 @@ export type WindowBounds = {
   height: number
 }
 
-export type WindowBoundsStore = {
-  load: () => Result<WindowBounds | undefined, unknown>
-  save: (bounds: WindowBounds) => Result<void, unknown>
-}
+export type WindowBoundsStore = JsonStore<WindowBounds>
 
 type TimerApi = {
   setTimeout: typeof setTimeout
@@ -43,11 +44,6 @@ export const createDebouncedAction = (
       action()
     },
   }
-}
-
-type WindowBoundsStorage = {
-  read: () => string
-  write: (serialized: string) => void
 }
 
 const parseWindowBounds = (value: unknown): WindowBounds | undefined => {
@@ -111,26 +107,6 @@ export const clampWindowBounds = (
   }
 }
 
-export const createWindowBoundsStore = ({
-  read,
-  write,
-}: WindowBoundsStorage): WindowBoundsStore => {
-  const parse = Result.fromThrowable(
-    (serialized: string): unknown => JSON.parse(serialized),
-    (caughtErr) => caughtErr,
-  )
-
-  return {
-    load: () =>
-      Result.fromThrowable(read, (caughtErr) => caughtErr)().andThen(
-        (serialized) => parse(serialized).map(parseWindowBounds),
-      ),
-    save: (bounds) =>
-      Result.fromThrowable(
-        () => {
-          write(JSON.stringify(bounds))
-        },
-        (caughtErr) => caughtErr,
-      )(),
-  }
-}
+export const createWindowBoundsStore = (
+  storage: JsonStoreStorage,
+): WindowBoundsStore => createJsonStore(storage, parseWindowBounds)

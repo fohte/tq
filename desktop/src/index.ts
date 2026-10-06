@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 
 import {
   app,
@@ -13,6 +12,7 @@ import {
 import { ResultAsync } from 'neverthrow'
 
 import { EXTERNAL_SCHEMES, TQ_ORIGIN } from '#config'
+import { createJsonFileStorage } from '#json-store'
 import { buildMenuTemplate } from '#menu'
 import {
   classifyNavigation,
@@ -22,11 +22,15 @@ import {
   shouldOpenSideNavigationInMain,
 } from '#navigation'
 import {
+  createSideWindowAlwaysOnTopController,
+  type SideWindowAlwaysOnTopController,
+} from '#side-window-always-on-top'
+import { createSideWindowSettingsStore } from '#side-window-settings'
+import {
   clampWindowBounds,
   createDebouncedAction,
   createWindowBoundsStore,
   initialWindowBounds,
-  type WindowBoundsStore,
 } from '#window-state'
 import { setSideWindowTitle } from '#window-title'
 
@@ -35,6 +39,7 @@ let mainWindow: BrowserWindow | undefined
 let sideWindow: BrowserWindow | undefined
 let memoWindow: BrowserWindow | undefined
 let flushSideWindowBounds: (() => void) | undefined
+let sideWindowAlwaysOnTopController: SideWindowAlwaysOnTopController | undefined
 // A deep link can arrive before the window exists (cold start from a link).
 let pendingUrl: string | undefined
 
@@ -125,15 +130,21 @@ const isMissingFile = (caughtErr: unknown): boolean =>
   'code' in caughtErr &&
   caughtErr.code === 'ENOENT'
 
-const createSideWindow = (): BrowserWindow => {
-  const boundsFile = join(app.getPath('userData'), 'side-window-bounds.json')
-  const boundsStore: WindowBoundsStore = createWindowBoundsStore({
-    read: () => readFileSync(boundsFile, 'utf8'),
-    write: (serialized) => {
-      mkdirSync(dirname(boundsFile), { recursive: true })
-      writeFileSync(boundsFile, serialized)
+const setSideWindowAlwaysOnTop = (alwaysOnTop: boolean) => {
+  sideWindowAlwaysOnTopController?.setEnabled(alwaysOnTop).match(
+    () => undefined,
+    (caughtErr) => {
+      console.error('failed to save side window settings', caughtErr)
     },
-  })
+  )
+}
+
+const createSideWindow = (): BrowserWindow => {
+  const boundsStore = createWindowBoundsStore(
+    createJsonFileStorage(
+      join(app.getPath('userData'), 'side-window-bounds.json'),
+    ),
+  )
   const loadedBounds = boundsStore.load().match(
     (bounds) => bounds,
     (caughtErr) => {
@@ -154,6 +165,7 @@ const createSideWindow = (): BrowserWindow => {
     ...bounds,
     webPreferences: { sandbox: true },
   })
+  sideWindowAlwaysOnTopController?.applyTo(win)
   setSideWindowTitle(win)
   sideWindow = win
 
@@ -301,6 +313,26 @@ app.on('window-all-closed', () => undefined)
 
 // Top-level `await app.whenReady()` never resolves in an ESM main process.
 void app.whenReady().then(() => {
+  const sideWindowSettingsStore = createSideWindowSettingsStore(
+    createJsonFileStorage(
+      join(app.getPath('userData'), 'side-window-settings.json'),
+    ),
+  )
+  const initialSettings = sideWindowSettingsStore.load().match(
+    (settings) => settings,
+    (caughtErr) => {
+      if (!isMissingFile(caughtErr)) {
+        console.error('failed to read side window settings', caughtErr)
+      }
+      return undefined
+    },
+  )
+  const alwaysOnTopController = createSideWindowAlwaysOnTopController({
+    initialValue: initialSettings?.alwaysOnTop ?? false,
+    settingsStore: sideWindowSettingsStore,
+  })
+  sideWindowAlwaysOnTopController = alwaysOnTopController
+
   // Only a packaged app has the `tq` scheme in its Info.plist; in development
   // this would claim the scheme for the bare Electron binary.
   if (app.isPackaged) app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME)
@@ -319,7 +351,11 @@ void app.whenReady().then(() => {
         win.webContents.navigationHistory,
         win.webContents,
         clipboard,
-        openSideWindow,
+        {
+          open: openSideWindow,
+          alwaysOnTop: alwaysOnTopController.isEnabled(),
+          setAlwaysOnTop: setSideWindowAlwaysOnTop,
+        },
       ),
     ),
   )
