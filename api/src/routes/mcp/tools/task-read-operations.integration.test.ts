@@ -101,6 +101,51 @@ describe('task_list', () => {
     ])
   })
 
+  it('returns checklist progress in task list rows', async () => {
+    const task = await createTask('Checklist task')
+    const checklistResponse = await app.request(
+      `/api/tasks/${task.id}/checklists`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Review' }),
+      },
+    )
+    const checklist = await jsonBody<{ id: string }>(checklistResponse)
+    const completedItemResponse = await app.request(
+      `/api/checklists/${checklist.id}/items`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'Complete item' }),
+      },
+    )
+    const completedItem = await jsonBody<{ id: string }>(completedItemResponse)
+    await app.request(`/api/checklists/${checklist.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'Pending item' }),
+    })
+    await app.request(`/api/checklist-items/${completedItem.id}/check`, {
+      method: 'POST',
+    })
+
+    const toolResult = await callMcpTool(client, 'task_list', {})
+
+    expect(parseToolJson(toolResult)).toEqual([
+      {
+        ...withoutLinkSync(task),
+        parentNumber: null,
+        duplicateOfNumber: null,
+        blockedByNumbers: [],
+        blockedByGithubRefs: [],
+        labels: [],
+        childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 2, completed: 1 },
+      },
+    ])
+  })
+
   it('returns only root tasks when parentId is "root"', async () => {
     const parent = await createTask('Parent')
     await createTask('Child', { parentId: parent.id })
@@ -139,6 +184,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -161,6 +207,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 1, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
         ...withoutLinkSync(grandchild),
@@ -169,6 +216,7 @@ describe('task_list', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -373,6 +421,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -394,6 +443,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
@@ -416,6 +466,7 @@ describe('task_search', () => {
         blockedByNumbers: [],
         blockedByGithubRefs: [],
         childCompletionCount: { total: 0, completed: 0 },
+        checklistCompletionCount: { total: 0, completed: 0 },
       },
     ])
   })
