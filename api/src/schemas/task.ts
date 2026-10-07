@@ -18,7 +18,7 @@ export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
 const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
-export const taskSortBy = z.enum(['created', 'updated', 'due', 'estimate'])
+export const taskSortBy = z.enum(['created', 'updated', 'due'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 
 const hasFlagSchema = z
@@ -64,7 +64,6 @@ export const createTaskSchema = z.object({
     .optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
-  estimatedMinutes: z.number().int().positive().optional(),
   parentId: taskIdOrNumber.optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
@@ -86,7 +85,6 @@ export const updateTaskSchema = z.object({
     .optional(),
   startDate: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
-  estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
@@ -122,7 +120,6 @@ export const listTasksQuerySchema = z.object({
     .optional(),
   q: z.string().optional(),
   label: z.string().optional(),
-  hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),

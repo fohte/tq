@@ -306,11 +306,6 @@ function buildConditions(
     }
   }
 
-  if (query.hasEstimate === true) {
-    conditions.push(isNotNull(tasks.estimatedMinutes))
-  } else if (query.hasEstimate === false) {
-    conditions.push(isNull(tasks.estimatedMinutes))
-  }
   if (query.hasDue === true) {
     conditions.push(isNotNull(tasks.dueDate))
   } else if (query.hasDue === false) {

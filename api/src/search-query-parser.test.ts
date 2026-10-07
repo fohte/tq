@@ -154,7 +154,6 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('sort:due').sortBy).toBe('due')
     expect(parseSearchQuery('sort:created').sortBy).toBe('created')
     expect(parseSearchQuery('sort:updated').sortBy).toBe('updated')
-    expect(parseSearchQuery('sort:estimate').sortBy).toBe('estimate')
   })
 
   it('treats invalid sort: value as free text', () => {
@@ -237,11 +236,6 @@ describe('getSearchQuerySuggestions', () => {
       {
         value: 'sort:updated',
         display: 'Sort by update date',
-        category: 'sort',
-      },
-      {
-        value: 'sort:estimate',
-        display: 'Sort by estimate',
         category: 'sort',
       },
       { value: 'has:pages', display: 'Has pages', category: 'has' },

@@ -21,8 +21,8 @@ describe('sortOptionValues', () => {
 })
 
 describe('withDefaultSort', () => {
-  it('replaces an obsolete estimate sort with the default sort', () => {
-    expect(withDefaultSort({ freeText: '', sortBy: 'estimate' })).toEqual({
+  it('defaults the sort when the query has none', () => {
+    expect(withDefaultSort({ freeText: '' })).toEqual({
       freeText: '',
       sortBy: 'updated',
     })

@@ -198,25 +198,6 @@ describe('TaskFilterChipRow', () => {
     expect(onQueryChange).toHaveBeenCalledWith('is:todo sort:created')
   })
 
-  it('normalizes the retired estimate sort in an existing query', () => {
-    renderRow({ parsed: { ...defaultParsed, sortBy: 'estimate' } })
-
-    const getActual = () => ({
-      updatedSortIsVisible:
-        screen.queryByRole('button', { name: 'Sort by updated' }) !== null,
-      estimateSortIsVisible:
-        screen.queryByRole('button', { name: 'Sort by estimate' }) !== null,
-      saveViewIsVisible:
-        screen.queryByRole('button', { name: 'Save view' }) !== null,
-    })
-
-    expect(getActual()).toEqual({
-      updatedSortIsVisible: true,
-      estimateSortIsVisible: false,
-      saveViewIsVisible: false,
-    })
-  })
-
   it('commits an edited free-text value merged with the applied query', async () => {
     const { onQueryChange } = renderRow({
       parsed: { ...defaultParsed, freeText: 'foo bar' },

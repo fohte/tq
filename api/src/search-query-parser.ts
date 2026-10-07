@@ -14,7 +14,7 @@ export interface ParsedQuery {
   hasNoBlockers?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated' | 'estimate'
+  sortBy?: 'due' | 'created' | 'updated'
 }
 
 export interface SearchQueryTokenRange {
@@ -104,9 +104,8 @@ const searchQueryTokenDefinitions = new Map(
         ['due', 'Sort by due date'],
         ['created', 'Sort by creation date'],
         ['updated', 'Sort by update date'],
-        ['estimate', 'Sort by estimate'],
       ],
-      'Sort results by date or estimate.',
+      'Sort results by date.',
       (result, value) => {
         result.sortBy = value
       },

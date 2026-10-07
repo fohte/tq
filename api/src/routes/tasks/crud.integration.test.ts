@@ -315,7 +315,6 @@ function createdTaskResponse(
     labels: [],
     startDate: null,
     dueDate: null,
-    estimatedMinutes: null,
     remindAt: null,
     parentId: null,
     projectId: null,
@@ -1059,7 +1058,6 @@ describe('tasks CRUD API', () => {
           description: 'Deploy to production',
           startDate: '2026-03-20',
           dueDate: '2026-03-25',
-          estimatedMinutes: 120,
           context: 'work',
           commitment: 'inbox',
         }),
@@ -1071,7 +1069,6 @@ describe('tasks CRUD API', () => {
       expect(body.description).toBe('Deploy to production')
       expect(body.startDate).toBe('2026-03-20')
       expect(body.dueDate).toBe('2026-03-25')
-      expect(body.estimatedMinutes).toBe(120)
       expect(body.context).toBe('work')
       expect(body.commitment).toBe('inbox')
     })
@@ -1097,7 +1094,6 @@ describe('tasks CRUD API', () => {
         labels: [],
         startDate: null,
         dueDate: null,
-        estimatedMinutes: null,
         remindAt: null,
         parentId: null,
         projectId: null,
@@ -1749,21 +1745,6 @@ describe('tasks CRUD API', () => {
       expect(body.map((t) => t.id).toSorted()).toEqual(
         [exactMatch.id, descendantMatch.id].toSorted(),
       )
-    })
-
-    it('filters by hasEstimate', async () => {
-      const withEstimate = await createTask('With estimate', {
-        estimatedMinutes: 30,
-      })
-      await createTask('Without estimate')
-
-      const res = await app.request('/api/tasks?hasEstimate=true')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(withEstimate.id)
     })
 
     it('filters by hasDue', async () => {
@@ -2440,18 +2421,6 @@ describe('tasks CRUD API', () => {
         taskWithoutDueFirst.id,
         taskWithoutDueSecond.id,
       ])
-    })
-
-    it('sorts by estimate ascending when sortBy=estimate', async () => {
-      const taskA = await createTask('Task A', { estimatedMinutes: 90 })
-      const taskB = await createTask('Task B', { estimatedMinutes: 15 })
-      const taskC = await createTask('Task C', { estimatedMinutes: 45 })
-
-      const res = await app.request('/api/tasks?sortBy=estimate')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id)).toEqual([taskB.id, taskC.id, taskA.id])
     })
   })
 
@@ -4138,7 +4107,6 @@ describe('tasks CRUD API', () => {
           labels: [],
           startDate: null,
           dueDate: '2026-03-22',
-          estimatedMinutes: null,
           remindAt: null,
           parentId: null,
           projectId: null,
@@ -4168,7 +4136,6 @@ describe('tasks CRUD API', () => {
           id: 'ID',
           title: 'Daily standup',
           description: null,
-          estimatedMinutes: null,
           projectId: null,
           parentId: null,
           context: 'personal',
@@ -4282,7 +4249,6 @@ describe('tasks CRUD API', () => {
           id: 'ID',
           title: 'New title',
           description: null,
-          estimatedMinutes: null,
           projectId: null,
           parentId: null,
           context: 'personal',

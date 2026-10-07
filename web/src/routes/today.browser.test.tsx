@@ -41,7 +41,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     id: 'task-1',
     title: 'Task 1',
     context: 'work',
-    estimatedMinutes: 30,
     ...overrides,
   })
 }
