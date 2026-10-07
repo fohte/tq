@@ -9,6 +9,10 @@ export const listLabelsQuerySchema = z.object({
     .describe('Only return labels in this context.'),
 })
 
+export const labelCountsQuerySchema = z.object({
+  context: contextEnum.describe('Only count labels in this context.'),
+})
+
 export const updateLabelSchema = z.object({
   name: labelNameSchema.optional(),
   context: contextEnum.optional(),

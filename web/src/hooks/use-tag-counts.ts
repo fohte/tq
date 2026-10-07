@@ -1,15 +1,13 @@
 import { useMemo } from 'react'
 
-import { useLabels } from '#hooks/use-labels'
-import { useTaskList } from '#hooks/use-tasks'
+import { useLabelCounts, useLabels } from '#hooks/use-labels'
 import type { TagTreeNode } from '#lib/tag-tree'
-import { buildTagTree, flattenLabelTree } from '#lib/tag-tree'
+import { buildTagTreeFromCounts } from '#lib/tag-tree'
 
 /**
- * Tag counts for the whole task set, independent of the tag filter itself,
- * restricted to labels belonging to `context` and nested into a tree by
- * splitting each name on '/'. Labels absent from the task tree are included
- * with count 0 only when `includeOrphanTags` is true.
+ * Tag counts for labels in `context`, nested into a tree by splitting each
+ * name on '/'. Labels without assigned tasks are included with count 0 only
+ * when `includeOrphanTags` is true.
  */
 export function useTagCounts(
   context: 'work' | 'personal',
@@ -19,39 +17,30 @@ export function useTagCounts(
   orphanTagCount: number
   isLoading: boolean
 } {
-  const {
-    categorized,
-    data: tasks,
-    isLoading: isTaskListLoading,
-  } = useTaskList()
+  const { data: counts, isLoading: isCountsLoading } = useLabelCounts(context)
   const { data: labels, isLoading: isLabelsLoading } = useLabels({ context })
 
   const { tagTree, orphanTagCount } = useMemo(() => {
-    if (tasks == null || labels == null) {
+    if (counts == null || labels == null) {
       return { tagTree: [], orphanTagCount: 0 }
     }
-    const namesInContext = new Set(labels.map((label) => label.name))
-    const tasksInContext = categorized.all.map((task) => ({
-      ...task,
-      labels: task.labels.filter((label) => namesInContext.has(label)),
-    }))
-    const taskTree = buildTagTree(tasksInContext)
-    const namesInTaskTree = new Set(flattenLabelTree(taskTree))
+    const namesWithCounts = new Set(counts.map(({ name }) => name))
     const orphanTagNames = labels
       .map((label) => label.name)
-      .filter((name) => !namesInTaskTree.has(name))
+      .filter((name) => !namesWithCounts.has(name))
 
     return {
-      tagTree: includeOrphanTags
-        ? buildTagTree(tasksInContext, orphanTagNames)
-        : taskTree,
+      tagTree: buildTagTreeFromCounts(
+        counts,
+        includeOrphanTags ? orphanTagNames : [],
+      ),
       orphanTagCount: orphanTagNames.length,
     }
-  }, [categorized.all, includeOrphanTags, labels, tasks])
+  }, [counts, includeOrphanTags, labels])
 
   return {
     tagTree,
     orphanTagCount,
-    isLoading: isTaskListLoading || isLabelsLoading,
+    isLoading: isCountsLoading || isLabelsLoading,
   }
 }

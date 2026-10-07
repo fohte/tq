@@ -17,6 +17,8 @@ export const taskKeys = {
     [...taskKeys.infiniteLists, filter] as const,
   details: ['tasks', 'detail'] as const,
   detail: (id: string) => [...taskKeys.details, id] as const,
+  labelCounts: (context: NonNullable<LabelFilter['context']>) =>
+    [...taskKeys.all, 'label-counts', context] as const,
 }
 
 export const taskChecklistKeys = {

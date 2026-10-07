@@ -4,6 +4,11 @@ export interface TagTreeNode {
   children: TagTreeNode[]
 }
 
+export interface TagCount {
+  name: string
+  count: number
+}
+
 export interface LabelTreeNode {
   name: string
   children: LabelTreeNode[]
@@ -85,6 +90,27 @@ export function buildTagTree(
     }
   }
 
+  sortTagTree(roots)
+
+  return roots
+}
+
+export function buildTagTreeFromCounts(
+  counts: TagCount[],
+  additionalLabelNames: string[] = [],
+): TagTreeNode[] {
+  const countByName = new Map(counts.map(({ name, count }) => [name, count]))
+  const { roots } = insertPaths(
+    [...counts.map(({ name }) => name), ...additionalLabelNames],
+    (name) => ({ name, count: countByName.get(name) ?? 0, children: [] }),
+  )
+
+  sortTagTree(roots)
+
+  return roots
+}
+
+function sortTagTree(roots: TagTreeNode[]) {
   function sortChildren(node: TagTreeNode) {
     node.children.sort(
       (a, b) => b.count - a.count || a.name.localeCompare(b.name),
@@ -93,8 +119,6 @@ export function buildTagTree(
   }
   roots.forEach(sortChildren)
   roots.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-
-  return roots
 }
 
 /**

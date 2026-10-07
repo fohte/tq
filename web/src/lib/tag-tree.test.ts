@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildLabelTree, buildTagTree, flattenLabelTree } from '#lib/tag-tree'
+import {
+  buildLabelTree,
+  buildTagTree,
+  buildTagTreeFromCounts,
+  flattenLabelTree,
+} from '#lib/tag-tree'
+import { makeTagCount } from '#lib/tag-tree-test-fixtures'
 
 interface TaskLike {
   status: string
@@ -137,6 +143,42 @@ describe('buildTagTree', () => {
 
   it('returns an empty array for no tasks', () => {
     expect(buildTagTree([])).toEqual([])
+  })
+})
+
+describe('buildTagTreeFromCounts', () => {
+  it('uses server counts, adds zero-count labels, and sorts each level', () => {
+    expect(
+      buildTagTreeFromCounts(
+        [
+          makeTagCount({ name: 'team', count: 3 }),
+          makeTagCount({ name: 'team/api', count: 2 }),
+          makeTagCount({ name: 'team/ui', count: 2 }),
+          makeTagCount({ name: 'alpha', count: 1 }),
+          makeTagCount({ name: 'zeta', count: 1 }),
+          makeTagCount({ name: 'completed-only' }),
+        ],
+        ['orphan', 'unused/group'],
+      ),
+    ).toEqual([
+      {
+        name: 'team',
+        count: 3,
+        children: [
+          { name: 'team/api', count: 2, children: [] },
+          { name: 'team/ui', count: 2, children: [] },
+        ],
+      },
+      { name: 'alpha', count: 1, children: [] },
+      { name: 'zeta', count: 1, children: [] },
+      { name: 'completed-only', count: 0, children: [] },
+      { name: 'orphan', count: 0, children: [] },
+      {
+        name: 'unused',
+        count: 0,
+        children: [{ name: 'unused/group', count: 0, children: [] }],
+      },
+    ])
   })
 })
 

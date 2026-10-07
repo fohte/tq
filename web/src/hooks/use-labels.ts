@@ -30,6 +30,16 @@ export function useLabels(filter?: LabelFilter) {
   })
 }
 
+export function useLabelCounts(context: NonNullable<LabelFilter['context']>) {
+  return useQuery({
+    queryKey: taskKeys.labelCounts(context),
+    queryFn: async () => {
+      const res = await api.api.labels.counts.$get({ query: { context } })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
 export function useLabelsForContext(context?: LabelFilter['context'] | '') {
   const currentContext = useCurrentContext()
   return useLabels({

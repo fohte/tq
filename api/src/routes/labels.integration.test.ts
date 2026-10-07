@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { createLabel } from '#routes/tasks/testing'
+import { createLabel, createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -17,6 +17,55 @@ interface LabelResponse {
 }
 
 describe('labels API', () => {
+  describe('GET /api/labels/counts', () => {
+    it.each([undefined, 'invalid'])(
+      'requires a valid context (%s)',
+      async (context) => {
+        const url =
+          context === undefined
+            ? '/api/labels/counts'
+            : `/api/labels/counts?context=${context}`
+        const res = await app.request(url)
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('counts active tasks per assigned label path in the label context', async () => {
+      await createLabel('team', { context: 'work' })
+      await createLabel('team/api', { context: 'work' })
+      await createLabel('completed-only', { context: 'work' })
+      await createLabel('personal-only', { context: 'personal' })
+      await createLabel('unassigned', { context: 'work' })
+
+      await createTask('parent and child labels', {
+        context: 'personal',
+        labels: ['team', 'team/api', 'personal-only'],
+      })
+      await createTask('child label', {
+        context: 'personal',
+        labels: ['team/api'],
+      })
+      const completedTask = await createTask('completed label', {
+        labels: ['completed-only'],
+      })
+      await app.request(`/api/tasks/${completedTask.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+
+      const res = await app.request('/api/labels/counts?context=work')
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual([
+        { name: 'completed-only', count: 0 },
+        { name: 'team', count: 2 },
+        { name: 'team/api', count: 2 },
+      ])
+    })
+  })
+
   describe('GET /api/labels', () => {
     it('returns empty list when no labels exist', async () => {
       const res = await app.request('/api/labels')
