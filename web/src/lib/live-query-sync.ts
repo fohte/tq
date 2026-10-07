@@ -1,4 +1,4 @@
-import type { Query, QueryClient, QueryFilters } from '@tanstack/react-query'
+import type { QueryClient, QueryFilters } from '@tanstack/react-query'
 import {
   type ChangeEvent,
   type ChangeResource,
@@ -11,12 +11,14 @@ import {
   githubSyncKeys,
   githubSyncRuleKeys,
   labelKeys,
+  matchesTaskSpecificQuery,
   projectKeys,
   queueKeys,
   recurringTemplateKeys,
   savedViewKeys,
   scheduleKeys,
   taskKeys,
+  taskMentionKeys,
   timeBlockKeys,
 } from '#lib/query-keys'
 import { getScreenId } from '#lib/screen-id'
@@ -53,6 +55,7 @@ interface LiveQuerySyncOptions {
 interface ResourceInvalidation {
   filters: QueryFilters[]
   taskIds?: string[]
+  includeUnresolvedPreviews?: boolean
 }
 
 function parseChangeEvent(raw: string): ChangeEvent | null {
@@ -97,79 +100,47 @@ function taskInvalidation(
 
 function withFilters(
   invalidation: ResourceInvalidation,
-  ...filters: QueryFilters[]
+  options: { before?: QueryFilters[]; after?: QueryFilters[] },
 ): ResourceInvalidation {
-  return { ...invalidation, filters: [...invalidation.filters, ...filters] }
-}
-
-function withLeadingFilters(
-  invalidation: ResourceInvalidation,
-  ...filters: QueryFilters[]
-): ResourceInvalidation {
-  return { ...invalidation, filters: [...filters, ...invalidation.filters] }
-}
-
-function taskIdFromPreview(data: unknown): string | null {
-  if (!isRecord(data)) return null
-  if (typeof data['id'] === 'string') return data['id']
-  const task = data['task']
-  return isRecord(task) && typeof task['id'] === 'string' ? task['id'] : null
-}
-
-function isTaskQueryForIds(
-  query: Query,
-  taskIds: ReadonlySet<string>,
-): boolean {
-  const [namespace, section, id] = query.queryKey
-  if (namespace !== taskKeys.all[0]) return false
-
-  if (section === 'detail') {
-    return typeof id === 'string' && taskIds.has(id)
+  return {
+    ...invalidation,
+    filters: [
+      ...(options.before ?? []),
+      ...invalidation.filters,
+      ...(options.after ?? []),
+    ],
   }
-
-  if ((id === 'comments' || id === 'activity') && typeof section === 'string') {
-    return taskIds.has(section)
-  }
-
-  if (
-    section === 'mention-preview' ||
-    section === 'task-url-preview' ||
-    section === 'github-url-preview'
-  ) {
-    if (
-      (typeof id === 'string' || typeof id === 'number') &&
-      taskIds.has(String(id))
-    ) {
-      return true
-    }
-    const taskId = taskIdFromPreview(query.state.data)
-    return taskId != null && taskIds.has(taskId)
-  }
-
-  return false
 }
 
 const resourceQueryFilters: Record<
   ChangeResource,
   (event: ChangeEvent) => ResourceInvalidation | null
 > = {
-  task: ({ taskIds }) =>
-    withFilters(
+  task: ({ taskIds }) => {
+    const invalidation = withFilters(
       taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
-      { queryKey: projectKeys.all },
-      { queryKey: queueKeys.all },
-    ),
+      { after: [{ queryKey: projectKeys.all }, { queryKey: queueKeys.all }] },
+    )
+    if (taskIds == null || taskIds.length === 0) return invalidation
+
+    return withFilters(
+      {
+        ...invalidation,
+        includeUnresolvedPreviews: true,
+      },
+      { after: [{ queryKey: taskMentionKeys.suggestionsPrefix }] },
+    )
+  },
   project: () => ({ filters: [{ queryKey: projectKeys.all }] }),
   label: ({ taskIds }) =>
-    withLeadingFilters(
-      taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
-      { queryKey: labelKeys.all },
-    ),
+    withFilters(taskInvalidation(taskIds, true, { queryKey: taskKeys.all }), {
+      before: [{ queryKey: labelKeys.all }],
+    }),
   queue: () => ({ filters: [{ queryKey: queueKeys.all }] }),
   time_block: ({ taskIds }) =>
-    withLeadingFilters(
+    withFilters(
       taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
-      { queryKey: timeBlockKeys.all },
+      { before: [{ queryKey: timeBlockKeys.all }] },
     ),
   schedule: () => ({ filters: [{ queryKey: scheduleKeys.all }] }),
   saved_view: () => ({ filters: [{ queryKey: savedViewKeys.all }] }),
@@ -183,9 +154,9 @@ const resourceQueryFilters: Record<
     filters: [{ queryKey: githubSyncRuleKeys.list }],
   }),
   agent_session: ({ taskIds }) =>
-    withLeadingFilters(
+    withFilters(
       taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
-      { queryKey: ['agent-sessions'] },
+      { before: [{ queryKey: ['agent-sessions'] }] },
     ),
   checklist: ({ taskIds }) =>
     taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
@@ -235,6 +206,7 @@ export function connectLiveQuerySync(
   const requestSessionCheck = options.checkSession ?? checkSession
   const pendingFilters = new Map<string, QueryFilters>()
   const pendingTaskIds = new Set<string>()
+  let pendingUnresolvedPreviews = false
   let pendingAll = false
   let hasConnected = false
   let sessionCheckRequested = false
@@ -320,8 +292,18 @@ export function connectLiveQuerySync(
     pendingFilters.clear()
     if (pendingTaskIds.size > 0) {
       const taskIds = new Set(pendingTaskIds)
-      filters.push({ predicate: (query) => isTaskQueryForIds(query, taskIds) })
+      const includeUnresolvedPreviews = pendingUnresolvedPreviews
+      filters.push({
+        predicate: (query) =>
+          matchesTaskSpecificQuery(
+            query.queryKey,
+            query.state.data,
+            taskIds,
+            includeUnresolvedPreviews,
+          ),
+      })
       pendingTaskIds.clear()
+      pendingUnresolvedPreviews = false
     }
     invalidateFilters(filters)
   }
@@ -342,6 +324,7 @@ export function connectLiveQuerySync(
       pendingAll = true
       pendingFilters.clear()
       pendingTaskIds.clear()
+      pendingUnresolvedPreviews = false
     } else if (!pendingAll) {
       for (const filter of invalidation.filters) {
         pendingFilters.set(JSON.stringify(filter), filter)
@@ -349,6 +332,8 @@ export function connectLiveQuerySync(
       for (const taskId of invalidation.taskIds ?? []) {
         pendingTaskIds.add(taskId)
       }
+      pendingUnresolvedPreviews ||=
+        invalidation.includeUnresolvedPreviews === true
     }
     schedulePendingInvalidations()
   }

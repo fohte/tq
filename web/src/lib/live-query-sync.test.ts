@@ -168,6 +168,10 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     taskActivity: observeQuery(queryClient, activityKeys.all(taskId)),
     otherTaskActivity: observeQuery(queryClient, activityKeys.all(otherTaskId)),
     taskMentionPreview: observeQuery(queryClient, taskMentionKeys.preview(101)),
+    unresolvedTaskMentionPreview: observeQuery(
+      queryClient,
+      taskMentionKeys.preview(103),
+    ),
     otherTaskMentionPreview: observeQuery(
       queryClient,
       taskMentionKeys.preview(102),
@@ -214,6 +218,7 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
 
   queryClient.setQueryData(taskMentionKeys.preview(101), { id: taskId })
   queryClient.setQueryData(taskMentionKeys.preview(102), { id: otherTaskId })
+  queryClient.setQueryData(taskMentionKeys.preview(103), null)
   queryClient.setQueryData(taskUrlPreviewKeys.preview('101'), { id: taskId })
   queryClient.setQueryData(taskUrlPreviewKeys.preview('102'), {
     id: otherTaskId,
@@ -269,6 +274,9 @@ function taskInvalidationSnapshot(
       fetchCount('otherTaskUrlPreviewById'),
       fetchCount('otherTaskUrlPreviewByNumber'),
       fetchCount('otherTaskGithubUrlPreview'),
+    ],
+    unresolvedPreviews: [
+      fetchCount('unresolvedTaskMentionPreview'),
       fetchCount('unlinkedGithubUrlPreview'),
     ],
     otherQueries: [
@@ -281,6 +289,14 @@ function taskInvalidationSnapshot(
       fetchCount('githubSync'),
     ],
   }
+}
+
+function invalidationKeys(
+  invalidations: ReturnType<typeof createConnection>['invalidations'],
+) {
+  return invalidations.mock.calls.map(([filters]) =>
+    typeof filters?.predicate === 'function' ? 'predicate' : filters?.queryKey,
+  )
 }
 
 afterEach(() => {
@@ -327,6 +343,7 @@ describe('connectLiveQuerySync', () => {
         { queryKey: taskKeys.infiniteLists },
         { queryKey: ['projects'] },
         { queryKey: ['queues'] },
+        { queryKey: taskMentionKeys.suggestionsPrefix },
         'predicate',
       ],
     })
@@ -439,10 +456,12 @@ describe('connectLiveQuerySync', () => {
         taskKeys.infiniteLists,
         projectKeys.all,
         queueKeys.all,
+        taskMentionKeys.suggestionsPrefix,
         'predicate',
       ],
       expectedTaskLists: [1, 1],
-      expectedOtherQueries: [0, 0, 0, 0, 1, 1, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
+      expectedUnresolvedPreviews: [1, 1],
     },
     {
       resource: 'label',
@@ -454,18 +473,21 @@ describe('connectLiveQuerySync', () => {
       ],
       expectedTaskLists: [1, 1],
       expectedOtherQueries: [0, 1, 0, 0, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
     },
     {
       resource: 'time_block',
       expectedInvalidationKeys: [timeBlockKeys.all, 'predicate'],
       expectedTaskLists: [0, 0],
       expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
     },
     {
       resource: 'agent_session',
       expectedInvalidationKeys: [['agent-sessions'], 'predicate'],
       expectedTaskLists: [0, 0],
       expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
     },
     {
       resource: 'checklist',
@@ -476,6 +498,7 @@ describe('connectLiveQuerySync', () => {
       ],
       expectedTaskLists: [1, 1],
       expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
     },
     {
       resource: 'checklist_item',
@@ -486,6 +509,7 @@ describe('connectLiveQuerySync', () => {
       ],
       expectedTaskLists: [1, 1],
       expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
     },
   ] as const)(
     'limits $resource changes with task IDs to affected queries',
@@ -494,6 +518,7 @@ describe('connectLiveQuerySync', () => {
       expectedInvalidationKeys,
       expectedTaskLists,
       expectedOtherQueries,
+      expectedUnresolvedPreviews,
     }) => {
       vi.useFakeTimers()
       const queryClient = new QueryClient()
@@ -512,11 +537,7 @@ describe('connectLiveQuerySync', () => {
       for (const query of Object.values(queries)) query.unsubscribe()
 
       const snapshot = () => ({
-        invalidationKeys: invalidations.mock.calls.map(([filters]) =>
-          typeof filters?.predicate === 'function'
-            ? 'predicate'
-            : filters?.queryKey,
-        ),
+        invalidationKeys: invalidationKeys(invalidations),
         fetchCounts: taskInvalidationSnapshot(queries),
       })
       expect(snapshot()).toEqual({
@@ -526,7 +547,8 @@ describe('connectLiveQuerySync', () => {
           taskDetails: [1, 1, 1, 1, 1, 1],
           otherTaskDetails: [0, 0, 0, 0, 0, 0],
           taskPreviews: [1, 1, 1, 1],
-          otherTaskPreviews: [0, 0, 0, 0, 0],
+          otherTaskPreviews: [0, 0, 0, 0],
+          unresolvedPreviews: expectedUnresolvedPreviews,
           otherQueries: expectedOtherQueries,
         },
       })
@@ -541,7 +563,8 @@ describe('connectLiveQuerySync', () => {
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
     },
     {
@@ -551,7 +574,8 @@ describe('connectLiveQuerySync', () => {
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 1, 0, 0, 0, 0, 0],
     },
     {
@@ -561,7 +585,8 @@ describe('connectLiveQuerySync', () => {
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedTaskPreviews: [0, 0, 0, 0],
-      expectedOtherTaskPreviews: [0, 0, 0, 0, 0],
+      expectedOtherTaskPreviews: [0, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
       expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
     },
     {
@@ -571,7 +596,8 @@ describe('connectLiveQuerySync', () => {
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedTaskPreviews: [0, 0, 0, 0],
-      expectedOtherTaskPreviews: [0, 0, 0, 0, 0],
+      expectedOtherTaskPreviews: [0, 0, 0, 0],
+      expectedUnresolvedPreviews: [0, 0],
       expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
     },
     {
@@ -581,7 +607,8 @@ describe('connectLiveQuerySync', () => {
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 0, 0, 0, 0, 0, 0],
     },
     {
@@ -591,7 +618,8 @@ describe('connectLiveQuerySync', () => {
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 0, 0, 0, 0, 0, 0],
     },
   ] as const)(
@@ -604,6 +632,7 @@ describe('connectLiveQuerySync', () => {
       expectedOtherTaskDetails,
       expectedTaskPreviews,
       expectedOtherTaskPreviews,
+      expectedUnresolvedPreviews,
       expectedOtherQueries,
     }) => {
       vi.useFakeTimers()
@@ -623,11 +652,7 @@ describe('connectLiveQuerySync', () => {
       for (const query of Object.values(queries)) query.unsubscribe()
 
       const snapshot = () => ({
-        invalidationKeys: invalidations.mock.calls.map(([filters]) =>
-          typeof filters?.predicate === 'function'
-            ? 'predicate'
-            : filters?.queryKey,
-        ),
+        invalidationKeys: invalidationKeys(invalidations),
         fetchCounts: taskInvalidationSnapshot(queries),
       })
       expect(snapshot()).toEqual({
@@ -638,6 +663,7 @@ describe('connectLiveQuerySync', () => {
           otherTaskDetails: expectedOtherTaskDetails,
           taskPreviews: expectedTaskPreviews,
           otherTaskPreviews: expectedOtherTaskPreviews,
+          unresolvedPreviews: expectedUnresolvedPreviews,
           otherQueries: expectedOtherQueries,
         },
       })
@@ -689,11 +715,7 @@ describe('connectLiveQuerySync', () => {
     for (const query of Object.values(queries)) query.unsubscribe()
 
     const snapshot = () => ({
-      invalidationKeys: invalidations.mock.calls.map(([filters]) =>
-        typeof filters?.predicate === 'function'
-          ? 'predicate'
-          : filters?.queryKey,
-      ),
+      invalidationKeys: invalidationKeys(invalidations),
       fetchCounts: Object.fromEntries(
         Object.entries(queries).map(([name, query]) => [
           name,
@@ -737,11 +759,7 @@ describe('connectLiveQuerySync', () => {
     for (const query of Object.values(queries)) query.unsubscribe()
 
     const snapshot = () => ({
-      invalidationKeys: invalidations.mock.calls.map(([filters]) =>
-        typeof filters?.predicate === 'function'
-          ? 'predicate'
-          : filters?.queryKey,
-      ),
+      invalidationKeys: invalidationKeys(invalidations),
       fetchCounts: taskInvalidationSnapshot(queries),
     })
     expect(snapshot()).toEqual({
@@ -751,7 +769,8 @@ describe('connectLiveQuerySync', () => {
         taskDetails: [0, 0, 0, 0, 0, 0],
         otherTaskDetails: [0, 0, 0, 0, 0, 0],
         taskPreviews: [0, 0, 0, 0],
-        otherTaskPreviews: [0, 0, 0, 0, 0],
+        otherTaskPreviews: [0, 0, 0, 0],
+        unresolvedPreviews: [0, 0],
         otherQueries: [0, 0, 0, 0, 0, 0, 0],
       },
     })
