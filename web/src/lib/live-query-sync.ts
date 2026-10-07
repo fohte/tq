@@ -205,7 +205,9 @@ function filtersForResourceChange(
 
 async function checkSession(): Promise<unknown> {
   const { api } = await import('#lib/api')
-  return api.api.tasks.$get({ query: { limit: '1' } })
+  return api.api.tasks.$get({
+    query: { context: 'all', status: 'all', limit: '1' },
+  })
 }
 
 export function connectLiveQuerySync(

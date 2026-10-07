@@ -32,7 +32,12 @@ export function TaskChecklistSection({
   const [mutationError, setMutationError] = useState(false)
   const { data: checklists, isLoading, isError } = useTaskChecklists(taskId)
   const subtaskQuery = useTaskList(
-    { parentId: taskId },
+    {
+      context: 'all',
+      status: 'all',
+      limit: 'unlimited',
+      parentId: taskId,
+    },
     { enabled: subtasks == null },
   )
   const linkedSubtasks = subtasks ?? subtaskQuery.categorized.all

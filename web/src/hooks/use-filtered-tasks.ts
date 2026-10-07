@@ -2,7 +2,7 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useMemo } from 'react'
 
 import { useCurrentContext } from '#hooks/use-current-context'
-import type { TaskListFilter } from '#hooks/use-tasks'
+import type { InfiniteTaskListFilter } from '#hooks/use-tasks'
 import { useInfiniteTaskList, useTaskList } from '#hooks/use-tasks'
 import { buildTree } from '#lib/tree-builder'
 
@@ -10,14 +10,14 @@ export function useBaseFilter(
   showCompleted: boolean,
   projectId?: string,
   tag?: string,
-): TaskListFilter {
+): InfiniteTaskListFilter {
   const context = useCurrentContext()
 
   return {
     context,
+    status: showCompleted ? 'all' : 'todo',
     ...(tag != null ? { label: tag } : {}),
     ...(projectId != null ? { projectId } : {}),
-    ...(showCompleted ? {} : { status: 'todo' }),
   }
 }
 
@@ -28,16 +28,17 @@ export function useFilteredTaskTree(options: {
   const context = useCurrentContext()
   const isSearching = parseSearchQuery(options.q).freeText !== ''
 
-  const baseFilter: TaskListFilter = {
+  const baseFilter: InfiniteTaskListFilter = {
     q: options.q,
     context,
+    status: 'all',
     ...(options.projectId != null ? { projectId: options.projectId } : {}),
   }
 
   // Mounted unconditionally per Rules of Hooks; `enabled` toggles between
   // non-paginated search and paginated root tasks.
   const searchResult = useTaskList(
-    { ...baseFilter, includeAncestors: true },
+    { ...baseFilter, includeAncestors: true, limit: 'unlimited' },
     { enabled: isSearching },
   )
   const rootResult = useInfiniteTaskList(
@@ -56,7 +57,9 @@ export function useFilteredTaskTree(options: {
     isLoading: isSearching ? searchResult.isLoading : rootResult.isLoading,
     tree,
     tasks,
-    lazyChildrenFilter: isSearching ? undefined : baseFilter,
+    lazyChildrenFilter: isSearching
+      ? undefined
+      : { ...baseFilter, limit: 'unlimited' as const },
     hasNextPage: isSearching ? false : rootResult.hasNextPage,
     isFetchingNextPage: isSearching ? false : rootResult.isFetchingNextPage,
     isFetchNextPageError: isSearching ? false : rootResult.isFetchNextPageError,

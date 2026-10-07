@@ -19,7 +19,10 @@ export function TaskSidebarStoryProviders({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), [])
+  queryClient.setQueryData(
+    taskKeys.list({ context: 'all', status: 'all', limit: 'unlimited' }),
+    [],
+  )
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
     projectKeys.list(undefined),

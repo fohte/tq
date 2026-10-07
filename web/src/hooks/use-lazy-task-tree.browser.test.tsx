@@ -66,7 +66,13 @@ describe('useLazyTaskTree', () => {
     })
 
     const { result } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+        }),
       { wrapper },
     )
 
@@ -89,7 +95,13 @@ describe('useLazyTaskTree', () => {
     )
 
     const { result } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+        }),
       { wrapper },
     )
 
@@ -105,6 +117,9 @@ describe('useLazyTaskTree', () => {
 
     expect(mockFetchTaskList).toHaveBeenCalledWith({
       q: 'is:todo',
+      context: 'all',
+      status: 'all',
+      limit: 'unlimited',
       parentId: 'root-1',
     })
     expect(result.current.isExpanded('root-1')).toBe(true)
@@ -117,7 +132,13 @@ describe('useLazyTaskTree', () => {
     })
 
     const { result, unmount } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+        }),
       { wrapper },
     )
     act(() => {
@@ -127,7 +148,13 @@ describe('useLazyTaskTree', () => {
     unmount()
 
     const { result: remounted } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+        }),
       { wrapper },
     )
     expect(remounted.current.isExpanded('root-1')).toBe(true)

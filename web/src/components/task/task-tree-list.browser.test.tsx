@@ -331,7 +331,12 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     )
 
     await renderTaskTreeList([root], {
-      lazyChildrenFilter: { q: 'is:todo' },
+      lazyChildrenFilter: {
+        q: 'is:todo',
+        context: 'all',
+        status: 'all',
+        limit: 'unlimited',
+      },
     })
 
     expect(screen.getByLabelText('Expand')).toBeInTheDocument()
@@ -343,6 +348,9 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     expect(await screen.findByText('Lazily Fetched Child')).toBeInTheDocument()
     expect(mockFetchTaskList).toHaveBeenCalledWith({
       q: 'is:todo',
+      context: 'all',
+      status: 'all',
+      limit: 'unlimited',
       parentId: 'root-1',
     })
   })

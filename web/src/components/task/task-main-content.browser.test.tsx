@@ -40,10 +40,21 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
 
   queryClient.setQueryData(commentKeys.all(task.id), [])
   queryClient.setQueryData(activityKeys.all(task.id), [])
-  queryClient.setQueryData(taskKeys.list(undefined), [])
-  queryClient.setQueryData(taskKeys.list({ context }), [])
   queryClient.setQueryData(
-    taskKeys.list({ context, commitment: 'inbox', status: 'todo' }),
+    taskKeys.list({ context: 'all', status: 'all', limit: 'unlimited' }),
+    [],
+  )
+  queryClient.setQueryData(
+    taskKeys.list({ context, status: 'all', limit: 'unlimited' }),
+    [],
+  )
+  queryClient.setQueryData(
+    taskKeys.list({
+      context,
+      commitment: 'inbox',
+      status: 'todo',
+      limit: 'unlimited',
+    }),
     [],
   )
   queryClient.setQueryData(labelKeys.list({ context }), [])

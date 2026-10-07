@@ -3,6 +3,7 @@ import type { ProjectFilter } from '#hooks/use-projects'
 import type { RecurringTemplateFilter } from '#hooks/use-recurring-templates'
 import type { SavedViewFilter } from '#hooks/use-saved-views'
 import type {
+  InfiniteTaskListFilter,
   TaskContext,
   TaskCountFilter,
   TaskListFilter,
@@ -16,9 +17,9 @@ import { isRecord } from '#lib/type-guards'
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter?: TaskListFilter) => [...taskKeys.lists, filter] as const,
+  list: (filter: TaskListFilter) => [...taskKeys.lists, filter] as const,
   infiniteLists: ['tasks', 'infinite-list'] as const,
-  infiniteList: (filter?: TaskListFilter) =>
+  infiniteList: (filter: InfiniteTaskListFilter) =>
     [...taskKeys.infiniteLists, filter] as const,
   details: ['tasks', 'detail'] as const,
   detail: (id: string) => [...taskKeys.details, id] as const,

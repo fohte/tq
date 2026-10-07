@@ -31,7 +31,12 @@ export function TaskSubtasksSection({
   parentTaskTitle: string
   inherited: InheritedTaskAttributes
 }) {
-  const { categorized, isLoading, isError } = useTaskList({ parentId: taskId })
+  const { categorized, isLoading, isError } = useTaskList({
+    context: 'all',
+    status: 'all',
+    limit: 'unlimited',
+    parentId: taskId,
+  })
 
   if (isLoading) {
     return <SectionLoadingIndicator label="subtasks" />

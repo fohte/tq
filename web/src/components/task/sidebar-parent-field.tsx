@@ -15,7 +15,11 @@ export function SidebarParentField({
   const [isEditing, setIsEditing] = useState(false)
   const [query, setQuery] = useState('')
 
-  const { categorized } = useTaskList()
+  const { categorized } = useTaskList({
+    context: 'all',
+    status: 'all',
+    limit: 'unlimited',
+  })
   const updateParent = useUpdateTaskParent()
 
   const allTasks = categorized.all

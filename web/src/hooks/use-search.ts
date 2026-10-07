@@ -56,7 +56,8 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
         query: {
           q: debouncedQuery,
           limit: '20',
-          ...(context == null ? {} : { context }),
+          context: context ?? 'all',
+          status: 'all',
           ...(hasFreeText ? { includeMatch: 'true' } : {}),
         },
       })

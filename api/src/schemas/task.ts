@@ -7,6 +7,9 @@ import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const taskStatus = z.enum(['todo', 'completed'])
 export type TaskStatus = z.infer<typeof taskStatus>
+
+export const taskListStatus = z.enum(['todo', 'completed', 'all'])
+export const taskListContext = z.enum(['work', 'personal', 'all'])
 export const taskStatusReason = z.enum([
   'completed',
   'not_planned',
@@ -113,9 +116,8 @@ export const updateTaskSchema = z.object({
 export const listTasksQuerySchema = z.object({
   ids: taskIdsQuerySchema,
   status: z
-    .union([taskStatus, z.array(taskStatus)])
-    .transform((v) => (Array.isArray(v) ? v : [v]))
-    .optional(),
+    .union([taskListStatus, z.array(taskStatus)])
+    .transform((v) => (Array.isArray(v) ? v : [v])),
   statusReason: z
     .union([taskStatusReason, z.array(taskStatusReason)])
     .transform((v) => (Array.isArray(v) ? v : [v]))
@@ -124,7 +126,7 @@ export const listTasksQuerySchema = z.object({
   label: z.string().optional(),
   hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
-  context: contextEnum.optional(),
+  context: taskListContext,
   commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
   templateId: z.uuid().optional(),
@@ -138,7 +140,10 @@ export const listTasksQuerySchema = z.object({
   includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
   sortBy: taskSortBy.optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.union([
+    z.coerce.number().int().min(1).max(100),
+    z.literal('unlimited'),
+  ]),
   offset: z.coerce.number().int().min(0).optional(),
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
@@ -152,7 +157,5 @@ export const taskFilterQuerySchema = listTasksQuerySchema.omit({
 })
 export type TaskFilterQuery = z.infer<typeof taskFilterQuerySchema>
 
-export const countTasksQuerySchema = taskFilterQuerySchema.extend({
-  context: contextEnum,
-})
+export const countTasksQuerySchema = taskFilterQuerySchema
 export type CountTasksQuery = z.infer<typeof countTasksQuerySchema>

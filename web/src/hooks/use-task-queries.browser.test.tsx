@@ -64,7 +64,12 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([makeTask({ id: 'a' })]))
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -75,7 +80,9 @@ describe('useInfiniteTaskList', () => {
     })
     expect(mockGet).toHaveBeenCalledWith({
       query: {
+        context: 'all',
         parentId: 'root',
+        status: 'all',
         limit: String(TASK_LIST_PAGE_SIZE),
         offset: '0',
       },
@@ -86,7 +93,12 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([makeTask({ id: 'a' })]))
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -105,7 +117,12 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse(firstPage))
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -120,7 +137,9 @@ describe('useInfiniteTaskList', () => {
     await waitFor(() => {
       expect(mockGet).toHaveBeenLastCalledWith({
         query: {
+          context: 'all',
           parentId: 'root',
+          status: 'all',
           limit: String(TASK_LIST_PAGE_SIZE),
           offset: String(TASK_LIST_PAGE_SIZE),
         },
@@ -147,7 +166,12 @@ describe('useInfiniteTaskList', () => {
     )
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -175,7 +199,11 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
     renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }, { enabled: false }),
+      () =>
+        useInfiniteTaskList(
+          { context: 'all', status: 'all', parentId: 'root' },
+          { enabled: false },
+        ),
       { wrapper },
     )
 
@@ -188,7 +216,14 @@ describe('useTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
     const { result } = renderHook(
-      () => useTaskList({ status: 'todo', hasDue: true, sortBy: 'due' }),
+      () =>
+        useTaskList({
+          context: 'all',
+          status: 'todo',
+          limit: 'unlimited',
+          hasDue: true,
+          sortBy: 'due',
+        }),
       { wrapper },
     )
 
@@ -199,7 +234,13 @@ describe('useTaskList', () => {
     expect(mockGet.mock.calls).toEqual([
       [
         {
-          query: { status: 'todo', hasDue: 'true', sortBy: 'due' },
+          query: {
+            context: 'all',
+            status: 'todo',
+            hasDue: 'true',
+            sortBy: 'due',
+            limit: 'unlimited',
+          },
         },
       ],
     ])
@@ -210,7 +251,15 @@ describe('useTaskList', () => {
     try {
       mockGet.mockResolvedValue(jsonResponse([]))
 
-      renderHook(() => useTaskList(undefined), { wrapper })
+      renderHook(
+        () =>
+          useTaskList({
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+          }),
+        { wrapper },
+      )
 
       let initialCallCount = 0
       const getCallCounts = () => ({

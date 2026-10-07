@@ -115,7 +115,16 @@ export const projectOperations = [
           param: { id: encodePathSegment(id) },
         }),
       ).andThen(() =>
-        requestJson(client.api.tasks.$get({ query: { projectId: id } })),
+        requestJson(
+          client.api.tasks.$get({
+            query: {
+              context: 'all',
+              status: 'all',
+              limit: 'unlimited',
+              projectId: id,
+            },
+          }),
+        ),
       ),
   }),
 ] as const

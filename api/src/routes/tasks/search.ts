@@ -48,7 +48,12 @@ export const tasksSearchApp = new Hono()
   .get('/mentions', zValidator('query', mentionsQuerySchema), async (c) => {
     const { q, limit } = c.req.valid('query')
 
-    const { rows } = await queryTaskList({ q, limit: limit ?? 10 })
+    const { rows } = await queryTaskList({
+      q,
+      context: 'all',
+      status: ['all'],
+      limit: limit ?? 10,
+    })
 
     return c.json(
       rows.map((r) => ({

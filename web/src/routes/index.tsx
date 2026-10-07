@@ -83,16 +83,25 @@ function DayView() {
     layout,
   } = Route.useSearch()
   const isCompactLayout = layout === 'compact'
-  const { isLoading, categorized } = useTaskList(baseFilter)
+  const { isLoading, categorized } = useTaskList({
+    ...baseFilter,
+    limit: 'unlimited',
+  })
   const taskMap = useTaskMap(categorized.all)
   const dueDateTasksQuery = useTaskList(
-    { ...baseFilter, status: 'todo', hasDue: true, sortBy: 'due' },
+    {
+      ...baseFilter,
+      status: 'todo',
+      hasDue: true,
+      sortBy: 'due',
+      limit: 'unlimited',
+    },
     { enabled: isCompactLayout },
   )
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
   const filteredTasksQuery = useTaskList(
-    { ...baseFilter, ...(q === '' ? {} : { q }) },
+    { ...baseFilter, ...(q === '' ? {} : { q }), limit: 'unlimited' },
     { enabled: isKanbanFiltering },
   )
   useEffect(() => {

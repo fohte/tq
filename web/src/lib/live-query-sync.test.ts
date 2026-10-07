@@ -137,8 +137,18 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
   const taskId = 'target-task-id'
   const otherTaskId = 'other-task-id'
   const queries = {
-    taskList: observeQuery(queryClient, taskKeys.list()),
-    taskInfiniteList: observeQuery(queryClient, taskKeys.infiniteList()),
+    taskList: observeQuery(
+      queryClient,
+      taskKeys.list({
+        context: 'all',
+        status: 'all',
+        limit: 'unlimited',
+      }),
+    ),
+    taskInfiniteList: observeQuery(
+      queryClient,
+      taskKeys.infiniteList({ context: 'all', status: 'all' }),
+    ),
     taskCounts: observeQuery(
       queryClient,
       taskKeys.count({ context: 'work', status: 'todo' }),
@@ -524,8 +534,18 @@ describe('connectLiveQuerySync', () => {
       const queryClient = new QueryClient()
       const taskId = 'sample-task-id'
       const queries = [
-        observeQuery(queryClient, taskKeys.list()),
-        observeQuery(queryClient, taskKeys.infiniteList()),
+        observeQuery(
+          queryClient,
+          taskKeys.list({
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+          }),
+        ),
+        observeQuery(
+          queryClient,
+          taskKeys.infiniteList({ context: 'all', status: 'all' }),
+        ),
         observeQuery(queryClient, taskKeys.detail(taskId)),
         observeQuery(queryClient, [
           ...taskKeys.detail(taskId),

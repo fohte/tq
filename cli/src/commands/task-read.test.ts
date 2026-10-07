@@ -61,7 +61,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { status: 'todo' },
+          query: { context: 'all', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -96,7 +96,13 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { q: 'planning', includeMatch: 'true' },
+          query: {
+            context: 'all',
+            status: 'todo',
+            q: 'planning',
+            includeMatch: 'true',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -133,7 +139,13 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { ids, includeAncestors: 'true' },
+          query: {
+            context: 'all',
+            status: 'todo',
+            ids,
+            includeAncestors: 'true',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -159,7 +171,12 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { parentId: '731' },
+          query: {
+            context: 'all',
+            status: 'todo',
+            parentId: '731',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -185,7 +202,12 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { descendantOf: '731' },
+          query: {
+            context: 'all',
+            status: 'todo',
+            descendantOf: '731',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -243,7 +265,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: {},
+          query: { context: 'all', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -292,7 +314,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: {},
+          query: { context: 'all', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -319,7 +341,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'work' },
+          query: { context: 'work', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -398,7 +420,12 @@ describe('task get', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { descendantOf: task.id },
+          query: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: task.id,
+          },
           body: undefined,
         },
       ],
@@ -518,7 +545,7 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'work', limit: '20' },
+          query: { context: 'work', status: 'all', limit: '20' },
           body: undefined,
         },
       ],
@@ -545,7 +572,7 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { q: 'hello', limit: '5' },
+          query: { context: 'all', status: 'all', q: 'hello', limit: '5' },
           body: undefined,
         },
       ],
@@ -571,7 +598,12 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { q: 'parent:731', limit: '20' },
+          query: {
+            context: 'all',
+            status: 'all',
+            q: 'parent:731',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -606,7 +638,13 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { parentId: '731', descendantOf: '731', limit: '20' },
+          query: {
+            context: 'all',
+            status: 'all',
+            parentId: '731',
+            descendantOf: '731',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -648,6 +686,8 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            context: 'all',
+            status: 'all',
             q: 'Selected',
             ids,
             includeAncestors: 'true',
@@ -687,7 +727,13 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { hasEstimate: 'false', hasDue: 'true', limit: '20' },
+          query: {
+            context: 'all',
+            status: 'all',
+            hasEstimate: 'false',
+            hasDue: 'true',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -721,7 +767,13 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { q: 'planning', includeMatch: 'true', limit: '20' },
+          query: {
+            context: 'all',
+            status: 'all',
+            q: 'planning',
+            includeMatch: 'true',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -755,7 +807,7 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { q: 'hello', limit: '20' },
+          query: { context: 'all', status: 'all', q: 'hello', limit: '20' },
           body: undefined,
         },
       ],
@@ -797,7 +849,7 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { q: 'hello', limit: '20' },
+          query: { context: 'all', status: 'all', q: 'hello', limit: '20' },
           body: undefined,
         },
       ],

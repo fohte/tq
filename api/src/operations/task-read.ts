@@ -9,7 +9,8 @@ import {
   type OperationError,
   requestJson,
 } from '#operations/types'
-import { contextEnum, listTasksQuerySchema } from '#schemas/task'
+import type { ListTasksQuery } from '#schemas/task'
+import { listTasksQuerySchema, taskListContext } from '#schemas/task'
 
 type TaskDetail = Record<string, unknown> & {
   id: string
@@ -22,7 +23,6 @@ type TaskListRow = Record<string, unknown> & {
 type TaskListQuery = NonNullable<
   Parameters<OperationClient['api']['tasks']['$get']>[0]
 >['query']
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -72,9 +72,9 @@ const taskListInputSchema = listTasksQuerySchema
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
-    status: listTasksQuerySchema.shape.status.describe(
-      'Only return tasks in this status.',
-    ),
+    status: listTasksQuerySchema.shape.status
+      .optional()
+      .describe('Only return tasks in this status. Defaults to todo.'),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason.',
     ),
@@ -84,10 +84,19 @@ const taskListInputSchema = listTasksQuerySchema
     parentId: listTasksQuerySchema.shape.parentId.describe(
       "Only return direct subtasks of this task UUID or number, or 'root' for tasks with no parent.",
     ),
-    context: contextEnum
+    context: taskListContext
       .optional()
-      .describe('Only return tasks in this context.'),
+      .describe('Only return tasks in this context. Defaults to all.'),
+    limit: listTasksQuerySchema.shape.limit
+      .optional()
+      .describe('Maximum number of results to return (1-100). Defaults to 20.'),
   })
+
+const taskListMcpInputSchema = taskListInputSchema.extend({
+  status: taskListInputSchema.shape.status.default(['todo']),
+  context: taskListInputSchema.shape.context.default('all'),
+  limit: taskListInputSchema.shape.limit.default(20),
+})
 
 const taskSearchInputSchema = listTasksQuerySchema
   .omit({
@@ -105,16 +114,16 @@ const taskSearchInputSchema = listTasksQuerySchema
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
-    status: listTasksQuerySchema.shape.status.describe(
-      'Only return tasks in this status. Equivalent to is: in q.',
-    ),
+    status: listTasksQuerySchema.shape.status
+      .optional()
+      .describe('Only return tasks in this status. Equivalent to is: in q.'),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason. Equivalent to reason: in q.',
     ),
     label: listTasksQuerySchema.shape.label.describe(
       'Only return tasks with this label or a descendant label. Equivalent to label: in q.',
     ),
-    context: contextEnum
+    context: taskListContext
       .optional()
       .describe(
         'Only return tasks in this context. Equivalent to context: in q.',
@@ -132,9 +141,9 @@ const taskSearchInputSchema = listTasksQuerySchema
     sortBy: listTasksQuerySchema.shape.sortBy.describe(
       'Sort order for results. Defaults to creation date.',
     ),
-    limit: listTasksQuerySchema.shape.limit.describe(
-      'Maximum number of results to return (1-100). Defaults to 20.',
-    ),
+    limit: listTasksQuerySchema.shape.limit
+      .optional()
+      .describe('Maximum number of results to return (1-100). Defaults to 20.'),
     offset: listTasksQuerySchema.shape.offset.describe(
       'Number of results to skip, for pagination.',
     ),
@@ -146,8 +155,8 @@ const taskIdInputSchema = z.object({
   ),
 })
 
-function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
-  const query = Object.fromEntries(
+function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
+  const query: Record<string, string | string[]> = Object.fromEntries(
     Object.entries(fields)
       .filter(([, value]) => value !== undefined)
       .map(([key, value]) => [
@@ -155,7 +164,12 @@ function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
         Array.isArray(value) ? value.map(String) : String(value),
       ]),
   )
-  return query
+  return {
+    ...query,
+    context: fields.context,
+    status: fields.status,
+    limit: String(fields.limit),
+  }
 }
 
 function toPageMetadata(page: Record<string, unknown>) {
@@ -172,7 +186,14 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
       return errAsync(invalidResponse('The task detail response is invalid.'))
     }
     return requestJson(
-      client.api.tasks.$get({ query: { descendantOf: taskResult.id } }),
+      client.api.tasks.$get({
+        query: {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: taskResult.id,
+        },
+      }),
     ).andThen((descendantResult) => {
       if (!isTaskListRows(descendantResult)) {
         return errAsync(
@@ -190,6 +211,7 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
 
 export const taskReadOperations = [
   defineOperation(taskListInputSchema, {
+    mcpInputSchema: taskListMcpInputSchema,
     path: ['task', 'list'],
     description:
       'List tasks by status, project, parent, context, or other supported filters, including an optional free-text query.',
@@ -208,7 +230,16 @@ export const taskReadOperations = [
       },
     },
     run: (client, input) =>
-      requestJson(client.api.tasks.$get({ query: toTaskQuery(input) })),
+      requestJson(
+        client.api.tasks.$get({
+          query: toTaskQuery({
+            ...input,
+            context: input.context ?? 'all',
+            status: input.status ?? ['todo'],
+            limit: input.limit ?? 20,
+          }),
+        }),
+      ),
   }),
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
@@ -240,7 +271,12 @@ export const taskReadOperations = [
     run: (client, input) =>
       requestJson(
         client.api.tasks.$get({
-          query: toTaskQuery({ ...input, limit: input.limit ?? 20 }),
+          query: toTaskQuery({
+            ...input,
+            context: input.context ?? 'all',
+            status: input.status ?? ['all'],
+            limit: input.limit ?? 20,
+          }),
         }),
       ),
   }),

@@ -311,9 +311,10 @@ describe('TaskChecklistSection', () => {
         [
           {
             query: {
+              context: 'all',
               parentId: taskId,
-              hasDue: undefined,
-              includeAncestors: undefined,
+              status: 'all',
+              limit: 'unlimited',
             },
           },
         ],

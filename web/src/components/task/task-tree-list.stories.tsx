@@ -180,6 +180,10 @@ export const LazyChildrenCollapsed: Story = {
     isLoading: false,
     tasks: [lazyRootTask],
     sessionsByTaskId: new Map(),
-    lazyChildrenFilter: {},
+    lazyChildrenFilter: {
+      context: 'all',
+      status: 'all',
+      limit: 'unlimited',
+    },
   },
 }

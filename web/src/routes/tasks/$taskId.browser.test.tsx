@@ -319,7 +319,12 @@ describe('TaskPage', () => {
 
     await renderTaskPage()
 
-    expect(mockUseTaskList).toHaveBeenCalledWith({ parentId: mockTask.id })
+    expect(mockUseTaskList).toHaveBeenCalledWith({
+      context: 'all',
+      status: 'all',
+      limit: 'unlimited',
+      parentId: mockTask.id,
+    })
 
     // PC and SP layouts both render TaskMainContent, so each subtask appears
     // twice. The row's title sits inside a larger `<Link>` alongside the

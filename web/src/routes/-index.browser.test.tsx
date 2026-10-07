@@ -155,7 +155,7 @@ vi.mock('#hooks/use-current-context', () => ({
 }))
 
 vi.mock('#hooks/use-filtered-tasks', () => ({
-  useBaseFilter: () => ({}),
+  useBaseFilter: () => ({ context: 'work', status: 'all' }),
 }))
 
 vi.mock('#hooks/use-gcal-events', () => ({
@@ -453,7 +453,13 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'compact',
         appLayoutVisible: false,
-        dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
+        dueTaskFilter: {
+          context: 'work',
+          status: 'todo',
+          hasDue: true,
+          sortBy: 'due',
+          limit: 'unlimited',
+        },
         dueTaskOptions: { enabled: true },
         memoArgs: ['work', true],
         nowPanelTimeBlocksRange: [
@@ -498,7 +504,13 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'default',
         appLayoutVisible: true,
-        dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
+        dueTaskFilter: {
+          context: 'work',
+          status: 'todo',
+          hasDue: true,
+          sortBy: 'due',
+          limit: 'unlimited',
+        },
         dueTaskOptions: { enabled: false },
         memoArgs: ['work', false],
         nowPanelTimeBlocksEnabled: true,

@@ -464,7 +464,9 @@ describe('task checklists API', () => {
     await setChecked(checkedLeaf.id, true)
     await setChecked(secondCheckedLeaf.id, true)
 
-    const response = await app.request('/api/tasks')
+    const response = await app.request(
+      '/api/tasks?context=all&status=all&limit=unlimited',
+    )
     expect(await summarizeTaskList(response)).toEqual({
       status: 200,
       body: [
@@ -479,7 +481,9 @@ describe('task checklists API', () => {
     const task = await createTask('Empty checklist')
     await createChecklist(task.id, { name: 'No items' })
 
-    const response = await app.request('/api/tasks')
+    const response = await app.request(
+      '/api/tasks?context=all&status=all&limit=unlimited',
+    )
     expect(await summarizeTaskList(response)).toEqual({
       status: 200,
       body: [toListItemResponse(task)],

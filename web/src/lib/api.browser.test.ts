@@ -23,8 +23,12 @@ describe('api author header', () => {
       }),
     )
 
-    await api.api.tasks.$get({ query: {} })
-    await api.api.tasks.$get({ query: {} })
+    await api.api.tasks.$get({
+      query: { context: 'all', status: 'all', limit: 'unlimited' },
+    })
+    await api.api.tasks.$get({
+      query: { context: 'all', status: 'all', limit: 'unlimited' },
+    })
 
     expect(authors).toEqual([
       `human:${getScreenId()}`,

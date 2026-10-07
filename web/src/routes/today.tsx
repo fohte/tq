@@ -22,7 +22,10 @@ export const Route = createFileRoute('/today')({
 
 export function TodayFocus() {
   const baseFilter = useBaseFilter(true)
-  const { isLoading: isTaskListLoading, categorized } = useTaskList(baseFilter)
+  const { isLoading: isTaskListLoading, categorized } = useTaskList({
+    ...baseFilter,
+    limit: 'unlimited',
+  })
 
   const liveToday = useLiveToday()
   const todayStr = useMemo(() => formatLocalDate(liveToday), [liveToday])

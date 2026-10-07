@@ -6,7 +6,16 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useTaskList } from '#hooks/use-tasks'
 
 export function GeneratedTasksList({ templateId }: { templateId: string }) {
-  const { data: tasks, isLoading, isError } = useTaskList({ templateId })
+  const {
+    data: tasks,
+    isLoading,
+    isError,
+  } = useTaskList({
+    context: 'all',
+    status: 'all',
+    limit: 'unlimited',
+    templateId,
+  })
 
   const sorted = [...(tasks ?? [])].sort((a, b) =>
     (b.dueDate ?? '').localeCompare(a.dueDate ?? ''),
