@@ -1,21 +1,11 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpRight,
-  ChevronDown,
-  CornerDownRight,
-  CornerUpLeft,
-  GitPullRequest,
-  Pencil,
-  Plus,
-  Trash2,
-} from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import type { KeyboardEvent } from 'react'
 import { useEffect, useState } from 'react'
 
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
+import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
 import { ChecklistItemComposer } from '#components/task/task-checklist-item-composer'
 import { TaskChecklistItemLinkedTargets } from '#components/task/task-checklist-item-linked-targets'
 import { ActionsMenu } from '#components/ui/actions-menu'
@@ -201,112 +191,36 @@ function ChecklistItemRow({
   const counts = countChecklistLeaves([item])
   const canLinkOrPromote = !isLocked
 
-  const itemActions = [
-    {
-      icon: <Pencil className="size-4" />,
-      label: 'edit',
-      onClick: () => {
-        setEditingContent(true)
-      },
+  const itemActions = createChecklistItemActions({
+    item,
+    index,
+    nextSibling,
+    previousBeforeItem,
+    indentMove,
+    outdentMove,
+    canLinkOrPromote,
+    onEdit: () => {
+      setEditingContent(true)
     },
-    ...(item.githubLinkId == null && item.subtaskId == null
-      ? [
-          {
-            icon: <Plus className="size-4" />,
-            label: 'add subitem',
-            onClick: () => {
-              setCollapsed(false)
-              onStartAddingItem(item.id)
-            },
-          },
-        ]
-      : []),
-    ...(canLinkOrPromote
-      ? [
-          {
-            icon: <GitPullRequest className="size-4" />,
-            label: 'link pull request',
-            onClick: () => {
-              setLinkDialogOpen(true)
-            },
-          },
-          {
-            icon: <ArrowUpRight className="size-4" />,
-            label: 'promote to subtask',
-            onClick: () => {
-              onPromoteItem(item.id)
-            },
-          },
-        ]
-      : []),
-    {
-      icon: <Pencil className="size-4" />,
-      label:
-        item.note == null || item.note === '' ? 'add details' : 'edit details',
-      onClick: () => {
-        setDetailsOpen(true)
-        setEditingNote(true)
-      },
+    onAddSubitem: () => {
+      setCollapsed(false)
+      onStartAddingItem(item.id)
     },
-    ...(index > 0
-      ? [
-          {
-            icon: <ArrowUp className="size-4" />,
-            label: 'move up',
-            onClick: () => {
-              onMoveItem(item.id, {
-                parentItemId: item.parentItemId,
-                afterItemId: previousBeforeItem?.id ?? null,
-              })
-            },
-          },
-        ]
-      : []),
-    ...(nextSibling != null
-      ? [
-          {
-            icon: <ArrowDown className="size-4" />,
-            label: 'move down',
-            onClick: () => {
-              onMoveItem(item.id, {
-                parentItemId: item.parentItemId,
-                afterItemId: nextSibling.id,
-              })
-            },
-          },
-        ]
-      : []),
-    ...(indentMove != null
-      ? [
-          {
-            icon: <CornerDownRight className="size-4" />,
-            label: 'indent',
-            onClick: () => {
-              onMoveItem(item.id, indentMove)
-            },
-          },
-        ]
-      : []),
-    ...(outdentMove != null
-      ? [
-          {
-            icon: <CornerUpLeft className="size-4" />,
-            label: 'outdent',
-            onClick: () => {
-              onMoveItem(item.id, outdentMove)
-            },
-          },
-        ]
-      : []),
-    {
-      icon: <Trash2 className="size-4" />,
-      label: 'delete…',
-      onClick: () => {
-        setDeleteDialogOpen(true)
-      },
-      destructive: true,
+    onLinkGithub: () => {
+      setLinkDialogOpen(true)
     },
-  ]
+    onPromote: () => {
+      onPromoteItem(item.id)
+    },
+    onEditDetails: () => {
+      setDetailsOpen(true)
+      setEditingNote(true)
+    },
+    onMoveItem,
+    onDelete: () => {
+      setDeleteDialogOpen(true)
+    },
+  })
 
   const saveContent = () => {
     const content = contentDraft.trim()
