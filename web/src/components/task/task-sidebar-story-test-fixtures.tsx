@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import type { ProjectDetail } from '#hooks/use-projects'
-import { projectKeys } from '#hooks/use-projects'
+import {
+  ALL_PROJECTS_FILTER,
+  type ProjectDetail,
+  projectKeys,
+} from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
@@ -22,7 +25,7 @@ export function TaskSidebarStoryProviders({
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
-    projectKeys.list({ context: 'all', status: 'all' }),
+    projectKeys.list(ALL_PROJECTS_FILTER),
     project ? [project] : [],
   )
   const todayStr = formatLocalDate(new Date())

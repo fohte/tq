@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { LinkExistingProjectTaskMenuAppearance } from '#components/project/link-existing-project-task-menu-appearance'
-import { useProjects, useProjectTaskIds } from '#hooks/use-projects'
+import {
+  ALL_PROJECTS_FILTER,
+  useProjects,
+  useProjectTaskIds,
+} from '#hooks/use-projects'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
 import { useUpdateTask } from '#hooks/use-tasks'
 
@@ -27,10 +31,7 @@ export function LinkExistingProjectTaskMenu({
     }
   }, [open])
 
-  const { data: projects } = useProjects(
-    { context: 'all', status: 'all' },
-    { enabled: open },
-  )
+  const { data: projects } = useProjects(ALL_PROJECTS_FILTER, { enabled: open })
   const { data: projectTaskIds } = useProjectTaskIds(projectId, {
     enabled: open,
   })

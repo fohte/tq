@@ -164,6 +164,57 @@ describe('project operation tools', () => {
     ])
   })
 
+  it('allows project_list to include every project status', async () => {
+    await createProject({
+      title: 'Active space',
+      status: 'active',
+      context: 'work',
+    })
+    await createProject({
+      title: 'Archived space',
+      status: 'archived',
+      context: 'personal',
+    })
+
+    const result = await callTool('project_list', {
+      status: 'all',
+      context: 'all',
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual([
+      {
+        id: '<uuid>',
+        title: 'Active space',
+        description: null,
+        status: 'active',
+        startDate: null,
+        targetDate: null,
+        color: null,
+        sortOrder: 0,
+        context: 'work',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        completionRate: 0,
+        taskCount: { total: 0, completed: 0 },
+      },
+      {
+        id: '<uuid>',
+        title: 'Archived space',
+        description: null,
+        status: 'archived',
+        startDate: null,
+        targetDate: null,
+        color: null,
+        sortOrder: 0,
+        context: 'personal',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+        completionRate: 0,
+        taskCount: { total: 0, completed: 0 },
+      },
+    ])
+  })
+
   it('returns project_create output as JSON', async () => {
     const result = await callTool('project_create', {
       title: 'Planning space',

@@ -33,6 +33,6 @@ export const updateProjectSchema = z.object({
 
 export const listProjectsQuerySchema = z.object({
   q: z.string().optional(),
-  status: z.enum(['active', 'paused', 'completed', 'archived', 'all']),
-  context: z.enum(['work', 'personal', 'all']),
+  status: z.enum([...projectStatus.options, 'all']),
+  context: z.enum([...contextEnum.options, 'all']),
 })

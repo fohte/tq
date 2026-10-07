@@ -28,6 +28,11 @@ export interface ProjectFilter {
   context: 'work' | 'personal' | 'all'
 }
 
+export const ALL_PROJECTS_FILTER = {
+  context: 'all',
+  status: 'all',
+} as const satisfies ProjectFilter
+
 export const PROJECT_COLOR_PRESETS = [
   { name: 'Orange', hex: '#FF8400' },
   { name: 'Red', hex: '#FF5C33' },

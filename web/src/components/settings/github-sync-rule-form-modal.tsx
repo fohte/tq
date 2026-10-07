@@ -24,7 +24,7 @@ import {
   useCreateGithubSyncRule,
   useUpdateGithubSyncRule,
 } from '#hooks/use-github-sync-rules'
-import { useProjects } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 import { selectValueHandler } from '#lib/form-utils'
 
 export interface GithubSyncRuleFormModalProps {
@@ -61,7 +61,7 @@ export function GithubSyncRuleFormModal({
   )
   const [includeExisting, setIncludeExisting] = useState(false)
 
-  const projects = useProjects({ context: 'all', status: 'all' })
+  const projects = useProjects(ALL_PROJECTS_FILTER)
   const createRule = useCreateGithubSyncRule()
   const updateRule = useUpdateGithubSyncRule()
 
