@@ -41,6 +41,8 @@ type EventSourceFactory = (url: string) => EventStream
 const EVENT_SOURCE_CLOSED = 2
 const INITIAL_RECONNECT_DELAY_MS = 1_000
 const MAX_RECONNECT_DELAY_MS = 30_000
+const INVALIDATION_BATCH_WINDOW_MS = 1_000
+const GITHUB_SYNC_QUERY_KEY = 'github-sync'
 
 interface LiveQuerySyncOptions {
   origin?: string
@@ -115,7 +117,9 @@ function filtersForResourceChange(event: ChangeEvent): QueryFilters[] | null {
 
 function invalidate(queryClient: QueryClient, filters: QueryFilters[]): void {
   for (const filtersForQuery of filters) {
-    void queryClient.invalidateQueries(filtersForQuery)
+    void queryClient.invalidateQueries(filtersForQuery, {
+      cancelRefetch: false,
+    })
   }
 }
 
@@ -139,21 +143,48 @@ export function connectLiveQuerySync(
   let shouldInvalidateOnOpen = false
   let reconnectAttempt = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+  let invalidationTimer: ReturnType<typeof setTimeout> | undefined
+  let waitingForMutation = false
   let disconnected = false
   let eventSource: EventStream
 
+  const clearInvalidationTimer = () => {
+    if (invalidationTimer == null) return
+    clearTimeout(invalidationTimer)
+    invalidationTimer = undefined
+  }
+
   const flushPendingInvalidations = () => {
-    if (queryClient.isMutating() > 0) return
+    if (queryClient.isMutating() > 0) {
+      waitingForMutation = true
+      return
+    }
+    waitingForMutation = false
+    clearInvalidationTimer()
     if (pendingAll) {
       pendingAll = false
       pendingFilters.clear()
-      void queryClient.invalidateQueries()
+      void queryClient.invalidateQueries(
+        {
+          predicate: (query) => query.queryKey[0] !== GITHUB_SYNC_QUERY_KEY,
+        },
+        { cancelRefetch: false },
+      )
       return
     }
 
     const filters = [...pendingFilters.values()]
     pendingFilters.clear()
     invalidate(queryClient, filters)
+  }
+
+  const schedulePendingInvalidations = () => {
+    if (waitingForMutation || invalidationTimer != null) return
+    if (!pendingAll && pendingFilters.size === 0) return
+    invalidationTimer = setTimeout(() => {
+      invalidationTimer = undefined
+      flushPendingInvalidations()
+    }, INVALIDATION_BATCH_WINDOW_MS)
   }
 
   const queueInvalidation = (filters: QueryFilters[] | null) => {
@@ -165,7 +196,7 @@ export function connectLiveQuerySync(
         pendingFilters.set(JSON.stringify(filter), filter)
       }
     }
-    flushPendingInvalidations()
+    schedulePendingInvalidations()
   }
 
   const onChange = (event: Event) => {
@@ -236,7 +267,11 @@ export function connectLiveQuerySync(
 
   const unsubscribeFromMutations = queryClient
     .getMutationCache()
-    .subscribe(flushPendingInvalidations)
+    .subscribe(() => {
+      if (waitingForMutation && queryClient.isMutating() === 0) {
+        flushPendingInvalidations()
+      }
+    })
 
   attachEventSource()
 
@@ -244,6 +279,7 @@ export function connectLiveQuerySync(
     if (disconnected) return
     disconnected = true
     unsubscribeFromMutations()
+    clearInvalidationTimer()
     if (reconnectTimer != null) clearTimeout(reconnectTimer)
     detachEventSource(eventSource)
   }
