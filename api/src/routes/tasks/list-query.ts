@@ -1,5 +1,6 @@
 import {
   and,
+  count,
   desc,
   eq,
   exists,
@@ -36,7 +37,11 @@ import {
   resolveTasksByIdsOrNumbers,
   type TaskSearchMatch,
 } from '#routes/tasks/shared'
-import type { ListTasksQuery } from '#schemas/task'
+import type {
+  CountTasksQuery,
+  ListTasksQuery,
+  TaskFilterQuery,
+} from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
@@ -356,19 +361,7 @@ function buildConditions(
   }
 }
 
-const ancestorIdSchema = z.array(z.object({ id: z.string() }))
-
-export async function queryTaskList(
-  query: ListTasksQuery,
-  options: {
-    includeSearchMatch?: boolean
-    prioritizeTitleMatches?: boolean
-  } = {},
-): Promise<{
-  rows: TaskListRow[]
-  ancestorOnlyIds: Set<string>
-  matchByTaskId: Map<string, TaskSearchMatch> | undefined
-}> {
+async function buildTaskFilterConditions(query: TaskFilterQuery) {
   const { ids: rawIds, ...filters } = query
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const parentIdentifier = parsed?.parentId ?? filters.parentId
@@ -400,11 +393,39 @@ export async function queryTaskList(
     rawIds === undefined
       ? undefined
       : (await resolveTasksByIdsOrNumbers(rawIds.map(String))).ids
+
+  return buildConditions(filters, ids, parsed, resolvedFilters)
+}
+
+export async function queryTaskCount(query: CountTasksQuery): Promise<number> {
+  const { conditions } = await buildTaskFilterConditions(query)
+  const [result] = await db
+    .select({ count: count() })
+    .from(tasks)
+    .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+
+  return result?.count ?? 0
+}
+
+const ancestorIdSchema = z.array(z.object({ id: z.string() }))
+
+export async function queryTaskList(
+  query: ListTasksQuery,
+  options: {
+    includeSearchMatch?: boolean
+    prioritizeTitleMatches?: boolean
+  } = {},
+): Promise<{
+  rows: TaskListRow[]
+  ancestorOnlyIds: Set<string>
+  matchByTaskId: Map<string, TaskSearchMatch> | undefined
+}> {
   const {
     conditions,
     sortBy,
     freeTextWords: words,
-  } = buildConditions(filters, ids, parsed, resolvedFilters)
+  } = await buildTaskFilterConditions(query)
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
     sortBy == null &&

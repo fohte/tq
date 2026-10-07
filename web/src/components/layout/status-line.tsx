@@ -2,9 +2,9 @@ import { useRouterState } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { KeybindHint } from '#components/ui/keybind-hint'
-import { useFilteredTaskList } from '#hooks/use-filtered-tasks'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { DAY_QUEUE_KEY, useQueueItems } from '#hooks/use-queues'
-import { useTaskMap } from '#hooks/use-tasks'
+import { useTaskCount } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import {
   navKeybindings,
@@ -20,21 +20,15 @@ export function StatusLine({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const { all, isLoading: isTaskListLoading } = useFilteredTaskList()
-
-  const taskMap = useTaskMap(all)
+  const context = useCurrentContext()
+  const { data: todoCount, isLoading: isTodoCountLoading } = useTaskCount({
+    context,
+    status: 'todo',
+  })
   const todayStr = useMemo(() => formatLocalDate(new Date()), [])
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
-    useQueueItems(DAY_QUEUE_KEY, todayStr)
-  const isLoading = isTaskListLoading || isTodayTasksLoading
-
-  const queueTasks = useMemo(
-    () =>
-      (todayTasksData ?? [])
-        .map((t) => taskMap.get(t.taskId))
-        .filter((t) => t != null),
-    [todayTasksData, taskMap],
-  )
+    useQueueItems(DAY_QUEUE_KEY, todayStr, { context })
+  const isLoading = isTodoCountLoading || isTodayTasksLoading
   const shortcuts = [
     { key: searchKeybinding.keys, label: 'search' },
     { key: newTaskKeybinding.keys, label: 'new' },
@@ -51,7 +45,7 @@ export function StatusLine({
       <span>
         {isLoading
           ? '…'
-          : `${String(all.length)} tasks · ${String(queueTasks.length)} queued`}
+          : `${String(todoCount ?? 0)} todo · ${String(todayTasksData?.length ?? 0)} queued`}
       </span>
       <div className="ml-auto flex gap-3.5 whitespace-nowrap">
         {shortcuts.map((shortcut) => (

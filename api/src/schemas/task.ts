@@ -142,3 +142,17 @@ export const listTasksQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
+
+export const taskFilterQuerySchema = listTasksQuerySchema.omit({
+  includeAncestors: true,
+  includeMatch: true,
+  limit: true,
+  offset: true,
+  sortBy: true,
+})
+export type TaskFilterQuery = z.infer<typeof taskFilterQuerySchema>
+
+export const countTasksQuerySchema = taskFilterQuerySchema.extend({
+  context: contextEnum,
+})
+export type CountTasksQuery = z.infer<typeof countTasksQuerySchema>

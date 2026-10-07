@@ -51,6 +51,12 @@ vi.mock('#lib/api', () => ({
         $get: vi
           .fn()
           .mockResolvedValue({ ok: true, json: () => Promise.resolve([]) }),
+        count: {
+          $get: vi.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ count: 0 }),
+          }),
+        },
         ':id': {
           $get: vi.fn().mockResolvedValue({
             ok: true,
