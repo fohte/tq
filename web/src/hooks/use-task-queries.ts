@@ -68,7 +68,7 @@ export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
   return unwrapOrThrow(assertOk(res)).json()
 }
 
-export async function fetchTaskCount(filter: TaskCountFilter): Promise<number> {
+async function fetchTaskCount(filter: TaskCountFilter): Promise<number> {
   const res = await api.api.tasks.count.$get({ query: filter })
   return unwrapOrThrow(assertOk(res))
     .json()

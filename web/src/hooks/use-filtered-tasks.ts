@@ -2,7 +2,7 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import { useCallback, useMemo } from 'react'
 
 import { useCurrentContext } from '#hooks/use-current-context'
-import type { TaskListFilter, TaskSortBy } from '#hooks/use-tasks'
+import type { TaskListFilter } from '#hooks/use-tasks'
 import { useInfiniteTaskList, useTaskList } from '#hooks/use-tasks'
 import { buildTree } from '#lib/tree-builder'
 
@@ -19,25 +19,6 @@ export function useBaseFilter(
     ...(projectId != null ? { projectId } : {}),
     ...(showCompleted ? {} : { status: 'todo' }),
   }
-}
-
-export function useFilteredTaskList(options?: {
-  sortBy?: TaskSortBy
-  showCompleted?: boolean
-  projectId?: string | undefined
-  tag?: string | undefined
-}) {
-  const baseFilter = useBaseFilter(
-    options?.showCompleted ?? true,
-    options?.projectId,
-    options?.tag,
-  )
-  const { isLoading, categorized } = useTaskList({
-    ...baseFilter,
-    ...(options?.sortBy ? { sortBy: options.sortBy } : {}),
-  })
-
-  return { isLoading, ...categorized }
 }
 
 export function useFilteredTaskTree(options: {
