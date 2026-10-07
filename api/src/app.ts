@@ -17,7 +17,6 @@ import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
 import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
-import { mcpApp } from '#routes/mcp/index'
 import { memosApp } from '#routes/memos'
 import { projectsApp } from '#routes/projects'
 import { pushApp } from '#routes/push'
@@ -49,6 +48,11 @@ export function onError(err: Error, c: Context): Response {
   })
   return c.json({ error: 'Internal server error' }, 500)
 }
+
+const mcpApp = new Hono().all('/', async (c) => {
+  const { handleMcpRequest } = await import('#routes/mcp/index')
+  return handleMcpRequest(c.req.raw)
+})
 
 const app = new Hono()
   .use(
