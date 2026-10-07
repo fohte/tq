@@ -152,5 +152,6 @@ export const WithInboxTasks: Story = {
   name: 'the sidebar includes a task in the inbox section',
   args: {
     tasks: tasksWithInboxItems,
+    tagCounts: [],
   },
 }
