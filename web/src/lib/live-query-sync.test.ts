@@ -65,6 +65,10 @@ class TestEventStream extends EventTarget implements EventStream {
   sendChange(data: string): void {
     this.dispatchEvent(Object.assign(new Event('change'), { data }))
   }
+
+  sendHeartbeat(): void {
+    this.dispatchEvent(new Event('heartbeat'))
+  }
 }
 
 const clients: QueryClient[] = []
@@ -349,6 +353,74 @@ describe('connectLiveQuerySync', () => {
         { queryKey: taskMentionKeys.suggestionsPrefix },
         'predicate',
       ],
+    })
+  })
+
+  it('reconnects after 75 seconds without changes or heartbeats', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const memoQuery = observeQuery(queryClient, ['memos', 'work'])
+    const checkSession = vi.fn(() => Promise.resolve())
+    const { eventStream, eventStreams, urls } = createConnection({
+      queryClient,
+      checkSession,
+    })
+
+    eventStream.open()
+    await vi.advanceTimersByTimeAsync(45_000)
+    eventStream.sendHeartbeat()
+    await vi.advanceTimersByTimeAsync(45_000)
+    eventStream.sendChange(
+      JSON.stringify({
+        resource: 'task',
+        id: 'task-one',
+        origin: 'screen-two',
+      }),
+    )
+    await vi.advanceTimersByTimeAsync(74_999)
+    const beforeTimeout = {
+      streamCount: eventStreams.length,
+      initialStreamClosed: eventStream.closed,
+    }
+
+    await vi.advanceTimersByTimeAsync(1)
+    const afterTimeout = {
+      streamCount: eventStreams.length,
+      initialStreamClosed: eventStream.closed,
+      urls: [...urls],
+    }
+    await vi.advanceTimersByTimeAsync(1_000)
+    eventStreams[1]?.open()
+    await vi.advanceTimersByTimeAsync(1_000)
+    memoQuery.unsubscribe()
+
+    const snapshot = () => ({
+      beforeTimeout,
+      afterTimeout,
+      afterReconnect: {
+        streamCount: eventStreams.length,
+        initialStreamClosed: eventStream.closed,
+        replacementStreamOpened: eventStreams[1]?.opened,
+        urls,
+        memoFetchCount: memoQuery.queryFn.mock.calls.length,
+        sessionCheckCount: checkSession.mock.calls.length,
+      },
+    })
+    expect(snapshot()).toEqual({
+      beforeTimeout: { streamCount: 1, initialStreamClosed: false },
+      afterTimeout: {
+        streamCount: 1,
+        initialStreamClosed: true,
+        urls: ['/api/events'],
+      },
+      afterReconnect: {
+        streamCount: 2,
+        initialStreamClosed: true,
+        replacementStreamOpened: true,
+        urls: ['/api/events', '/api/events'],
+        memoFetchCount: 1,
+        sessionCheckCount: 1,
+      },
     })
   })
 

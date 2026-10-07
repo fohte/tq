@@ -434,7 +434,7 @@ describe('day-view route compact layout', () => {
     queryClient.clear()
   })
 
-  it('activates the compact shell and polls every visible data query from the URL', async () => {
+  it('activates the compact shell without polling SSE-backed queries', async () => {
     const { queryClient, router } = await renderDayRoute('/?layout=compact')
     const nowPanelRange = getNowPanelQueryDateRange(new Date())
     const getCompactRouteState = () => ({
@@ -465,11 +465,11 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'compact',
         appLayoutVisible: false,
-        taskListInterval: 60_000,
+        taskListInterval: undefined,
         dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
-        dueTaskOptions: { enabled: true, refetchInterval: 60_000 },
-        timeBlocksInterval: 60_000,
-        schedulesInterval: 60_000,
+        dueTaskOptions: { enabled: true },
+        timeBlocksInterval: undefined,
+        schedulesInterval: undefined,
         memoArgs: ['work', true],
         nowPanelTimeBlocksRange: [
           nowPanelRange.startDate,
@@ -480,8 +480,8 @@ describe('day-view route compact layout', () => {
           nowPanelRange.endDate,
         ],
         nowPanelGcalRange: [nowPanelRange.startDate, nowPanelRange.endDate],
-        queuesInterval: 60_000,
-        queueItemsInterval: 60_000,
+        queuesInterval: undefined,
+        queueItemsInterval: undefined,
       })
     })
 

@@ -290,6 +290,6 @@ describe('change events', () => {
 
     const snapshot = () =>
       chunk?.value == null ? null : new TextDecoder().decode(chunk.value)
-    expect(snapshot()).toEqual(': heartbeat\n\n')
+    expect(snapshot()).toEqual('event: heartbeat\ndata: \n\n')
   })
 })
