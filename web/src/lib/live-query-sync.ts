@@ -231,10 +231,8 @@ export function connectLiveQuerySync(
   let unsubscribeFromPendingFetches: (() => void) | undefined
   let disconnected = false
   let eventSource: EventStream
-  const eventSourceListeners = new WeakMap<
-    EventStream,
-    { change: EventListener; heartbeat: EventListener }
-  >()
+  let eventSourceListeners:
+    { change: EventListener; heartbeat: EventListener } | undefined
 
   const clearInvalidationTimer = () => {
     if (invalidationTimer == null) return
@@ -405,11 +403,10 @@ export function connectLiveQuerySync(
   }
 
   const detachEventSource = (source: EventStream) => {
-    const listeners = eventSourceListeners.get(source)
-    if (listeners != null) {
-      source.removeEventListener('change', listeners.change)
-      source.removeEventListener('heartbeat', listeners.heartbeat)
-      eventSourceListeners.delete(source)
+    if (eventSourceListeners != null) {
+      source.removeEventListener('change', eventSourceListeners.change)
+      source.removeEventListener('heartbeat', eventSourceListeners.heartbeat)
+      eventSourceListeners = undefined
     }
     source.onopen = null
     source.onerror = null
@@ -428,7 +425,7 @@ export function connectLiveQuerySync(
         onHeartbeat(source)
       },
     }
-    eventSourceListeners.set(source, listeners)
+    eventSourceListeners = listeners
     source.addEventListener('change', listeners.change)
     source.addEventListener('heartbeat', listeners.heartbeat)
     source.onopen = () => {

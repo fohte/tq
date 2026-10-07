@@ -424,6 +424,35 @@ describe('connectLiveQuerySync', () => {
     })
   })
 
+  it('refreshes the memo changed by another screen', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const queries = [
+      observeQuery(queryClient, ['memos', 'work']),
+      observeQuery(queryClient, ['memos', 'personal']),
+    ]
+    const { eventStream, invalidations } = createConnection({ queryClient })
+
+    eventStream.sendChange(
+      JSON.stringify({
+        resource: 'memo',
+        id: 'work',
+        origin: 'screen-two',
+      }),
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    for (const query of queries) query.unsubscribe()
+
+    const snapshot = () => ({
+      memoFetchCounts: queries.map((query) => query.queryFn.mock.calls.length),
+      invalidationKeys: invalidationKeys(invalidations),
+    })
+    expect(snapshot()).toEqual({
+      memoFetchCounts: [1, 0],
+      invalidationKeys: [['memos', 'work']],
+    })
+  })
+
   it('coalesces changes received within one second', async () => {
     vi.useFakeTimers()
     const queryClient = new QueryClient()

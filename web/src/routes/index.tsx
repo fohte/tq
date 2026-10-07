@@ -168,7 +168,6 @@ function DayView() {
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
     selectedDateStr,
-    undefined,
     { enabled: canReadQueueItems },
   )
   const updateTimeBlock = useUpdateTimeBlock()

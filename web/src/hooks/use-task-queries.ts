@@ -71,15 +71,12 @@ export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
 
 export function useTaskList(
   filter?: TaskListFilter,
-  options?: { enabled?: boolean; refetchInterval?: number },
+  options?: { enabled?: boolean },
 ) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
-    ...(options?.refetchInterval === undefined
-      ? {}
-      : { refetchInterval: options.refetchInterval }),
   })
 
   const categorized = useMemo((): CategorizedTasks => {

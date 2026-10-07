@@ -46,7 +46,6 @@ export function useMemos(context: MemoContext, isCompactLayout: boolean) {
     queryKey: memoKeys.detail(context),
     queryFn: () => memoTransport.read(context),
     enabled: isCompactLayout,
-    refetchInterval: false,
   })
 }
 
