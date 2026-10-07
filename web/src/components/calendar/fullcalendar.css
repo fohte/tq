@@ -330,12 +330,6 @@
   border-left-style: dashed;
 }
 
-.tq-month-event[data-event-type='completed'] {
-  background-color: var(--surface-strong);
-  border-left-color: var(--foreground);
-  opacity: 0.5;
-}
-
 .tq-month-event[data-pending-response='true'] {
   opacity: 0.5;
 }

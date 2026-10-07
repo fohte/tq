@@ -1,3 +1,4 @@
+import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
 import {
   and,
@@ -15,8 +16,13 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import { resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
-import { putQueueItemsSchema, queueDateSchema } from '#schemas/queue'
 import {
+  carryOverQueueItemsSchema,
+  putQueueItemsSchema,
+  queueDateSchema,
+} from '#schemas/queue'
+import {
+  carryOverTaskQueueItems,
   getQueueByKeyOrRespond,
   resolvePeriodStart,
   type TaskQueue,
@@ -56,6 +62,21 @@ export const queuesApp = new Hono()
 
     return c.json(rows.map(queueToResponse), 200)
   })
+  .post(
+    '/carry-over',
+    zValidator('json', carryOverQueueItemsSchema),
+    async (c) => {
+      const { date } = c.req.valid('json')
+      const result = await carryOverTaskQueueItems(date)
+      return result.match(
+        () => c.body(null, 204),
+        (error) => {
+          captureWithFingerprint(error, 'api.queues.carry-over-failed')
+          return c.json({ error: 'Internal server error' }, 500)
+        },
+      )
+    },
+  )
   .get('/:key/items', zValidator('query', itemsQuerySchema), async (c) => {
     const key = c.req.param('key')
     const { date } = c.req.valid('query')

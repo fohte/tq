@@ -11,7 +11,7 @@ Source of truth for every value in this doc:
 - Shared tokens: `@fohte/ui/tokens.css`
 - tq-specific tokens and utilities: `web/src/index.css`
 - Shared primitives: `@fohte/ui/{button,chip,dialog,input,panel,popover,select,tooltip}`
-- tq primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,chip,keybind-hint,progress-bar,modal-panel,desktop-modal-frame}.tsx`
+- tq primitives: `web/src/components/ui/{section-heading,screen-header-bar,tab-strip,keybind-hint,progress-bar,modal-panel,desktop-modal-frame}.tsx`
 
 Add tq-specific tokens to `web/src/index.css`. Shared tokens come from the
 `@fohte/ui` dependency; when a dependency update changes their values, update
@@ -52,15 +52,16 @@ provide the unused light palette.
 
 ### Surfaces
 
-| Token              | Value     | Tailwind utility    | Usage                                                                                                                          |
-| ------------------ | --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `--background`     | `#0a0a0a` | `bg-background`     | Page background                                                                                                                |
-| `--card`           | `#141414` | `bg-card`           | Raised surface (cards, popovers)                                                                                               |
-| `--popover`        | `#141414` | `bg-popover`        | Popover/menu surface (same value as `--card`)                                                                                  |
-| `--secondary`      | `#141414` | `bg-secondary`      | Secondary fill (e.g. day-group header row background in `DayView`)                                                             |
-| `--muted`          | `#141414` | `bg-muted`          | Muted fill (e.g. button hover background)                                                                                      |
-| `--accent`         | `#1f1f1f` | `bg-accent`         | Accent fill (menu item hover, keyboard-highlighted row) — kept distinct from `--popover`/`--card` so it's visible against them |
-| `--surface-strong` | `#1f1f1f` | `bg-surface-strong` | Emphasized _enabled_ surface fill — active tab, primary button, progress track background                                      |
+| Token              | Value              | Tailwind utility    | Usage                                                                                                                          |
+| ------------------ | ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--background`     | `#0a0a0a`          | `bg-background`     | Page background                                                                                                                |
+| `--card`           | `#141414`          | `bg-card`           | Raised surface (cards, popovers)                                                                                               |
+| `--popover`        | `#141414`          | `bg-popover`        | Popover/menu surface (same value as `--card`)                                                                                  |
+| `--secondary`      | `#141414`          | `bg-secondary`      | Secondary fill (e.g. day-group header row background in `DayView`)                                                             |
+| `--muted`          | `#141414`          | `bg-muted`          | Muted fill (e.g. button hover background)                                                                                      |
+| `--accent`         | `#1f1f1f`          | `bg-accent`         | Accent fill (menu item hover, keyboard-highlighted row) — kept distinct from `--popover`/`--card` so it's visible against them |
+| `--surface-strong` | `#1f1f1f`          | `bg-surface-strong` | Emphasized _enabled_ surface fill — active tab, primary button, progress track background                                      |
+| `--scrim`          | `rgb(0 0 0 / 40%)` | `bg-scrim`          | Dimmed backdrop behind an open bottom sheet (`BottomSheetOverlay`)                                                             |
 
 ### Text
 
@@ -286,7 +287,7 @@ custom token, unlike `--text-2xs` above.
 
 **Half-step utilities (`0.5`/`1.5`/`2.5`/`3.5` → 2/6/10/14px) are part of
 this grid, not an exception to it.** Tailwind ships them as named scale
-steps, and the UI already uses them heavily — `chip.tsx`'s `px-1.5 py-0.5`,
+steps, and the UI already uses them heavily — `@fohte/ui/chip`'s `px-1.5 py-0.5`,
 `badge.tsx`'s `py-0.5`, `modal-field.tsx`'s `px-2.5 py-1.5`, and more.
 Banning them would fight code that's already correct.
 
@@ -593,12 +594,14 @@ screen (e.g. "tasks", "subtasks") — not a page title (see
 function ScreenHeaderBar(props: {
   children: React.ReactNode
   className?: string
+  spacing?: 'normal' | 'compact'
 }): JSX.Element
 ```
 
 A fixed-height (`h-10`) bottom-bordered bar for a screen's or panel's
-top header row. Compose it with a `SectionHeading` / plain label plus
-trailing actions (e.g. `ml-auto` button).
+top header row. `spacing="compact"` reduces the gaps between all child items
+on narrow queue headers; normal spacing resumes from `sm`. Compose it with a
+`SectionHeading` / plain label plus trailing actions (e.g. `ml-auto` button).
 
 ```tsx
 <ScreenHeaderBar>
@@ -653,57 +656,27 @@ or faint text and border colors. A `span` chip can show a remove button when
 `onRemove` and `removeLabel` are both set; a `button` chip is interactive and
 does not support removal.
 
-### Local `Chip`
-
-`web/src/components/ui/chip.tsx`
-
-```ts
-function Chip(props: {
-  as?: 'span' | 'button'
-  size?: 'sm' | 'md'
-  active?: boolean
-  className?: string
-  children: ReactNode
-}): JSX.Element
-```
-
-A small bordered label retained for call sites that need per-instance sizing,
-pointer-event control, or GitHub state colors that the shared chip does not
-provide. Use the shared `@fohte/ui/chip` for standard short labels.
-
-`size="sm"` is for dense inline context; `size="md"` is for a standalone
-badge or interactive filter chip (`as="button"`). `active` swaps to
-`border-border-strong` + `text-foreground`.
-
-```tsx
-<Chip>work</Chip>
-<Chip size="md" active>
-  <span className="text-primary font-bold">#</span>dev:tq
-</Chip>
-<Chip as="button" size="md">filter</Chip>
-```
-
 ### `KeybindHint`
 
 `web/src/components/ui/keybind-hint.tsx`
 
 ```ts
 function KeybindHint(props: {
-  variant?: 'plain' | 'boxed'
+  variant?: 'plain' | 'strong' | 'muted' | 'boxed'
   className?: string
   children: React.ReactNode
 }): JSX.Element
 ```
 
 Renders a keybinding label. `plain` (default) is dim, unboxed text
-(`text-muted-foreground-ghost`) — used for e.g. sidebar nav hints; override
-the color via `className` for brighter contexts (e.g. the status line's
-`⌘K search`) rather than adding a new variant. `boxed` renders a bordered
-key-cap look (`rounded-(--keycap-radius)`, one of the three [radius exceptions](#radius-policy)).
+(`text-muted-foreground-ghost`) — used for e.g. sidebar nav hints. `strong` and
+`muted` use their corresponding gray tiers. `boxed` renders a bordered key-cap
+look (`rounded-(--keycap-radius)`, one of the three [radius exceptions](#radius-policy)).
 
 ```tsx
 <KeybindHint>g t</KeybindHint>
-<KeybindHint className="text-muted-foreground-strong">⌘K</KeybindHint>
+<KeybindHint variant="strong">⌘K</KeybindHint>
+<KeybindHint variant="muted">⌘N</KeybindHint>
 <KeybindHint variant="boxed">⌘K</KeybindHint>
 ```
 
@@ -754,19 +727,17 @@ variants as `Panel`, defaulting to `md`.
 ```ts
 function ProgressBar(props: {
   percent: number
-  fillClassName?: string // default: 'bg-foreground'
+  tone?: 'foreground' | 'muted' // default: 'foreground'
   className?: string
 }): JSX.Element
 ```
 
 A thin (`h-0.5`) track (`bg-surface-strong`) with a filled bar
-(`percent` clamped to 0-100). Default fill is `bg-foreground`; pass
-`fillClassName` to use a different fill color (e.g. `bg-muted-foreground`
-for a dimmer/secondary progress indicator).
+(`percent` clamped to 0-100). The `tone` selects the foreground or muted fill.
 
 ```tsx
 <ProgressBar percent={39} />
-<ProgressBar percent={39} fillClassName="bg-muted-foreground" />
+<ProgressBar percent={39} tone="muted" />
 ```
 
 ### `Button` (redesigned)

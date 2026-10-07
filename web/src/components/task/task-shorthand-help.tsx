@@ -13,6 +13,7 @@ export function TaskShorthandHelp({
   return (
     <HelpPopover
       label="Show title shortcut help"
+      tone="muted"
       defaultOpen={defaultOpen}
       onOpenChange={onOpenChange}
       tabIndex={-1}

@@ -13,7 +13,6 @@ export interface CalendarEventProps {
     | 'gcal-solo'
     | 'gcal-status'
     | 'gcal-info'
-    | 'completed'
     | 'schedule'
     | 'day-queue'
     | 'task-date'
@@ -24,7 +23,7 @@ export interface CalendarEventProps {
   dateTaskOverdue?: boolean
   dateTaskDueDateLabel?: string
   displayPriority?: number
-  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed'. Independent of `type`, since a completed task's block can have been either. */
+  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto'. */
   isAutoScheduled?: boolean
   scheduleId?: string
   /** Raw start ISO string, used to disambiguate cross-midnight blocks sharing a scheduleId */
@@ -67,7 +66,6 @@ export function getGcalEventDetails(
 const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
   'manual',
   'auto',
-  'completed',
   'schedule',
   'day-queue',
   'task-date',
@@ -75,7 +73,7 @@ const CLICKABLE_EVENT_TYPES = new Set<CalendarEventProps['type']>([
 
 /**
  * True when a click on this event has a destination: task detail for
- * manual/auto/completed/day-queue/task-date, the edit modal for schedule. Shared by
+ * manual/auto/day-queue/task-date, the edit modal for schedule. Shared by
  * handleEventClick and the `cursor: pointer` affordance in
  * fullcalendar.css so the two can't drift apart.
  */

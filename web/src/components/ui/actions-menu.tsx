@@ -45,6 +45,7 @@ export function ActionsMenu({
   mobileItems = items,
   desktopTriggerClassName,
   mobileTriggerClassName,
+  hideDesktopTriggerUntilHover = false,
   'aria-label': ariaLabel = 'Actions',
   defaultOpen,
 }: {
@@ -52,6 +53,7 @@ export function ActionsMenu({
   mobileItems?: ActionsMenuItem[]
   desktopTriggerClassName?: string
   mobileTriggerClassName?: string
+  hideDesktopTriggerUntilHover?: boolean
   'aria-label'?: string
   defaultOpen?: 'desktop' | 'mobile' | undefined
 }) {
@@ -70,10 +72,17 @@ export function ActionsMenu({
           aria-label={ariaLabel}
           onClick={stopRowNavigation}
           data-no-dnd=""
-          className={cn(
-            'hidden h-5 w-5 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:flex',
-            desktopTriggerClassName,
-          )}
+          render={
+            <button
+              type="button"
+              className={cn(
+                'hidden h-5 w-5 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:flex',
+                hideDesktopTriggerUntilHover &&
+                  'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100',
+                desktopTriggerClassName,
+              )}
+            />
+          }
         >
           <MoreHorizontal className="h-3.5 w-3.5" />
         </DropdownMenuTrigger>
@@ -82,10 +91,7 @@ export function ActionsMenu({
             <DropdownMenuItem
               key={item.label}
               onClick={item.onClick}
-              className={cn(
-                item.destructive === true &&
-                  'text-destructive focus:bg-destructive/10 focus:text-destructive focus:**:text-destructive',
-              )}
+              variant={item.destructive === true ? 'destructive' : 'default'}
             >
               {item.icon}
               {item.label}
@@ -103,10 +109,15 @@ export function ActionsMenu({
             aria-label={ariaLabel}
             onClick={stopRowNavigation}
             data-no-dnd=""
-            className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
-              mobileTriggerClassName,
-            )}
+            render={
+              <button
+                type="button"
+                className={cn(
+                  'flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
+                  mobileTriggerClassName,
+                )}
+              />
+            }
           >
             <MoreHorizontal className="h-4 w-4" />
           </ActionSheetTrigger>
@@ -116,7 +127,7 @@ export function ActionsMenu({
                 key={item.label}
                 icon={item.icon}
                 onClick={item.onClick}
-                className={cn(item.destructive === true && 'text-destructive')}
+                variant={item.destructive === true ? 'destructive' : 'default'}
               >
                 {item.label}
                 {item.selected === true && (

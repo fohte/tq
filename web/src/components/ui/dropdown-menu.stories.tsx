@@ -48,7 +48,24 @@ function DropdownMenuItemsDemo({
       <DropdownMenuContent>
         <DropdownMenuItem>Edit</DropdownMenuItem>
         <DropdownMenuItem>Duplicate</DropdownMenuItem>
-        <DropdownMenuItem>Delete</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function DropdownMenuQuietTriggerDemo({
+  open,
+  onOpenChange,
+}: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  return (
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
+      <DropdownMenuTrigger variant="quiet">closed</DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem>Closed</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -90,6 +107,15 @@ export const CheckboxOpen: StoryObj<typeof DropdownMenuCheckboxDemo> = {
   render: (args) => <DropdownMenuCheckboxDemo {...args} />,
   args: {
     open: true,
+    onOpenChange: fn(),
+  },
+}
+
+export const QuietTrigger: StoryObj<typeof DropdownMenuQuietTriggerDemo> = {
+  name: 'the menu uses a compact quiet trigger for a small control',
+  render: (args) => <DropdownMenuQuietTriggerDemo {...args} />,
+  args: {
+    open: false,
     onOpenChange: fn(),
   },
 }

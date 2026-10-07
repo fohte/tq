@@ -12,6 +12,7 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
+  type Queue,
   type QueueItem,
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
@@ -32,7 +33,7 @@ describe('buildQueueSections', () => {
       [openTask.id, openTask],
       [completedTask.id, completedTask],
     ])
-    const queues = [
+    const queues: Queue[] = [
       makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' }),
       makeQueue({
         key: 'backlog',
@@ -117,7 +118,7 @@ describe('buildQueueSections', () => {
       weekEarlier,
     ]
     const taskMap = new Map(tasks.map((task) => [task.id, task]))
-    const queues = [
+    const queues: Queue[] = [
       makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' }),
       makeQueue({
         key: WEEK_QUEUE_KEY,
@@ -303,7 +304,7 @@ describe('buildQueueSections', () => {
       [taskA.id, taskA],
       [taskB.id, taskB],
     ])
-    const queues = [makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' })]
+    const queues: Queue[] = [makeQueue({ key: DAY_QUEUE_KEY, name: 'Today' })]
     const rawItemsByKey = new Map<string, QueueItem[]>([
       [
         DAY_QUEUE_KEY,

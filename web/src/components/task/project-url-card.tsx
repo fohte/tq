@@ -26,8 +26,6 @@ export function ProjectUrlCard({
   const total = project.taskCount.total
   const completed = project.taskCount.completed
   const percent = total > 0 ? (completed / total) * 100 : 0
-  const fillClassName =
-    status === 'active' ? 'bg-foreground' : 'bg-muted-foreground'
 
   return (
     <Link
@@ -51,7 +49,7 @@ export function ProjectUrlCard({
       <div className="flex items-center gap-2.5">
         <ProgressBar
           percent={percent}
-          fillClassName={fillClassName}
+          tone={status === 'active' ? 'foreground' : 'muted'}
           className="flex-1"
         />
         <span className="shrink-0 font-mono text-2xs text-muted-foreground">

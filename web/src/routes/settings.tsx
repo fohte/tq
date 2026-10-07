@@ -32,7 +32,7 @@ export const Route = createFileRoute('/settings')({
 })
 
 const INTEGRATION_ICONS: Record<string, ReactNode> = {
-  github: <GithubMarkIcon className="size-5 text-foreground" />,
+  github: <GithubMarkIcon className="size-5" />,
   google_calendar: <Calendar className="size-5 text-foreground" />,
 }
 

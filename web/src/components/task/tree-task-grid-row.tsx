@@ -9,7 +9,6 @@ import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { SetProjectMenu } from '#components/task/set-project-menu'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TreeRowActionsMenu } from '#components/task/tree-row-actions-menu'
-import { Chip } from '#components/ui/chip'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TreeNode } from '#hooks/use-tasks'
 
@@ -91,6 +90,17 @@ export function TreeTaskGridRow({
   const childCount = node.childCompletionCount
   const childCountText = `${String(childCount.completed)}/${String(childCount.total)}`
   const childCountDescriptionId = `child-count-description-${node.id}`
+  const childCountLabel = (showExpandAffordance: boolean) => (
+    <span
+      className="pointer-events-none inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-xs text-muted-foreground"
+      data-testid={showExpandAffordance ? undefined : 'child-completion'}
+    >
+      {showExpandAffordance && (
+        <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+      )}
+      {childCountText}
+    </span>
+  )
   const childCompletion =
     childCount.total === 0 ? null : hasChildren ? (
       <Button
@@ -104,18 +114,13 @@ export function TreeTaskGridRow({
         aria-describedby={childCountDescriptionId}
         aria-expanded={expanded}
       >
-        <Chip size="md" className="pointer-events-none text-xs">
-          <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
-          {childCountText}
-        </Chip>
+        {childCountLabel(true)}
         <span id={childCountDescriptionId} className="sr-only">
           {childCount.completed} of {childCount.total} child tasks completed
         </span>
       </Button>
     ) : (
-      <Chip size="md" className="text-xs" data-testid="child-completion">
-        {childCountText}
-      </Chip>
+      childCountLabel(false)
     )
 
   return (

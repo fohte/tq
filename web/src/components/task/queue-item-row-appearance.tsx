@@ -8,7 +8,6 @@ import { X } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { Chip } from '#components/ui/chip'
 import type { Task } from '#hooks/use-tasks'
 import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
@@ -74,9 +73,9 @@ export function QueueItemRowAppearance({
         className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
       />
     ) : (
-      <Chip
-        as="button"
-        size="md"
+      <button
+        type="button"
+        className="inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap border border-destructive px-1.5 py-0.5 font-mono text-2xs text-destructive"
         onClick={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -84,10 +83,9 @@ export function QueueItemRowAppearance({
         }}
         data-no-dnd=""
         title="No estimate set — excluded from auto-scheduling"
-        className="shrink-0 whitespace-nowrap border-destructive text-destructive"
       >
         No estimate
-      </Chip>
+      </button>
     )
 
   return (

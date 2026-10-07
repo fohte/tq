@@ -43,6 +43,6 @@ export const DimFill: Story = {
   name: 'shows a partially filled progress bar with a muted fill',
   args: {
     percent: 39,
-    fillClassName: 'bg-muted-foreground',
+    tone: 'muted',
   },
 }

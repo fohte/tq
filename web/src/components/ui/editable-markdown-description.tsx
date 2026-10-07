@@ -8,7 +8,7 @@ import { cn } from '#lib/utils'
 
 export function EditableMarkdownDescription({
   header,
-  className,
+  variant = 'task',
   defaultValue,
   placeholder,
   editButtonLabel,
@@ -17,7 +17,7 @@ export function EditableMarkdownDescription({
   initiallyEditing = false,
 }: {
   header?: ReactNode
-  className?: string
+  variant?: 'task' | 'project'
   defaultValue: string | null
   placeholder: string
   editButtonLabel: string
@@ -52,7 +52,9 @@ export function EditableMarkdownDescription({
       <div
         className={cn(
           'border border-border text-sm leading-relaxed',
-          className,
+          variant === 'task' && 'p-4 focus-within:border-ring',
+          variant === 'project' &&
+            'px-1 pb-1 pt-3 focus-within:border-primary/50',
         )}
         onClick={(event) => {
           if (

@@ -1,6 +1,5 @@
 import { CircleDot, GitPullRequest } from 'lucide-react'
 
-import { Chip } from '#components/ui/chip'
 import type { GithubLink } from '#hooks/use-github-link'
 import { cn } from '#lib/utils'
 
@@ -21,10 +20,10 @@ export function GithubLinkBadge({
   extraCount?: number
 }) {
   return (
-    <Chip
-      as="button"
+    <button
+      type="button"
       className={cn(
-        'shrink-0',
+        'inline-flex shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs',
         link.state === 'open' && STATE_COLORS.open,
         link.state === 'closed' && STATE_COLORS.closed,
         link.state === 'merged' && STATE_COLORS.merged,
@@ -44,6 +43,6 @@ export function GithubLinkBadge({
       {extraCount != null && extraCount > 0 && (
         <span className="text-muted-foreground-faint">+{extraCount}</span>
       )}
-    </Chip>
+    </button>
   )
 }

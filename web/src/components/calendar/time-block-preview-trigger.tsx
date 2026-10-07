@@ -28,7 +28,7 @@ type PreviewBlock = Pick<TimeBlock, 'startTime' | 'endTime' | 'isAutoScheduled'>
 
 /**
  * Wraps a calendar chip with a hover card for its time block, so it can be
- * deleted without opening the task detail page. Only manual/auto/completed
+ * deleted without opening the task detail page. Only manual/auto
  * task blocks carry a taskId (schedule and gcal events never do), and a
  * redacted block hides its own content for the same reason it shouldn't
  * reveal it here either.
@@ -45,7 +45,7 @@ export function TimeBlockPreviewTrigger({
   const { type, taskId, redacted, isAutoScheduled } = event.extendedProps
 
   if (
-    (type !== 'manual' && type !== 'auto' && type !== 'completed') ||
+    (type !== 'manual' && type !== 'auto') ||
     taskId == null ||
     redacted === true ||
     event.start == null ||
@@ -187,7 +187,7 @@ function TimeBlockPreviewPopup({
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>
-          <PreviewCardPopup className="w-auto p-0">
+          <PreviewCardPopup padding="none" className="w-auto">
             <TimeBlockPreviewCard
               task={task}
               isTaskError={isTaskError}
