@@ -89,10 +89,9 @@ describe('useTimeBlocks', () => {
     try {
       const mocks = await getMocks()
 
-      renderHook(
-        () => useTimeBlocks('2026-03-22', '2026-03-22', 60_000, false),
-        { wrapper },
-      )
+      renderHook(() => useTimeBlocks('2026-03-22', '2026-03-22', false), {
+        wrapper,
+      })
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60_000)
@@ -124,7 +123,7 @@ describe('useTimeBlocks', () => {
     expect(result.current.data).toEqual([sampleBlock])
   })
 
-  it('polls for external time-block changes when an interval is configured', async () => {
+  it('does not poll time blocks for external changes', async () => {
     vi.useFakeTimers()
     try {
       const mocks = await getMocks()
@@ -133,9 +132,7 @@ describe('useTimeBlocks', () => {
         json: () => Promise.resolve([sampleBlock]),
       })
 
-      renderHook(() => useTimeBlocks('2026-03-22', '2026-03-22', 60_000), {
-        wrapper,
-      })
+      renderHook(() => useTimeBlocks('2026-03-22', '2026-03-22'), { wrapper })
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0)
@@ -145,14 +142,11 @@ describe('useTimeBlocks', () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60_000)
       })
-      const callCountAfterInterval = assertDefined(mocks['mockGet']).mock.calls
+      const callCountAfterOneMinute = assertDefined(mocks['mockGet']).mock.calls
         .length
 
-      const getPollingCallCounts = () => [
-        initialCallCount,
-        callCountAfterInterval,
-      ]
-      expect(getPollingCallCounts()).toEqual([1, 2])
+      const getFetchCounts = () => [initialCallCount, callCountAfterOneMinute]
+      expect(getFetchCounts()).toEqual([1, 1])
     } finally {
       vi.useRealTimers()
     }

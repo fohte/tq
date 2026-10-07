@@ -42,10 +42,9 @@ export async function fetchQueueItems(
   return unwrapOrThrow(assertOk(res)).json()
 }
 
-export function useQueues(refetchInterval?: number) {
+export function useQueues() {
   return useQuery({
     queryKey: queueKeys.all,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     queryFn: async () => {
       const res = await api.api.queues.$get()
       return unwrapOrThrow(assertOk(res)).json()
@@ -111,14 +110,12 @@ export function useQueueItems(
 export function useQueueItemsForQueues(
   queues: Queue[] | undefined,
   date: string,
-  refetchInterval?: number,
   options?: { enabled?: boolean },
 ) {
   return useQueries({
     queries: (queues ?? []).map((queue) => ({
       queryKey: queueKeys.items(queue.key, date),
       ...(options?.enabled === undefined ? {} : { enabled: options.enabled }),
-      ...(refetchInterval === undefined ? {} : { refetchInterval }),
       queryFn: () => fetchQueueItems(queue.key, date),
     })),
   })
@@ -127,7 +124,6 @@ export function useQueueItemsForQueues(
 export function useQueueItemsForDates(
   key: string | undefined,
   dates: string[],
-  refetchInterval?: number,
 ) {
   return useQueries({
     queries:
@@ -135,7 +131,6 @@ export function useQueueItemsForDates(
         ? []
         : dates.map((date) => ({
             queryKey: queueKeys.items(key, date),
-            ...(refetchInterval === undefined ? {} : { refetchInterval }),
             queryFn: () => fetchQueueItems(key, date),
           })),
   })
