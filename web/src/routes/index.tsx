@@ -43,10 +43,7 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
-import {
-  getCompactRefetchInterval,
-  isCompactDayLayoutSearch,
-} from '#lib/compact-layout'
+import { isCompactDayLayoutSearch } from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
@@ -86,18 +83,11 @@ function DayView() {
     layout,
   } = Route.useSearch()
   const isCompactLayout = layout === 'compact'
-  const refetchInterval = getCompactRefetchInterval(isCompactLayout)
-  const { isLoading, categorized } = useTaskList(
-    baseFilter,
-    refetchInterval === undefined ? undefined : { refetchInterval },
-  )
+  const { isLoading, categorized } = useTaskList(baseFilter)
   const taskMap = useTaskMap(categorized.all)
   const dueDateTasksQuery = useTaskList(
     { ...baseFilter, status: 'todo', hasDue: true, sortBy: 'due' },
-    {
-      enabled: isCompactLayout,
-      ...(refetchInterval === undefined ? {} : { refetchInterval }),
-    },
+    { enabled: isCompactLayout },
   )
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
@@ -162,13 +152,11 @@ function DayView() {
   const timeBlocksQuery = useTimeBlocks(
     visibleRange.startDate,
     visibleRange.endDate,
-    refetchInterval,
   )
   const { data: timeBlocksData } = timeBlocksQuery
   const schedulesQuery = useScheduleList(
     visibleRange.startDate,
     visibleRange.endDate,
-    refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
   useCompactRefreshErrorLogging(isCompactLayout, 'day view', {
@@ -176,11 +164,10 @@ function DayView() {
     schedules: schedulesQuery.error,
     dueTasks: dueDateTasksQuery.error,
   })
-  const { data: queuesData } = useQueues(refetchInterval)
+  const { data: queuesData } = useQueues()
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
     selectedDateStr,
-    refetchInterval,
     { enabled: canReadQueueItems },
   )
   const updateTimeBlock = useUpdateTimeBlock()
@@ -196,7 +183,6 @@ function DayView() {
     context,
     taskMap,
     isTasksLoading: isLoading,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
   })
   const compactMemoProps = useCompactMemoData({
     enabled: isCompactLayout,
@@ -237,7 +223,6 @@ function DayView() {
     queues: queuesData,
     startDate: visibleRange.startDate,
     endDate: visibleRange.endDate,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     createTimeBlock,
     setQueueItems,
     onTimeBlockChange: handleTimeBlockChange,
@@ -247,7 +232,6 @@ function DayView() {
     selectedDate,
     hasDayQueue:
       queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
   })
 
   // Queue updates replace the full list, so keep stored IDs separate from

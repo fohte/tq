@@ -27,6 +27,10 @@ import {
   type GithubBlockerRef,
 } from '#services/task-github-blockers'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
+import {
+  getIncompleteTaskWaits,
+  type TaskWaitSummary,
+} from '#services/task-waits'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
@@ -77,14 +81,21 @@ async function checkNotBlocked(
     error: string
     blockedByNumbers: number[]
     blockedByGithubRefs: GithubBlockerRef[]
+    blockedByWaits?: TaskWaitSummary[]
   }
   status: 409
 } | null> {
-  const [blockedByNumbers, blockedByGithubRefs] = await Promise.all([
-    getIncompleteBlockerNumbers(id, tx),
-    getIncompleteGithubBlockerRefs(id, tx),
-  ])
-  if (blockedByNumbers.length === 0 && blockedByGithubRefs.length === 0) {
+  const [blockedByNumbers, blockedByGithubRefs, blockedByWaits] =
+    await Promise.all([
+      getIncompleteBlockerNumbers(id, tx),
+      getIncompleteGithubBlockerRefs(id, tx),
+      getIncompleteTaskWaits(id, tx),
+    ])
+  if (
+    blockedByNumbers.length === 0 &&
+    blockedByGithubRefs.length === 0 &&
+    blockedByWaits.length === 0
+  ) {
     return null
   }
 
@@ -93,6 +104,7 @@ async function checkNotBlocked(
     ...blockedByGithubRefs.map(
       ({ owner, repo, number }) => `${owner}/${repo}#${String(number)}`,
     ),
+    ...blockedByWaits.map(({ id: waitId, label }) => `wait ${label || waitId}`),
   ]
 
   return {
@@ -100,6 +112,7 @@ async function checkNotBlocked(
       error: `Task is blocked by unresolved blockers: ${blockerNames.join(', ')}`,
       blockedByNumbers,
       blockedByGithubRefs,
+      ...(blockedByWaits.length > 0 ? { blockedByWaits } : {}),
     },
     status: 409,
   }

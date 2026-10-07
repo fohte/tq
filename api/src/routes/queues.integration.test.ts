@@ -45,8 +45,16 @@ async function putQueueItems(
   return { res, body: await jsonBody<QueueItemResponse[]>(res) }
 }
 
-async function getQueueItems(key: string, date: string) {
-  const res = await app.request(`/api/queues/${key}/items?date=${date}`)
+async function getQueueItems(
+  key: string,
+  date: string,
+  context?: 'work' | 'personal',
+) {
+  const query = new URLSearchParams({
+    date,
+    ...(context == null ? {} : { context }),
+  })
+  const res = await app.request(`/api/queues/${key}/items?${query.toString()}`)
   return { res, body: await jsonBody<QueueItemResponse[]>(res) }
 }
 
@@ -629,6 +637,30 @@ describe('GET /api/queues/:key/items', () => {
 
     expect(res.status).toBe(200)
     expect(body.map((item) => item.taskId)).toEqual([taskB.id, taskA.id])
+  })
+
+  it('filters queue items by task context', async () => {
+    const workTask = await createTask('Work task', { context: 'work' })
+    const personalTask = await createTask('Personal task', {
+      context: 'personal',
+    })
+    await putQueueItems('day', [workTask.id, personalTask.id], '2026-03-22')
+
+    const { res, body } = await getQueueItems('day', '2026-03-22', 'work')
+
+    expect(normalizeQueueResponse({ res, body })).toEqual({
+      status: 200,
+      body: [
+        {
+          id: 'ID',
+          taskId: workTask.id,
+          periodStart: '2026-03-22',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
   })
 
   it.each([

@@ -11,11 +11,9 @@ import {
 export function useFutureDayQueueItems({
   selectedDate,
   hasDayQueue,
-  refetchInterval,
 }: {
   selectedDate: Date
   hasDayQueue: boolean
-  refetchInterval?: number
 }) {
   const selectedDateStr = formatLocalDate(selectedDate)
   const futureDayQueueDates = useMemo(() => {
@@ -25,7 +23,6 @@ export function useFutureDayQueueItems({
   const futureDayQueueItemsResults = useQueueItemsForDates(
     hasDayQueue ? DAY_QUEUE_KEY : undefined,
     futureDayQueueDates,
-    refetchInterval,
   )
   const loggedQueryErrors = useRef(new Map<string, number>())
   useEffect(() => {

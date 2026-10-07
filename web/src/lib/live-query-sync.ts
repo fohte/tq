@@ -45,6 +45,7 @@ const EVENT_SOURCE_CLOSED = 2
 const INITIAL_RECONNECT_DELAY_MS = 1_000
 const MAX_RECONNECT_DELAY_MS = 30_000
 const INVALIDATION_BATCH_WINDOW_MS = 1_000
+const HEARTBEAT_TIMEOUT_MS = 75_000
 
 interface LiveQuerySyncOptions {
   origin?: string
@@ -130,6 +131,7 @@ const resourceQueryFilters: Record<
       },
       {
         after: [
+          { queryKey: taskKeys.countPrefix },
           { queryKey: taskKeys.labelCountsPrefix },
           { queryKey: taskMentionKeys.suggestionsPrefix },
         ],
@@ -224,11 +226,14 @@ export function connectLiveQuerySync(
   let reconnectAttempt = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let invalidationTimer: ReturnType<typeof setTimeout> | undefined
+  let watchdogTimer: ReturnType<typeof setTimeout> | undefined
   let waitingForMutation = false
   const pendingFetchQueryHashes = new Set<string>()
   let unsubscribeFromPendingFetches: (() => void) | undefined
   let disconnected = false
   let eventSource: EventStream
+  let eventSourceListeners:
+    { change: EventListener; heartbeat: EventListener } | undefined
 
   const clearInvalidationTimer = () => {
     if (invalidationTimer == null) return
@@ -348,7 +353,25 @@ export function connectLiveQuerySync(
     schedulePendingInvalidations()
   }
 
-  const onChange = (event: Event) => {
+  const clearWatchdogTimer = () => {
+    if (watchdogTimer == null) return
+    clearTimeout(watchdogTimer)
+    watchdogTimer = undefined
+  }
+
+  const resetWatchdogTimer = (source: EventStream) => {
+    clearWatchdogTimer()
+    watchdogTimer = setTimeout(() => {
+      watchdogTimer = undefined
+      if (disconnected || source !== eventSource) return
+      source.close()
+      onError(source)
+    }, HEARTBEAT_TIMEOUT_MS)
+  }
+
+  const onChange = (source: EventStream, event: Event) => {
+    if (disconnected || source !== eventSource) return
+    resetWatchdogTimer(source)
     const raw = 'data' in event ? event.data : null
     if (typeof raw !== 'string') {
       queueInvalidation(null)
@@ -365,7 +388,14 @@ export function connectLiveQuerySync(
     queueInvalidation(filtersForResourceChange(change))
   }
 
-  const onOpen = () => {
+  const onHeartbeat = (source: EventStream) => {
+    if (disconnected || source !== eventSource) return
+    resetWatchdogTimer(source)
+  }
+
+  const onOpen = (source: EventStream) => {
+    if (disconnected || source !== eventSource) return
+    resetWatchdogTimer(source)
     if (hasConnected || shouldInvalidateOnOpen) queueInvalidation(null)
     hasConnected = true
     shouldInvalidateOnOpen = false
@@ -374,20 +404,38 @@ export function connectLiveQuerySync(
   }
 
   const detachEventSource = (source: EventStream) => {
-    source.removeEventListener('change', onChange)
+    if (eventSourceListeners != null) {
+      source.removeEventListener('change', eventSourceListeners.change)
+      source.removeEventListener('heartbeat', eventSourceListeners.heartbeat)
+      eventSourceListeners = undefined
+    }
     source.onopen = null
     source.onerror = null
     source.close()
+    clearWatchdogTimer()
   }
 
   const attachEventSource = () => {
     const source = createEventSource('/api/events')
     eventSource = source
-    source.addEventListener('change', onChange)
-    source.onopen = onOpen
+    const listeners = {
+      change: (event: Event) => {
+        onChange(source, event)
+      },
+      heartbeat: () => {
+        onHeartbeat(source)
+      },
+    }
+    eventSourceListeners = listeners
+    source.addEventListener('change', listeners.change)
+    source.addEventListener('heartbeat', listeners.heartbeat)
+    source.onopen = () => {
+      onOpen(source)
+    }
     source.onerror = () => {
       onError(source)
     }
+    resetWatchdogTimer(source)
   }
 
   const onError = (source: EventStream) => {
@@ -396,6 +444,7 @@ export function connectLiveQuerySync(
       sessionCheckRequested = true
       void requestSessionCheck().catch(() => undefined)
     }
+    if (source.readyState === EVENT_SOURCE_CLOSED) clearWatchdogTimer()
     if (source.readyState !== EVENT_SOURCE_CLOSED || reconnectTimer != null) {
       return
     }

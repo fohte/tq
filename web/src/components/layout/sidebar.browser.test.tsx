@@ -70,6 +70,7 @@ const labelsForTasksWithTags: Label[] = [
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
 async function renderSidebar({
   tagCounts = [],
+  inboxCount = 0,
   projects = [],
   initialEntry = '/',
   savedViews = [],
@@ -77,6 +78,7 @@ async function renderSidebar({
   pendingTagCounts = false,
 }: {
   tagCounts?: TagCount[]
+  inboxCount?: number
   projects?: Project[]
   initialEntry?: string
   savedViews?: SavedView[]
@@ -101,6 +103,14 @@ async function renderSidebar({
   } else {
     queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts)
   }
+  queryClient.setQueryData(
+    taskKeys.count({
+      context: 'personal',
+      commitment: 'inbox',
+      status: 'todo',
+    }),
+    inboxCount,
+  )
   queryClient.setQueryData(
     projectKeys.list({ context: 'personal', status: 'all' }),
     projects,
@@ -140,6 +150,12 @@ function readBreakpointVisibility(sidebar: HTMLElement) {
 }
 
 describe('Sidebar', () => {
+  it('shows the inbox badge from the task count query', async () => {
+    await renderSidebar({ inboxCount: 3 })
+
+    expect(screen.getByText('3').textContent).toEqual('3')
+  })
+
   it('is hidden below the md breakpoint', async () => {
     await renderSidebar()
     const sidebar = screen.getByRole('complementary')

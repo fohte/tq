@@ -232,7 +232,7 @@ describe('session list', () => {
     ])
   })
 
-  it('sends each repeated --session-id as a query param', async () => {
+  it('sends each repeated --session-id to both APIs as a query param', async () => {
     const responses = [
       new Response(JSON.stringify([session1]), { status: 200 }),
       new Response(JSON.stringify([]), { status: 200 }),
@@ -261,6 +261,12 @@ describe('session list', () => {
     expect(request(calls[0])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions',
+      query: { sessionId: ['sess-1', 'sess-2'] },
+      body: undefined,
+    })
+    expect(request(calls[1])).toEqual({
+      method: 'GET',
+      pathname: '/api/agent-sessions/by-task',
       query: { sessionId: ['sess-1', 'sess-2'] },
       body: undefined,
     })

@@ -6,13 +6,11 @@ import {
   makeLabel,
   makeProject,
   makeSavedView,
-  makeTask,
 } from '#components/layout/sidebar-test-fixtures'
 import type { Label } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { labelKeys, savedViewKeys } from '#lib/query-keys'
 import type { TagCount } from '#lib/tag-tree'
@@ -40,10 +38,6 @@ const labelsForNestedTags = [
   makeLabel({ id: '5', name: 'dev/infra' }),
 ]
 
-const tasksWithInboxItems: Task[] = [
-  makeTask({ id: '3', title: 'Untriaged task', commitment: 'inbox' }),
-]
-
 const projectsAcrossStatuses: Project[] = [
   makeProject({
     id: '1',
@@ -65,11 +59,11 @@ const savedViews: SavedView[] = [
 ]
 
 function SidebarContentStory({
-  tasks = [],
+  inboxCount = 0,
   labels = labelsForTasksWithTags,
   tagCounts = tagCountsWithTags,
 }: {
-  tasks?: Task[]
+  inboxCount?: number
   labels?: Label[]
   tagCounts?: TagCount[]
 }) {
@@ -78,10 +72,12 @@ function SidebarContentStory({
   })
   queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts)
   queryClient.setQueryData(
-    taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
-    tasks.filter(
-      (task) => task.commitment === 'inbox' && task.status === 'todo',
-    ),
+    taskKeys.count({
+      context: 'personal',
+      commitment: 'inbox',
+      status: 'todo',
+    }),
+    inboxCount,
   )
   queryClient.setQueryData(
     projectKeys.list({ context: 'personal', status: 'all' }),
@@ -103,11 +99,11 @@ function SidebarContentStory({
 }
 
 function SidebarContentWithRouter({
-  tasks,
+  inboxCount,
   labels,
   tagCounts,
 }: {
-  tasks?: Task[]
+  inboxCount?: number
   labels?: Label[]
   tagCounts?: TagCount[]
 }) {
@@ -115,7 +111,7 @@ function SidebarContentWithRouter({
     <StoryRouter
       component={() => (
         <SidebarContentStory
-          {...(tasks != null ? { tasks } : {})}
+          {...(inboxCount != null ? { inboxCount } : {})}
           {...(labels != null ? { labels } : {})}
           {...(tagCounts != null ? { tagCounts } : {})}
         />
@@ -149,9 +145,9 @@ export const WithNestedTags: Story = {
 }
 
 export const WithInboxTasks: Story = {
-  name: 'the sidebar includes a task in the inbox section',
+  name: 'the sidebar shows the inbox task count',
   args: {
-    tasks: tasksWithInboxItems,
+    inboxCount: 1,
     tagCounts: [],
   },
 }

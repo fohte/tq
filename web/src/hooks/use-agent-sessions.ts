@@ -17,7 +17,7 @@ const STALE_THRESHOLD_MS = 30 * 60_000
 
 /** A session is active when it hasn't ended or been archived and hasn't gone stale (see `agentSessions` schema doc). */
 export function isAgentSessionActive(
-  session: AgentSession,
+  session: Pick<AgentSession, 'endedAt' | 'archivedAt' | 'lastActiveAt'>,
   now: Date = new Date(),
 ): boolean {
   return (

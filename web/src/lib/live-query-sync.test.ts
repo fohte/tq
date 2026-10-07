@@ -65,6 +65,10 @@ class TestEventStream extends EventTarget implements EventStream {
   sendChange(data: string): void {
     this.dispatchEvent(Object.assign(new Event('change'), { data }))
   }
+
+  sendHeartbeat(): void {
+    this.dispatchEvent(new Event('heartbeat'))
+  }
 }
 
 const clients: QueryClient[] = []
@@ -135,6 +139,10 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
   const queries = {
     taskList: observeQuery(queryClient, taskKeys.list()),
     taskInfiniteList: observeQuery(queryClient, taskKeys.infiniteList()),
+    taskCounts: observeQuery(
+      queryClient,
+      taskKeys.count({ context: 'work', status: 'todo' }),
+    ),
     labelCounts: observeQuery(queryClient, taskKeys.labelCounts('work')),
     taskDetail: observeQuery(queryClient, taskKeys.detail(taskId)),
     otherTaskDetail: observeQuery(queryClient, taskKeys.detail(otherTaskId)),
@@ -248,6 +256,7 @@ function taskInvalidationSnapshot(
 
   return {
     taskLists: [fetchCount('taskList'), fetchCount('taskInfiniteList')],
+    taskCounts: fetchCount('taskCounts'),
     labelCounts: fetchCount('labelCounts'),
     taskDetails: [
       fetchCount('taskDetail'),
@@ -345,10 +354,108 @@ describe('connectLiveQuerySync', () => {
         { queryKey: taskKeys.infiniteLists },
         { queryKey: ['projects'] },
         { queryKey: ['queues'] },
+        { queryKey: taskKeys.countPrefix },
         { queryKey: taskKeys.labelCountsPrefix },
         { queryKey: taskMentionKeys.suggestionsPrefix },
         'predicate',
       ],
+    })
+  })
+
+  it('reconnects after 75 seconds without changes or heartbeats', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const memoQuery = observeQuery(queryClient, ['memos', 'work'])
+    const checkSession = vi.fn(() => Promise.resolve())
+    const { eventStream, eventStreams, urls } = createConnection({
+      queryClient,
+      checkSession,
+    })
+
+    eventStream.open()
+    await vi.advanceTimersByTimeAsync(45_000)
+    eventStream.sendHeartbeat()
+    await vi.advanceTimersByTimeAsync(45_000)
+    eventStream.sendChange(
+      JSON.stringify({
+        resource: 'task',
+        id: 'task-one',
+        origin: 'screen-two',
+      }),
+    )
+    await vi.advanceTimersByTimeAsync(74_999)
+    const beforeTimeout = {
+      streamCount: eventStreams.length,
+      initialStreamClosed: eventStream.closed,
+    }
+
+    await vi.advanceTimersByTimeAsync(1)
+    const afterTimeout = {
+      streamCount: eventStreams.length,
+      initialStreamClosed: eventStream.closed,
+      urls: [...urls],
+    }
+    await vi.advanceTimersByTimeAsync(1_000)
+    eventStreams[1]?.open()
+    await vi.advanceTimersByTimeAsync(1_000)
+    memoQuery.unsubscribe()
+
+    const snapshot = () => ({
+      beforeTimeout,
+      afterTimeout,
+      afterReconnect: {
+        streamCount: eventStreams.length,
+        initialStreamClosed: eventStream.closed,
+        replacementStreamOpened: eventStreams[1]?.opened,
+        urls,
+        memoFetchCount: memoQuery.queryFn.mock.calls.length,
+        sessionCheckCount: checkSession.mock.calls.length,
+      },
+    })
+    expect(snapshot()).toEqual({
+      beforeTimeout: { streamCount: 1, initialStreamClosed: false },
+      afterTimeout: {
+        streamCount: 1,
+        initialStreamClosed: true,
+        urls: ['/api/events'],
+      },
+      afterReconnect: {
+        streamCount: 2,
+        initialStreamClosed: true,
+        replacementStreamOpened: true,
+        urls: ['/api/events', '/api/events'],
+        memoFetchCount: 1,
+        sessionCheckCount: 1,
+      },
+    })
+  })
+
+  it('refreshes the memo changed by another screen', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const queries = [
+      observeQuery(queryClient, ['memos', 'work']),
+      observeQuery(queryClient, ['memos', 'personal']),
+    ]
+    const { eventStream, invalidations } = createConnection({ queryClient })
+
+    eventStream.sendChange(
+      JSON.stringify({
+        resource: 'memo',
+        id: 'work',
+        origin: 'screen-two',
+      }),
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    for (const query of queries) query.unsubscribe()
+
+    const snapshot = () => ({
+      memoFetchCounts: queries.map((query) => query.queryFn.mock.calls.length),
+      invalidationKeys: invalidationKeys(invalidations),
+    })
+    expect(snapshot()).toEqual({
+      memoFetchCounts: [1, 0],
+      invalidationKeys: [['memos', 'work']],
     })
   })
 
@@ -459,11 +566,13 @@ describe('connectLiveQuerySync', () => {
         taskKeys.infiniteLists,
         projectKeys.all,
         queueKeys.all,
+        taskKeys.countPrefix,
         taskKeys.labelCountsPrefix,
         taskMentionKeys.suggestionsPrefix,
         'predicate',
       ],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 1,
       expectedLabelCounts: 1,
       expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
       expectedUnresolvedPreviews: [1, 1],
@@ -478,6 +587,7 @@ describe('connectLiveQuerySync', () => {
         'predicate',
       ],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 1,
       expectedOtherQueries: [0, 1, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
@@ -486,6 +596,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'time_block',
       expectedInvalidationKeys: [timeBlockKeys.all, 'predicate'],
       expectedTaskLists: [0, 0],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 0,
       expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
@@ -494,6 +605,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'agent_session',
       expectedInvalidationKeys: [['agent-sessions'], 'predicate'],
       expectedTaskLists: [0, 0],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 0,
       expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
@@ -506,6 +618,7 @@ describe('connectLiveQuerySync', () => {
         'predicate',
       ],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 0,
       expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
@@ -518,6 +631,7 @@ describe('connectLiveQuerySync', () => {
         'predicate',
       ],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 0,
       expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
@@ -528,6 +642,7 @@ describe('connectLiveQuerySync', () => {
       resource,
       expectedInvalidationKeys,
       expectedTaskLists,
+      expectedTaskCounts,
       expectedLabelCounts,
       expectedOtherQueries,
       expectedUnresolvedPreviews,
@@ -556,6 +671,7 @@ describe('connectLiveQuerySync', () => {
         invalidationKeys: expectedInvalidationKeys,
         fetchCounts: {
           taskLists: expectedTaskLists,
+          taskCounts: expectedTaskCounts,
           labelCounts: expectedLabelCounts,
           taskDetails: [1, 1, 1, 1, 1, 1],
           otherTaskDetails: [0, 0, 0, 0, 0, 0],
@@ -573,6 +689,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'task',
       expectedInvalidationKeys: [taskKeys.all, projectKeys.all, queueKeys.all],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 1,
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
@@ -585,6 +702,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'label',
       expectedInvalidationKeys: [labelKeys.all, taskKeys.all],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 1,
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
@@ -597,6 +715,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'time_block',
       expectedInvalidationKeys: [timeBlockKeys.all, taskKeys.details],
       expectedTaskLists: [0, 0],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 0,
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
@@ -609,6 +728,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'agent_session',
       expectedInvalidationKeys: [['agent-sessions'], taskKeys.details],
       expectedTaskLists: [0, 0],
+      expectedTaskCounts: 0,
       expectedLabelCounts: 0,
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
@@ -621,6 +741,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'checklist',
       expectedInvalidationKeys: [taskKeys.all],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 1,
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
@@ -633,6 +754,7 @@ describe('connectLiveQuerySync', () => {
       resource: 'checklist_item',
       expectedInvalidationKeys: [taskKeys.all],
       expectedTaskLists: [1, 1],
+      expectedTaskCounts: 1,
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
@@ -647,6 +769,7 @@ describe('connectLiveQuerySync', () => {
       resource,
       expectedInvalidationKeys,
       expectedTaskLists,
+      expectedTaskCounts,
       expectedLabelCounts,
       expectedTaskDetails,
       expectedOtherTaskDetails,
@@ -679,6 +802,7 @@ describe('connectLiveQuerySync', () => {
         invalidationKeys: expectedInvalidationKeys,
         fetchCounts: {
           taskLists: expectedTaskLists,
+          taskCounts: expectedTaskCounts,
           labelCounts: expectedLabelCounts,
           taskDetails: expectedTaskDetails,
           otherTaskDetails: expectedOtherTaskDetails,
@@ -787,6 +911,7 @@ describe('connectLiveQuerySync', () => {
       invalidationKeys: [taskKeys.lists, taskKeys.infiniteLists],
       fetchCounts: {
         taskLists: [1, 1],
+        taskCounts: 0,
         labelCounts: 0,
         taskDetails: [0, 0, 0, 0, 0, 0],
         otherTaskDetails: [0, 0, 0, 0, 0, 0],

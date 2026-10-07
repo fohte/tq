@@ -18,6 +18,7 @@ import { scheduleOverrideOperations } from '#operations/schedule-override'
 import { sessionOperations } from '#operations/session'
 import { taskReadOperations } from '#operations/task-read'
 import { taskWriteOperations } from '#operations/task-write'
+import { waitOperations } from '#operations/wait'
 
 export {
   assetOperations,
@@ -40,6 +41,7 @@ export {
   sessionOperations,
   taskReadOperations,
   taskWriteOperations,
+  waitOperations,
 }
 export const operations = [
   ...assetOperations,
@@ -62,6 +64,7 @@ export const operations = [
   ...sessionOperations,
   ...taskReadOperations,
   ...taskWriteOperations,
+  ...waitOperations,
 ] as const
 
 type CliOperation<Operation> = Operation extends {

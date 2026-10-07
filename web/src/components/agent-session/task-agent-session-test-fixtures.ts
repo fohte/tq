@@ -25,8 +25,11 @@ export function makeAgentSession(
 export function makeTaskAgentSession(
   overrides: Partial<TaskAgentSession> = {},
 ): TaskAgentSession {
+  const session: Omit<AgentSession, 'lastMessage'> = { ...makeAgentSession() }
+  Reflect.deleteProperty(session, 'lastMessage')
+
   return {
-    ...makeAgentSession(),
+    ...session,
     taskId: 'task-1',
     taskNumber: 1,
     taskTitle: 'Task title',
@@ -43,7 +46,6 @@ export const activeAgentSession: TaskAgentSession = makeTaskAgentSession({
   id: '1',
   taskTitle: 'Sample task',
   label: 'Implement session indicator',
-  lastMessage: 'Wiring up the hover card',
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
 })

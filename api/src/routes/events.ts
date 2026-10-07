@@ -43,7 +43,7 @@ export const eventsApp = new Hono().get('/events', (c) =>
 
       const event = takeNextEvent()
       if (event == null) {
-        await stream.write(': heartbeat\n\n')
+        await stream.writeSSE({ event: 'heartbeat', data: '' })
         continue
       }
 

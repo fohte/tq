@@ -80,6 +80,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+function queueItemsQuerySnapshot(data: unknown, calls: unknown) {
+  return { data, calls }
+}
+
 const taskId = '00000000-0000-0000-0000-000000000001'
 const earlierTaskId = '00000000-0000-0000-0000-000000000002'
 const laterTaskId = '00000000-0000-0000-0000-000000000003'
@@ -141,6 +145,32 @@ describe('useTaskPlan', () => {
 })
 
 describe('queue ordering cache', () => {
+  it('requests queue items for the selected task context', async () => {
+    const mockGet = assertDefined((await getMocks())['mockGet'])
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () => useQueueItems(DAY_QUEUE_KEY, date, { context: 'work' }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(
+        queueItemsQuerySnapshot(result.current.data, mockGet.mock.calls),
+      ).toEqual({
+        data: [],
+        calls: [
+          [
+            {
+              param: { key: DAY_QUEUE_KEY },
+              query: { date, context: 'work' },
+            },
+          ],
+        ],
+      })
+    })
+  })
+
   it('refetches server order after replacing queue items', async () => {
     const mocks = await getMocks()
     const mockGet = assertDefined(mocks['mockGet'])
@@ -219,8 +249,8 @@ describe('queue ordering cache', () => {
   })
 })
 
-describe('queue polling', () => {
-  it('refreshes queue definitions and items when an interval is configured', async () => {
+describe('queue updates', () => {
+  it('does not poll queue definitions or items', async () => {
     vi.useFakeTimers()
     try {
       const mocks = await getMocks()
@@ -232,15 +262,13 @@ describe('queue polling', () => {
       queueGet.mockResolvedValue(jsonResponse(queues))
       itemGet.mockResolvedValue(jsonResponse([]))
 
-      renderHook(() => useQueues(60_000), { wrapper })
-      renderHook(() => useQueueItemsForQueues(queues, date, 60_000), {
-        wrapper,
-      })
+      renderHook(() => useQueues(), { wrapper })
+      renderHook(() => useQueueItemsForQueues(queues, date), { wrapper })
 
       let initialCallCounts = { queues: 0, items: 0 }
       const getCallCounts = () => ({
         initial: initialCallCounts,
-        afterInterval: {
+        afterOneMinute: {
           queues: queueGet.mock.calls.length,
           items: itemGet.mock.calls.length,
         },
@@ -260,7 +288,7 @@ describe('queue polling', () => {
 
       expect(getCallCounts()).toEqual({
         initial: { queues: 1, items: 1 },
-        afterInterval: { queues: 2, items: 2 },
+        afterOneMinute: { queues: 1, items: 1 },
       })
     } finally {
       vi.useRealTimers()
@@ -283,7 +311,7 @@ describe('queue carry-over', () => {
     const { result } = renderHook(
       () => {
         const carryOver = useQueueCarryOver(today)
-        const items = useQueueItemsForQueues(queues, today, undefined, {
+        const items = useQueueItemsForQueues(queues, today, {
           enabled: carryOver.canReadQueueItems,
         })
         return { carryOver, items }
@@ -333,7 +361,7 @@ describe('queue carry-over', () => {
     const { result } = renderHook(
       () => {
         const carryOver = useQueueCarryOver(today)
-        const items = useQueueItemsForQueues(queues, today, undefined, {
+        const items = useQueueItemsForQueues(queues, today, {
           enabled: carryOver.canReadQueueItems,
         })
         return { carryOver, items }
