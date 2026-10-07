@@ -11,6 +11,8 @@ import {
 } from '#operations/types'
 import type { ListTasksQuery } from '#schemas/task'
 import { listTasksQuerySchema, taskListContext } from '#schemas/task'
+import { timezoneOffsetMinutesSchema } from '#schemas/timezone'
+import { parseSearchQuery } from '#search-query-parser'
 
 type TaskDetail = Record<string, unknown> & {
   id: string
@@ -23,6 +25,7 @@ type TaskListRow = Record<string, unknown> & {
 type TaskListQuery = NonNullable<
   Parameters<OperationClient['api']['tasks']['$get']>[0]
 >['query']
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -92,12 +95,6 @@ const taskListInputSchema = listTasksQuerySchema
       .describe('Maximum number of results to return (1-100). Defaults to 20.'),
   })
 
-const taskListMcpInputSchema = taskListInputSchema.extend({
-  status: taskListInputSchema.shape.status.default(['todo']),
-  context: taskListInputSchema.shape.context.default('all'),
-  limit: taskListInputSchema.shape.limit.default(20),
-})
-
 const taskSearchInputSchema = listTasksQuerySchema
   .omit({
     hasEstimate: true,
@@ -116,7 +113,9 @@ const taskSearchInputSchema = listTasksQuerySchema
     ),
     status: listTasksQuerySchema.shape.status
       .optional()
-      .describe('Only return tasks in this status. Equivalent to is: in q.'),
+      .describe(
+        'Only return tasks in this status. Equivalent to is: in q. Defaults to all.',
+      ),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason. Equivalent to reason: in q.',
     ),
@@ -149,6 +148,19 @@ const taskSearchInputSchema = listTasksQuerySchema
     ),
   })
 
+const taskListMcpInputSchema = taskListInputSchema.extend({
+  status: taskListInputSchema.shape.status.default(['todo']),
+  context: taskListInputSchema.shape.context.default('all'),
+  limit: taskListInputSchema.shape.limit.default(20),
+  tzOffset: timezoneOffsetMinutesSchema,
+})
+
+const taskSearchMcpInputSchema = taskSearchInputSchema.extend({
+  context: taskSearchInputSchema.shape.context.default('all'),
+  limit: taskSearchInputSchema.shape.limit.default(20),
+  tzOffset: timezoneOffsetMinutesSchema,
+})
+
 const taskIdInputSchema = z.object({
   taskId: taskIdOrNumber.describe(
     'The task id (UUID) or task number to look up.',
@@ -156,8 +168,16 @@ const taskIdInputSchema = z.object({
 })
 
 function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
+  const queryFields = { ...fields }
+  if (
+    queryFields['tzOffset'] === undefined &&
+    typeof queryFields['q'] === 'string' &&
+    parseSearchQuery(queryFields['q']).hasFollowUpDue === true
+  ) {
+    queryFields['tzOffset'] = new Date().getTimezoneOffset()
+  }
   const query: Record<string, string | string[]> = Object.fromEntries(
-    Object.entries(fields)
+    Object.entries(queryFields)
       .filter(([, value]) => value !== undefined)
       .map(([key, value]) => [
         key,
@@ -211,16 +231,17 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
 
 export const taskReadOperations = [
   defineOperation(taskListInputSchema, {
-    mcpInputSchema: taskListMcpInputSchema,
     path: ['task', 'list'],
     description:
       'List tasks by status, project, parent, context, or other supported filters, including an optional free-text query.',
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/tasks'],
+    mcpInputSchema: taskListMcpInputSchema,
     cli: {
       group: { description: 'Manage tasks', order: 1 },
       commandOrder: 0,
+      excludeFields: ['tzOffset'],
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
@@ -254,12 +275,14 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|estimate. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|estimate. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],
+    mcpInputSchema: taskSearchMcpInputSchema,
     cli: {
       commandOrder: 9,
+      excludeFields: ['tzOffset'],
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
