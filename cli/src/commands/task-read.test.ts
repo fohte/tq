@@ -69,6 +69,47 @@ describe('task list', () => {
     })
   })
 
+  it('sends task date filters to the API', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'list',
+        '--date-from',
+        '2026-03-16',
+        '--date-to',
+        '2026-03-19',
+        '--due-to',
+        '2026-03-18',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: {
+            dateFrom: '2026-03-16',
+            dateTo: '2026-03-19',
+            dueTo: '2026-03-18',
+          },
+          body: undefined,
+        },
+      ],
+      stdout: [['[]\n']],
+    })
+  })
+
   it('keeps the query and matched-text options', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response('[]', { status: 200 }),

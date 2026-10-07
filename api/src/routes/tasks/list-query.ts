@@ -26,6 +26,7 @@ import {
   tasks,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import {
   buildTitleMatchCondition,
   queryTaskSearchMatches,
@@ -311,6 +312,8 @@ function buildConditions(
   } else if (query.hasDue === false) {
     conditions.push(isNull(tasks.dueDate))
   }
+
+  conditions.push(...buildTaskDateConditions(query))
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText

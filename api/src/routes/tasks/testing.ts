@@ -415,6 +415,7 @@ export async function createTask(
   opts: {
     parentId?: string
     description?: string
+    startDate?: string
     dueDate?: string
     estimatedMinutes?: number
     context?: string
