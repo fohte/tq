@@ -1,18 +1,14 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import type { Node } from '@milkdown/kit/prose/model'
-import { and, asc, desc, eq, isNull } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
+import { asc, desc, eq } from 'drizzle-orm'
 
 import { db, type DbTransaction } from '#db/connection'
-import {
-  taskChecklistItems,
-  taskChecklists,
-  taskDescriptionTemplates,
-} from '#db/schema'
+import { taskDescriptionTemplates } from '#db/schema'
 import type { Author } from '#lib/author'
 import { parseMarkdown } from '#lib/markdown-parser'
 import { validateTaskDescriptionTemplate } from '#routes/tasks/description-template-validation'
 import type { TaskStatusReason } from '#schemas/task'
+import { getUncheckedLeafChecklistItems } from '#services/task-checklist-leaves'
 
 export type TaskConventionViolation =
   | {
@@ -171,40 +167,10 @@ export async function checkTaskComplete(
     return null
   }
 
-  const children = alias(taskChecklistItems, 'checklist_child')
-  const uncheckedChecklistItems = await tx
-    .select({
-      id: taskChecklistItems.id,
-      checklistName: taskChecklists.name,
-      content: taskChecklistItems.content,
-    })
-    .from(taskChecklistItems)
-    .innerJoin(
-      taskChecklists,
-      eq(taskChecklists.id, taskChecklistItems.checklistId),
-    )
-    .leftJoin(
-      children,
-      and(
-        eq(children.checklistId, taskChecklistItems.checklistId),
-        eq(children.parentItemId, taskChecklistItems.id),
-      ),
-    )
-    .where(
-      and(
-        eq(taskChecklists.taskId, task.id),
-        isNull(taskChecklistItems.checkedAt),
-        isNull(children.id),
-      ),
-    )
-    .orderBy(
-      asc(taskChecklists.sortOrder),
-      asc(taskChecklists.createdAt),
-      asc(taskChecklists.id),
-      asc(taskChecklistItems.sortOrder),
-      asc(taskChecklistItems.createdAt),
-      asc(taskChecklistItems.id),
-    )
+  const uncheckedChecklistItems = await getUncheckedLeafChecklistItems(
+    tx,
+    task.id,
+  )
 
   let items: string[] = []
   let descriptionParseFailed = false
@@ -255,22 +221,21 @@ export function taskConventionViolationBody(
   if (violation.kind === 'unchecked-completion-criteria') {
     const hasDescriptionCriteria = violation.items.length > 0
     const hasChecklistItems = violation.uncheckedChecklistItems.length > 0
+    const completionInstruction =
+      hasDescriptionCriteria && hasChecklistItems
+        ? 'Check off each verified completion criterion and checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".'
+        : hasDescriptionCriteria
+          ? 'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".'
+          : hasChecklistItems
+            ? 'Check off each verified checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".'
+            : null
     const instructions = [
       ...(violation.descriptionParseFailed
         ? [
             'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".',
           ]
         : []),
-      ...(hasDescriptionCriteria
-        ? [
-            'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
-          ]
-        : []),
-      ...(hasChecklistItems
-        ? [
-            'Check off each verified checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
-          ]
-        : []),
+      ...(completionInstruction === null ? [] : [completionInstruction]),
     ]
     return {
       error: [

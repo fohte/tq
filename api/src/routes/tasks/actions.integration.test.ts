@@ -1243,6 +1243,95 @@ describe('tasks actions API', () => {
       ])
     })
 
+    it('allows LLM completion when every checklist leaf item is checked', async () => {
+      const task = await createTask('Checked checklist task')
+      const checklistId = await createChecklist(task.id, 'Release readiness')
+      const parentItemId = await createChecklistItem(
+        checklistId,
+        'Release checks',
+      )
+      await createChecklistItem(checklistId, 'Verify deployment', {
+        parentItemId,
+        checked: true,
+      })
+      await createChecklistItem(checklistId, 'Confirm handoff', {
+        parentItemId,
+        checked: true,
+      })
+
+      const res = await completeTask(task.id, 'POST')
+      const [storedTask] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, task.id))
+
+      const getActual = () => ({ status: res.status, task: storedTask })
+      expect(getActual()).toEqual({
+        status: 200,
+        task: { status: 'completed', statusReason: 'completed' },
+      })
+    })
+
+    it('returns both unchecked description criteria and checklist items', async () => {
+      const task = await createTask('Combined criteria task', {
+        description: '- [ ] Verify the result',
+      })
+      const checklistId = await createChecklist(task.id, 'Release readiness')
+      const uncheckedItemId = await createChecklistItem(
+        checklistId,
+        'Verify deployment',
+      )
+
+      const res = await completeTask(task.id, 'POST')
+      const body = await jsonBody<{
+        error: string
+        uncheckedCompletionCriteria: string[]
+        uncheckedChecklistItems: {
+          id: string
+          checklistName: string | null
+          content: string
+        }[]
+      }>(res)
+      const [storedTask] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, task.id))
+
+      const getActual = () => ({
+        status: res.status,
+        body: {
+          error: body.error,
+          uncheckedCompletionCriteria: body.uncheckedCompletionCriteria,
+          uncheckedChecklistItems: body.uncheckedChecklistItems.map((item) => ({
+            ...item,
+            id: item.id === uncheckedItemId ? 'ITEM' : item.id,
+          })),
+        },
+        task: storedTask,
+      })
+      expect(getActual()).toEqual({
+        status: 400,
+        body: {
+          error: [
+            'Unchecked completion criteria:',
+            '- [ ] Verify the result',
+            'Unchecked checklist items:',
+            '- Release readiness: Verify deployment',
+            'Check off each verified completion criterion and checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+          ].join('\n'),
+          uncheckedCompletionCriteria: ['- [ ] Verify the result'],
+          uncheckedChecklistItems: [
+            {
+              id: 'ITEM',
+              checklistName: 'Release readiness',
+              content: 'Verify deployment',
+            },
+          ],
+        },
+        task: { status: 'todo', statusReason: null },
+      })
+    })
+
     it('ignores checked criteria and task lists inside fenced or indented code blocks', async () => {
       const attempts = [
         {
