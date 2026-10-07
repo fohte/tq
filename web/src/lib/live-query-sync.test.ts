@@ -6,7 +6,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { connectLiveQuerySync } from '#lib/live-query-sync'
-import { githubSyncKeys } from '#lib/query-keys'
+import { githubSyncKeys, taskKeys, timeBlockKeys } from '#lib/query-keys'
 
 interface EventStream {
   readyState: number
@@ -201,11 +201,64 @@ describe('connectLiveQuerySync', () => {
         ['projects'],
         ['queues'],
         ['time-blocks'],
+        ['tasks', 'detail'],
       ],
       taskFetchCount: 1,
       timeBlockFetchCount: 1,
     })
   })
+
+  it.each([
+    {
+      resource: 'time_block',
+      expectedInvalidationKeys: [['time-blocks'], ['tasks', 'detail']],
+      expectedFetchCounts: [0, 0, 1, 1, 1, 0],
+    },
+    {
+      resource: 'agent_session',
+      expectedInvalidationKeys: [['agent-sessions'], ['tasks', 'detail']],
+      expectedFetchCounts: [0, 0, 1, 1, 0, 1],
+    },
+  ])(
+    'refreshes task details without refreshing task lists for $resource changes',
+    async ({ resource, expectedInvalidationKeys, expectedFetchCounts }) => {
+      vi.useFakeTimers()
+      const queryClient = new QueryClient()
+      const taskId = 'sample-task-id'
+      const queries = [
+        observeQuery(queryClient, taskKeys.list()),
+        observeQuery(queryClient, taskKeys.infiniteList()),
+        observeQuery(queryClient, taskKeys.detail(taskId)),
+        observeQuery(queryClient, [
+          ...taskKeys.detail(taskId),
+          'agent-sessions',
+        ]),
+        observeQuery(
+          queryClient,
+          timeBlockKeys.list('sample-start', 'sample-end'),
+        ),
+        observeQuery(queryClient, ['agent-sessions', 'by-task', taskId]),
+      ]
+      const { eventStream, invalidations } = createConnection({ queryClient })
+
+      eventStream.sendChange(
+        JSON.stringify({ resource, id: null, origin: 'screen-two' }),
+      )
+      await vi.advanceTimersByTimeAsync(1_000)
+      for (const query of queries) query.unsubscribe()
+
+      const snapshot = () => ({
+        invalidationKeys: invalidations.mock.calls.map(
+          ([filters]) => filters?.queryKey,
+        ),
+        fetchCounts: queries.map(({ queryFn }) => queryFn.mock.calls.length),
+      })
+      expect(snapshot()).toEqual({
+        invalidationKeys: expectedInvalidationKeys,
+        fetchCounts: expectedFetchCounts,
+      })
+    },
+  )
 
   it('refreshes after an in-flight query settles without aborting it', async () => {
     vi.useFakeTimers()
@@ -341,7 +394,7 @@ describe('connectLiveQuerySync', () => {
       invalidationsWhilePending: [],
       invalidationsAfterMutation: [
         { queryKey: ['time-blocks'] },
-        { queryKey: ['tasks'] },
+        { queryKey: ['tasks', 'detail'] },
       ],
     })
   })

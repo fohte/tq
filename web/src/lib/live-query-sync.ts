@@ -80,7 +80,7 @@ const resourceQueryFilters: Record<
   queue: () => [{ queryKey: queueKeys.all }],
   time_block: () => [
     { queryKey: timeBlockKeys.all },
-    { queryKey: taskKeys.all },
+    { queryKey: taskKeys.details },
   ],
   schedule: () => [{ queryKey: scheduleKeys.all }],
   saved_view: () => [{ queryKey: savedViewKeys.all }],
@@ -89,7 +89,7 @@ const resourceQueryFilters: Record<
   github_sync_rule: () => [{ queryKey: githubSyncRuleKeys.list }],
   agent_session: () => [
     { queryKey: ['agent-sessions'] },
-    { queryKey: taskKeys.all },
+    { queryKey: taskKeys.details },
   ],
   checklist: () => [{ queryKey: taskKeys.all }],
   checklist_item: () => [{ queryKey: taskKeys.all }],
