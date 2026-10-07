@@ -35,7 +35,10 @@ interface AgentSessionResponse {
   archivedAt: string | null
 }
 
-interface TaskAgentSessionResponse extends AgentSessionResponse {
+interface TaskAgentSessionResponse extends Omit<
+  AgentSessionResponse,
+  'lastMessage'
+> {
   taskId: string
   taskNumber: number
   taskTitle: string
@@ -52,6 +55,14 @@ function normalizeSession(session: AgentSessionResponse) {
     endedAt: session.endedAt === null ? null : 'DATE',
     archivedAt: session.archivedAt === null ? null : 'DATE',
   }
+}
+
+function normalizeTaskSession(
+  session: AgentSessionResponse,
+): Omit<AgentSessionResponse, 'lastMessage'> {
+  const taskSession: Omit<AgentSessionResponse, 'lastMessage'> = { ...session }
+  Reflect.deleteProperty(taskSession, 'lastMessage')
+  return taskSession
 }
 
 function responseWithBody<T>(status: number, body: T) {
@@ -780,7 +791,7 @@ describe('agent sessions API', () => {
             taskParentId: null,
             taskStatus: 'todo',
             linkedAt: newer.startedAt,
-            ...newer,
+            ...normalizeTaskSession(newer),
           },
           {
             taskId: task.id,
@@ -789,7 +800,7 @@ describe('agent sessions API', () => {
             taskParentId: null,
             taskStatus: 'todo',
             linkedAt: older.startedAt,
-            ...older,
+            ...normalizeTaskSession(older),
           },
         ],
       })
@@ -840,7 +851,7 @@ describe('agent sessions API', () => {
             taskParentId: null,
             taskStatus: 'todo',
             linkedAt: newerSession.startedAt,
-            ...newerSession,
+            ...normalizeTaskSession(newerSession),
           },
           {
             taskId: task1.id,
@@ -849,7 +860,7 @@ describe('agent sessions API', () => {
             taskParentId: null,
             taskStatus: 'todo',
             linkedAt: olderSession.startedAt,
-            ...olderSession,
+            ...normalizeTaskSession(olderSession),
           },
         ],
       })
@@ -888,7 +899,117 @@ describe('agent sessions API', () => {
             taskParentId: parent.id,
             taskStatus: 'todo',
             linkedAt: session.startedAt,
-            ...session,
+            ...normalizeTaskSession(session),
+          },
+        ],
+      })
+    })
+
+    it('filters by multiple session ids', async () => {
+      const task = await createTask('My task')
+      const sessions: AgentSessionResponse[] = []
+      for (const session of [
+        {
+          sessionId: 'session-1',
+          lastActiveAt: '2030-01-01T00:00:00.000Z',
+          lastMessage: 'First message',
+        },
+        {
+          sessionId: 'session-2',
+          lastActiveAt: '2030-01-02T00:00:00.000Z',
+          lastMessage: 'Second message',
+        },
+        {
+          sessionId: 'session-3',
+          lastActiveAt: '2030-01-03T00:00:00.000Z',
+          lastMessage: 'Third message',
+        },
+      ]) {
+        sessions.push(
+          await upsertSessionAtTime(
+            {
+              provider: 'claude_code',
+              sessionId: session.sessionId,
+              cwd: '/home/fohte/project',
+              context: 'work',
+              label: null,
+              lastMessage: session.lastMessage,
+            },
+            session.lastActiveAt,
+          ),
+        )
+      }
+      for (const session of sessions) {
+        await postLink(task.id, session.id)
+      }
+      const [firstSession, , thirdSession] = sessions
+      assertDefined(firstSession)
+      assertDefined(thirdSession)
+
+      const res = await app.request(
+        '/api/agent-sessions/by-task?sessionId=session-1&sessionId=session-3',
+      )
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: thirdSession.startedAt,
+            ...normalizeTaskSession(thirdSession),
+          },
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: firstSession.startedAt,
+            ...normalizeTaskSession(firstSession),
+          },
+        ],
+      })
+    })
+
+    it('omits lastMessage from linked session rows', async () => {
+      const task = await createTask('My task')
+      const session = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: null,
+        lastMessage: 'A message that is not needed here',
+      })
+      await postLink(task.id, session.id)
+
+      const res = await app.request('/api/agent-sessions/by-task')
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: session.startedAt,
+            ...normalizeTaskSession(session),
           },
         ],
       })

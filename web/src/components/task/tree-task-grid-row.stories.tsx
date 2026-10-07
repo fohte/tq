@@ -249,7 +249,6 @@ const activeSession: TaskAgentSession = makeTaskAgentSession({
   taskTitle: baseTreeNode.title,
   sessionId: 'session-active',
   label: 'Implement tree session rows',
-  lastMessage: 'Wiring up the sessions endpoint',
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
 })
