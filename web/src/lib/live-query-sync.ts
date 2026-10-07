@@ -1,4 +1,4 @@
-import type { QueryClient, QueryFilters } from '@tanstack/react-query'
+import type { Query, QueryClient, QueryFilters } from '@tanstack/react-query'
 import {
   type ChangeEvent,
   type ChangeResource,
@@ -50,6 +50,11 @@ interface LiveQuerySyncOptions {
   checkSession?: () => Promise<unknown>
 }
 
+interface ResourceInvalidation {
+  filters: QueryFilters[]
+  taskIds?: string[]
+}
+
 function parseChangeEvent(raw: string): ChangeEvent | null {
   const parsed = Result.fromThrowable(
     (data: string) => JSON.parse(data) as unknown,
@@ -72,52 +77,146 @@ function parseChangeEvent(raw: string): ChangeEvent | null {
   }
 }
 
+const taskListFilters: QueryFilters[] = [
+  { queryKey: taskKeys.lists },
+  { queryKey: taskKeys.infiniteLists },
+]
+
+function taskInvalidation(
+  taskIds: string[] | null,
+  includeLists: boolean,
+  fallbackFilter: QueryFilters,
+): ResourceInvalidation {
+  if (taskIds === null) return { filters: [fallbackFilter] }
+
+  return {
+    filters: includeLists ? taskListFilters : [],
+    taskIds,
+  }
+}
+
+function withFilters(
+  invalidation: ResourceInvalidation,
+  ...filters: QueryFilters[]
+): ResourceInvalidation {
+  return { ...invalidation, filters: [...invalidation.filters, ...filters] }
+}
+
+function withLeadingFilters(
+  invalidation: ResourceInvalidation,
+  ...filters: QueryFilters[]
+): ResourceInvalidation {
+  return { ...invalidation, filters: [...filters, ...invalidation.filters] }
+}
+
+function taskIdFromPreview(data: unknown): string | null {
+  if (!isRecord(data)) return null
+  if (typeof data['id'] === 'string') return data['id']
+  const task = data['task']
+  return isRecord(task) && typeof task['id'] === 'string' ? task['id'] : null
+}
+
+function isTaskQueryForIds(
+  query: Query,
+  taskIds: ReadonlySet<string>,
+): boolean {
+  const [namespace, section, id] = query.queryKey
+  if (namespace !== taskKeys.all[0]) return false
+
+  if (section === 'detail') {
+    return typeof id === 'string' && taskIds.has(id)
+  }
+
+  if ((id === 'comments' || id === 'activity') && typeof section === 'string') {
+    return taskIds.has(section)
+  }
+
+  if (
+    section === 'mention-preview' ||
+    section === 'task-url-preview' ||
+    section === 'github-url-preview'
+  ) {
+    if (
+      (typeof id === 'string' || typeof id === 'number') &&
+      taskIds.has(String(id))
+    ) {
+      return true
+    }
+    const taskId = taskIdFromPreview(query.state.data)
+    return taskId != null && taskIds.has(taskId)
+  }
+
+  return false
+}
+
 const resourceQueryFilters: Record<
   ChangeResource,
-  (event: ChangeEvent) => QueryFilters[] | null
+  (event: ChangeEvent) => ResourceInvalidation | null
 > = {
-  task: () => [
-    { queryKey: taskKeys.all },
-    { queryKey: projectKeys.all },
-    { queryKey: queueKeys.all },
-  ],
-  project: () => [{ queryKey: projectKeys.all }],
-  label: () => [{ queryKey: labelKeys.all }, { queryKey: taskKeys.all }],
-  queue: () => [{ queryKey: queueKeys.all }],
-  time_block: () => [
-    { queryKey: timeBlockKeys.all },
-    { queryKey: taskKeys.details },
-  ],
-  schedule: () => [{ queryKey: scheduleKeys.all }],
-  saved_view: () => [{ queryKey: savedViewKeys.all }],
-  description_template: () => [{ queryKey: descriptionTemplateKeys.all }],
-  recurring_task_template: () => [{ queryKey: recurringTemplateKeys.all }],
-  github_sync_rule: () => [{ queryKey: githubSyncRuleKeys.list }],
-  agent_session: () => [
-    { queryKey: ['agent-sessions'] },
-    { queryKey: taskKeys.details },
-  ],
-  checklist: () => [{ queryKey: taskKeys.all }],
-  checklist_item: () => [{ queryKey: taskKeys.all }],
-  scheduling_setting: () => [{ queryKey: ['scheduling-settings'] }],
-  memo: ({ id }) => [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
-  push: () => [],
-  calendar: () => [
-    { queryKey: ['gcal-calendars'] },
-    { queryKey: ['gcal-events'] },
-  ],
-  github: () => [],
-  asset: () => [],
-  integration: () => [
-    { queryKey: ['integrations'] },
-    { queryKey: ['gcal-calendars'] },
-    { queryKey: ['gcal-events'] },
-    { queryKey: githubSyncKeys.all },
-  ],
+  task: ({ taskIds }) =>
+    withFilters(
+      taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+      { queryKey: projectKeys.all },
+      { queryKey: queueKeys.all },
+    ),
+  project: () => ({ filters: [{ queryKey: projectKeys.all }] }),
+  label: ({ taskIds }) =>
+    withLeadingFilters(
+      taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+      { queryKey: labelKeys.all },
+    ),
+  queue: () => ({ filters: [{ queryKey: queueKeys.all }] }),
+  time_block: ({ taskIds }) =>
+    withLeadingFilters(
+      taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
+      { queryKey: timeBlockKeys.all },
+    ),
+  schedule: () => ({ filters: [{ queryKey: scheduleKeys.all }] }),
+  saved_view: () => ({ filters: [{ queryKey: savedViewKeys.all }] }),
+  description_template: () => ({
+    filters: [{ queryKey: descriptionTemplateKeys.all }],
+  }),
+  recurring_task_template: () => ({
+    filters: [{ queryKey: recurringTemplateKeys.all }],
+  }),
+  github_sync_rule: () => ({
+    filters: [{ queryKey: githubSyncRuleKeys.list }],
+  }),
+  agent_session: ({ taskIds }) =>
+    withLeadingFilters(
+      taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
+      { queryKey: ['agent-sessions'] },
+    ),
+  checklist: ({ taskIds }) =>
+    taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+  checklist_item: ({ taskIds }) =>
+    taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+  scheduling_setting: () => ({
+    filters: [{ queryKey: ['scheduling-settings'] }],
+  }),
+  memo: ({ id }) => ({
+    filters: [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
+  }),
+  push: () => ({ filters: [] }),
+  calendar: () => ({
+    filters: [{ queryKey: ['gcal-calendars'] }, { queryKey: ['gcal-events'] }],
+  }),
+  github: () => ({ filters: [] }),
+  asset: () => ({ filters: [] }),
+  integration: () => ({
+    filters: [
+      { queryKey: ['integrations'] },
+      { queryKey: ['gcal-calendars'] },
+      { queryKey: ['gcal-events'] },
+      { queryKey: githubSyncKeys.all },
+    ],
+  }),
   unknown: () => null,
 }
 
-function filtersForResourceChange(event: ChangeEvent): QueryFilters[] | null {
+function filtersForResourceChange(
+  event: ChangeEvent,
+): ResourceInvalidation | null {
   return resourceQueryFilters[event.resource](event)
 }
 
@@ -135,6 +234,7 @@ export function connectLiveQuerySync(
     options.createEventSource ?? ((url: string) => new EventSource(url))
   const requestSessionCheck = options.checkSession ?? checkSession
   const pendingFilters = new Map<string, QueryFilters>()
+  const pendingTaskIds = new Set<string>()
   let pendingAll = false
   let hasConnected = false
   let sessionCheckRequested = false
@@ -218,25 +318,36 @@ export function connectLiveQuerySync(
 
     const filters = [...pendingFilters.values()]
     pendingFilters.clear()
+    if (pendingTaskIds.size > 0) {
+      const taskIds = new Set(pendingTaskIds)
+      filters.push({ predicate: (query) => isTaskQueryForIds(query, taskIds) })
+      pendingTaskIds.clear()
+    }
     invalidateFilters(filters)
   }
 
   const schedulePendingInvalidations = () => {
     if (waitingForMutation || invalidationTimer != null) return
-    if (!pendingAll && pendingFilters.size === 0) return
+    if (!pendingAll && pendingFilters.size === 0 && pendingTaskIds.size === 0) {
+      return
+    }
     invalidationTimer = setTimeout(() => {
       invalidationTimer = undefined
       flushPendingInvalidations()
     }, INVALIDATION_BATCH_WINDOW_MS)
   }
 
-  const queueInvalidation = (filters: QueryFilters[] | null) => {
-    if (filters == null) {
+  const queueInvalidation = (invalidation: ResourceInvalidation | null) => {
+    if (invalidation == null) {
       pendingAll = true
       pendingFilters.clear()
+      pendingTaskIds.clear()
     } else if (!pendingAll) {
-      for (const filter of filters) {
+      for (const filter of invalidation.filters) {
         pendingFilters.set(JSON.stringify(filter), filter)
+      }
+      for (const taskId of invalidation.taskIds ?? []) {
+        pendingTaskIds.add(taskId)
       }
     }
     schedulePendingInvalidations()
