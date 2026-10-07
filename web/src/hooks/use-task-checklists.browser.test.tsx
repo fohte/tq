@@ -6,14 +6,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TaskChecklistSection } from '#components/task/task-checklist-section'
 import {
+  makeTaskChecklist,
+  makeTaskChecklistItem,
+} from '#components/task/task-checklist-test-fixtures'
+import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
   useLinkTaskChecklistItemToGithub,
   usePromoteTaskChecklistItem,
   useSetTaskChecklistItemChecked,
 } from '#hooks/use-task-checklists'
 import { taskChecklistKeys } from '#lib/query-keys'
+import { StoryRouter } from '#storybook-config/story-router'
 
 const {
   mockGetChecklists,
+  mockGetTasks,
   mockCreateChecklist,
   mockCheck,
   mockUncheck,
@@ -21,6 +28,7 @@ const {
   mockPromoteChecklistItem,
 } = vi.hoisted(() => ({
   mockGetChecklists: vi.fn(),
+  mockGetTasks: vi.fn(),
   mockCreateChecklist: vi.fn(),
   mockCheck: vi.fn(),
   mockUncheck: vi.fn(),
@@ -32,6 +40,7 @@ vi.mock('#lib/api', () => ({
   api: {
     api: {
       tasks: {
+        $get: mockGetTasks,
         ':taskId': {
           checklists: {
             $get: mockGetChecklists,
@@ -76,6 +85,13 @@ function checklistResponse() {
   })
 }
 
+function taskListResponse(tasks: ReturnType<typeof makeTask>[]) {
+  return new Response(JSON.stringify(tasks), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 function readCheckMutationState(invalidationKeys: unknown[]) {
   return {
     checkCalls: mockCheck.mock.calls,
@@ -105,6 +121,30 @@ function readPromoteMutationState(invalidationKeys: unknown[]) {
   }
 }
 
+function readFetchedSubtaskState(link: HTMLElement, taskListRequests: unknown) {
+  return {
+    link: {
+      label: link.getAttribute('aria-label'),
+      href: link.getAttribute('href'),
+    },
+    taskListRequests,
+  }
+}
+
+function readChecklistLinkFailureState(
+  error: HTMLElement,
+  dialogOpen: boolean,
+  url: string | null,
+  linkCalls: unknown,
+) {
+  return {
+    errorMessage: error.textContent,
+    dialogOpen,
+    url,
+    linkCalls,
+  }
+}
+
 beforeEach(() => {
   queryClient = new QueryClient({
     defaultOptions: {
@@ -113,6 +153,7 @@ beforeEach(() => {
     },
   })
   mockGetChecklists.mockReset().mockImplementation(checklistResponse)
+  mockGetTasks.mockReset().mockImplementation(() => taskListResponse([]))
   mockCreateChecklist.mockReset()
   mockCheck.mockReset().mockResolvedValue(successResponse())
   mockUncheck.mockReset().mockResolvedValue(successResponse())
@@ -217,6 +258,145 @@ describe('usePromoteTaskChecklistItem', () => {
 })
 
 describe('TaskChecklistSection', () => {
+  it('loads linked subtasks when task detail data omits them', async () => {
+    const subtaskId = '50000000-0000-4000-8000-000000000401'
+    const subtask = makeTask({
+      id: subtaskId,
+      number: 27,
+      title: 'Add retry handling',
+      parentId: taskId,
+    })
+    mockGetTasks.mockResolvedValue(taskListResponse([subtask]))
+    mockGetChecklists.mockImplementation(
+      () =>
+        new Response(
+          JSON.stringify([
+            makeTaskChecklist({
+              items: [
+                makeTaskChecklistItem({
+                  id: itemId,
+                  content: 'Add retry handling',
+                  subtaskId,
+                }),
+              ],
+            }),
+          ]),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+    )
+    render(
+      <QueryClientProvider client={queryClient}>
+        <StoryRouter
+          component={() => (
+            <TaskChecklistSection taskId={taskId} githubLinks={[]} />
+          )}
+          paths={['/tasks/$taskId']}
+        />
+      </QueryClientProvider>,
+    )
+
+    const link = await screen.findByRole('link', {
+      name: '#27 Add retry handling',
+    })
+
+    expect(readFetchedSubtaskState(link, mockGetTasks.mock.calls)).toEqual({
+      link: {
+        label: '#27 Add retry handling',
+        href: `/tasks/${subtaskId}`,
+      },
+      taskListRequests: [
+        [
+          {
+            query: {
+              parentId: taskId,
+              hasDue: undefined,
+              includeAncestors: undefined,
+            },
+          },
+        ],
+      ],
+    })
+  })
+
+  it('shows the server error and keeps the URL when linking fails', async () => {
+    const user = userEvent.setup()
+    const url = 'https://github.com/example-org/sample-app/issues/14'
+    mockGetChecklists.mockImplementation(
+      () =>
+        new Response(
+          JSON.stringify([
+            makeTaskChecklist({
+              items: [
+                makeTaskChecklistItem({
+                  id: itemId,
+                  content: 'Add retry handling',
+                }),
+              ],
+            }),
+          ]),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+    )
+    mockUpdateChecklistItem.mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: 'This URL must point to a pull request.' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    )
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TaskChecklistSection taskId={taskId} githubLinks={[]} subtasks={[]} />
+      </QueryClientProvider>,
+    )
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Actions for Add retry handling',
+      }),
+    )
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'link pull request' }),
+    )
+    const input = await screen.findByRole('textbox', {
+      name: 'Pull request URL',
+    })
+    await user.type(input, url)
+    await user.click(screen.getByRole('button', { name: 'Link' }))
+    const error = await screen.findByText(
+      'This URL must point to a pull request.',
+    )
+
+    expect(
+      readChecklistLinkFailureState(
+        error,
+        screen.queryByRole('dialog') != null,
+        input instanceof HTMLInputElement ? input.value : null,
+        mockUpdateChecklistItem.mock.calls,
+      ),
+    ).toEqual({
+      errorMessage: 'This URL must point to a pull request.',
+      dialogOpen: true,
+      url,
+      linkCalls: [
+        [
+          {
+            param: { itemId },
+            json: { github: url },
+          },
+        ],
+      ],
+    })
+  })
+
   it('shows an error when saving a checklist fails', async () => {
     const user = userEvent.setup()
     mockCreateChecklist.mockResolvedValue(

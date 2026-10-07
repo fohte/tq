@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import {
+  assertOk,
+  assertOkOrThrow,
+  assertOkWithMessage,
+  unwrapOrThrow,
+} from '#lib/assert-response'
 import { taskChecklistKeys, taskKeys } from '#lib/query-keys'
 
 type TaskChecklistResponse = InferResponseType<
@@ -196,7 +201,7 @@ export function useLinkTaskChecklistItemToGithub() {
         param: { itemId },
         json: { github: url },
       })
-      return unwrapOrThrow(assertOk(res)).json()
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })

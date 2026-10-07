@@ -14,17 +14,27 @@ export function ChecklistItemGithubLinkDialog({
   open,
   onOpenChange,
   itemContent,
+  errorMessage,
+  defaultShowError = false,
+  isPending,
   onSubmit,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   itemContent: string
-  onSubmit: (url: string) => void
+  errorMessage: string | undefined
+  defaultShowError?: boolean | undefined
+  isPending: boolean
+  onSubmit: (url: string, onSuccess: () => void) => void
 }) {
   const [url, setUrl] = useState('')
+  const [showError, setShowError] = useState(defaultShowError)
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setUrl('')
+    if (!nextOpen) {
+      setUrl('')
+      setShowError(false)
+    }
     onOpenChange(nextOpen)
   }
 
@@ -32,8 +42,10 @@ export function ChecklistItemGithubLinkDialog({
     const trimmedUrl = url.trim()
     if (trimmedUrl === '') return
 
-    onSubmit(trimmedUrl)
-    handleOpenChange(false)
+    setShowError(true)
+    onSubmit(trimmedUrl, () => {
+      handleOpenChange(false)
+    })
   }
 
   return (
@@ -62,6 +74,14 @@ export function ChecklistItemGithubLinkDialog({
           placeholder="https://github.com/owner/repo/pull/123"
           autoFocus
         />
+        {showError && errorMessage != null && (
+          <p className="text-sm text-destructive">{errorMessage}</p>
+        )}
+        {isPending && (
+          <p className="text-sm text-muted-foreground">
+            Linking pull request...
+          </p>
+        )}
 
         <DialogFooter>
           <Button
@@ -72,7 +92,10 @@ export function ChecklistItemGithubLinkDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={url.trim() === ''}>
+          <Button
+            onClick={handleSubmit}
+            disabled={url.trim() === '' || isPending}
+          >
             Link
           </Button>
         </DialogFooter>

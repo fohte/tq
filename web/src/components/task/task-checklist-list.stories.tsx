@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 
 import { TaskChecklistList } from '#components/task/task-checklist-list'
 import {
@@ -61,9 +61,19 @@ const nestedChecklist = makeTaskChecklist({
   ],
 })
 
+const onLinkGithub: ComponentProps<typeof TaskChecklistList>['onLinkGithub'] = (
+  _itemId,
+  _url,
+  onSuccess,
+) => {
+  onSuccess()
+}
+
 const checklistActions = {
   githubLinks: [],
   subtasks: [],
+  linkGithubErrorMessage: undefined,
+  isLinkingGithub: false,
   onCreateChecklist: () => {},
   onUpdateChecklist: () => {},
   onReorderChecklists: () => {},
@@ -73,7 +83,7 @@ const checklistActions = {
   onDeleteItem: () => {},
   onMoveItem: () => {},
   onSetItemChecked: () => {},
-  onLinkGithub: () => {},
+  onLinkGithub,
   onPromoteItem: () => {},
 }
 

@@ -22,6 +22,8 @@ interface TaskChecklistListProps {
   checklists: TaskChecklist[]
   githubLinks: GithubLink[]
   subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   onCreateChecklist: () => void
   onUpdateChecklist: (
     checklistId: string,
@@ -37,7 +39,7 @@ interface TaskChecklistListProps {
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
-  onLinkGithub: (itemId: string, url: string) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
   onPromoteItem: (itemId: string) => void
 }
 
@@ -45,6 +47,8 @@ export function TaskChecklistList({
   checklists,
   githubLinks,
   subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   onCreateChecklist,
   onUpdateChecklist,
   onReorderChecklists,
@@ -86,6 +90,8 @@ export function TaskChecklistList({
               checklist={checklist}
               githubLinks={githubLinks}
               subtasks={subtasks}
+              linkGithubErrorMessage={linkGithubErrorMessage}
+              isLinkingGithub={isLinkingGithub}
               checklistIndex={index}
               checklistCount={checklists.length}
               onCreateItem={onCreateItem}
@@ -120,6 +126,8 @@ function ChecklistPanel({
   checklist,
   githubLinks,
   subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   checklistIndex,
   checklistCount,
   onCreateItem,
@@ -136,6 +144,8 @@ function ChecklistPanel({
   checklist: TaskChecklist
   githubLinks: GithubLink[]
   subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   checklistIndex: number
   checklistCount: number
   onCreateItem: (
@@ -152,7 +162,7 @@ function ChecklistPanel({
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
-  onLinkGithub: (itemId: string, url: string) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
   onPromoteItem: (itemId: string) => void
 }) {
   const [editingName, setEditingName] = useState(false)
@@ -268,6 +278,8 @@ function ChecklistPanel({
           items={checklist.items}
           githubLinks={githubLinks}
           subtasks={subtasks}
+          linkGithubErrorMessage={linkGithubErrorMessage}
+          isLinkingGithub={isLinkingGithub}
           addingItemParentId={addingItemParentId}
           onCancelAddingItem={() => {
             setAddingItemParentId(undefined)

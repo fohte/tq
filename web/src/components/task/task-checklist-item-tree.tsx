@@ -36,6 +36,8 @@ interface TaskChecklistItemTreeProps {
   items: TaskChecklistItem[]
   githubLinks: GithubLink[]
   subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   parentItem?: TaskChecklistItem | undefined
   depth?: number
   addingItemParentId: string | null | undefined
@@ -45,7 +47,7 @@ interface TaskChecklistItemTreeProps {
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
-  onLinkGithub: (itemId: string, url: string) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
   onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   initiallyCollapsedItemIds?: string[] | undefined
@@ -55,6 +57,8 @@ export function TaskChecklistItemTree({
   items,
   githubLinks,
   subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   parentItem,
   depth = 0,
   addingItemParentId,
@@ -79,6 +83,8 @@ export function TaskChecklistItemTree({
           item={item}
           githubLinks={githubLinks}
           subtasks={subtasks}
+          linkGithubErrorMessage={linkGithubErrorMessage}
+          isLinkingGithub={isLinkingGithub}
           siblings={items}
           index={index}
           parentItem={parentItem}
@@ -113,6 +119,8 @@ function ChecklistItemRow({
   item,
   githubLinks,
   subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   siblings,
   index,
   parentItem,
@@ -132,6 +140,8 @@ function ChecklistItemRow({
   item: TaskChecklistItem
   githubLinks: GithubLink[]
   subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   siblings: TaskChecklistItem[]
   index: number
   parentItem: TaskChecklistItem | undefined
@@ -140,7 +150,7 @@ function ChecklistItemRow({
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
-  onLinkGithub: (itemId: string, url: string) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
   onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   addingItemParentId: string | null | undefined
@@ -189,8 +199,7 @@ function ChecklistItemRow({
           afterItemId: parentItem.id,
         }
   const counts = countChecklistLeaves([item])
-  const canLinkOrPromote =
-    !hasChildren && item.githubLinkId == null && item.subtaskId == null
+  const canLinkOrPromote = !isLocked
 
   const itemActions = [
     {
@@ -445,6 +454,8 @@ function ChecklistItemRow({
           onSetItemChecked={onSetItemChecked}
           githubLinks={githubLinks}
           subtasks={subtasks}
+          linkGithubErrorMessage={linkGithubErrorMessage}
+          isLinkingGithub={isLinkingGithub}
           onLinkGithub={onLinkGithub}
           onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
@@ -485,8 +496,10 @@ function ChecklistItemRow({
         open={linkDialogOpen}
         onOpenChange={setLinkDialogOpen}
         itemContent={item.content}
-        onSubmit={(url) => {
-          onLinkGithub(item.id, url)
+        errorMessage={linkGithubErrorMessage}
+        isPending={isLinkingGithub}
+        onSubmit={(url, onSuccess) => {
+          onLinkGithub(item.id, url, onSuccess)
         }}
       />
     </div>

@@ -101,6 +101,8 @@ function ItemTreeStory({
             items={storyItems}
             githubLinks={githubLinks}
             subtasks={subtasks}
+            linkGithubErrorMessage={undefined}
+            isLinkingGithub={false}
             addingItemParentId={undefined}
             onCancelAddingItem={() => {}}
             onCreateItem={() => {}}
@@ -108,7 +110,9 @@ function ItemTreeStory({
             onDeleteItem={() => {}}
             onMoveItem={() => {}}
             onSetItemChecked={() => {}}
-            onLinkGithub={() => {}}
+            onLinkGithub={(_itemId, _url, onSuccess) => {
+              onSuccess()
+            }}
             onPromoteItem={() => {}}
             onStartAddingItem={() => {}}
             initiallyCollapsedItemIds={initiallyCollapsedItemIds}

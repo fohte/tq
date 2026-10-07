@@ -71,10 +71,18 @@ function renderChecklist({
   checklists = [makeTestChecklist()],
   githubLinks = [],
   subtasks = [],
+  linkGithubErrorMessage,
+  isLinkingGithub = false,
+  onLinkGithub,
 }: {
   checklists?: ComponentProps<typeof TaskChecklistList>['checklists']
   githubLinks?: ComponentProps<typeof TaskChecklistList>['githubLinks']
   subtasks?: ComponentProps<typeof TaskChecklistList>['subtasks']
+  linkGithubErrorMessage?: ComponentProps<
+    typeof TaskChecklistList
+  >['linkGithubErrorMessage']
+  isLinkingGithub?: ComponentProps<typeof TaskChecklistList>['isLinkingGithub']
+  onLinkGithub?: ComponentProps<typeof TaskChecklistList>['onLinkGithub']
 } = {}) {
   const actions = {
     onCreateChecklist: vi.fn(),
@@ -86,7 +94,12 @@ function renderChecklist({
     onDeleteItem: vi.fn(),
     onMoveItem: vi.fn(),
     onSetItemChecked: vi.fn(),
-    onLinkGithub: vi.fn(),
+    onLinkGithub: vi.fn<
+      ComponentProps<typeof TaskChecklistList>['onLinkGithub']
+    >((_itemId, url, onSuccess) => {
+      if (onLinkGithub == null) onSuccess()
+      else onLinkGithub(_itemId, url, onSuccess)
+    }),
     onPromoteItem: vi.fn(),
   }
 
@@ -96,9 +109,35 @@ function renderChecklist({
       checklists={checklists}
       githubLinks={githubLinks}
       subtasks={subtasks}
+      linkGithubErrorMessage={linkGithubErrorMessage}
+      isLinkingGithub={isLinkingGithub}
     />,
   )
   return { ...actions, unmount: rendered.unmount }
+}
+
+function readLinkSubmissionState(
+  calls: Parameters<ComponentProps<typeof TaskChecklistList>['onLinkGithub']>[],
+  dialogOpen: boolean,
+) {
+  return {
+    submissions: calls.map(([itemId, url, onSuccess]) => ({
+      itemId,
+      url,
+      hasOnSuccess: typeof onSuccess === 'function',
+    })),
+    dialogOpen,
+  }
+}
+
+function readLinkDialogState(errorMessage: string) {
+  return {
+    errorText: screen.queryByText(errorMessage)?.textContent ?? null,
+    dialogOpen: screen.queryByRole('dialog') != null,
+    linkButtonDisabled: screen
+      .getByRole('button', { name: 'Link' })
+      .hasAttribute('disabled'),
+  }
 }
 
 function getRenderedChecklistState() {
@@ -197,10 +236,74 @@ describe('TaskChecklistList', () => {
       'https://github.com/example-org/sample-app/pull/14',
     )
     await user.click(screen.getByRole('button', { name: 'Link' }))
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('dialog', { name: 'Link pull request' }),
+      ).toEqual(null)
+    })
 
-    expect(actions.onLinkGithub.mock.calls).toEqual([
-      [jacketId, 'https://github.com/example-org/sample-app/pull/14'],
-    ])
+    expect(
+      readLinkSubmissionState(
+        actions.onLinkGithub.mock.calls,
+        screen.queryByRole('dialog', { name: 'Link pull request' }) != null,
+      ),
+    ).toEqual({
+      submissions: [
+        {
+          itemId: jacketId,
+          url: 'https://github.com/example-org/sample-app/pull/14',
+          hasOnSuccess: true,
+        },
+      ],
+      dialogOpen: false,
+    })
+  })
+
+  it('keeps the link dialog open and shows API errors', async () => {
+    const user = userEvent.setup()
+    const errorMessage = 'This URL must point to a pull request.'
+    renderChecklist({
+      linkGithubErrorMessage: errorMessage,
+      onLinkGithub: vi.fn(),
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: 'Actions for Fleece jacket' }),
+    )
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'link pull request' }),
+    )
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Pull request URL' }),
+      'https://github.com/example-org/sample-app/issues/14',
+    )
+    await user.click(screen.getByRole('button', { name: 'Link' }))
+
+    expect(readLinkDialogState(errorMessage)).toEqual({
+      errorText: errorMessage,
+      dialogOpen: true,
+      linkButtonDisabled: false,
+    })
+  })
+
+  it('disables the link action while the request is pending', async () => {
+    const user = userEvent.setup()
+    renderChecklist({ isLinkingGithub: true })
+
+    await user.click(
+      screen.getByRole('button', { name: 'Actions for Fleece jacket' }),
+    )
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'link pull request' }),
+    )
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Pull request URL' }),
+      'https://github.com/example-org/sample-app/pull/14',
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Link' }).hasAttribute('disabled'),
+    ).toEqual(true)
   })
 
   it('promotes a leaf item from its action menu', async () => {
@@ -262,6 +365,8 @@ describe('TaskChecklistList', () => {
       ],
       githubLinks: [pullRequest],
       subtasks: [linkedSubtask],
+      linkGithubErrorMessage: undefined,
+      isLinkingGithub: false,
     }
     render(
       <StoryRouter
@@ -529,6 +634,8 @@ describe('TaskChecklistList', () => {
         ]}
         githubLinks={[]}
         subtasks={[]}
+        linkGithubErrorMessage={undefined}
+        isLinkingGithub={false}
         onCreateChecklist={() => {}}
         onUpdateChecklist={() => {}}
         onReorderChecklists={() => {}}
@@ -538,7 +645,9 @@ describe('TaskChecklistList', () => {
         onDeleteItem={() => {}}
         onMoveItem={() => {}}
         onSetItemChecked={() => {}}
-        onLinkGithub={() => {}}
+        onLinkGithub={(_itemId, _url, onSuccess) => {
+          onSuccess()
+        }}
         onPromoteItem={() => {}}
       />,
     )

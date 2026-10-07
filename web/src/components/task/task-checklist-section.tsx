@@ -79,6 +79,10 @@ export function TaskChecklistSection({
         checklists={checklists ?? []}
         githubLinks={githubLinks}
         subtasks={linkedSubtasks}
+        linkGithubErrorMessage={
+          linkItemToGithub.isError ? linkItemToGithub.error.message : undefined
+        }
+        isLinkingGithub={linkItemToGithub.isPending}
         onCreateChecklist={() => {
           createChecklist.mutate({ name: null }, mutationCallbacks)
         }}
@@ -106,8 +110,8 @@ export function TaskChecklistSection({
         onSetItemChecked={(itemId, checked) => {
           setItemChecked.mutate({ itemId, checked }, mutationCallbacks)
         }}
-        onLinkGithub={(itemId, url) => {
-          linkItemToGithub.mutate({ itemId, url }, mutationCallbacks)
+        onLinkGithub={(itemId, url, onSuccess) => {
+          linkItemToGithub.mutate({ itemId, url }, { onSuccess })
         }}
         onPromoteItem={(itemId) => {
           promoteItem.mutate(itemId, mutationCallbacks)
