@@ -51,11 +51,21 @@ it('accepts task numbers in every operation task reference schema', () => {
         if (!isTaskReferenceField(operation.path, fieldName)) return []
 
         const isListField = isListTaskReference(fieldName)
-        const taskNumberInput = isListField ? [taskNumber] : taskNumber
+        const isStringEncodedTaskIdFilter =
+          operation.path[0] === 'task' &&
+          (operation.path[1] === 'list' || operation.path[1] === 'search') &&
+          fieldName.toLowerCase() === 'ids'
+        const taskNumberInputs = isStringEncodedTaskIdFilter
+          ? [taskNumber, [taskNumber]]
+          : isListField
+            ? [[taskNumber], [456]]
+            : [taskNumber, 456]
         const invalidTaskReferenceInput = isListField
           ? [invalidTaskReference]
           : invalidTaskReference
-        const acceptsTaskNumber = fieldSchema.safeParse(taskNumberInput).success
+        const acceptsTaskNumber = taskNumberInputs.every(
+          (input) => fieldSchema.safeParse(input).success,
+        )
         const rejectsInvalidTaskReference = !fieldSchema.safeParse(
           invalidTaskReferenceInput,
         ).success
