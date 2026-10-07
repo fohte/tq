@@ -50,6 +50,31 @@ async function getQueueItems(key: string, date: string) {
   return { res, body: await jsonBody<QueueItemResponse[]>(res) }
 }
 
+async function carryOverQueueItems(date: string) {
+  return app.request('/api/queues/carry-over', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date }),
+  })
+}
+
+async function updateTaskStatus(taskId: string, status: string) {
+  return app.request(`/api/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+}
+
+function queueOrder(items: QueueItemResponse[]) {
+  return items.map(({ id, taskId, periodStart, sortOrder }) => ({
+    id,
+    taskId,
+    periodStart,
+    sortOrder,
+  }))
+}
+
 function normalizeQueueResponse(
   result: Awaited<ReturnType<typeof getQueueItems>>,
 ) {
@@ -349,6 +374,248 @@ describe('PUT /api/queues/:key/items', () => {
 
     const { body: dayItems } = await getQueueItems('day', '2026-01-05')
     expect(dayItems.map((item) => item.taskId)).toEqual([task.id])
+  })
+})
+
+describe('POST /api/queues/carry-over', () => {
+  it('moves unfinished day items to today, deduplicates them, and appends after existing items', async () => {
+    const existingTask = await createTask('Existing task')
+    const carriedTask = await createTask('Carried task')
+    const secondCarriedTask = await createTask('Second carried task')
+    const todayRow = await putQueueItems('day', [existingTask.id], '2026-03-20')
+    const earliestCarriedRow = await putQueueItems(
+      'day',
+      [carriedTask.id],
+      '2026-03-17',
+    )
+    await putQueueItems('day', [carriedTask.id], '2026-03-18')
+    const secondCarriedRow = await putQueueItems(
+      'day',
+      [secondCarriedTask.id],
+      '2026-03-19',
+    )
+
+    const firstRun = await carryOverQueueItems('2026-03-20')
+    const secondRun = await carryOverQueueItems('2026-03-20')
+    const today = await getQueueItems('day', '2026-03-20')
+    const yesterday = await getQueueItems('day', '2026-03-19')
+    const earlierDay = await getQueueItems('day', '2026-03-18')
+    const earliestDay = await getQueueItems('day', '2026-03-17')
+
+    const getOutput = () => [
+      [firstRun.status, secondRun.status],
+      queueOrder(today.body),
+      [
+        yesterday.body.map((item) => item.taskId),
+        earlierDay.body.map((item) => item.taskId),
+        earliestDay.body.map((item) => item.taskId),
+      ],
+    ]
+    expect(getOutput()).toEqual([
+      [204, 204],
+      [
+        {
+          id: todayRow.body[0]?.id,
+          taskId: existingTask.id,
+          periodStart: '2026-03-20',
+          sortOrder: 0,
+        },
+        {
+          id: earliestCarriedRow.body[0]?.id,
+          taskId: carriedTask.id,
+          periodStart: '2026-03-20',
+          sortOrder: 1,
+        },
+        {
+          id: secondCarriedRow.body[0]?.id,
+          taskId: secondCarriedTask.id,
+          periodStart: '2026-03-20',
+          sortOrder: 2,
+        },
+      ],
+      [[], [], []],
+    ])
+  })
+
+  it('leaves completed items and items with a today-or-later queue entry in their original periods', async () => {
+    const completedTask = await createTask('Completed task')
+    const todayTask = await createTask('Today task')
+    const futureDayTask = await createTask('Future day task')
+    const currentWeekTask = await createTask('Current week task')
+    const futureWeekTask = await createTask('Future week task')
+    await putQueueItems(
+      'day',
+      [
+        completedTask.id,
+        todayTask.id,
+        futureDayTask.id,
+        currentWeekTask.id,
+        futureWeekTask.id,
+      ],
+      '2026-03-19',
+    )
+    const completeResponse = await updateTaskStatus(
+      completedTask.id,
+      'completed',
+    )
+    await putQueueItems('day', [todayTask.id], '2026-03-20')
+    await putQueueItems('day', [futureDayTask.id], '2026-03-23')
+    await putQueueItems('week', [currentWeekTask.id], '2026-03-18')
+    await putQueueItems('week', [futureWeekTask.id], '2026-03-23')
+
+    const carryResponse = await carryOverQueueItems('2026-03-20')
+    const oldDay = await getQueueItems('day', '2026-03-19')
+    const today = await getQueueItems('day', '2026-03-20')
+    const futureDay = await getQueueItems('day', '2026-03-23')
+    const currentWeek = await getQueueItems('week', '2026-03-20')
+    const futureWeek = await getQueueItems('week', '2026-03-23')
+
+    const getOutput = () => [
+      [completeResponse.status, carryResponse.status],
+      oldDay.body.map((item) => item.taskId),
+      today.body.map((item) => item.taskId),
+      futureDay.body.map((item) => item.taskId),
+      currentWeek.body.map((item) => item.taskId),
+      futureWeek.body.map((item) => item.taskId),
+    ]
+    expect(getOutput()).toEqual([
+      [200, 204],
+      [
+        completedTask.id,
+        todayTask.id,
+        futureDayTask.id,
+        currentWeekTask.id,
+        futureWeekTask.id,
+      ],
+      [todayTask.id],
+      [futureDayTask.id],
+      [currentWeekTask.id],
+      [futureWeekTask.id],
+    ])
+  })
+
+  it('moves unfinished prior-week items to this week once, deduplicates them, and appends after existing items', async () => {
+    const existingTask = await createTask('Existing task')
+    const carriedTask = await createTask('Carried task')
+    const secondCarriedTask = await createTask('Second carried task')
+    const completedTask = await createTask('Completed prior-week task')
+    const currentWeekRow = await putQueueItems(
+      'week',
+      [existingTask.id],
+      '2026-03-18',
+    )
+    const earliestCarriedRow = await putQueueItems(
+      'week',
+      [carriedTask.id],
+      '2026-03-02',
+    )
+    await putQueueItems('week', [carriedTask.id], '2026-03-09')
+    const priorWeekRows = await putQueueItems(
+      'week',
+      [secondCarriedTask.id, completedTask.id],
+      '2026-03-09',
+    )
+    const secondCarriedRow = priorWeekRows.body[0]
+    await updateTaskStatus(completedTask.id, 'completed')
+
+    const firstRun = await carryOverQueueItems('2026-03-20')
+    const secondRun = await carryOverQueueItems('2026-03-20')
+    const currentWeek = await getQueueItems('week', '2026-03-20')
+    const priorWeek = await getQueueItems('week', '2026-03-09')
+    const earlierWeek = await getQueueItems('week', '2026-03-02')
+
+    const getOutput = () => [
+      [firstRun.status, secondRun.status],
+      queueOrder(currentWeek.body),
+      [
+        priorWeek.body.map((item) => item.taskId),
+        earlierWeek.body.map((item) => item.taskId),
+      ],
+    ]
+    expect(getOutput()).toEqual([
+      [204, 204],
+      [
+        {
+          id: currentWeekRow.body[0]?.id,
+          taskId: existingTask.id,
+          periodStart: '2026-03-16',
+          sortOrder: 0,
+        },
+        {
+          id: earliestCarriedRow.body[0]?.id,
+          taskId: carriedTask.id,
+          periodStart: '2026-03-16',
+          sortOrder: 1,
+        },
+        {
+          id: secondCarriedRow?.id,
+          taskId: secondCarriedTask.id,
+          periodStart: '2026-03-16',
+          sortOrder: 2,
+        },
+      ],
+      [[completedTask.id], []],
+    ])
+  })
+
+  it('keeps prior-week items when they are planned in a current or future week or day, or carried into today', async () => {
+    const todayTask = await createTask('Today task')
+    const futureDayTask = await createTask('Future day task')
+    const currentWeekTask = await createTask('Current week task')
+    const futureWeekTask = await createTask('Future week task')
+    const dayCarriedTask = await createTask('Day carried task')
+    await putQueueItems(
+      'week',
+      [
+        todayTask.id,
+        futureDayTask.id,
+        currentWeekTask.id,
+        futureWeekTask.id,
+        dayCarriedTask.id,
+      ],
+      '2026-03-09',
+    )
+    await putQueueItems('day', [todayTask.id], '2026-03-20')
+    await putQueueItems('day', [futureDayTask.id], '2026-03-23')
+    await putQueueItems('week', [currentWeekTask.id], '2026-03-18')
+    await putQueueItems('week', [futureWeekTask.id], '2026-03-23')
+    await putQueueItems('day', [dayCarriedTask.id], '2026-03-19')
+
+    const carryResponse = await carryOverQueueItems('2026-03-20')
+    const priorWeek = await getQueueItems('week', '2026-03-09')
+    const currentWeek = await getQueueItems('week', '2026-03-20')
+    const today = await getQueueItems('day', '2026-03-20')
+    const futureDay = await getQueueItems('day', '2026-03-23')
+    const futureWeek = await getQueueItems('week', '2026-03-23')
+
+    const getOutput = () => [
+      carryResponse.status,
+      priorWeek.body.map((item) => item.taskId),
+      currentWeek.body.map((item) => item.taskId),
+      today.body.map((item) => item.taskId),
+      futureDay.body.map((item) => item.taskId),
+      futureWeek.body.map((item) => item.taskId),
+    ]
+    expect(getOutput()).toEqual([
+      204,
+      [
+        todayTask.id,
+        futureDayTask.id,
+        currentWeekTask.id,
+        futureWeekTask.id,
+        dayCarriedTask.id,
+      ],
+      [currentWeekTask.id],
+      [todayTask.id, dayCarriedTask.id],
+      [futureDayTask.id],
+      [futureWeekTask.id],
+    ])
+  })
+
+  it('returns 400 for a malformed date', async () => {
+    const response = await carryOverQueueItems('2026/03/20')
+
+    expect(response.status).toBe(400)
   })
 })
 

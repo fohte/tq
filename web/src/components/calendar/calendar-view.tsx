@@ -29,7 +29,6 @@ export interface TimeBlockEvent {
     | 'gcal-solo'
     | 'gcal-status'
     | 'gcal-info'
-    | 'completed'
     | 'schedule'
     | 'day-queue'
     | 'task-date'
@@ -45,7 +44,7 @@ export interface TimeBlockEvent {
   dateTaskOverdue?: boolean
   dateTaskDueDateLabel?: string
   displayPriority?: number
-  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' | 'completed' */
+  /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' */
   isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string

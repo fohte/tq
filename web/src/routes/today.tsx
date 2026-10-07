@@ -3,8 +3,10 @@ import { useMemo } from 'react'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
+import { useLiveToday } from '#hooks/use-live-today'
 import {
   DAY_QUEUE_KEY,
+  useQueueCarryOver,
   useQueueItems,
   useSetQueueItems,
 } from '#hooks/use-queues'
@@ -22,11 +24,16 @@ export function TodayFocus() {
   const baseFilter = useBaseFilter(true)
   const { isLoading: isTaskListLoading, categorized } = useTaskList(baseFilter)
 
-  const todayStr = useMemo(() => formatLocalDate(new Date()), [])
+  const liveToday = useLiveToday()
+  const todayStr = useMemo(() => formatLocalDate(liveToday), [liveToday])
+  const queueCarryOver = useQueueCarryOver(todayStr)
 
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
-    useQueueItems(DAY_QUEUE_KEY, todayStr)
-  const isLoading = isTaskListLoading || isTodayTasksLoading
+    useQueueItems(DAY_QUEUE_KEY, todayStr, {
+      enabled: queueCarryOver.canReadQueueItems,
+    })
+  const isLoading =
+    isTaskListLoading || queueCarryOver.isCarryingOver || isTodayTasksLoading
 
   const setQueueItems = useSetQueueItems()
 

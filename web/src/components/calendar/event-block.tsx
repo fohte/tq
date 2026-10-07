@@ -26,7 +26,6 @@ const RULE_CLASS: Record<EventKind, string> = {
   schedule: 'border-l-primary',
   'day-queue': 'border-l-muted-foreground',
   manual: 'border-l-muted-foreground',
-  completed: 'border-l-foreground',
   auto: 'border-l-muted-foreground',
   'gcal-meeting': 'border-l-border',
   'gcal-status': 'border-l-border',
@@ -44,7 +43,6 @@ const BG_CLASS: Record<EventKind, string> = {
   'gcal-solo': 'bg-transparent',
   auto: 'bg-transparent',
   manual: 'bg-card',
-  completed: 'bg-surface-strong',
   'task-date': 'bg-card',
 }
 
@@ -94,7 +92,6 @@ export function EventBlock(arg: EventContentArg) {
   }
 
   const isShort = event.allDay || (arg.isStart && isShortEvent(event))
-  const isCompleted = type === 'completed'
   const isPendingResponse = isPendingGcalResponse(props)
   const continuesBefore = event.allDay && !arg.isStart
   const continuesAfter = event.allDay && !arg.isEnd
@@ -146,7 +143,7 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
-        (isCompleted || isPendingResponse) && 'opacity-50',
+        isPendingResponse && 'opacity-50',
         event.allDay && 'tq-all-day-content',
         continuesBefore && 'border-l-0',
       )}
@@ -164,7 +161,6 @@ export function EventBlock(arg: EventContentArg) {
                 : type === 'gcal-status'
                   ? 'text-muted-foreground-strong'
                   : 'font-mono text-foreground',
-            isCompleted && 'line-through',
           )}
         >
           <GcalEventIconTitle

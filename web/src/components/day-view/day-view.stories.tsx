@@ -123,13 +123,6 @@ const sampleEvents: TimeBlockEvent[] = [
     scheduleId: 'sched-sleep',
   },
   {
-    id: 'tb-2',
-    title: '#513 cc watch の認知負荷を下げる',
-    start: `${dateStr}T08:30:00`,
-    end: `${dateStr}T10:00:00`,
-    type: 'completed',
-  },
-  {
     id: 'tb-3',
     title: 'Team Standup',
     start: `${dateStr}T10:00:00`,

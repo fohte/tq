@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +14,7 @@ import type { Task } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
 const mockUseTaskList = vi.fn()
+const mockUseQueueCarryOver = vi.fn<(date: string) => unknown>()
 const mockUseQueueItems = vi.fn()
 const mockUseSetQueueItems = vi.fn()
 
@@ -28,6 +29,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 
 vi.mock('#hooks/use-queues', () => ({
   DAY_QUEUE_KEY: 'day',
+  useQueueCarryOver: (date: string) => mockUseQueueCarryOver(date),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useQueueItems: (...args: unknown[]) => mockUseQueueItems(...args),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
@@ -62,6 +64,14 @@ function setup({
   isTodayTasksLoading?: boolean
 }) {
   mockUseTaskList.mockReturnValue({ isLoading, categorized: { all } })
+  mockUseQueueCarryOver.mockReturnValue({
+    isSuccess: true,
+    isPending: false,
+    isError: false,
+    error: null,
+    isCarryingOver: false,
+    canReadQueueItems: true,
+  })
   mockUseQueueItems.mockReturnValue({
     data: queue.map((t, index) => ({
       taskId: t.id,
@@ -122,6 +132,71 @@ afterEach(() => {
 })
 
 describe('TodayFocus', () => {
+  it('waits for carry-over before reading today queue items', async () => {
+    setup({ all: [], queue: [], isTodayTasksLoading: true })
+    mockUseQueueCarryOver.mockReturnValue({
+      isSuccess: false,
+      isPending: true,
+      isError: false,
+      error: null,
+      isCarryingOver: true,
+      canReadQueueItems: false,
+    })
+
+    await renderToday()
+
+    const getOutput = () => [
+      mockUseQueueCarryOver.mock.calls.map(([date]) => date),
+      mockUseQueueItems.mock.calls,
+    ]
+    expect(getOutput()).toEqual([
+      ['2026-03-20'],
+      [['day', '2026-03-20', { enabled: false }]],
+    ])
+  })
+
+  it('reads today queue items if carry-over fails', async () => {
+    setup({ all: [], queue: [] })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockUseQueueCarryOver.mockReturnValue({
+      isSuccess: false,
+      isPending: false,
+      isError: true,
+      error: new Error('carry-over unavailable'),
+      isCarryingOver: false,
+      canReadQueueItems: true,
+    })
+
+    await renderToday()
+
+    expect(mockUseQueueItems.mock.calls).toEqual([
+      ['day', '2026-03-20', { enabled: true }],
+    ])
+  })
+
+  it('carries over each local today before reading its day queue', async () => {
+    setup({ all: [], queue: [] })
+
+    await renderToday()
+
+    await act(async () => {
+      vi.setSystemTime(new Date('2026-03-21T09:00:00'))
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+
+    const getOutput = () => [
+      mockUseQueueCarryOver.mock.calls.map(([date]) => date),
+      mockUseQueueItems.mock.calls,
+    ]
+    expect(getOutput()).toEqual([
+      ['2026-03-20', '2026-03-21'],
+      [
+        ['day', '2026-03-20', { enabled: true }],
+        ['day', '2026-03-21', { enabled: true }],
+      ],
+    ])
+  })
+
   it('focuses the first non-completed task in queue order', async () => {
     const taskA = makeTask({ id: 'a', title: 'Task A' })
     const taskB = makeTask({ id: 'b', title: 'Task B' })

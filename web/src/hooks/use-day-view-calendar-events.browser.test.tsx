@@ -5,6 +5,7 @@ import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gca
 import { makeCalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { makeGcalEvent } from '#hooks/gcal-event-test-fixtures'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 
@@ -32,6 +33,52 @@ function expectedDetails(
 }
 
 describe('useDayViewCalendarEvents', () => {
+  it('removes a past time block when its task is completed', () => {
+    const task = makeTask({
+      id: 'task-calendar-block',
+      title: 'Prepare a sample outline',
+      context: 'personal',
+    })
+    const timeBlock = makeTimeBlock({
+      id: 'block-calendar-task',
+      taskId: task.id,
+      startTime: '2020-02-03T10:00:00.000Z',
+      endTime: '2020-02-03T11:00:00.000Z',
+    })
+    const { result, rerender } = renderHook(
+      ({ tasks }: { tasks: Map<string, ReturnType<typeof makeTask>> }) =>
+        useDayViewCalendarEvents({
+          timeBlocksData: [timeBlock],
+          schedulesData: undefined,
+          gcalEventsData: undefined,
+          dayQueueItems: [],
+          taskMap: tasks,
+          context: 'personal',
+        }),
+      { initialProps: { tasks: new Map([[task.id, task]]) } },
+    )
+    const eventsByStatus = [result.current]
+
+    rerender({ tasks: new Map([[task.id, { ...task, status: 'completed' }]]) })
+    eventsByStatus.push(result.current)
+
+    expect(eventsByStatus).toEqual([
+      [
+        {
+          id: 'block-calendar-task',
+          title: 'Prepare a sample outline',
+          start: '2020-02-03T10:00:00.000Z',
+          end: '2020-02-03T11:00:00.000Z',
+          type: 'manual',
+          taskId: 'task-calendar-block',
+          isAutoScheduled: false,
+          redacted: false,
+        },
+      ],
+      [],
+    ])
+  })
+
   it('maps task dates alongside visible events and omits blank meeting URLs', () => {
     const datedTask = makeTask({
       id: 'dated-task',

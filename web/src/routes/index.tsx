@@ -28,6 +28,7 @@ import {
   DAY_QUEUE_KEY,
   type QueueItem,
   queueKeys,
+  useQueueCarryOver,
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
@@ -135,6 +136,8 @@ function DayView() {
     () => formatLocalDate(selectedDate),
     [selectedDate],
   )
+  const queueCarryOver = useQueueCarryOver(selectedDateStr)
+  const canReadQueueItems = queueCarryOver.canReadQueueItems
   const [visibleRange, setVisibleRange] = useState(() => ({
     startDate: selectedDateStr,
     endDate: selectedDateStr,
@@ -176,6 +179,7 @@ function DayView() {
     queuesData,
     selectedDateStr,
     refetchInterval,
+    { enabled: canReadQueueItems },
   )
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
@@ -242,10 +246,13 @@ function DayView() {
   const rawItemsByKey = useMemo(() => {
     const map = new Map<string, QueueItem[]>()
     ;(queuesData ?? []).forEach((queue, i) => {
-      map.set(queue.key, queueItemsResults[i]?.data ?? [])
+      map.set(
+        queue.key,
+        canReadQueueItems ? (queueItemsResults[i]?.data ?? []) : [],
+      )
     })
     return map
-  }, [queuesData, queueItemsResults])
+  }, [canReadQueueItems, queuesData, queueItemsResults])
 
   // Completed tasks remain stored but are omitted from non-day queue sections.
   const queueSections = useMemo(
@@ -392,6 +399,7 @@ function DayView() {
         compactMemo={compactMemoProps}
         isLoading={
           isLoading ||
+          queueCarryOver.isCarryingOver ||
           (isCompactLayout && dueDateTasksQuery.isLoading) ||
           (isKanbanFiltering && filteredTasksQuery.isLoading)
         }

@@ -41,29 +41,28 @@ export function useDayViewCalendarEvents({
 }: UseDayViewCalendarEventsOptions): TimeBlockEvent[] {
   const taskEvents: TimeBlockEvent[] = useMemo(() => {
     if (!timeBlocksData) return []
-    return timeBlocksData.map((block) => {
+    return timeBlocksData.flatMap((block) => {
       const task = taskMap.get(block.taskId)
+      if (task?.status === 'completed') return []
+
       const parentTask =
         task?.parentId != null ? taskMap.get(task.parentId) : undefined
 
-      return {
-        id: block.id,
-        title: task?.title ?? 'Unknown task',
-        start: block.startTime,
-        end: block.endTime,
-        type:
-          task?.status === 'completed'
-            ? 'completed'
-            : block.isAutoScheduled
-              ? 'auto'
-              : 'manual',
-        taskId: block.taskId,
-        isAutoScheduled: block.isAutoScheduled,
-        ...(parentTask != null
-          ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
-          : {}),
-        redacted: !matchesContextFilter(task?.context ?? 'personal', context),
-      }
+      return [
+        {
+          id: block.id,
+          title: task?.title ?? 'Unknown task',
+          start: block.startTime,
+          end: block.endTime,
+          type: block.isAutoScheduled ? 'auto' : 'manual',
+          taskId: block.taskId,
+          isAutoScheduled: block.isAutoScheduled,
+          ...(parentTask != null
+            ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
+            : {}),
+          redacted: !matchesContextFilter(task?.context ?? 'personal', context),
+        },
+      ]
     })
   }, [timeBlocksData, taskMap, context])
 

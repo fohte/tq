@@ -5,19 +5,20 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
+import { useEffect } from 'react'
 
 import type { PlanValue } from '#components/task/create-task-modal-fields'
 import { api } from '#lib/api'
-import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { formatLocalDate } from '#lib/date-range'
 import { queueKeys } from '#lib/query-keys'
 
 export { queueKeys }
 
-// The focus view addresses the today queue by key — see routes/today.tsx.
+// The Today view and queue carry-over use the day queue by name.
 export const DAY_QUEUE_KEY = 'day'
 
-// The only other queue the PLAN field writes to; unlike DAY_QUEUE_KEY, no
-// backend code depends on this name specifically.
+// Carry-over processing and the PLAN field depend on this key by name.
 export const WEEK_QUEUE_KEY = 'week'
 
 export type Queue = InferResponseType<
@@ -52,6 +53,37 @@ export function useQueues(refetchInterval?: number) {
   })
 }
 
+export function useQueueCarryOver(date: string) {
+  const queryClient = useQueryClient()
+  const isToday = date === formatLocalDate(new Date())
+
+  const query = useQuery({
+    queryKey: queueKeys.carryOver(date),
+    enabled: isToday,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const res = await api.api.queues['carry-over'].$post({ json: { date } })
+      assertOkOrThrow(res)
+      await queryClient.invalidateQueries({
+        queryKey: queueKeys.all,
+        predicate: ({ queryKey }) => queryKey[2] === 'items',
+      })
+      return date
+    },
+  })
+
+  useEffect(() => {
+    if (!isToday || query.error == null) return
+    console.error('Failed to carry over queue items', query.error)
+  }, [isToday, query.error])
+
+  return {
+    ...query,
+    isCarryingOver: isToday && query.isPending,
+    canReadQueueItems: !isToday || query.isSuccess || query.isError,
+  }
+}
+
 export function useQueueItems(
   key: string,
   date: string,
@@ -80,10 +112,12 @@ export function useQueueItemsForQueues(
   queues: Queue[] | undefined,
   date: string,
   refetchInterval?: number,
+  options?: { enabled?: boolean },
 ) {
   return useQueries({
     queries: (queues ?? []).map((queue) => ({
       queryKey: queueKeys.items(queue.key, date),
+      ...(options?.enabled === undefined ? {} : { enabled: options.enabled }),
       ...(refetchInterval === undefined ? {} : { refetchInterval }),
       queryFn: () => fetchQueueItems(queue.key, date),
     })),

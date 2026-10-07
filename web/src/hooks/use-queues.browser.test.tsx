@@ -2,13 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { Mock } from 'vitest'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import {
   DAY_QUEUE_KEY,
+  type Queue,
+  useQueueCarryOver,
   useQueueItems,
   useQueueItemsForDates,
   useQueueItemsForQueues,
@@ -18,9 +20,11 @@ import {
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import { useUpdateTask } from '#hooks/use-task-mutations'
+import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
+  const mockCarryOver = vi.fn()
   const mockQueueGet = vi.fn()
   const mockGet = vi.fn()
   const mockPut = vi.fn()
@@ -30,6 +34,7 @@ vi.mock('#lib/api', () => {
       api: {
         queues: {
           $get: mockQueueGet,
+          'carry-over': { $post: mockCarryOver },
           ':key': {
             items: { $get: mockGet, $put: mockPut },
           },
@@ -37,7 +42,7 @@ vi.mock('#lib/api', () => {
         tasks: { ':id': { $patch: mockTaskPatch } },
       },
     },
-    __mocks: { mockQueueGet, mockGet, mockPut, mockTaskPatch },
+    __mocks: { mockCarryOver, mockQueueGet, mockGet, mockPut, mockTaskPatch },
   }
 })
 
@@ -69,6 +74,10 @@ beforeEach(async () => {
   for (const mock of Object.values(mocks)) {
     mock.mockReset()
   }
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 const taskId = '00000000-0000-0000-0000-000000000001'
@@ -217,7 +226,9 @@ describe('queue polling', () => {
       const mocks = await getMocks()
       const queueGet = assertDefined(mocks['mockQueueGet'])
       const itemGet = assertDefined(mocks['mockGet'])
-      const queues = [makeQueue({ key: DAY_QUEUE_KEY, name: 'today' })]
+      const queues = [
+        makeQueue({ key: DAY_QUEUE_KEY, name: 'today' }),
+      ] satisfies Queue[]
       queueGet.mockResolvedValue(jsonResponse(queues))
       itemGet.mockResolvedValue(jsonResponse([]))
 
@@ -254,6 +265,107 @@ describe('queue polling', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+describe('queue carry-over', () => {
+  it('reads today queue items if carry-over fails', async () => {
+    const mocks = await getMocks()
+    const mockCarryOver = assertDefined(mocks['mockCarryOver'])
+    const mockGet = assertDefined(mocks['mockGet'])
+    const today = formatLocalDate(new Date())
+    const queues = [
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'today' }),
+    ] satisfies Queue[]
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockCarryOver.mockResolvedValue(new Response(null, { status: 500 }))
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () => {
+        const carryOver = useQueueCarryOver(today)
+        const items = useQueueItemsForQueues(queues, today, undefined, {
+          enabled: carryOver.canReadQueueItems,
+        })
+        return { carryOver, items }
+      },
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      const getOutput = () => ({
+        canReadQueueItems: result.current.carryOver.canReadQueueItems,
+        carryOverFailed: result.current.carryOver.isError,
+        queueReads: mockGet.mock.calls,
+      })
+      expect(getOutput()).toEqual({
+        canReadQueueItems: true,
+        carryOverFailed: true,
+        queueReads: [
+          [{ param: { key: DAY_QUEUE_KEY }, query: { date: today } }],
+        ],
+      })
+    })
+  })
+
+  it('finishes carrying over today before reading its queue items', async () => {
+    const mocks = await getMocks()
+    const mockCarryOver = assertDefined(mocks['mockCarryOver'])
+    const mockGet = assertDefined(mocks['mockGet'])
+    const calls: string[] = []
+    let resolveCarryOver: (() => void) | undefined
+    const today = formatLocalDate(new Date())
+    const queues = [
+      makeQueue({ key: DAY_QUEUE_KEY, name: 'today' }),
+    ] satisfies Queue[]
+    mockCarryOver.mockImplementation(() => {
+      calls.push('carry-over')
+      return new Promise<Response>((resolve) => {
+        resolveCarryOver = () => {
+          resolve(new Response(null, { status: 204 }))
+        }
+      })
+    })
+    mockGet.mockImplementation(() => {
+      calls.push('items')
+      return Promise.resolve(jsonResponse([]))
+    })
+
+    const { result } = renderHook(
+      () => {
+        const carryOver = useQueueCarryOver(today)
+        const items = useQueueItemsForQueues(queues, today, undefined, {
+          enabled: carryOver.canReadQueueItems,
+        })
+        return { carryOver, items }
+      },
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      const getOutput = () => [
+        calls,
+        result.current.carryOver.isPending,
+        mockCarryOver.mock.calls,
+      ]
+      expect(getOutput()).toEqual([
+        ['carry-over'],
+        true,
+        [[{ json: { date: today } }]],
+      ])
+    })
+
+    act(() => {
+      assertDefined(resolveCarryOver)()
+    })
+
+    await waitFor(() => {
+      const getOutput = () => [
+        calls,
+        result.current.carryOver.isSuccess,
+        result.current.items[0]?.data,
+      ]
+      expect(getOutput()).toEqual([['carry-over', 'items'], true, []])
+    })
   })
 })
 
