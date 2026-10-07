@@ -57,21 +57,12 @@ function normalizeSession(session: AgentSessionResponse) {
   }
 }
 
-function normalizeTaskSession(session: AgentSessionResponse) {
-  return {
-    id: session.id,
-    provider: session.provider,
-    sessionId: session.sessionId,
-    parentSessionId: session.parentSessionId,
-    context: session.context,
-    cwd: session.cwd,
-    label: session.label,
-    customLabel: session.customLabel,
-    startedAt: session.startedAt,
-    lastActiveAt: session.lastActiveAt,
-    endedAt: session.endedAt,
-    archivedAt: session.archivedAt,
-  }
+function normalizeTaskSession(
+  session: AgentSessionResponse,
+): Omit<AgentSessionResponse, 'lastMessage'> {
+  const taskSession: Omit<AgentSessionResponse, 'lastMessage'> = { ...session }
+  Reflect.deleteProperty(taskSession, 'lastMessage')
+  return taskSession
 }
 
 function responseWithBody<T>(status: number, body: T) {
@@ -914,7 +905,7 @@ describe('agent sessions API', () => {
       })
     })
 
-    it('filters by session ids and omits last messages', async () => {
+    it('filters by multiple session ids', async () => {
       const task = await createTask('My task')
       const sessions: AgentSessionResponse[] = []
       for (const session of [
@@ -984,6 +975,41 @@ describe('agent sessions API', () => {
             taskStatus: 'todo',
             linkedAt: firstSession.startedAt,
             ...normalizeTaskSession(firstSession),
+          },
+        ],
+      })
+    })
+
+    it('omits lastMessage from linked session rows', async () => {
+      const task = await createTask('My task')
+      const session = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/home/fohte/project',
+        context: 'work',
+        label: null,
+        lastMessage: 'A message that is not needed here',
+      })
+      await postLink(task.id, session.id)
+
+      const res = await app.request('/api/agent-sessions/by-task')
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: session.startedAt,
+            ...normalizeTaskSession(session),
           },
         ],
       })

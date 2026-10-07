@@ -25,21 +25,11 @@ export function makeAgentSession(
 export function makeTaskAgentSession(
   overrides: Partial<TaskAgentSession> = {},
 ): TaskAgentSession {
-  const session = makeAgentSession()
+  const session: Omit<AgentSession, 'lastMessage'> = { ...makeAgentSession() }
+  Reflect.deleteProperty(session, 'lastMessage')
 
   return {
-    id: session.id,
-    provider: session.provider,
-    sessionId: session.sessionId,
-    parentSessionId: session.parentSessionId,
-    context: session.context,
-    cwd: session.cwd,
-    label: session.label,
-    customLabel: session.customLabel,
-    startedAt: session.startedAt,
-    lastActiveAt: session.lastActiveAt,
-    endedAt: session.endedAt,
-    archivedAt: session.archivedAt,
+    ...session,
     taskId: 'task-1',
     taskNumber: 1,
     taskTitle: 'Task title',

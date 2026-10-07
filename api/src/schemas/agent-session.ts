@@ -21,16 +21,15 @@ export const updateAgentSessionSchema = z.object({
   customLabel: z.string().trim().min(1).nullable(),
 })
 
+const sessionIdFilterSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((v) => (Array.isArray(v) ? v : [v]))
+  .optional()
+
 export const listAgentSessionsQuerySchema = z.object({
-  sessionId: z
-    .union([z.string(), z.array(z.string())])
-    .transform((v) => (Array.isArray(v) ? v : [v]))
-    .optional(),
+  sessionId: sessionIdFilterSchema,
 })
 
 export const listAgentSessionsByTaskQuerySchema = z.object({
-  sessionId: z
-    .union([z.string(), z.array(z.string())])
-    .transform((v) => (Array.isArray(v) ? v : [v]))
-    .optional(),
+  sessionId: sessionIdFilterSchema,
 })

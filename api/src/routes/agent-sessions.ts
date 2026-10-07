@@ -58,6 +58,33 @@ export function agentSessionToResponse(
   session: typeof agentSessions.$inferSelect,
 ) {
   return {
+    ...agentSessionSummaryToResponse(session),
+    lastMessage: session.lastMessage,
+  }
+}
+
+const agentSessionSummaryColumns = {
+  id: agentSessions.id,
+  provider: agentSessions.provider,
+  sessionId: agentSessions.sessionId,
+  parentSessionId: agentSessions.parentSessionId,
+  context: agentSessions.context,
+  cwd: agentSessions.cwd,
+  label: agentSessions.label,
+  customLabel: agentSessions.customLabel,
+  startedAt: agentSessions.startedAt,
+  lastActiveAt: agentSessions.lastActiveAt,
+  endedAt: agentSessions.endedAt,
+  archivedAt: agentSessions.archivedAt,
+}
+
+type AgentSessionSummary = Pick<
+  typeof agentSessions.$inferSelect,
+  keyof typeof agentSessionSummaryColumns
+>
+
+function agentSessionSummaryToResponse(session: AgentSessionSummary) {
+  return {
     id: session.id,
     provider: session.provider,
     sessionId: session.sessionId,
@@ -65,7 +92,6 @@ export function agentSessionToResponse(
     context: session.context,
     cwd: session.cwd,
     label: session.label,
-    lastMessage: session.lastMessage,
     customLabel: session.customLabel,
     startedAt: session.startedAt.toISOString(),
     lastActiveAt: session.lastActiveAt.toISOString(),
@@ -241,20 +267,7 @@ export const agentSessionsApp = new Hono()
           taskParentId: tasks.parentId,
           taskStatus: tasks.status,
           linkedAt: taskAgentSessions.linkedAt,
-          session: {
-            id: agentSessions.id,
-            provider: agentSessions.provider,
-            sessionId: agentSessions.sessionId,
-            parentSessionId: agentSessions.parentSessionId,
-            context: agentSessions.context,
-            cwd: agentSessions.cwd,
-            label: agentSessions.label,
-            customLabel: agentSessions.customLabel,
-            startedAt: agentSessions.startedAt,
-            lastActiveAt: agentSessions.lastActiveAt,
-            endedAt: agentSessions.endedAt,
-            archivedAt: agentSessions.archivedAt,
-          },
+          session: agentSessionSummaryColumns,
         })
         .from(taskAgentSessions)
         .innerJoin(
@@ -275,18 +288,7 @@ export const agentSessionsApp = new Hono()
           taskParentId: row.taskParentId,
           taskStatus: row.taskStatus,
           linkedAt: row.linkedAt.toISOString(),
-          id: row.session.id,
-          provider: row.session.provider,
-          sessionId: row.session.sessionId,
-          parentSessionId: row.session.parentSessionId,
-          context: row.session.context,
-          cwd: row.session.cwd,
-          label: row.session.label,
-          customLabel: row.session.customLabel,
-          startedAt: row.session.startedAt.toISOString(),
-          lastActiveAt: row.session.lastActiveAt.toISOString(),
-          endedAt: row.session.endedAt?.toISOString() ?? null,
-          archivedAt: row.session.archivedAt?.toISOString() ?? null,
+          ...agentSessionSummaryToResponse(row.session),
         })),
         200,
       )
