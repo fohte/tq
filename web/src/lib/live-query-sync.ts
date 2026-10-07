@@ -8,6 +8,7 @@ import { Result } from 'neverthrow'
 
 import {
   descriptionTemplateKeys,
+  githubSyncKeys,
   githubSyncRuleKeys,
   labelKeys,
   projectKeys,
@@ -42,7 +43,6 @@ const EVENT_SOURCE_CLOSED = 2
 const INITIAL_RECONNECT_DELAY_MS = 1_000
 const MAX_RECONNECT_DELAY_MS = 30_000
 const INVALIDATION_BATCH_WINDOW_MS = 1_000
-const GITHUB_SYNC_QUERY_KEY = 'github-sync'
 
 interface LiveQuerySyncOptions {
   origin?: string
@@ -106,21 +106,13 @@ const resourceQueryFilters: Record<
     { queryKey: ['integrations'] },
     { queryKey: ['gcal-calendars'] },
     { queryKey: ['gcal-events'] },
-    { queryKey: ['github-sync'] },
+    { queryKey: githubSyncKeys.all },
   ],
   unknown: () => null,
 }
 
 function filtersForResourceChange(event: ChangeEvent): QueryFilters[] | null {
   return resourceQueryFilters[event.resource](event)
-}
-
-function invalidate(queryClient: QueryClient, filters: QueryFilters[]): void {
-  for (const filtersForQuery of filters) {
-    void queryClient.invalidateQueries(filtersForQuery, {
-      cancelRefetch: false,
-    })
-  }
 }
 
 async function checkSession(): Promise<unknown> {
@@ -145,6 +137,8 @@ export function connectLiveQuerySync(
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let invalidationTimer: ReturnType<typeof setTimeout> | undefined
   let waitingForMutation = false
+  const pendingFetchQueryHashes = new Set<string>()
+  let unsubscribeFromPendingFetches: (() => void) | undefined
   let disconnected = false
   let eventSource: EventStream
 
@@ -152,6 +146,50 @@ export function connectLiveQuerySync(
     if (invalidationTimer == null) return
     clearTimeout(invalidationTimer)
     invalidationTimer = undefined
+  }
+
+  const invalidateFilters = (filters: QueryFilters[]) => {
+    const queryCache = queryClient.getQueryCache()
+    for (const filter of filters) {
+      for (const query of queryCache.findAll(filter)) {
+        if (query.state.fetchStatus === 'fetching') {
+          pendingFetchQueryHashes.add(query.queryHash)
+        }
+      }
+    }
+
+    if (
+      pendingFetchQueryHashes.size > 0 &&
+      unsubscribeFromPendingFetches == null
+    ) {
+      unsubscribeFromPendingFetches = queryCache.subscribe(() => {
+        const settledQueryHashes = [...pendingFetchQueryHashes].filter(
+          (queryHash) =>
+            queryCache.get(queryHash)?.state.fetchStatus !== 'fetching',
+        )
+        if (settledQueryHashes.length === 0) return
+
+        for (const queryHash of settledQueryHashes) {
+          pendingFetchQueryHashes.delete(queryHash)
+        }
+        if (pendingFetchQueryHashes.size === 0) {
+          unsubscribeFromPendingFetches?.()
+          unsubscribeFromPendingFetches = undefined
+        }
+
+        const settledQueryHashSet = new Set(settledQueryHashes)
+        void queryClient.invalidateQueries(
+          {
+            predicate: (query) => settledQueryHashSet.has(query.queryHash),
+          },
+          { cancelRefetch: false },
+        )
+      })
+    }
+
+    for (const filter of filters) {
+      void queryClient.invalidateQueries(filter, { cancelRefetch: false })
+    }
   }
 
   const flushPendingInvalidations = () => {
@@ -164,18 +202,17 @@ export function connectLiveQuerySync(
     if (pendingAll) {
       pendingAll = false
       pendingFilters.clear()
-      void queryClient.invalidateQueries(
+      invalidateFilters([
         {
-          predicate: (query) => query.queryKey[0] !== GITHUB_SYNC_QUERY_KEY,
+          predicate: (query) => query.queryKey[0] !== githubSyncKeys.all[0],
         },
-        { cancelRefetch: false },
-      )
+      ])
       return
     }
 
     const filters = [...pendingFilters.values()]
     pendingFilters.clear()
-    invalidate(queryClient, filters)
+    invalidateFilters(filters)
   }
 
   const schedulePendingInvalidations = () => {
@@ -280,6 +317,8 @@ export function connectLiveQuerySync(
     disconnected = true
     unsubscribeFromMutations()
     clearInvalidationTimer()
+    unsubscribeFromPendingFetches?.()
+    unsubscribeFromPendingFetches = undefined
     if (reconnectTimer != null) clearTimeout(reconnectTimer)
     detachEventSource(eventSource)
   }

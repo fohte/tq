@@ -6,6 +6,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { connectLiveQuerySync } from '#lib/live-query-sync'
+import { githubSyncKeys } from '#lib/query-keys'
 
 interface EventStream {
   readyState: number
@@ -99,8 +100,13 @@ function createConnection(
   }
 }
 
-function observeQuery(queryClient: QueryClient, queryKey: readonly unknown[]) {
-  const queryFn = vi.fn(() => Promise.resolve('fresh'))
+function observeQuery(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  fetchQuery: (context: QueryFunctionContext) => Promise<string> = () =>
+    Promise.resolve('fresh'),
+) {
+  const queryFn = vi.fn(fetchQuery)
   const observer = new QueryObserver(queryClient, {
     queryKey,
     queryFn,
@@ -108,7 +114,7 @@ function observeQuery(queryClient: QueryClient, queryKey: readonly unknown[]) {
     staleTime: Infinity,
   })
   const unsubscribe = observer.subscribe(() => undefined)
-  return { queryFn, unsubscribe }
+  return { observer, queryFn, unsubscribe }
 }
 
 afterEach(() => {
@@ -159,12 +165,13 @@ describe('connectLiveQuerySync', () => {
     vi.useFakeTimers()
     const queryClient = new QueryClient()
     const taskQuery = observeQuery(queryClient, ['tasks'])
+    const timeBlockQuery = observeQuery(queryClient, ['time-blocks'])
     const { eventStream, invalidations } = createConnection({ queryClient })
 
     for (let index = 0; index < 36; index += 1) {
       eventStream.sendChange(
         JSON.stringify({
-          resource: 'task',
+          resource: index % 2 === 0 ? 'task' : 'time_block',
           id: `task-${String(index)}`,
           origin: 'screen-two',
         }),
@@ -177,6 +184,7 @@ describe('connectLiveQuerySync', () => {
     )
     await vi.advanceTimersByTimeAsync(1)
     taskQuery.unsubscribe()
+    timeBlockQuery.unsubscribe()
 
     const snapshot = () => ({
       invalidationsBeforeWindowEnd,
@@ -184,32 +192,37 @@ describe('connectLiveQuerySync', () => {
         ([filters]) => filters?.queryKey,
       ),
       taskFetchCount: taskQuery.queryFn.mock.calls.length,
+      timeBlockFetchCount: timeBlockQuery.queryFn.mock.calls.length,
     })
     expect(snapshot()).toEqual({
       invalidationsBeforeWindowEnd: [],
-      invalidationKeysAtWindowEnd: [['tasks'], ['projects'], ['queues']],
+      invalidationKeysAtWindowEnd: [
+        ['tasks'],
+        ['projects'],
+        ['queues'],
+        ['time-blocks'],
+      ],
       taskFetchCount: 1,
+      timeBlockFetchCount: 1,
     })
   })
 
-  it('keeps an in-flight query running when its resource changes', async () => {
+  it('refreshes after an in-flight query settles without aborting it', async () => {
     vi.useFakeTimers()
     const queryClient = new QueryClient()
     const requestSignals: AbortSignal[] = []
     let finishRequest: (value: string) => void = () => {}
-    const queryFn = vi.fn(({ signal }: QueryFunctionContext) => {
-      requestSignals.push(signal)
-      return new Promise<string>((resolve) => {
-        finishRequest = resolve
-      })
-    })
-    const observer = new QueryObserver(queryClient, {
-      queryKey: ['tasks'],
-      queryFn,
-      initialData: 'cached',
-      staleTime: Infinity,
-    })
-    const unsubscribe = observer.subscribe(() => undefined)
+    const { observer, queryFn, unsubscribe } = observeQuery(
+      queryClient,
+      ['tasks'],
+      ({ signal }) => {
+        requestSignals.push(signal)
+        if (requestSignals.length > 1) return Promise.resolve('fresh')
+        return new Promise<string>((resolve) => {
+          finishRequest = resolve
+        })
+      },
+    )
     const pendingFetch = observer.refetch()
     const { eventStream } = createConnection({ queryClient })
 
@@ -217,15 +230,29 @@ describe('connectLiveQuerySync', () => {
       JSON.stringify({ resource: 'task', id: 'task-one', origin: null }),
     )
     await vi.advanceTimersByTimeAsync(1_000)
-    const snapshot = () => ({
+    const requestStateWhileFetching = {
       requestCount: queryFn.mock.calls.length,
       aborted: requestSignals.map(({ aborted }) => aborted),
-    })
+    }
     finishRequest('fresh')
     await pendingFetch
+    await vi.advanceTimersByTimeAsync(0)
     unsubscribe()
 
-    expect(snapshot()).toEqual({ requestCount: 1, aborted: [false] })
+    const snapshot = () => ({
+      requestStateWhileFetching,
+      requestStateAfterFirstFetch: {
+        requestCount: queryFn.mock.calls.length,
+        aborted: requestSignals.map(({ aborted }) => aborted),
+      },
+    })
+    expect(snapshot()).toEqual({
+      requestStateWhileFetching: { requestCount: 1, aborted: [false] },
+      requestStateAfterFirstFetch: {
+        requestCount: 2,
+        aborted: [false, false],
+      },
+    })
   })
 
   it('skips GitHub sync queries during unknown-event and reconnect refreshes', async () => {
@@ -233,8 +260,8 @@ describe('connectLiveQuerySync', () => {
     const queryClient = new QueryClient()
     const queries = [
       observeQuery(queryClient, ['tasks']),
-      observeQuery(queryClient, ['github-sync']),
-      observeQuery(queryClient, ['github-sync', 'task', 'task-one']),
+      observeQuery(queryClient, githubSyncKeys.all),
+      observeQuery(queryClient, githubSyncKeys.task('task-one')),
     ]
     const { eventStream } = createConnection({ queryClient })
 
