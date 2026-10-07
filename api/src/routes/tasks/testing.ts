@@ -66,6 +66,20 @@ export interface GithubLinkResponse {
   lastSyncedAt: string
 }
 
+export interface TaskWaitSummaryResponse {
+  id: string
+  label: string
+  followUpDate: string
+  resolvedAt: string | null
+}
+
+export interface TaskWaitResponse extends TaskWaitSummaryResponse {
+  taskId: string
+  body: string
+  acknowledgedAt: string | null
+  createdAt: string
+}
+
 export interface TaskResponse {
   id: string
   number: number
@@ -89,6 +103,7 @@ export interface TaskResponse {
   githubLinks: GithubLinkResponse[]
   // Present only on the single-task detail response.
   githubBlockers?: GithubLinkResponse[]
+  waits?: TaskWaitResponse[]
   createdAt: string
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
@@ -143,6 +158,7 @@ export interface TaskListItemResponse {
     number: number
     url: string
   }[]
+  waits?: TaskWaitSummaryResponse[]
   childCompletionCount?: { completed: number; total: number }
   checklistCompletionCount: { completed: number; total: number }
   children?: TaskListItemResponse[]
@@ -218,6 +234,7 @@ export function toListItemResponse(
     checklistCompletionCount?: { completed: number; total: number }
     blockedByNumbers?: number[]
     blockedByGithubRefs?: TaskListItemResponse['blockedByGithubRefs']
+    waits?: TaskWaitSummaryResponse[]
   } = {},
 ): TaskListItemResponse {
   return {
@@ -247,6 +264,9 @@ export function toListItemResponse(
     duplicateOfNumber: null,
     blockedByNumbers: opts.blockedByNumbers ?? [],
     blockedByGithubRefs: opts.blockedByGithubRefs ?? [],
+    ...(opts.waits != null && opts.waits.length > 0
+      ? { waits: opts.waits }
+      : {}),
     childCompletionCount: opts.childCompletionCount ?? {
       completed: 0,
       total: 0,
@@ -311,6 +331,20 @@ const githubLinkResponseSchema = z.object({
   lastSyncedAt: z.string(),
 })
 
+const taskWaitSummaryResponseSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  followUpDate: z.iso.date(),
+  resolvedAt: z.string().nullable(),
+})
+
+const taskWaitResponseSchema = taskWaitSummaryResponseSchema.extend({
+  taskId: z.string(),
+  body: z.string(),
+  acknowledgedAt: z.string().nullable(),
+  createdAt: z.string(),
+})
+
 const taskListItemResponseSchema = z.object({
   id: z.string(),
   number: z.number(),
@@ -345,6 +379,7 @@ const taskListItemResponseSchema = z.object({
       url: z.string(),
     }),
   ),
+  waits: z.array(taskWaitSummaryResponseSchema).optional(),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
@@ -376,6 +411,7 @@ const taskResponseSchema = z.object({
   occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   githubBlockers: z.array(githubLinkResponseSchema).optional(),
+  waits: z.array(taskWaitResponseSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   childCompletionCount: z

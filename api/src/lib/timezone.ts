@@ -14,3 +14,7 @@ export function localDateBoundsToUtc(
   dayEnd.setTime(dayEnd.getTime() + offsetMs)
   return { dayStart, dayEnd }
 }
+export function formatDateAtOffset(date: Date, tzOffsetMinutes = 0): string {
+  const localDate = new Date(date.getTime() - tzOffsetMinutes * 60 * 1000)
+  return `${String(localDate.getUTCFullYear())}-${String(localDate.getUTCMonth() + 1).padStart(2, '0')}-${String(localDate.getUTCDate()).padStart(2, '0')}`
+}

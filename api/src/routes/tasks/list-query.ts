@@ -27,6 +27,11 @@ import {
   tasks,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import { formatDateAtOffset } from '#lib/timezone'
+import {
+  followUpDueTaskWaitSubquery,
+  unresolvedTaskWaitSubquery,
+} from '#routes/tasks/list-query-waits'
 import {
   buildTitleMatchCondition,
   queryTaskSearchMatches,
@@ -241,6 +246,7 @@ function buildConditions(
       or(
         exists(unresolvedTaskBlockerSubquery()),
         exists(unresolvedGithubBlockerSubquery()),
+        exists(unresolvedTaskWaitSubquery()),
       ),
     )
   }
@@ -250,6 +256,17 @@ function buildConditions(
       and(
         notExists(unresolvedTaskBlockerSubquery()),
         notExists(unresolvedGithubBlockerSubquery()),
+        notExists(unresolvedTaskWaitSubquery()),
+      ),
+    )
+  }
+
+  if (parsed?.hasFollowUpDue === true) {
+    conditions.push(
+      exists(
+        followUpDueTaskWaitSubquery(
+          formatDateAtOffset(new Date(), query.tzOffset ?? 0),
+        ),
       ),
     )
   }

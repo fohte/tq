@@ -4,6 +4,7 @@ import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { labelNameSchema } from '#schemas/label-name'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { queryTimezoneOffsetMinutesSchema } from '#schemas/timezone'
 
 export const taskStatus = z.enum(['todo', 'completed'])
 export type TaskStatus = z.infer<typeof taskStatus>
@@ -121,6 +122,11 @@ export const listTasksQuerySchema = z.object({
     .transform((v) => (Array.isArray(v) ? v : [v]))
     .optional(),
   q: z.string().optional(),
+  tzOffset: queryTimezoneOffsetMinutesSchema
+    .optional()
+    .describe(
+      'Client timezone offset in minutes. Used to determine today for has:follow-up-due; defaults to UTC when omitted.',
+    ),
   label: z.string().optional(),
   hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
