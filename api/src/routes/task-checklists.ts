@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import {
   checklistItemTree,
   checklistToResponse,
@@ -49,5 +50,6 @@ export const taskChecklistsApp = new Hono<TaskEnv>()
     )
 
     if (!checklist) return c.json({ error: 'Task not found' }, 404)
+    setChangeEventTaskIds(c, [taskId])
     return c.json(checklistToResponse(checklist, []), 201)
   })

@@ -16,6 +16,7 @@ import {
   makeGithubTimelineEvent,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { createTask } from '#routes/tasks/testing'
 import {
@@ -37,6 +38,8 @@ vi.mock('web-push', async (importOriginal) => {
 })
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
 
 beforeEach(() => {
   queuedResponses.clear()
@@ -79,6 +82,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
   vi.restoreAllMocks()
 })
 
@@ -464,13 +469,28 @@ describe('syncLinkFromGithub', () => {
         .where(eq(taskGithubLinks.id, link.id))
         .returning(),
     )
+    const syncStartedAt = new Date(linkWithEtag.lastSyncedAt.getTime() + 1000)
+    const writtenTaskIds: string[] = []
 
     queueGithubNotModifiedResponse()
-    ;(await syncLinkFromGithub(linkWithEtag))._unsafeUnwrap()
+    ;(
+      await syncLinkFromGithub(linkWithEtag, syncStartedAt, (taskId) => {
+        writtenTaskIds.push(taskId)
+      })
+    )._unsafeUnwrap()
 
-    expect(await linkSyncOutcome(link.id)).toEqual({
+    const updatedLink = await loadLink(link.id)
+    const snapshot = () => ({
+      link: normalizeLink(updatedLink),
+      lastSyncedAt: updatedLink.lastSyncedAt.toISOString(),
+      notifications: sentNotifications(),
+      writtenTaskIds,
+    })
+    expect(snapshot()).toEqual({
       link: normalizeLink(linkWithEtag),
+      lastSyncedAt: syncStartedAt.toISOString(),
       notifications: [],
+      writtenTaskIds: [],
     })
   })
 
@@ -1178,6 +1198,47 @@ describe('syncAllGithubLinks', () => {
     const updatedTask = await loadTask(task.id)
     expect(updatedTask.title).toBe(task.title)
   })
+
+  it('publishes task changes with the triggering screen as origin', async () => {
+    const first = await createLinkedTask()
+    const second = await createLinkedTask({ ...ref, number: 43 })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    await syncAllGithubLinks('screen-id')
+
+    const snapshot = () =>
+      events.toSorted((left, right) =>
+        String(left.id).localeCompare(String(right.id)),
+      )
+    expect(snapshot()).toEqual(
+      [first.task.id, second.task.id]
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((id) => ({
+          resource: 'task',
+          id,
+          origin: 'screen-id',
+          taskIds: [id],
+        })),
+    )
+  })
+
+  it('does not publish task changes when GitHub confirms a link is unchanged', async () => {
+    const { link } = await createLinkedTask()
+    await db
+      .update(taskGithubLinks)
+      .set({ etag: '"unchanged"' })
+      .where(eq(taskGithubLinks.id, link.id))
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubNotModifiedResponse()
+    await syncAllGithubLinks('screen-id')
+
+    expect(events).toEqual([])
+  })
 })
 
 describe('syncDueGithubLinks', () => {
@@ -1210,6 +1271,8 @@ describe('syncDueGithubLinks', () => {
       new Date(now - 2 * 60 * 60 * 1000),
       'merged',
     )
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     queueGithubIssueResponse()
     queueGithubIssueResponse()
@@ -1222,6 +1285,42 @@ describe('syncDueGithubLinks', () => {
       ),
     )
 
-    expect(synced).toEqual([true, false, true, false, false])
+    const snapshot = () => ({
+      synced,
+      events: events.toSorted((left, right) =>
+        String(left.id).localeCompare(String(right.id)),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      synced: [true, false, true, false, false],
+      events: [subjectDue.taskId, blockerDue.taskId]
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((id) => ({ resource: 'task', id, origin: null, taskIds: [id] })),
+    })
+  })
+
+  it('does not publish task changes when a due link is unchanged on GitHub', async () => {
+    await upsertGithubToken('valid-token')
+    const link = await createScheduledLink(
+      'subject',
+      57,
+      new Date(Date.now() - 2 * 60 * 60 * 1000),
+    )
+    await db
+      .update(taskGithubLinks)
+      .set({ etag: '"unchanged"' })
+      .where(eq(taskGithubLinks.id, link.id))
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubNotModifiedResponse()
+    await syncDueGithubLinks()
+
+    const updatedLink = await loadLink(link.id)
+    const snapshot = () => ({
+      lastSyncedAtAdvanced: updatedLink.lastSyncedAt > link.lastSyncedAt,
+      events,
+    })
+    expect(snapshot()).toEqual({ lastSyncedAtAdvanced: true, events: [] })
   })
 })

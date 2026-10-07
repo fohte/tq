@@ -4,6 +4,7 @@ import { ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
 import { recurrenceRules, recurringTaskTemplates, tasks } from '#db/schema'
+import { publishChangeEvent } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { computeDueOccurrences, formatDate } from '#services/recurrence'
@@ -28,6 +29,7 @@ function subtractDays(dateStr: string, days: number): string {
 async function generateForTemplate(
   template: typeof recurringTaskTemplates.$inferSelect,
   today: string,
+  onTaskCreated: (taskId: string) => void,
 ): Promise<void> {
   const rule = await db.query.recurrenceRules.findFirst({
     where: eq(recurrenceRules.id, template.recurrenceRuleId),
@@ -118,6 +120,7 @@ async function generateForTemplate(
     // Must run after the task's transaction commits: syncTaskLinks opens its
     // own transaction and needs the row to already exist.
     await syncTaskLinks(id)
+    onTaskCreated(id)
   }
 }
 
@@ -135,7 +138,14 @@ export async function generateDueRecurringTasks(): Promise<void> {
 
   for (const template of templates) {
     const result = await ResultAsync.fromPromise(
-      generateForTemplate(template, today),
+      generateForTemplate(template, today, (id) => {
+        publishChangeEvent({
+          resource: 'task',
+          id,
+          origin: null,
+          taskIds: template.parentId == null ? [id] : [id, template.parentId],
+        })
+      }),
       toError,
     )
     if (result.isErr()) {

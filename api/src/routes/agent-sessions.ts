@@ -7,6 +7,7 @@ import { ResultAsync } from 'neverthrow'
 import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import type { AgentProvider } from '#schemas/agent-session'
 import {
   agentProviderSchema,
@@ -40,6 +41,18 @@ function findAgentSessionBySessionId(
   })
 }
 
+async function listTaskIdsForSession(
+  tx: DbTransaction,
+  agentSessionId: string,
+): Promise<string[]> {
+  const links = await tx
+    .select({ taskId: taskAgentSessions.taskId })
+    .from(taskAgentSessions)
+    .where(eq(taskAgentSessions.agentSessionId, agentSessionId))
+
+  return links.map(({ taskId }) => taskId).sort()
+}
+
 export function agentSessionToResponse(
   session: typeof agentSessions.$inferSelect,
 ) {
@@ -65,7 +78,7 @@ export const agentSessionsApp = new Hono()
     const input = c.req.valid('json')
     const now = new Date()
 
-    const session = await db.transaction(async (tx) => {
+    const upserted = await db.transaction(async (tx) => {
       const existing = await findAgentSessionBySessionId(
         tx,
         input.provider,
@@ -142,10 +155,13 @@ export const agentSessionsApp = new Hono()
         }
       }
 
-      return session
+      return {
+        session,
+        taskIds: session ? await listTaskIdsForSession(tx, session.id) : [],
+      }
     })
 
-    if (!session) {
+    if (!upserted.session) {
       return c.json({ error: 'Failed to upsert agent session' }, 500)
     }
 
@@ -153,14 +169,33 @@ export const agentSessionsApp = new Hono()
     // piggybacks on every write instead. Isolated from the upsert above: a
     // failure here must not turn an already-successful report into a 500.
     const pruneResult = await ResultAsync.fromPromise(
-      db
-        .delete(agentSessions)
-        .where(
-          lt(
-            agentSessions.lastActiveAt,
-            new Date(now.getTime() - STALE_SESSION_MAX_AGE_MS),
-          ),
-        ),
+      db.transaction(async (tx) => {
+        const staleSessions = await tx
+          .select({ id: agentSessions.id })
+          .from(agentSessions)
+          .where(
+            lt(
+              agentSessions.lastActiveAt,
+              new Date(now.getTime() - STALE_SESSION_MAX_AGE_MS),
+            ),
+          )
+          .for('update')
+        const staleSessionIds = staleSessions.map(({ id }) => id)
+        if (staleSessionIds.length === 0) return []
+
+        const taskIds = (
+          await tx
+            .select({ taskId: taskAgentSessions.taskId })
+            .from(taskAgentSessions)
+            .where(inArray(taskAgentSessions.agentSessionId, staleSessionIds))
+        ).map(({ taskId }) => taskId)
+
+        await tx
+          .delete(agentSessions)
+          .where(inArray(agentSessions.id, staleSessionIds))
+
+        return taskIds
+      }),
       (error) => error,
     )
     if (pruneResult.isErr()) {
@@ -170,7 +205,13 @@ export const agentSessionsApp = new Hono()
       )
     }
 
-    return c.json(agentSessionToResponse(session), 200)
+    const taskIds = new Set(upserted.taskIds)
+    if (pruneResult.isOk()) {
+      for (const taskId of pruneResult.value) taskIds.add(taskId)
+    }
+    setChangeEventTaskIds(c, [...taskIds].sort())
+
+    return c.json(agentSessionToResponse(upserted.session), 200)
   })
   .get('/', zValidator('query', listAgentSessionsQuerySchema), async (c) => {
     const { sessionId } = c.req.valid('query')
@@ -233,16 +274,21 @@ export const agentSessionsApp = new Hono()
     const id = c.req.param('id')
     const input = c.req.valid('json')
 
-    const [session] = await db
-      .update(agentSessions)
-      .set({ customLabel: input.customLabel })
-      .where(eq(agentSessions.id, id))
-      .returning()
+    const { session, taskIds } = await db.transaction(async (tx) => {
+      const taskIds = await listTaskIdsForSession(tx, id)
+      const [session] = await tx
+        .update(agentSessions)
+        .set({ customLabel: input.customLabel })
+        .where(eq(agentSessions.id, id))
+        .returning()
+      return { session, taskIds }
+    })
 
     if (!session) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
 
+    setChangeEventTaskIds(c, taskIds)
     return c.json(agentSessionToResponse(session), 200)
   })
   // Resolves tq's internal id from the (provider, session_id) pair a hook
@@ -277,20 +323,33 @@ export const agentSessionsApp = new Hono()
     }
     const sessionId = c.req.param('sessionId')
 
-    const deleted = await db
-      .delete(agentSessions)
-      .where(
-        and(
-          eq(agentSessions.provider, provider),
-          eq(agentSessions.sessionId, sessionId),
-        ),
-      )
-      .returning()
+    const deleted = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ id: agentSessions.id })
+        .from(agentSessions)
+        .where(
+          and(
+            eq(agentSessions.provider, provider),
+            eq(agentSessions.sessionId, sessionId),
+          ),
+        )
+        .for('update')
+      if (!existing) return null
 
-    if (deleted.length === 0) {
+      const taskIds = await listTaskIdsForSession(tx, existing.id)
+      const rows = await tx
+        .delete(agentSessions)
+        .where(eq(agentSessions.id, existing.id))
+        .returning()
+
+      return rows.length > 0 ? taskIds : null
+    })
+
+    if (deleted == null) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
 
+    setChangeEventTaskIds(c, deleted)
     return c.body(null, 204)
   })
   .post('/by-session/:provider/:sessionId/archive', async (c) => {
@@ -300,21 +359,29 @@ export const agentSessionsApp = new Hono()
     }
     const sessionId = c.req.param('sessionId')
 
-    const [session] = await db
-      .update(agentSessions)
-      .set({ archivedAt: new Date() })
-      .where(
-        and(
-          eq(agentSessions.provider, provider),
-          eq(agentSessions.sessionId, sessionId),
-        ),
+    const { session, taskIds } = await db.transaction(async (tx) => {
+      const existing = await findAgentSessionBySessionId(
+        tx,
+        provider,
+        sessionId,
       )
-      .returning()
+      if (!existing) return { session: undefined, taskIds: [] }
+
+      const taskIds = await listTaskIdsForSession(tx, existing.id)
+      const [session] = await tx
+        .update(agentSessions)
+        .set({ archivedAt: new Date() })
+        .where(eq(agentSessions.id, existing.id))
+        .returning()
+
+      return { session, taskIds }
+    })
 
     if (!session) {
       return c.json({ error: 'Agent session not found' }, 404)
     }
 
+    setChangeEventTaskIds(c, taskIds)
     return c.json(agentSessionToResponse(session), 200)
   })
   .get('/:id/tasks', async (c) => {

@@ -3,6 +3,7 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { recurringTemplateKeys } from '#lib/query-keys'
 
 export type RecurringTemplate = InferResponseType<
   (typeof api.api)['recurring-task-templates'][':id']['$get'],
@@ -12,14 +13,6 @@ export type RecurringTemplate = InferResponseType<
 export interface RecurringTemplateFilter {
   context?: 'work' | 'personal'
   enabled?: boolean
-}
-
-const recurringTemplateKeys = {
-  all: ['recurring-templates'] as const,
-  lists: ['recurring-templates', 'list'] as const,
-  list: (filter?: RecurringTemplateFilter) =>
-    [...recurringTemplateKeys.lists, filter] as const,
-  detail: (id: string) => [...recurringTemplateKeys.all, 'detail', id] as const,
 }
 
 export function useRecurringTemplates(filter?: RecurringTemplateFilter) {

@@ -485,9 +485,7 @@ export const Default: Story = {
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onMoveScheduledTaskToWeek: fn(),
-    onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
-    isAutoAssigning: false,
   },
 }
 
@@ -596,9 +594,7 @@ export const Loading: Story = {
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onMoveScheduledTaskToWeek: fn(),
-    onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
-    isAutoAssigning: false,
     initialMobileTab: 'tasks',
   },
 }
@@ -617,9 +613,7 @@ export const Empty: Story = {
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onMoveScheduledTaskToWeek: fn(),
-    onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
-    isAutoAssigning: false,
     initialMobileTab: 'tasks',
   },
 }
@@ -642,9 +636,7 @@ export const EmptyQueueWithCandidates: Story = {
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
     onMoveScheduledTaskToWeek: fn(),
-    onAutoAssign: fn(),
     onCreateTimeBlock: fn(),
-    isAutoAssigning: false,
     initialMobileTab: 'tasks',
   },
 }

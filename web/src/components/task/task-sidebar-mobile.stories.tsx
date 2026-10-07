@@ -7,7 +7,7 @@ import type { TaskDetail } from '#hooks/use-tasks'
 
 function MobileSidebarStory({ task }: { task: TaskDetail }) {
   return (
-    <TaskSidebarStoryProviders task={task}>
+    <TaskSidebarStoryProviders>
       <div className="max-w-sm border-t border-border p-4">
         <TaskSidebarMobile task={task} />
       </div>

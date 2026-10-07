@@ -5,6 +5,7 @@ import { ResultAsync } from 'neverthrow'
 import { db } from '#db/connection'
 import { tasks } from '#db/schema'
 import { APP_DOMAIN } from '#env'
+import { publishChangeEvent } from '#lib/change-events'
 import { sendPush } from '#services/push'
 
 function toError(error: unknown): Error {
@@ -44,11 +45,20 @@ export async function deliverDueReminders(): Promise<void> {
       context: tasks.context,
     })
 
+  for (const task of due) {
+    publishChangeEvent({
+      resource: 'task',
+      id: task.id,
+      origin: null,
+      taskIds: [task.id],
+    })
+  }
+
   // The rest still has to lose its `remind_at`, otherwise every later tick
   // reconsiders it forever. Restated rather than inverted with `not()` so a
   // reminder set to a past instant between the two statements stays for the
   // next tick instead of being retired here without ever being sent.
-  await db
+  const retired = await db
     .update(tasks)
     .set({ remindAt: null })
     .where(
@@ -60,6 +70,16 @@ export async function deliverDueReminders(): Promise<void> {
         ),
       ),
     )
+    .returning({ id: tasks.id })
+
+  for (const task of retired) {
+    publishChangeEvent({
+      resource: 'task',
+      id: task.id,
+      origin: null,
+      taskIds: [task.id],
+    })
+  }
 
   for (const task of due) {
     // Isolated per task: `remind_at` is already cleared, so letting one

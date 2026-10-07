@@ -137,4 +137,73 @@ describe('checklist MCP operations', () => {
       updatedAt: '<timestamp>',
     })
   })
+  it('promotes an item through the shared operation', async () => {
+    const task = await createTask('Checklist task')
+    const createdChecklist = parseToolJson(
+      await callMcpTool(client, 'checklist_create', { taskId: task.number }),
+    )
+    const checklist = z.object({ id: z.uuid() }).parse(createdChecklist)
+    const addedItem = parseToolJson(
+      await callMcpTool(client, 'checklist_item_add', {
+        checklistId: checklist.id,
+        content: 'Prepare materials',
+        note: 'Markdown detail',
+      }),
+    )
+    const item = z.object({ id: z.uuid() }).parse(addedItem)
+
+    const promoted = await callMcpTool(client, 'checklist_item_promote', {
+      itemId: item.id,
+    })
+    const listed = await callMcpTool(client, 'checklist_list', {
+      taskId: task.number,
+    })
+
+    expect(
+      normalizeDynamicValues({
+        promoted: parseToolJson(promoted),
+        listed: parseToolJson(listed),
+      }),
+    ).toEqual({
+      promoted: {
+        id: '<uuid>',
+        checklistId: '<uuid>',
+        parentItemId: null,
+        content: 'Prepare materials',
+        note: 'Markdown detail',
+        checkedAt: null,
+        sortOrder: 0,
+        githubLinkId: null,
+        subtaskId: '<uuid>',
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+      listed: [
+        {
+          id: '<uuid>',
+          taskId: '<uuid>',
+          name: null,
+          sortOrder: 0,
+          createdAt: '<timestamp>',
+          updatedAt: '<timestamp>',
+          items: [
+            {
+              id: '<uuid>',
+              checklistId: '<uuid>',
+              parentItemId: null,
+              content: 'Prepare materials',
+              note: 'Markdown detail',
+              checkedAt: null,
+              sortOrder: 0,
+              githubLinkId: null,
+              subtaskId: '<uuid>',
+              createdAt: '<timestamp>',
+              updatedAt: '<timestamp>',
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+  })
 })

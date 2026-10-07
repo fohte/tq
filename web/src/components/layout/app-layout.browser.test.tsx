@@ -153,8 +153,6 @@ function renderDayViewWithManyCandidates(queryClient: QueryClient) {
           onAddCandidate={vi.fn()}
           onRemoveFromQueue={vi.fn()}
           onMoveScheduledTaskToWeek={vi.fn()}
-          onAutoAssign={vi.fn()}
-          isAutoAssigning={false}
           selectedDate={today}
           onDateChange={vi.fn()}
           viewMode="queue"

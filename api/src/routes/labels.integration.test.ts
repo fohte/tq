@@ -1,10 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { createLabel } from '#routes/tasks/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
+import { createLabel, createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+})
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -16,7 +24,67 @@ interface LabelResponse {
   createdAt: string
 }
 
+interface LabelCountResponse {
+  name: string
+  count: number
+}
+
+async function responseOutput<T>(res: Response) {
+  return { status: res.status, body: await jsonBody<T>(res) }
+}
+
 describe('labels API', () => {
+  describe('GET /api/labels/counts', () => {
+    it.each([undefined, 'invalid', 'all'])(
+      'requires a valid context (%s)',
+      async (context) => {
+        const url =
+          context === undefined
+            ? '/api/labels/counts'
+            : `/api/labels/counts?context=${context}`
+        const res = await app.request(url)
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('counts active tasks per assigned label path in the label context', async () => {
+      await createLabel('team', { context: 'work' })
+      await createLabel('team/api', { context: 'work' })
+      await createLabel('completed-only', { context: 'work' })
+      await createLabel('personal-only', { context: 'personal' })
+      await createLabel('unassigned', { context: 'work' })
+
+      await createTask('parent and child labels', {
+        context: 'personal',
+        labels: ['team', 'team/api', 'personal-only'],
+      })
+      await createTask('child label', {
+        context: 'personal',
+        labels: ['team/api'],
+      })
+      const completedTask = await createTask('completed label', {
+        labels: ['completed-only'],
+      })
+      await app.request(`/api/tasks/${completedTask.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      })
+
+      const res = await app.request('/api/labels/counts?context=work')
+
+      expect(await responseOutput<LabelCountResponse[]>(res)).toEqual({
+        status: 200,
+        body: [
+          { name: 'completed-only', count: 0 },
+          { name: 'team', count: 2 },
+          { name: 'team/api', count: 2 },
+        ],
+      })
+    })
+  })
+
   describe('GET /api/labels', () => {
     it('returns empty list when no labels exist', async () => {
       const res = await app.request('/api/labels')
@@ -57,6 +125,67 @@ describe('labels API', () => {
   })
 
   describe('PATCH /api/labels/:id', () => {
+    it('emits task IDs when a label name changes', async () => {
+      const label = await createLabel('bug')
+      const firstTask = await createTask('First tagged task', {
+        labels: [label.name],
+      })
+      const secondTask = await createTask('Second tagged task', {
+        labels: [label.name],
+      })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'defect' }),
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'label',
+            id: label.id,
+            origin: null,
+            taskIds: [firstTask.id, secondTask.id].sort(),
+          },
+        ],
+      })
+    })
+
+    it('emits no task IDs when only label context changes', async () => {
+      const label = await createLabel('urgent')
+      await createTask('Tagged task', { labels: [label.name] })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: 'work' }),
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'label',
+            id: label.id,
+            origin: null,
+            taskIds: [],
+          },
+        ],
+      })
+    })
+
     it('renames a label', async () => {
       const label = await createLabel('bug')
 
@@ -181,6 +310,32 @@ describe('labels API', () => {
   })
 
   describe('DELETE /api/labels/:id', () => {
+    it('emits attached task IDs before deleting a label', async () => {
+      const label = await createLabel('bug')
+      const task = await createTask('Tagged task', { labels: [label.name] })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'label',
+            id: label.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('deletes a label', async () => {
       const label = await createLabel('bug')
 

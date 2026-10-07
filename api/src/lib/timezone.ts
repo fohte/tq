@@ -14,17 +14,3 @@ export function localDateBoundsToUtc(
   dayEnd.setTime(dayEnd.getTime() + offsetMs)
   return { dayStart, dayEnd }
 }
-
-/**
- * Convert a naive local date-time string (no timezone suffix, e.g. from
- * `expandScheduleForDate`) into a real UTC instant.
- */
-export function localNaiveDateTimeToUtc(
-  naiveDateTime: string,
-  tzOffsetMinutes = 0,
-): Date {
-  const offsetMs = tzOffsetMinutes * 60 * 1000
-  const asUtc = new Date(`${naiveDateTime}Z`)
-  asUtc.setTime(asUtc.getTime() + offsetMs)
-  return asUtc
-}

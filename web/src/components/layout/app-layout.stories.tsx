@@ -37,6 +37,7 @@ const meta = {
         http.get('/api/queues/:key/items', () => HttpResponse.json([])),
         http.get('/api/saved-views', () => HttpResponse.json([])),
         http.get('/api/labels', () => HttpResponse.json([])),
+        http.get('/api/labels/counts', () => HttpResponse.json([])),
       ],
     },
   },

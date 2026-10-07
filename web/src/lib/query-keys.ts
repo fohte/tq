@@ -1,5 +1,6 @@
 import type { LabelFilter } from '#hooks/use-labels'
 import type { ProjectFilter } from '#hooks/use-projects'
+import type { RecurringTemplateFilter } from '#hooks/use-recurring-templates'
 import type { SavedViewFilter } from '#hooks/use-saved-views'
 import type { TaskListFilter } from '#hooks/use-task-queries'
 
@@ -14,7 +15,10 @@ export const taskKeys = {
   infiniteLists: ['tasks', 'infinite-list'] as const,
   infiniteList: (filter?: TaskListFilter) =>
     [...taskKeys.infiniteLists, filter] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
+  details: ['tasks', 'detail'] as const,
+  detail: (id: string) => [...taskKeys.details, id] as const,
+  labelCounts: (context: NonNullable<LabelFilter['context']>) =>
+    [...taskKeys.all, 'label-counts', context] as const,
 }
 
 export const taskChecklistKeys = {
@@ -76,6 +80,36 @@ export const savedViewKeys = {
   all: ['saved-views'] as const,
   lists: ['saved-views', 'list'] as const,
   list: (filter?: SavedViewFilter) => [...savedViewKeys.lists, filter] as const,
+}
+
+export const scheduleKeys = {
+  all: ['schedules'] as const,
+  lists: ['schedules', 'list'] as const,
+  list: (startDate: string, endDate: string) =>
+    [...scheduleKeys.lists, { startDate, endDate }] as const,
+}
+
+export const recurringTemplateKeys = {
+  all: ['recurring-templates'] as const,
+  lists: ['recurring-templates', 'list'] as const,
+  list: (filter?: RecurringTemplateFilter) =>
+    [...recurringTemplateKeys.lists, filter] as const,
+  detail: (id: string) => [...recurringTemplateKeys.all, 'detail', id] as const,
+}
+
+export const descriptionTemplateKeys = {
+  all: ['description-templates'] as const,
+  lists: ['description-templates', 'list'] as const,
+  list: () => descriptionTemplateKeys.lists,
+}
+
+export const githubSyncRuleKeys = {
+  list: ['github-sync-rules'] as const,
+}
+
+export const githubSyncKeys = {
+  all: ['github-sync'] as const,
+  task: (taskId: string) => ['github-sync', 'task', taskId] as const,
 }
 
 export type SearchContext = 'work' | 'personal'

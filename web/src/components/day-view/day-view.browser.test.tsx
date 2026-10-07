@@ -82,8 +82,6 @@ async function renderDayView(
     onAddCandidate: vi.fn(),
     onRemoveFromQueue: vi.fn(),
     onMoveScheduledTaskToWeek: vi.fn(),
-    onAutoAssign: vi.fn(),
-    isAutoAssigning: false,
     selectedDate: new Date('2026-07-20T00:00:00'),
     onDateChange: vi.fn(),
     viewMode: 'queue',

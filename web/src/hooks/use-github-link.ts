@@ -11,6 +11,7 @@ import {
   assertOkWithMessageOrThrow,
   unwrapOrThrow,
 } from '#lib/assert-response'
+import { githubSyncKeys } from '#lib/query-keys'
 
 export type ResolveGithubUrlResult = InferResponseType<
   typeof api.api.github.resolve.$post,
@@ -156,7 +157,7 @@ export function useGithubSync() {
   const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: ['github-sync'],
+    queryKey: githubSyncKeys.all,
     queryFn: async () => {
       const res = await api.api.github.sync.$post()
       assertOkOrThrow(res)
@@ -177,7 +178,7 @@ export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
   const queryClient = useQueryClient()
 
   return useQuery({
-    queryKey: ['github-sync', 'task', taskId],
+    queryKey: githubSyncKeys.task(taskId),
     queryFn: async () => {
       const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
         param: { taskId },

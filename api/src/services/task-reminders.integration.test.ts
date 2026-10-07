@@ -1,9 +1,10 @@
 import { asc } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { sendNotification } from 'web-push'
 
 import { db } from '#db/connection'
 import { pushSubscriptions, tasks } from '#db/schema'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { deliverDueReminders } from '#services/reminder-delivery'
 import { setupTestDb } from '#testing'
@@ -28,6 +29,13 @@ beforeEach(() => {
     body: '',
     headers: {},
   })
+})
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
 })
 
 const MINUTE_MS = 60_000
@@ -90,37 +98,53 @@ describe('deliverDueReminders', () => {
       context: 'work',
       remindAt: new Date(Date.now() - MINUTE_MS),
     })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     await deliverDueReminders()
 
-    expect(await deliveryOutcome()).toEqual({
-      notifications: [
-        {
-          endpoint: WORK_ENDPOINT,
-          payload: {
-            title: 'Prepare the standup notes',
-            body: `#${String(task.number)}`,
-            taskId: task.id,
-            url: `https://localhost:5173/tasks/${task.id}`,
+    const snapshot = async () => ({ delivery: await deliveryOutcome(), events })
+    expect(await snapshot()).toEqual({
+      delivery: {
+        notifications: [
+          {
+            endpoint: WORK_ENDPOINT,
+            payload: {
+              title: 'Prepare the standup notes',
+              body: `#${String(task.number)}`,
+              taskId: task.id,
+              url: `https://localhost:5173/tasks/${task.id}`,
+            },
           },
-        },
+        ],
+        remindAt: { 'Prepare the standup notes': null },
+      },
+      events: [
+        { resource: 'task', id: task.id, origin: null, taskIds: [task.id] },
       ],
-      remindAt: { 'Prepare the standup notes': null },
     })
   })
 
   it('retires a reminder that came due over an hour ago without sending it', async () => {
     await register(PERSONAL_ENDPOINT, 'personal')
-    await createTask({
+    const task = await createTask({
       title: 'Missed while the API was down',
       remindAt: new Date(Date.now() - 2 * HOUR_MS),
     })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     await deliverDueReminders()
 
-    expect(await deliveryOutcome()).toEqual({
-      notifications: [],
-      remindAt: { 'Missed while the API was down': null },
+    const snapshot = async () => ({ delivery: await deliveryOutcome(), events })
+    expect(await snapshot()).toEqual({
+      delivery: {
+        notifications: [],
+        remindAt: { 'Missed while the API was down': null },
+      },
+      events: [
+        { resource: 'task', id: task.id, origin: null, taskIds: [task.id] },
+      ],
     })
   })
 
@@ -144,12 +168,18 @@ describe('deliverDueReminders', () => {
     await register(PERSONAL_ENDPOINT, 'personal')
     const future = new Date(Date.now() + HOUR_MS)
     await createTask({ title: 'Still upcoming', remindAt: future })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     await deliverDueReminders()
 
-    expect(await deliveryOutcome()).toEqual({
-      notifications: [],
-      remindAt: { 'Still upcoming': future.toISOString() },
+    const snapshot = async () => ({ delivery: await deliveryOutcome(), events })
+    expect(await snapshot()).toEqual({
+      delivery: {
+        notifications: [],
+        remindAt: { 'Still upcoming': future.toISOString() },
+      },
+      events: [],
     })
   })
 

@@ -1,6 +1,7 @@
 import type { AppType } from 'api/types'
 import { hc } from 'hono/client'
 
+import { getScreenId } from '#lib/screen-id'
 import { sessionAwareFetch } from '#lib/session-aware-fetch'
 
 // Every request from the web app is human-initiated, so it's tagged here
@@ -10,7 +11,7 @@ function fetchWithAuthor(
   init?: RequestInit,
 ): Promise<Response> {
   const headers = new Headers(init?.headers)
-  headers.set('X-Author', 'human')
+  headers.set('X-Author', `human:${getScreenId()}`)
   return sessionAwareFetch(input, { ...init, headers })
 }
 

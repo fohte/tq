@@ -31,8 +31,6 @@ export const EXCLUDED_ROUTES = {
     'calendar subscription setup requires browser authorization; one-time setup',
 
   // Settings screens the web UI already covers.
-  'GET /api/scheduling-settings': 'settings covered by the web UI',
-  'PATCH /api/scheduling-settings': 'settings covered by the web UI',
   'POST /api/github/sync-rules': 'settings covered by the web UI',
   'GET /api/github/sync-rules': 'settings covered by the web UI',
   'PATCH /api/github/sync-rules/:id': 'settings covered by the web UI',
@@ -48,23 +46,23 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/description-templates/:name':
     'template management is a web UI action',
 
-  // Recurring schedule defaults and auto-assignment remain calendar actions;
-  // per-occurrence changes have separate CLI operations.
+  // Recurring schedule defaults remain calendar actions; per-occurrence
+  // changes have separate CLI operations.
   'POST /api/schedule/recurring':
     'calendar UI is faster for direct manipulation',
   'PATCH /api/schedule/recurring/:id':
     'calendar UI is faster for direct manipulation',
   'DELETE /api/schedule/recurring/:id':
     'calendar UI is faster for direct manipulation',
-  'POST /api/schedule/auto-assign':
-    'calendar UI is faster for direct manipulation',
-
   // Web Push subscriptions belong to a browser: only a browser can produce
   // one, and only a browser can display what gets delivered to it.
   'GET /api/push/vapid-public-key': 'web push is a browser-only capability',
   'POST /api/push/subscriptions': 'web push is a browser-only capability',
   'DELETE /api/push/subscriptions': 'web push is a browser-only capability',
   'POST /api/push/test': 'web push is a browser-only capability',
+
+  // The web UI consumes the live event stream through EventSource.
+  'GET /api/events': 'live refresh is a browser-only capability',
 
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
@@ -81,6 +79,9 @@ export const EXCLUDED_ROUTES = {
     'backs the web search bar autocomplete, not a CLI concern',
   'GET /api/tasks/mentions':
     "backs the editor's # mention autocomplete, not a CLI concern",
+
+  // The web sidebar is the only consumer of these aggregated badge counts.
+  'GET /api/labels/counts': 'sidebar badge data, not a CLI concern',
 
   // Backs the web project detail page's task tree (ids only, no task data);
   // `GET /api/projects/:id` already covers a CLI's project-summary use case.

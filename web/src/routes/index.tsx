@@ -13,7 +13,6 @@ import {
   buildQueueSections,
   filterTasksDueOnOrBeforeToday,
 } from '#components/day-view/queue-sections'
-import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCompactMemoData } from '#hooks/use-compact-memo-data'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
@@ -22,11 +21,7 @@ import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
-import {
-  GcalAuthRequiredError,
-  useAutoRescheduleOnGcalChange,
-  useGcalEvents,
-} from '#hooks/use-gcal-events'
+import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useNowPanelData } from '#hooks/use-now-panel-data'
 import { useProjects } from '#hooks/use-projects'
@@ -41,7 +36,6 @@ import {
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import { useScheduleList } from '#hooks/use-schedules'
-import { useSchedulingSettings } from '#hooks/use-scheduling-settings'
 import { useSelectedDate } from '#hooks/use-selected-date'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import {
@@ -223,7 +217,6 @@ function DayView() {
     visibleRange.endDate,
     context,
   )
-  const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError ||
     nowPanelGcalAuthRequired
@@ -240,7 +233,6 @@ function DayView() {
   }, [gcalEventsQuery.error])
 
   const setQueueItems = useSetQueueItems()
-  const autoAssign = useAutoAssign()
   const { dayQueueItems, dndCallbacks } = useDayQueueCalendar({
     queues: queuesData,
     startDate: visibleRange.startDate,
@@ -453,27 +445,6 @@ function DayView() {
     )
   }
 
-  const handleAutoAssign = () => {
-    if (autoAssign.isPending) return
-    autoAssign.mutate(
-      {
-        date: selectedDateStr,
-        tzOffset: new Date().getTimezoneOffset(),
-      },
-      {
-        onError: (error) => {
-          console.error('Failed to auto-assign tasks', error)
-        },
-      },
-    )
-  }
-
-  useAutoRescheduleOnGcalChange(
-    gcalEventsQuery.data,
-    handleAutoAssign,
-    schedulingSettings.data?.autoRescheduleOnGcalChange ?? true,
-  )
-
   return (
     <>
       <DayViewPresentation
@@ -504,8 +475,6 @@ function DayView() {
         onAddCandidate={handleAddCandidate}
         onRemoveFromQueue={handleRemoveFromQueue}
         onMoveScheduledTaskToWeek={handleMoveScheduledTaskToWeek}
-        onAutoAssign={handleAutoAssign}
-        isAutoAssigning={autoAssign.isPending}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         onVisibleRangeChange={handleVisibleRangeChange}

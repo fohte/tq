@@ -94,8 +94,8 @@ export interface DayViewPresentationProps {
   gcalAuthUrl?: string
   queueSections: QueueSectionData[]
   /** The day queue's own (unfiltered — completed tasks included) items, for
-   * the progress bar and auto-assign eligibility, which only ever apply to
-   * "today" regardless of how many other queues exist. */
+   * the progress bar, which only ever applies to "today" regardless of how
+   * many other queues exist. */
   dayQueueTasks: Task[]
   queueCandidates: QueueCandidate<Task>[]
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
@@ -106,8 +106,6 @@ export interface DayViewPresentationProps {
   onAddCandidate: (taskId: string) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
   onMoveScheduledTaskToWeek: (taskId: string, date: string) => void
-  onAutoAssign: () => void
-  isAutoAssigning: boolean
   selectedDate: Date
   onDateChange: (date: Date) => void
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
@@ -145,8 +143,6 @@ export function DayViewPresentation({
   onAddCandidate,
   onRemoveFromQueue,
   onMoveScheduledTaskToWeek,
-  onAutoAssign,
-  isAutoAssigning,
   selectedDate,
   onDateChange,
   onVisibleRangeChange,
@@ -196,8 +192,6 @@ export function DayViewPresentation({
     setIsCreateModalOpen(true)
   }, [])
   const taskListRef = useRef<HTMLDivElement>(null)
-
-  const canAutoAssign = dayQueueTasks.some((t) => t.estimatedMinutes != null)
 
   const layoutItems: ActionsMenuItem[] = [
     {
@@ -284,21 +278,6 @@ export function DayViewPresentation({
               onValueChange={setMobileTab}
             />
           </div>
-
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={onAutoAssign}
-            disabled={isAutoAssigning || !canAutoAssign}
-            title={
-              canAutoAssign
-                ? undefined
-                : 'Set an estimate on at least one queued task to auto-schedule'
-            }
-            className="ml-auto"
-          >
-            {isAutoAssigning ? 'scheduling…' : 'auto'}
-          </Button>
 
           <Button
             variant="ghost"
