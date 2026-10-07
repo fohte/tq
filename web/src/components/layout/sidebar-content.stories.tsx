@@ -15,11 +15,13 @@ import type { SavedView } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { labelKeys, savedViewKeys } from '#lib/query-keys'
+import type { TagCount } from '#lib/tag-tree'
+import { makeTagCount } from '#lib/tag-tree-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const tasksWithTags: Task[] = [
-  makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
-  makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
+const tagCountsWithTags: TagCount[] = [
+  makeTagCount({ name: 'dev:tq', count: 2 }),
+  makeTagCount({ name: 'urgent', count: 1 }),
 ]
 
 const labelsForTasksWithTags = [
@@ -27,9 +29,10 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '2', name: 'urgent' }),
 ]
 
-const tasksWithNestedTags: Task[] = [
-  makeTask({ id: '4', title: 'Task X', labels: ['dev/tq'] }),
-  makeTask({ id: '5', title: 'Task Y', labels: ['dev/infra'] }),
+const tagCountsWithNestedTags: TagCount[] = [
+  makeTagCount({ name: 'dev', count: 2 }),
+  makeTagCount({ name: 'dev/tq', count: 1 }),
+  makeTagCount({ name: 'dev/infra', count: 1 }),
 ]
 
 const labelsForNestedTags = [
@@ -62,16 +65,18 @@ const savedViews: SavedView[] = [
 ]
 
 function SidebarContentStory({
-  tasks = tasksWithTags,
+  tasks = [],
   labels = labelsForTasksWithTags,
+  tagCounts = tagCountsWithTags,
 }: {
   tasks?: Task[]
   labels?: Label[]
+  tagCounts?: TagCount[]
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts)
   queryClient.setQueryData(
     taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
     tasks.filter(
@@ -100,9 +105,11 @@ function SidebarContentStory({
 function SidebarContentWithRouter({
   tasks,
   labels,
+  tagCounts,
 }: {
   tasks?: Task[]
   labels?: Label[]
+  tagCounts?: TagCount[]
 }) {
   return (
     <StoryRouter
@@ -110,6 +117,7 @@ function SidebarContentWithRouter({
         <SidebarContentStory
           {...(tasks != null ? { tasks } : {})}
           {...(labels != null ? { labels } : {})}
+          {...(tagCounts != null ? { tagCounts } : {})}
         />
       )}
     />
@@ -135,7 +143,7 @@ export const Default: Story = {
 export const WithNestedTags: Story = {
   name: 'the sidebar groups tasks under nested labels',
   args: {
-    tasks: tasksWithNestedTags,
+    tagCounts: tagCountsWithNestedTags,
     labels: labelsForNestedTags,
   },
 }
