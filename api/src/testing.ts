@@ -9,9 +9,20 @@ import { dbContext } from '#db/context'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
+interface CapturedDbQuery {
+  query: string
+  parameters: unknown[]
+}
+
+let activeQueryCapture: CapturedDbQuery[] | undefined
 // Single connection so the transaction below and every query issued during
 // a test run on the same underlying Postgres session.
-const testClient = postgres(DATABASE_URL, { max: 1 })
+const testClient = postgres(DATABASE_URL, {
+  max: 1,
+  debug: (_connection, query, parameters) => {
+    activeQueryCapture?.push({ query, parameters })
+  },
+})
 const testDb = drizzle(testClient, { schema })
 
 function runWithDb<T>(current: DbContextValue, fn: () => T): T {
@@ -52,6 +63,21 @@ export function setupTestDb() {
   afterAll(async () => {
     await testClient.end()
   })
+}
+
+export function captureDbQueries<T>(
+  operation: () => Promise<T>,
+): Promise<{ result: T; queries: CapturedDbQuery[] }> {
+  const previousCapture = activeQueryCapture
+  const queries: CapturedDbQuery[] = []
+  activeQueryCapture = queries
+
+  return Promise.resolve()
+    .then(operation)
+    .then((result) => ({ result, queries }))
+    .finally(() => {
+      activeQueryCapture = previousCapture
+    })
 }
 
 /**
