@@ -37,7 +37,11 @@ import {
   resolveTasksByIdsOrNumbers,
   type TaskSearchMatch,
 } from '#routes/tasks/shared'
-import type { CountTasksQuery, ListTasksQuery } from '#schemas/task'
+import type {
+  CountTasksQuery,
+  ListTasksQuery,
+  TaskFilterQuery,
+} from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
@@ -356,11 +360,6 @@ function buildConditions(
     freeTextWords: freeTextWords(parsed?.freeText),
   }
 }
-
-type TaskFilterQuery = Omit<
-  ListTasksQuery,
-  'includeAncestors' | 'includeMatch' | 'limit' | 'offset' | 'sortBy'
->
 
 async function buildTaskFilterConditions(query: TaskFilterQuery) {
   const { ids: rawIds, ...filters } = query

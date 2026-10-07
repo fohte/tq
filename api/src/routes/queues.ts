@@ -27,8 +27,6 @@ import {
   type TaskQueue,
 } from '#services/task-queues'
 
-const itemsQuerySchema = getQueueItemsQuerySchema
-
 function queueToResponse(queue: TaskQueue) {
   return {
     key: queue.key,
@@ -76,36 +74,38 @@ export const queuesApp = new Hono()
       )
     },
   )
-  .get('/:key/items', zValidator('query', itemsQuerySchema), async (c) => {
-    const key = c.req.param('key')
-    const { date, context } = c.req.valid('query')
+  .get(
+    '/:key/items',
+    zValidator('query', getQueueItemsQuerySchema),
+    async (c) => {
+      const key = c.req.param('key')
+      const { date, context } = c.req.valid('query')
 
-    const queueResult = await getQueueByKeyOrRespond(c, key)
-    if (queueResult.isErr()) return queueResult.error
-    const queue = queueResult.value
+      const queueResult = await getQueueByKeyOrRespond(c, key)
+      if (queueResult.isErr()) return queueResult.error
+      const queue = queueResult.value
 
-    const periodStart = resolvePeriodStart(queue.periodUnit, date)
+      const periodStart = resolvePeriodStart(queue.periodUnit, date)
 
-    const rows = await db
-      .select({ item: taskQueueItems })
-      .from(taskQueueItems)
-      .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
-      .where(
-        and(
-          eq(taskQueueItems.queueId, queue.id),
-          periodStartCondition(periodStart),
-          context === 'work' || context === 'personal'
-            ? eq(tasks.context, context)
-            : undefined,
-        ),
+      const rows = await db
+        .select({ item: taskQueueItems })
+        .from(taskQueueItems)
+        .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
+        .where(
+          and(
+            eq(taskQueueItems.queueId, queue.id),
+            periodStartCondition(periodStart),
+            context == null ? undefined : eq(tasks.context, context),
+          ),
+        )
+        .orderBy(asc(tasks.dueDate), taskQueueItems.sortOrder)
+
+      return c.json(
+        rows.map(({ item }) => itemToResponse(item)),
+        200,
       )
-      .orderBy(asc(tasks.dueDate), taskQueueItems.sortOrder)
-
-    return c.json(
-      rows.map(({ item }) => itemToResponse(item)),
-      200,
-    )
-  })
+    },
+  )
   .put('/:key/items', zValidator('json', putQueueItemsSchema), async (c) => {
     const key = c.req.param('key')
     const { taskIds, date } = c.req.valid('json')

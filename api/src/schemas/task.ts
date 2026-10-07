@@ -143,13 +143,16 @@ export const listTasksQuerySchema = z.object({
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
 
-export const countTasksQuerySchema = listTasksQuerySchema
-  .omit({
-    includeAncestors: true,
-    includeMatch: true,
-    limit: true,
-    offset: true,
-    sortBy: true,
-  })
-  .extend({ context: contextEnum })
+export const taskFilterQuerySchema = listTasksQuerySchema.omit({
+  includeAncestors: true,
+  includeMatch: true,
+  limit: true,
+  offset: true,
+  sortBy: true,
+})
+export type TaskFilterQuery = z.infer<typeof taskFilterQuerySchema>
+
+export const countTasksQuerySchema = taskFilterQuerySchema.extend({
+  context: contextEnum,
+})
 export type CountTasksQuery = z.infer<typeof countTasksQuerySchema>
