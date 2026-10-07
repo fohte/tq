@@ -1,14 +1,14 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
-import { eq } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
 import type { Context } from 'hono'
-import { ResultAsync } from 'neverthrow'
+import { err, ok, type Result, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
-import { taskQueues } from '#db/schema'
-import { firstOrErr, type RowNotFoundError } from '#lib/drizzle-utils'
+import { taskQueueItems, taskQueues, tasks } from '#db/schema'
+import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
 
-// The "today" queue is the only one auto-assign and the focus view depend on
-// by name; every other queue is addressed generically via the queues API.
+// Auto-assign and the focus view depend on the day queue by name. Carry-over
+// processing also addresses the day and week queues by name.
 const DAY_QUEUE_KEY = 'day'
 
 export type TaskQueue = typeof taskQueues.$inferSelect
@@ -82,4 +82,163 @@ export function resolvePeriodStart(
     case null:
       return null
   }
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error))
+}
+
+function maxSortOrder(rows: { sortOrder: number }[]): number {
+  return Math.max(-1, ...rows.map((row) => row.sortOrder))
+}
+
+export function carryOverTaskQueueItems(
+  date: string,
+): ResultAsync<void, Error | RowNotFoundError> {
+  const weekStart = mondayOf(date)
+
+  const transaction = db.transaction(
+    async (tx): Promise<Result<void, RowNotFoundError>> => {
+      const queues = await tx
+        .select()
+        .from(taskQueues)
+        .where(inArray(taskQueues.key, ['day', 'week']))
+      const dayQueue = queues.find((queue) => queue.key === 'day')
+      const weekQueue = queues.find((queue) => queue.key === 'week')
+
+      if (dayQueue == null || weekQueue == null) {
+        return err(new RowNotFoundError())
+      }
+
+      const carryOverPeriod = async (
+        queueId: string,
+        targetPeriodStart: string,
+        forwardTaskIds: ReadonlySet<string>,
+      ): Promise<Set<string>> => {
+        const pastPeriodCondition = and(
+          eq(taskQueueItems.queueId, queueId),
+          lt(taskQueueItems.periodStart, targetPeriodStart),
+        )
+        await tx
+          .select({ id: taskQueueItems.id })
+          .from(taskQueueItems)
+          .where(pastPeriodCondition)
+          .for('update')
+
+        const candidates = await tx
+          .select({ item: taskQueueItems })
+          .from(taskQueueItems)
+          .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
+          .where(and(pastPeriodCondition, eq(tasks.status, 'todo')))
+          .orderBy(
+            asc(taskQueueItems.periodStart),
+            asc(taskQueueItems.sortOrder),
+            asc(taskQueueItems.id),
+          )
+        const rowsByTaskId = new Map<
+          string,
+          (typeof candidates)[number]['item'][]
+        >()
+        for (const { item } of candidates) {
+          if (forwardTaskIds.has(item.taskId)) continue
+          const rows = rowsByTaskId.get(item.taskId) ?? []
+          rows.push(item)
+          rowsByTaskId.set(item.taskId, rows)
+        }
+
+        const targetRows = await tx
+          .select({ sortOrder: taskQueueItems.sortOrder })
+          .from(taskQueueItems)
+          .where(
+            and(
+              eq(taskQueueItems.queueId, queueId),
+              eq(taskQueueItems.periodStart, targetPeriodStart),
+            ),
+          )
+        let nextSortOrder = maxSortOrder(targetRows) + 1
+        const duplicateIds: string[] = []
+
+        for (const rows of rowsByTaskId.values()) {
+          const [row, ...duplicates] = rows
+          if (row == null) continue
+          duplicateIds.push(...duplicates.map((duplicate) => duplicate.id))
+          await tx
+            .update(taskQueueItems)
+            .set({
+              periodStart: targetPeriodStart,
+              sortOrder: nextSortOrder,
+              updatedAt: new Date(),
+            })
+            .where(eq(taskQueueItems.id, row.id))
+          nextSortOrder += 1
+        }
+        if (duplicateIds.length > 0) {
+          await tx
+            .delete(taskQueueItems)
+            .where(inArray(taskQueueItems.id, duplicateIds))
+        }
+
+        return new Set(rowsByTaskId.keys())
+      }
+
+      const forwardDayRows = await tx
+        .select({ taskId: taskQueueItems.taskId })
+        .from(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, dayQueue.id),
+            gte(taskQueueItems.periodStart, date),
+          ),
+        )
+      const forwardWeekRows = await tx
+        .select({ taskId: taskQueueItems.taskId })
+        .from(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, weekQueue.id),
+            gte(taskQueueItems.periodStart, weekStart),
+          ),
+        )
+      const forwardDayTaskIds = new Set([
+        ...forwardDayRows.map((row) => row.taskId),
+        ...forwardWeekRows.map((row) => row.taskId),
+      ])
+      const movedDayTaskIds = await carryOverPeriod(
+        dayQueue.id,
+        date,
+        forwardDayTaskIds,
+      )
+
+      const forwardWeekRowsAfterDay = await tx
+        .select({ taskId: taskQueueItems.taskId })
+        .from(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, weekQueue.id),
+            gte(taskQueueItems.periodStart, weekStart),
+          ),
+        )
+      const forwardDayRowsAfterDay = await tx
+        .select({ taskId: taskQueueItems.taskId })
+        .from(taskQueueItems)
+        .where(
+          and(
+            eq(taskQueueItems.queueId, dayQueue.id),
+            gte(taskQueueItems.periodStart, date),
+          ),
+        )
+      const forwardWeekTaskIds = new Set([
+        ...forwardWeekRowsAfterDay.map((row) => row.taskId),
+        ...forwardDayRowsAfterDay.map((row) => row.taskId),
+        ...movedDayTaskIds,
+      ])
+      await carryOverPeriod(weekQueue.id, weekStart, forwardWeekTaskIds)
+
+      return ok(undefined)
+    },
+  )
+
+  return ResultAsync.fromPromise(transaction, toError).andThen(
+    (result) => result,
+  )
 }

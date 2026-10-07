@@ -31,6 +31,8 @@ export const projectKeys = {
 
 export const queueKeys = {
   all: ['queues'] as const,
+  // Broad queue invalidations should not repeat this date-scoped write.
+  carryOver: (date: string) => ['queue-carry-over', date] as const,
   items: (key: string, date: string) =>
     [...queueKeys.all, key, 'items', date] as const,
 }

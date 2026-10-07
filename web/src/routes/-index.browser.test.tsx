@@ -13,6 +13,7 @@ import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import type { QueueItem } from '#hooks/use-queues'
 import { getNowPanelQueryDateRange } from '#lib/compact-layout'
+import { formatLocalDate } from '#lib/date-range'
 import { assertDefined } from '#lib/test-utils'
 import { Route as RootRoute } from '#routes/__root'
 import { Route as DayRoute } from '#routes/index'
@@ -38,7 +39,16 @@ type QueueItemsMock = (
   queues: unknown,
   date: string,
   refetchInterval?: number,
+  options?: { enabled?: boolean },
 ) => unknown
+type QueueCarryOverMock = (date: string) => {
+  isSuccess: boolean
+  isPending: boolean
+  isError: boolean
+  error: unknown
+  isCarryingOver: boolean
+  canReadQueueItems: boolean
+}
 type QueueDatesMock = (
   key: string | undefined,
   dates: string[],
@@ -86,6 +96,8 @@ const mocks = vi.hoisted(() => ({
   useMemos: vi.fn<MemosMock>(),
   useQueues: vi.fn<QueueListMock>(),
   useQueueItemsForQueues: vi.fn<QueueItemsMock>(),
+  useQueueCarryOver: vi.fn<QueueCarryOverMock>(),
+  selectedDate: null as Date | null,
   useQueueItemsForDates: vi.fn<QueueDatesMock>(),
   fetchQueueItems: vi.fn<(key: string, date: string) => Promise<QueueItem[]>>(),
   setQueueItems:
@@ -184,6 +196,8 @@ vi.mock('#hooks/use-queues', () => ({
   },
   useQueueItemsForQueues: (...args: Parameters<QueueItemsMock>) =>
     mocks.useQueueItemsForQueues(...args),
+  useQueueCarryOver: (...args: Parameters<QueueCarryOverMock>) =>
+    mocks.useQueueCarryOver(...args),
   useQueueItemsForDates: (...args: Parameters<QueueDatesMock>) =>
     mocks.useQueueItemsForDates(...args),
   fetchQueueItems: (...args: Parameters<typeof mocks.fetchQueueItems>) =>
@@ -224,7 +238,7 @@ vi.mock('#hooks/use-scheduling-settings', () => ({
 
 vi.mock('#hooks/use-selected-date', () => ({
   useSelectedDate: () => ({
-    selectedDate: new Date('2026-07-20T00:00:00'),
+    selectedDate: mocks.selectedDate ?? new Date('2026-07-20T00:00:00'),
     setSelectedDate: vi.fn(),
   }),
 }))
@@ -293,6 +307,15 @@ beforeEach(() => {
   })
   mocks.useQueues.mockReturnValue({ data: [] })
   mocks.useQueueItemsForQueues.mockReturnValue([])
+  mocks.useQueueCarryOver.mockImplementation(() => ({
+    isSuccess: true,
+    isPending: false,
+    isError: false,
+    error: null,
+    isCarryingOver: false,
+    canReadQueueItems: true,
+  }))
+  mocks.selectedDate = null
   mocks.useQueueItemsForDates.mockReturnValue([])
   mocks.fetchQueueItems.mockResolvedValue([])
 })
@@ -302,6 +325,116 @@ afterEach(() => {
 })
 
 describe('day-view route compact layout', () => {
+  it('waits for carry-over before reading today queue items', async () => {
+    const today = new Date()
+    const todayStr = formatLocalDate(today)
+    mocks.selectedDate = today
+    mocks.useQueues.mockReturnValue({
+      data: [makeQueue({ key: 'day', name: 'today' })],
+    })
+    mocks.useQueueCarryOver.mockReturnValue({
+      isSuccess: false,
+      isPending: true,
+      isError: false,
+      error: null,
+      isCarryingOver: true,
+      canReadQueueItems: false,
+    })
+
+    const { queryClient } = await renderDayRoute('/')
+
+    await waitFor(() => {
+      const getOutput = () => [
+        mocks.useQueueCarryOver.mock.calls.at(-1),
+        mocks.useQueueItemsForQueues.mock.calls.at(-1),
+      ]
+      expect(getOutput()).toEqual([
+        [todayStr],
+        [
+          [makeQueue({ key: 'day', name: 'today' })],
+          todayStr,
+          undefined,
+          { enabled: false },
+        ],
+      ])
+    })
+
+    queryClient.clear()
+  })
+
+  it('reads today queue items if carry-over fails', async () => {
+    const today = new Date()
+    const todayStr = formatLocalDate(today)
+    const error = new Error('carry-over unavailable')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.selectedDate = today
+    mocks.useQueueCarryOver.mockReturnValue({
+      isSuccess: false,
+      isPending: false,
+      isError: true,
+      error,
+      isCarryingOver: false,
+      canReadQueueItems: true,
+    })
+
+    const { queryClient } = await renderDayRoute('/')
+
+    await waitFor(() => {
+      expect(mocks.useQueueItemsForQueues.mock.calls.at(-1)).toEqual([
+        [],
+        todayStr,
+        undefined,
+        { enabled: true },
+      ])
+    })
+
+    queryClient.clear()
+  })
+
+  it('does not carry over when a past date is selected', async () => {
+    const pastDate = new Date()
+    pastDate.setDate(pastDate.getDate() - 1)
+    const pastDateStr = formatLocalDate(pastDate)
+    mocks.selectedDate = pastDate
+
+    const { queryClient } = await renderDayRoute('/')
+
+    await waitFor(() => {
+      const getOutput = () => [
+        mocks.useQueueCarryOver.mock.calls.at(-1),
+        mocks.useQueueItemsForQueues.mock.calls.at(-1),
+      ]
+      expect(getOutput()).toEqual([
+        [pastDateStr],
+        [[], pastDateStr, undefined, { enabled: true }],
+      ])
+    })
+
+    queryClient.clear()
+  })
+
+  it('does not carry over when a future date is selected', async () => {
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 1)
+    const futureDateStr = formatLocalDate(futureDate)
+    mocks.selectedDate = futureDate
+
+    const { queryClient } = await renderDayRoute('/')
+
+    await waitFor(() => {
+      const getOutput = () => [
+        mocks.useQueueCarryOver.mock.calls.at(-1),
+        mocks.useQueueItemsForQueues.mock.calls.at(-1),
+      ]
+      expect(getOutput()).toEqual([
+        [futureDateStr],
+        [[], futureDateStr, undefined, { enabled: true }],
+      ])
+    })
+
+    queryClient.clear()
+  })
+
   it('activates the compact shell and polls every visible data query from the URL', async () => {
     const { queryClient, router } = await renderDayRoute('/?layout=compact')
     const nowPanelRange = getNowPanelQueryDateRange(new Date())

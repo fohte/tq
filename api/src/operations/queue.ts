@@ -1,14 +1,33 @@
 import { z } from 'zod'
 
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
-import { defineOperation, requestJson } from '#operations/types'
+import {
+  defineOperation,
+  requestJson,
+  requestNoContent,
+} from '#operations/types'
 import { putQueueItemsSchema, queueDateSchema } from '#schemas/queue'
 
 const queueKeySchema = pathSegmentSchema('Queue key')
+const queueTzOffsetSchema = z
+  .number()
+  .int()
+  .describe(
+    'Timezone offset in minutes using the Date.getTimezoneOffset() convention. Required by MCP clients to identify local today.',
+  )
 
 const queueGetInputSchema = z.object({
   key: queueKeySchema,
-  date: queueDateSchema.describe('Date to fetch the queue for, as YYYY-MM-DD.'),
+  date: queueDateSchema
+    .optional()
+    .describe(
+      'Date to fetch the queue for, as YYYY-MM-DD. Defaults to today in the local timezone.',
+    ),
+  tzOffset: queueTzOffsetSchema.optional(),
+})
+
+const queueGetMcpInputSchema = queueGetInputSchema.extend({
+  tzOffset: queueTzOffsetSchema,
 })
 
 const queueSetInputSchema = z.object({
@@ -36,18 +55,38 @@ export const queueOperations = [
   }),
   defineOperation(queueGetInputSchema, {
     path: ['queue', 'get'],
-    description: 'List a queue for a date (YYYY-MM-DD).',
-    positionalArgs: ['key', 'date'],
-    kind: 'read',
-    routes: ['GET /api/queues/:key/items'],
-    cli: { output: { kind: 'json' } },
-    run: (client, { key, date }) =>
-      requestJson(
-        client.api.queues[':key'].items.$get({
-          param: { key: encodePathSegment(key) },
-          query: { date },
-        }),
-      ),
+    description:
+      "List a queue for a date (YYYY-MM-DD). Defaults to today in the local timezone; reading today's queue first carries unfinished items forward. MCP callers must pass their local timezone offset.",
+    positionalArgs: ['key', { name: 'date', optional: true }],
+    mcpInputSchema: queueGetMcpInputSchema,
+    kind: 'write',
+    routes: ['POST /api/queues/carry-over', 'GET /api/queues/:key/items'],
+    cli: {
+      excludeFields: ['tzOffset'],
+      output: { kind: 'json' },
+    },
+    run: (client, { key, date, tzOffset }) => {
+      const today =
+        tzOffset === undefined
+          ? formatLocalDate(new Date())
+          : formatDateAtOffset(new Date(), tzOffset)
+      const requestedDate = date ?? today
+      const getItems = () =>
+        requestJson(
+          client.api.queues[':key'].items.$get({
+            param: { key: encodePathSegment(key) },
+            query: { date: requestedDate },
+          }),
+        )
+
+      return requestedDate === today
+        ? requestNoContent(
+            client.api.queues['carry-over'].$post({
+              json: { date: requestedDate },
+            }),
+          ).andThen(getItems)
+        : getItems()
+    },
   }),
   defineOperation(queueSetInputSchema, {
     path: ['queue', 'set'],
@@ -70,3 +109,12 @@ export const queueOperations = [
       ),
   }),
 ] as const
+
+function formatLocalDate(date: Date): string {
+  return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function formatDateAtOffset(date: Date, tzOffset: number): string {
+  const localDate = new Date(date.getTime() - tzOffset * 60_000)
+  return `${String(localDate.getUTCFullYear())}-${String(localDate.getUTCMonth() + 1).padStart(2, '0')}-${String(localDate.getUTCDate()).padStart(2, '0')}`
+}
