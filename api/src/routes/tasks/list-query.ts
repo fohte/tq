@@ -24,9 +24,12 @@ import {
   taskPages,
   taskRelations,
   tasks,
-  taskWaits,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import {
+  followUpDueTaskWaitSubquery,
+  unresolvedTaskWaitSubquery,
+} from '#routes/tasks/list-query-waits'
 import {
   buildTitleMatchCondition,
   queryTaskSearchMatches,
@@ -100,26 +103,6 @@ function unresolvedGithubBlockerSubquery() {
         eq(taskGithubLinks.taskId, tasks.id),
         eq(taskGithubLinks.role, 'blocker'),
         eq(taskGithubLinks.state, 'open'),
-      ),
-    )
-}
-
-function unresolvedTaskWaitSubquery() {
-  return db
-    .select({ _: sql`1` })
-    .from(taskWaits)
-    .where(and(eq(taskWaits.taskId, tasks.id), isNull(taskWaits.resolvedAt)))
-}
-
-function followUpDueTaskWaitSubquery() {
-  return db
-    .select({ _: sql`1` })
-    .from(taskWaits)
-    .where(
-      and(
-        eq(taskWaits.taskId, tasks.id),
-        isNull(taskWaits.resolvedAt),
-        sql`${taskWaits.followUpDate} <= CURRENT_DATE`,
       ),
     )
 }
