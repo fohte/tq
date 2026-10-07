@@ -1,12 +1,13 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { zValidator } from '@hono/zod-validator'
-import { and, desc, eq, inArray, lt } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, isNull, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { ResultAsync } from 'neverthrow'
 
 import type { DbTransaction } from '#db/connection'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions, tasks } from '#db/schema'
+import { getAgentSessionActiveCriteria } from '#lib/agent-session-activity'
 import { setChangeEventTaskIds } from '#lib/change-events'
 import type { AgentProvider } from '#schemas/agent-session'
 import {
@@ -241,25 +242,28 @@ export const agentSessionsApp = new Hono()
     return c.json(agentSessionToResponse(upserted.session), 200)
   })
   .get('/', zValidator('query', listAgentSessionsQuerySchema), async (c) => {
-    const { sessionId } = c.req.valid('query')
+    const { sessionId, limit } = c.req.valid('query')
 
-    const result = await db
+    const query = db
       .select()
       .from(agentSessions)
       .where(
         sessionId ? inArray(agentSessions.sessionId, sessionId) : undefined,
       )
       .orderBy(desc(agentSessions.lastActiveAt))
+    const result =
+      limit === 'unlimited' ? await query : await query.limit(limit)
 
     return c.json(result.map(agentSessionToResponse), 200)
   })
   .get(
     '/by-task',
-    zValidator('query', listAgentSessionsByTaskQuerySchema.optional()),
+    zValidator('query', listAgentSessionsByTaskQuerySchema),
     async (c) => {
-      const sessionId = c.req.valid('query')?.sessionId
+      const { sessionId, taskIds, active, limit } = c.req.valid('query')
+      const activeCriteria = getAgentSessionActiveCriteria()
 
-      const rows = await db
+      const query = db
         .select({
           taskId: taskAgentSessions.taskId,
           taskNumber: tasks.number,
@@ -276,9 +280,26 @@ export const agentSessionsApp = new Hono()
         )
         .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
         .where(
-          sessionId ? inArray(agentSessions.sessionId, sessionId) : undefined,
+          and(
+            sessionId ? inArray(agentSessions.sessionId, sessionId) : undefined,
+            taskIds === 'all'
+              ? undefined
+              : inArray(taskAgentSessions.taskId, taskIds),
+            active === 'all'
+              ? undefined
+              : and(
+                  isNull(agentSessions.endedAt),
+                  isNull(agentSessions.archivedAt),
+                  gt(
+                    agentSessions.lastActiveAt,
+                    activeCriteria.lastActiveAtAfter,
+                  ),
+                ),
+          ),
         )
         .orderBy(desc(agentSessions.lastActiveAt))
+      const rows =
+        limit === 'unlimited' ? await query : await query.limit(limit)
 
       return c.json(
         rows.map((row) => ({

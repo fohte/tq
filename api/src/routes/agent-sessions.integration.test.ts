@@ -627,11 +627,26 @@ describe('agent sessions API', () => {
   })
 
   describe('GET /api/agent-sessions', () => {
-    it('returns an empty list when no sessions exist', async () => {
-      const res = await app.request('/api/agent-sessions')
+    it('requires a valid limit even when sessionId is specified', async () => {
+      const responses = await Promise.all([
+        app.request('/api/agent-sessions'),
+        app.request('/api/agent-sessions?sessionId=some-session'),
+        app.request('/api/agent-sessions?limit=0'),
+        app.request('/api/agent-sessions?limit=101'),
+      ])
 
-      expect(res.status).toBe(200)
-      expect(await res.json()).toEqual([])
+      expect(responses.map((response) => response.status)).toEqual([
+        400, 400, 400, 400,
+      ])
+    })
+
+    it('returns an empty list when no sessions exist', async () => {
+      const res = await app.request('/api/agent-sessions?limit=unlimited')
+
+      expect(responseWithBody(res.status, await res.json())).toEqual({
+        status: 200,
+        body: [],
+      })
     })
 
     it('returns sessions ordered by most recently active first', async () => {
@@ -661,11 +676,54 @@ describe('agent sessions API', () => {
         '2030-01-02T00:00:00.000Z',
       )
 
-      const res = await app.request('/api/agent-sessions')
+      const res = await app.request('/api/agent-sessions?limit=unlimited')
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<AgentSessionResponse[]>(res)
-      expect(body.map((session) => session.id)).toEqual([newer.id, older.id])
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<AgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [newer, older],
+      })
+    })
+
+    it('limits the session list to the requested number of rows', async () => {
+      await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'older',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newer = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'newer',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
+
+      const res = await app.request('/api/agent-sessions?limit=1')
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<AgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [newer],
+      })
     })
 
     it('filters to the given sessionId values when repeated in the query', async () => {
@@ -704,14 +762,18 @@ describe('agent sessions API', () => {
       )
 
       const res = await app.request(
-        '/api/agent-sessions?sessionId=older&sessionId=newer',
+        '/api/agent-sessions?sessionId=older&sessionId=newer&limit=unlimited',
       )
 
-      expect(res.status).toBe(200)
-      expect(await jsonBody<AgentSessionResponse[]>(res)).toEqual([
-        newer,
-        older,
-      ])
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<AgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [newer, older],
+      })
     })
   })
 
@@ -740,11 +802,34 @@ describe('agent sessions API', () => {
   })
 
   describe('GET /api/agent-sessions/by-task', () => {
-    it('returns an empty list when no sessions are linked', async () => {
-      const res = await app.request('/api/agent-sessions/by-task')
+    it('requires taskIds, active, and limit even when sessionId is specified', async () => {
+      const responses = await Promise.all([
+        app.request('/api/agent-sessions/by-task'),
+        app.request(
+          '/api/agent-sessions/by-task?sessionId=session-1&active=all&limit=unlimited',
+        ),
+        app.request(
+          '/api/agent-sessions/by-task?sessionId=session-1&taskIds=all&limit=unlimited',
+        ),
+        app.request(
+          '/api/agent-sessions/by-task?sessionId=session-1&taskIds=all&active=all',
+        ),
+      ])
 
-      expect(res.status).toBe(200)
-      expect(await res.json()).toEqual([])
+      expect(responses.map((response) => response.status)).toEqual([
+        400, 400, 400, 400,
+      ])
+    })
+
+    it('returns an empty list when no sessions are linked', async () => {
+      const res = await app.request(
+        '/api/agent-sessions/by-task?taskIds=all&active=all&limit=unlimited',
+      )
+
+      expect(responseWithBody(res.status, await res.json())).toEqual({
+        status: 200,
+        body: [],
+      })
     })
 
     it('returns both sessions linked to a single task', async () => {
@@ -774,7 +859,9 @@ describe('agent sessions API', () => {
       await postLink(task.id, older.id)
       await postLink(task.id, newer.id)
 
-      const res = await app.request('/api/agent-sessions/by-task')
+      const res = await app.request(
+        '/api/agent-sessions/by-task?taskIds=all&active=all&limit=unlimited',
+      )
 
       expect(
         responseWithBody(
@@ -834,7 +921,9 @@ describe('agent sessions API', () => {
       await postLink(task1.id, olderSession.id)
       await postLink(task2.id, newerSession.id)
 
-      const res = await app.request('/api/agent-sessions/by-task')
+      const res = await app.request(
+        '/api/agent-sessions/by-task?taskIds=all&active=all&limit=unlimited',
+      )
 
       expect(
         responseWithBody(
@@ -866,6 +955,180 @@ describe('agent sessions API', () => {
       })
     })
 
+    it('filters linked rows by taskIds', async () => {
+      const includedTask = await createTask('Included task')
+      const excludedTask = await createTask('Excluded task')
+      const session = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'session-1',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      await postLink(includedTask.id, session.id)
+      await postLink(excludedTask.id, session.id)
+
+      const res = await app.request(
+        `/api/agent-sessions/by-task?taskIds=${includedTask.id}&active=all&limit=unlimited`,
+      )
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: includedTask.id,
+            taskNumber: includedTask.number,
+            taskTitle: includedTask.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: session.startedAt,
+            ...normalizeTaskSession(session),
+          },
+        ],
+      })
+    })
+
+    it('limits linked session rows to the requested number', async () => {
+      const task = await createTask('Limited task')
+      const older = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'older-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-01T00:00:00.000Z',
+      )
+      const newer = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'newer-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
+      await postLink(task.id, older.id)
+      await postLink(task.id, newer.id)
+
+      const res = await app.request(
+        `/api/agent-sessions/by-task?taskIds=${task.id}&active=all&limit=1`,
+      )
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: newer.startedAt,
+            ...normalizeTaskSession(newer),
+          },
+        ],
+      })
+    })
+
+    it('filters by the shared active session definition', async () => {
+      const task = await createTask('Activity task')
+      const now = Date.now()
+      const active = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'active-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        new Date(now - 60_000).toISOString(),
+      )
+      const stale = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'stale-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        new Date(now - 31 * 60_000).toISOString(),
+      )
+      const ended = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'ended-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+          ended: true,
+        },
+        new Date(now - 60_000).toISOString(),
+      )
+      const archived = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'archived-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        new Date(now - 60_000).toISOString(),
+      )
+      await archiveSession('claude_code', archived.sessionId)
+      await Promise.all(
+        [active, stale, ended, archived].map((session) =>
+          postLink(task.id, session.id),
+        ),
+      )
+
+      const res = await app.request(
+        `/api/agent-sessions/by-task?taskIds=${task.id}&active=true&limit=unlimited`,
+      )
+
+      expect(
+        responseWithBody(
+          res.status,
+          await jsonBody<TaskAgentSessionResponse[]>(res),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          {
+            taskId: task.id,
+            taskNumber: task.number,
+            taskTitle: task.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: active.startedAt,
+            ...normalizeTaskSession(active),
+          },
+        ],
+      })
+    })
+
     it('returns the parent task id for a subtask', async () => {
       const parent = await createTask('Parent task')
       const child = await createTask('Child task', { parentId: parent.id })
@@ -882,7 +1145,9 @@ describe('agent sessions API', () => {
       )
       await postLink(child.id, session.id)
 
-      const res = await app.request('/api/agent-sessions/by-task')
+      const res = await app.request(
+        '/api/agent-sessions/by-task?taskIds=all&active=all&limit=unlimited',
+      )
 
       expect(
         responseWithBody(
@@ -947,7 +1212,7 @@ describe('agent sessions API', () => {
       assertDefined(thirdSession)
 
       const res = await app.request(
-        '/api/agent-sessions/by-task?sessionId=session-1&sessionId=session-3',
+        '/api/agent-sessions/by-task?sessionId=session-1&sessionId=session-3&taskIds=all&active=all&limit=unlimited',
       )
 
       expect(
@@ -992,7 +1257,9 @@ describe('agent sessions API', () => {
       })
       await postLink(task.id, session.id)
 
-      const res = await app.request('/api/agent-sessions/by-task')
+      const res = await app.request(
+        '/api/agent-sessions/by-task?taskIds=all&active=all&limit=unlimited',
+      )
 
       expect(
         responseWithBody(

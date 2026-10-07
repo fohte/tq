@@ -101,13 +101,13 @@ describe('session list', () => {
     expect(request(calls[0])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions',
-      query: {},
+      query: { limit: '20' },
       body: undefined,
     })
     expect(request(calls[1])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions/by-task',
-      query: {},
+      query: { taskIds: 'all', active: 'all', limit: 'unlimited' },
       body: undefined,
     })
     expect(write.mock.calls).toEqual([
@@ -248,6 +248,8 @@ describe('session list', () => {
         apiUrl,
         'session',
         'list',
+        '--limit',
+        '5',
         '--session-id',
         'sess-1',
         '--session-id',
@@ -261,13 +263,18 @@ describe('session list', () => {
     expect(request(calls[0])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions',
-      query: { sessionId: ['sess-1', 'sess-2'] },
+      query: { sessionId: ['sess-1', 'sess-2'], limit: '5' },
       body: undefined,
     })
     expect(request(calls[1])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions/by-task',
-      query: { sessionId: ['sess-1', 'sess-2'] },
+      query: {
+        sessionId: ['sess-1', 'sess-2'],
+        taskIds: 'all',
+        active: 'all',
+        limit: 'unlimited',
+      },
       body: undefined,
     })
   })
