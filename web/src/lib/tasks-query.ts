@@ -10,6 +10,8 @@ export const sortOptionValues = [
 ] as const satisfies readonly TaskSortBy[]
 
 export const defaultTaskSort = 'updated' as const
+export const legacyTaskSortBy = 'estimate' as const
+export const legacyTaskSortSyntax = `sort:${legacyTaskSortBy}` as const
 
 export const tasksSearchDefaultQuery = buildSearchQuery({
   freeText: '',
@@ -21,7 +23,7 @@ export function withDefaultSort(parsed: ParsedQuery): ParsedQuery {
   return {
     ...parsed,
     sortBy:
-      parsed.sortBy == null || parsed.sortBy === 'estimate'
+      parsed.sortBy == null || parsed.sortBy === legacyTaskSortBy
         ? defaultTaskSort
         : parsed.sortBy,
   }

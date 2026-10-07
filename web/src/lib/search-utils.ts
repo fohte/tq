@@ -1,6 +1,7 @@
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
+import { legacyTaskSortSyntax } from '#lib/tasks-query'
 
 type SearchResult = Omit<
   InferResponseType<typeof api.api.tasks.$get, 200>[number],
@@ -19,7 +20,7 @@ export function extractTaskNumber(query: string): string | undefined {
 export function filterSearchSuggestions(
   suggestions: SearchSuggestion[],
 ): SearchSuggestion[] {
-  return suggestions.filter(({ value }) => value !== 'sort:estimate')
+  return suggestions.filter(({ value }) => value !== legacyTaskSortSyntax)
 }
 
 export function taskDetailToSearchResult(task: TaskDetail): SearchResult {

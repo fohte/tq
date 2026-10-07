@@ -60,11 +60,9 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
           ...(hasFreeText ? { includeMatch: 'true' } : {}),
         },
       })
-      const searchResults: SearchResult[] = await unwrapOrThrow(
-        // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow consumes the Result at the React Query boundary
-        assertOk(res),
-      ).json()
-      return searchResults
+      return unwrapOrThrow(assertOk(res))
+        .json()
+        .then((results): SearchResult[] => results)
     },
     enabled: debouncedQuery.length > 0,
     placeholderData: (prev, prevQuery) => {
@@ -157,9 +155,7 @@ export function useSearchSuggestions(prefix: string) {
       const res = await api.api.tasks.search.suggest.$get({
         query: { prefix: debouncedPrefix },
       })
-      // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow consumes the Result at the React Query boundary
-      const suggestions = await unwrapOrThrow(assertOk(res)).json()
-      return filterSearchSuggestions(suggestions)
+      return unwrapOrThrow(assertOk(res)).json().then(filterSearchSuggestions)
     },
     enabled: debouncedPrefix.length > 0,
   })

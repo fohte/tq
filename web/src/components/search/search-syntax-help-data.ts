@@ -1,6 +1,7 @@
 import { getSearchQueryHelpTokens } from 'api/search-query-parser'
 
 import { SEARCH_MODE_DEFINITIONS } from '#components/search/search-modal-mode'
+import { legacyTaskSortBy, legacyTaskSortSyntax } from '#lib/tasks-query'
 
 interface SearchSyntaxHelpEntry {
   syntax: string
@@ -30,8 +31,10 @@ export function getSearchSyntaxHelpSections({
 
     return {
       ...token,
-      description: 'Sort results by date.',
-      values: token.values.filter(({ syntax }) => syntax !== 'sort:estimate'),
+      description: token.description.replace(` or ${legacyTaskSortBy}.`, '.'),
+      values: token.values.filter(
+        ({ syntax }) => syntax !== legacyTaskSortSyntax,
+      ),
     }
   })
   const filterTokens =

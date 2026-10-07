@@ -763,27 +763,54 @@ describe('CreateTaskModal', () => {
         'Buy milk @30m >today @tomorrow #groceries %work ',
       )
 
-      await waitFor(() => {
-        expect(
-          atIndex(screen.getAllByPlaceholderText(titleInputPlaceholder), 0),
-        ).toHaveValue('Buy milk @30m ')
+      const getFormState = () => ({
+        durationTokenRemainsInTitle: screen
+          .getAllByPlaceholderText(titleInputPlaceholder)
+          .some(
+            (input) =>
+              input instanceof HTMLInputElement &&
+              input.value === 'Buy milk @30m ',
+          ),
+        startDateApplied: screen.queryAllByDisplayValue(today).length > 0,
+        dueDateApplied: screen.queryAllByDisplayValue(tomorrow).length > 0,
+        labelApplied: screen.queryAllByText('groceries').length > 0,
+        contextApplied: screen.queryAllByText('Work').length > 0,
       })
-      expect(screen.getAllByDisplayValue(today).length).toBeGreaterThan(0)
-      expect(screen.getAllByDisplayValue(tomorrow).length).toBeGreaterThan(0)
-      expect(screen.getAllByText('groceries').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Work').length).toBeGreaterThan(0)
+      await waitFor(() => {
+        if (Object.values(getFormState()).some((value) => !value)) {
+          throw new Error('Shorthand values have not been applied')
+        }
+      })
+      await screen.findAllByDisplayValue(today)
+      await screen.findAllByDisplayValue(tomorrow)
+      await screen.findAllByText('groceries')
+      await screen.findAllByText('Work')
+      const formState = getFormState()
 
       await user.keyboard('{Meta>}{Enter}{/Meta}')
 
-      expect(mutate.mock.calls.map(([input]) => input)).toEqual([
-        {
-          title: 'Buy milk @30m',
-          startDate: today,
-          dueDate: tomorrow,
-          context: 'work',
-          labels: ['groceries'],
+      const getActual = () => ({
+        formState,
+        mutationInputs: mutate.mock.calls.map(([input]) => input),
+      })
+      expect(getActual()).toEqual({
+        formState: {
+          durationTokenRemainsInTitle: true,
+          startDateApplied: true,
+          dueDateApplied: true,
+          labelApplied: true,
+          contextApplied: true,
         },
-      ])
+        mutationInputs: [
+          {
+            title: 'Buy milk @30m',
+            startDate: today,
+            dueDate: tomorrow,
+            context: 'work',
+            labels: ['groceries'],
+          },
+        ],
+      })
     })
 
     it('activates the "today" plan tab via the !today shorthand', async () => {
