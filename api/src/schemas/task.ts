@@ -5,6 +5,7 @@ import { taskIdOrNumber } from '#lib/numeric-id'
 import { labelNameSchema } from '#schemas/label-name'
 import { queueDateSchema } from '#schemas/queue'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { queryTimezoneOffsetMinutesSchema } from '#schemas/timezone'
 
 export const taskStatus = z.enum(['todo', 'completed'])
 export type TaskStatus = z.infer<typeof taskStatus>
@@ -122,6 +123,11 @@ export const listTasksQuerySchema = z.object({
     .transform((v) => (Array.isArray(v) ? v : [v]))
     .optional(),
   q: z.string().optional(),
+  tzOffset: queryTimezoneOffsetMinutesSchema
+    .optional()
+    .describe(
+      'Client timezone offset in minutes. Used to determine today for has:follow-up-due; defaults to UTC when omitted.',
+    ),
   label: z.string().optional(),
   hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
@@ -155,3 +161,17 @@ export const listTasksQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
+
+export const taskFilterQuerySchema = listTasksQuerySchema.omit({
+  includeAncestors: true,
+  includeMatch: true,
+  limit: true,
+  offset: true,
+  sortBy: true,
+})
+export type TaskFilterQuery = z.infer<typeof taskFilterQuerySchema>
+
+export const countTasksQuerySchema = taskFilterQuerySchema.extend({
+  context: contextEnum,
+})
+export type CountTasksQuery = z.infer<typeof countTasksQuerySchema>

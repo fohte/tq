@@ -8,6 +8,7 @@ import type { InferResponseType } from 'hono/client'
 import { useEffect } from 'react'
 
 import type { PlanValue } from '#components/task/create-task-modal-fields'
+import type { TaskContext } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 import { formatLocalDate } from '#lib/date-range'
@@ -34,18 +35,18 @@ export type QueueItem = InferResponseType<
 export async function fetchQueueItems(
   key: string,
   date: string,
+  context?: TaskContext,
 ): Promise<QueueItem[]> {
   const res = await api.api.queues[':key'].items.$get({
     param: { key },
-    query: { date },
+    query: { date, ...(context == null ? {} : { context }) },
   })
   return unwrapOrThrow(assertOk(res)).json()
 }
 
-export function useQueues(refetchInterval?: number) {
+export function useQueues() {
   return useQuery({
     queryKey: queueKeys.all,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     queryFn: async () => {
       const res = await api.api.queues.$get()
       return unwrapOrThrow(assertOk(res)).json()
@@ -87,13 +88,14 @@ export function useQueueCarryOver(date: string) {
 export function useQueueItems(
   key: string,
   date: string,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; context?: TaskContext },
 ) {
   const enabled = options?.enabled
+  const context = options?.context
 
   return useQuery({
-    queryKey: queueKeys.items(key, date),
-    queryFn: () => fetchQueueItems(key, date),
+    queryKey: queueKeys.items(key, date, context),
+    queryFn: () => fetchQueueItems(key, date, context),
     // exactOptionalPropertyTypes rejects `enabled: undefined` since Enabled
     // itself doesn't include undefined, so the key must be omitted entirely
     // to fall back to react-query's default (enabled).
@@ -111,14 +113,12 @@ export function useQueueItems(
 export function useQueueItemsForQueues(
   queues: Queue[] | undefined,
   date: string,
-  refetchInterval?: number,
   options?: { enabled?: boolean },
 ) {
   return useQueries({
     queries: (queues ?? []).map((queue) => ({
       queryKey: queueKeys.items(queue.key, date),
       ...(options?.enabled === undefined ? {} : { enabled: options.enabled }),
-      ...(refetchInterval === undefined ? {} : { refetchInterval }),
       queryFn: () => fetchQueueItems(queue.key, date),
     })),
   })
@@ -127,7 +127,6 @@ export function useQueueItemsForQueues(
 export function useQueueItemsForDates(
   key: string | undefined,
   dates: string[],
-  refetchInterval?: number,
 ) {
   return useQueries({
     queries:
@@ -135,7 +134,6 @@ export function useQueueItemsForDates(
         ? []
         : dates.map((date) => ({
             queryKey: queueKeys.items(key, date),
-            ...(refetchInterval === undefined ? {} : { refetchInterval }),
             queryFn: () => fetchQueueItems(key, date),
           })),
   })

@@ -2767,7 +2767,7 @@ describe('tasks CRUD API', () => {
       const actual = relatedTaskQueryCountSnapshot(
         relatedTaskHydrationQueryCount,
       )
-      const expected = relatedTaskQueryCountSnapshot(7)
+      const expected = relatedTaskQueryCountSnapshot(8)
 
       expect(actual).toEqual(expected)
     })

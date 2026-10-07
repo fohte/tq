@@ -86,7 +86,7 @@ export const sessionOperations = [
         client.api['agent-sessions'].$get({ query }),
       ).andThen((value) => parseResponse(z.array(agentSessionSchema), value))
       const sessionsByTask = requestJson(
-        client.api['agent-sessions']['by-task'].$get(),
+        client.api['agent-sessions']['by-task'].$get({ query }),
       ).andThen((value) =>
         parseResponse(z.array(agentSessionByTaskSchema), value),
       )

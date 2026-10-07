@@ -11,6 +11,7 @@ import { setChangeEventTaskIds } from '#lib/change-events'
 import type { AgentProvider } from '#schemas/agent-session'
 import {
   agentProviderSchema,
+  listAgentSessionsByTaskQuerySchema,
   listAgentSessionsQuerySchema,
   updateAgentSessionSchema,
   upsertAgentSessionSchema,
@@ -57,6 +58,33 @@ export function agentSessionToResponse(
   session: typeof agentSessions.$inferSelect,
 ) {
   return {
+    ...agentSessionSummaryToResponse(session),
+    lastMessage: session.lastMessage,
+  }
+}
+
+const agentSessionSummaryColumns = {
+  id: agentSessions.id,
+  provider: agentSessions.provider,
+  sessionId: agentSessions.sessionId,
+  parentSessionId: agentSessions.parentSessionId,
+  context: agentSessions.context,
+  cwd: agentSessions.cwd,
+  label: agentSessions.label,
+  customLabel: agentSessions.customLabel,
+  startedAt: agentSessions.startedAt,
+  lastActiveAt: agentSessions.lastActiveAt,
+  endedAt: agentSessions.endedAt,
+  archivedAt: agentSessions.archivedAt,
+}
+
+type AgentSessionSummary = Pick<
+  typeof agentSessions.$inferSelect,
+  keyof typeof agentSessionSummaryColumns
+>
+
+function agentSessionSummaryToResponse(session: AgentSessionSummary) {
+  return {
     id: session.id,
     provider: session.provider,
     sessionId: session.sessionId,
@@ -64,7 +92,6 @@ export function agentSessionToResponse(
     context: session.context,
     cwd: session.cwd,
     label: session.label,
-    lastMessage: session.lastMessage,
     customLabel: session.customLabel,
     startedAt: session.startedAt.toISOString(),
     lastActiveAt: session.lastActiveAt.toISOString(),
@@ -226,38 +253,47 @@ export const agentSessionsApp = new Hono()
 
     return c.json(result.map(agentSessionToResponse), 200)
   })
-  .get('/by-task', async (c) => {
-    const rows = await db
-      .select({
-        taskId: taskAgentSessions.taskId,
-        taskNumber: tasks.number,
-        taskTitle: tasks.title,
-        taskParentId: tasks.parentId,
-        taskStatus: tasks.status,
-        linkedAt: taskAgentSessions.linkedAt,
-        session: agentSessions,
-      })
-      .from(taskAgentSessions)
-      .innerJoin(
-        agentSessions,
-        eq(taskAgentSessions.agentSessionId, agentSessions.id),
-      )
-      .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
-      .orderBy(desc(agentSessions.lastActiveAt))
+  .get(
+    '/by-task',
+    zValidator('query', listAgentSessionsByTaskQuerySchema.optional()),
+    async (c) => {
+      const sessionId = c.req.valid('query')?.sessionId
 
-    return c.json(
-      rows.map((row) => ({
-        taskId: row.taskId,
-        taskNumber: row.taskNumber,
-        taskTitle: row.taskTitle,
-        taskParentId: row.taskParentId,
-        taskStatus: row.taskStatus,
-        linkedAt: row.linkedAt.toISOString(),
-        ...agentSessionToResponse(row.session),
-      })),
-      200,
-    )
-  })
+      const rows = await db
+        .select({
+          taskId: taskAgentSessions.taskId,
+          taskNumber: tasks.number,
+          taskTitle: tasks.title,
+          taskParentId: tasks.parentId,
+          taskStatus: tasks.status,
+          linkedAt: taskAgentSessions.linkedAt,
+          session: agentSessionSummaryColumns,
+        })
+        .from(taskAgentSessions)
+        .innerJoin(
+          agentSessions,
+          eq(taskAgentSessions.agentSessionId, agentSessions.id),
+        )
+        .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
+        .where(
+          sessionId ? inArray(agentSessions.sessionId, sessionId) : undefined,
+        )
+        .orderBy(desc(agentSessions.lastActiveAt))
+
+      return c.json(
+        rows.map((row) => ({
+          taskId: row.taskId,
+          taskNumber: row.taskNumber,
+          taskTitle: row.taskTitle,
+          taskParentId: row.taskParentId,
+          taskStatus: row.taskStatus,
+          linkedAt: row.linkedAt.toISOString(),
+          ...agentSessionSummaryToResponse(row.session),
+        })),
+        200,
+      )
+    },
+  )
   .get('/:id', async (c) => {
     const id = c.req.param('id')
 

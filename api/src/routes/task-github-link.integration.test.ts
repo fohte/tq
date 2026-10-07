@@ -679,7 +679,7 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     const storedLink = firstOrThrow(
       await db
         .update(taskGithubLinks)
-        .set({ etag: '"unchanged"' })
+        .set({ etag: '"unchanged"', lastSyncedAt: new Date(0) })
         .where(eq(taskGithubLinks.id, link.id))
         .returning(),
     )

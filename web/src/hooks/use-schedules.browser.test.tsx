@@ -51,10 +51,9 @@ describe('useScheduleList', () => {
     vi.useFakeTimers()
     const mocks = await getMocks()
 
-    renderHook(
-      () => useScheduleList('2026-03-22', '2026-03-22', 60_000, false),
-      { wrapper },
-    )
+    renderHook(() => useScheduleList('2026-03-22', '2026-03-22', false), {
+      wrapper,
+    })
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000)
@@ -63,7 +62,7 @@ describe('useScheduleList', () => {
     expect(assertDefined(mocks.mockGet).mock.calls).toEqual([])
   })
 
-  it('polls for external schedule changes when an interval is configured', async () => {
+  it('does not poll schedules for external changes', async () => {
     vi.useFakeTimers()
     const mocks = await getMocks()
     const schedule = makeSchedule({
@@ -77,9 +76,7 @@ describe('useScheduleList', () => {
       json: () => Promise.resolve([schedule]),
     })
 
-    renderHook(() => useScheduleList('2026-03-22', '2026-03-22', 60_000), {
-      wrapper,
-    })
+    renderHook(() => useScheduleList('2026-03-22', '2026-03-22'), { wrapper })
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0)
@@ -89,13 +86,10 @@ describe('useScheduleList', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000)
     })
-    const callCountAfterInterval = assertDefined(mocks.mockGet).mock.calls
+    const callCountAfterOneMinute = assertDefined(mocks.mockGet).mock.calls
       .length
 
-    const getPollingCallCounts = () => [
-      initialCallCount,
-      callCountAfterInterval,
-    ]
-    expect(getPollingCallCounts()).toEqual([1, 2])
+    const getFetchCounts = () => [initialCallCount, callCountAfterOneMinute]
+    expect(getFetchCounts()).toEqual([1, 1])
   })
 })

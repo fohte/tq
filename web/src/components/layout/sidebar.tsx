@@ -19,7 +19,7 @@ import { useProjects } from '#hooks/use-projects'
 import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { SavedView } from '#hooks/use-saved-views'
 import { useDeleteSavedView, useSavedViews } from '#hooks/use-saved-views'
-import { useTaskList } from '#hooks/use-tasks'
+import { useTaskCount } from '#hooks/use-tasks'
 import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import { navKeybindings } from '#lib/keybindings'
 import {
@@ -113,12 +113,11 @@ function NavLink({ item, badge }: { item: NavItem; badge?: ReactNode }) {
 // since Inbox is the only nav item whose badge needs its own data fetch.
 function InboxNavLink() {
   const context = useCurrentContext()
-  const { categorized } = useTaskList({
+  const { data: count = 0 } = useTaskCount({
     context,
     commitment: 'inbox',
     status: 'todo',
   })
-  const count = categorized.all.length
 
   return (
     <NavLink
