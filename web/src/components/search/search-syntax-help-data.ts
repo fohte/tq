@@ -25,7 +25,15 @@ export function getSearchSyntaxHelpSections({
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
 } = {}): SearchSyntaxHelpSection[] {
-  const queryTokens = getSearchQueryHelpTokens()
+  const queryTokens = getSearchQueryHelpTokens().map((token) => {
+    if (token.key !== 'sort') return token
+
+    return {
+      ...token,
+      description: 'Sort results by date.',
+      values: token.values.filter(({ syntax }) => syntax !== 'sort:estimate'),
+    }
+  })
   const filterTokens =
     audience === 'task-filter'
       ? queryTokens.filter(

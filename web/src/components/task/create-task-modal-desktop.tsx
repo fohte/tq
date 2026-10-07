@@ -12,7 +12,6 @@ import {
   Calendar,
   CalendarClock,
   CalendarPlus,
-  Clock,
   Inbox,
   Layers,
   Tag,
@@ -45,8 +44,6 @@ export function CreateTaskModalDesktop({
   setStartDate,
   dueDate,
   setDueDate,
-  estimateInput,
-  setEstimateInput,
   context,
   setContext,
   commitment,
@@ -69,8 +66,6 @@ export function CreateTaskModalDesktop({
   setStartDate: (value: string) => void
   dueDate: string
   setDueDate: (value: string) => void
-  estimateInput: string
-  setEstimateInput: (value: string) => void
   context: ContextValue | ''
   setContext: (value: ContextValue | '') => void
   commitment: CommitmentValue | ''
@@ -154,21 +149,6 @@ export function CreateTaskModalDesktop({
                 setDueDate(e.target.value)
               }}
               className="w-32"
-            />
-          </InlineFieldGroup>
-          <InlineFieldGroup
-            label="Estimate"
-            icon={<Clock className="size-3.5" />}
-          >
-            <Input
-              type="text"
-              variant="ghost"
-              value={estimateInput}
-              onChange={(e) => {
-                setEstimateInput(e.target.value)
-              }}
-              placeholder="1h30m"
-              className="w-16"
             />
           </InlineFieldGroup>
           <InlineFieldGroup

@@ -71,15 +71,6 @@ interface SelectedRange {
   end: Date
 }
 
-// A plain click (no drag) reports a range as short as one snap increment —
-// treat anything under 30 minutes as "just a click" and default to 30.
-function estimateMinutesForRange(range: SelectedRange): number {
-  const rawMinutes = Math.round(
-    (range.end.getTime() - range.start.getTime()) / 60_000,
-  )
-  return Math.max(30, rawMinutes)
-}
-
 export interface DayViewPresentationProps {
   isLoading: boolean
   calendarEvents: TimeBlockEvent[]
@@ -322,9 +313,6 @@ export function DayViewPresentation({
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         defaultStartDate={formatLocalDate(pendingRange?.start ?? new Date())}
-        {...(pendingRange
-          ? { defaultEstimateMinutes: estimateMinutesForRange(pendingRange) }
-          : {})}
         onCreated={(task) => {
           if (!pendingRange) return
           onCreateTimeBlock({

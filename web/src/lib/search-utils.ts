@@ -2,11 +2,24 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 
-type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
+type SearchResult = Omit<
+  InferResponseType<typeof api.api.tasks.$get, 200>[number],
+  'estimatedMinutes'
+>
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
+type SearchSuggestion = InferResponseType<
+  (typeof api.api.tasks.search.suggest)['$get'],
+  200
+>[number]
 
 export function extractTaskNumber(query: string): string | undefined {
   return /^#?(\d+)$/.exec(query)?.[1]
+}
+
+export function filterSearchSuggestions(
+  suggestions: SearchSuggestion[],
+): SearchSuggestion[] {
+  return suggestions.filter(({ value }) => value !== 'sort:estimate')
 }
 
 export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
@@ -22,7 +35,6 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
     remindAt: task.remindAt,
     parentId: task.parentId,
     parentNumber: task.parentNumber,

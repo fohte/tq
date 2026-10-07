@@ -53,7 +53,7 @@ export function makeTaskDetail(
     labels: [],
     startDate: '2026-03-20',
     dueDate: '2026-03-25',
-    estimatedMinutes: 90,
+    estimatedMinutes: null,
     remindAt: null,
     parentId: null,
     parentNumber: null,

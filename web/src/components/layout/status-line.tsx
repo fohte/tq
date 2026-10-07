@@ -6,7 +6,6 @@ import { useFilteredTaskList } from '#hooks/use-filtered-tasks'
 import { DAY_QUEUE_KEY, useQueueItems } from '#hooks/use-queues'
 import { useTaskMap } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { formatMinutes } from '#lib/format'
 import {
   navKeybindings,
   newTaskKeybinding,
@@ -36,11 +35,6 @@ export function StatusLine({
         .filter((t) => t != null),
     [todayTasksData, taskMap],
   )
-  const remainingEstimate = queueTasks.reduce(
-    (total, t) =>
-      t.status === 'completed' ? total : total + (t.estimatedMinutes ?? 0),
-    0,
-  )
   const shortcuts = [
     { key: searchKeybinding.keys, label: 'search' },
     { key: newTaskKeybinding.keys, label: 'new' },
@@ -57,7 +51,7 @@ export function StatusLine({
       <span>
         {isLoading
           ? '…'
-          : `${String(all.length)} tasks · ${String(queueTasks.length)} queued · ${formatMinutes(remainingEstimate)} left`}
+          : `${String(all.length)} tasks · ${String(queueTasks.length)} queued`}
       </span>
       <div className="ml-auto flex gap-3.5 whitespace-nowrap">
         {shortcuts.map((shortcut) => (

@@ -8,7 +8,6 @@ import {
   BlockedByLabel,
   CloseReasonLabel,
   DateRangeBadge,
-  EstimateLabel,
   ParentTaskLabel,
   RecurrenceLabel,
   RemindBadge,
@@ -27,7 +26,7 @@ import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 
 export interface TaskRowAppearanceProps {
-  task: Task
+  task: Omit<Task, 'estimatedMinutes'>
   sessions?: TaskAgentSession[]
   depth?: number
   selected?: boolean
@@ -39,7 +38,7 @@ export interface TaskRowAppearanceProps {
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
   // Appended after the row's canonical second-line items (labels, project,
-  // context, parent, dateRange, remindAt, estimate, recurrence, githubLink,
+  // context, parent, dateRange, remindAt, recurrence, githubLink,
   // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
   isCurrentTimeBlock?: boolean
@@ -108,9 +107,6 @@ export function TaskRowAppearance({
       />
     ) : null,
     task.remindAt != null ? <RemindBadge remindAt={task.remindAt} /> : null,
-    task.estimatedMinutes != null ? (
-      <EstimateLabel minutes={task.estimatedMinutes} />
-    ) : null,
     task.recurrenceRule != null ? (
       <RecurrenceLabel
         rule={task.recurrenceRule}
@@ -144,9 +140,6 @@ export function TaskRowAppearance({
         ? {
             'data-task-id': task.id,
             'data-task-title': task.title,
-            ...(task.estimatedMinutes != null
-              ? { 'data-estimated-minutes': String(task.estimatedMinutes) }
-              : {}),
           }
         : {})}
     >

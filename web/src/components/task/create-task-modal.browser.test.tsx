@@ -678,15 +678,6 @@ describe('CreateTaskModal', () => {
     },
   )
 
-  it('prefills the estimate field from defaultEstimateMinutes', () => {
-    renderControlledModal(CreateTaskModal, { defaultEstimateMinutes: 90 })
-
-    const estimateInputs = screen.getAllByPlaceholderText('1h30m')
-    for (const input of estimateInputs) {
-      expect(input).toHaveValue('1h30m')
-    }
-  })
-
   describe('tags', () => {
     it('adds a tag typed into the tag input', async () => {
       const user = userEvent.setup()
@@ -753,8 +744,9 @@ describe('CreateTaskModal', () => {
   })
 
   describe('shorthand syntax', () => {
-    it('applies parsed shorthand tokens (estimate, dates, label, context) to their respective fields', async () => {
+    it('keeps duration text while applying other shorthand tokens', async () => {
       const user = userEvent.setup()
+      const mutate = mockCreateTaskSuccess(makeTask())
       renderControlledModal(CreateTaskModal, {})
 
       const today = formatLocalDate(new Date())
@@ -774,13 +766,24 @@ describe('CreateTaskModal', () => {
       await waitFor(() => {
         expect(
           atIndex(screen.getAllByPlaceholderText(titleInputPlaceholder), 0),
-        ).toHaveValue('Buy milk ')
+        ).toHaveValue('Buy milk @30m ')
       })
-      expect(screen.getAllByDisplayValue('30m').length).toBeGreaterThan(0)
       expect(screen.getAllByDisplayValue(today).length).toBeGreaterThan(0)
       expect(screen.getAllByDisplayValue(tomorrow).length).toBeGreaterThan(0)
       expect(screen.getAllByText('groceries').length).toBeGreaterThan(0)
       expect(screen.getAllByText('Work').length).toBeGreaterThan(0)
+
+      await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+      expect(mutate.mock.calls.map(([input]) => input)).toEqual([
+        {
+          title: 'Buy milk @30m',
+          startDate: today,
+          dueDate: tomorrow,
+          context: 'work',
+          labels: ['groceries'],
+        },
+      ])
     })
 
     it('activates the "today" plan tab via the !today shorthand', async () => {

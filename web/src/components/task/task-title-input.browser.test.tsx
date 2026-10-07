@@ -54,18 +54,18 @@ describe('TaskTitleInput', () => {
     })
   })
 
-  it('selects a suggestion on Enter, replacing the partial token', async () => {
+  it('selects a due date suggestion on Enter, replacing the partial token', async () => {
     const user = userEvent.setup()
     renderTaskTitleInput()
 
     const input = screen.getByRole('textbox')
-    await user.type(input, 'Buy milk @30')
-    await expect(screen.findByText('@30m')).resolves.toBeVisible()
+    await user.type(input, 'Buy milk @tom')
+    await expect(screen.findByText('@tomorrow')).resolves.toBeVisible()
 
     await user.keyboard('{Enter}')
 
-    expect(input).toHaveValue('Buy milk @30m ')
-    expect(screen.queryByText('@30m')).not.toBeInTheDocument()
+    expect(input).toHaveValue('Buy milk @tomorrow ')
+    expect(screen.queryByText('@tomorrow')).not.toBeInTheDocument()
   })
 
   it('selects a parent suggestion on Enter, replacing the partial token', async () => {

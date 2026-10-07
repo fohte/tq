@@ -11,7 +11,6 @@ import {
   Calendar,
   CalendarClock,
   CalendarPlus,
-  Clock,
   Inbox,
   Layers,
   X,
@@ -49,10 +48,6 @@ export function CreateTaskModalMobile({
   setStartDate,
   dueDate,
   setDueDate,
-  estimateInput,
-  setEstimateInput,
-  estimateLabel,
-  estimateActive,
   context,
   setContext,
   commitment,
@@ -75,10 +70,6 @@ export function CreateTaskModalMobile({
   setStartDate: (value: string) => void
   dueDate: string
   setDueDate: (value: string) => void
-  estimateInput: string
-  setEstimateInput: (value: string) => void
-  estimateLabel: string
-  estimateActive: boolean
   context: ContextValue | ''
   setContext: (value: ContextValue | '') => void
   commitment: CommitmentValue | ''
@@ -153,24 +144,6 @@ export function CreateTaskModalMobile({
                   }}
                   autoFocus
                   className="w-28"
-                />
-              )}
-            />
-            <ExpandableFieldChip
-              icon={<Clock className="size-3.5" />}
-              label={estimateLabel}
-              active={estimateActive}
-              expanded={() => (
-                <Input
-                  type="text"
-                  variant="ghost"
-                  value={estimateInput}
-                  onChange={(e) => {
-                    setEstimateInput(e.target.value)
-                  }}
-                  placeholder="1h30m"
-                  autoFocus
-                  className="w-14"
                 />
               )}
             />
