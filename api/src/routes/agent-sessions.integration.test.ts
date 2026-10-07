@@ -957,11 +957,12 @@ describe('agent sessions API', () => {
 
     it('filters linked rows by taskIds', async () => {
       const includedTask = await createTask('Included task')
+      const secondIncludedTask = await createTask('Second included task')
       const excludedTask = await createTask('Excluded task')
-      const session = await upsertSessionAtTime(
+      const olderSession = await upsertSessionAtTime(
         {
           provider: 'claude_code',
-          sessionId: 'session-1',
+          sessionId: 'older-session',
           cwd: '/home/fohte/project',
           context: 'work',
           label: null,
@@ -969,11 +970,34 @@ describe('agent sessions API', () => {
         },
         '2030-01-01T00:00:00.000Z',
       )
-      await postLink(includedTask.id, session.id)
-      await postLink(excludedTask.id, session.id)
+      const newerSession = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'newer-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-02T00:00:00.000Z',
+      )
+      const excludedSession = await upsertSessionAtTime(
+        {
+          provider: 'claude_code',
+          sessionId: 'excluded-session',
+          cwd: '/home/fohte/project',
+          context: 'work',
+          label: null,
+          lastMessage: null,
+        },
+        '2030-01-03T00:00:00.000Z',
+      )
+      await postLink(includedTask.id, olderSession.id)
+      await postLink(secondIncludedTask.id, newerSession.id)
+      await postLink(excludedTask.id, excludedSession.id)
 
       const res = await app.request(
-        `/api/agent-sessions/by-task?taskIds=${includedTask.id}&active=all&limit=unlimited`,
+        `/api/agent-sessions/by-task?taskIds=${includedTask.id}&taskIds=${secondIncludedTask.id}&active=all&limit=unlimited`,
       )
 
       expect(
@@ -985,13 +1009,22 @@ describe('agent sessions API', () => {
         status: 200,
         body: [
           {
+            taskId: secondIncludedTask.id,
+            taskNumber: secondIncludedTask.number,
+            taskTitle: secondIncludedTask.title,
+            taskParentId: null,
+            taskStatus: 'todo',
+            linkedAt: newerSession.startedAt,
+            ...normalizeTaskSession(newerSession),
+          },
+          {
             taskId: includedTask.id,
             taskNumber: includedTask.number,
             taskTitle: includedTask.title,
             taskParentId: null,
             taskStatus: 'todo',
-            linkedAt: session.startedAt,
-            ...normalizeTaskSession(session),
+            linkedAt: olderSession.startedAt,
+            ...normalizeTaskSession(olderSession),
           },
         ],
       })

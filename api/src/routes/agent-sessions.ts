@@ -288,8 +288,12 @@ export const agentSessionsApp = new Hono()
             active === 'all'
               ? undefined
               : and(
-                  isNull(agentSessions.endedAt),
-                  isNull(agentSessions.archivedAt),
+                  activeCriteria.endedAt === null
+                    ? isNull(agentSessions.endedAt)
+                    : eq(agentSessions.endedAt, activeCriteria.endedAt),
+                  activeCriteria.archivedAt === null
+                    ? isNull(agentSessions.archivedAt)
+                    : eq(agentSessions.archivedAt, activeCriteria.archivedAt),
                   gt(
                     agentSessions.lastActiveAt,
                     activeCriteria.lastActiveAtAfter,
