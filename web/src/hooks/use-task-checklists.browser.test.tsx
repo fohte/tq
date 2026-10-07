@@ -5,16 +5,28 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TaskChecklistSection } from '#components/task/task-checklist-section'
-import { useSetTaskChecklistItemChecked } from '#hooks/use-task-checklists'
+import {
+  useLinkTaskChecklistItemToGithub,
+  usePromoteTaskChecklistItem,
+  useSetTaskChecklistItemChecked,
+} from '#hooks/use-task-checklists'
 import { taskChecklistKeys } from '#lib/query-keys'
 
-const { mockGetChecklists, mockCreateChecklist, mockCheck, mockUncheck } =
-  vi.hoisted(() => ({
-    mockGetChecklists: vi.fn(),
-    mockCreateChecklist: vi.fn(),
-    mockCheck: vi.fn(),
-    mockUncheck: vi.fn(),
-  }))
+const {
+  mockGetChecklists,
+  mockCreateChecklist,
+  mockCheck,
+  mockUncheck,
+  mockUpdateChecklistItem,
+  mockPromoteChecklistItem,
+} = vi.hoisted(() => ({
+  mockGetChecklists: vi.fn(),
+  mockCreateChecklist: vi.fn(),
+  mockCheck: vi.fn(),
+  mockUncheck: vi.fn(),
+  mockUpdateChecklistItem: vi.fn(),
+  mockPromoteChecklistItem: vi.fn(),
+}))
 
 vi.mock('#lib/api', () => ({
   api: {
@@ -29,7 +41,9 @@ vi.mock('#lib/api', () => ({
       },
       'checklist-items': {
         ':itemId': {
+          $patch: mockUpdateChecklistItem,
           check: { $post: mockCheck },
+          promote: { $post: mockPromoteChecklistItem },
           uncheck: { $post: mockUncheck },
         },
       },
@@ -77,6 +91,20 @@ function readChecklistSaveFailure(alertText: string | null) {
   }
 }
 
+function readLinkMutationState(invalidationKeys: unknown[]) {
+  return {
+    updateCalls: mockUpdateChecklistItem.mock.calls,
+    invalidationKeys,
+  }
+}
+
+function readPromoteMutationState(invalidationKeys: unknown[]) {
+  return {
+    promoteCalls: mockPromoteChecklistItem.mock.calls,
+    invalidationKeys,
+  }
+}
+
 beforeEach(() => {
   queryClient = new QueryClient({
     defaultOptions: {
@@ -88,6 +116,8 @@ beforeEach(() => {
   mockCreateChecklist.mockReset()
   mockCheck.mockReset().mockResolvedValue(successResponse())
   mockUncheck.mockReset().mockResolvedValue(successResponse())
+  mockUpdateChecklistItem.mockReset().mockResolvedValue(successResponse())
+  mockPromoteChecklistItem.mockReset().mockResolvedValue(successResponse())
 })
 
 afterEach(() => {
@@ -126,6 +156,66 @@ describe('useSetTaskChecklistItemChecked', () => {
   })
 })
 
+describe('useLinkTaskChecklistItemToGithub', () => {
+  it('links a pull request and invalidates task data', async () => {
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+    const { result } = renderHook(() => useLinkTaskChecklistItemToGithub(), {
+      wrapper,
+    })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        itemId,
+        url: 'https://github.com/example-org/sample-app/pull/14',
+      })
+    })
+
+    expect(
+      readLinkMutationState(
+        invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey),
+      ),
+    ).toEqual({
+      updateCalls: [
+        [
+          {
+            param: { itemId },
+            json: {
+              github: 'https://github.com/example-org/sample-app/pull/14',
+            },
+          },
+        ],
+      ],
+      invalidationKeys: [['tasks']],
+    })
+  })
+})
+
+describe('usePromoteTaskChecklistItem', () => {
+  it('promotes an item and invalidates task data', async () => {
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+    const { result } = renderHook(() => usePromoteTaskChecklistItem(), {
+      wrapper,
+    })
+
+    await act(async () => {
+      await result.current.mutateAsync(itemId)
+    })
+
+    expect(
+      readPromoteMutationState(
+        invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey),
+      ),
+    ).toEqual({
+      promoteCalls: [[{ param: { itemId } }]],
+      invalidationKeys: [['tasks']],
+    })
+  })
+})
+
 describe('TaskChecklistSection', () => {
   it('shows an error when saving a checklist fails', async () => {
     const user = userEvent.setup()
@@ -137,7 +227,7 @@ describe('TaskChecklistSection', () => {
     )
     render(
       <QueryClientProvider client={queryClient}>
-        <TaskChecklistSection taskId={taskId} />
+        <TaskChecklistSection taskId={taskId} githubLinks={[]} subtasks={[]} />
       </QueryClientProvider>,
     )
 

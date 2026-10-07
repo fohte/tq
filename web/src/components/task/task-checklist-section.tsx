@@ -2,22 +2,40 @@ import { useState } from 'react'
 
 import { TaskChecklistList } from '#components/task/task-checklist-list'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
+import type { GithubLink } from '#hooks/use-github-link'
 import {
   useCreateTaskChecklist,
   useCreateTaskChecklistItem,
   useDeleteTaskChecklist,
   useDeleteTaskChecklistItem,
+  useLinkTaskChecklistItemToGithub,
   useMoveTaskChecklistItem,
+  usePromoteTaskChecklistItem,
   useReorderTaskChecklists,
   useSetTaskChecklistItemChecked,
   useTaskChecklists,
   useUpdateTaskChecklist,
   useUpdateTaskChecklistItem,
 } from '#hooks/use-task-checklists'
+import type { Task } from '#hooks/use-tasks'
+import { useTaskList } from '#hooks/use-tasks'
 
-export function TaskChecklistSection({ taskId }: { taskId: string }) {
+export function TaskChecklistSection({
+  taskId,
+  githubLinks,
+  subtasks,
+}: {
+  taskId: string
+  githubLinks: GithubLink[]
+  subtasks?: Task[] | undefined
+}) {
   const [mutationError, setMutationError] = useState(false)
   const { data: checklists, isLoading, isError } = useTaskChecklists(taskId)
+  const subtaskQuery = useTaskList(
+    { parentId: taskId },
+    { enabled: subtasks == null },
+  )
+  const linkedSubtasks = subtasks ?? subtaskQuery.categorized.all
   const createChecklist = useCreateTaskChecklist(taskId)
   const updateChecklist = useUpdateTaskChecklist(taskId)
   const reorderChecklists = useReorderTaskChecklists(taskId)
@@ -27,6 +45,8 @@ export function TaskChecklistSection({ taskId }: { taskId: string }) {
   const deleteItem = useDeleteTaskChecklistItem(taskId)
   const moveItem = useMoveTaskChecklistItem(taskId)
   const setItemChecked = useSetTaskChecklistItemChecked(taskId)
+  const linkItemToGithub = useLinkTaskChecklistItemToGithub()
+  const promoteItem = usePromoteTaskChecklistItem()
   const mutationCallbacks = {
     onError: () => {
       setMutationError(true)
@@ -57,6 +77,8 @@ export function TaskChecklistSection({ taskId }: { taskId: string }) {
       )}
       <TaskChecklistList
         checklists={checklists ?? []}
+        githubLinks={githubLinks}
+        subtasks={linkedSubtasks}
         onCreateChecklist={() => {
           createChecklist.mutate({ name: null }, mutationCallbacks)
         }}
@@ -83,6 +105,12 @@ export function TaskChecklistSection({ taskId }: { taskId: string }) {
         }}
         onSetItemChecked={(itemId, checked) => {
           setItemChecked.mutate({ itemId, checked }, mutationCallbacks)
+        }}
+        onLinkGithub={(itemId, url) => {
+          linkItemToGithub.mutate({ itemId, url }, mutationCallbacks)
+        }}
+        onPromoteItem={(itemId) => {
+          promoteItem.mutate(itemId, mutationCallbacks)
         }}
       />
     </>

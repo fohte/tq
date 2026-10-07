@@ -1,11 +1,14 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { Link } from '@tanstack/react-router'
 import {
   ArrowDown,
   ArrowUp,
+  ArrowUpRight,
   ChevronDown,
   CornerDownRight,
   CornerUpLeft,
+  GitPullRequest,
   Pencil,
   Plus,
   Trash2,
@@ -13,21 +16,27 @@ import {
 import type { KeyboardEvent } from 'react'
 import { useEffect, useState } from 'react'
 
+import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
+import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { ChecklistItemComposer } from '#components/task/task-checklist-item-composer'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { Checkbox } from '#components/ui/checkbox'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
+import type { GithubLink } from '#hooks/use-github-link'
 import type {
   MoveTaskChecklistItemInput,
   TaskChecklistItem,
   UpdateTaskChecklistItemInput,
 } from '#hooks/use-task-checklists'
+import type { Task } from '#hooks/use-tasks'
 import { countChecklistLeaves } from '#lib/task-checklist-tree'
 
 interface TaskChecklistItemTreeProps {
   items: TaskChecklistItem[]
+  githubLinks: GithubLink[]
+  subtasks: Task[]
   parentItem?: TaskChecklistItem | undefined
   depth?: number
   addingItemParentId: string | null | undefined
@@ -37,12 +46,16 @@ interface TaskChecklistItemTreeProps {
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
+  onLinkGithub: (itemId: string, url: string) => void
+  onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   initiallyCollapsedItemIds?: string[] | undefined
 }
 
 export function TaskChecklistItemTree({
   items,
+  githubLinks,
+  subtasks,
   parentItem,
   depth = 0,
   addingItemParentId,
@@ -52,6 +65,8 @@ export function TaskChecklistItemTree({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
+  onLinkGithub,
+  onPromoteItem,
   onStartAddingItem,
   initiallyCollapsedItemIds = [],
 }: TaskChecklistItemTreeProps) {
@@ -63,6 +78,8 @@ export function TaskChecklistItemTree({
         <ChecklistItemRow
           key={item.id}
           item={item}
+          githubLinks={githubLinks}
+          subtasks={subtasks}
           siblings={items}
           index={index}
           parentItem={parentItem}
@@ -71,6 +88,8 @@ export function TaskChecklistItemTree({
           onDeleteItem={onDeleteItem}
           onMoveItem={onMoveItem}
           onSetItemChecked={onSetItemChecked}
+          onLinkGithub={onLinkGithub}
+          onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
           addingItemParentId={addingItemParentId}
           onCancelAddingItem={onCancelAddingItem}
@@ -93,6 +112,8 @@ export function TaskChecklistItemTree({
 
 function ChecklistItemRow({
   item,
+  githubLinks,
+  subtasks,
   siblings,
   index,
   parentItem,
@@ -101,6 +122,8 @@ function ChecklistItemRow({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
+  onLinkGithub,
+  onPromoteItem,
   onStartAddingItem,
   addingItemParentId,
   onCancelAddingItem,
@@ -108,6 +131,8 @@ function ChecklistItemRow({
   initiallyCollapsedItemIds,
 }: {
   item: TaskChecklistItem
+  githubLinks: GithubLink[]
+  subtasks: Task[]
   siblings: TaskChecklistItem[]
   index: number
   parentItem: TaskChecklistItem | undefined
@@ -116,6 +141,8 @@ function ChecklistItemRow({
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
+  onLinkGithub: (itemId: string, url: string) => void
+  onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   addingItemParentId: string | null | undefined
   onCancelAddingItem: () => void
@@ -130,6 +157,7 @@ function ChecklistItemRow({
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const { onChange: onNoteChange, flush: flushNoteChange } = useDebouncedSave(
     (note) => {
       onUpdateItem(item.id, { note })
@@ -141,6 +169,8 @@ function ChecklistItemRow({
   }, [editingContent, item.content])
 
   const hasChildren = item.children.length > 0
+  const githubLink = githubLinks.find((link) => link.id === item.githubLinkId)
+  const subtask = subtasks.find((task) => task.id === item.subtaskId)
   const isLocked =
     hasChildren || item.githubLinkId != null || item.subtaskId != null
   const previousSibling = index > 0 ? siblings[index - 1] : undefined
@@ -160,6 +190,8 @@ function ChecklistItemRow({
           afterItemId: parentItem.id,
         }
   const counts = countChecklistLeaves([item])
+  const canLinkOrPromote =
+    !hasChildren && item.githubLinkId == null && item.subtaskId == null
 
   const itemActions = [
     {
@@ -177,6 +209,24 @@ function ChecklistItemRow({
             onClick: () => {
               setCollapsed(false)
               onStartAddingItem(item.id)
+            },
+          },
+        ]
+      : []),
+    ...(canLinkOrPromote
+      ? [
+          {
+            icon: <GitPullRequest className="size-4" />,
+            label: 'link pull request',
+            onClick: () => {
+              setLinkDialogOpen(true)
+            },
+          },
+          {
+            icon: <ArrowUpRight className="size-4" />,
+            label: 'promote to subtask',
+            onClick: () => {
+              onPromoteItem(item.id)
             },
           },
         ]
@@ -342,6 +392,24 @@ function ChecklistItemRow({
               </span>
             </Button>
           )}
+          {(githubLink != null || subtask != null) && (
+            <div className="mt-1 flex min-w-0 flex-wrap gap-1">
+              {githubLink != null && <GithubLinkBadge link={githubLink} />}
+              {subtask != null && (
+                <Link
+                  to="/tasks/$taskId"
+                  params={{ taskId: subtask.id }}
+                  aria-label={`#${String(subtask.number)} ${subtask.title}`}
+                  className="inline-flex max-w-full min-w-0 items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground hover:text-foreground"
+                >
+                  <span className="shrink-0 font-bold text-primary">
+                    #{subtask.number}
+                  </span>
+                  <span className="truncate">{subtask.title}</span>
+                </Link>
+              )}
+            </div>
+          )}
         </div>
         {hasChildren && (
           <span className="shrink-0 font-mono text-2xs text-muted-foreground-faint">
@@ -390,6 +458,10 @@ function ChecklistItemRow({
           onDeleteItem={onDeleteItem}
           onMoveItem={onMoveItem}
           onSetItemChecked={onSetItemChecked}
+          githubLinks={githubLinks}
+          subtasks={subtasks}
+          onLinkGithub={onLinkGithub}
+          onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
         />
@@ -422,6 +494,14 @@ function ChecklistItemRow({
         onOpenChange={setDeleteDialogOpen}
         onConfirm={() => {
           onDeleteItem(item.id)
+        }}
+      />
+      <ChecklistItemGithubLinkDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        itemContent={item.content}
+        onSubmit={(url) => {
+          onLinkGithub(item.id, url)
         }}
       />
     </div>

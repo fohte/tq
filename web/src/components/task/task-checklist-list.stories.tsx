@@ -62,6 +62,8 @@ const nestedChecklist = makeTaskChecklist({
 })
 
 const checklistActions = {
+  githubLinks: [],
+  subtasks: [],
   onCreateChecklist: () => {},
   onUpdateChecklist: () => {},
   onReorderChecklists: () => {},
@@ -71,6 +73,8 @@ const checklistActions = {
   onDeleteItem: () => {},
   onMoveItem: () => {},
   onSetItemChecked: () => {},
+  onLinkGithub: () => {},
+  onPromoteItem: () => {},
 }
 
 function Providers({ children }: { children: ReactNode }) {
