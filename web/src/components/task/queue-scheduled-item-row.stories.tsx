@@ -22,7 +22,6 @@ const meta = {
     task: makeTask({
       id: 'scheduled-task',
       title: 'Review the launch notes',
-      estimatedMinutes: 45,
     }),
     date: '2026-08-11',
     onRemove: fn(),
@@ -33,5 +32,5 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Scheduled: Story = {
-  name: 'a dated queue task uses one muted line without its number or estimate',
+  name: 'a dated queue task uses one muted line without its number',
 }

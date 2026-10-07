@@ -17,7 +17,6 @@ const baseTemplate = makeRecurringTemplate({
     daysOfWeek: [1],
     dayOfMonth: null,
   },
-  estimatedMinutes: 30,
   context: 'work',
   labels: ['report'],
   startOffsetDays: 1,

@@ -1,20 +1,9 @@
 import { ProgressBar } from '#components/ui/progress-bar'
 import type { Task } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
 
 export function TaskListHeader({ tasks }: { tasks: Task[] }) {
   const total = tasks.length
-  const { completed, totalEstimate, completedEstimate } = tasks.reduce(
-    (acc, t) => {
-      if (t.status === 'completed') {
-        acc.completed++
-        acc.completedEstimate += t.estimatedMinutes ?? 0
-      }
-      acc.totalEstimate += t.estimatedMinutes ?? 0
-      return acc
-    },
-    { completed: 0, totalEstimate: 0, completedEstimate: 0 },
-  )
+  const completed = tasks.filter((task) => task.status === 'completed').length
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
@@ -26,13 +15,6 @@ export function TaskListHeader({ tasks }: { tasks: Task[] }) {
           {total}
         </span>
         <span className="text-muted-foreground-faint">done</span>
-        {totalEstimate > 0 && (
-          <span className="ml-auto whitespace-nowrap text-muted-foreground-strong">
-            {formatMinutes(completedEstimate)}
-            <span className="text-muted-foreground-faint"> / </span>
-            {formatMinutes(totalEstimate)}
-          </span>
-        )}
       </div>
 
       <ProgressBar percent={progress} />

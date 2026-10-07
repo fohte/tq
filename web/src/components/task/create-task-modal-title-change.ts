@@ -13,7 +13,6 @@ interface CreateTaskModalTitleChangeHandlerOptions {
   setTitle: Dispatch<SetStateAction<string>>
   setStartDate: Dispatch<SetStateAction<string>>
   setDueDate: Dispatch<SetStateAction<string>>
-  setEstimateInput: Dispatch<SetStateAction<string>>
   setContext: Dispatch<SetStateAction<ContextValue | ''>>
   setLabels: Dispatch<SetStateAction<string[]>>
   setParentOverrideNumber: Dispatch<SetStateAction<number | undefined>>
@@ -28,7 +27,6 @@ export function createTaskModalTitleChangeHandler({
   setTitle,
   setStartDate,
   setDueDate,
-  setEstimateInput,
   setContext,
   setLabels,
   setParentOverrideNumber,
@@ -45,7 +43,6 @@ export function createTaskModalTitleChangeHandler({
     setTitle(parsed.title)
     if (parsed.startDate != null) setStartDate(parsed.startDate)
     if (parsed.dueDate != null) setDueDate(parsed.dueDate)
-    if (parsed.estimateInput != null) setEstimateInput(parsed.estimateInput)
     if (parsed.context != null) setContext(parsed.context)
     if (parsed.labels.length > 0) {
       setLabels((prev) => [...new Set([...prev, ...parsed.labels])])

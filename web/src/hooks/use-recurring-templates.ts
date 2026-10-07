@@ -50,7 +50,6 @@ export function useRecurringTemplate(id: string) {
 export interface UpdateRecurringTemplateInput {
   title?: string
   description?: string | null
-  estimatedMinutes?: number | null
   projectId?: string | null
   parentId?: string | null
   context?: 'work' | 'personal'

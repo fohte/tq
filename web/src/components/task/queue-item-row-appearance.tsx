@@ -3,13 +3,11 @@ import type {
   DraggableSyntheticListeners,
 } from '@dnd-kit/core'
 import { Button } from '@fohte/ui/button'
-import { Input } from '@fohte/ui/input'
 import { X } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import type { Task } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
 import { cn } from '#lib/utils'
 
 export function QueueItemRowAppearance({
@@ -22,14 +20,8 @@ export function QueueItemRowAppearance({
   setNodeRef,
   style,
   isDragging = false,
-  isEditingEstimate,
-  estimateInput,
   secondLineExtras = [],
   isCurrentTimeBlock = false,
-  onEstimateInputChange,
-  onStartEditingEstimate,
-  onCommitEstimate,
-  onCancelEstimate,
 }: {
   task: Task
   queueKey: string
@@ -40,54 +32,9 @@ export function QueueItemRowAppearance({
   setNodeRef: (node: HTMLElement | null) => void
   style: CSSProperties
   isDragging?: boolean
-  isEditingEstimate: boolean
-  estimateInput: string
   secondLineExtras?: ReactNode[]
   isCurrentTimeBlock?: boolean
-  onEstimateInputChange: (value: string) => void
-  onStartEditingEstimate: () => void
-  onCommitEstimate: () => void
-  onCancelEstimate: () => void
 }) {
-  // The value itself renders through TaskRowAppearance's own second line;
-  // this only supplies the null-estimate affordances (button / input).
-  const estimateItem =
-    task.estimatedMinutes != null ? null : isEditingEstimate ? (
-      <Input
-        autoFocus
-        data-no-dnd=""
-        value={estimateInput}
-        onChange={(e) => {
-          onEstimateInputChange(e.target.value)
-        }}
-        onBlur={onCommitEstimate}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') onCancelEstimate()
-        }}
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
-        placeholder={formatMinutes(30)}
-        className="h-6 w-16 shrink-0 py-0.5 font-mono text-xs"
-      />
-    ) : (
-      <button
-        type="button"
-        className="inline-flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap border border-destructive px-1.5 py-0.5 font-mono text-2xs text-destructive"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onStartEditingEstimate()
-        }}
-        data-no-dnd=""
-        title="Set an estimate"
-      >
-        No estimate
-      </button>
-    )
-
   return (
     <div
       ref={setNodeRef}
@@ -105,7 +52,7 @@ export function QueueItemRowAppearance({
         <TaskRowAppearance
           task={task}
           draggable={task.status !== 'completed'}
-          secondLineExtras={[estimateItem, ...secondLineExtras]}
+          secondLineExtras={secondLineExtras}
           isCurrentTimeBlock={isCurrentTimeBlock}
         />
       </div>

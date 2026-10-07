@@ -4,7 +4,6 @@ import {
   type PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { formatLocalDate } from '#lib/date-range'
-import { parseDurationToMinutes } from '#lib/parse-duration'
 
 export interface ShorthandRecurrenceRule {
   type: 'daily' | 'weekly' | 'monthly'
@@ -16,7 +15,6 @@ export interface ShorthandExtraction {
   title: string
   startDate?: string
   dueDate?: string
-  estimateInput?: string
   context?: ContextValue
   labels: string[]
   parentNumber?: number
@@ -88,7 +86,6 @@ function resolveDateKeyword(keyword: string): string | null {
 
 /**
  * Extract completed shorthand tokens from a task title as it's being typed:
- * - `@Nm` / `@Nh` → estimateInput
  * - `@today` / `@tomorrow` / `@YYYY-MM-DD` → dueDate
  * - `>today` / `>tomorrow` / `>YYYY-MM-DD` → startDate
  * - `#label` → labels
@@ -124,11 +121,6 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
         const date = resolveDateKeyword(value)
         if (date != null) {
           result.dueDate = date
-          consumed = true
-          continue
-        }
-        if (parseDurationToMinutes(value) != null) {
-          result.estimateInput = value
           consumed = true
           continue
         }
@@ -209,8 +201,8 @@ export function extractShorthandTokens(input: string): ShorthandExtraction {
 export const taskShorthandHelpItems = [
   {
     trigger: '@',
-    description: 'Set a due date or estimate',
-    examples: ['@today', '@1h'],
+    description: 'Set a due date',
+    examples: ['@today', '@tomorrow'],
   },
   {
     trigger: '>',
@@ -254,10 +246,6 @@ export interface SuggestionItem {
 const AT_SUGGESTIONS: SuggestionItem[] = [
   { value: 'today', display: 'today' },
   { value: 'tomorrow', display: 'tomorrow' },
-  { value: '15m', display: '15m' },
-  { value: '30m', display: '30m' },
-  { value: '1h', display: '1h' },
-  { value: '2h', display: '2h' },
 ]
 
 const START_DATE_SUGGESTIONS: SuggestionItem[] = [

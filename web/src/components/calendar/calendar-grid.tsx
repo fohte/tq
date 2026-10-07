@@ -175,19 +175,12 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         eventData: (el) => {
           const taskId = el.getAttribute('data-task-id') ?? ''
           const taskTitle = el.getAttribute('data-task-title') ?? ''
-          const estimatedMinutes = el.getAttribute('data-estimated-minutes')
           const queueSource = el.closest<HTMLElement>('[data-queue-key]')
-          const durationMinutes =
-            estimatedMinutes != null && estimatedMinutes !== ''
-              ? Number.parseInt(estimatedMinutes, 10)
-              : 30
 
           return {
             id: `external-${taskId}`,
             title: taskTitle,
-            duration: {
-              minutes: durationMinutes,
-            },
+            duration: { minutes: 30 },
             extendedProps: {
               taskId,
               type: 'manual',

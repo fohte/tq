@@ -99,7 +99,7 @@ export function TaskFilterChipRow({
     }
   }, [freeTextInputId, searchModalOpen])
 
-  const sortBy = parsed.sortBy ?? defaultTaskSort
+  const sortBy = withDefaultSort(parsed).sortBy ?? defaultTaskSort
   // Keep the picker selection valid if an older URL contains a removed sort.
   const pickerSortBy =
     sortOptionValues.find((value) => value === sortBy) ?? defaultTaskSort

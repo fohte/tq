@@ -12,7 +12,6 @@ import { Textarea } from '#components/ui/textarea'
 import { useFocusNotes } from '#hooks/use-focus-notes'
 import type { Task } from '#hooks/use-tasks'
 import { useCompleteTask } from '#hooks/use-tasks'
-import { formatMinutes } from '#lib/format'
 
 export interface FocusViewPresentationProps {
   isLoading: boolean
@@ -48,18 +47,7 @@ function FocusHeader() {
 
 function FocusProgress({ tasks }: { tasks: Task[] }) {
   const total = tasks.length
-  const { completed, totalEstimate, completedEstimate } = tasks.reduce(
-    (acc, t) => {
-      if (t.status === 'completed') {
-        acc.completed++
-        acc.completedEstimate += t.estimatedMinutes ?? 0
-      }
-      acc.totalEstimate += t.estimatedMinutes ?? 0
-      return acc
-    },
-    { completed: 0, totalEstimate: 0, completedEstimate: 0 },
-  )
-  const remainingEstimate = totalEstimate - completedEstimate
+  const completed = tasks.filter((task) => task.status === 'completed').length
   const progress = total > 0 ? (completed / total) * 100 : 0
 
   return (
@@ -70,23 +58,6 @@ function FocusProgress({ tasks }: { tasks: Task[] }) {
           <span className="text-muted-foreground-faint">/</span>
           {total} completed
         </span>
-        {totalEstimate > 0 && (
-          <span
-            className="ml-auto text-muted-foreground-strong"
-            data-testid="focus-remaining-time"
-          >
-            <span className="md:hidden">
-              {formatMinutes(remainingEstimate)} left
-            </span>
-            <span className="hidden md:inline">
-              remaining {formatMinutes(remainingEstimate)}
-              <span className="text-muted-foreground-faint">
-                {' '}
-                / {formatMinutes(totalEstimate)}
-              </span>
-            </span>
-          </span>
-        )}
       </div>
       <ProgressBar percent={progress} />
     </div>
@@ -132,11 +103,6 @@ function FocusCard({
         >
           defer
         </Button>
-        {task.estimatedMinutes != null && (
-          <span className="font-mono text-sm text-muted-foreground-strong md:ml-auto">
-            {formatMinutes(task.estimatedMinutes)}
-          </span>
-        )}
       </div>
     </div>
   )
@@ -193,11 +159,6 @@ function FocusUpNext({ task }: { task: Task }) {
         <span className="truncate text-sm text-muted-foreground-strong">
           {task.title}
         </span>
-        {task.estimatedMinutes != null && (
-          <span className="ml-auto shrink-0 font-mono text-2xs text-muted-foreground">
-            {formatMinutes(task.estimatedMinutes)}
-          </span>
-        )}
       </div>
     </Panel>
   )

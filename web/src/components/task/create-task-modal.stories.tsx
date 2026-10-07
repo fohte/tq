@@ -96,13 +96,6 @@ export const WithDefaultStartDate: Story = {
   },
 }
 
-export const WithDefaultEstimate: Story = {
-  name: 'prefills the task estimate',
-  args: {
-    defaultEstimateMinutes: 90,
-  },
-}
-
 export const DiscardConfirmation: Story = {
   name: 'asks for confirmation before discarding the draft',
   args: {

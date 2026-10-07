@@ -17,18 +17,16 @@ const todayStr = formatLocalDate(new Date())
 const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
   title: 'Implement task list UI',
-  estimatedMinutes: 30,
 })
 
 const tasks: Task[] = [
-  { ...baseTask, id: '1', title: 'Task A', estimatedMinutes: 30 },
-  { ...baseTask, id: '2', title: 'Task B', estimatedMinutes: 60 },
+  { ...baseTask, id: '1', title: 'Task A' },
+  { ...baseTask, id: '2', title: 'Task B' },
   {
     ...baseTask,
     id: '3',
     title: 'Task C',
     status: 'completed',
-    estimatedMinutes: 45,
   },
 ]
 

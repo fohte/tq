@@ -24,33 +24,9 @@ describe('extractShorthandTokens', () => {
     })
   })
 
-  it('leaves the in-progress trailing token untouched', () => {
-    expect(extractShorthandTokens('Task @30m')).toEqual({
-      title: 'Task @30m',
-      labels: [],
-    })
-  })
-
-  it('consumes a completed duration token once followed by a space', () => {
+  it('keeps duration tokens in the task title', () => {
     expect(extractShorthandTokens('Task @30m ')).toEqual({
-      title: 'Task ',
-      estimateInput: '30m',
-      labels: [],
-    })
-  })
-
-  it('keeps the raw duration string rather than converting to minutes', () => {
-    expect(extractShorthandTokens('Task @1h30m ')).toEqual({
-      title: 'Task ',
-      estimateInput: '1h30m',
-      labels: [],
-    })
-  })
-
-  it('consumes a completed token as soon as another word follows it', () => {
-    expect(extractShorthandTokens('Task @30m more')).toEqual({
-      title: 'Task more',
-      estimateInput: '30m',
+      title: 'Task @30m ',
       labels: [],
     })
   })
@@ -285,8 +261,7 @@ describe('extractShorthandTokens', () => {
         'Buy groceries @30m @tomorrow #food %personal >today ^42 ',
       ),
     ).toEqual({
-      title: 'Buy groceries ',
-      estimateInput: '30m',
+      title: 'Buy groceries @30m ',
       dueDate: '2026-01-02',
       startDate: '2026-01-01',
       context: 'personal',
@@ -312,17 +287,17 @@ describe('extractShorthandTokens', () => {
 
 describe('detectTrigger', () => {
   it('detects a trigger at the end of the input', () => {
-    expect(detectTrigger('Task @30', 8)).toEqual({
+    expect(detectTrigger('Task @to', 8)).toEqual({
       trigger: '@',
-      partial: '30',
+      partial: 'to',
       tokenStart: 5,
     })
   })
 
   it('detects a trigger with the cursor mid-token', () => {
-    expect(detectTrigger('Task @30m more', 7)).toEqual({
+    expect(detectTrigger('Task @tomorrow more', 9)).toEqual({
       trigger: '@',
-      partial: '3',
+      partial: 'tom',
       tokenStart: 5,
     })
   })
@@ -344,7 +319,8 @@ describe('detectTrigger', () => {
   })
 
   it('returns null right after a completed token followed by a space', () => {
-    expect(detectTrigger('Task @30m ', 10)).toBeNull()
+    const input = 'Task @tomorrow '
+    expect(detectTrigger(input, input.length)).toBeNull()
   })
 
   it('detects the * recurrence trigger', () => {
@@ -374,6 +350,13 @@ describe('getSuggestions', () => {
 
   it('filters items by a case-insensitive prefix match', () => {
     expect(getSuggestions('@', 'TOM')).toEqual([
+      { value: 'tomorrow', display: 'tomorrow' },
+    ])
+  })
+
+  it('offers only due date suggestions for @', () => {
+    expect(getSuggestions('@', '')).toEqual([
+      { value: 'today', display: 'today' },
       { value: 'tomorrow', display: 'tomorrow' },
     ])
   })
