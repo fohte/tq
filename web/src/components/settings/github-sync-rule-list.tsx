@@ -12,7 +12,7 @@ export function GithubSyncRuleList() {
   const [createOpen, setCreateOpen] = useState(false)
 
   const syncRules = useGithubSyncRules()
-  const projects = useProjects()
+  const projects = useProjects({ context: 'all', status: 'all' })
 
   return (
     <div className="flex flex-col gap-3">

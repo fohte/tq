@@ -617,7 +617,7 @@ describe('SearchModal', () => {
       })
       expect(getOutput()).toEqual({
         project: {
-          filter: { q: 'active', context: 'work' },
+          filter: { q: 'active', context: 'work', status: 'all' },
           options: { enabled: true },
         },
         view: {
@@ -1597,7 +1597,7 @@ describe('SearchModal', () => {
         result: null,
         mode: '!',
         lastProjectSearch: {
-          filter: { q: 'foo bar' },
+          filter: { q: 'foo bar', context: 'all', status: 'all' },
           options: { enabled: true },
         },
       })

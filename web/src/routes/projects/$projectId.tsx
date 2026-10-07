@@ -47,7 +47,7 @@ function ProjectDetailPage() {
     isLoading: isProjectLoading,
     error,
   } = useProject(projectId)
-  const projects = useProjects()
+  const projects = useProjects({ context: 'all', status: 'all' })
 
   useEffect(() => {
     if (isProjectLoading || error || project == null) return

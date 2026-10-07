@@ -61,7 +61,7 @@ export function GithubSyncRuleFormModal({
   )
   const [includeExisting, setIncludeExisting] = useState(false)
 
-  const projects = useProjects()
+  const projects = useProjects({ context: 'all', status: 'all' })
   const createRule = useCreateGithubSyncRule()
   const updateRule = useUpdateGithubSyncRule()
 

@@ -27,7 +27,10 @@ export function LinkExistingProjectTaskMenu({
     }
   }, [open])
 
-  const { data: projects } = useProjects(undefined, { enabled: open })
+  const { data: projects } = useProjects(
+    { context: 'all', status: 'all' },
+    { enabled: open },
+  )
   const { data: projectTaskIds } = useProjectTaskIds(projectId, {
     enabled: open,
   })

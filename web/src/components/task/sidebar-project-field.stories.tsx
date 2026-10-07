@@ -23,7 +23,10 @@ function createSeededQueryClient(projects: Project[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  client.setQueryData(projectKeys.list(undefined), projects)
+  client.setQueryData(
+    projectKeys.list({ context: 'all', status: 'all' }),
+    projects,
+  )
   return client
 }
 

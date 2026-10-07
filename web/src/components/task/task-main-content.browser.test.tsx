@@ -47,8 +47,11 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
     [],
   )
   queryClient.setQueryData(labelKeys.list({ context }), [])
-  queryClient.setQueryData(projectKeys.list(undefined), [])
-  queryClient.setQueryData(projectKeys.list({ context }), [])
+  queryClient.setQueryData(
+    projectKeys.list({ context: 'all', status: 'all' }),
+    [],
+  )
+  queryClient.setQueryData(projectKeys.list({ context, status: 'all' }), [])
   queryClient.setQueryData(savedViewKeys.list({ context }), [])
   // TaskSidebarMobile's SidebarPlanField reads both via useTaskPlan.
   queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, todayStr), [])

@@ -203,7 +203,7 @@ function DayView() {
     context,
   })
   const queryClient = useQueryClient()
-  const projects = useProjects()
+  const projects = useProjects({ context: 'all', status: 'all' })
 
   const {
     changeFeedback,

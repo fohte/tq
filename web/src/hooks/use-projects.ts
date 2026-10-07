@@ -20,11 +20,12 @@ type ProjectTask = Task
 export type { Project, ProjectDetail, ProjectTask }
 
 type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived'
+type ProjectListStatus = ProjectStatus | 'all'
 
 export interface ProjectFilter {
   q?: string
-  status?: ProjectStatus
-  context?: 'work' | 'personal'
+  status: ProjectListStatus
+  context: 'work' | 'personal' | 'all'
 }
 
 export const PROJECT_COLOR_PRESETS = [
@@ -39,7 +40,7 @@ export const PROJECT_COLOR_PRESETS = [
 ] as const
 
 export function useProjects(
-  filter?: ProjectFilter,
+  filter: ProjectFilter,
   options?: { enabled?: boolean },
 ) {
   return useQuery({
@@ -47,9 +48,9 @@ export function useProjects(
     queryFn: async () => {
       const res = await api.api.projects.$get({
         query: {
-          ...(filter?.q == null ? {} : { q: filter.q }),
-          ...(filter?.status == null ? {} : { status: filter.status }),
-          ...(filter?.context == null ? {} : { context: filter.context }),
+          ...(filter.q == null ? {} : { q: filter.q }),
+          status: filter.status,
+          context: filter.context,
         },
       })
       return unwrapOrThrow(assertOk(res)).json()

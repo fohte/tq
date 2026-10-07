@@ -135,7 +135,7 @@ function Providers({
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
-    projectKeys.list(undefined),
+    projectKeys.list({ context: 'all', status: 'all' }),
     project ? [project] : [],
   )
   const todayStr = formatLocalDate(new Date())

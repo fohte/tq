@@ -20,7 +20,7 @@ export function SidebarProjectField({
   taskId: string
   projectId: string | null
 }) {
-  const { data: projects } = useProjects()
+  const { data: projects } = useProjects({ context: 'all', status: 'all' })
   const updateTask = useUpdateTask()
 
   const projectItems = (projects ?? []).map((project) => ({

@@ -13,7 +13,10 @@ export function SetProjectMenu({
   taskId: string
   taskNumber: number
 }) {
-  const { data: projects } = useProjects(undefined, { enabled: open })
+  const { data: projects } = useProjects(
+    { context: 'all', status: 'all' },
+    { enabled: open },
+  )
   const updateTask = useUpdateTask()
 
   const selectProject = (projectId: string | null) => {

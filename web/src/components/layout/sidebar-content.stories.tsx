@@ -84,7 +84,7 @@ function SidebarContentStory({
     ),
   )
   queryClient.setQueryData(
-    projectKeys.list({ context: 'personal' }),
+    projectKeys.list({ context: 'personal', status: 'all' }),
     projectsAcrossStatuses,
   )
   queryClient.setQueryData(

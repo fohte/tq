@@ -204,7 +204,7 @@ function ViewsSection() {
 
 function ProjectsSection() {
   const context = useCurrentContext()
-  const { data: projects } = useProjects({ context })
+  const { data: projects } = useProjects({ context, status: 'all' })
 
   return (
     <div className="flex shrink-0 flex-col">

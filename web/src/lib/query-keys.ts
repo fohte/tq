@@ -30,7 +30,7 @@ export const taskChecklistKeys = {
 export const projectKeys = {
   all: ['projects'] as const,
   lists: ['projects', 'list'] as const,
-  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
+  list: (filter: ProjectFilter) => [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
   taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }

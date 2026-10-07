@@ -80,7 +80,7 @@ function TaskList() {
     })
   }
 
-  const projects = useProjects()
+  const projects = useProjects({ context: 'all', status: 'all' })
 
   const {
     isLoading,
