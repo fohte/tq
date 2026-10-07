@@ -131,6 +131,7 @@ const resourceQueryFilters: Record<
       },
       {
         after: [
+          { queryKey: taskKeys.countPrefix },
           { queryKey: taskKeys.labelCountsPrefix },
           { queryKey: taskMentionKeys.suggestionsPrefix },
         ],

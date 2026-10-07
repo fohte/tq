@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { contextEnum } from '#schemas/task'
 
 export const queueDateSchema = z
   .string()
@@ -13,4 +14,9 @@ export const putQueueItemsSchema = z.object({
 
 export const carryOverQueueItemsSchema = z.object({
   date: queueDateSchema,
+})
+
+export const getQueueItemsQuerySchema = z.object({
+  date: queueDateSchema,
+  context: contextEnum.optional(),
 })
