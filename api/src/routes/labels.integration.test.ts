@@ -16,9 +16,18 @@ interface LabelResponse {
   createdAt: string
 }
 
+interface LabelCountResponse {
+  name: string
+  count: number
+}
+
+async function responseOutput<T>(res: Response) {
+  return { status: res.status, body: await jsonBody<T>(res) }
+}
+
 describe('labels API', () => {
   describe('GET /api/labels/counts', () => {
-    it.each([undefined, 'invalid'])(
+    it.each([undefined, 'invalid', 'all'])(
       'requires a valid context (%s)',
       async (context) => {
         const url =
@@ -57,12 +66,14 @@ describe('labels API', () => {
 
       const res = await app.request('/api/labels/counts?context=work')
 
-      expect(res.status).toBe(200)
-      expect(await res.json()).toEqual([
-        { name: 'completed-only', count: 0 },
-        { name: 'team', count: 2 },
-        { name: 'team/api', count: 2 },
-      ])
+      expect(await responseOutput<LabelCountResponse[]>(res)).toEqual({
+        status: 200,
+        body: [
+          { name: 'completed-only', count: 0 },
+          { name: 'team', count: 2 },
+          { name: 'team/api', count: 2 },
+        ],
+      })
     })
   })
 

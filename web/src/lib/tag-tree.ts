@@ -14,11 +14,6 @@ export interface LabelTreeNode {
   children: LabelTreeNode[]
 }
 
-interface TaskLike {
-  status: string
-  labels: string[]
-}
-
 // Splits each name on '/' and inserts it into a tree, synthesizing any
 // missing ancestor (e.g. "dev" when only "dev/tq" is given) via makeNode.
 function insertPaths<T extends { name: string; children: T[] }>(
@@ -47,52 +42,6 @@ function insertPaths<T extends { name: string; children: T[] }>(
   for (const name of names) getOrCreate(name)
 
   return { nodeByName, roots }
-}
-
-/**
- * Nests tasks' labels and any additional label names into a tree by splitting
- * each name on '/'. Additional names create nodes but do not contribute to
- * task counts. A path prefix with no label of its own (e.g. "dev" when only
- * "dev/tq" and "dev/infra" are ever attached directly) still appears as a
- * synthesized node. A label attached only to completed tasks still appears,
- * with count 0. Each node's count is the number of distinct non-completed tasks
- * carrying that name or any of its descendants — a task tagged with both a
- * name and one of its descendants counts once, not twice. Sorted by count
- * descending, then name ascending, at every level.
- */
-export function buildTagTree(
-  tasks: TaskLike[],
-  additionalLabelNames: string[] = [],
-): TagTreeNode[] {
-  const { nodeByName, roots } = insertPaths(
-    [...tasks.flatMap((task) => task.labels), ...additionalLabelNames],
-    (name) => ({ name, count: 0, children: [] }),
-  )
-
-  for (const task of tasks) {
-    if (task.status === 'completed') continue
-
-    const inducedNames = new Set<string>()
-    for (const label of task.labels) {
-      let name = label
-      // Walk up to the root, crediting each ancestor once per task even if
-      // more than one of the task's labels shares that ancestor.
-      for (;;) {
-        inducedNames.add(name)
-        const lastSlash = name.lastIndexOf('/')
-        if (lastSlash === -1) break
-        name = name.slice(0, lastSlash)
-      }
-    }
-    for (const name of inducedNames) {
-      const node = nodeByName.get(name)
-      if (node != null) node.count += 1
-    }
-  }
-
-  sortTagTree(roots)
-
-  return roots
 }
 
 export function buildTagTreeFromCounts(

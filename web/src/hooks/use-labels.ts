@@ -72,7 +72,7 @@ export function useUpdateLabel() {
       return unwrapOrThrow(await assertOkWithMessage(res)).json()
     },
     // These two refetches settle independently, so a renamed tag can briefly
-    // drop out of the sidebar's TAGS list until the tasks refetch also lands.
+    // drop out of the sidebar's TAGS list until the label-count refetch lands.
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: labelKeys.all })
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
