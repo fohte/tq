@@ -82,6 +82,10 @@ const REGISTERED_TOOL_NAMES = [
   'task_sessions',
   'task_status',
   'task_update',
+  'wait_add',
+  'wait_remove',
+  'wait_resolve',
+  'wait_update',
 ]
 
 function summarizeTools(

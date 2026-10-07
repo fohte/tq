@@ -31,6 +31,7 @@ import { taskChecklistsApp } from '#routes/task-checklists'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
+import { taskWaitsApp } from '#routes/task-waits'
 import { tasksApp } from '#routes/tasks/index'
 
 // Final safety net: any error that escapes a route handler without being
@@ -67,6 +68,7 @@ const app = new Hono()
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
+  .route('/api/tasks/:taskId/waits', taskWaitsApp)
   .route('/api/tasks/:taskId/checklists', taskChecklistsApp)
   .route('/api/checklists', checklistsApp)
   .route('/api/checklist-items', checklistItemsByIdApp)

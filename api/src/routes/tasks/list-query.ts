@@ -24,6 +24,7 @@ import {
   taskPages,
   taskRelations,
   tasks,
+  taskWaits,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
 import {
@@ -99,6 +100,26 @@ function unresolvedGithubBlockerSubquery() {
         eq(taskGithubLinks.taskId, tasks.id),
         eq(taskGithubLinks.role, 'blocker'),
         eq(taskGithubLinks.state, 'open'),
+      ),
+    )
+}
+
+function unresolvedTaskWaitSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskWaits)
+    .where(and(eq(taskWaits.taskId, tasks.id), isNull(taskWaits.resolvedAt)))
+}
+
+function followUpDueTaskWaitSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskWaits)
+    .where(
+      and(
+        eq(taskWaits.taskId, tasks.id),
+        isNull(taskWaits.resolvedAt),
+        sql`${taskWaits.followUpDate} <= CURRENT_DATE`,
       ),
     )
 }
@@ -236,6 +257,7 @@ function buildConditions(
       or(
         exists(unresolvedTaskBlockerSubquery()),
         exists(unresolvedGithubBlockerSubquery()),
+        exists(unresolvedTaskWaitSubquery()),
       ),
     )
   }
@@ -245,8 +267,13 @@ function buildConditions(
       and(
         notExists(unresolvedTaskBlockerSubquery()),
         notExists(unresolvedGithubBlockerSubquery()),
+        notExists(unresolvedTaskWaitSubquery()),
       ),
     )
+  }
+
+  if (parsed?.hasFollowUpDue === true) {
+    conditions.push(exists(followUpDueTaskWaitSubquery()))
   }
 
   // Unlike the other filters above, an explicit `projectId` param wins over
