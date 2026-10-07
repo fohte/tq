@@ -17,7 +17,7 @@ export type BlockedByGithubRef = Task['blockedByGithubRefs'][number]
 
 type TaskStatus = 'todo' | 'completed'
 
-type TaskContext = 'work' | 'personal'
+export type TaskContext = 'work' | 'personal'
 
 export type TaskSortBy = 'created' | 'updated' | 'due' | 'estimate'
 
@@ -37,6 +37,12 @@ export interface TaskListFilter {
   includeAncestors?: boolean
   limit?: number
   offset?: number
+}
+
+export interface TaskCountFilter {
+  context: TaskContext
+  status?: TaskStatus | TaskStatus[]
+  commitment?: TaskCommitment
 }
 
 const TASK_LIST_PAGE_SIZE = 50
@@ -60,6 +66,13 @@ export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
     },
   })
   return unwrapOrThrow(assertOk(res)).json()
+}
+
+export async function fetchTaskCount(filter: TaskCountFilter): Promise<number> {
+  const res = await api.api.tasks.count.$get({ query: filter })
+  return unwrapOrThrow(assertOk(res))
+    .json()
+    .then((body) => body.count)
 }
 
 export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
@@ -88,6 +101,17 @@ export function useTaskList(
   }, [query.data])
 
   return { ...query, categorized }
+}
+
+export function useTaskCount(
+  filter: TaskCountFilter,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: taskKeys.count(filter),
+    queryFn: () => fetchTaskCount(filter),
+    enabled: options?.enabled ?? true,
+  })
 }
 
 /**

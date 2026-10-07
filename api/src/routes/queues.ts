@@ -11,15 +11,14 @@ import {
   type SQL,
 } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import { resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import {
   carryOverQueueItemsSchema,
+  getQueueItemsQuerySchema,
   putQueueItemsSchema,
-  queueDateSchema,
 } from '#schemas/queue'
 import {
   carryOverTaskQueueItems,
@@ -28,7 +27,7 @@ import {
   type TaskQueue,
 } from '#services/task-queues'
 
-const itemsQuerySchema = z.object({ date: queueDateSchema })
+const itemsQuerySchema = getQueueItemsQuerySchema
 
 function queueToResponse(queue: TaskQueue) {
   return {
@@ -79,7 +78,7 @@ export const queuesApp = new Hono()
   )
   .get('/:key/items', zValidator('query', itemsQuerySchema), async (c) => {
     const key = c.req.param('key')
-    const { date } = c.req.valid('query')
+    const { date, context } = c.req.valid('query')
 
     const queueResult = await getQueueByKeyOrRespond(c, key)
     if (queueResult.isErr()) return queueResult.error
@@ -95,6 +94,9 @@ export const queuesApp = new Hono()
         and(
           eq(taskQueueItems.queueId, queue.id),
           periodStartCondition(periodStart),
+          context === 'work' || context === 'personal'
+            ? eq(tasks.context, context)
+            : undefined,
         ),
       )
       .orderBy(asc(tasks.dueDate), taskQueueItems.sortOrder)

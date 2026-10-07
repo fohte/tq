@@ -80,6 +80,10 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+function queueItemsQuerySnapshot(data: unknown, calls: unknown) {
+  return { data, calls }
+}
+
 const taskId = '00000000-0000-0000-0000-000000000001'
 const earlierTaskId = '00000000-0000-0000-0000-000000000002'
 const laterTaskId = '00000000-0000-0000-0000-000000000003'
@@ -141,6 +145,32 @@ describe('useTaskPlan', () => {
 })
 
 describe('queue ordering cache', () => {
+  it('requests queue items for the selected task context', async () => {
+    const mockGet = assertDefined((await getMocks())['mockGet'])
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () => useQueueItems(DAY_QUEUE_KEY, date, { context: 'work' }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(
+        queueItemsQuerySnapshot(result.current.data, mockGet.mock.calls),
+      ).toEqual({
+        data: [],
+        calls: [
+          [
+            {
+              param: { key: DAY_QUEUE_KEY },
+              query: { date, context: 'work' },
+            },
+          ],
+        ],
+      })
+    })
+  })
+
   it('refetches server order after replacing queue items', async () => {
     const mocks = await getMocks()
     const mockGet = assertDefined(mocks['mockGet'])

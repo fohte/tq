@@ -5,15 +5,20 @@ import type { Mock } from 'vitest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import { useInfiniteTaskList, useTaskList } from '#hooks/use-task-queries'
+import {
+  useInfiniteTaskList,
+  useTaskCount,
+  useTaskList,
+} from '#hooks/use-task-queries'
 
 const TASK_LIST_PAGE_SIZE = 50
 
 vi.mock('#lib/api', () => {
   const mockGet = vi.fn()
+  const mockCount = vi.fn()
   return {
-    api: { api: { tasks: { $get: mockGet } } },
-    __mocks: { mockGet },
+    api: { api: { tasks: { $get: mockGet, count: { $get: mockCount } } } },
+    __mocks: { mockGet, mockCount },
   }
 })
 
@@ -22,6 +27,13 @@ async function getMockGet() {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- accessing test-only __mocks property injected by vi.mock
   const typed = mod as unknown as { __mocks: { mockGet: Mock } }
   return typed.__mocks.mockGet
+}
+
+async function getMockCount() {
+  const mod = await import('#lib/api')
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- accessing test-only __mocks property injected by vi.mock
+  const typed = mod as unknown as { __mocks: { mockCount: Mock } }
+  return typed.__mocks.mockCount
 }
 
 let queryClient: QueryClient
@@ -38,10 +50,20 @@ beforeEach(async () => {
   })
   const mockGet = await getMockGet()
   mockGet.mockReset()
+  const mockCount = await getMockCount()
+  mockCount.mockReset()
 })
 
 function jsonResponse(tasks: unknown[]) {
   return { ok: true, json: () => Promise.resolve(tasks) }
+}
+
+function taskCountQuerySnapshot(
+  count: unknown,
+  countCalls: unknown,
+  listCalls: unknown,
+) {
+  return { count, countCalls, listCalls }
 }
 
 describe('useInfiniteTaskList', () => {
@@ -225,5 +247,50 @@ describe('useTaskList', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('useTaskCount', () => {
+  it('requests a filtered count without fetching task rows', async () => {
+    const mockGet = await getMockGet()
+    const mockCount = await getMockCount()
+    mockCount.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ count: 4 }),
+    })
+
+    const { result } = renderHook(
+      () =>
+        useTaskCount({
+          context: 'work',
+          commitment: 'inbox',
+          status: 'todo',
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(
+        taskCountQuerySnapshot(
+          result.current.data,
+          mockCount.mock.calls,
+          mockGet.mock.calls,
+        ),
+      ).toEqual({
+        count: 4,
+        countCalls: [
+          [
+            {
+              query: {
+                context: 'work',
+                commitment: 'inbox',
+                status: 'todo',
+              },
+            },
+          ],
+        ],
+        listCalls: [],
+      })
+    })
   })
 })
