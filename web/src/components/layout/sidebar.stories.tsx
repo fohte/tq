@@ -6,13 +6,11 @@ import {
   makeLabel,
   makeProject,
   makeSavedView,
-  makeTask,
 } from '#components/layout/sidebar-test-fixtures'
 import type { Label } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { labelKeys, savedViewKeys } from '#lib/query-keys'
 import type { TagCount } from '#lib/tag-tree'
@@ -42,10 +40,6 @@ const labelsForNestedTags = [
   makeLabel({ id: '5', name: 'dev/infra' }),
 ]
 
-const tasksWithInboxItems: Task[] = [
-  makeTask({ id: '4', title: 'Untriaged task', commitment: 'inbox' }),
-]
-
 const projectsAcrossStatuses: Project[] = [
   makeProject({
     id: '1',
@@ -68,14 +62,14 @@ const projectsAcrossStatuses: Project[] = [
 ]
 
 function SidebarStory({
-  tasks,
+  inboxCount,
   projects,
   savedViews,
   labels,
   tagCounts,
   desktopWindowControls,
 }: {
-  tasks?: Task[] | undefined
+  inboxCount?: number | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
   labels?: Label[] | undefined
@@ -87,10 +81,12 @@ function SidebarStory({
   })
   queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts ?? [])
   queryClient.setQueryData(
-    taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
-    (tasks ?? []).filter(
-      (task) => task.commitment === 'inbox' && task.status === 'todo',
-    ),
+    taskKeys.count({
+      context: 'personal',
+      commitment: 'inbox',
+      status: 'todo',
+    }),
+    inboxCount ?? 0,
   )
   queryClient.setQueryData(
     projectKeys.list({ context: 'personal' }),
@@ -116,7 +112,7 @@ function SidebarStory({
 
 function SidebarWithRouter({
   currentPath,
-  tasks,
+  inboxCount,
   projects,
   savedViews,
   labels,
@@ -124,7 +120,7 @@ function SidebarWithRouter({
   desktopWindowControls,
 }: {
   currentPath: string
-  tasks?: Task[] | undefined
+  inboxCount?: number | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
   labels?: Label[] | undefined
@@ -135,7 +131,7 @@ function SidebarWithRouter({
     <StoryRouter
       component={() => (
         <SidebarStory
-          tasks={tasks}
+          inboxCount={inboxCount}
           projects={projects}
           savedViews={savedViews}
           labels={labels}
@@ -221,10 +217,10 @@ export const WithNestedTags: Story = {
 }
 
 export const WithInboxTasks: Story = {
-  name: 'the sidebar shows an untriaged inbox task',
+  name: 'the sidebar shows the inbox task count',
   args: {
     currentPath: '/',
-    tasks: tasksWithInboxItems,
+    inboxCount: 1,
   },
 }
 
