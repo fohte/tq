@@ -41,6 +41,19 @@ type ChangeEventEnv = {
   Variables: Partial<TaskEnv['Variables']>
 }
 
+declare module 'hono' {
+  interface ContextVariableMap {
+    changeEventTaskIds?: string[] | null
+  }
+}
+
+export function setChangeEventTaskIds(
+  c: Context,
+  taskIds: string[] | null,
+): void {
+  c.set('changeEventTaskIds', taskIds)
+}
+
 export function subscribeToChangeEvents(
   listener: ChangeEventListener,
 ): () => void {
@@ -115,9 +128,17 @@ export const changeEventMiddleware: MiddlewareHandler<ChangeEventEnv> = async (
   const resource = resourceFromRoute(routePattern)
   if (resource == null) return
 
+  const id = idFromRoute(routePattern, resource, c)
+  const configuredTaskIds = c.get('changeEventTaskIds')
   publishChangeEvent({
     resource,
-    id: idFromRoute(routePattern, resource, c),
+    id,
     origin: c.get('origin'),
+    taskIds:
+      configuredTaskIds === undefined
+        ? resource === 'task' && id != null
+          ? [id]
+          : null
+        : configuredTaskIds,
   })
 }

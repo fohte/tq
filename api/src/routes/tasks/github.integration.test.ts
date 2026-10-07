@@ -5,12 +5,17 @@ import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import type { TaskResponse } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+let stopWatchingChanges: (() => void) | undefined
+
 afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
   vi.restoreAllMocks()
 })
 
@@ -41,6 +46,14 @@ function normalizeCreateResponse(body: {
       })),
     },
   }
+}
+
+function normalizeChangeEvents(events: ChangeEvent[], taskId: string) {
+  return events.map((event) => ({
+    ...event,
+    taskIds:
+      event.taskIds?.map((id) => (id === taskId ? 'TASK_ID' : id)) ?? null,
+  }))
 }
 
 describe('POST /api/tasks/from-github', () => {
@@ -112,6 +125,35 @@ describe('POST /api/tasks/from-github', () => {
     expect(res.status).toBe(200)
     const body = await jsonBody<{ created: boolean; task: TaskResponse }>(res)
     expect(body).toEqual({ created: false, task: firstBody.task })
+  })
+
+  it('publishes the created task ID in the change event', async () => {
+    const url = 'https://github.com/example-owner/example-repo/issues/17'
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: url })
+
+    const res = await createTaskFromGithub(url)
+    const body = await jsonBody<{ created: boolean; task: TaskResponse }>(res)
+
+    const snapshot = () => ({
+      status: res.status,
+      created: body.created,
+      events: normalizeChangeEvents(events, body.task.id),
+    })
+    expect(snapshot()).toEqual({
+      status: 201,
+      created: true,
+      events: [
+        {
+          resource: 'task',
+          id: null,
+          origin: null,
+          taskIds: ['TASK_ID'],
+        },
+      ],
+    })
   })
 
   it('returns 400 for a non-GitHub URL', async () => {

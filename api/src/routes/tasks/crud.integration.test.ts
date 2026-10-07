@@ -109,6 +109,18 @@ function normalizeTask<
   }
 }
 
+function normalizeChangeEvents(
+  events: ChangeEvent[],
+  taskIds: Map<string, string>,
+) {
+  const normalizeId = (id: string) => taskIds.get(id) ?? id
+  return events.map((event) => ({
+    ...event,
+    id: event.id === null ? null : normalizeId(event.id),
+    taskIds: event.taskIds?.map(normalizeId) ?? null,
+  }))
+}
+
 function normalizeTaskListItem(
   task: TaskListItemResponse & { ancestorOnly?: boolean },
 ) {
@@ -280,6 +292,190 @@ function normalizeTemplate(
 }
 
 describe('tasks CRUD API', () => {
+  describe('change event task IDs', () => {
+    it('includes the created task and its parent', async () => {
+      const parent = await createTask('Parent')
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Child', parentId: parent.id }),
+      })
+      const child = await jsonBody<TaskResponse>(res)
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [child.id, 'CHILD_ID'],
+            [parent.id, 'PARENT_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 201,
+        events: [
+          {
+            resource: 'task',
+            id: null,
+            origin: null,
+            taskIds: ['CHILD_ID', 'PARENT_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes the task and parent when a child status changes', async () => {
+      const parent = await createTask('Parent')
+      const child = await createTask('Child', { parentId: parent.id })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await setStatus(child.id, 'completed')
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [child.id, 'CHILD_ID'],
+            [parent.id, 'PARENT_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: 'CHILD_ID',
+            origin: null,
+            taskIds: ['CHILD_ID', 'PARENT_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes both parents when a task is moved', async () => {
+      const previousParent = await createTask('Previous parent')
+      const nextParent = await createTask('Next parent')
+      const task = await createTask('Task', { parentId: previousParent.id })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/tasks/${task.id}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: nextParent.id }),
+      })
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [task.id, 'TASK_ID'],
+            [previousParent.id, 'PREVIOUS_PARENT_ID'],
+            [nextParent.id, 'NEXT_PARENT_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: 'TASK_ID',
+            origin: null,
+            taskIds: ['TASK_ID', 'PREVIOUS_PARENT_ID', 'NEXT_PARENT_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes reparented children and the former parent when deleting a task', async () => {
+      const grandparent = await createTask('Grandparent')
+      const parent = await createTask('Parent', { parentId: grandparent.id })
+      const child = await createTask('Child', { parentId: parent.id })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/tasks/${parent.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [parent.id, 'PARENT_ID'],
+            [grandparent.id, 'GRANDPARENT_ID'],
+            [child.id, 'CHILD_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'task',
+            id: 'PARENT_ID',
+            origin: null,
+            taskIds: ['PARENT_ID', 'GRANDPARENT_ID', 'CHILD_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes old and new blocker tasks when blockedBy changes', async () => {
+      const source = await createTask('Source')
+      const previousBlocker = await createTask('Previous blocker')
+      const nextBlocker = await createTask('Next blocker')
+      await setBlockedBy(source.id, [previousBlocker.id])
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await setBlockedBy(source.id, [nextBlocker.id])
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [source.id, 'SOURCE_ID'],
+            [previousBlocker.id, 'PREVIOUS_BLOCKER_ID'],
+            [nextBlocker.id, 'NEXT_BLOCKER_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: 'SOURCE_ID',
+            origin: null,
+            taskIds: ['SOURCE_ID', 'PREVIOUS_BLOCKER_ID', 'NEXT_BLOCKER_ID'],
+          },
+        ],
+      })
+    })
+  })
+
   describe('POST /api/tasks', () => {
     it('creates a task with only title', async () => {
       const res = await app.request('/api/tasks', {
@@ -2343,14 +2539,21 @@ describe('tasks CRUD API', () => {
         body: JSON.stringify({ title: 'Updated task title' }),
       })
 
-      const eventSnapshot = events.map((event) => ({
-        ...event,
-        id: event.id === task.id ? 'TASK_ID' : event.id,
-      }))
+      const eventSnapshot = normalizeChangeEvents(
+        events,
+        new Map([[task.id, 'TASK_ID']]),
+      )
       const snapshot = () => ({ status: res.status, events: eventSnapshot })
       expect(snapshot()).toEqual({
         status: 200,
-        events: [{ resource: 'task', id: 'TASK_ID', origin: null }],
+        events: [
+          {
+            resource: 'task',
+            id: 'TASK_ID',
+            origin: null,
+            taskIds: ['TASK_ID'],
+          },
+        ],
       })
     })
 

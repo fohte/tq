@@ -10,6 +10,7 @@ import {
   getEvents,
   partitionAccountEvents,
 } from '#integrations/google-calendar/index'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { localDateBoundsToUtc, localNaiveDateTimeToUtc } from '#lib/timezone'
 import { expandScheduleForDate } from '#routes/schedule-expansion'
 import {
@@ -184,20 +185,33 @@ export const autoAssignApp = new Hono().post(
             .returning()
         : []
 
-    if (staleAutoBlocks.length > 0) {
-      // Re-check isAutoScheduled at delete time (not just at the SELECT
-      // above) so a block promoted to manual between the two doesn't get
-      // deleted underneath a concurrent drag/resize.
-      await db.delete(timeBlocks).where(
-        and(
-          inArray(
-            timeBlocks.id,
-            staleAutoBlocks.map((b) => b.id),
-          ),
-          eq(timeBlocks.isAutoScheduled, true),
-        ),
-      )
-    }
+    // Re-check isAutoScheduled at delete time so a concurrently promoted block
+    // is left in place and excluded from the event's affected task IDs.
+    const deleted =
+      staleAutoBlocks.length > 0
+        ? await db
+            .delete(timeBlocks)
+            .where(
+              and(
+                inArray(
+                  timeBlocks.id,
+                  staleAutoBlocks.map((b) => b.id),
+                ),
+                eq(timeBlocks.isAutoScheduled, true),
+              ),
+            )
+            .returning({ taskId: timeBlocks.taskId })
+        : []
+
+    setChangeEventTaskIds(
+      c,
+      [
+        ...new Set([
+          ...inserted.map((block) => block.taskId),
+          ...deleted.map((block) => block.taskId),
+        ]),
+      ].sort(),
+    )
 
     return c.json(inserted.map(timeBlockToResponse), 200)
   },

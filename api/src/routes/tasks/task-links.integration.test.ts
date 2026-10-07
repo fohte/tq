@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { APP_DOMAIN } from '#env'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import {
   callMcpTool,
   connectMcpClient,
@@ -20,6 +21,25 @@ import {
 import { jsonBody, passthroughSchema, setupTestDb } from '#testing'
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+})
+
+function normalizeChangeEvents(
+  events: ChangeEvent[],
+  taskIds: Map<string, string>,
+) {
+  const normalizeId = (id: string) => taskIds.get(id) ?? id
+  return events.map((event) => ({
+    ...event,
+    id: event.id === null ? null : normalizeId(event.id),
+    taskIds: event.taskIds?.map(normalizeId) ?? null,
+  }))
+}
 
 function linkSummary(
   task: Pick<TaskResponse, 'id' | 'number' | 'title' | 'status'>,
@@ -95,6 +115,41 @@ async function getLinks(id: string) {
 }
 
 describe('task mention links', () => {
+  it('publishes the source and changed target task for a comment mention', async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    const res = await app.request(`/api/tasks/${source.id}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: `See #${String(target.number)}` }),
+    })
+
+    const snapshot = () => ({
+      status: res.status,
+      events: normalizeChangeEvents(
+        events,
+        new Map([
+          [source.id, 'SOURCE_ID'],
+          [target.id, 'TARGET_ID'],
+        ]),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      status: 201,
+      events: [
+        {
+          resource: 'task',
+          id: 'SOURCE_ID',
+          origin: null,
+          taskIds: ['SOURCE_ID', 'TARGET_ID'],
+        },
+      ],
+    })
+  })
+
   it('links from a mention in the description', async () => {
     const source = await createTask('Source')
     const target = await createTask('Target')

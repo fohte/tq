@@ -1,12 +1,21 @@
 import { and, eq, sql } from 'drizzle-orm'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions } from '#db/schema'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+  vi.useRealTimers()
+})
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -52,6 +61,12 @@ function linkResponse<T>(
   }
 }
 
+function watchChangeEvents(): ChangeEvent[] {
+  const events: ChangeEvent[] = []
+  stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+  return events
+}
+
 describe('task <-> agent session links API', () => {
   describe('POST /api/tasks/:taskId/agent-sessions', () => {
     it('links an agent session to a task', async () => {
@@ -68,6 +83,7 @@ describe('task <-> agent session links API', () => {
         .where(eq(agentSessions.id, session.id))
       assertDefined(linkTimestampRow)
       const { linkTimestamp } = linkTimestampRow
+      const events = watchChangeEvents()
 
       const res = await postLink(task.id, session.id)
       const [link] = await db
@@ -80,13 +96,13 @@ describe('task <-> agent session links API', () => {
           ),
         )
 
-      expect(
-        linkResponse(
-          res.status,
-          await jsonBody<AgentSessionResponse>(res),
-          link,
-        ),
-      ).toEqual({
+      const body = await jsonBody<AgentSessionResponse>(res)
+      const snapshot = () => ({
+        ...linkResponse(res.status, body, link),
+        events,
+      })
+
+      expect(snapshot()).toEqual({
         status: 201,
         body: { ...session, startedAt: sessionStartedAt.toISOString() },
         link: {
@@ -94,6 +110,14 @@ describe('task <-> agent session links API', () => {
           agentSessionId: session.id,
           linkedAt: new Date(linkTimestamp).toISOString(),
         },
+        events: [
+          {
+            resource: 'task',
+            id: task.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
       })
     })
 
@@ -222,16 +246,33 @@ describe('task <-> agent session links API', () => {
       const task = await createTask('My task')
       const session = await createAgentSession('session-1')
       await postLink(task.id, session.id)
+      const events = watchChangeEvents()
 
       const res = await app.request(
         `/api/tasks/${task.id}/agent-sessions/${session.id}`,
         { method: 'DELETE' },
       )
 
-      expect(res.status).toBe(204)
-
       const listRes = await app.request(`/api/tasks/${task.id}/agent-sessions`)
-      expect(await listRes.json()).toEqual([])
+      const list = await listRes.json()
+      const snapshot = () => ({
+        status: res.status,
+        list,
+        events,
+      })
+
+      expect(snapshot()).toEqual({
+        status: 204,
+        list: [],
+        events: [
+          {
+            resource: 'task',
+            id: task.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
     })
 
     it('returns 404 when the link does not exist', async () => {
