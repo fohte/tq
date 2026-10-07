@@ -462,7 +462,7 @@ export const requireTask = factory.createMiddleware(async (c, next) => {
     c.res.status < 200 ||
     c.res.status >= 300
   ) {
-    return c.res
+    return
   }
 
   const currentTask = await db.query.tasks.findFirst({
@@ -480,5 +480,5 @@ export const requireTask = factory.createMiddleware(async (c, next) => {
   }
 
   setChangeEventTaskIds(c, await getTaskChangeEventIds(taskIds))
-  return c.res
+  return undefined
 })
