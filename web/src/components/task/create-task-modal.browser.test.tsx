@@ -745,6 +745,7 @@ describe('CreateTaskModal', () => {
 
   describe('shorthand syntax', () => {
     it('keeps duration text while applying other shorthand tokens', async () => {
+      await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
       const user = userEvent.setup()
       const mutate = mockCreateTaskSuccess(makeTask())
       renderControlledModal(CreateTaskModal, {})
@@ -754,37 +755,45 @@ describe('CreateTaskModal', () => {
       tomorrowDate.setDate(tomorrowDate.getDate() + 1)
       const tomorrow = formatLocalDate(tomorrowDate)
 
-      const titleInput = atIndex(
-        screen.getAllByPlaceholderText(titleInputPlaceholder),
-        0,
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
       )
       await user.type(
         titleInput,
         'Buy milk @30m >today @tomorrow #groceries %work ',
       )
 
-      const getFormState = () => ({
-        durationTokenRemainsInTitle: screen
-          .getAllByPlaceholderText(titleInputPlaceholder)
-          .some(
-            (input) =>
-              input instanceof HTMLInputElement &&
-              input.value === 'Buy milk @30m ',
-          ),
-        startDateApplied: screen.queryAllByDisplayValue(today).length > 0,
-        dueDateApplied: screen.queryAllByDisplayValue(tomorrow).length > 0,
-        labelApplied: screen.queryAllByText('groceries').length > 0,
-        contextApplied: screen.queryAllByText('Work').length > 0,
-      })
-      await waitFor(() => {
-        if (Object.values(getFormState()).some((value) => !value)) {
-          throw new Error('Shorthand values have not been applied')
-        }
-      })
+      const visibleInputValue = (elements: HTMLElement[]) => {
+        const element = findVisible(elements)
+        return element instanceof HTMLInputElement ? element.value : null
+      }
       await screen.findAllByDisplayValue(today)
       await screen.findAllByDisplayValue(tomorrow)
       await screen.findAllByText('groceries')
-      await screen.findAllByText('Work')
+      await user.click(
+        assertDefined(findVisible(screen.getAllByRole('combobox'))),
+      )
+      await screen.findByRole('option', { name: 'Work' })
+      const selectedContext = findVisible(
+        screen.getAllByRole('option', { name: 'Work' }),
+      )
+      const contextValue =
+        selectedContext?.getAttribute('aria-selected') ?? null
+      await user.click(
+        assertDefined(
+          findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+        ),
+      )
+      const getFormState = () => ({
+        title: visibleInputValue(
+          screen.getAllByPlaceholderText(titleInputPlaceholder),
+        ),
+        startDate: visibleInputValue(screen.getAllByDisplayValue(today)),
+        dueDate: visibleInputValue(screen.getAllByDisplayValue(tomorrow)),
+        label:
+          findVisible(screen.getAllByText('groceries'))?.textContent ?? null,
+        context: contextValue,
+      })
       const formState = getFormState()
 
       await user.keyboard('{Meta>}{Enter}{/Meta}')
@@ -795,11 +804,11 @@ describe('CreateTaskModal', () => {
       })
       expect(getActual()).toEqual({
         formState: {
-          durationTokenRemainsInTitle: true,
-          startDateApplied: true,
-          dueDateApplied: true,
-          labelApplied: true,
-          contextApplied: true,
+          title: 'Buy milk @30m ',
+          startDate: today,
+          dueDate: tomorrow,
+          label: '#groceries',
+          context: 'true',
         },
         mutationInputs: [
           {
@@ -811,6 +820,7 @@ describe('CreateTaskModal', () => {
           },
         ],
       })
+      await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     })
 
     it('activates the "today" plan tab via the !today shorthand', async () => {
