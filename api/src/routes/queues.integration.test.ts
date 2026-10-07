@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { taskQueues } from '#db/schema'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -52,6 +54,21 @@ async function getQueueItems(
 ) {
   const query = new URLSearchParams({
     date,
+    ...(context == null ? {} : { context }),
+  })
+  const res = await app.request(`/api/queues/${key}/items?${query.toString()}`)
+  return { res, body: await jsonBody<QueueItemResponse[]>(res) }
+}
+
+async function getQueueItemsInRange(
+  key: string,
+  from: string,
+  to: string,
+  context?: 'work' | 'personal',
+) {
+  const query = new URLSearchParams({
+    from,
+    to,
     ...(context == null ? {} : { context }),
   })
   const res = await app.request(`/api/queues/${key}/items?${query.toString()}`)
@@ -663,6 +680,109 @@ describe('GET /api/queues/:key/items', () => {
     })
   })
 
+  it('returns ranged items by period and keeps due-date order within each period', async () => {
+    const laterDue = await createTask('Range later due', {
+      context: 'work',
+      dueDate: '2030-04-04',
+    })
+    const earlierDue = await createTask('Range earlier due', {
+      context: 'work',
+      dueDate: '2030-04-02',
+    })
+    const otherContext = await createTask('Range personal', {
+      context: 'personal',
+      dueDate: '2030-04-01',
+    })
+    const nextPeriod = await createTask('Range next period', {
+      context: 'work',
+      dueDate: '2030-04-01',
+    })
+    const beforeRange = await createTask('Range before', {
+      context: 'work',
+      dueDate: '2030-03-29',
+    })
+    const afterRange = await createTask('Range after', {
+      context: 'work',
+      dueDate: '2030-04-14',
+    })
+
+    await putQueueItems(
+      'week',
+      [laterDue.id, earlierDue.id, otherContext.id],
+      '2030-04-01',
+    )
+    await putQueueItems('week', [nextPeriod.id], '2030-04-08')
+    await putQueueItems('week', [beforeRange.id], '2030-03-25')
+    await putQueueItems('week', [afterRange.id], '2030-04-15')
+
+    const response = await getQueueItemsInRange(
+      'week',
+      '2030-04-03',
+      '2030-04-10',
+      'work',
+    )
+
+    expect(normalizeQueueResponse(response)).toEqual({
+      status: 200,
+      body: [
+        {
+          id: 'ID',
+          taskId: earlierDue.id,
+          periodStart: '2030-04-01',
+          sortOrder: 1,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: laterDue.id,
+          periodStart: '2030-04-01',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+        {
+          id: 'ID',
+          taskId: nextPeriod.id,
+          periodStart: '2030-04-08',
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
+  })
+
+  it('returns the static queue contents for a range', async () => {
+    await db.insert(taskQueues).values({
+      key: 'static-range',
+      name: 'Static range',
+      periodUnit: null,
+    })
+    const task = await createTask('Static queue task')
+    await putQueueItems('static-range', [task.id], '2030-04-01')
+
+    const response = await getQueueItemsInRange(
+      'static-range',
+      '2030-04-03',
+      '2030-04-10',
+    )
+
+    expect(normalizeQueueResponse(response)).toEqual({
+      status: 200,
+      body: [
+        {
+          id: 'ID',
+          taskId: task.id,
+          periodStart: null,
+          sortOrder: 0,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      ],
+    })
+  })
+
   it.each([
     ['day', '2026-03-22', '2026-03-22'],
     ['week', '2026-03-22', '2026-03-16'],
@@ -828,5 +948,21 @@ describe('GET /api/queues/:key/items', () => {
   it('returns 400 for a malformed date', async () => {
     const res = await app.request('/api/queues/day/items?date=2026/03/22')
     expect(res.status).toBe(400)
+  })
+
+  it('requires either date or a complete ordered range', async () => {
+    const paths = [
+      '/api/queues/day/items',
+      '/api/queues/day/items?from=2030-04-01',
+      '/api/queues/day/items?to=2030-04-01',
+      '/api/queues/day/items?date=2030-04-01&from=2030-04-01&to=2030-04-02',
+      '/api/queues/day/items?from=2030-04-03&to=2030-04-02',
+      '/api/queues/day/items?from=2030/04/01&to=2030-04-02',
+    ]
+    const statuses = await Promise.all(
+      paths.map(async (path) => (await app.request(path)).status),
+    )
+
+    expect(statuses).toEqual([400, 400, 400, 400, 400, 400])
   })
 })
