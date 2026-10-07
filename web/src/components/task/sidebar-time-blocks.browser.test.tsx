@@ -1,43 +1,37 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SidebarTimeBlocks } from '#components/task/sidebar-time-blocks'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
-import { useRemoveFromDayQueue } from '#hooks/use-queues'
-import { useDeleteManualTimeBlock } from '#hooks/use-time-blocks'
+import { useDeleteTimeBlock } from '#hooks/use-time-blocks'
 
 vi.mock('#hooks/use-time-blocks', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('#hooks/use-time-blocks')>()
   return {
     ...original,
-    useDeleteManualTimeBlock: vi.fn(),
+    useDeleteTimeBlock: vi.fn(),
   }
 })
 
-vi.mock('#hooks/use-queues', async (importOriginal) => {
-  const original = await importOriginal<typeof import('#hooks/use-queues')>()
-  return {
-    ...original,
-    useRemoveFromDayQueue: vi.fn(),
-  }
-})
-
-const mockUseDeleteManualTimeBlock = vi.mocked(useDeleteManualTimeBlock)
-const mockUseRemoveFromDayQueue = vi.mocked(useRemoveFromDayQueue)
+const mockUseDeleteTimeBlock = vi.mocked(useDeleteTimeBlock)
 
 const taskId = '00000000-0000-0000-0000-000000000001'
+
+function getDeleteOutput(deleteHookCalls: unknown, deleteCalls: number) {
+  return { deleteHookCalls, deleteCalls }
+}
+
+beforeEach(() => {
+  mockUseDeleteTimeBlock.mockReset()
+})
 
 describe('SidebarTimeBlocks', () => {
   it('deletes a manual block once the delete dialog is confirmed', async () => {
     const onDelete = vi.fn()
-    mockUseDeleteManualTimeBlock.mockReturnValue({
+    mockUseDeleteTimeBlock.mockReturnValue({
       onDelete,
-      isDeleting: false,
-    })
-    mockUseRemoveFromDayQueue.mockReturnValue({
-      onDelete: vi.fn(),
       isDeleting: false,
     })
     const manualBlock = makeTimeBlock({ taskId, isAutoScheduled: false })
@@ -47,40 +41,35 @@ describe('SidebarTimeBlocks', () => {
     await user.click(screen.getByRole('button', { name: 'Delete time block' }))
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
-    expect(onDelete).toHaveBeenCalledTimes(1)
+    expect(
+      getDeleteOutput(
+        mockUseDeleteTimeBlock.mock.calls,
+        onDelete.mock.calls.length,
+      ),
+    ).toEqual({
+      deleteHookCalls: [[taskId, manualBlock.id]],
+      deleteCalls: 1,
+    })
   })
 
-  it('removes an auto-scheduled block from the queue once the delete dialog is confirmed', async () => {
+  it('deletes an auto-scheduled block once the delete dialog is confirmed', async () => {
     const onDelete = vi.fn()
-    mockUseDeleteManualTimeBlock.mockReturnValue({
-      onDelete: vi.fn(),
-      isDeleting: false,
-    })
-    mockUseRemoveFromDayQueue.mockReturnValue({ onDelete, isDeleting: false })
+    mockUseDeleteTimeBlock.mockReturnValue({ onDelete, isDeleting: false })
     const autoBlock = makeTimeBlock({ taskId, isAutoScheduled: true })
     const user = userEvent.setup()
     render(<SidebarTimeBlocks taskId={taskId} timeBlocks={[autoBlock]} />)
 
-    await user.click(screen.getByRole('button', { name: 'Remove from queue' }))
+    await user.click(screen.getByRole('button', { name: 'Delete time block' }))
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
-    expect(onDelete).toHaveBeenCalledTimes(1)
-  })
-
-  it('disables the remove-from-queue button while the day queue is loading', () => {
-    mockUseDeleteManualTimeBlock.mockReturnValue({
-      onDelete: vi.fn(),
-      isDeleting: false,
-    })
-    mockUseRemoveFromDayQueue.mockReturnValue({
-      onDelete: vi.fn(),
-      isDeleting: true,
-    })
-    const autoBlock = makeTimeBlock({ taskId, isAutoScheduled: true })
-    render(<SidebarTimeBlocks taskId={taskId} timeBlocks={[autoBlock]} />)
-
     expect(
-      screen.getByRole('button', { name: 'Remove from queue' }),
-    ).toBeDisabled()
+      getDeleteOutput(
+        mockUseDeleteTimeBlock.mock.calls,
+        onDelete.mock.calls.length,
+      ),
+    ).toEqual({
+      deleteHookCalls: [[taskId, autoBlock.id]],
+      deleteCalls: 1,
+    })
   })
 })

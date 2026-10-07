@@ -48,19 +48,11 @@ export function TimeBlockCard({
         </Badge>
       </div>
       <DeleteConfirmButton
-        title={
-          block.isAutoScheduled ? 'Remove from queue' : 'Delete time block'
-        }
-        description={
-          block.isAutoScheduled
-            ? "This task will be removed from that day's queue and won't be auto-scheduled again unless you re-add it."
-            : 'Are you sure you want to delete this time block? This action cannot be undone.'
-        }
+        title="Delete time block"
+        description="Are you sure you want to delete this time block? This action cannot be undone."
         onDelete={onDelete}
         disabled={isDeleting}
-        aria-label={
-          block.isAutoScheduled ? 'Remove from queue' : 'Delete time block'
-        }
+        aria-label="Delete time block"
       />
     </div>
   )

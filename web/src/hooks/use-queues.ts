@@ -15,8 +15,7 @@ import { queueKeys } from '#lib/query-keys'
 
 export { queueKeys }
 
-// Auto-assign and the focus view (/today) depend on this key by name.
-// Carry-over processing also addresses the day and week queues by name.
+// The Today view and queue carry-over use the day queue by name.
 export const DAY_QUEUE_KEY = 'day'
 
 // Carry-over processing and the PLAN field depend on this key by name.
@@ -264,31 +263,5 @@ export function useTaskPlan(taskId: string, date: string) {
     setPlan,
     isLoading:
       dayItems.isLoading || weekItems.isLoading || setQueueItems.isPending,
-  }
-}
-
-export function useRemoveFromDayQueue(
-  taskId: string,
-  localDate: string,
-  options?: { enabled?: boolean },
-) {
-  const dayQueueItems = useQueueItems(DAY_QUEUE_KEY, localDate, options)
-  const setQueueItems = useSetQueueItems()
-
-  return {
-    onDelete: () => {
-      setQueueItems.mutate({
-        key: DAY_QUEUE_KEY,
-        date: localDate,
-        taskIds: (dayQueueItems.data ?? [])
-          .map((item) => item.taskId)
-          .filter((id) => id !== taskId),
-      })
-    },
-    isDeleting:
-      setQueueItems.isPending ||
-      dayQueueItems.isLoading ||
-      dayQueueItems.isError ||
-      dayQueueItems.data === undefined,
   }
 }

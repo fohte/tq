@@ -12,7 +12,6 @@ export const CHANGE_RESOURCES = [
   'agent_session',
   'checklist',
   'checklist_item',
-  'scheduling_setting',
   'memo',
   'push',
   'calendar',

@@ -162,9 +162,6 @@ const resourceQueryFilters: Record<
     taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
   checklist_item: ({ taskIds }) =>
     taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
-  scheduling_setting: () => ({
-    filters: [{ queryKey: ['scheduling-settings'] }],
-  }),
   memo: ({ id }) => ({
     filters: [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
   }),

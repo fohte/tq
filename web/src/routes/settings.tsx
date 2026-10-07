@@ -10,7 +10,6 @@ import { IntegrationCard } from '#components/settings/integration-card'
 import { KeybindingsList } from '#components/settings/keybindings-list'
 import { PushNotificationsPanel } from '#components/settings/push-notifications-panel'
 import { QueryStateMessage } from '#components/settings/query-state-message'
-import { SchedulingSettingsPanel } from '#components/settings/scheduling-settings-panel'
 import { ServiceWorkerPanel } from '#components/settings/service-worker-panel'
 import { SessionOpenSettingsPanel } from '#components/settings/session-open-settings-panel'
 import { GithubMarkIcon } from '#components/ui/github-mark-icon'
@@ -72,10 +71,6 @@ function Settings() {
 
           <div className="mt-8">
             <PushNotificationsPanel {...pushNotifications} />
-          </div>
-
-          <div className="mt-8">
-            <SchedulingSettingsPanel />
           </div>
 
           <div className="mt-8">
