@@ -16,6 +16,7 @@ import {
   makeGithubTimelineEvent,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { createTask } from '#routes/tasks/testing'
 import {
@@ -37,6 +38,8 @@ vi.mock('web-push', async (importOriginal) => {
 })
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
 
 beforeEach(() => {
   queuedResponses.clear()
@@ -79,6 +82,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
   vi.restoreAllMocks()
 })
 
@@ -1178,6 +1183,27 @@ describe('syncAllGithubLinks', () => {
     const updatedTask = await loadTask(task.id)
     expect(updatedTask.title).toBe(task.title)
   })
+
+  it('publishes task changes with the triggering screen as origin', async () => {
+    const first = await createLinkedTask()
+    const second = await createLinkedTask({ ...ref, number: 43 })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    await syncAllGithubLinks('screen-id')
+
+    const snapshot = () =>
+      events.toSorted((left, right) =>
+        String(left.id).localeCompare(String(right.id)),
+      )
+    expect(snapshot()).toEqual(
+      [first.task.id, second.task.id]
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((id) => ({ resource: 'task', id, origin: 'screen-id' })),
+    )
+  })
 })
 
 describe('syncDueGithubLinks', () => {
@@ -1210,6 +1236,8 @@ describe('syncDueGithubLinks', () => {
       new Date(now - 2 * 60 * 60 * 1000),
       'merged',
     )
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     queueGithubIssueResponse()
     queueGithubIssueResponse()
@@ -1222,6 +1250,17 @@ describe('syncDueGithubLinks', () => {
       ),
     )
 
-    expect(synced).toEqual([true, false, true, false, false])
+    const snapshot = () => ({
+      synced,
+      events: events.toSorted((left, right) =>
+        String(left.id).localeCompare(String(right.id)),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      synced: [true, false, true, false, false],
+      events: [subjectDue.taskId, blockerDue.taskId]
+        .toSorted((left, right) => left.localeCompare(right))
+        .map((id) => ({ resource: 'task', id, origin: null })),
+    })
   })
 })

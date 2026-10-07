@@ -9,6 +9,7 @@ import {
   taskLabels,
   tasks,
 } from '#db/schema'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { generateDueRecurringTasks } from '#services/recurring-task-generator'
 import { syncTemplateLabels } from '#services/recurring-task-template-labels'
@@ -16,7 +17,11 @@ import { setupTestDb } from '#testing'
 
 setupTestDb()
 
+let stopWatchingChanges: (() => void) | undefined
+
 afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
   vi.useRealTimers()
 })
 
@@ -154,6 +159,27 @@ describe('generateDueRecurringTasks', () => {
       ],
       lastGeneratedDate: '2026-03-23',
     })
+  })
+
+  it('emits a task change after creating a due occurrence', async () => {
+    fakeToday('2026-03-23')
+    const template = await createTemplate(
+      { type: 'daily', interval: 1 },
+      { anchorDate: '2026-03-22' },
+    )
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    await generateDueRecurringTasks()
+
+    const generatedTasks = await rawTasksForTemplate(template.id)
+    expect(events).toEqual(
+      generatedTasks.map((task) => ({
+        resource: 'task',
+        id: task.id,
+        origin: null,
+      })),
+    )
   })
 
   it('creates nothing when no occurrence is due yet', async () => {

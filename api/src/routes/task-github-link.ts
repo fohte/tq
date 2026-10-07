@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { isQuietProviderError } from '#integrations/quiet-errors'
+import { publishChangeEvent } from '#lib/change-events'
 import { githubNotifyEventsSchema } from '#lib/github-notify-events'
 import { recordGithubUnlinked } from '#lib/task-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
@@ -115,10 +116,17 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
   // syncAllGithubLinks's runSync).
   .post('/sync', async (c) => {
     const taskId = c.get('task').id
+    const changedTaskIds = new Set<string>()
 
     const links = (await getGithubLinksByTaskId([taskId])).get(taskId) ?? []
     for (const link of links) {
-      const result = await syncLinkFromGithub(link)
+      const result = await syncLinkFromGithub(
+        link,
+        undefined,
+        (changedTaskId) => {
+          changedTaskIds.add(changedTaskId)
+        },
+      )
       if (result.isErr() && !isQuietProviderError(result.error)) {
         captureWithFingerprint(
           result.error,
@@ -126,6 +134,14 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
           { extras: { linkId: link.id } },
         )
       }
+    }
+
+    for (const changedTaskId of changedTaskIds) {
+      publishChangeEvent({
+        resource: 'task',
+        id: changedTaskId,
+        origin: c.get('origin'),
+      })
     }
 
     return c.body(null, 204)
