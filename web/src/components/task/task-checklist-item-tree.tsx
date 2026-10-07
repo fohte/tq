@@ -1,6 +1,5 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
-import { Link } from '@tanstack/react-router'
 import {
   ArrowDown,
   ArrowUp,
@@ -17,8 +16,8 @@ import type { KeyboardEvent } from 'react'
 import { useEffect, useState } from 'react'
 
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
-import { GithubLinkBadge } from '#components/task/github-link-badge'
 import { ChecklistItemComposer } from '#components/task/task-checklist-item-composer'
+import { TaskChecklistItemLinkedTargets } from '#components/task/task-checklist-item-linked-targets'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { Checkbox } from '#components/ui/checkbox'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
@@ -392,24 +391,10 @@ function ChecklistItemRow({
               </span>
             </Button>
           )}
-          {(githubLink != null || subtask != null) && (
-            <div className="mt-1 flex min-w-0 flex-wrap gap-1">
-              {githubLink != null && <GithubLinkBadge link={githubLink} />}
-              {subtask != null && (
-                <Link
-                  to="/tasks/$taskId"
-                  params={{ taskId: subtask.id }}
-                  aria-label={`#${String(subtask.number)} ${subtask.title}`}
-                  className="inline-flex max-w-full min-w-0 items-center gap-1 border border-border px-1 font-mono text-2xs text-muted-foreground hover:text-foreground"
-                >
-                  <span className="shrink-0 font-bold text-primary">
-                    #{subtask.number}
-                  </span>
-                  <span className="truncate">{subtask.title}</span>
-                </Link>
-              )}
-            </div>
-          )}
+          <TaskChecklistItemLinkedTargets
+            githubLink={githubLink}
+            subtask={subtask}
+          />
         </div>
         {hasChildren && (
           <span className="shrink-0 font-mono text-2xs text-muted-foreground-faint">
