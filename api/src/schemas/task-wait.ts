@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { timezoneOffsetMinutesSchema } from '#schemas/timezone'
 
-export const createTaskWaitFieldsSchema = z.object({
+const createTaskWaitFieldsSchema = z.object({
   body: z.string().min(1),
   followUpDate: z.iso.date().optional(),
 })

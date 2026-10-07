@@ -13,7 +13,7 @@ export interface TaskWaitSummary {
   resolvedAt: string | null
 }
 
-export function taskWaitSummary(
+function taskWaitSummary(
   wait: Pick<TaskWaitRow, 'id' | 'body' | 'followUpDate' | 'resolvedAt'>,
 ): TaskWaitSummary {
   return {
