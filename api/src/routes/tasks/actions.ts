@@ -155,6 +155,7 @@ export const tasksActionsApp = new Hono()
         const current = firstOrThrow(
           await tx
             .select({
+              id: tasks.id,
               status: tasks.status,
               statusReason: tasks.statusReason,
               description: tasks.description,
@@ -173,6 +174,7 @@ export const tasksActionsApp = new Hono()
             author,
             current,
             nextStatusReason ?? undefined,
+            tx,
           )
           if (conventionViolation !== null) {
             return {
@@ -342,7 +344,11 @@ export const tasksActionsApp = new Hono()
       const result = await db.transaction(async (tx) => {
         const current = firstOrThrow(
           await tx
-            .select({ status: tasks.status, description: tasks.description })
+            .select({
+              id: tasks.id,
+              status: tasks.status,
+              description: tasks.description,
+            })
             .from(tasks)
             .where(eq(tasks.id, id))
             .for('update'),
@@ -360,6 +366,7 @@ export const tasksActionsApp = new Hono()
           author,
           current,
           reason,
+          tx,
         )
         if (conventionViolation !== null) {
           return {
