@@ -27,7 +27,10 @@ import {
   type GithubBlockerRef,
 } from '#services/task-github-blockers'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
-import { getIncompleteTaskWaits } from '#services/task-waits'
+import {
+  getIncompleteTaskWaits,
+  type TaskWaitSummary,
+} from '#services/task-waits'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
@@ -78,7 +81,7 @@ async function checkNotBlocked(
     error: string
     blockedByNumbers: number[]
     blockedByGithubRefs: GithubBlockerRef[]
-    blockedByWaits?: Awaited<ReturnType<typeof getIncompleteTaskWaits>>
+    blockedByWaits?: TaskWaitSummary[]
   }
   status: 409
 } | null> {

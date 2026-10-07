@@ -15,6 +15,11 @@ export function localDateBoundsToUtc(
   return { dayStart, dayEnd }
 }
 
+export function formatDateAtOffset(date: Date, tzOffsetMinutes = 0): string {
+  const localDate = new Date(date.getTime() - tzOffsetMinutes * 60 * 1000)
+  return `${String(localDate.getUTCFullYear())}-${String(localDate.getUTCMonth() + 1).padStart(2, '0')}-${String(localDate.getUTCDate()).padStart(2, '0')}`
+}
+
 /**
  * Convert a naive local date-time string (no timezone suffix, e.g. from
  * `expandScheduleForDate`) into a real UTC instant.

@@ -8,21 +8,26 @@ import {
   requestJson,
   requestNoContent,
 } from '#operations/types'
-import { createTaskWaitSchema } from '#schemas/task-wait'
+import {
+  createTaskWaitSchema,
+  updateTaskWaitFieldsSchema,
+} from '#schemas/task-wait'
+import { timezoneOffsetMinutesSchema } from '#schemas/timezone'
 
 const waitIdSchema = z.uuid()
 const createWaitInputSchema = createTaskWaitSchema.extend({
   taskId: taskIdOrNumber,
 })
+const createWaitMcpInputSchema = createWaitInputSchema.extend({
+  tzOffset: timezoneOffsetMinutesSchema,
+})
 const waitReferenceSchema = z.object({
   taskId: taskIdOrNumber,
   waitId: waitIdSchema,
 })
-const updateWaitInputSchema = z.object({
+const updateWaitInputSchema = updateTaskWaitFieldsSchema.extend({
   taskId: taskIdOrNumber,
   waitId: waitIdSchema,
-  body: z.string().min(1).optional(),
-  followUpDate: z.iso.date().optional(),
 })
 
 export const waitOperations = [
@@ -33,8 +38,10 @@ export const waitOperations = [
     kind: 'write',
     attribution: 'agent',
     routes: ['POST /api/tasks/:taskId/waits'],
+    mcpInputSchema: createWaitMcpInputSchema,
     cli: {
       group: { description: 'Manage waits', order: 3 },
+      excludeFields: ['tzOffset'],
       customOptions: [
         {
           flags: '--body <markdown>',
@@ -49,11 +56,15 @@ export const waitOperations = [
       optionMetavars: { body: 'markdown', followUpDate: 'date' },
       output: { kind: 'json' },
     },
-    run: (client, { taskId, body, followUpDate }) =>
+    run: (client, { taskId, body, followUpDate, tzOffset }) =>
       requestJson(
         client.api.tasks[':taskId'].waits.$post({
           param: { taskId: encodePathSegment(String(taskId)) },
-          json: { body, followUpDate },
+          json: {
+            body,
+            followUpDate,
+            tzOffset: tzOffset ?? new Date().getTimezoneOffset(),
+          },
         }),
       ),
   }),

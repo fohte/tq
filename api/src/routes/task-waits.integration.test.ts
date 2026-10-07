@@ -20,19 +20,31 @@ afterEach(() => {
   stopWatchingChanges = undefined
 })
 
-function addUtcDays(date: Date, days: number): string {
-  const result = new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  )
+function dateAtOffset(date: Date, tzOffset: number): string {
+  const result = new Date(date.getTime() - tzOffset * 60_000)
+  return `${String(result.getUTCFullYear())}-${String(result.getUTCMonth() + 1).padStart(2, '0')}-${String(result.getUTCDate()).padStart(2, '0')}`
+}
+
+function addDaysAtOffset(date: Date, tzOffset: number, days: number): string {
+  const result = new Date(`${dateAtOffset(date, tzOffset)}T00:00:00.000Z`)
   result.setUTCDate(result.getUTCDate() + days)
   return result.toISOString().slice(0, 10)
 }
 
-function addWait(taskId: string | number, body: string, followUpDate?: string) {
+function offsetWithDifferentUtcDate(date: Date): number {
+  return date.getUTCHours() < 12 ? 720 : -720
+}
+
+function addWait(
+  taskId: string | number,
+  body: string,
+  followUpDate?: string,
+  tzOffset?: number,
+) {
   return app.request(`/api/tasks/${String(taskId)}/waits`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ body, followUpDate }),
+    body: JSON.stringify({ body, followUpDate, tzOffset }),
   })
 }
 
@@ -80,6 +92,18 @@ function waitCollectionsSnapshot<TResolved, TDetail, TSummary>(
   return { resolved, detail, list }
 }
 
+function waitUpdatesSnapshot<T>(
+  bodyStatus: number,
+  bodyUpdate: T,
+  dateStatus: number,
+  dateUpdate: T,
+) {
+  return [
+    waitResponseSnapshot(bodyStatus, bodyUpdate),
+    waitResponseSnapshot(dateStatus, dateUpdate),
+  ]
+}
+
 function waitFilterSnapshot<T>(blockers: T, noBlockers: T, followUpDue: T) {
   return { blockers, noBlockers, followUpDue }
 }
@@ -96,9 +120,12 @@ function waitRemovalSnapshot<T>(
 describe('task waits API', () => {
   it('creates a wait using a task number and defaults the follow-up date to three days later', async () => {
     const task = await createTask('Waiting task')
+    const tzOffset = offsetWithDifferentUtcDate(new Date())
     const res = await addWait(
       task.number,
       '### Waiting for a reply\nMore detail',
+      undefined,
+      tzOffset,
     )
 
     const wait = await jsonBody<TaskWaitResponse>(res)
@@ -109,7 +136,7 @@ describe('task waits API', () => {
         taskId: task.id,
         body: '### Waiting for a reply\nMore detail',
         label: '### Waiting for a reply',
-        followUpDate: addUtcDays(new Date(wait.createdAt), 3),
+        followUpDate: addDaysAtOffset(new Date(wait.createdAt), tzOffset, 3),
         resolvedAt: null,
         acknowledgedAt: null,
         createdAt: 'CREATED_AT',
@@ -117,47 +144,75 @@ describe('task waits API', () => {
     })
   })
 
-  it('updates only supplied fields on a wait', async () => {
+  it('preserves omitted fields when updating the body and follow-up date', async () => {
     const task = await createTask('Waiting task')
     const created = await addWait(task.id, 'Original request', '2036-04-05')
     const wait = await jsonBody<TaskWaitResponse>(created)
-    const res = await app.request(`/api/tasks/${task.id}/waits/${wait.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        body: 'Updated request',
-        followUpDate: '2036-04-12',
-      }),
-    })
+    const bodyUpdate = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: 'Updated request' }),
+      },
+    )
+    const afterBodyUpdate = await jsonBody<TaskWaitResponse>(bodyUpdate)
+    const dateUpdate = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followUpDate: '2036-04-12' }),
+      },
+    )
+    const afterDateUpdate = await jsonBody<TaskWaitResponse>(dateUpdate)
 
     expect(
-      waitResponseSnapshot(
-        res.status,
-        normalizeWait(await jsonBody<TaskWaitResponse>(res)),
+      waitUpdatesSnapshot(
+        bodyUpdate.status,
+        normalizeWait(afterBodyUpdate),
+        dateUpdate.status,
+        normalizeWait(afterDateUpdate),
       ),
-    ).toEqual({
-      status: 200,
-      wait: {
-        id: 'WAIT_ID',
-        taskId: task.id,
-        body: 'Updated request',
-        label: 'Updated request',
-        followUpDate: '2036-04-12',
-        resolvedAt: null,
-        acknowledgedAt: null,
-        createdAt: 'CREATED_AT',
+    ).toEqual([
+      {
+        status: 200,
+        wait: {
+          id: 'WAIT_ID',
+          taskId: task.id,
+          body: 'Updated request',
+          label: 'Updated request',
+          followUpDate: '2036-04-05',
+          resolvedAt: null,
+          acknowledgedAt: null,
+          createdAt: 'CREATED_AT',
+        },
       },
-    })
+      {
+        status: 200,
+        wait: {
+          id: 'WAIT_ID',
+          taskId: task.id,
+          body: 'Updated request',
+          label: 'Updated request',
+          followUpDate: '2036-04-12',
+          resolvedAt: null,
+          acknowledgedAt: null,
+          createdAt: 'CREATED_AT',
+        },
+      },
+    ])
   })
 
   it('returns every wait in detail and a compact summary in the task list after resolution', async () => {
     const task = await createTask('Waiting task')
     const created = await addWait(
       task.id,
-      'A response is pending',
+      'A response was received',
       '2036-04-05',
     )
     const wait = await jsonBody<TaskWaitResponse>(created)
+    await addWait(task.id, 'B response is pending', '2036-04-06')
     const resolved = await app.request(
       `/api/tasks/${task.id}/waits/${wait.id}/resolve`,
       { method: 'POST' },
@@ -173,15 +228,19 @@ describe('task waits API', () => {
     expect(
       waitCollectionsSnapshot(
         normalizeWait(resolvedWait),
-        detail.waits?.map(normalizeWait),
-        listItem?.waits?.map(normalizeSummary),
+        detail.waits
+          ?.map(normalizeWait)
+          .sort((left, right) => left.label.localeCompare(right.label)),
+        listItem?.waits
+          ?.map(normalizeSummary)
+          .sort((left, right) => left.label.localeCompare(right.label)),
       ),
     ).toEqual({
       resolved: {
         id: 'WAIT_ID',
         taskId: task.id,
-        body: 'A response is pending',
-        label: 'A response is pending',
+        body: 'A response was received',
+        label: 'A response was received',
         followUpDate: '2036-04-05',
         resolvedAt: 'RESOLVED_AT',
         acknowledgedAt: 'RESOLVED_AT',
@@ -191,20 +250,36 @@ describe('task waits API', () => {
         {
           id: 'WAIT_ID',
           taskId: task.id,
-          body: 'A response is pending',
-          label: 'A response is pending',
+          body: 'A response was received',
+          label: 'A response was received',
           followUpDate: '2036-04-05',
           resolvedAt: 'RESOLVED_AT',
           acknowledgedAt: 'RESOLVED_AT',
+          createdAt: 'CREATED_AT',
+        },
+        {
+          id: 'WAIT_ID',
+          taskId: task.id,
+          body: 'B response is pending',
+          label: 'B response is pending',
+          followUpDate: '2036-04-06',
+          resolvedAt: null,
+          acknowledgedAt: null,
           createdAt: 'CREATED_AT',
         },
       ],
       list: [
         {
           id: 'WAIT_ID',
-          label: 'A response is pending',
+          label: 'A response was received',
           followUpDate: '2036-04-05',
           resolvedAt: 'RESOLVED_AT',
+        },
+        {
+          id: 'WAIT_ID',
+          label: 'B response is pending',
+          followUpDate: '2036-04-06',
+          resolvedAt: null,
         },
       ],
     })
@@ -215,13 +290,15 @@ describe('task waits API', () => {
     const futureTask = await createTask('Future wait')
     const resolvedTask = await createTask('Resolved wait')
     const clearTask = await createTask('No wait')
-    await addWait(dueTask.id, 'Due today', addUtcDays(new Date(), 0))
-    await addWait(futureTask.id, 'Due later', addUtcDays(new Date(), 1))
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    await addWait(dueTask.id, 'Due today', addDaysAtOffset(now, tzOffset, 0))
+    await addWait(futureTask.id, 'Due later', addDaysAtOffset(now, tzOffset, 1))
     const resolved = await jsonBody<TaskWaitResponse>(
       await addWait(
         resolvedTask.id,
         'Already answered',
-        addUtcDays(new Date(), -1),
+        addDaysAtOffset(now, tzOffset, -1),
       ),
     )
     await app.request(
@@ -231,7 +308,10 @@ describe('task waits API', () => {
 
     const taskIds = async (query: string) => {
       const response = await app.request(
-        `/api/tasks?q=${encodeURIComponent(query)}`,
+        `/api/tasks?${new URLSearchParams({
+          q: query,
+          tzOffset: String(tzOffset),
+        }).toString()}`,
       )
       const body: unknown = await response.json()
       const ids = Array.isArray(body)

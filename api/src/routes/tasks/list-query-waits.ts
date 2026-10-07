@@ -10,7 +10,7 @@ export function unresolvedTaskWaitSubquery() {
     .where(and(eq(taskWaits.taskId, tasks.id), isNull(taskWaits.resolvedAt)))
 }
 
-export function followUpDueTaskWaitSubquery() {
+export function followUpDueTaskWaitSubquery(today: string) {
   return db
     .select({ _: sql`1` })
     .from(taskWaits)
@@ -18,7 +18,7 @@ export function followUpDueTaskWaitSubquery() {
       and(
         eq(taskWaits.taskId, tasks.id),
         isNull(taskWaits.resolvedAt),
-        sql`${taskWaits.followUpDate} <= CURRENT_DATE`,
+        sql`${taskWaits.followUpDate} <= ${today}::date`,
       ),
     )
 }

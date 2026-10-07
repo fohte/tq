@@ -26,12 +26,9 @@ export function taskWaitSummary(
 
 export function taskWaitToResponse(wait: TaskWaitRow) {
   return {
-    id: wait.id,
+    ...taskWaitSummary(wait),
     taskId: wait.taskId,
     body: wait.body,
-    label: wait.body.split(/\r?\n/u, 1)[0] ?? '',
-    followUpDate: wait.followUpDate,
-    resolvedAt: wait.resolvedAt?.toISOString() ?? null,
     acknowledgedAt: wait.acknowledgedAt?.toISOString() ?? null,
     createdAt: wait.createdAt.toISOString(),
   }

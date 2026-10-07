@@ -39,6 +39,7 @@ describe('wait commands', () => {
           })
     })
     const write = spyStdout()
+    vi.spyOn(Date.prototype, 'getTimezoneOffset').mockReturnValue(-540)
     const commands = [
       [
         '--api-url',
@@ -92,7 +93,11 @@ describe('wait commands', () => {
           method: 'POST',
           pathname: '/api/tasks/42/waits',
           query: {},
-          body: { body: 'Initial request', followUpDate: '2036-04-05' },
+          body: {
+            body: 'Initial request',
+            followUpDate: '2036-04-05',
+            tzOffset: -540,
+          },
         },
         {
           method: 'PATCH',

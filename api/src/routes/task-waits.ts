@@ -7,16 +7,15 @@ import { db } from '#db/connection'
 import { taskWaits } from '#db/schema'
 import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { formatDateAtOffset } from '#lib/timezone'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createTaskWaitSchema, updateTaskWaitSchema } from '#schemas/task-wait'
 import { taskWaitToResponse } from '#services/task-waits'
 
 const waitIdParamsSchema = z.object({ waitId: z.uuid() })
 
-function defaultFollowUpDate(now: Date): string {
-  const date = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  )
+function defaultFollowUpDate(now: Date, tzOffset: number): string {
+  const date = new Date(`${formatDateAtOffset(now, tzOffset)}T00:00:00.000Z`)
   date.setUTCDate(date.getUTCDate() + 3)
   return date.toISOString().slice(0, 10)
 }
@@ -44,7 +43,9 @@ export const taskWaitsApp = new Hono<TaskEnv>()
         .values({
           taskId: c.get('task').id,
           body: input.body,
-          followUpDate: input.followUpDate ?? defaultFollowUpDate(new Date()),
+          followUpDate:
+            input.followUpDate ??
+            defaultFollowUpDate(new Date(), input.tzOffset ?? 0),
         })
         .returning(),
     )

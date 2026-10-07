@@ -26,6 +26,7 @@ import {
   tasks,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import { formatDateAtOffset } from '#lib/timezone'
 import {
   followUpDueTaskWaitSubquery,
   unresolvedTaskWaitSubquery,
@@ -256,7 +257,13 @@ function buildConditions(
   }
 
   if (parsed?.hasFollowUpDue === true) {
-    conditions.push(exists(followUpDueTaskWaitSubquery()))
+    conditions.push(
+      exists(
+        followUpDueTaskWaitSubquery(
+          formatDateAtOffset(new Date(), query.tzOffset ?? 0),
+        ),
+      ),
+    )
   }
 
   // Unlike the other filters above, an explicit `projectId` param wins over
