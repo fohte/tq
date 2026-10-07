@@ -483,7 +483,7 @@ describe('syncLinkFromGithub', () => {
     const snapshot = () => ({
       link: normalizeLink(updatedLink),
       lastSyncedAt: updatedLink.lastSyncedAt.toISOString(),
-      notifications: [],
+      notifications: sentNotifications(),
       writtenTaskIds,
     })
     expect(snapshot()).toEqual({

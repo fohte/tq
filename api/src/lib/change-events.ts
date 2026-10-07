@@ -30,7 +30,7 @@ const routeResources: Record<string, ChangeResource> = {
   integrations: 'integration',
 }
 
-// React Query uses these POST routes for reads or syncs; sync writes publish targeted events separately.
+// React Query uses these POST routes for reads or syncs; 304 syncs only update bookkeeping and emit no event.
 const postQueryRoutes = new Set([
   '/api/github/resolve',
   '/api/github/sync',

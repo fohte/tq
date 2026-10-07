@@ -241,8 +241,7 @@ export function syncLinkFromGithub(
               matchesStoredGithubState(link),
               lt(taskGithubLinks.lastSyncedAt, lastSyncedAt),
             ),
-          )
-          .returning({ id: taskGithubLinks.id }),
+          ),
       ).map(() => undefined)
     }
 
