@@ -15,12 +15,14 @@ import type { SavedView } from '#hooks/use-saved-views'
 import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { labelKeys, savedViewKeys } from '#lib/query-keys'
+import type { TagCount } from '#lib/tag-tree'
+import { makeTagCount } from '#lib/tag-tree-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const tasksWithTags: Task[] = [
-  makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
-  makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
-  makeTask({ id: '3', title: 'Task C', labels: ['review'] }),
+const tagCountsWithTags: TagCount[] = [
+  makeTagCount({ name: 'dev:tq', count: 2 }),
+  makeTagCount({ name: 'urgent', count: 1 }),
+  makeTagCount({ name: 'review', count: 1 }),
 ]
 
 const labelsForTasksWithTags = [
@@ -29,9 +31,10 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '3', name: 'review' }),
 ]
 
-const tasksWithNestedTags: Task[] = [
-  makeTask({ id: '5', title: 'Task X', labels: ['dev/tq'] }),
-  makeTask({ id: '6', title: 'Task Y', labels: ['dev/infra'] }),
+const tagCountsWithNestedTags: TagCount[] = [
+  makeTagCount({ name: 'dev', count: 2 }),
+  makeTagCount({ name: 'dev/tq', count: 1 }),
+  makeTagCount({ name: 'dev/infra', count: 1 }),
 ]
 
 const labelsForNestedTags = [
@@ -69,18 +72,20 @@ function SidebarStory({
   projects,
   savedViews,
   labels,
+  tagCounts,
   desktopWindowControls,
 }: {
   tasks?: Task[] | undefined
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
   labels?: Label[] | undefined
+  tagCounts?: TagCount[] | undefined
   desktopWindowControls?: boolean | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasks ?? [])
+  queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts ?? [])
   queryClient.setQueryData(
     taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
     (tasks ?? []).filter(
@@ -115,6 +120,7 @@ function SidebarWithRouter({
   projects,
   savedViews,
   labels,
+  tagCounts,
   desktopWindowControls,
 }: {
   currentPath: string
@@ -122,6 +128,7 @@ function SidebarWithRouter({
   projects?: Project[] | undefined
   savedViews?: SavedView[] | undefined
   labels?: Label[] | undefined
+  tagCounts?: TagCount[] | undefined
   desktopWindowControls?: boolean | undefined
 }) {
   return (
@@ -132,6 +139,7 @@ function SidebarWithRouter({
           projects={projects}
           savedViews={savedViews}
           labels={labels}
+          tagCounts={tagCounts}
           desktopWindowControls={desktopWindowControls}
         />
       )}
@@ -198,7 +206,7 @@ export const WithTags: Story = {
   name: 'the sidebar lists labels used by tasks',
   args: {
     currentPath: '/',
-    tasks: tasksWithTags,
+    tagCounts: tagCountsWithTags,
     labels: labelsForTasksWithTags,
   },
 }
@@ -207,7 +215,7 @@ export const WithNestedTags: Story = {
   name: 'the sidebar nests labels into a hierarchy',
   args: {
     currentPath: '/',
-    tasks: tasksWithNestedTags,
+    tagCounts: tagCountsWithNestedTags,
     labels: labelsForNestedTags,
   },
 }
