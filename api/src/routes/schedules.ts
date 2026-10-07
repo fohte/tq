@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { recurrenceRules, schedules, timeBlocks } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { localDateBoundsToUtc } from '#lib/timezone'
@@ -153,6 +154,8 @@ export const schedulesApp = new Hono()
           .returning(),
       )
 
+      setChangeEventTaskIds(c, [task.id])
+
       return c.json(timeBlockToResponse(block), 201)
     },
   )
@@ -205,6 +208,7 @@ export const schedulesApp = new Hono()
       }
 
       if (Object.keys(updates).length === 0) {
+        setChangeEventTaskIds(c, [])
         return c.json(timeBlockToResponse(existing), 200)
       }
 
@@ -215,6 +219,8 @@ export const schedulesApp = new Hono()
           .where(eq(timeBlocks.id, id))
           .returning(),
       )
+
+      setChangeEventTaskIds(c, [existing.taskId])
 
       return c.json(timeBlockToResponse(updated), 200)
     },
@@ -230,6 +236,8 @@ export const schedulesApp = new Hono()
     }
 
     await db.delete(timeBlocks).where(eq(timeBlocks.id, id))
+
+    setChangeEventTaskIds(c, [existing.taskId])
 
     return c.body(null, 204)
   })

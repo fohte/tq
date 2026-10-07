@@ -59,10 +59,16 @@ function parseChangeEvent(raw: string): ChangeEvent | null {
 
   const id = parsed['id']
   const origin = parsed['origin']
+  const taskIds = parsed['taskIds']
   return {
     resource: parsed['resource'],
     id: typeof id === 'string' ? id : null,
     origin: typeof origin === 'string' ? origin : null,
+    taskIds:
+      Array.isArray(taskIds) &&
+      taskIds.every((taskId) => typeof taskId === 'string')
+        ? taskIds
+        : null,
   }
 }
 
