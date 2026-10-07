@@ -91,9 +91,9 @@ Catch the exception, wrap it in the boundary-specific subclass, and rethrow it â
 
 Perform aggregation (counts, sums, and grouping), filtering, and sorting in server-side APIs. Clients must not fetch all records to calculate these values, because that makes memory use and work grow with the data set on every client.
 
-### Return only fields used by the screen from list APIs
+### Return only fields needed by each list API consumer
 
-Return only the fields a screen uses from list APIs to reduce response size and avoid transferring unnecessary data.
+Return only fields required by each list API consumer to reduce response size. When consumers need different fields, use consumer-specific projections so one consumer's smaller response does not drop fields required by another.
 
 ### Run recurring work on the server
 
