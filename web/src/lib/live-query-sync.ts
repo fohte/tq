@@ -128,14 +128,27 @@ const resourceQueryFilters: Record<
         ...invalidation,
         includeUnresolvedPreviews: true,
       },
-      { after: [{ queryKey: taskMentionKeys.suggestionsPrefix }] },
+      {
+        after: [
+          { queryKey: taskKeys.labelCountsPrefix },
+          { queryKey: taskMentionKeys.suggestionsPrefix },
+        ],
+      },
     )
   },
   project: () => ({ filters: [{ queryKey: projectKeys.all }] }),
-  label: ({ taskIds }) =>
-    withFilters(taskInvalidation(taskIds, true, { queryKey: taskKeys.all }), {
+  label: ({ taskIds }) => {
+    const invalidation = taskInvalidation(taskIds, true, {
+      queryKey: taskKeys.all,
+    })
+    return withFilters(invalidation, {
       before: [{ queryKey: labelKeys.all }],
-    }),
+      after:
+        taskIds != null && taskIds.length > 0
+          ? [{ queryKey: taskKeys.labelCountsPrefix }]
+          : [],
+    })
+  },
   queue: () => ({ filters: [{ queryKey: queueKeys.all }] }),
   time_block: ({ taskIds }) =>
     withFilters(
