@@ -196,20 +196,18 @@ describe('useTaskList', () => {
     ])
   })
 
-  it('refetches when an interval is supplied', async () => {
+  it('does not poll task lists', async () => {
     vi.useFakeTimers()
     try {
       const mockGet = await getMockGet()
       mockGet.mockResolvedValue(jsonResponse([]))
 
-      renderHook(() => useTaskList(undefined, { refetchInterval: 60_000 }), {
-        wrapper,
-      })
+      renderHook(() => useTaskList(undefined), { wrapper })
 
       let initialCallCount = 0
       const getCallCounts = () => ({
         initial: initialCallCount,
-        afterInterval: mockGet.mock.calls.length,
+        afterOneMinute: mockGet.mock.calls.length,
       })
 
       await act(async () => {
@@ -221,7 +219,7 @@ describe('useTaskList', () => {
         await vi.advanceTimersByTimeAsync(60_000)
       })
 
-      expect(getCallCounts()).toEqual({ initial: 1, afterInterval: 2 })
+      expect(getCallCounts()).toEqual({ initial: 1, afterOneMinute: 1 })
     } finally {
       vi.useRealTimers()
     }

@@ -219,8 +219,8 @@ describe('queue ordering cache', () => {
   })
 })
 
-describe('queue polling', () => {
-  it('refreshes queue definitions and items when an interval is configured', async () => {
+describe('queue updates', () => {
+  it('does not poll queue definitions or items', async () => {
     vi.useFakeTimers()
     try {
       const mocks = await getMocks()
@@ -232,15 +232,13 @@ describe('queue polling', () => {
       queueGet.mockResolvedValue(jsonResponse(queues))
       itemGet.mockResolvedValue(jsonResponse([]))
 
-      renderHook(() => useQueues(60_000), { wrapper })
-      renderHook(() => useQueueItemsForQueues(queues, date, 60_000), {
-        wrapper,
-      })
+      renderHook(() => useQueues(), { wrapper })
+      renderHook(() => useQueueItemsForQueues(queues, date), { wrapper })
 
       let initialCallCounts = { queues: 0, items: 0 }
       const getCallCounts = () => ({
         initial: initialCallCounts,
-        afterInterval: {
+        afterOneMinute: {
           queues: queueGet.mock.calls.length,
           items: itemGet.mock.calls.length,
         },
@@ -260,7 +258,7 @@ describe('queue polling', () => {
 
       expect(getCallCounts()).toEqual({
         initial: { queues: 1, items: 1 },
-        afterInterval: { queues: 2, items: 2 },
+        afterOneMinute: { queues: 1, items: 1 },
       })
     } finally {
       vi.useRealTimers()
@@ -283,7 +281,7 @@ describe('queue carry-over', () => {
     const { result } = renderHook(
       () => {
         const carryOver = useQueueCarryOver(today)
-        const items = useQueueItemsForQueues(queues, today, undefined, {
+        const items = useQueueItemsForQueues(queues, today, {
           enabled: carryOver.canReadQueueItems,
         })
         return { carryOver, items }
@@ -333,7 +331,7 @@ describe('queue carry-over', () => {
     const { result } = renderHook(
       () => {
         const carryOver = useQueueCarryOver(today)
-        const items = useQueueItemsForQueues(queues, today, undefined, {
+        const items = useQueueItemsForQueues(queues, today, {
           enabled: carryOver.canReadQueueItems,
         })
         return { carryOver, items }

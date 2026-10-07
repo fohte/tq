@@ -1,6 +1,5 @@
 import { formatLocalDate } from '#lib/date-range'
 
-const COMPACT_REFRESH_INTERVAL_MS = 60_000
 const NOW_PANEL_LOOKAHEAD_DAYS = 30
 
 export function isCompactDayLayoutSearch(search: unknown): boolean {
@@ -19,12 +18,6 @@ export function isCompactDayLayoutMatch(
   return (
     (routeId === '/' || routeId === '/memo') && isCompactDayLayoutSearch(search)
   )
-}
-
-export function getCompactRefetchInterval(
-  isCompactLayout: boolean,
-): number | undefined {
-  return isCompactLayout ? COMPACT_REFRESH_INTERVAL_MS : undefined
 }
 
 export function getNowPanelQueryDateRange(now: Date): {
