@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const MAX_SCHEDULE_DATE_RANGE_DAYS = 42
-export const SCHEDULE_DATE_RANGE_ERROR_MESSAGE = `Date range must be chronological and no longer than ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} days`
+const SCHEDULE_DATE_RANGE_ERROR_MESSAGE = `Date range must be chronological and no longer than ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} days`
 
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000
 
@@ -12,7 +12,7 @@ export const scheduleDateRangeInputSchema = z.object({
   endDate: z.iso.date().describe('Last local date to include, as YYYY-MM-DD.'),
 })
 
-export function isScheduleDateRangeValid({
+function isScheduleDateRangeValid({
   startDate,
   endDate,
 }: {
