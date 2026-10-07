@@ -1,5 +1,4 @@
 import { createMcpHandler } from '@modelcontextprotocol/server'
-import { Hono } from 'hono'
 
 import { createMcpServer } from '#routes/mcp/server'
 
@@ -12,5 +11,3 @@ const handler = createMcpHandler(() => createMcpServer())
 export function handleMcpRequest(request: Request): Promise<Response> {
   return handler.fetch(request)
 }
-
-export const mcpApp = new Hono().all('/', (c) => handleMcpRequest(c.req.raw))

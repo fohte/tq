@@ -90,9 +90,8 @@ function summarizeTools(
   return tools.map((tool) => tool.name).sort()
 }
 
-// `mcpApp` is mounted with `.route()` on the same `app` instance as every
-// other route (see api/src/app.ts) instead of a dedicated server or
-// middleware stack, so it runs through the existing OTel HTTP
+// The MCP handler is mounted on the same `app` instance as every other route
+// (see api/src/app.ts), so it runs through the existing OTel HTTP
 // auto-instrumentation exactly like any other route.
 describe('MCP endpoint', () => {
   it('completes initialize and lists the registered tools', async () => {
