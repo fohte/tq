@@ -82,6 +82,32 @@ describe('schedule time blocks list', () => {
       stdout: [],
     })
   })
+
+  it('rejects date ranges longer than 42 days before sending a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'time-blocks',
+          'list',
+          '2099-01-01',
+          '2099-02-12',
+          '--tz-offset',
+          '0',
+        ],
+        new Response('[]', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: endDate: Date range must be chronological and no longer than 42 days\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
 })
 
 describe('schedule time blocks create', () => {

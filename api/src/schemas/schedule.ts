@@ -28,7 +28,15 @@ export function isScheduleDateRangeValid({
   )
 }
 
-export const scheduleDateRangeSchema = scheduleDateRangeInputSchema.refine(
-  isScheduleDateRangeValid,
-  { message: SCHEDULE_DATE_RANGE_ERROR_MESSAGE, path: ['endDate'] },
+export function withScheduleDateRange<
+  Schema extends z.ZodObject<typeof scheduleDateRangeInputSchema.shape>,
+>(schema: Schema) {
+  return schema.refine(isScheduleDateRangeValid, {
+    message: SCHEDULE_DATE_RANGE_ERROR_MESSAGE,
+    path: ['endDate'],
+  })
+}
+
+export const scheduleDateRangeSchema = withScheduleDateRange(
+  scheduleDateRangeInputSchema,
 )

@@ -6,15 +6,15 @@ import { encodePathSegment } from '#operations/path-segment'
 import {
   defineOperation,
   formatInputIssues,
+  type OperationError,
   requestJson,
   requestNoContent,
 } from '#operations/types'
 import {
-  isScheduleDateRangeValid,
   MAX_SCHEDULE_DATE_RANGE_DAYS,
-  SCHEDULE_DATE_RANGE_ERROR_MESSAGE,
   scheduleDateRangeInputSchema,
   scheduleDateRangeSchema,
+  withScheduleDateRange,
 } from '#schemas/schedule'
 
 const timeBlockIdSchema = z.object({ id: z.uuid() })
@@ -28,9 +28,8 @@ const timeBlockListInputSchema = scheduleDateRangeInputSchema.extend({
     ),
 })
 
-const timeBlockListMcpInputSchema = timeBlockListInputSchema.refine(
-  isScheduleDateRangeValid,
-  { message: SCHEDULE_DATE_RANGE_ERROR_MESSAGE, path: ['endDate'] },
+const timeBlockListMcpInputSchema = withScheduleDateRange(
+  timeBlockListInputSchema,
 )
 
 const createTimeBlockInputSchema = z.object({
@@ -53,8 +52,6 @@ const updateTimeBlockInputSchema = z.object({
   isAutoScheduled: z.boolean().optional(),
 })
 
-const recurringScheduleListInputSchema = scheduleDateRangeInputSchema
-
 const autoScheduleCliOptions = [
   {
     flags: '--auto-scheduled',
@@ -71,6 +68,19 @@ function mapCliTimezoneOffset(
   return tzOffset.success
     ? ok({ ...input, tzOffset: tzOffset.data })
     : err(new Error('tzOffset must be an integer number of minutes'))
+}
+
+function validateScheduleDateRange(input: {
+  startDate: string
+  endDate: string
+}): Result<{ startDate: string; endDate: string }, OperationError> {
+  const result = scheduleDateRangeSchema.safeParse(input)
+  return result.success
+    ? ok(result.data)
+    : err({
+        kind: 'input',
+        message: formatInputIssues(result.error),
+      })
 }
 
 function mapCliAutoScheduleFlags(
@@ -91,8 +101,7 @@ function mapCliAutoScheduleFlags(
 export const scheduleOperations = [
   defineOperation(timeBlockListInputSchema, {
     path: ['schedule', 'time-blocks', 'list'],
-    description:
-      'List time blocks that overlap an inclusive local date range. Pass a timezone offset using the Date.getTimezoneOffset() convention.',
+    description: `List time blocks that overlap an inclusive local date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Pass a timezone offset using the Date.getTimezoneOffset() convention.`,
     positionalArgs: ['startDate', 'endDate'],
     kind: 'read',
     mcpInputSchema: timeBlockListMcpInputSchema,
@@ -111,20 +120,15 @@ export const scheduleOperations = [
       output: { kind: 'json' },
     },
     run: (client, { startDate, endDate, tzOffset }) => {
-      const dateRange = scheduleDateRangeSchema.safeParse({
+      const dateRange = validateScheduleDateRange({
         startDate,
         endDate,
       })
-      if (!dateRange.success) {
-        return errAsync({
-          kind: 'input',
-          message: formatInputIssues(dateRange.error),
-        })
-      }
+      if (dateRange.isErr()) return errAsync(dateRange.error)
 
       return requestJson(
         client.api.schedule['time-blocks'].$get({
-          query: { ...dateRange.data, tzOffset: String(tzOffset) },
+          query: { ...dateRange.value, tzOffset: String(tzOffset) },
         }),
       )
     },
@@ -180,7 +184,7 @@ export const scheduleOperations = [
         }),
       ).map(() => ({ deleted: true, id })),
   }),
-  defineOperation(recurringScheduleListInputSchema, {
+  defineOperation(scheduleDateRangeInputSchema, {
     path: ['schedule', 'recurring', 'list'],
     description: `List expanded recurring schedule instances for an inclusive date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Split longer ranges into multiple requests.`,
     positionalArgs: ['startDate', 'endDate'],
@@ -189,15 +193,10 @@ export const scheduleOperations = [
     routes: ['GET /api/schedule/recurring'],
     cli: { output: { kind: 'json' } },
     run: (client, query) => {
-      const dateRange = scheduleDateRangeSchema.safeParse(query)
-      if (!dateRange.success) {
-        return errAsync({
-          kind: 'input',
-          message: formatInputIssues(dateRange.error),
-        })
-      }
+      const dateRange = validateScheduleDateRange(query)
+      if (dateRange.isErr()) return errAsync(dateRange.error)
       return requestJson(
-        client.api.schedule.recurring.$get({ query: dateRange.data }),
+        client.api.schedule.recurring.$get({ query: dateRange.value }),
       )
     },
   }),
