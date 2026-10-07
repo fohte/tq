@@ -25,7 +25,7 @@ export async function promoteChecklistItemToSubtask(
   tx: DbTransaction,
   itemId: string,
   author: EditAuthor,
-): Promise<Result<ChecklistItem, ChecklistError>> {
+): Promise<Result<{ item: ChecklistItem; taskIds: string[] }, ChecklistError>> {
   type ParentTask = Pick<
     typeof tasks.$inferSelect,
     'id' | 'context' | 'projectId'
@@ -77,6 +77,9 @@ export async function promoteChecklistItemToSubtask(
   const { directChildren, descendants } = collectChecklistDescendants(
     items,
     item.id,
+  )
+  const linkedSubtaskIds = descendants.flatMap(({ subtaskId }) =>
+    subtaskId == null ? [] : [subtaskId],
   )
 
   const parentLabels = await tx
@@ -130,9 +133,6 @@ export async function promoteChecklistItemToSubtask(
         ),
       )
 
-    const linkedSubtaskIds = descendants.flatMap(({ subtaskId }) =>
-      subtaskId == null ? [] : [subtaskId],
-    )
     if (linkedSubtaskIds.length > 0) {
       await tx
         .update(tasks)
@@ -153,7 +153,12 @@ export async function promoteChecklistItemToSubtask(
   if (promoted == null) return fail(404, 'Checklist item not found')
 
   await recalculateChecklistAncestors(tx, [item.parentItemId])
-  return ok(promoted)
+  return ok({
+    item: promoted,
+    taskIds: [
+      ...new Set([parentTask.id, subtask.id, ...linkedSubtaskIds]),
+    ].sort(),
+  })
 }
 
 export async function syncChecklistItemWithSubtaskStatus(

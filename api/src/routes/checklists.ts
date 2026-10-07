@@ -1,7 +1,10 @@
 import { zValidator } from '@hono/zod-validator'
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
+import { taskChecklists } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { checklistItemErrorResponse } from '#routes/checklist-item-error'
 import {
   checklistItemToResponse,
@@ -18,6 +21,15 @@ import {
   updateTaskChecklist,
 } from '#services/task-checklists'
 
+async function getChecklistTaskId(checklistId: string): Promise<string | null> {
+  const [checklist] = await db
+    .select({ taskId: taskChecklists.taskId })
+    .from(taskChecklists)
+    .where(eq(taskChecklists.id, checklistId))
+
+  return checklist?.taskId ?? null
+}
+
 export const checklistsApp = new Hono()
   .post(
     '/:checklistId/items',
@@ -25,6 +37,7 @@ export const checklistsApp = new Hono()
     async (c) => {
       const checklistId = c.req.param('checklistId')
       const { github, ...input } = c.req.valid('json')
+      const taskId = await getChecklistTaskId(checklistId)
       const result =
         github == null
           ? await db.transaction((tx) =>
@@ -38,7 +51,10 @@ export const checklistsApp = new Hono()
             )
 
       return result.match(
-        (item) => c.json(checklistItemToResponse(item), 201),
+        (item) => {
+          if (taskId != null) setChangeEventTaskIds(c, [taskId])
+          return c.json(checklistItemToResponse(item), 201)
+        },
         (error) =>
           checklistItemErrorResponse(c, error, 'checklist-item.create'),
       )
@@ -54,6 +70,7 @@ export const checklistsApp = new Hono()
       )
 
       if (!updated) return c.json({ error: 'Checklist not found' }, 404)
+      setChangeEventTaskIds(c, [updated.taskId])
       return c.json(checklistToResponse(updated), 200)
     },
   )
@@ -62,6 +79,7 @@ export const checklistsApp = new Hono()
       deleteTaskChecklist(tx, c.req.param('checklistId')),
     )
 
-    if (!deleted) return c.json({ error: 'Checklist not found' }, 404)
+    if (deleted == null) return c.json({ error: 'Checklist not found' }, 404)
+    setChangeEventTaskIds(c, [deleted])
     return c.body(null, 204)
   })

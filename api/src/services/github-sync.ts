@@ -353,10 +353,15 @@ async function runSync(origin: string | null): Promise<void> {
   })
 
   for (const id of changedTaskIds) {
-    publishChangeEvent({ resource: 'task', id, origin })
+    publishChangeEvent({ resource: 'task', id, origin, taskIds: [id] })
   }
   for (const id of changedRuleIds) {
-    publishChangeEvent({ resource: 'github_sync_rule', id, origin })
+    publishChangeEvent({
+      resource: 'github_sync_rule',
+      id,
+      origin,
+      taskIds: [],
+    })
   }
 }
 
@@ -390,7 +395,7 @@ export async function syncDueGithubLinks(): Promise<void> {
   const changedTaskIds = new Set<string>()
   await syncLinks(links, now, (taskId) => changedTaskIds.add(taskId))
   for (const id of changedTaskIds) {
-    publishChangeEvent({ resource: 'task', id, origin: null })
+    publishChangeEvent({ resource: 'task', id, origin: null, taskIds: [id] })
   }
 }
 

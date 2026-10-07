@@ -1,12 +1,21 @@
 import { and, eq } from 'drizzle-orm'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import { taskAgentSessions } from '#db/schema'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+  vi.useRealTimers()
+})
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -61,6 +70,12 @@ function responseWithInheritedLink<T>(
       linkedAt: link.linkedAt.toISOString(),
     },
   }
+}
+
+function watchChangeEvents(): ChangeEvent[] {
+  const events: ChangeEvent[] = []
+  stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+  return events
 }
 
 describe('agent sessions API', () => {
@@ -547,6 +562,7 @@ describe('agent sessions API', () => {
     })
 
     it('prunes sessions inactive for more than 30 days on any later report', async () => {
+      const task = await createTask('Task with stale session')
       const stale = await upsertSessionAtTime(
         {
           provider: 'claude_code',
@@ -557,6 +573,8 @@ describe('agent sessions API', () => {
         },
         '2030-01-01T00:00:00.000Z',
       )
+      await postLink(task.id, stale.id)
+      const events = watchChangeEvents()
 
       // 41 days later, comfortably past the 30-day threshold.
       await upsertSessionAtTime(
@@ -576,7 +594,24 @@ describe('agent sessions API', () => {
       const freshRes = await app.request(
         '/api/agent-sessions/by-session/claude_code/fresh-session',
       )
-      expect(freshRes.status).toBe(200)
+      const snapshot = () => ({
+        staleStatus: staleRes.status,
+        freshStatus: freshRes.status,
+        events,
+      })
+
+      expect(snapshot()).toEqual({
+        staleStatus: 404,
+        freshStatus: 200,
+        events: [
+          {
+            resource: 'agent_session',
+            id: null,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
     })
   })
 
@@ -1103,6 +1138,147 @@ describe('agent sessions API', () => {
       ).toEqual({
         status: 404,
         body: { error: 'Agent session not found' },
+      })
+    })
+  })
+
+  describe('change event task IDs', () => {
+    it('includes inherited task links when a child session is created', async () => {
+      const task = await createTask('Linked task')
+      const parent = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'parent-session',
+        cwd: '/tmp/example',
+        label: null,
+        lastMessage: null,
+      })
+      await postLink(task.id, parent.id)
+      const events = watchChangeEvents()
+
+      await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'child-session',
+        parentSessionId: 'parent-session',
+        cwd: '/tmp/example',
+        label: null,
+        lastMessage: null,
+      })
+
+      expect(events).toEqual([
+        {
+          resource: 'agent_session',
+          id: null,
+          origin: null,
+          taskIds: [task.id],
+        },
+      ])
+    })
+
+    it('uses an empty task ID list for an unlinked session', async () => {
+      const events = watchChangeEvents()
+
+      await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'unlinked-session',
+        cwd: '/tmp/example',
+        label: null,
+        lastMessage: null,
+      })
+
+      expect(events).toEqual([
+        {
+          resource: 'agent_session',
+          id: null,
+          origin: null,
+          taskIds: [],
+        },
+      ])
+    })
+
+    it('includes every linked task when a session is updated', async () => {
+      const firstTask = await createTask('First linked task')
+      const secondTask = await createTask('Second linked task')
+      const session = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/tmp/example',
+        label: null,
+        lastMessage: null,
+      })
+      await postLink(firstTask.id, session.id)
+      await postLink(secondTask.id, session.id)
+      const events = watchChangeEvents()
+
+      await patchCustomLabel(session.id, 'renamed session')
+
+      expect(events).toEqual([
+        {
+          resource: 'agent_session',
+          id: session.id,
+          origin: null,
+          taskIds: [firstTask.id, secondTask.id].sort(),
+        },
+      ])
+    })
+
+    it('includes linked tasks before deleting the cascading session links', async () => {
+      const task = await createTask('Linked task')
+      const session = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/tmp/example',
+        label: null,
+        lastMessage: null,
+      })
+      await postLink(task.id, session.id)
+      const events = watchChangeEvents()
+
+      const response = await app.request(
+        '/api/agent-sessions/by-session/claude_code/session-1',
+        { method: 'DELETE' },
+      )
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'agent_session',
+            id: 'claude_code',
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
+    it('includes linked tasks when a session is archived', async () => {
+      const task = await createTask('Linked task')
+      const session = await upsertSessionAndGetBody({
+        provider: 'claude_code',
+        sessionId: 'session-1',
+        cwd: '/tmp/example',
+        label: null,
+        lastMessage: null,
+      })
+      await postLink(task.id, session.id)
+      const events = watchChangeEvents()
+
+      const response = await archiveSession('claude_code', 'session-1')
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'agent_session',
+            id: 'claude_code',
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
       })
     })
   })

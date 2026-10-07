@@ -1,9 +1,10 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, asc, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { labels } from '#db/schema'
+import { labels, taskLabels } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import {
   labelCountsQuerySchema,
   listLabelsQuerySchema,
@@ -96,6 +97,15 @@ export const labelsApp = new Hono()
       }
     }
 
+    const affectedTasks =
+      input.name !== undefined && input.name !== existing.name
+        ? await db
+            .select({ taskId: taskLabels.taskId })
+            .from(taskLabels)
+            .where(eq(taskLabels.labelId, id))
+            .orderBy(asc(taskLabels.taskId))
+        : []
+
     const [updated] = await db
       .update(labels)
       .set(input)
@@ -105,6 +115,11 @@ export const labelsApp = new Hono()
     if (!updated) {
       return c.json({ error: 'Label not found' }, 404)
     }
+
+    setChangeEventTaskIds(
+      c,
+      affectedTasks.map((task) => task.taskId),
+    )
 
     return c.json(labelToResponse(updated), 200)
   })
@@ -118,7 +133,18 @@ export const labelsApp = new Hono()
       return c.json({ error: 'Label not found' }, 404)
     }
 
+    const affectedTasks = await db
+      .select({ taskId: taskLabels.taskId })
+      .from(taskLabels)
+      .where(eq(taskLabels.labelId, id))
+      .orderBy(asc(taskLabels.taskId))
+
     await db.delete(labels).where(eq(labels.id, id))
+
+    setChangeEventTaskIds(
+      c,
+      affectedTasks.map((task) => task.taskId),
+    )
 
     return c.body(null, 204)
   })

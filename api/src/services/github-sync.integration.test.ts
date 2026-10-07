@@ -1216,7 +1216,12 @@ describe('syncAllGithubLinks', () => {
     expect(snapshot()).toEqual(
       [first.task.id, second.task.id]
         .toSorted((left, right) => left.localeCompare(right))
-        .map((id) => ({ resource: 'task', id, origin: 'screen-id' })),
+        .map((id) => ({
+          resource: 'task',
+          id,
+          origin: 'screen-id',
+          taskIds: [id],
+        })),
     )
   })
 
@@ -1290,7 +1295,7 @@ describe('syncDueGithubLinks', () => {
       synced: [true, false, true, false, false],
       events: [subjectDue.taskId, blockerDue.taskId]
         .toSorted((left, right) => left.localeCompare(right))
-        .map((id) => ({ resource: 'task', id, origin: null })),
+        .map((id) => ({ resource: 'task', id, origin: null, taskIds: [id] })),
     })
   })
 

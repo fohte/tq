@@ -143,6 +143,7 @@ describe('connectLiveQuerySync', () => {
         resource: 'task',
         id: 'task-one',
         origin: 'screen-two',
+        taskIds: ['task-one'],
       }),
     )
     await vi.advanceTimersByTimeAsync(1_000)

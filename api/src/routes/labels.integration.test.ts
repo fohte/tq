@@ -1,10 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { createLabel, createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+})
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -117,6 +125,67 @@ describe('labels API', () => {
   })
 
   describe('PATCH /api/labels/:id', () => {
+    it('emits task IDs when a label name changes', async () => {
+      const label = await createLabel('bug')
+      const firstTask = await createTask('First tagged task', {
+        labels: [label.name],
+      })
+      const secondTask = await createTask('Second tagged task', {
+        labels: [label.name],
+      })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'defect' }),
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'label',
+            id: label.id,
+            origin: null,
+            taskIds: [firstTask.id, secondTask.id].sort(),
+          },
+        ],
+      })
+    })
+
+    it('emits no task IDs when only label context changes', async () => {
+      const label = await createLabel('urgent')
+      await createTask('Tagged task', { labels: [label.name] })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: 'work' }),
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'label',
+            id: label.id,
+            origin: null,
+            taskIds: [],
+          },
+        ],
+      })
+    })
+
     it('renames a label', async () => {
       const label = await createLabel('bug')
 
@@ -241,6 +310,32 @@ describe('labels API', () => {
   })
 
   describe('DELETE /api/labels/:id', () => {
+    it('emits attached task IDs before deleting a label', async () => {
+      const label = await createLabel('bug')
+      const task = await createTask('Tagged task', { labels: [label.name] })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/labels/${label.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'label',
+            id: label.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('deletes a label', async () => {
       const label = await createLabel('bug')
 

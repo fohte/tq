@@ -178,6 +178,7 @@ describe('generateDueRecurringTasks', () => {
         resource: 'task',
         id: task.id,
         origin: null,
+        taskIds: [task.id],
       })),
     )
   })

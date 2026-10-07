@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 
 import { db } from '#db/connection'
 import { agentSessions, taskAgentSessions } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { agentSessionToResponse } from '#routes/agent-sessions'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { linkAgentSessionSchema } from '#schemas/task-agent-session'
@@ -60,6 +61,7 @@ export const taskAgentSessionsApp = new Hono<TaskEnv>()
       })
       .returning()
 
+    setChangeEventTaskIds(c, [taskId])
     return c.json(
       agentSessionToResponse(session),
       inserted.length > 0 ? 201 : 200,
@@ -83,5 +85,6 @@ export const taskAgentSessionsApp = new Hono<TaskEnv>()
       return c.json({ error: 'Link not found' }, 404)
     }
 
+    setChangeEventTaskIds(c, [taskId])
     return c.body(null, 204)
   })

@@ -9,6 +9,7 @@ import {
   taskRelations,
   tasks,
 } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
@@ -16,6 +17,7 @@ import {
   resolveCreateBlockedByInputs,
   resolveUpdateBlockedByInputs,
 } from '#routes/tasks/blocked-by'
+import { getTaskChangeEventIds } from '#routes/tasks/change-event-task-ids'
 import { tasksDeleteApp } from '#routes/tasks/delete'
 import { tasksListApp } from '#routes/tasks/list'
 import {
@@ -186,6 +188,15 @@ export const tasksCrudApp = new Hono()
     )
 
     const linkSync = await syncTaskLinks(task.id)
+    setChangeEventTaskIds(
+      c,
+      await getTaskChangeEventIds([
+        task.id,
+        ...(parentId == null ? [] : [parentId]),
+        ...blockedByTargetIds,
+        ...linkSync.outgoing.map(({ id }) => id),
+      ]),
+    )
 
     return c.json(
       {
@@ -211,6 +222,7 @@ export const tasksCrudApp = new Hono()
         remindAt: remindAtInput,
         ...taskFields
       } = c.req.valid('json')
+      const affectedTaskIdsBefore = await getTaskChangeEventIds([id])
 
       if (recurrenceRuleInput !== undefined && existing.templateId != null) {
         return c.json(
@@ -459,6 +471,11 @@ export const tasksCrudApp = new Hono()
 
       const linkSync =
         'description' in taskFields ? await syncTaskLinks(id) : undefined
+
+      const affectedTaskIdsAfter = await getTaskChangeEventIds([id])
+      setChangeEventTaskIds(c, [
+        ...new Set([...affectedTaskIdsBefore, ...affectedTaskIdsAfter]),
+      ])
 
       const [githubLinksByTaskId, labelsByTaskId] = await Promise.all([
         getGithubLinksByTaskId([id], { role: 'subject' }),
