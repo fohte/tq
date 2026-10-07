@@ -237,6 +237,22 @@ export const checklistOperations = [
         }),
       ),
   }),
+  defineOperation(itemRefSchema, {
+    path: ['checklist', 'item', 'promote'],
+    description:
+      'Promote a checklist item to a subtask, keeping its content and detail and moving any child items to the new task.',
+    positionalArgs: ['itemId'],
+    kind: 'write',
+    attribution: 'agent',
+    routes: ['POST /api/checklist-items/:itemId/promote'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { itemId }) =>
+      requestJson(
+        client.api['checklist-items'][':itemId'].promote.$post({
+          param: { itemId: encodePathSegment(itemId) },
+        }),
+      ),
+  }),
   defineOperation(moveChecklistItemInputSchema, {
     path: ['checklist', 'item', 'move'],
     description:

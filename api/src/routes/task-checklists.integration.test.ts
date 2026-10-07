@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskChecklistItems, taskGithubLinks } from '#db/schema'
+import { taskChecklistItems, taskGithubLinks, taskLinks } from '#db/schema'
 import {
   mockGithubIssueResponse,
   mockGithubPullResponse,
@@ -15,7 +15,7 @@ import {
   TEST_UUID,
   toListItemResponse,
 } from '#routes/tasks/testing'
-import { jsonBody, setupTestDb } from '#testing'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
@@ -159,6 +159,138 @@ async function setChecked(itemId: string, checked: boolean) {
     `/api/checklist-items/${itemId}/${checked ? 'check' : 'uncheck'}`,
     { method: 'POST' },
   )
+}
+
+async function setTaskStatus(taskId: string, status: 'todo' | 'completed') {
+  return app.request(`/api/tasks/${taskId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+}
+
+interface SummarizedItemTree {
+  content: string
+  note: string | null
+  checked: boolean
+  linkedToSubtask: boolean
+  sortOrder: number
+  children: SummarizedItemTree[]
+}
+
+function summarizeItemTree(item: ItemResponse): SummarizedItemTree {
+  return {
+    content: item.content,
+    note: item.note,
+    checked: item.checkedAt != null,
+    linkedToSubtask: item.subtaskId != null,
+    sortOrder: item.sortOrder,
+    children: (item.children ?? []).map(summarizeItemTree),
+  }
+}
+
+function summarizeTaskChecklists(
+  checklists: Awaited<ReturnType<typeof checklistList>>,
+) {
+  return checklists.body.map(({ name, items }) => ({
+    name,
+    items: items.map(summarizeItemTree),
+  }))
+}
+
+function summarizePromotionScenario(input: {
+  promotionStatus: number
+  promoted: NormalizedItem
+  subtask: TaskResponse
+  moved: Awaited<ReturnType<typeof checklistList>>
+  afterPromotion: Awaited<ReturnType<typeof checklistList>>
+}) {
+  return {
+    promotionStatus: input.promotionStatus,
+    promoted: input.promoted,
+    subtask: {
+      title: input.subtask.title,
+      description: input.subtask.description,
+      status: input.subtask.status,
+      parentId: input.subtask.parentId,
+      context: input.subtask.context,
+      labels: input.subtask.labels,
+    },
+    moved: summarizeTaskChecklists(input.moved),
+    afterPromotion: summarizeTaskChecklists(input.afterPromotion),
+  }
+}
+
+function summarizeCompleteScenario(input: {
+  promotionStatus: number
+  completionStatus: number
+  checklists: Awaited<ReturnType<typeof checklistList>>
+}) {
+  return {
+    promotionStatus: input.promotionStatus,
+    completionStatus: input.completionStatus,
+    checklists: summarizeTaskChecklists(input.checklists),
+  }
+}
+
+function summarizeRepeatedPromotionScenario(input: {
+  promotionStatus: number
+  repeatedPromotion: { status: number; body: unknown }
+}) {
+  return {
+    promotionStatus: input.promotionStatus,
+    repeatedPromotion: input.repeatedPromotion,
+  }
+}
+
+function summarizeStatusTransitionScenario(input: {
+  promotionStatus: number
+  completionStatus: number
+  afterComplete: ReturnType<typeof summarizeTaskChecklists>
+  reopeningStatus: number
+  afterReopen: ReturnType<typeof summarizeTaskChecklists>
+}) {
+  return {
+    promotionStatus: input.promotionStatus,
+    completionStatus: input.completionStatus,
+    afterComplete: input.afterComplete,
+    reopeningStatus: input.reopeningStatus,
+    afterReopen: input.afterReopen,
+  }
+}
+
+function summarizeMovedSubtaskScenario(input: {
+  promotionStatus: number
+  movedSubtaskParentId: string | null
+  movedChecklist: Awaited<ReturnType<typeof checklistList>>
+}) {
+  return {
+    promotionStatus: input.promotionStatus,
+    movedSubtaskParentId: input.movedSubtaskParentId,
+    movedChecklist: summarizeTaskChecklists(input.movedChecklist),
+  }
+}
+
+function summarizePromotedTaskMentions(input: {
+  promotionStatus: number
+  subtaskDescription: string | null
+  outgoingTaskIds: string[]
+}) {
+  return {
+    promotionStatus: input.promotionStatus,
+    subtaskDescription: input.subtaskDescription,
+    outgoingTaskIds: input.outgoingTaskIds,
+  }
+}
+
+function summarizeGithubPromotionRejection(input: {
+  linkStatus: number
+  promotion: { status: number; body: unknown }
+}) {
+  return {
+    linkStatus: input.linkStatus,
+    promotion: input.promotion,
+  }
 }
 
 async function summarizeJsonResponse(response: Response) {
@@ -1417,6 +1549,426 @@ describe('task checklists API', () => {
       itemSubtaskLinked: true,
       parentChecked: null,
       links: [],
+    })
+  })
+  it('promotes an item and moves its descendants', async () => {
+    const task = await createTask('Parent task', {
+      context: 'work',
+      labels: ['fixture-tag'],
+    })
+    const checklist = await createChecklist(task.id, { name: 'Milestones' })
+    const group = await addItem(checklist.id, 'Release')
+    const target = await addItem(checklist.id, 'Build feature', {
+      note: 'Detailed steps',
+      parentItemId: group.id,
+    })
+    const apiItem = await addItem(checklist.id, 'Write API', {
+      parentItemId: target.id,
+    })
+    const backend = await addItem(checklist.id, 'Backend', {
+      parentItemId: target.id,
+    })
+    const migration = await addItem(checklist.id, 'Write migration', {
+      parentItemId: backend.id,
+    })
+    await setChecked(apiItem.id, true)
+    await setChecked(migration.id, true)
+    const peer = await addItem(checklist.id, 'Review feature', {
+      parentItemId: group.id,
+    })
+    await setChecked(peer.id, true)
+
+    const promotion = await app.request(
+      `/api/checklist-items/${target.id}/promote`,
+      { method: 'POST' },
+    )
+    const promotedRaw = await jsonBody<ItemResponse>(promotion)
+    const subtaskId = promotedRaw.subtaskId
+    assertDefined(subtaskId)
+    const subtaskResponse = await app.request(`/api/tasks/${subtaskId}`)
+    const subtask = await jsonBody<TaskResponse>(subtaskResponse)
+    const moved = await checklistList(subtaskId)
+    const afterPromotion = await checklistList(task.id)
+
+    expect(
+      summarizePromotionScenario({
+        promotionStatus: promotion.status,
+        promoted: normalizeItem(promotedRaw),
+        subtask,
+        moved,
+        afterPromotion,
+      }),
+    ).toEqual({
+      promotionStatus: 200,
+      promoted: {
+        id: 'ITEM',
+        checklistId: 'CHECKLIST',
+        parentItemId: 'ITEM',
+        content: 'Build feature',
+        note: 'Detailed steps',
+        checkedAt: null,
+        sortOrder: 0,
+        githubLinkId: null,
+        subtaskId: 'SUBTASK',
+        createdAt: 'DATE',
+        updatedAt: 'DATE',
+        children: [],
+      },
+      subtask: {
+        title: 'Build feature',
+        description: 'Detailed steps',
+        status: 'todo',
+        parentId: task.id,
+        context: 'work',
+        labels: ['fixture-tag'],
+      },
+      moved: [
+        {
+          name: null,
+          items: [
+            {
+              content: 'Write API',
+              note: null,
+              checked: true,
+              linkedToSubtask: false,
+              sortOrder: 0,
+              children: [],
+            },
+            {
+              content: 'Backend',
+              note: null,
+              checked: true,
+              linkedToSubtask: false,
+              sortOrder: 1,
+              children: [
+                {
+                  content: 'Write migration',
+                  note: null,
+                  checked: true,
+                  linkedToSubtask: false,
+                  sortOrder: 0,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      afterPromotion: [
+        {
+          name: 'Milestones',
+          items: [
+            {
+              content: 'Release',
+              note: null,
+              checked: false,
+              linkedToSubtask: false,
+              sortOrder: 0,
+              children: [
+                {
+                  content: 'Build feature',
+                  note: 'Detailed steps',
+                  checked: false,
+                  linkedToSubtask: true,
+                  sortOrder: 0,
+                  children: [],
+                },
+                {
+                  content: 'Review feature',
+                  note: null,
+                  checked: true,
+                  linkedToSubtask: false,
+                  sortOrder: 1,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('rejects promoting an item that is already linked to a subtask', async () => {
+    const task = await createTask('Parent task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Finish work')
+    const promotion = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+    const repeatedPromotion = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+
+    expect(
+      summarizeRepeatedPromotionScenario({
+        promotionStatus: promotion.status,
+        repeatedPromotion: await summarizeJsonResponse(repeatedPromotion),
+      }),
+    ).toEqual({
+      promotionStatus: 200,
+      repeatedPromotion: {
+        status: 400,
+        body: { error: 'Checklist item is already linked to a task' },
+      },
+    })
+  })
+
+  it('checks and unchecks the linked item when subtask status changes', async () => {
+    const task = await createTask('Parent task')
+    const checklist = await createChecklist(task.id)
+    const parent = await addItem(checklist.id, 'Release')
+    const item = await addItem(checklist.id, 'Finish work', {
+      parentItemId: parent.id,
+    })
+    const promotion = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+    const promoted = await jsonBody<ItemResponse>(promotion)
+    const subtaskId = promoted.subtaskId
+    assertDefined(subtaskId)
+
+    const completed = await setTaskStatus(subtaskId, 'completed')
+    const afterComplete = summarizeTaskChecklists(await checklistList(task.id))
+    const reopened = await setTaskStatus(subtaskId, 'todo')
+    const afterReopen = summarizeTaskChecklists(await checklistList(task.id))
+
+    expect(
+      summarizeStatusTransitionScenario({
+        promotionStatus: promotion.status,
+        completionStatus: completed.status,
+        afterComplete,
+        reopeningStatus: reopened.status,
+        afterReopen,
+      }),
+    ).toEqual({
+      promotionStatus: 200,
+      completionStatus: 200,
+      afterComplete: [
+        {
+          name: null,
+          items: [
+            {
+              content: 'Release',
+              note: null,
+              checked: true,
+              linkedToSubtask: false,
+              sortOrder: 0,
+              children: [
+                {
+                  content: 'Finish work',
+                  note: null,
+                  checked: true,
+                  linkedToSubtask: true,
+                  sortOrder: 0,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      reopeningStatus: 200,
+      afterReopen: [
+        {
+          name: null,
+          items: [
+            {
+              content: 'Release',
+              note: null,
+              checked: false,
+              linkedToSubtask: false,
+              sortOrder: 0,
+              children: [
+                {
+                  content: 'Finish work',
+                  note: null,
+                  checked: false,
+                  linkedToSubtask: true,
+                  sortOrder: 0,
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('reparents subtasks linked to moved checklist descendants', async () => {
+    const task = await createTask('Parent task')
+    const existingSubtask = await createTask('Nested task', {
+      parentId: task.id,
+    })
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Promote this work')
+    const descendant = await addItem(checklist.id, 'Nested task', {
+      parentItemId: item.id,
+    })
+    await db
+      .update(taskChecklistItems)
+      .set({ subtaskId: existingSubtask.id })
+      .where(eq(taskChecklistItems.id, descendant.id))
+
+    const promotion = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+    const promoted = await jsonBody<ItemResponse>(promotion)
+    const subtaskId = promoted.subtaskId
+    assertDefined(subtaskId)
+    const existingSubtaskResponse = await app.request(
+      `/api/tasks/${existingSubtask.id}`,
+    )
+    const movedSubtask = await jsonBody<TaskResponse>(existingSubtaskResponse)
+
+    expect(
+      summarizeMovedSubtaskScenario({
+        promotionStatus: promotion.status,
+        movedSubtaskParentId: movedSubtask.parentId,
+        movedChecklist: await checklistList(subtaskId),
+      }),
+    ).toEqual({
+      promotionStatus: 200,
+      movedSubtaskParentId: subtaskId,
+      movedChecklist: [
+        {
+          name: null,
+          items: [
+            {
+              content: 'Nested task',
+              note: null,
+              checked: false,
+              linkedToSubtask: true,
+              sortOrder: 0,
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('syncs task mentions from the promoted item note', async () => {
+    const task = await createTask('Parent task')
+    const targetTask = await createTask('Mentioned task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Research', {
+      note: `See #${String(targetTask.number)}`,
+    })
+
+    const promotion = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+    const promoted = await jsonBody<ItemResponse>(promotion)
+    const subtaskId = promoted.subtaskId
+    assertDefined(subtaskId)
+    const subtaskResponse = await app.request(`/api/tasks/${subtaskId}`)
+    const subtask = await jsonBody<TaskResponse>(subtaskResponse)
+    const links = await db
+      .select({ targetTaskId: taskLinks.targetTaskId })
+      .from(taskLinks)
+      .where(eq(taskLinks.sourceTaskId, subtaskId))
+
+    expect(
+      summarizePromotedTaskMentions({
+        promotionStatus: promotion.status,
+        subtaskDescription: subtask.description,
+        outgoingTaskIds: links.map(({ targetTaskId }) => targetTaskId),
+      }),
+    ).toEqual({
+      promotionStatus: 200,
+      subtaskDescription: `See #${String(targetTask.number)}`,
+      outgoingTaskIds: [targetTask.id],
+    })
+  })
+
+  it('checks the linked item when its subtask is completed through the complete route', async () => {
+    const task = await createTask('Parent task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Finish work')
+    const promotion = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+    const promoted = await jsonBody<ItemResponse>(promotion)
+    const subtaskId = promoted.subtaskId
+    assertDefined(subtaskId)
+
+    const completed = await app.request(`/api/tasks/${subtaskId}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const list = await checklistList(task.id)
+
+    expect(
+      summarizeCompleteScenario({
+        promotionStatus: promotion.status,
+        completionStatus: completed.status,
+        checklists: list,
+      }),
+    ).toEqual({
+      promotionStatus: 200,
+      completionStatus: 200,
+      checklists: [
+        {
+          name: null,
+          items: [
+            {
+              content: 'Finish work',
+              note: null,
+              checked: true,
+              linkedToSubtask: true,
+              sortOrder: 0,
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('rejects promoting an item linked to a pull request', async () => {
+    const task = await createTask('Parent task')
+    const checklist = await createChecklist(task.id)
+    const item = await addItem(checklist.id, 'Wait for review')
+    const githubUrl = 'https://github.com/example-owner/example-repo/pull/1'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({
+      html_url: githubUrl,
+      pull_request: {},
+      state: 'open',
+    })
+    const link = await app.request(`/api/checklist-items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ github: githubUrl }),
+    })
+
+    const response = await app.request(
+      `/api/checklist-items/${item.id}/promote`,
+      { method: 'POST' },
+    )
+
+    expect(
+      summarizeGithubPromotionRejection({
+        linkStatus: link.status,
+        promotion: await summarizeJsonResponse(response),
+      }),
+    ).toEqual({
+      linkStatus: 200,
+      promotion: {
+        status: 400,
+        body: {
+          error: 'Checklist items linked to GitHub cannot be promoted',
+        },
+      },
     })
   })
 })
