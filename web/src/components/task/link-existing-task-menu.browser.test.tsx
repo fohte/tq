@@ -159,4 +159,27 @@ describe('LinkExistingTaskMenu', () => {
 
     expect(screen.getByText('no results for "Deploy"')).toBeInTheDocument()
   })
+
+  it('loads descendants only while the menu is open', () => {
+    mockSearchResults([])
+    mockUseTaskList.mockClear()
+    const props = {
+      onOpenChange: vi.fn(),
+      parentId,
+      parentNumber,
+    }
+    const { rerender } = render(<LinkExistingTaskMenu {...props} open />)
+
+    rerender(<LinkExistingTaskMenu {...props} open={false} />)
+
+    expect(
+      mockUseTaskList.mock.calls.map(([filter, options]) => ({
+        filter,
+        enabled: options?.enabled,
+      })),
+    ).toEqual([
+      { filter: { descendantOf: parentId }, enabled: true },
+      { filter: { descendantOf: parentId }, enabled: false },
+    ])
+  })
 })

@@ -31,6 +31,7 @@ export interface TaskListFilter {
   commitment?: TaskCommitment
   parentId?: string
   templateId?: string
+  descendantOf?: string
   label?: string
   projectId?: string
   sortBy?: TaskSortBy

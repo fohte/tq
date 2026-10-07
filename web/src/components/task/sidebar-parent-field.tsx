@@ -7,23 +7,30 @@ import { getDescendantIds } from '#lib/task-tree'
 
 export function SidebarParentField({
   taskId,
-  parentId,
+  parentNumber,
+  parentTitle,
 }: {
   taskId: string
-  parentId: string | null
+  parentNumber: number | null
+  parentTitle: string | null
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [query, setQuery] = useState('')
 
-  const { categorized } = useTaskList()
+  const { categorized } = useTaskList(
+    { descendantOf: taskId },
+    { enabled: isEditing },
+  )
   const updateParent = useUpdateTaskParent()
 
-  const allTasks = categorized.all
   const invalidParentIds = new Set([
     taskId,
-    ...getDescendantIds(allTasks, taskId),
+    ...getDescendantIds(categorized.all, taskId),
   ])
-  const currentParent = allTasks.find((t) => t.id === parentId) ?? null
+  const currentParent =
+    parentNumber != null && parentTitle != null
+      ? { number: parentNumber, title: parentTitle }
+      : null
 
   const { data: searchResults, isFetching } = useSearchTasks(query)
   const candidates = (searchResults ?? []).filter(
@@ -37,11 +44,7 @@ export function SidebarParentField({
 
   return (
     <SidebarParentFieldAppearance
-      currentParent={
-        currentParent != null
-          ? { number: currentParent.number, title: currentParent.title }
-          : null
-      }
+      currentParent={currentParent}
       isEditing={isEditing}
       onOpenChange={(open) => {
         if (open) {

@@ -57,6 +57,7 @@ export function makeTaskDetail(
     remindAt: null,
     parentId: null,
     parentNumber: null,
+    parentTitle: null,
     projectId: null,
     recurrenceRuleId: null,
     recurrenceRule: null,

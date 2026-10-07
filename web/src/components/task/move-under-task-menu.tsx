@@ -16,7 +16,10 @@ export function MoveUnderTaskMenu({
   taskId: string
   taskNumber: number
 }) {
-  const { categorized } = useTaskList(undefined, { enabled: open })
+  const { categorized } = useTaskList(
+    { descendantOf: taskId },
+    { enabled: open },
+  )
   const updateTaskParent = useUpdateTaskParent()
 
   // A task can't become its own ancestor, so both itself and every current

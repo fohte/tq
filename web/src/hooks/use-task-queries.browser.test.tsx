@@ -174,12 +174,18 @@ describe('useInfiniteTaskList', () => {
 })
 
 describe('useTaskList', () => {
-  it('serializes the due-date filter as an HTTP query string', async () => {
+  it('serializes task-list filters as an HTTP query string', async () => {
     const mockGet = await getMockGet()
     mockGet.mockResolvedValue(jsonResponse([]))
 
     const { result } = renderHook(
-      () => useTaskList({ status: 'todo', hasDue: true, sortBy: 'due' }),
+      () =>
+        useTaskList({
+          status: 'todo',
+          hasDue: true,
+          sortBy: 'due',
+          descendantOf: 'ancestor-id',
+        }),
       { wrapper },
     )
 
@@ -190,7 +196,12 @@ describe('useTaskList', () => {
     expect(mockGet.mock.calls).toEqual([
       [
         {
-          query: { status: 'todo', hasDue: 'true', sortBy: 'due' },
+          query: {
+            status: 'todo',
+            hasDue: 'true',
+            sortBy: 'due',
+            descendantOf: 'ancestor-id',
+          },
         },
       ],
     ])

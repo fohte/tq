@@ -86,7 +86,11 @@ export function TaskSidebar({
         templateId={task.templateId}
       />
       <SidebarRemindField taskId={task.id} remindAt={task.remindAt} />
-      <SidebarParentField taskId={task.id} parentId={task.parentId} />
+      <SidebarParentField
+        taskId={task.id}
+        parentNumber={task.parentNumber}
+        parentTitle={task.parentTitle}
+      />
       <SidebarContextField taskId={task.id} context={task.context} />
       <SidebarCommitmentField taskId={task.id} commitment={task.commitment} />
       <SidebarProjectField taskId={task.id} projectId={task.projectId} />
@@ -177,7 +181,11 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
           <SidebarRemindField taskId={task.id} remindAt={task.remindAt} />
         </MobileFieldCell>
         <MobileFieldCell>
-          <SidebarParentField taskId={task.id} parentId={task.parentId} />
+          <SidebarParentField
+            taskId={task.id}
+            parentNumber={task.parentNumber}
+            parentTitle={task.parentTitle}
+          />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarContextField taskId={task.id} context={task.context} />

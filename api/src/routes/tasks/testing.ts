@@ -100,6 +100,7 @@ export interface TaskResponse {
   // Only present on the single-task detail response (`GET /:id`), not on any
   // create/update mutation response.
   parentNumber?: number | null
+  parentTitle?: string | null
   duplicateOfNumber?: number | null
   // Same shape as one entry of `links.outgoing`.
   duplicateOfTask?: TaskListItemResponse | null
@@ -394,6 +395,7 @@ const taskResponseSchema = z.object({
     .optional(),
   linkSync: linkSyncResponseSchema.optional(),
   parentNumber: z.number().nullable().optional(),
+  parentTitle: z.string().nullable().optional(),
   duplicateOfNumber: z.number().nullable().optional(),
   duplicateOfTask: taskListItemResponseSchema.nullable().optional(),
   blockedBy: z.array(taskListItemResponseSchema).optional(),

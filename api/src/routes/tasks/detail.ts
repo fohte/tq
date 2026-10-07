@@ -56,7 +56,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     task.parentId != null
       ? db.query.tasks.findFirst({
           where: eq(tasks.id, task.parentId),
-          columns: { number: true },
+          columns: { number: true, title: true },
         })
       : Promise.resolve(null),
     db
@@ -102,6 +102,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       titleAuthor: taskFieldAuthors.title,
       descriptionAuthor: taskFieldAuthors.description,
       parentNumber: parentTask?.number ?? null,
+      parentTitle: parentTask?.title ?? null,
       childCompletionCount: {
         total: childStats[0]?.total ?? 0,
         completed: childStats[0]?.completed ?? 0,

@@ -140,6 +140,29 @@ describe('MoveUnderTaskMenu', () => {
     expect(screen.getByText('no results for "Deploy"')).toBeInTheDocument()
   })
 
+  it('loads descendants only while the dialog is open', () => {
+    mockSearchResults([])
+    mockUseTaskList.mockClear()
+    const props = {
+      onOpenChange: vi.fn(),
+      taskId,
+      taskNumber,
+    }
+    const { rerender } = render(<MoveUnderTaskMenu {...props} open />)
+
+    rerender(<MoveUnderTaskMenu {...props} open={false} />)
+
+    expect(
+      mockUseTaskList.mock.calls.map(([filter, options]) => ({
+        filter,
+        enabled: options?.enabled,
+      })),
+    ).toEqual([
+      { filter: { descendantOf: taskId }, enabled: true },
+      { filter: { descendantOf: taskId }, enabled: false },
+    ])
+  })
+
   it('excludes the task itself and its descendants from the candidate list', async () => {
     const descendant = makeTask({
       id: '00000000-0000-0000-0000-000000000021',
@@ -165,7 +188,15 @@ describe('MoveUnderTaskMenu', () => {
 
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
 
-    expect(screen.getByText('Deploy to production')).toBeInTheDocument()
-    expect(screen.queryByText('Deploy staging')).not.toBeInTheDocument()
+    expect(screen.getByText('Deploy to production').textContent).toBe(
+      'Deploy to production',
+    )
+    expect(screen.queryByText('Deploy staging')).toBeNull()
+    expect(
+      mockUseTaskList.mock.calls.map(([filter, options]) => ({
+        filter,
+        enabled: options?.enabled,
+      })),
+    ).toEqual([{ filter: { descendantOf: taskId }, enabled: true }])
   })
 })

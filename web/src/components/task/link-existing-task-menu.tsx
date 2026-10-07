@@ -27,7 +27,10 @@ export function LinkExistingTaskMenu({
     }
   }, [open])
 
-  const { categorized } = useTaskList(undefined, { enabled: open })
+  const { categorized } = useTaskList(
+    { descendantOf: parentId },
+    { enabled: open },
+  )
   const updateTaskParent = useUpdateTaskParent()
 
   const excludedTaskIds = useMemo(
