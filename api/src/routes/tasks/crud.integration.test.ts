@@ -1618,6 +1618,80 @@ describe('tasks CRUD API', () => {
       )
     })
 
+    it('matches task date ranges that reach dateFrom', async () => {
+      const rangeReachesBoundary = await createTask(
+        'Range reaches lower bound',
+        {
+          startDate: '2026-03-10',
+          dueDate: '2026-03-16',
+        },
+      )
+      const rangeAfterBoundary = await createTask('Range after lower bound', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      const startDateAfterBoundary = await createTask(
+        'Start after lower bound',
+        { startDate: '2026-03-16' },
+      )
+      await createTask('Range before lower bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-15',
+      })
+      await createTask('Due before lower bound', {
+        dueDate: '2026-03-15',
+      })
+
+      const res = await app.request('/api/tasks?dateFrom=2026-03-16')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeReachesBoundary.id,
+          rangeAfterBoundary.id,
+          startDateAfterBoundary.id,
+        ].toSorted(),
+      )
+    })
+
+    it('matches task date ranges that begin by dateTo', async () => {
+      const rangeSpansBoundary = await createTask('Range spans upper bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-25',
+      })
+      const rangeBeforeBoundary = await createTask('Range before upper bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-19',
+      })
+      const startDateAtBoundary = await createTask('Start at upper bound', {
+        startDate: '2026-03-19',
+      })
+      await createTask('Range after upper bound', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      await createTask('Start after upper bound', {
+        startDate: '2026-03-20',
+      })
+
+      const res = await app.request('/api/tasks?dateTo=2026-03-19')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeSpansBoundary.id,
+          rangeBeforeBoundary.id,
+          startDateAtBoundary.id,
+        ].toSorted(),
+      )
+    })
+
     it('includes tasks due on or before dueTo', async () => {
       const beforeBoundary = await createTask('Due before boundary', {
         dueDate: '2026-03-17',
@@ -1646,6 +1720,9 @@ describe('tasks CRUD API', () => {
       })
       const activeCandidate = await createTask('Active candidate', {
         commitment: 'active',
+      })
+      const dueOnCandidateDate = await createTask('Due on candidate date', {
+        dueDate: '2026-03-18',
       })
       const completedCandidate = await createTask('Completed candidate', {
         dueDate: '2026-03-16',
@@ -1736,6 +1813,7 @@ describe('tasks CRUD API', () => {
         dueCandidate.id,
         startCandidate.id,
         activeCandidate.id,
+        dueOnCandidateDate.id,
         completedCandidate.id,
         otherWeekQueued.id,
       ]
@@ -1744,6 +1822,7 @@ describe('tasks CRUD API', () => {
         dueCandidate.id,
         startCandidate.id,
         activeCandidate.id,
+        dueOnCandidateDate.id,
         otherWeekQueued.id,
       ]
         .toSorted()

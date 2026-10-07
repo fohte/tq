@@ -15,6 +15,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import type { ListTasksQuery } from '#schemas/task'
+import { resolvePeriodStart } from '#services/task-queues'
 
 type TaskDateFilters = Pick<
   ListTasksQuery,
@@ -33,7 +34,13 @@ function dateIsInRange(
   )
 }
 
-function taskIsQueuedOn(date: string) {
+function taskIsNotQueuedOn(date: string) {
+  const periodMatch = (unit: 'day' | 'week' | 'month') =>
+    and(
+      eq(taskQueues.periodUnit, unit),
+      eq(taskQueueItems.periodStart, resolvePeriodStart(unit, date) ?? date),
+    )
+
   return notExists(
     db
       .select({ _: sql`1` })
@@ -43,24 +50,9 @@ function taskIsQueuedOn(date: string) {
         and(
           eq(taskQueueItems.taskId, tasks.id),
           or(
-            and(
-              eq(taskQueues.periodUnit, 'day'),
-              eq(taskQueueItems.periodStart, date),
-            ),
-            and(
-              eq(taskQueues.periodUnit, 'week'),
-              eq(
-                taskQueueItems.periodStart,
-                sql`date_trunc('week', ${date}::date)::date`,
-              ),
-            ),
-            and(
-              eq(taskQueues.periodUnit, 'month'),
-              eq(
-                taskQueueItems.periodStart,
-                sql`date_trunc('month', ${date}::date)::date`,
-              ),
-            ),
+            periodMatch('day'),
+            periodMatch('week'),
+            periodMatch('month'),
             and(
               isNull(taskQueues.periodUnit),
               isNull(taskQueueItems.periodStart),
@@ -100,7 +92,7 @@ export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
         lte(tasks.startDate, query.candidatesOn),
         eq(tasks.commitment, 'active'),
       ),
-      taskIsQueuedOn(query.candidatesOn),
+      taskIsNotQueuedOn(query.candidatesOn),
     )
     if (candidateCondition != null) conditions.push(candidateCondition)
   }
