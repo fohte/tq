@@ -226,7 +226,7 @@ describe('change events', () => {
     })
   })
 
-  it('does not emit generic events for client-triggered GitHub sync', async () => {
+  it('does not emit generic events for manual GitHub sync', async () => {
     expect(await request('/api/github/sync', { method: 'POST' })).toEqual({
       status: 204,
       body: null,
