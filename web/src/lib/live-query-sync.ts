@@ -91,7 +91,6 @@ const resourceQueryFilters: Record<
   ],
   checklist: () => [{ queryKey: taskKeys.all }],
   checklist_item: () => [{ queryKey: taskKeys.all }],
-  scheduling_setting: () => [{ queryKey: ['scheduling-settings'] }],
   memo: ({ id }) => [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
   push: () => [],
   calendar: () => [
