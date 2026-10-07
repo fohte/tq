@@ -27,3 +27,10 @@ export const listAgentSessionsQuerySchema = z.object({
     .transform((v) => (Array.isArray(v) ? v : [v]))
     .optional(),
 })
+
+export const listAgentSessionsByTaskQuerySchema = z.object({
+  sessionId: z
+    .union([z.string(), z.array(z.string())])
+    .transform((v) => (Array.isArray(v) ? v : [v]))
+    .optional(),
+})

@@ -25,8 +25,21 @@ export function makeAgentSession(
 export function makeTaskAgentSession(
   overrides: Partial<TaskAgentSession> = {},
 ): TaskAgentSession {
+  const session = makeAgentSession()
+
   return {
-    ...makeAgentSession(),
+    id: session.id,
+    provider: session.provider,
+    sessionId: session.sessionId,
+    parentSessionId: session.parentSessionId,
+    context: session.context,
+    cwd: session.cwd,
+    label: session.label,
+    customLabel: session.customLabel,
+    startedAt: session.startedAt,
+    lastActiveAt: session.lastActiveAt,
+    endedAt: session.endedAt,
+    archivedAt: session.archivedAt,
     taskId: 'task-1',
     taskNumber: 1,
     taskTitle: 'Task title',
@@ -43,7 +56,6 @@ export const activeAgentSession: TaskAgentSession = makeTaskAgentSession({
   id: '1',
   taskTitle: 'Sample task',
   label: 'Implement session indicator',
-  lastMessage: 'Wiring up the hover card',
   startedAt: new Date(Date.now() - 34 * 60_000).toISOString(),
   lastActiveAt: new Date(Date.now() - 2 * 60_000).toISOString(),
 })

@@ -11,6 +11,7 @@ import { setChangeEventTaskIds } from '#lib/change-events'
 import type { AgentProvider } from '#schemas/agent-session'
 import {
   agentProviderSchema,
+  listAgentSessionsByTaskQuerySchema,
   listAgentSessionsQuerySchema,
   updateAgentSessionSchema,
   upsertAgentSessionSchema,
@@ -226,38 +227,71 @@ export const agentSessionsApp = new Hono()
 
     return c.json(result.map(agentSessionToResponse), 200)
   })
-  .get('/by-task', async (c) => {
-    const rows = await db
-      .select({
-        taskId: taskAgentSessions.taskId,
-        taskNumber: tasks.number,
-        taskTitle: tasks.title,
-        taskParentId: tasks.parentId,
-        taskStatus: tasks.status,
-        linkedAt: taskAgentSessions.linkedAt,
-        session: agentSessions,
-      })
-      .from(taskAgentSessions)
-      .innerJoin(
-        agentSessions,
-        eq(taskAgentSessions.agentSessionId, agentSessions.id),
-      )
-      .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
-      .orderBy(desc(agentSessions.lastActiveAt))
+  .get(
+    '/by-task',
+    zValidator('query', listAgentSessionsByTaskQuerySchema.optional()),
+    async (c) => {
+      const sessionId = c.req.valid('query')?.sessionId
 
-    return c.json(
-      rows.map((row) => ({
-        taskId: row.taskId,
-        taskNumber: row.taskNumber,
-        taskTitle: row.taskTitle,
-        taskParentId: row.taskParentId,
-        taskStatus: row.taskStatus,
-        linkedAt: row.linkedAt.toISOString(),
-        ...agentSessionToResponse(row.session),
-      })),
-      200,
-    )
-  })
+      const rows = await db
+        .select({
+          taskId: taskAgentSessions.taskId,
+          taskNumber: tasks.number,
+          taskTitle: tasks.title,
+          taskParentId: tasks.parentId,
+          taskStatus: tasks.status,
+          linkedAt: taskAgentSessions.linkedAt,
+          session: {
+            id: agentSessions.id,
+            provider: agentSessions.provider,
+            sessionId: agentSessions.sessionId,
+            parentSessionId: agentSessions.parentSessionId,
+            context: agentSessions.context,
+            cwd: agentSessions.cwd,
+            label: agentSessions.label,
+            customLabel: agentSessions.customLabel,
+            startedAt: agentSessions.startedAt,
+            lastActiveAt: agentSessions.lastActiveAt,
+            endedAt: agentSessions.endedAt,
+            archivedAt: agentSessions.archivedAt,
+          },
+        })
+        .from(taskAgentSessions)
+        .innerJoin(
+          agentSessions,
+          eq(taskAgentSessions.agentSessionId, agentSessions.id),
+        )
+        .innerJoin(tasks, eq(taskAgentSessions.taskId, tasks.id))
+        .where(
+          sessionId ? inArray(agentSessions.sessionId, sessionId) : undefined,
+        )
+        .orderBy(desc(agentSessions.lastActiveAt))
+
+      return c.json(
+        rows.map((row) => ({
+          taskId: row.taskId,
+          taskNumber: row.taskNumber,
+          taskTitle: row.taskTitle,
+          taskParentId: row.taskParentId,
+          taskStatus: row.taskStatus,
+          linkedAt: row.linkedAt.toISOString(),
+          id: row.session.id,
+          provider: row.session.provider,
+          sessionId: row.session.sessionId,
+          parentSessionId: row.session.parentSessionId,
+          context: row.session.context,
+          cwd: row.session.cwd,
+          label: row.session.label,
+          customLabel: row.session.customLabel,
+          startedAt: row.session.startedAt.toISOString(),
+          lastActiveAt: row.session.lastActiveAt.toISOString(),
+          endedAt: row.session.endedAt?.toISOString() ?? null,
+          archivedAt: row.session.archivedAt?.toISOString() ?? null,
+        })),
+        200,
+      )
+    },
+  )
   .get('/:id', async (c) => {
     const id = c.req.param('id')
 
