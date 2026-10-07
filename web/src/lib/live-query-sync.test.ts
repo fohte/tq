@@ -1,7 +1,12 @@
-import { QueryClient } from '@tanstack/react-query'
+import {
+  QueryClient,
+  type QueryFunctionContext,
+  QueryObserver,
+} from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { connectLiveQuerySync } from '#lib/live-query-sync'
+import { githubSyncKeys } from '#lib/query-keys'
 
 interface EventStream {
   readyState: number
@@ -57,14 +62,18 @@ function createConnection(
   options: {
     origin?: string
     checkSession?: () => Promise<unknown>
+    queryClient?: QueryClient
   } = {},
 ) {
-  const queryClient = new QueryClient()
+  const queryClient = options.queryClient ?? new QueryClient()
   const eventStream = new TestEventStream()
   const eventStreams = [eventStream]
+  const invalidateQueries = queryClient.invalidateQueries.bind(queryClient)
   const invalidations = vi
     .spyOn(queryClient, 'invalidateQueries')
-    .mockResolvedValue(undefined)
+    .mockImplementation((filters, invalidationOptions) =>
+      invalidateQueries(filters, invalidationOptions),
+    )
   const urls: string[] = []
   const disconnect = connectLiveQuerySync(queryClient, {
     origin: options.origin ?? 'screen-one',
@@ -91,6 +100,23 @@ function createConnection(
   }
 }
 
+function observeQuery(
+  queryClient: QueryClient,
+  queryKey: readonly unknown[],
+  fetchQuery: (context: QueryFunctionContext) => Promise<string> = () =>
+    Promise.resolve('fresh'),
+) {
+  const queryFn = vi.fn(fetchQuery)
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    queryFn,
+    initialData: 'cached',
+    staleTime: Infinity,
+  })
+  const unsubscribe = observer.subscribe(() => undefined)
+  return { observer, queryFn, unsubscribe }
+}
+
 afterEach(() => {
   for (const disconnect of disconnectors) disconnect()
   for (const queryClient of clients) queryClient.clear()
@@ -101,7 +127,8 @@ afterEach(() => {
 })
 
 describe('connectLiveQuerySync', () => {
-  it('connects to the event stream and ignores changes from this screen', () => {
+  it('connects to the event stream and ignores changes from this screen', async () => {
+    vi.useFakeTimers()
     const { eventStream, invalidations, urls } = createConnection()
 
     eventStream.sendChange(
@@ -118,6 +145,7 @@ describe('connectLiveQuerySync', () => {
         origin: 'screen-two',
       }),
     )
+    await vi.advanceTimersByTimeAsync(1_000)
 
     const snapshot = () => ({
       urls,
@@ -133,16 +161,134 @@ describe('connectLiveQuerySync', () => {
     })
   })
 
-  it('invalidates all queries for an unrecognized resource', () => {
-    const { eventStream, invalidations } = createConnection()
+  it('coalesces changes received within one second', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const taskQuery = observeQuery(queryClient, ['tasks'])
+    const timeBlockQuery = observeQuery(queryClient, ['time-blocks'])
+    const { eventStream, invalidations } = createConnection({ queryClient })
+
+    for (let index = 0; index < 36; index += 1) {
+      eventStream.sendChange(
+        JSON.stringify({
+          resource: index % 2 === 0 ? 'task' : 'time_block',
+          id: `task-${String(index)}`,
+          origin: 'screen-two',
+        }),
+      )
+      if (index < 35) await vi.advanceTimersByTimeAsync(25)
+    }
+    await vi.advanceTimersByTimeAsync(124)
+    const invalidationsBeforeWindowEnd = invalidations.mock.calls.map(
+      ([filters]) => filters?.queryKey,
+    )
+    await vi.advanceTimersByTimeAsync(1)
+    taskQuery.unsubscribe()
+    timeBlockQuery.unsubscribe()
+
+    const snapshot = () => ({
+      invalidationsBeforeWindowEnd,
+      invalidationKeysAtWindowEnd: invalidations.mock.calls.map(
+        ([filters]) => filters?.queryKey,
+      ),
+      taskFetchCount: taskQuery.queryFn.mock.calls.length,
+      timeBlockFetchCount: timeBlockQuery.queryFn.mock.calls.length,
+    })
+    expect(snapshot()).toEqual({
+      invalidationsBeforeWindowEnd: [],
+      invalidationKeysAtWindowEnd: [
+        ['tasks'],
+        ['projects'],
+        ['queues'],
+        ['time-blocks'],
+      ],
+      taskFetchCount: 1,
+      timeBlockFetchCount: 1,
+    })
+  })
+
+  it('refreshes after an in-flight query settles without aborting it', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const requestSignals: AbortSignal[] = []
+    let finishRequest: (value: string) => void = () => {}
+    const { observer, queryFn, unsubscribe } = observeQuery(
+      queryClient,
+      ['tasks'],
+      ({ signal }) => {
+        requestSignals.push(signal)
+        if (requestSignals.length > 1) return Promise.resolve('fresh')
+        return new Promise<string>((resolve) => {
+          finishRequest = resolve
+        })
+      },
+    )
+    const pendingFetch = observer.refetch()
+    const { eventStream } = createConnection({ queryClient })
+
+    eventStream.sendChange(
+      JSON.stringify({ resource: 'task', id: 'task-one', origin: null }),
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    const requestStateWhileFetching = {
+      requestCount: queryFn.mock.calls.length,
+      aborted: requestSignals.map(({ aborted }) => aborted),
+    }
+    finishRequest('fresh')
+    await pendingFetch
+    await vi.advanceTimersByTimeAsync(0)
+    unsubscribe()
+
+    const snapshot = () => ({
+      requestStateWhileFetching,
+      requestStateAfterFirstFetch: {
+        requestCount: queryFn.mock.calls.length,
+        aborted: requestSignals.map(({ aborted }) => aborted),
+      },
+    })
+    expect(snapshot()).toEqual({
+      requestStateWhileFetching: { requestCount: 1, aborted: [false] },
+      requestStateAfterFirstFetch: {
+        requestCount: 2,
+        aborted: [false, false],
+      },
+    })
+  })
+
+  it('skips GitHub sync queries during unknown-event and reconnect refreshes', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const queries = [
+      observeQuery(queryClient, ['tasks']),
+      observeQuery(queryClient, githubSyncKeys.all),
+      observeQuery(queryClient, githubSyncKeys.task('task-one')),
+    ]
+    const { eventStream } = createConnection({ queryClient })
 
     eventStream.sendChange(
       JSON.stringify({ resource: 'unknown_resource', id: null, origin: null }),
     )
+    await vi.advanceTimersByTimeAsync(1_000)
+    const queryCountsAfterUnknownEvent = queries.map(
+      ({ queryFn }) => queryFn.mock.calls.length,
+    )
 
-    expect(invalidations.mock.calls.map(([filters]) => filters)).toEqual([
-      undefined,
-    ])
+    eventStream.open()
+    eventStream.open()
+    await vi.advanceTimersByTimeAsync(1_000)
+    const queryCountsAfterReconnect = queries.map(
+      ({ queryFn }) => queryFn.mock.calls.length,
+    )
+    for (const query of queries) query.unsubscribe()
+
+    const snapshot = () => ({
+      queryCountsAfterUnknownEvent,
+      queryCountsAfterReconnect,
+    })
+    expect(snapshot()).toEqual({
+      queryCountsAfterUnknownEvent: [1, 0, 0],
+      queryCountsAfterReconnect: [2, 0, 0],
+    })
   })
 
   it('ignores known resources without query consumers', () => {
@@ -156,6 +302,7 @@ describe('connectLiveQuerySync', () => {
   })
 
   it('waits for a local mutation before applying queued invalidations', async () => {
+    vi.useFakeTimers()
     const { eventStream, invalidations, queryClient } = createConnection()
     let finishMutation = () => {}
     let signalMutationStarted = () => {}
@@ -177,6 +324,7 @@ describe('connectLiveQuerySync', () => {
     eventStream.sendChange(
       JSON.stringify({ resource: 'time_block', id: 'block-one', origin: null }),
     )
+    await vi.advanceTimersByTimeAsync(1_000)
     const invalidationsWhilePending = invalidations.mock.calls.map(
       ([filters]) => filters,
     )
@@ -196,17 +344,6 @@ describe('connectLiveQuerySync', () => {
         { queryKey: ['tasks'] },
       ],
     })
-  })
-
-  it('invalidates everything after reconnecting', () => {
-    const { eventStream, invalidations } = createConnection()
-
-    eventStream.open()
-    eventStream.open()
-
-    expect(invalidations.mock.calls.map(([filters]) => filters)).toEqual([
-      undefined,
-    ])
   })
 
   it('checks the session once per disconnected interval', () => {
@@ -233,6 +370,7 @@ describe('connectLiveQuerySync', () => {
     eventStream.failPermanently()
     await vi.advanceTimersByTimeAsync(1_000)
     eventStreams[1]?.open()
+    await vi.advanceTimersByTimeAsync(1_000)
 
     const snapshot = () => ({
       urls,
@@ -241,7 +379,10 @@ describe('connectLiveQuerySync', () => {
         opened,
       })),
       sessionChecks: checkSession.mock.calls,
-      invalidations: invalidations.mock.calls.map(([filters]) => filters),
+      invalidations: invalidations.mock.calls.map(([filters, options]) => ({
+        hasPredicate: typeof filters?.predicate === 'function',
+        cancelRefetch: options?.cancelRefetch,
+      })),
     })
     expect(snapshot()).toEqual({
       urls: ['/api/events', '/api/events'],
@@ -250,7 +391,7 @@ describe('connectLiveQuerySync', () => {
         { closed: false, opened: true },
       ],
       sessionChecks: [[]],
-      invalidations: [undefined],
+      invalidations: [{ hasPredicate: true, cancelRefetch: false }],
     })
   })
 
