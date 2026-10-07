@@ -321,11 +321,10 @@ async function hasGithubAccess(): Promise<boolean> {
 
 async function syncLinks(
   links: LinkRow[],
-  syncStartedAt?: Date,
   onWrite?: (taskId: string) => void,
 ): Promise<void> {
   for (const link of links) {
-    const result = await syncLinkFromGithub(link, syncStartedAt, onWrite)
+    const result = await syncLinkFromGithub(link, undefined, onWrite)
     if (result.isErr() && !isQuietProviderError(result.error)) {
       captureWithFingerprint(result.error, 'api.github-sync.sync-link-failed', {
         extras: { linkId: link.id },
@@ -342,7 +341,7 @@ async function runSync(origin: string | null): Promise<void> {
   const links = await db.select().from(taskGithubLinks)
   const changedTaskIds = new Set<string>()
   const changedRuleIds = new Set<string>()
-  await syncLinks(links, undefined, (taskId) => changedTaskIds.add(taskId))
+  await syncLinks(links, (taskId) => changedTaskIds.add(taskId))
 
   await syncGithubAssignedIssues({
     onTaskCreated: (taskId) => changedTaskIds.add(taskId),
