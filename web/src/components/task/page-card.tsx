@@ -1,7 +1,14 @@
 import { Button } from '@fohte/ui/button'
 import { Panel } from '@fohte/ui/panel'
 import { Link } from '@tanstack/react-router'
-import { ChevronDown, Code2, ExternalLink, Pencil, Trash2 } from 'lucide-react'
+import {
+  ChevronDown,
+  Code2,
+  ExternalLink,
+  Loader2,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import { LlmAuthorLabel } from '#components/task/llm-author-label'
@@ -17,6 +24,9 @@ export function PageCardPresentation({
   onDelete,
   isDeleting,
   isExpanded: controlledExpanded,
+  onExpandedChange,
+  expandedContent,
+  contentLoadError = false,
   defaultEditing = false,
   defaultActionsMenuOpen,
   deleteDialogOpen,
@@ -27,6 +37,9 @@ export function PageCardPresentation({
   onDelete?: () => void
   isDeleting?: boolean
   isExpanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
+  expandedContent?: string | undefined
+  contentLoadError?: boolean
   defaultEditing?: boolean
   defaultActionsMenuOpen?: 'desktop' | 'mobile' | undefined
   deleteDialogOpen?: boolean
@@ -44,11 +57,17 @@ export function PageCardPresentation({
     useState(false)
   const isExpanded = controlledExpanded ?? internalExpanded
 
+  const preview = page.preview ?? ''
   const previewLines =
-    page.format === 'html' ? null : getPreviewLines(page.content, 3)
+    page.format === 'html' ? null : getPreviewLines(preview, 3)
   const hasMore =
     page.format !== 'html' &&
-    page.content.split('\n').filter((line) => line.trim()).length > 3
+    (page.contentTruncated ||
+      preview.split('\n').filter((line) => line.trim()).length > 3)
+  const setExpanded = (expanded: boolean) => {
+    setInternalExpanded(expanded)
+    onExpandedChange?.(expanded)
+  }
   const actionItems = [
     ...(page.format === 'markdown'
       ? [
@@ -56,7 +75,7 @@ export function PageCardPresentation({
             icon: <Pencil className="h-4 w-4" />,
             label: 'edit',
             onClick: () => {
-              setInternalExpanded(true)
+              setExpanded(true)
               setIsEditing(true)
             },
           },
@@ -85,7 +104,7 @@ export function PageCardPresentation({
           variant="ghost"
           size="icon-xs"
           onClick={() => {
-            setInternalExpanded(!isExpanded)
+            setExpanded(!isExpanded)
           }}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
@@ -100,7 +119,7 @@ export function PageCardPresentation({
           type="button"
           variant="ghost"
           onClick={() => {
-            setInternalExpanded(!isExpanded)
+            setExpanded(!isExpanded)
           }}
           className="h-auto min-h-0 justify-start rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex flex-1 items-center gap-2 overflow-hidden text-left"
         >
@@ -151,34 +170,49 @@ export function PageCardPresentation({
           <span>HTML page</span>
         </div>
       )}
-      {!isExpanded && previewLines != null && (
-        <div className="flex flex-col gap-1.5 border-t border-border px-2.5 py-2">
-          <p className="line-clamp-3 whitespace-pre-line font-code text-xs text-muted-foreground">
-            {previewLines}
-          </p>
-          {hasMore && (
-            <Button
-              type="button"
-              variant="link"
-              size="xs"
-              className="h-auto w-fit p-0 text-2xs"
-              onClick={() => {
-                setInternalExpanded(true)
-              }}
-            >
-              show more
-            </Button>
-          )}
-        </div>
-      )}
+      {!isExpanded &&
+        page.format !== 'html' &&
+        (previewLines != null || hasMore) && (
+          <div className="flex flex-col gap-1.5 border-t border-border px-2.5 py-2">
+            {previewLines != null && (
+              <p className="line-clamp-3 whitespace-pre-line font-code text-xs text-muted-foreground">
+                {previewLines}
+              </p>
+            )}
+            {hasMore && (
+              <Button
+                type="button"
+                variant="link"
+                size="xs"
+                className="h-auto w-fit p-0 text-2xs"
+                onClick={() => {
+                  setExpanded(true)
+                }}
+              >
+                show more
+              </Button>
+            )}
+          </div>
+        )}
 
       {/* Expanded editor */}
       {isExpanded && renderEditor && (
         <div className="border-t border-border bg-card p-3">
-          {renderEditor(page.content, {
-            editing: isEditing,
-            onEditingChange: setIsEditing,
-          })}
+          {contentLoadError ? (
+            <p role="alert" className="font-mono text-xs text-destructive">
+              Could not load this page.
+            </p>
+          ) : expandedContent === undefined ? (
+            <div role="status" className="flex justify-center py-4">
+              <Loader2 className="size-4 animate-spin" />
+              <span className="sr-only">Loading page</span>
+            </div>
+          ) : (
+            renderEditor(expandedContent, {
+              editing: isEditing,
+              onEditingChange: setIsEditing,
+            })
+          )}
         </div>
       )}
     </Panel>
