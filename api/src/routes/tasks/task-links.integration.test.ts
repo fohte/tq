@@ -150,6 +150,137 @@ describe('task mention links', () => {
     })
   })
 
+  it('publishes the source and both targets when a description mention changes', async () => {
+    const source = await createTask('Source')
+    const previousTarget = await createTask('Previous target')
+    const nextTarget = await createTask('Next target')
+    await patchTask(source.id, {
+      description: `See #${String(previousTarget.number)}`,
+    })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    const response = await app.request(`/api/tasks/${source.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: `See #${String(nextTarget.number)}`,
+      }),
+    })
+
+    const snapshot = () => ({
+      status: response.status,
+      events: normalizeChangeEvents(
+        events,
+        new Map([
+          [source.id, 'SOURCE_ID'],
+          [previousTarget.id, 'PREVIOUS_TARGET_ID'],
+          [nextTarget.id, 'NEXT_TARGET_ID'],
+        ]),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      status: 200,
+      events: [
+        {
+          resource: 'task',
+          id: 'SOURCE_ID',
+          origin: null,
+          taskIds: ['SOURCE_ID', 'PREVIOUS_TARGET_ID', 'NEXT_TARGET_ID'],
+        },
+      ],
+    })
+  })
+
+  it("publishes the source and target when a comment's final mention is removed", async () => {
+    const source = await createTask('Source')
+    const target = await createTask('Target')
+    const comment = await createComment(
+      source.id,
+      `See #${String(target.number)}`,
+    )
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    const response = await app.request(
+      `/api/tasks/${source.id}/comments/${comment.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'No longer mentions a task' }),
+      },
+    )
+
+    const snapshot = () => ({
+      status: response.status,
+      events: normalizeChangeEvents(
+        events,
+        new Map([
+          [source.id, 'SOURCE_ID'],
+          [target.id, 'TARGET_ID'],
+        ]),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      status: 200,
+      events: [
+        {
+          resource: 'task',
+          id: 'SOURCE_ID',
+          origin: null,
+          taskIds: ['SOURCE_ID', 'TARGET_ID'],
+        },
+      ],
+    })
+  })
+
+  it('publishes the source and both targets when a page mention changes', async () => {
+    const source = await createTask('Source')
+    const previousTarget = await createTask('Previous target')
+    const nextTarget = await createTask('Next target')
+    const page = await createPage(
+      source.id,
+      'Related tasks',
+      `See #${String(previousTarget.number)}`,
+    )
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    const response = await app.request(
+      `/api/tasks/${source.id}/pages/${page.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `See #${String(nextTarget.number)}`,
+        }),
+      },
+    )
+
+    const snapshot = () => ({
+      status: response.status,
+      events: normalizeChangeEvents(
+        events,
+        new Map([
+          [source.id, 'SOURCE_ID'],
+          [previousTarget.id, 'PREVIOUS_TARGET_ID'],
+          [nextTarget.id, 'NEXT_TARGET_ID'],
+        ]),
+      ),
+    })
+    expect(snapshot()).toEqual({
+      status: 200,
+      events: [
+        {
+          resource: 'task',
+          id: 'SOURCE_ID',
+          origin: null,
+          taskIds: ['SOURCE_ID', 'PREVIOUS_TARGET_ID', 'NEXT_TARGET_ID'],
+        },
+      ],
+    })
+  })
+
   it('links from a mention in the description', async () => {
     const source = await createTask('Source')
     const target = await createTask('Target')

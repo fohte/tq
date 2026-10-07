@@ -4,7 +4,10 @@ import { Hono } from 'hono'
 import { db } from '#db/connection'
 import { tasks } from '#db/schema'
 import { setChangeEventTaskIds } from '#lib/change-events'
-import { getTaskChangeEventIds } from '#routes/tasks/change-event-task-ids'
+import {
+  getTaskChangeEventIds,
+  getTaskChecklistOwnerIds,
+} from '#routes/tasks/change-event-task-ids'
 import { requireTask } from '#routes/tasks/shared'
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 
@@ -15,6 +18,7 @@ export const tasksDeleteApp = new Hono().delete(
     const existing = c.get('task')
     const id = existing.id
     const relatedTaskIdsBefore = await getTaskChangeEventIds([id])
+    const checklistOwnerIds = await getTaskChecklistOwnerIds(id)
 
     const reparentedChildIds = await db.transaction(async (tx) => {
       // Reparent children to the deleted task's parent (or top-level if
@@ -47,7 +51,11 @@ export const tasksDeleteApp = new Hono().delete(
       ...reparentedChildIds,
     ])
     setChangeEventTaskIds(c, [
-      ...new Set([...relatedTaskIdsBefore, ...affectedTaskIdsAfter]),
+      ...new Set([
+        ...relatedTaskIdsBefore,
+        ...checklistOwnerIds,
+        ...affectedTaskIdsAfter,
+      ]),
     ])
 
     return c.body(null, 204)

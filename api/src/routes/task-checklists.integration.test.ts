@@ -2166,6 +2166,92 @@ describe('task checklists API', () => {
       })
     })
 
+    it('includes a checklist owner when its promoted subtask changes status', async () => {
+      const owner = await createTask('Checklist owner')
+      const otherParent = await createTask('Other parent')
+      const checklist = await createChecklist(owner.id)
+      const item = await addItem(checklist.id, 'Promoted item')
+      const promotion = await app.request(
+        `/api/checklist-items/${item.id}/promote`,
+        { method: 'POST' },
+      )
+      const promoted = await jsonBody<ItemResponse>(promotion)
+      const subtaskId = promoted.subtaskId
+      assertDefined(subtaskId)
+      const reparent = await app.request(`/api/tasks/${subtaskId}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: otherParent.id }),
+      })
+      const events = watchChangeEvents()
+
+      const response = await setTaskStatus(subtaskId, 'completed')
+
+      const snapshot = () => ({
+        promotionStatus: promotion.status,
+        reparentStatus: reparent.status,
+        status: response.status,
+        events,
+      })
+      expect(snapshot()).toEqual({
+        promotionStatus: 200,
+        reparentStatus: 200,
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: subtaskId,
+            origin: null,
+            taskIds: [subtaskId, otherParent.id, owner.id],
+          },
+        ],
+      })
+    })
+
+    it('includes a checklist owner when its promoted subtask is deleted', async () => {
+      const owner = await createTask('Checklist owner')
+      const otherParent = await createTask('Other parent')
+      const checklist = await createChecklist(owner.id)
+      const item = await addItem(checklist.id, 'Promoted item')
+      const promotion = await app.request(
+        `/api/checklist-items/${item.id}/promote`,
+        { method: 'POST' },
+      )
+      const promoted = await jsonBody<ItemResponse>(promotion)
+      const subtaskId = promoted.subtaskId
+      assertDefined(subtaskId)
+      const reparent = await app.request(`/api/tasks/${subtaskId}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: otherParent.id }),
+      })
+      const events = watchChangeEvents()
+
+      const response = await app.request(`/api/tasks/${subtaskId}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({
+        promotionStatus: promotion.status,
+        reparentStatus: reparent.status,
+        status: response.status,
+        events,
+      })
+      expect(snapshot()).toEqual({
+        promotionStatus: 200,
+        reparentStatus: 200,
+        status: 204,
+        events: [
+          {
+            resource: 'task',
+            id: subtaskId,
+            origin: null,
+            taskIds: [subtaskId, owner.id, otherParent.id],
+          },
+        ],
+      })
+    })
+
     it('includes parent, promoted subtask, and reparented descendant tasks', async () => {
       const task = await createTask('Parent task')
       const mentionedTask = await createTask('Mentioned task')
