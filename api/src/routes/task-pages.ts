@@ -8,6 +8,7 @@ import {
 } from '#constants/content-length'
 import { db } from '#db/connection'
 import { taskPages } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   diffFields,
@@ -15,6 +16,10 @@ import {
   getPageAuthors,
   recordEdit,
 } from '#lib/edits'
+import {
+  getOutgoingTaskLinkIds,
+  getTaskLinkChangeEventIds,
+} from '#routes/tasks/change-event-task-ids'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 import { syncTaskLinks } from '#services/task-links'
@@ -92,6 +97,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
   })
   .post('/', zValidator('json', createPageSchema), async (c) => {
     const taskId = c.get('task').id
+    const previousTaskLinkIds = await getOutgoingTaskLinkIds(taskId)
     const input = c.req.valid('json')
     const author = c.get('author')
     const format = input.format ?? 'markdown'
@@ -127,6 +133,15 @@ export const taskPagesApp = new Hono<TaskEnv>()
     })
 
     const linkSync = await syncTaskLinks(taskId)
+    setChangeEventTaskIds(
+      c,
+      getTaskLinkChangeEventIds(
+        taskId,
+        previousTaskLinkIds,
+        linkSync.outgoing.map(({ id }) => id),
+        true,
+      ),
+    )
 
     return c.json({ ...pageToResponse(page, author), linkSync }, 201)
   })
@@ -158,6 +173,8 @@ export const taskPagesApp = new Hono<TaskEnv>()
     if (!existing) {
       return c.json({ error: 'Page not found' }, 404)
     }
+    const previousTaskLinkIds =
+      'content' in input ? await getOutgoingTaskLinkIds(taskId) : []
 
     const format = input.format ?? existing.format
     const content = input.content ?? existing.content
@@ -197,6 +214,15 @@ export const taskPagesApp = new Hono<TaskEnv>()
 
     const linkSync =
       'content' in input ? await syncTaskLinks(taskId) : undefined
+    setChangeEventTaskIds(
+      c,
+      getTaskLinkChangeEventIds(
+        taskId,
+        previousTaskLinkIds,
+        linkSync?.outgoing.map(({ id }) => id) ?? [],
+        true,
+      ),
+    )
 
     const authors = await getPageAuthors([pageId])
 
@@ -211,6 +237,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
   .delete('/:pageId', async (c) => {
     const taskId = c.get('task').id
     const pageId = c.req.param('pageId')
+    const previousTaskLinkIds = await getOutgoingTaskLinkIds(taskId)
 
     const deleted = await db
       .delete(taskPages)
@@ -221,7 +248,16 @@ export const taskPagesApp = new Hono<TaskEnv>()
       return c.json({ error: 'Page not found' }, 404)
     }
 
-    await syncTaskLinks(taskId)
+    const linkSync = await syncTaskLinks(taskId)
+    setChangeEventTaskIds(
+      c,
+      getTaskLinkChangeEventIds(
+        taskId,
+        previousTaskLinkIds,
+        linkSync.outgoing.map(({ id }) => id),
+        true,
+      ),
+    )
 
     return c.body(null, 204)
   })

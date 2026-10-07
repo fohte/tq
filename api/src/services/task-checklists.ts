@@ -122,16 +122,16 @@ export async function updateTaskChecklist(
 export async function deleteTaskChecklist(
   tx: DbTransaction,
   checklistId: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const [existing] = await tx
     .select({ taskId: taskChecklists.taskId })
     .from(taskChecklists)
     .where(eq(taskChecklists.id, checklistId))
-  if (!existing || !(await lockTask(tx, existing.taskId))) return false
+  if (!existing || !(await lockTask(tx, existing.taskId))) return null
 
   const [deleted] = await tx
     .delete(taskChecklists)
     .where(eq(taskChecklists.id, checklistId))
     .returning({ id: taskChecklists.id })
-  return deleted != null
+  return deleted != null ? existing.taskId : null
 }

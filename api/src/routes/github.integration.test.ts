@@ -191,7 +191,14 @@ describe('POST /api/github/sync', () => {
     const snapshot = () => ({ status: res.status, events })
     expect(snapshot()).toEqual({
       status: 204,
-      events: [{ resource: 'task', id: task.id, origin: 'screen-id' }],
+      events: [
+        {
+          resource: 'task',
+          id: task.id,
+          origin: 'screen-id',
+          taskIds: [task.id],
+        },
+      ],
     })
   })
 
@@ -253,6 +260,7 @@ describe('POST /api/github/sync', () => {
         resource: event.resource,
         id: normalizeEventId(event.id),
         origin: event.origin,
+        taskIds: event.taskIds?.map(normalizeEventId) ?? event.taskIds,
       })),
     })
     expect(snapshot()).toEqual({
@@ -260,8 +268,18 @@ describe('POST /api/github/sync', () => {
       createdTaskTitles: ['New assignment'],
       seedIgnoreOnNextSync: false,
       events: [
-        { resource: 'task', id: 'created-task', origin: 'screen-id' },
-        { resource: 'github_sync_rule', id: 'seed-rule', origin: 'screen-id' },
+        {
+          resource: 'task',
+          id: 'created-task',
+          origin: 'screen-id',
+          taskIds: ['created-task'],
+        },
+        {
+          resource: 'github_sync_rule',
+          id: 'seed-rule',
+          origin: 'screen-id',
+          taskIds: [],
+        },
       ],
     })
   })

@@ -141,6 +141,7 @@ export const taskGithubLinkApp = new Hono<TaskEnv>()
         resource: 'task',
         id: changedTaskId,
         origin: c.get('origin'),
+        taskIds: [changedTaskId],
       })
     }
 

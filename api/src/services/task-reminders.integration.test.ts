@@ -119,7 +119,9 @@ describe('deliverDueReminders', () => {
         ],
         remindAt: { 'Prepare the standup notes': null },
       },
-      events: [{ resource: 'task', id: task.id, origin: null }],
+      events: [
+        { resource: 'task', id: task.id, origin: null, taskIds: [task.id] },
+      ],
     })
   })
 
@@ -140,7 +142,9 @@ describe('deliverDueReminders', () => {
         notifications: [],
         remindAt: { 'Missed while the API was down': null },
       },
-      events: [{ resource: 'task', id: task.id, origin: null }],
+      events: [
+        { resource: 'task', id: task.id, origin: null, taskIds: [task.id] },
+      ],
     })
   })
 

@@ -46,7 +46,12 @@ export async function deliverDueReminders(): Promise<void> {
     })
 
   for (const task of due) {
-    publishChangeEvent({ resource: 'task', id: task.id, origin: null })
+    publishChangeEvent({
+      resource: 'task',
+      id: task.id,
+      origin: null,
+      taskIds: [task.id],
+    })
   }
 
   // The rest still has to lose its `remind_at`, otherwise every later tick
@@ -68,7 +73,12 @@ export async function deliverDueReminders(): Promise<void> {
     .returning({ id: tasks.id })
 
   for (const task of retired) {
-    publishChangeEvent({ resource: 'task', id: task.id, origin: null })
+    publishChangeEvent({
+      resource: 'task',
+      id: task.id,
+      origin: null,
+      taskIds: [task.id],
+    })
   }
 
   for (const task of due) {

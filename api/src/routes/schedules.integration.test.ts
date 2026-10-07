@@ -1,9 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
+
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+})
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
@@ -54,6 +62,12 @@ async function createTask(title: string, extra: Record<string, unknown> = {}) {
   return jsonBody<{ id: string; number: number }>(res)
 }
 
+function watchChangeEvents() {
+  const events: ChangeEvent[] = []
+  stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+  return events
+}
+
 function normalizeTimeBlock(block: TimeBlockResponse) {
   return { ...block, id: 'ID', createdAt: 'TIMESTAMP', updatedAt: 'TIMESTAMP' }
 }
@@ -98,6 +112,30 @@ async function putScheduleOverride(
 
 describe('schedule/time-blocks API', () => {
   describe('POST /api/schedule/time-blocks', () => {
+    it('emits the resolved task ID when creating a time block', async () => {
+      const task = await createTask('Scheduled task')
+      const events = watchChangeEvents()
+
+      const { res } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 201,
+        events: [
+          {
+            resource: 'time_block',
+            id: null,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('creates a time block', async () => {
       const task = await createTask('Test task')
       const { res, body } = await createTimeBlock(
@@ -248,6 +286,35 @@ describe('schedule/time-blocks API', () => {
   })
 
   describe('PATCH /api/schedule/time-blocks/:id', () => {
+    it('emits the time block task ID when updating a time block', async () => {
+      const task = await createTask('Movable task')
+      const { body: created } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+      const events = watchChangeEvents()
+
+      const res = await app.request(`/api/schedule/time-blocks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startTime: '2026-03-22T11:00:00.000Z' }),
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'time_block',
+            id: created.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('updates start and end time (simulating drag move)', async () => {
       const task = await createTask('Movable task')
       const { body: created } = await createTimeBlock(
@@ -339,6 +406,33 @@ describe('schedule/time-blocks API', () => {
   })
 
   describe('DELETE /api/schedule/time-blocks/:id', () => {
+    it('emits the time block task ID when deleting a time block', async () => {
+      const task = await createTask('Deletable task')
+      const { body: created } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+      const events = watchChangeEvents()
+
+      const res = await app.request(`/api/schedule/time-blocks/${created.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'time_block',
+            id: created.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('deletes a time block', async () => {
       const task = await createTask('Deletable task')
       const { body: created } = await createTimeBlock(

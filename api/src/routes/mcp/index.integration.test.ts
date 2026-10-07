@@ -18,6 +18,7 @@ const REGISTERED_TOOL_NAMES = [
   'checklist_item_check',
   'checklist_item_delete',
   'checklist_item_move',
+  'checklist_item_promote',
   'checklist_item_uncheck',
   'checklist_item_update',
   'checklist_list',

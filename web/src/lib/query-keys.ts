@@ -15,7 +15,8 @@ export const taskKeys = {
   infiniteLists: ['tasks', 'infinite-list'] as const,
   infiniteList: (filter?: TaskListFilter) =>
     [...taskKeys.infiniteLists, filter] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
+  details: ['tasks', 'detail'] as const,
+  detail: (id: string) => [...taskKeys.details, id] as const,
 }
 
 export const taskChecklistKeys = {
@@ -102,6 +103,11 @@ export const descriptionTemplateKeys = {
 
 export const githubSyncRuleKeys = {
   list: ['github-sync-rules'] as const,
+}
+
+export const githubSyncKeys = {
+  all: ['github-sync'] as const,
+  task: (taskId: string) => ['github-sync', 'task', taskId] as const,
 }
 
 export type SearchContext = 'work' | 'personal'

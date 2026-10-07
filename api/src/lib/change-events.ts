@@ -29,7 +29,7 @@ const routeResources: Record<string, ChangeResource> = {
   integrations: 'integration',
 }
 
-// React Query uses these POST routes for reads or syncs; sync writes publish targeted events separately.
+// React Query uses these POST routes for reads or syncs; 304 syncs only update bookkeeping and emit no event.
 const postQueryRoutes = new Set([
   '/api/github/resolve',
   '/api/github/sync',
@@ -38,6 +38,19 @@ const postQueryRoutes = new Set([
 
 type ChangeEventEnv = {
   Variables: Partial<TaskEnv['Variables']>
+}
+
+declare module 'hono' {
+  interface ContextVariableMap {
+    changeEventTaskIds?: string[] | null
+  }
+}
+
+export function setChangeEventTaskIds(
+  c: Context,
+  taskIds: string[] | null,
+): void {
+  c.set('changeEventTaskIds', taskIds)
 }
 
 export function subscribeToChangeEvents(
@@ -112,9 +125,17 @@ export const changeEventMiddleware: MiddlewareHandler<ChangeEventEnv> = async (
   const resource = resourceFromRoute(routePattern)
   if (resource == null) return
 
+  const id = idFromRoute(routePattern, resource, c)
+  const configuredTaskIds = c.get('changeEventTaskIds')
   publishChangeEvent({
     resource,
-    id: idFromRoute(routePattern, resource, c),
+    id,
     origin: c.get('origin'),
+    taskIds:
+      configuredTaskIds === undefined
+        ? resource === 'task' && id != null
+          ? [id]
+          : null
+        : configuredTaskIds,
   })
 }

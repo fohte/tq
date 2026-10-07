@@ -8,6 +8,7 @@ import { Result } from 'neverthrow'
 
 import {
   descriptionTemplateKeys,
+  githubSyncKeys,
   githubSyncRuleKeys,
   labelKeys,
   projectKeys,
@@ -41,6 +42,7 @@ type EventSourceFactory = (url: string) => EventStream
 const EVENT_SOURCE_CLOSED = 2
 const INITIAL_RECONNECT_DELAY_MS = 1_000
 const MAX_RECONNECT_DELAY_MS = 30_000
+const INVALIDATION_BATCH_WINDOW_MS = 1_000
 
 interface LiveQuerySyncOptions {
   origin?: string
@@ -57,10 +59,16 @@ function parseChangeEvent(raw: string): ChangeEvent | null {
 
   const id = parsed['id']
   const origin = parsed['origin']
+  const taskIds = parsed['taskIds']
   return {
     resource: parsed['resource'],
     id: typeof id === 'string' ? id : null,
     origin: typeof origin === 'string' ? origin : null,
+    taskIds:
+      Array.isArray(taskIds) &&
+      taskIds.every((taskId) => typeof taskId === 'string')
+        ? taskIds
+        : null,
   }
 }
 
@@ -78,7 +86,7 @@ const resourceQueryFilters: Record<
   queue: () => [{ queryKey: queueKeys.all }],
   time_block: () => [
     { queryKey: timeBlockKeys.all },
-    { queryKey: taskKeys.all },
+    { queryKey: taskKeys.details },
   ],
   schedule: () => [{ queryKey: scheduleKeys.all }],
   saved_view: () => [{ queryKey: savedViewKeys.all }],
@@ -87,7 +95,7 @@ const resourceQueryFilters: Record<
   github_sync_rule: () => [{ queryKey: githubSyncRuleKeys.list }],
   agent_session: () => [
     { queryKey: ['agent-sessions'] },
-    { queryKey: taskKeys.all },
+    { queryKey: taskKeys.details },
   ],
   checklist: () => [{ queryKey: taskKeys.all }],
   checklist_item: () => [{ queryKey: taskKeys.all }],
@@ -103,19 +111,13 @@ const resourceQueryFilters: Record<
     { queryKey: ['integrations'] },
     { queryKey: ['gcal-calendars'] },
     { queryKey: ['gcal-events'] },
-    { queryKey: ['github-sync'] },
+    { queryKey: githubSyncKeys.all },
   ],
   unknown: () => null,
 }
 
 function filtersForResourceChange(event: ChangeEvent): QueryFilters[] | null {
   return resourceQueryFilters[event.resource](event)
-}
-
-function invalidate(queryClient: QueryClient, filters: QueryFilters[]): void {
-  for (const filtersForQuery of filters) {
-    void queryClient.invalidateQueries(filtersForQuery)
-  }
 }
 
 async function checkSession(): Promise<unknown> {
@@ -138,21 +140,93 @@ export function connectLiveQuerySync(
   let shouldInvalidateOnOpen = false
   let reconnectAttempt = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+  let invalidationTimer: ReturnType<typeof setTimeout> | undefined
+  let waitingForMutation = false
+  const pendingFetchQueryHashes = new Set<string>()
+  let unsubscribeFromPendingFetches: (() => void) | undefined
   let disconnected = false
   let eventSource: EventStream
 
+  const clearInvalidationTimer = () => {
+    if (invalidationTimer == null) return
+    clearTimeout(invalidationTimer)
+    invalidationTimer = undefined
+  }
+
+  const invalidateFilters = (filters: QueryFilters[]) => {
+    const queryCache = queryClient.getQueryCache()
+    for (const filter of filters) {
+      for (const query of queryCache.findAll(filter)) {
+        if (query.state.fetchStatus === 'fetching') {
+          pendingFetchQueryHashes.add(query.queryHash)
+        }
+      }
+    }
+
+    if (
+      pendingFetchQueryHashes.size > 0 &&
+      unsubscribeFromPendingFetches == null
+    ) {
+      unsubscribeFromPendingFetches = queryCache.subscribe(() => {
+        const settledQueryHashes = [...pendingFetchQueryHashes].filter(
+          (queryHash) =>
+            queryCache.get(queryHash)?.state.fetchStatus !== 'fetching',
+        )
+        if (settledQueryHashes.length === 0) return
+
+        for (const queryHash of settledQueryHashes) {
+          pendingFetchQueryHashes.delete(queryHash)
+        }
+        if (pendingFetchQueryHashes.size === 0) {
+          unsubscribeFromPendingFetches?.()
+          unsubscribeFromPendingFetches = undefined
+        }
+
+        const settledQueryHashSet = new Set(settledQueryHashes)
+        void queryClient.invalidateQueries(
+          {
+            predicate: (query) => settledQueryHashSet.has(query.queryHash),
+          },
+          { cancelRefetch: false },
+        )
+      })
+    }
+
+    for (const filter of filters) {
+      void queryClient.invalidateQueries(filter, { cancelRefetch: false })
+    }
+  }
+
   const flushPendingInvalidations = () => {
-    if (queryClient.isMutating() > 0) return
+    if (queryClient.isMutating() > 0) {
+      waitingForMutation = true
+      return
+    }
+    waitingForMutation = false
+    clearInvalidationTimer()
     if (pendingAll) {
       pendingAll = false
       pendingFilters.clear()
-      void queryClient.invalidateQueries()
+      invalidateFilters([
+        {
+          predicate: (query) => query.queryKey[0] !== githubSyncKeys.all[0],
+        },
+      ])
       return
     }
 
     const filters = [...pendingFilters.values()]
     pendingFilters.clear()
-    invalidate(queryClient, filters)
+    invalidateFilters(filters)
+  }
+
+  const schedulePendingInvalidations = () => {
+    if (waitingForMutation || invalidationTimer != null) return
+    if (!pendingAll && pendingFilters.size === 0) return
+    invalidationTimer = setTimeout(() => {
+      invalidationTimer = undefined
+      flushPendingInvalidations()
+    }, INVALIDATION_BATCH_WINDOW_MS)
   }
 
   const queueInvalidation = (filters: QueryFilters[] | null) => {
@@ -164,7 +238,7 @@ export function connectLiveQuerySync(
         pendingFilters.set(JSON.stringify(filter), filter)
       }
     }
-    flushPendingInvalidations()
+    schedulePendingInvalidations()
   }
 
   const onChange = (event: Event) => {
@@ -235,7 +309,11 @@ export function connectLiveQuerySync(
 
   const unsubscribeFromMutations = queryClient
     .getMutationCache()
-    .subscribe(flushPendingInvalidations)
+    .subscribe(() => {
+      if (waitingForMutation && queryClient.isMutating() === 0) {
+        flushPendingInvalidations()
+      }
+    })
 
   attachEventSource()
 
@@ -243,6 +321,9 @@ export function connectLiveQuerySync(
     if (disconnected) return
     disconnected = true
     unsubscribeFromMutations()
+    clearInvalidationTimer()
+    unsubscribeFromPendingFetches?.()
+    unsubscribeFromPendingFetches = undefined
     if (reconnectTimer != null) clearTimeout(reconnectTimer)
     detachEventSource(eventSource)
   }

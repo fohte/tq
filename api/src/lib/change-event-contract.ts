@@ -27,6 +27,7 @@ export interface ChangeEvent {
   resource: ChangeResource
   id: string | null
   origin: string | null
+  taskIds: string[] | null
 }
 
 const changeResourceSet: ReadonlySet<string> = new Set(CHANGE_RESOURCES)
