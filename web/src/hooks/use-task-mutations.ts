@@ -14,7 +14,6 @@ export interface CreateTaskInput {
   description?: string
   startDate?: string
   dueDate?: string
-  estimatedMinutes?: number
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
   labels?: string[]
@@ -68,7 +67,7 @@ export function useCreateTask() {
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
-        estimatedMinutes: input.estimatedMinutes ?? null,
+        estimatedMinutes: null,
         remindAt: null,
         parentId: input.parentId ?? null,
         parentNumber: null,
@@ -195,7 +194,6 @@ export interface UpdateTaskInput {
   description?: string | null
   startDate?: string | null
   dueDate?: string | null
-  estimatedMinutes?: number | null
   remindAt?: string | null
   projectId?: string | null
   context?: 'work' | 'personal'

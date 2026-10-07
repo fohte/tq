@@ -35,10 +35,3 @@ export const SortByDue: Story = {
     sortBy: 'due',
   },
 }
-
-export const SortByEstimate: Story = {
-  name: 'tasks are sorted by estimated duration',
-  args: {
-    sortBy: 'estimate',
-  },
-}

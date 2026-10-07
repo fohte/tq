@@ -11,7 +11,11 @@ import {
   extractCurrentPrefix,
   resolveSearchContext,
 } from '#hooks/use-search'
-import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
+import {
+  extractTaskNumber,
+  filterSearchSuggestions,
+  taskDetailToSearchResult,
+} from '#lib/search-utils'
 
 describe('extractTaskNumber', () => {
   it('accepts a bare number', () => {
@@ -73,7 +77,6 @@ describe('taskDetailToSearchResult', () => {
       labels: task.labels,
       startDate: task.startDate,
       dueDate: task.dueDate,
-      estimatedMinutes: task.estimatedMinutes,
       remindAt: task.remindAt,
       parentId: task.parentId,
       parentNumber: task.parentNumber,
@@ -98,6 +101,27 @@ describe('taskDetailToSearchResult', () => {
         },
       ],
     })
+  })
+})
+
+describe('filterSearchSuggestions', () => {
+  it('removes the retired estimate sort suggestion', () => {
+    const dueSort = makeSuggestion({
+      value: 'sort:due',
+      display: 'Sort by due date',
+      category: 'sort',
+    })
+
+    expect(
+      filterSearchSuggestions([
+        makeSuggestion({
+          value: 'sort:estimate',
+          display: 'Sort by estimate',
+          category: 'sort',
+        }),
+        dueSort,
+      ]),
+    ).toEqual([dueSort])
   })
 })
 

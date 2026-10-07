@@ -12,14 +12,12 @@ const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
   title: 'Design the onboarding flow',
   context: 'work',
-  estimatedMinutes: 60,
 })
 
 const nextTask: Task = {
   ...baseTask,
   id: '00000000-0000-0000-0000-000000000002',
   title: 'Review pull request #42',
-  estimatedMinutes: 30,
 }
 
 const completedTask: Task = {
@@ -27,7 +25,6 @@ const completedTask: Task = {
   id: '00000000-0000-0000-0000-000000000003',
   title: 'Write project brief',
   status: 'completed',
-  estimatedMinutes: 45,
 }
 
 const subtasks: Task[] = [
@@ -37,14 +34,12 @@ const subtasks: Task[] = [
     title: 'Sketch wireframes',
     status: 'completed',
     parentId: baseTask.id,
-    estimatedMinutes: null,
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000012',
     title: 'Get feedback from the team',
     parentId: baseTask.id,
-    estimatedMinutes: null,
   },
 ]
 

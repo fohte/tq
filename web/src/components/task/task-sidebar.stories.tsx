@@ -85,7 +85,6 @@ export const SidebarMinimal: Story = {
   args: {
     task: {
       ...baseTask,
-      estimatedMinutes: null,
       startDate: null,
       dueDate: null,
       parentId: null,

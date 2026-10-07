@@ -37,14 +37,8 @@ import { useTaskMentionPreview } from '#hooks/use-task-mentions'
 import type { CreateTaskInput } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { formatMinutes } from '#lib/format'
-import { parseDurationToMinutes } from '#lib/parse-duration'
 import type { ShorthandRecurrenceRule } from '#lib/task-shorthand'
 import { cn } from '#lib/utils'
-
-function estimateInputFor(minutes: number | undefined): string {
-  return minutes != null ? formatMinutes(minutes) : ''
-}
 
 interface CreateTaskModalProps {
   open: boolean
@@ -52,7 +46,6 @@ interface CreateTaskModalProps {
   defaultStartDate?: string
   defaultContext?: ContextValue
   defaultLabels?: string[]
-  defaultEstimateMinutes?: number
   defaultParentOverrideNumber?: number
   defaultGithubUrl?: string
   projectId?: string
@@ -72,7 +65,6 @@ export function CreateTaskModal({
   defaultStartDate,
   defaultContext,
   defaultLabels,
-  defaultEstimateMinutes,
   defaultParentOverrideNumber,
   defaultGithubUrl,
   projectId,
@@ -92,9 +84,6 @@ export function CreateTaskModal({
   )
   const [startDate, setStartDate] = useState(defaultStartDate ?? '')
   const [dueDate, setDueDate] = useState('')
-  const [estimateInput, setEstimateInput] = useState(
-    estimateInputFor(defaultEstimateMinutes),
-  )
   const [context, setContext] = useState<ContextValue | ''>(
     effectiveDefaultContext,
   )
@@ -173,28 +162,18 @@ export function CreateTaskModal({
       setStartDate(defaultStartDate ?? '')
       setContext(effectiveDefaultContext)
       setLabels(defaultLabels ?? [])
-      setEstimateInput(estimateInputFor(defaultEstimateMinutes))
     }
-  }, [
-    defaultStartDate,
-    effectiveDefaultContext,
-    defaultLabels,
-    defaultEstimateMinutes,
-    open,
-  ])
+  }, [defaultStartDate, effectiveDefaultContext, defaultLabels, open])
 
   useEffect(() => {
     if (!open) setDiscardConfirmationOpen(false)
   }, [open])
-
-  const parsedMinutes = parseDurationToMinutes(estimateInput)
 
   const resetForm = useCallback(() => {
     setTitle('')
     descriptionTemplate.reset()
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
-    setEstimateInput(estimateInputFor(defaultEstimateMinutes))
     setContext(effectiveDefaultContext)
     setCommitment('')
     setPlan('')
@@ -206,7 +185,6 @@ export function CreateTaskModal({
     defaultStartDate,
     effectiveDefaultContext,
     defaultLabels,
-    defaultEstimateMinutes,
     descriptionTemplate.reset,
   ])
 
@@ -235,7 +213,6 @@ export function CreateTaskModal({
     setTitle,
     setStartDate,
     setDueDate,
-    setEstimateInput,
     setContext,
     setLabels,
     setParentOverrideNumber,
@@ -275,7 +252,6 @@ export function CreateTaskModal({
       ...(desc ? { description: desc } : {}),
       ...(startDate ? { startDate } : {}),
       ...(dueDate ? { dueDate } : {}),
-      ...(parsedMinutes != null ? { estimatedMinutes: parsedMinutes } : {}),
       ...(context ? { context } : {}),
       ...(effectiveCommitment ? { commitment: effectiveCommitment } : {}),
       ...(labels.length > 0 ? { labels } : {}),
@@ -326,11 +302,6 @@ export function CreateTaskModal({
       handleSubmit()
     }
   }
-
-  const estimateLabel =
-    parsedMinutes != null
-      ? formatMinutes(parsedMinutes)
-      : estimateInput || 'Estimate'
 
   const parentIndicator = effectiveParentNumber != null && (
     <span
@@ -432,8 +403,6 @@ export function CreateTaskModal({
             setStartDate={setStartDate}
             dueDate={dueDate}
             setDueDate={setDueDate}
-            estimateInput={estimateInput}
-            setEstimateInput={setEstimateInput}
             context={context}
             setContext={setContext}
             commitment={commitment}
@@ -457,10 +426,6 @@ export function CreateTaskModal({
             setStartDate={setStartDate}
             dueDate={dueDate}
             setDueDate={setDueDate}
-            estimateInput={estimateInput}
-            setEstimateInput={setEstimateInput}
-            estimateLabel={estimateLabel}
-            estimateActive={parsedMinutes != null}
             context={context}
             setContext={setContext}
             commitment={commitment}

@@ -678,15 +678,6 @@ describe('CreateTaskModal', () => {
     },
   )
 
-  it('prefills the estimate field from defaultEstimateMinutes', () => {
-    renderControlledModal(CreateTaskModal, { defaultEstimateMinutes: 90 })
-
-    const estimateInputs = screen.getAllByPlaceholderText('1h30m')
-    for (const input of estimateInputs) {
-      expect(input).toHaveValue('1h30m')
-    }
-  })
-
   describe('tags', () => {
     it('adds a tag typed into the tag input', async () => {
       const user = userEvent.setup()
@@ -753,8 +744,10 @@ describe('CreateTaskModal', () => {
   })
 
   describe('shorthand syntax', () => {
-    it('applies parsed shorthand tokens (estimate, dates, label, context) to their respective fields', async () => {
+    it('keeps duration text while applying other shorthand tokens', async () => {
+      await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
       const user = userEvent.setup()
+      const mutate = mockCreateTaskSuccess(makeTask())
       renderControlledModal(CreateTaskModal, {})
 
       const today = formatLocalDate(new Date())
@@ -762,25 +755,72 @@ describe('CreateTaskModal', () => {
       tomorrowDate.setDate(tomorrowDate.getDate() + 1)
       const tomorrow = formatLocalDate(tomorrowDate)
 
-      const titleInput = atIndex(
-        screen.getAllByPlaceholderText(titleInputPlaceholder),
-        0,
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
       )
       await user.type(
         titleInput,
         'Buy milk @30m >today @tomorrow #groceries %work ',
       )
 
-      await waitFor(() => {
-        expect(
-          atIndex(screen.getAllByPlaceholderText(titleInputPlaceholder), 0),
-        ).toHaveValue('Buy milk ')
+      const visibleInputValue = (elements: HTMLElement[]) => {
+        const element = findVisible(elements)
+        return element instanceof HTMLInputElement ? element.value : null
+      }
+      await screen.findAllByDisplayValue(today)
+      await screen.findAllByDisplayValue(tomorrow)
+      await screen.findAllByText('groceries')
+      await user.click(
+        assertDefined(findVisible(screen.getAllByRole('combobox'))),
+      )
+      await screen.findByRole('option', { name: 'Work' })
+      const selectedContext = findVisible(
+        screen.getAllByRole('option', { name: 'Work' }),
+      )
+      const contextValue =
+        selectedContext?.getAttribute('aria-selected') ?? null
+      await user.click(
+        assertDefined(
+          findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+        ),
+      )
+      const getFormState = () => ({
+        title: visibleInputValue(
+          screen.getAllByPlaceholderText(titleInputPlaceholder),
+        ),
+        startDate: visibleInputValue(screen.getAllByDisplayValue(today)),
+        dueDate: visibleInputValue(screen.getAllByDisplayValue(tomorrow)),
+        label:
+          findVisible(screen.getAllByText('groceries'))?.textContent ?? null,
+        context: contextValue,
       })
-      expect(screen.getAllByDisplayValue('30m').length).toBeGreaterThan(0)
-      expect(screen.getAllByDisplayValue(today).length).toBeGreaterThan(0)
-      expect(screen.getAllByDisplayValue(tomorrow).length).toBeGreaterThan(0)
-      expect(screen.getAllByText('groceries').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Work').length).toBeGreaterThan(0)
+      const formState = getFormState()
+
+      await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+      const getActual = () => ({
+        formState,
+        mutationInputs: mutate.mock.calls.map(([input]) => input),
+      })
+      expect(getActual()).toEqual({
+        formState: {
+          title: 'Buy milk @30m ',
+          startDate: today,
+          dueDate: tomorrow,
+          label: '#groceries',
+          context: 'true',
+        },
+        mutationInputs: [
+          {
+            title: 'Buy milk @30m',
+            startDate: today,
+            dueDate: tomorrow,
+            context: 'work',
+            labels: ['groceries'],
+          },
+        ],
+      })
+      await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     })
 
     it('activates the "today" plan tab via the !today shorthand', async () => {

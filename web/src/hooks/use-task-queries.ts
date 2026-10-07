@@ -19,7 +19,7 @@ type TaskStatus = 'todo' | 'completed'
 
 export type TaskContext = 'work' | 'personal'
 
-export type TaskSortBy = 'created' | 'updated' | 'due' | 'estimate'
+export type TaskSortBy = 'created' | 'updated' | 'due'
 
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 

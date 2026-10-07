@@ -507,7 +507,6 @@ describe('CalendarGrid', () => {
     const taskElement = document.createElement('div')
     taskElement.dataset['taskId'] = 'queued-sample-a'
     taskElement.dataset['taskTitle'] = 'Prepare a sample outline'
-    taskElement.dataset['estimatedMinutes'] = '45'
     queueElement.append(taskElement)
     dragContainer.append(queueElement)
 
@@ -558,7 +557,7 @@ describe('CalendarGrid', () => {
         eventData: {
           id: 'external-queued-sample-a',
           title: 'Prepare a sample outline',
-          duration: { minutes: 45 },
+          duration: { minutes: 30 },
           extendedProps: {
             taskId: 'queued-sample-a',
             type: 'manual',

@@ -25,9 +25,6 @@ export function QueueScheduledItemRow({
         params={{ taskId: task.id }}
         data-task-id={task.id}
         data-task-title={task.title}
-        {...(task.estimatedMinutes == null
-          ? {}
-          : { 'data-estimated-minutes': String(task.estimatedMinutes) })}
         className="min-w-0 flex-1 truncate text-muted-foreground hover:text-foreground"
       >
         {task.title}

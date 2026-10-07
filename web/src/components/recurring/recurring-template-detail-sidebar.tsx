@@ -12,7 +12,6 @@ import { useProject } from '#hooks/use-projects'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
 import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'
 import { selectValueHandler } from '#lib/form-utils'
-import { formatMinutes } from '#lib/format'
 import { templateNextOccurrence } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
 import { cn } from '#lib/utils'
@@ -40,11 +39,6 @@ export function RecurringTemplateSidebar({
       </TemplateSidebarField>
       <TemplateSidebarField label="DUE OFFSET">
         {dueOffsetLabel(template.startOffsetDays)}
-      </TemplateSidebarField>
-      <TemplateSidebarField label="ESTIMATE">
-        {template.estimatedMinutes != null
-          ? formatMinutes(template.estimatedMinutes)
-          : '—'}
       </TemplateSidebarField>
       <TemplateSidebarField label="CONTEXT">
         {template.context}
@@ -86,11 +80,6 @@ export function RecurringTemplateSidebarMobile({
         </TemplateFieldRow>
         <TemplateFieldRow label="DUE OFFSET">
           {dueOffsetLabel(template.startOffsetDays)}
-        </TemplateFieldRow>
-        <TemplateFieldRow label="ESTIMATE">
-          {template.estimatedMinutes != null
-            ? formatMinutes(template.estimatedMinutes)
-            : '—'}
         </TemplateFieldRow>
         <TemplateFieldRow label="CONTEXT">{template.context}</TemplateFieldRow>
         <TemplateFieldRow label="PROJECT">

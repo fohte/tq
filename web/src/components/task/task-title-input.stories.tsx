@@ -108,8 +108,8 @@ export const Empty: Story = {
   },
 }
 
-export const ShowsEstimateSuggestionsOnAt: Story = {
-  name: 'typing an at sign opens estimate suggestions',
+export const ShowsDueDateSuggestionsOnAt: Story = {
+  name: 'typing an at sign opens due date suggestions',
   args: {
     initialValue: 'Buy milk @',
     detectInitialTrigger: true,
@@ -117,7 +117,7 @@ export const ShowsEstimateSuggestionsOnAt: Story = {
 }
 
 export const FiltersSuggestionsByPartialText: Story = {
-  name: 'the estimate menu narrows results to the typed text',
+  name: 'the due date menu narrows results to the typed text',
   args: {
     initialValue: 'Buy milk @tom',
     detectInitialTrigger: true,
