@@ -21,6 +21,13 @@ setupTestDb()
 
 let client: Client
 
+function callTaskReadTool(
+  name: 'task_list' | 'task_search',
+  args: Record<string, unknown> = {},
+) {
+  return callMcpTool(client, name, { tzOffset: 0, ...args })
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -72,7 +79,7 @@ it('declares task read tools as read-only', async () => {
 
 describe('task_list', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'task_list', {
+    const result = await callTaskReadTool('task_list', {
       projectId: 'not-a-uuid',
     })
 
@@ -83,7 +90,7 @@ describe('task_list', () => {
     const task = await createTask('Work task', { context: 'work' })
     await createTask('Personal task')
 
-    const toolResult = await callMcpTool(client, 'task_list', {
+    const toolResult = await callTaskReadTool('task_list', {
       context: 'work',
     })
 
@@ -130,7 +137,7 @@ describe('task_list', () => {
       method: 'POST',
     })
 
-    const toolResult = await callMcpTool(client, 'task_list', {})
+    const toolResult = await callTaskReadTool('task_list', {})
 
     expect(parseToolJson(toolResult)).toEqual([
       {
@@ -150,7 +157,7 @@ describe('task_list', () => {
     const parent = await createTask('Parent')
     await createTask('Child', { parentId: parent.id })
 
-    const toolResult = await callMcpTool(client, 'task_list', {
+    const toolResult = await callTaskReadTool('task_list', {
       parentId: 'root',
     })
 
@@ -172,7 +179,7 @@ describe('task_list', () => {
     const parent = await createTask('Parent')
     const child = await createTask('Child', { parentId: parent.id })
 
-    const toolResult = await callMcpTool(client, 'task_list', {
+    const toolResult = await callTaskReadTool('task_list', {
       parentId: parent.number,
     })
 
@@ -195,7 +202,7 @@ describe('task_list', () => {
     const grandchild = await createTask('Grandchild', { parentId: child.id })
     await createTask('Unrelated')
 
-    const toolResult = await callMcpTool(client, 'task_list', {
+    const toolResult = await callTaskReadTool('task_list', {
       descendantOf: root.number,
     })
 
@@ -231,7 +238,7 @@ describe('task_list', () => {
     })
     await createTask('Unselected')
 
-    const toolResult = await callMcpTool(client, 'task_list', {
+    const toolResult = await callTaskReadTool('task_list', {
       ids: [String(selectedByNumber.number), selectedById.id],
       includeAncestors: true,
     })
@@ -378,7 +385,7 @@ describe('task_get', () => {
 
 describe('task_search', () => {
   it('rejects invalid input', async () => {
-    const result = await callMcpTool(client, 'task_search', { limit: 0 })
+    const result = await callTaskReadTool('task_search', { limit: 0 })
 
     expect(result.isError).toBe(true)
   })
@@ -387,7 +394,7 @@ describe('task_search', () => {
     const match = await createTask('Deploy to production')
     await createTask('Buy groceries')
 
-    const toolResult = await callMcpTool(client, 'task_search', {
+    const toolResult = await callTaskReadTool('task_search', {
       q: 'deploy',
     })
 
@@ -409,7 +416,7 @@ describe('task_search', () => {
     const child = await createTask('Child', { parentId: parent.id })
     await createTask('Orphan')
 
-    const toolResult = await callMcpTool(client, 'task_search', {
+    const toolResult = await callTaskReadTool('task_search', {
       q: `parent:${String(parent.number)}`,
     })
 
@@ -431,7 +438,7 @@ describe('task_search', () => {
     const child = await createTask('Child', { parentId: parent.id })
     await createTask('Orphan')
 
-    const toolResult = await callMcpTool(client, 'task_search', {
+    const toolResult = await callTaskReadTool('task_search', {
       parentId: parent.number,
     })
 
@@ -453,7 +460,7 @@ describe('task_search', () => {
     const child = await createTask('Child', { parentId: root.id })
     const grandchild = await createTask('Grandchild', { parentId: child.id })
 
-    const toolResult = await callMcpTool(client, 'task_search', {
+    const toolResult = await callTaskReadTool('task_search', {
       q: 'Grandchild',
       descendantOf: root.number,
     })
@@ -476,7 +483,7 @@ describe('task_search', () => {
     const match = await createTask('Selected task', { parentId: root.id })
     await createTask('Unselected task')
 
-    const toolResult = await callMcpTool(client, 'task_search', {
+    const toolResult = await callTaskReadTool('task_search', {
       q: 'Selected',
       ids: [match.id],
       includeAncestors: true,
@@ -512,7 +519,7 @@ describe('task_search', () => {
     })
     await createTask('Without due date')
 
-    const toolResult = await callMcpTool(client, 'task_search', {
+    const toolResult = await callTaskReadTool('task_search', {
       hasDue: true,
     })
 
