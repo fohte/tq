@@ -85,6 +85,20 @@ When `error_tracking` or `is_web_app` is enabled, call `captureWithFingerprint` 
 
 Catch the exception, wrap it in the boundary-specific subclass, and rethrow it — `no-restricted-syntax` bans `try`/`throw` as separate selectors, so both the `try` and the `throw` need their own `eslint-disable-next-line no-restricted-syntax` comment explaining why.
 
+## Server-side data processing rules
+
+### Aggregate, filter, and sort data in the API
+
+Perform aggregation (counts, sums, and grouping), filtering, and sorting in server-side APIs. Clients must not fetch all records to calculate these values, because that makes memory use and work grow with the data set on every client.
+
+### Return only fields used by the screen from list APIs
+
+Return only the fields a screen uses from list APIs to reduce response size and avoid transferring unnecessary data.
+
+### Run recurring work on the server
+
+Run recurring work such as syncing with external services on the server so its load does not grow with the number of clients.
+
 ## Storybook
 
 ### Write a story for every presentational component
