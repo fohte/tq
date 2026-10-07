@@ -1,9 +1,14 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import type { Node } from '@milkdown/kit/prose/model'
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 
-import { db } from '#db/connection'
-import { taskDescriptionTemplates } from '#db/schema'
+import { db, type DbTransaction } from '#db/connection'
+import {
+  taskChecklistItems,
+  taskChecklists,
+  taskDescriptionTemplates,
+} from '#db/schema'
 import type { Author } from '#lib/author'
 import { parseMarkdown } from '#lib/markdown-parser'
 import { validateTaskDescriptionTemplate } from '#routes/tasks/description-template-validation'
@@ -25,7 +30,14 @@ export type TaskConventionViolation =
       kind: 'unchecked-completion-criteria'
       items: string[]
       descriptionParseFailed: boolean
+      uncheckedChecklistItems: UncheckedChecklistItem[]
     }
+
+type UncheckedChecklistItem = {
+  id: string
+  checklistName: string | null
+  content: string
+}
 
 type DescriptionTemplate = typeof taskDescriptionTemplates.$inferSelect
 
@@ -151,37 +163,73 @@ function collectUncheckedCompletionCriteria(node: Node): string[] {
 
 export async function checkTaskComplete(
   author: Author,
-  task: { description: string | null },
+  task: { id: string; description: string | null },
   statusReason: TaskStatusReason | undefined,
+  tx: DbTransaction,
 ): Promise<TaskConventionViolation | null> {
-  if (
-    !appliesTaskConventions(author) ||
-    statusReason !== 'completed' ||
-    task.description === null
-  ) {
+  if (!appliesTaskConventions(author) || statusReason !== 'completed') {
     return null
   }
 
-  const parsed = await parseMarkdown(task.description)
-  if (parsed.isErr()) {
-    captureWithFingerprint(
-      parsed.error,
-      'api.task-conventions.completion-parse-failed',
+  const children = alias(taskChecklistItems, 'checklist_child')
+  const uncheckedChecklistItems = await tx
+    .select({
+      id: taskChecklistItems.id,
+      checklistName: taskChecklists.name,
+      content: taskChecklistItems.content,
+    })
+    .from(taskChecklistItems)
+    .innerJoin(
+      taskChecklists,
+      eq(taskChecklists.id, taskChecklistItems.checklistId),
     )
-    return {
-      kind: 'unchecked-completion-criteria',
-      items: [],
-      descriptionParseFailed: true,
+    .leftJoin(
+      children,
+      and(
+        eq(children.checklistId, taskChecklistItems.checklistId),
+        eq(children.parentItemId, taskChecklistItems.id),
+      ),
+    )
+    .where(
+      and(
+        eq(taskChecklists.taskId, task.id),
+        isNull(taskChecklistItems.checkedAt),
+        isNull(children.id),
+      ),
+    )
+    .orderBy(
+      asc(taskChecklists.sortOrder),
+      asc(taskChecklists.createdAt),
+      asc(taskChecklists.id),
+      asc(taskChecklistItems.sortOrder),
+      asc(taskChecklistItems.createdAt),
+      asc(taskChecklistItems.id),
+    )
+
+  let items: string[] = []
+  let descriptionParseFailed = false
+  if (task.description !== null) {
+    const parsed = await parseMarkdown(task.description)
+    if (parsed.isErr()) {
+      captureWithFingerprint(
+        parsed.error,
+        'api.task-conventions.completion-parse-failed',
+      )
+      descriptionParseFailed = true
+    } else {
+      items = collectUncheckedCompletionCriteria(parsed.value)
     }
   }
 
-  const items = collectUncheckedCompletionCriteria(parsed.value)
-  return items.length === 0
+  return items.length === 0 &&
+    !descriptionParseFailed &&
+    uncheckedChecklistItems.length === 0
     ? null
     : {
         kind: 'unchecked-completion-criteria',
         items,
-        descriptionParseFailed: false,
+        descriptionParseFailed,
+        uncheckedChecklistItems,
       }
 }
 
@@ -205,17 +253,50 @@ export function taskConventionViolationBody(
   }
 
   if (violation.kind === 'unchecked-completion-criteria') {
+    const hasDescriptionCriteria = violation.items.length > 0
+    const hasChecklistItems = violation.uncheckedChecklistItems.length > 0
+    const instructions = [
+      ...(violation.descriptionParseFailed
+        ? [
+            'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".',
+          ]
+        : []),
+      ...(hasDescriptionCriteria
+        ? [
+            'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+          ]
+        : []),
+      ...(hasChecklistItems
+        ? [
+            'Check off each verified checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+          ]
+        : []),
+    ]
     return {
       error: [
         violation.descriptionParseFailed
           ? 'Could not inspect completion criteria because the description could not be parsed as Markdown.'
-          : 'Unchecked completion criteria:',
+          : hasDescriptionCriteria
+            ? 'Unchecked completion criteria:'
+            : null,
         ...violation.items,
-        violation.descriptionParseFailed
-          ? 'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".'
-          : 'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
-      ].join('\n'),
+        ...(hasChecklistItems
+          ? [
+              'Unchecked checklist items:',
+              ...violation.uncheckedChecklistItems.map(
+                ({ checklistName, content }) =>
+                  `- ${checklistName ?? 'Checklist'}: ${content}`,
+              ),
+            ]
+          : []),
+        ...instructions,
+      ]
+        .filter((line): line is string => line !== null)
+        .join('\n'),
       uncheckedCompletionCriteria: violation.items,
+      ...(hasChecklistItems
+        ? { uncheckedChecklistItems: violation.uncheckedChecklistItems }
+        : {}),
     }
   }
 
