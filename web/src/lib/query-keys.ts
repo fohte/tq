@@ -15,7 +15,8 @@ export const taskKeys = {
   infiniteLists: ['tasks', 'infinite-list'] as const,
   infiniteList: (filter?: TaskListFilter) =>
     [...taskKeys.infiniteLists, filter] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
+  details: ['tasks', 'detail'] as const,
+  detail: (id: string) => [...taskKeys.details, id] as const,
 }
 
 export const taskChecklistKeys = {
