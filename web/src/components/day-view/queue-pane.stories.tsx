@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { fn } from 'storybook/test'
 
 import { QueuePane } from '#components/day-view/queue-pane'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -61,6 +62,7 @@ const meta = {
     onMoveTask: fn(),
     onInsertCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onMoveScheduledTaskToWeek: fn(),
   },
 } satisfies Meta<typeof QueuePane>
 
@@ -68,24 +70,37 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the queue pane groups tasks into today and this week',
+  name: 'the queue pane shows future scheduled tasks beneath this week',
   args: {
     isLoading: false,
     queueSections: [
-      {
+      makeQueueSectionData({
         key: 'day',
         title: 'today',
         items: dayTasks,
         dateRangeLabel: '09-01',
         emptyMessage: "No tasks in today's queue",
-      },
-      {
+      }),
+      makeQueueSectionData({
         key: 'week',
         title: 'this week',
         items: weekTasks,
+        dayGroups: [
+          {
+            date: '2026-09-02',
+            label: 'Wed 09-02',
+            items: [
+              makeTask({
+                id: '5',
+                title: 'Review the release checklist',
+                estimatedMinutes: 45,
+              }),
+            ],
+          },
+        ],
         dateRangeLabel: '08-31 – 09-06',
         emptyMessage: "No tasks in this week's queue",
-      },
+      }),
     ],
     queueCandidates: getQueueCandidates(candidateTasks, new Set()),
   },
@@ -96,20 +111,21 @@ export const Empty: Story = {
   args: {
     isLoading: false,
     queueSections: [
-      {
+      makeQueueSectionData({
         key: 'day',
         title: 'today',
         items: [],
         dateRangeLabel: '09-01',
         emptyMessage: "No tasks in today's queue",
-      },
-      {
+      }),
+      makeQueueSectionData({
         key: 'week',
         title: 'this week',
         items: [],
+        dayGroups: [],
         dateRangeLabel: '08-31 – 09-06',
         emptyMessage: "No tasks in this week's queue",
-      },
+      }),
     ],
     queueCandidates: [],
   },

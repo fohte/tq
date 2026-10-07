@@ -8,6 +8,7 @@ import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import { buildNowPanelModel } from '#components/day-view/now-panel-model'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -427,8 +428,13 @@ type Story = StoryObj<typeof meta>
 
 const queuedTasks = sampleTasks.slice(0, 4)
 const weekQueuedTasks = sampleTasks.slice(4, 6)
+const scheduledWeekdayTask = makeTask({
+  id: 'scheduled-weekday-task',
+  title: 'Review the release checklist',
+  estimatedMinutes: 45,
+})
 const queuedTaskIds = new Set(
-  [...queuedTasks, ...weekQueuedTasks].map((t) => t.id),
+  [...queuedTasks, ...weekQueuedTasks, scheduledWeekdayTask].map((t) => t.id),
 )
 const queueCandidates = getQueueCandidates(
   sampleCategorized.all,
@@ -437,20 +443,27 @@ const queueCandidates = getQueueCandidates(
 )
 
 const sampleQueueSections = [
-  {
+  makeQueueSectionData({
     key: 'day',
     title: 'today',
     items: queuedTasks,
     dateRangeLabel: '09-01',
     emptyMessage: "No tasks in today's queue",
-  },
-  {
+  }),
+  makeQueueSectionData({
     key: 'week',
     title: 'this week',
     items: weekQueuedTasks,
+    dayGroups: [
+      {
+        date: '2026-09-02',
+        label: 'Wed 09-02',
+        items: [scheduledWeekdayTask],
+      },
+    ],
     dateRangeLabel: '08-31 – 09-06',
     emptyMessage: "No tasks in this week's queue",
-  },
+  }),
 ]
 
 export const Default: Story = {
@@ -471,6 +484,7 @@ export const Default: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onCreateTimeBlock: fn(),
   },
 }
@@ -579,6 +593,7 @@ export const Loading: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onCreateTimeBlock: fn(),
     initialMobileTab: 'tasks',
   },
@@ -597,6 +612,7 @@ export const Empty: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onCreateTimeBlock: fn(),
     initialMobileTab: 'tasks',
   },
@@ -619,6 +635,7 @@ export const EmptyQueueWithCandidates: Story = {
     onInsertCandidate: fn(),
     onAddCandidate: fn(),
     onRemoveFromQueue: fn(),
+    onMoveScheduledTaskToWeek: fn(),
     onCreateTimeBlock: fn(),
     initialMobileTab: 'tasks',
   },

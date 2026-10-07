@@ -20,6 +20,7 @@ import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
+import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
 import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useNowPanelData } from '#hooks/use-now-panel-data'
@@ -32,6 +33,7 @@ import {
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
+  WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import { useScheduleList } from '#hooks/use-schedules'
 import { useSelectedDate } from '#hooks/use-selected-date'
@@ -241,6 +243,13 @@ function DayView() {
     onTimeBlockChange: handleTimeBlockChange,
   })
 
+  const futureDayQueueItems = useFutureDayQueueItems({
+    selectedDate,
+    hasDayQueue:
+      queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
+    ...(refetchInterval === undefined ? {} : { refetchInterval }),
+  })
+
   // Queue updates replace the full list, so keep stored IDs separate from
   // filters applied to the displayed sections.
   const rawItemsByKey = useMemo(() => {
@@ -256,18 +265,38 @@ function DayView() {
 
   // Completed tasks remain stored but are omitted from non-day queue sections.
   const queueSections = useMemo(
-    () => buildQueueSections(queuesData, rawItemsByKey, taskMap, selectedDate),
-    [queuesData, rawItemsByKey, taskMap, selectedDate],
+    () =>
+      buildQueueSections(
+        queuesData,
+        rawItemsByKey,
+        taskMap,
+        selectedDate,
+        futureDayQueueItems,
+      ),
+    [queuesData, rawItemsByKey, taskMap, selectedDate, futureDayQueueItems],
   )
 
   const filteredQueueSections = useMemo(
     () =>
       filterTaskIds == null
         ? queueSections
-        : queueSections.map((section) => ({
-            ...section,
-            items: section.items.filter((task) => filterTaskIds.has(task.id)),
-          })),
+        : queueSections.map((section) => {
+            const items = section.items.filter((task) =>
+              filterTaskIds.has(task.id),
+            )
+            const dayGroups = section.dayGroups
+              ?.map((group) => ({
+                ...group,
+                items: group.items.filter((task) => filterTaskIds.has(task.id)),
+              }))
+              .filter((group) => group.items.length > 0)
+
+            return {
+              ...section,
+              items,
+              ...(dayGroups == null ? {} : { dayGroups }),
+            }
+          }),
     [queueSections, filterTaskIds],
   )
 
@@ -297,8 +326,11 @@ function DayView() {
         ids.add(item.taskId)
       })
     })
+    futureDayQueueItems.forEach(({ item }) => {
+      ids.add(item.taskId)
+    })
     return ids
-  }, [rawItemsByKey])
+  }, [rawItemsByKey, futureDayQueueItems])
 
   const allQueueCandidates = useMemo(
     () => getQueueCandidates(categorized.all, allQueuedTaskIds),
@@ -359,6 +391,31 @@ function DayView() {
     })
   }
 
+  const handleMoveScheduledTaskToWeek = (taskId: string, date: string) => {
+    const weekQueueIndex =
+      queuesData?.findIndex((queue) => queue.key === WEEK_QUEUE_KEY) ?? -1
+    if (
+      weekQueueIndex === -1 ||
+      queueItemsResults[weekQueueIndex]?.data == null
+    )
+      return
+    const taskIds = appendedTaskIdsFor(WEEK_QUEUE_KEY, taskId)
+    if (taskIds == null) return
+    setQueueItems.mutate(
+      { key: WEEK_QUEUE_KEY, date, taskIds },
+      {
+        onSuccess: () => {
+          void queryClient.invalidateQueries({
+            queryKey: [...queueKeys.all, WEEK_QUEUE_KEY, 'items'],
+          })
+          void queryClient.invalidateQueries({
+            queryKey: queueKeys.items(DAY_QUEUE_KEY, date),
+          })
+        },
+      },
+    )
+  }
+
   const handleMoveTask = (
     taskId: string,
     fromQueueKey: string,
@@ -417,6 +474,7 @@ function DayView() {
         onInsertCandidate={handleInsertCandidate}
         onAddCandidate={handleAddCandidate}
         onRemoveFromQueue={handleRemoveFromQueue}
+        onMoveScheduledTaskToWeek={handleMoveScheduledTaskToWeek}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         onVisibleRangeChange={handleVisibleRangeChange}
