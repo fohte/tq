@@ -232,9 +232,6 @@ export function syncLinkFromGithub(
     link.etag,
   ).andThen((result) => {
     if (result.notModified) {
-      // GitHub confirmed nothing changed since the stored etag (a bare 304,
-      // no primary-rate-limit cost) — nothing to write beyond the check
-      // itself.
       return ResultAsync.fromSafePromise(
         db
           .update(taskGithubLinks)
@@ -246,9 +243,7 @@ export function syncLinkFromGithub(
             ),
           )
           .returning({ id: taskGithubLinks.id }),
-      ).map((updatedLinks) => {
-        if (updatedLinks.length > 0) onWrite?.(link.taskId)
-      })
+      ).map(() => undefined)
     }
 
     const { issue, etag } = result
