@@ -8,16 +8,22 @@ import { TaskChecklistItemTree } from '#components/task/task-checklist-item-tree
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { SectionHeading } from '#components/ui/section-heading'
+import type { GithubLink } from '#hooks/use-github-link'
 import type {
   CreateTaskChecklistItemInput,
   MoveTaskChecklistItemInput,
   TaskChecklist,
   UpdateTaskChecklistItemInput,
 } from '#hooks/use-task-checklists'
+import type { Task } from '#hooks/use-tasks'
 import { countChecklistLeaves } from '#lib/task-checklist-tree'
 
 interface TaskChecklistListProps {
   checklists: TaskChecklist[]
+  githubLinks: GithubLink[]
+  subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   onCreateChecklist: () => void
   onUpdateChecklist: (
     checklistId: string,
@@ -33,10 +39,16 @@ interface TaskChecklistListProps {
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
+  onPromoteItem: (itemId: string) => void
 }
 
 export function TaskChecklistList({
   checklists,
+  githubLinks,
+  subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   onCreateChecklist,
   onUpdateChecklist,
   onReorderChecklists,
@@ -46,6 +58,8 @@ export function TaskChecklistList({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
+  onLinkGithub,
+  onPromoteItem,
 }: TaskChecklistListProps) {
   const counts = countChecklistLeaves(
     checklists.flatMap((checklist) => checklist.items),
@@ -74,6 +88,10 @@ export function TaskChecklistList({
             <ChecklistPanel
               key={checklist.id}
               checklist={checklist}
+              githubLinks={githubLinks}
+              subtasks={subtasks}
+              linkGithubErrorMessage={linkGithubErrorMessage}
+              isLinkingGithub={isLinkingGithub}
               checklistIndex={index}
               checklistCount={checklists.length}
               onCreateItem={onCreateItem}
@@ -84,6 +102,8 @@ export function TaskChecklistList({
               onDeleteItem={onDeleteItem}
               onMoveItem={onMoveItem}
               onSetItemChecked={onSetItemChecked}
+              onLinkGithub={onLinkGithub}
+              onPromoteItem={onPromoteItem}
             />
           ))}
         </div>
@@ -104,6 +124,10 @@ export function TaskChecklistList({
 
 function ChecklistPanel({
   checklist,
+  githubLinks,
+  subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   checklistIndex,
   checklistCount,
   onCreateItem,
@@ -114,8 +138,14 @@ function ChecklistPanel({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
+  onLinkGithub,
+  onPromoteItem,
 }: {
   checklist: TaskChecklist
+  githubLinks: GithubLink[]
+  subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   checklistIndex: number
   checklistCount: number
   onCreateItem: (
@@ -132,6 +162,8 @@ function ChecklistPanel({
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
+  onPromoteItem: (itemId: string) => void
 }) {
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(checklist.name ?? '')
@@ -244,6 +276,10 @@ function ChecklistPanel({
       <div>
         <TaskChecklistItemTree
           items={checklist.items}
+          githubLinks={githubLinks}
+          subtasks={subtasks}
+          linkGithubErrorMessage={linkGithubErrorMessage}
+          isLinkingGithub={isLinkingGithub}
           addingItemParentId={addingItemParentId}
           onCancelAddingItem={() => {
             setAddingItemParentId(undefined)
@@ -253,6 +289,8 @@ function ChecklistPanel({
           onDeleteItem={onDeleteItem}
           onMoveItem={onMoveItem}
           onSetItemChecked={onSetItemChecked}
+          onLinkGithub={onLinkGithub}
+          onPromoteItem={onPromoteItem}
           onStartAddingItem={(itemId) => {
             setAddingItemParentId(itemId)
           }}

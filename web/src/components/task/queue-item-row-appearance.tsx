@@ -50,7 +50,7 @@ export function QueueItemRowAppearance({
   onCancelEstimate: () => void
 }) {
   // The value itself renders through TaskRowAppearance's own second line;
-  // this only supplies the null-estimate affordances (chip / input).
+  // this only supplies the null-estimate affordances (button / input).
   const estimateItem =
     task.estimatedMinutes != null ? null : isEditingEstimate ? (
       <Input
@@ -82,7 +82,7 @@ export function QueueItemRowAppearance({
           onStartEditingEstimate()
         }}
         data-no-dnd=""
-        title="No estimate set — excluded from auto-scheduling"
+        title="Set an estimate"
       >
         No estimate
       </button>

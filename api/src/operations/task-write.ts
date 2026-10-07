@@ -17,33 +17,18 @@ import {
   updateTaskSchema,
 } from '#schemas/task'
 
-const cliTaskIdentifier = z.union([z.string(), z.number()])
-const taskIdSchema = z.object({ taskId: cliTaskIdentifier })
-const taskIdToolSchema = z.object({ taskId: taskIdOrNumber })
-const createTaskInputSchema = createTaskSchema.extend({
-  parentId: cliTaskIdentifier.optional(),
-})
+const taskIdSchema = z.object({ taskId: taskIdOrNumber })
 const updateTaskInputSchema = updateTaskSchema.extend({
-  taskId: cliTaskIdentifier,
-})
-const updateTaskToolInputSchema = updateTaskSchema.extend({
   taskId: taskIdOrNumber,
 })
 const taskStatusInputSchema = taskIdSchema.extend({ status: taskStatus })
-const taskStatusToolInputSchema = taskIdToolSchema.extend({
+const taskStatusToolInputSchema = taskIdSchema.extend({
   status: z.literal('todo'),
 })
 const taskParentInputSchema = taskIdSchema.extend({
-  parentId: cliTaskIdentifier.optional(),
-})
-const taskParentToolInputSchema = taskIdToolSchema.extend({
   parentId: taskIdOrNumber.optional(),
 })
 const taskCompleteInputSchema = taskIdSchema.extend({
-  statusReason: taskStatusReason.optional(),
-  duplicateOfTaskId: cliTaskIdentifier.optional(),
-})
-const taskCompleteToolInputSchema = taskIdToolSchema.extend({
   statusReason: taskStatusReason.optional(),
   duplicateOfTaskId: taskIdOrNumber
     .describe('Task id or task number this task duplicates.')
@@ -155,7 +140,7 @@ function mapTaskStatusCliInput(input: Record<string, unknown>) {
 }
 
 export const taskWriteOperations = [
-  defineOperation(createTaskInputSchema, {
+  defineOperation(createTaskSchema, {
     path: ['task', 'create'],
     description:
       'Create a task. `labels` that do not match an existing label are ' +
@@ -174,7 +159,6 @@ export const taskWriteOperations = [
     kind: 'write',
     attribution: 'agent',
     routes: ['POST /api/tasks'],
-    mcpInputSchema: createTaskSchema,
     cli: {
       commandOrder: 3,
       description: 'Create a task',
@@ -219,7 +203,6 @@ export const taskWriteOperations = [
     kind: 'write',
     attribution: 'agent',
     routes: ['PATCH /api/tasks/:id'],
-    mcpInputSchema: updateTaskToolInputSchema,
     cli: {
       commandOrder: 4,
       description: 'Update a task',
@@ -256,7 +239,6 @@ export const taskWriteOperations = [
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'delete',
     routes: ['DELETE /api/tasks/:id'],
-    mcpInputSchema: taskIdToolSchema,
     cli: {
       commandOrder: 5,
       description: 'Delete a task',
@@ -303,7 +285,6 @@ export const taskWriteOperations = [
     ],
     kind: 'write',
     routes: ['PATCH /api/tasks/:id/parent'],
-    mcpInputSchema: taskParentToolInputSchema,
     cli: {
       commandOrder: 7,
       description: "Set or clear a task's parent (omit parentId to clear it)",
@@ -327,7 +308,6 @@ export const taskWriteOperations = [
     kind: 'write',
     attribution: 'agent',
     routes: ['POST /api/tasks/:id/complete'],
-    mcpInputSchema: taskCompleteToolInputSchema,
     cli: {
       commandOrder: 8,
       description: 'Complete a task',

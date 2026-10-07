@@ -21,7 +21,6 @@ const routeResources: Record<string, ChangeResource> = {
   'recurring-task-templates': 'recurring_task_template',
   'description-templates': 'description_template',
   'saved-views': 'saved_view',
-  'scheduling-settings': 'scheduling_setting',
   memos: 'memo',
   push: 'push',
   calendar: 'calendar',
@@ -77,9 +76,7 @@ function resourceFromRoute(routePattern: string): ChangeResource | null {
 
   const rootResource = segments[1]
   if (rootResource === 'schedule') {
-    return ['time-blocks', 'auto-assign'].includes(segments[2] ?? '')
-      ? 'time_block'
-      : 'schedule'
+    return segments[2] === 'time-blocks' ? 'time_block' : 'schedule'
   }
   if (rootResource === 'github' && segments[2] === 'sync-rules') {
     return 'github_sync_rule'

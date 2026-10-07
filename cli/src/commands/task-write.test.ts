@@ -15,11 +15,19 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-function taskCreateSnapshot(
+function operationSnapshot(
   exitCode: number,
   call: Parameters<typeof request>[0],
 ) {
   return { exitCode, request: request(call) }
+}
+
+function operationOutputSnapshot(
+  exitCode: number,
+  call: Parameters<typeof request>[0],
+  stdout: unknown,
+) {
+  return { ...operationSnapshot(exitCode, call), stdout }
 }
 
 describe('task create', () => {
@@ -114,7 +122,7 @@ describe('task create', () => {
       fakeStdin(true),
     )
 
-    expect(taskCreateSnapshot(exitCode, calls[0])).toEqual({
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
       exitCode: 0,
       request: {
         method: 'POST',
@@ -695,28 +703,41 @@ describe('task status', () => {
 
 describe('task parent', () => {
   it('sends the given parentId as the request body and prints the response', async () => {
-    const updated = { id: 't1', number: 1, parentId: 'p-uuid' }
+    const updated = {
+      id: 't1',
+      number: 1,
+      parentId: '22222222-2222-4222-8222-222222222222',
+    }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
     )
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'parent', '42', 'p-uuid'],
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'parent',
+        '42',
+        '22222222-2222-4222-8222-222222222222',
+      ],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'PATCH',
-      pathname: '/api/tasks/42/parent',
-      query: {},
-      body: { parentId: 'p-uuid' },
+    expect(
+      operationOutputSnapshot(exitCode, calls[0], write.mock.calls),
+    ).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'PATCH',
+        pathname: '/api/tasks/42/parent',
+        query: {},
+        body: { parentId: '22222222-2222-4222-8222-222222222222' },
+      },
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(updated, null, 2)}\n`],
-    ])
   })
 
   it('sends parentId: null when the positional is omitted', async () => {
@@ -873,20 +894,22 @@ Options:
         '--reason',
         'duplicate',
         '--duplicate-of',
-        '11111111-1111-1111-1111-111111111111',
+        '22222222-2222-4222-8222-222222222222',
       ],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'POST',
-      pathname: '/api/tasks/42/complete',
-      query: {},
-      body: {
-        statusReason: 'duplicate',
-        duplicateOfTaskId: '11111111-1111-1111-1111-111111111111',
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks/42/complete',
+        query: {},
+        body: {
+          statusReason: 'duplicate',
+          duplicateOfTaskId: '22222222-2222-4222-8222-222222222222',
+        },
       },
     })
   })

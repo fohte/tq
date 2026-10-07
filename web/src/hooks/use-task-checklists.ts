@@ -2,8 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
-import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
-import { taskChecklistKeys } from '#lib/query-keys'
+import {
+  assertOk,
+  assertOkOrThrow,
+  assertOkWithMessage,
+  unwrapOrThrow,
+} from '#lib/assert-response'
+import { taskChecklistKeys, taskKeys } from '#lib/query-keys'
 
 type TaskChecklistResponse = InferResponseType<
   (typeof api.api.tasks)[':taskId']['checklists']['$get'],
@@ -183,6 +188,39 @@ export function useUpdateTaskChecklistItem(taskId: string) {
     },
     onSettled: () => {
       invalidateTaskChecklists(taskId, queryClient)
+    },
+  })
+}
+
+export function useLinkTaskChecklistItemToGithub() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ itemId, url }: { itemId: string; url: string }) => {
+      const res = await api.api['checklist-items'][':itemId'].$patch({
+        param: { itemId },
+        json: { github: url },
+      })
+      return unwrapOrThrow(await assertOkWithMessage(res)).json()
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+    },
+  })
+}
+
+export function usePromoteTaskChecklistItem() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (itemId: string) => {
+      const res = await api.api['checklist-items'][':itemId'].promote.$post({
+        param: { itemId },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
     },
   })
 }

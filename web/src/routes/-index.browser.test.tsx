@@ -9,11 +9,15 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
+import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
+import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import type { QueueItem } from '#hooks/use-queues'
+import type { Task } from '#hooks/use-tasks'
 import { getNowPanelQueryDateRange } from '#lib/compact-layout'
 import { formatLocalDate } from '#lib/date-range'
+import type { QueueCandidate } from '#lib/queue-candidates'
 import { assertDefined } from '#lib/test-utils'
 import { Route as RootRoute } from '#routes/__root'
 import { Route as DayRoute } from '#routes/index'
@@ -54,6 +58,7 @@ type QueueDatesMock = (
   dates: string[],
   refetchInterval?: number,
 ) => unknown
+type TaskMapMock = () => ReadonlyMap<string, Task>
 type QueueMutationVariables = {
   key: string
   date: string
@@ -68,6 +73,9 @@ type DayViewMockProps = {
   isLoading?: boolean
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
+  queueSections?: QueueSectionData[]
+  queueCandidates?: QueueCandidate<Task>[]
+  onMoveScheduledTaskToWeek?: (taskId: string, date: string) => void
 }
 type MemosMock = (
   context: 'work' | 'personal',
@@ -99,6 +107,7 @@ const mocks = vi.hoisted(() => ({
   useQueueCarryOver: vi.fn<QueueCarryOverMock>(),
   selectedDate: null as Date | null,
   useQueueItemsForDates: vi.fn<QueueDatesMock>(),
+  useTaskMap: vi.fn<TaskMapMock>(),
   fetchQueueItems: vi.fn<(key: string, date: string) => Promise<QueueItem[]>>(),
   setQueueItems:
     vi.fn<
@@ -138,10 +147,6 @@ vi.mock('#components/layout/app-layout', () => ({
   ),
 }))
 
-vi.mock('#hooks/use-auto-assign', () => ({
-  useAutoAssign: () => ({ isPending: false, mutate: vi.fn() }),
-}))
-
 vi.mock('#hooks/use-calendar-change-feedback', () => ({
   useCalendarChangeFeedback: () => ({
     changeFeedback: null,
@@ -161,7 +166,6 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 
 vi.mock('#hooks/use-gcal-events', () => ({
   GcalAuthRequiredError: class extends Error {},
-  useAutoRescheduleOnGcalChange: vi.fn(),
   useGcalEvents: (...args: Parameters<GcalQueryMock>) => {
     mocks.useGcalEvents(...args)
     return { data: [], error: null }
@@ -230,12 +234,6 @@ vi.mock('#hooks/use-schedules', () => ({
     mocks.useScheduleList(...args),
 }))
 
-vi.mock('#hooks/use-scheduling-settings', () => ({
-  useSchedulingSettings: () => ({
-    data: { autoRescheduleOnGcalChange: false },
-  }),
-}))
-
 vi.mock('#hooks/use-selected-date', () => ({
   useSelectedDate: () => ({
     selectedDate: mocks.selectedDate ?? new Date('2026-07-20T00:00:00'),
@@ -250,7 +248,7 @@ vi.mock('#hooks/use-service-worker-update', () => ({
 vi.mock('#hooks/use-tasks', () => ({
   useTaskList: (...args: Parameters<TaskListMock>) =>
     mocks.useTaskList(...args),
-  useTaskMap: () => new Map(),
+  useTaskMap: () => mocks.useTaskMap(),
 }))
 
 vi.mock('#hooks/use-time-blocks', () => ({
@@ -317,6 +315,7 @@ beforeEach(() => {
   }))
   mocks.selectedDate = null
   mocks.useQueueItemsForDates.mockReturnValue([])
+  mocks.useTaskMap.mockReturnValue(new Map())
   mocks.fetchQueueItems.mockResolvedValue([])
 })
 
@@ -621,6 +620,156 @@ describe('day-view route compact layout', () => {
   })
 })
 
+describe('day-view route scheduled week tasks', () => {
+  it('shows a later day queue task and returns it to the week queue with its placed date', async () => {
+    const scheduledDate = '2026-07-21'
+    const scheduledTask = makeTask({
+      id: 'scheduled-task',
+      title: 'Review the release notes',
+      commitment: 'active',
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    mocks.useTaskList.mockReturnValue({
+      data: [scheduledTask],
+      isLoading: false,
+      categorized: { all: [scheduledTask] },
+    })
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useQueueItemsForQueues.mockReturnValue([{ data: [] }, { data: [] }])
+    mocks.useTaskMap.mockReturnValue(
+      new Map([[scheduledTask.id, scheduledTask]]),
+    )
+    mocks.useQueueItemsForDates.mockImplementation((_key, dates) =>
+      dates.map((date) => ({
+        data:
+          date === scheduledDate
+            ? [makeQueueItem({ taskId: scheduledTask.id })]
+            : [],
+        error: null,
+        errorUpdatedAt: 0,
+      })),
+    )
+
+    const { queryClient } = await renderDayRoute('/')
+    const weekItemsKey = ['queues', 'week', 'items', '2026-07-20']
+    const dayItemsKey = ['queues', 'day', 'items', scheduledDate]
+    queryClient.setQueryData(weekItemsKey, [])
+    queryClient.setQueryData(dayItemsKey, [
+      makeQueueItem({ taskId: scheduledTask.id }),
+    ])
+
+    const presentationProps = assertDefined(
+      mocks.dayViewProps.mock.lastCall?.[0],
+    )
+    const onMoveScheduledTaskToWeek = assertDefined(
+      presentationProps.onMoveScheduledTaskToWeek,
+    )
+    const queueCandidateTaskIds = assertDefined(
+      presentationProps.queueCandidates,
+    ).map(({ task }) => task.id)
+    act(() => {
+      onMoveScheduledTaskToWeek(scheduledTask.id, scheduledDate)
+    })
+    const mutationOptions = assertDefined(
+      mocks.setQueueItems.mock.calls[0]?.[1],
+    )
+    act(() => {
+      mutationOptions.onSuccess?.()
+    })
+
+    const readResult = () => ({
+      fetchedDates: mocks.useQueueItemsForDates.mock.calls.at(-1)?.[1],
+      queueSections: presentationProps.queueSections,
+      queueCandidateTaskIds,
+      mutationVariables: mocks.setQueueItems.mock.calls.map(
+        ([variables]) => variables,
+      ),
+      cacheInvalidation: [weekItemsKey, dayItemsKey].map(
+        (key) => queryClient.getQueryState(key)?.isInvalidated,
+      ),
+    })
+
+    expect(readResult()).toEqual({
+      fetchedDates: [
+        '2026-07-21',
+        '2026-07-22',
+        '2026-07-23',
+        '2026-07-24',
+        '2026-07-25',
+        '2026-07-26',
+      ],
+      queueSections: [
+        {
+          key: 'day',
+          title: 'Today',
+          items: [],
+          dateRangeLabel: '07-20',
+          emptyMessage: "No tasks in Today's queue",
+        },
+        {
+          key: 'week',
+          title: 'This week',
+          items: [],
+          dayGroups: [
+            {
+              date: scheduledDate,
+              label: 'Tue 07-21',
+              items: [scheduledTask],
+            },
+          ],
+          dateRangeLabel: '07-20 – 07-26',
+          emptyMessage: "No tasks in This week's queue",
+        },
+      ],
+      queueCandidateTaskIds: [],
+      mutationVariables: [
+        { key: 'week', date: scheduledDate, taskIds: [scheduledTask.id] },
+      ],
+      cacheInvalidation: [true, true],
+    })
+    queryClient.clear()
+  })
+
+  it('logs failures while loading future day queues', async () => {
+    const error = new Error('queue request failed')
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.useQueues.mockReturnValue({
+      data: [makeQueue({ key: 'day', name: 'Today' })],
+    })
+    mocks.useQueueItemsForDates.mockImplementation((_key, dates) =>
+      dates.map((date) => ({
+        data: [],
+        error: date === '2026-07-21' ? error : null,
+        errorUpdatedAt: date === '2026-07-21' ? 123 : 0,
+      })),
+    )
+
+    const { queryClient } = await renderDayRoute('/')
+    const readQueueErrorLogs = () =>
+      consoleError.mock.calls.filter(
+        ([message]) => message === 'Failed to refresh future day queue items',
+      )
+
+    await waitFor(() => {
+      expect(readQueueErrorLogs()).toEqual([
+        [
+          'Failed to refresh future day queue items',
+          { date: '2026-07-21', error },
+        ],
+      ])
+    })
+    queryClient.clear()
+  })
+})
+
 describe('day queue calendar interactions', () => {
   it('loads a day queue for every date in the visible calendar range', async () => {
     mocks.useQueues.mockReturnValue({
@@ -643,7 +792,10 @@ describe('day queue calendar interactions', () => {
     })
 
     await waitFor(() => {
-      expect(mocks.useQueueItemsForDates.mock.lastCall).toEqual([
+      const calendarQuery = mocks.useQueueItemsForDates.mock.calls
+        .filter((call) => call[1][0] === '2026-07-19')
+        .at(-1)
+      expect(calendarQuery).toEqual([
         'day',
         ['2026-07-19', '2026-07-20', '2026-07-21', '2026-07-22'],
         undefined,
@@ -663,10 +815,18 @@ describe('day queue calendar interactions', () => {
     )
 
     const { queryClient } = await renderDayRoute('/')
-    const getActual = () => consoleError.mock.calls
+    const getActual = () =>
+      consoleError.mock.calls.filter(
+        ([message]) => message === 'Failed to refresh calendar day queue items',
+      )
 
     await waitFor(() => {
-      const dates = assertDefined(mocks.useQueueItemsForDates.mock.lastCall)[1]
+      const dates = assertDefined(
+        mocks.useQueueItemsForDates.mock.calls.find(
+          ([, requestedDates]) =>
+            requestedDates.length === 1 && requestedDates[0] === '2026-07-20',
+        ),
+      )[1]
       expect(getActual()).toEqual(
         dates.map((date) => [
           'Failed to refresh calendar day queue items',

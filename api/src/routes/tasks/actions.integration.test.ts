@@ -3,7 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskGithubLinks, taskRelations, tasks } from '#db/schema'
+import {
+  taskChecklistItems,
+  taskChecklists,
+  taskGithubLinks,
+  taskRelations,
+  tasks,
+} from '#db/schema'
 import {
   mockGithubIssueResponse,
   mockGithubPullResponse,
@@ -1016,6 +1022,39 @@ describe('tasks actions API', () => {
   })
 
   describe('unchecked completion criteria guard', () => {
+    async function createChecklist(taskId: string, name: string) {
+      const checklist = (
+        await db
+          .insert(taskChecklists)
+          .values({ taskId, name })
+          .returning({ id: taskChecklists.id })
+      )[0]
+      assertDefined(checklist)
+      return checklist.id
+    }
+
+    async function createChecklistItem(
+      checklistId: string,
+      content: string,
+      opts: { parentItemId?: string; checked?: boolean } = {},
+    ) {
+      const item = (
+        await db
+          .insert(taskChecklistItems)
+          .values({
+            checklistId,
+            content,
+            ...(opts.parentItemId === undefined
+              ? {}
+              : { parentItemId: opts.parentItemId }),
+            checkedAt: opts.checked === true ? new Date() : null,
+          })
+          .returning({ id: taskChecklistItems.id })
+      )[0]
+      assertDefined(item)
+      return item.id
+    }
+
     async function completeTask(
       taskId: string,
       method: 'PATCH' | 'POST',
@@ -1110,6 +1149,187 @@ describe('tasks actions API', () => {
           task: { status: 'todo', statusReason: null },
         },
       ])
+    })
+
+    it('rejects LLM completion when unchecked checklist leaf items remain', async () => {
+      const methods = ['PATCH', 'POST'] as const
+      const actual = []
+      for (const method of methods) {
+        const task = await createTask(`${method} checklist task`)
+        const checklistId = await createChecklist(task.id, 'Release readiness')
+        const parentItemId = await createChecklistItem(
+          checklistId,
+          'Release checks',
+        )
+        const uncheckedItemId = await createChecklistItem(
+          checklistId,
+          'Verify deployment',
+          { parentItemId },
+        )
+        await createChecklistItem(checklistId, 'Confirm handoff', {
+          parentItemId,
+          checked: true,
+        })
+
+        const res = await completeTask(task.id, method)
+        const body = await jsonBody<{
+          error: string
+          uncheckedCompletionCriteria: string[]
+          uncheckedChecklistItems: {
+            id: string
+            checklistName: string | null
+            content: string
+          }[]
+        }>(res)
+        const [storedTask] = await db
+          .select({ status: tasks.status, statusReason: tasks.statusReason })
+          .from(tasks)
+          .where(eq(tasks.id, task.id))
+        actual.push({
+          method,
+          status: res.status,
+          body: {
+            error: body.error,
+            uncheckedCompletionCriteria: body.uncheckedCompletionCriteria,
+            uncheckedChecklistItems: body.uncheckedChecklistItems.map(
+              (item) => ({
+                ...item,
+                id: item.id === uncheckedItemId ? 'ITEM' : item.id,
+              }),
+            ),
+          },
+          task: storedTask,
+        })
+      }
+
+      const checklistError = [
+        'Unchecked checklist items:',
+        '- Release readiness: Verify deployment',
+        'Check off each verified checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+      ].join('\n')
+      expect(actual).toEqual([
+        {
+          method: 'PATCH',
+          status: 400,
+          body: {
+            error: checklistError,
+            uncheckedCompletionCriteria: [],
+            uncheckedChecklistItems: [
+              {
+                id: 'ITEM',
+                checklistName: 'Release readiness',
+                content: 'Verify deployment',
+              },
+            ],
+          },
+          task: { status: 'todo', statusReason: null },
+        },
+        {
+          method: 'POST',
+          status: 400,
+          body: {
+            error: checklistError,
+            uncheckedCompletionCriteria: [],
+            uncheckedChecklistItems: [
+              {
+                id: 'ITEM',
+                checklistName: 'Release readiness',
+                content: 'Verify deployment',
+              },
+            ],
+          },
+          task: { status: 'todo', statusReason: null },
+        },
+      ])
+    })
+
+    it('allows LLM completion when every checklist leaf item is checked', async () => {
+      const task = await createTask('Checked checklist task')
+      const checklistId = await createChecklist(task.id, 'Release readiness')
+      const parentItemId = await createChecklistItem(
+        checklistId,
+        'Release checks',
+      )
+      await createChecklistItem(checklistId, 'Verify deployment', {
+        parentItemId,
+        checked: true,
+      })
+      await createChecklistItem(checklistId, 'Confirm handoff', {
+        parentItemId,
+        checked: true,
+      })
+
+      const res = await completeTask(task.id, 'POST')
+      const [storedTask] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, task.id))
+
+      const getActual = () => ({ status: res.status, task: storedTask })
+      expect(getActual()).toEqual({
+        status: 200,
+        task: { status: 'completed', statusReason: 'completed' },
+      })
+    })
+
+    it('returns both unchecked description criteria and checklist items', async () => {
+      const task = await createTask('Combined criteria task', {
+        description: '- [ ] Verify the result',
+      })
+      const checklistId = await createChecklist(task.id, 'Release readiness')
+      const uncheckedItemId = await createChecklistItem(
+        checklistId,
+        'Verify deployment',
+      )
+
+      const res = await completeTask(task.id, 'POST')
+      const body = await jsonBody<{
+        error: string
+        uncheckedCompletionCriteria: string[]
+        uncheckedChecklistItems: {
+          id: string
+          checklistName: string | null
+          content: string
+        }[]
+      }>(res)
+      const [storedTask] = await db
+        .select({ status: tasks.status, statusReason: tasks.statusReason })
+        .from(tasks)
+        .where(eq(tasks.id, task.id))
+
+      const getActual = () => ({
+        status: res.status,
+        body: {
+          error: body.error,
+          uncheckedCompletionCriteria: body.uncheckedCompletionCriteria,
+          uncheckedChecklistItems: body.uncheckedChecklistItems.map((item) => ({
+            ...item,
+            id: item.id === uncheckedItemId ? 'ITEM' : item.id,
+          })),
+        },
+        task: storedTask,
+      })
+      expect(getActual()).toEqual({
+        status: 400,
+        body: {
+          error: [
+            'Unchecked completion criteria:',
+            '- [ ] Verify the result',
+            'Unchecked checklist items:',
+            '- Release readiness: Verify deployment',
+            'Check off each verified completion criterion and checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
+          ].join('\n'),
+          uncheckedCompletionCriteria: ['- [ ] Verify the result'],
+          uncheckedChecklistItems: [
+            {
+              id: 'ITEM',
+              checklistName: 'Release readiness',
+              content: 'Verify deployment',
+            },
+          ],
+        },
+        task: { status: 'todo', statusReason: null },
+      })
     })
 
     it('ignores checked criteria and task lists inside fenced or indented code blocks', async () => {
@@ -1222,6 +1442,8 @@ describe('tasks actions API', () => {
         const task = await createTask(attempt.title, {
           description: '- [ ] Verify the result',
         })
+        const checklistId = await createChecklist(task.id, 'Release readiness')
+        await createChecklistItem(checklistId, 'Verify deployment')
         const res = await completeTask(
           task.id,
           attempt.method,

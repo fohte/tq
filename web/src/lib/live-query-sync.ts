@@ -11,12 +11,14 @@ import {
   githubSyncKeys,
   githubSyncRuleKeys,
   labelKeys,
+  matchesTaskSpecificQuery,
   projectKeys,
   queueKeys,
   recurringTemplateKeys,
   savedViewKeys,
   scheduleKeys,
   taskKeys,
+  taskMentionKeys,
   timeBlockKeys,
 } from '#lib/query-keys'
 import { getScreenId } from '#lib/screen-id'
@@ -50,6 +52,12 @@ interface LiveQuerySyncOptions {
   checkSession?: () => Promise<unknown>
 }
 
+interface ResourceInvalidation {
+  filters: QueryFilters[]
+  taskIds?: string[]
+  includeUnresolvedPreviews?: boolean
+}
+
 function parseChangeEvent(raw: string): ChangeEvent | null {
   const parsed = Result.fromThrowable(
     (data: string) => JSON.parse(data) as unknown,
@@ -72,52 +80,124 @@ function parseChangeEvent(raw: string): ChangeEvent | null {
   }
 }
 
+const taskListFilters: QueryFilters[] = [
+  { queryKey: taskKeys.lists },
+  { queryKey: taskKeys.infiniteLists },
+]
+
+function taskInvalidation(
+  taskIds: string[] | null,
+  includeLists: boolean,
+  fallbackFilter: QueryFilters,
+): ResourceInvalidation {
+  if (taskIds === null) return { filters: [fallbackFilter] }
+
+  return {
+    filters: includeLists ? taskListFilters : [],
+    taskIds,
+  }
+}
+
+function withFilters(
+  invalidation: ResourceInvalidation,
+  options: { before?: QueryFilters[]; after?: QueryFilters[] },
+): ResourceInvalidation {
+  return {
+    ...invalidation,
+    filters: [
+      ...(options.before ?? []),
+      ...invalidation.filters,
+      ...(options.after ?? []),
+    ],
+  }
+}
+
 const resourceQueryFilters: Record<
   ChangeResource,
-  (event: ChangeEvent) => QueryFilters[] | null
+  (event: ChangeEvent) => ResourceInvalidation | null
 > = {
-  task: () => [
-    { queryKey: taskKeys.all },
-    { queryKey: projectKeys.all },
-    { queryKey: queueKeys.all },
-  ],
-  project: () => [{ queryKey: projectKeys.all }],
-  label: () => [{ queryKey: labelKeys.all }, { queryKey: taskKeys.all }],
-  queue: () => [{ queryKey: queueKeys.all }],
-  time_block: () => [
-    { queryKey: timeBlockKeys.all },
-    { queryKey: taskKeys.details },
-  ],
-  schedule: () => [{ queryKey: scheduleKeys.all }],
-  saved_view: () => [{ queryKey: savedViewKeys.all }],
-  description_template: () => [{ queryKey: descriptionTemplateKeys.all }],
-  recurring_task_template: () => [{ queryKey: recurringTemplateKeys.all }],
-  github_sync_rule: () => [{ queryKey: githubSyncRuleKeys.list }],
-  agent_session: () => [
-    { queryKey: ['agent-sessions'] },
-    { queryKey: taskKeys.details },
-  ],
-  checklist: () => [{ queryKey: taskKeys.all }],
-  checklist_item: () => [{ queryKey: taskKeys.all }],
-  scheduling_setting: () => [{ queryKey: ['scheduling-settings'] }],
-  memo: ({ id }) => [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
-  push: () => [],
-  calendar: () => [
-    { queryKey: ['gcal-calendars'] },
-    { queryKey: ['gcal-events'] },
-  ],
-  github: () => [],
-  asset: () => [],
-  integration: () => [
-    { queryKey: ['integrations'] },
-    { queryKey: ['gcal-calendars'] },
-    { queryKey: ['gcal-events'] },
-    { queryKey: githubSyncKeys.all },
-  ],
+  task: ({ taskIds }) => {
+    const invalidation = withFilters(
+      taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+      { after: [{ queryKey: projectKeys.all }, { queryKey: queueKeys.all }] },
+    )
+    if (taskIds == null || taskIds.length === 0) return invalidation
+
+    return withFilters(
+      {
+        ...invalidation,
+        includeUnresolvedPreviews: true,
+      },
+      {
+        after: [
+          { queryKey: taskKeys.labelCountsPrefix },
+          { queryKey: taskMentionKeys.suggestionsPrefix },
+        ],
+      },
+    )
+  },
+  project: () => ({ filters: [{ queryKey: projectKeys.all }] }),
+  label: ({ taskIds }) => {
+    const invalidation = taskInvalidation(taskIds, true, {
+      queryKey: taskKeys.all,
+    })
+    return withFilters(invalidation, {
+      before: [{ queryKey: labelKeys.all }],
+      after:
+        taskIds != null && taskIds.length > 0
+          ? [{ queryKey: taskKeys.labelCountsPrefix }]
+          : [],
+    })
+  },
+  queue: () => ({ filters: [{ queryKey: queueKeys.all }] }),
+  time_block: ({ taskIds }) =>
+    withFilters(
+      taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
+      { before: [{ queryKey: timeBlockKeys.all }] },
+    ),
+  schedule: () => ({ filters: [{ queryKey: scheduleKeys.all }] }),
+  saved_view: () => ({ filters: [{ queryKey: savedViewKeys.all }] }),
+  description_template: () => ({
+    filters: [{ queryKey: descriptionTemplateKeys.all }],
+  }),
+  recurring_task_template: () => ({
+    filters: [{ queryKey: recurringTemplateKeys.all }],
+  }),
+  github_sync_rule: () => ({
+    filters: [{ queryKey: githubSyncRuleKeys.list }],
+  }),
+  agent_session: ({ taskIds }) =>
+    withFilters(
+      taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
+      { before: [{ queryKey: ['agent-sessions'] }] },
+    ),
+  checklist: ({ taskIds }) =>
+    taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+  checklist_item: ({ taskIds }) =>
+    taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+  memo: ({ id }) => ({
+    filters: [{ queryKey: id == null ? ['memos'] : ['memos', id] }],
+  }),
+  push: () => ({ filters: [] }),
+  calendar: () => ({
+    filters: [{ queryKey: ['gcal-calendars'] }, { queryKey: ['gcal-events'] }],
+  }),
+  github: () => ({ filters: [] }),
+  asset: () => ({ filters: [] }),
+  integration: () => ({
+    filters: [
+      { queryKey: ['integrations'] },
+      { queryKey: ['gcal-calendars'] },
+      { queryKey: ['gcal-events'] },
+      { queryKey: githubSyncKeys.all },
+    ],
+  }),
   unknown: () => null,
 }
 
-function filtersForResourceChange(event: ChangeEvent): QueryFilters[] | null {
+function filtersForResourceChange(
+  event: ChangeEvent,
+): ResourceInvalidation | null {
   return resourceQueryFilters[event.resource](event)
 }
 
@@ -135,6 +215,8 @@ export function connectLiveQuerySync(
     options.createEventSource ?? ((url: string) => new EventSource(url))
   const requestSessionCheck = options.checkSession ?? checkSession
   const pendingFilters = new Map<string, QueryFilters>()
+  const pendingTaskIds = new Set<string>()
+  let pendingUnresolvedPreviews = false
   let pendingAll = false
   let hasConnected = false
   let sessionCheckRequested = false
@@ -218,26 +300,50 @@ export function connectLiveQuerySync(
 
     const filters = [...pendingFilters.values()]
     pendingFilters.clear()
+    if (pendingTaskIds.size > 0) {
+      const taskIds = new Set(pendingTaskIds)
+      const includeUnresolvedPreviews = pendingUnresolvedPreviews
+      filters.push({
+        predicate: (query) =>
+          matchesTaskSpecificQuery(
+            query.queryKey,
+            query.state.data,
+            taskIds,
+            includeUnresolvedPreviews,
+          ),
+      })
+      pendingTaskIds.clear()
+      pendingUnresolvedPreviews = false
+    }
     invalidateFilters(filters)
   }
 
   const schedulePendingInvalidations = () => {
     if (waitingForMutation || invalidationTimer != null) return
-    if (!pendingAll && pendingFilters.size === 0) return
+    if (!pendingAll && pendingFilters.size === 0 && pendingTaskIds.size === 0) {
+      return
+    }
     invalidationTimer = setTimeout(() => {
       invalidationTimer = undefined
       flushPendingInvalidations()
     }, INVALIDATION_BATCH_WINDOW_MS)
   }
 
-  const queueInvalidation = (filters: QueryFilters[] | null) => {
-    if (filters == null) {
+  const queueInvalidation = (invalidation: ResourceInvalidation | null) => {
+    if (invalidation == null) {
       pendingAll = true
       pendingFilters.clear()
+      pendingTaskIds.clear()
+      pendingUnresolvedPreviews = false
     } else if (!pendingAll) {
-      for (const filter of filters) {
+      for (const filter of invalidation.filters) {
         pendingFilters.set(JSON.stringify(filter), filter)
       }
+      for (const taskId of invalidation.taskIds ?? []) {
+        pendingTaskIds.add(taskId)
+      }
+      pendingUnresolvedPreviews ||=
+        invalidation.includeUnresolvedPreviews === true
     }
     schedulePendingInvalidations()
   }

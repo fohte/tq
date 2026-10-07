@@ -10,7 +10,6 @@ import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { localDateBoundsToUtc } from '#lib/timezone'
-import { autoAssignApp } from '#routes/schedule-auto-assign'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -412,5 +411,4 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  .route('/', autoAssignApp)
   .route('/', scheduleOverridesApp)

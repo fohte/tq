@@ -1,23 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-import { makeLabel, makeTask } from '#components/layout/sidebar-test-fixtures'
+import { makeLabel } from '#components/layout/sidebar-test-fixtures'
 import { TagsSection } from '#components/layout/tags-section'
 import type { Label } from '#hooks/use-labels'
-import type { Task } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
+import { taskKeys } from '#hooks/use-task-queries'
 import { labelKeys } from '#lib/query-keys'
+import { makeTagCount } from '#lib/tag-tree-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
-
-const tasks: Task[] = [
-  makeTask({ id: '1', title: 'An active task', labels: ['project/active'] }),
-  makeTask({
-    id: '2',
-    title: 'A completed task',
-    status: 'completed',
-    labels: ['archive'],
-  }),
-]
 
 const labels: Label[] = [
   makeLabel({ id: '1', name: 'project/active' }),
@@ -34,7 +24,11 @@ function TagsSectionStory({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  queryClient.setQueryData(taskKeys.labelCounts('personal'), [
+    makeTagCount({ name: 'project', count: 1 }),
+    makeTagCount({ name: 'project/active', count: 1 }),
+    makeTagCount({ name: 'archive' }),
+  ])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), labels)
 
   return (

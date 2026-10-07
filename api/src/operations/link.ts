@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
@@ -11,7 +12,7 @@ import {
 import { agentProviderSchema } from '#schemas/agent-session'
 
 const linkInputSchema = z.object({
-  taskId: pathSegmentSchema('Task ID'),
+  taskId: taskIdOrNumber,
   provider: pathSegmentSchema('Provider').pipe(agentProviderSchema),
   sessionId: pathSegmentSchema('Session ID'),
 })
@@ -48,7 +49,7 @@ export const linkOperations = [
         (agentSessionId) =>
           requestJson(
             client.api.tasks[':taskId']['agent-sessions'].$post({
-              param: { taskId: encodePathSegment(taskId) },
+              param: { taskId: encodePathSegment(String(taskId)) },
               json: { agentSessionId },
             }),
           ),
@@ -79,7 +80,7 @@ export const linkOperations = [
               ':agentSessionId'
             ].$delete({
               param: {
-                taskId: encodePathSegment(taskId),
+                taskId: encodePathSegment(String(taskId)),
                 agentSessionId: encodePathSegment(agentSessionId),
               },
             }),

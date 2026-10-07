@@ -4,12 +4,12 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  timeBlockKeys,
   useCreateTimeBlock,
-  useDeleteManualTimeBlock,
+  useDeleteTimeBlock,
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
+import { timeBlockKeys } from '#lib/query-keys'
 import { assertDefined } from '#lib/test-utils'
 
 // Mock the API module
@@ -514,7 +514,7 @@ describe('useUpdateTimeBlock', () => {
   })
 })
 
-describe('useDeleteManualTimeBlock', () => {
+describe('useDeleteTimeBlock', () => {
   it('deletes a time block with optimistic update', async () => {
     const mocks = await getMocks()
     const mockGet = assertDefined(mocks['mockGet'])
@@ -546,7 +546,7 @@ describe('useDeleteManualTimeBlock', () => {
 
     // Delete
     const { result } = renderHook(
-      () => useDeleteManualTimeBlock('task-1', 'block-1'),
+      () => useDeleteTimeBlock('task-1', 'block-1'),
       { wrapper },
     )
 
