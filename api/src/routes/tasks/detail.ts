@@ -19,7 +19,6 @@ import {
 import { getTaskGithubBlockers } from '#services/task-github-blockers'
 import { getTaskLinkRows } from '#services/task-links'
 import {
-  getDuplicateOfNumbersByTaskId,
   getDuplicateOfTaskRow,
   getTaskBlockedByRelationRows,
 } from '#services/task-relations'
@@ -74,7 +73,6 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     githubLinksByTaskId,
     taskFieldAuthors,
     labelsByTaskId,
-    duplicateOfNumbersByTaskId,
     githubBlockers,
     checklistData,
     relatedTasks,
@@ -116,9 +114,6 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     getGithubLinksByTaskId([id], { role: 'subject' }),
     getTaskFieldAuthors(id),
     getLabelNamesByTaskId([id]),
-    task.statusReason === 'duplicate'
-      ? getDuplicateOfNumbersByTaskId([id])
-      : Promise.resolve(new Map<string, number>()),
     getTaskGithubBlockers(id),
     getTaskChecklistData(id),
     relatedTasksPromise,
@@ -147,10 +142,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
       links: relatedTasks.links,
       labels: labelsByTaskId.get(id) ?? [],
-      duplicateOfNumber:
-        task.statusReason === 'duplicate'
-          ? (duplicateOfNumbersByTaskId.get(id) ?? null)
-          : null,
+      duplicateOfNumber: relatedTasks.duplicateOfTask?.number ?? null,
       duplicateOfTask: relatedTasks.duplicateOfTask,
       blockedBy: relatedTasks.blockedBy,
       blocking: relatedTasks.blocking,

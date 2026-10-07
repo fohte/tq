@@ -10,14 +10,14 @@ import { dbContext } from '#db/context'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
-// Single connection so the transaction below and every query issued during
-// a test run on the same underlying Postgres session.
 interface CapturedDbQuery {
   query: string
   parameters: unknown[]
 }
 
 let activeQueryCapture: CapturedDbQuery[] | undefined
+// Single connection so the transaction below and every query issued during
+// a test run on the same underlying Postgres session.
 const testClient = postgres(DATABASE_URL, {
   max: 1,
   debug: (_connection, query, parameters) => {

@@ -154,19 +154,102 @@ function normalizeTaskDetail(task: TaskResponse) {
   }
 }
 
-function relatedTaskQuerySnapshot(
-  status: number,
-  body: TaskResponse,
-  relatedTaskHydrationQueryCount: number,
-  previousRelatedTaskHydrationQueryCount: number,
-) {
+function relatedTaskResponseSnapshot(status: number, body: TaskResponse) {
   return {
     status,
     body: normalizeTaskDetail(body),
-    relatedTaskHydrationQueryCount,
-    previousRelatedTaskHydrationQueryCount,
-    queryCountDecreased:
-      relatedTaskHydrationQueryCount < previousRelatedTaskHydrationQueryCount,
+  }
+}
+
+function relatedTaskQueryCountSnapshot(currentCount: number) {
+  const previousCount = 21
+  return {
+    previousCount,
+    currentCount,
+    decreased: currentCount < previousCount,
+  }
+}
+
+async function createTaskWithAllRelations() {
+  const task = await createTask('Task with relations')
+  const duplicateTarget = await createTask('Related task')
+  const incomingTask = await createTask('Incoming task')
+
+  await app.request(`/api/tasks/${task.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      description: `See #${String(duplicateTarget.number)}`,
+    }),
+  })
+  await app.request(`/api/tasks/${incomingTask.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description: `See #${String(task.number)}` }),
+  })
+  await setBlockedBy(task.id, [duplicateTarget.id])
+  const incomingTaskAfterPatch = await jsonBody<TaskResponse>(
+    await setBlockedBy(incomingTask.id, [task.id]),
+  )
+
+  const duplicateTargetAfterComplete = await jsonBody<TaskResponse>(
+    await app.request(`/api/tasks/${duplicateTarget.id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statusReason: 'not_planned' }),
+    }),
+  )
+  const completedTask = await jsonBody<TaskResponse>(
+    await app.request(`/api/tasks/${task.id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        statusReason: 'duplicate',
+        duplicateOfTaskId: duplicateTarget.id,
+      }),
+    }),
+  )
+
+  return {
+    task,
+    duplicateTarget,
+    incomingTask,
+    incomingTaskAfterPatch,
+    duplicateTargetAfterComplete,
+    completedTask,
+  }
+}
+
+function expectedTaskWithAllRelations({
+  completedTask,
+  duplicateTargetAfterComplete,
+  incomingTaskAfterPatch,
+}: Awaited<ReturnType<typeof createTaskWithAllRelations>>) {
+  const incomingTaskDetail = toListItemResponse(incomingTaskAfterPatch, {
+    blockedByNumbers: [completedTask.number],
+  })
+  const duplicateTargetDetail = toListItemResponse(duplicateTargetAfterComplete)
+
+  return {
+    ...withoutLinkSync(completedTask),
+    titleAuthor: { kind: 'human', agent: null },
+    descriptionAuthor: { kind: 'human', agent: null },
+    parentNumber: null,
+    childCompletionCount: { total: 0, completed: 0 },
+    pages: [],
+    timeBlocks: [],
+    links: {
+      outgoing: [duplicateTargetDetail],
+      incoming: [incomingTaskDetail],
+    },
+    labels: [],
+    duplicateOfNumber: duplicateTargetAfterComplete.number,
+    duplicateOfTask: duplicateTargetDetail,
+    blockedBy: [duplicateTargetDetail],
+    blocking: [incomingTaskDetail],
+    githubBlockers: [],
+    checklistCompletionCount: { total: 0, completed: 0 },
+    checklists: [],
   }
 }
 
@@ -2177,101 +2260,41 @@ describe('tasks CRUD API', () => {
   })
 
   describe('GET /api/tasks/:id', () => {
-    it('returns all related task rows with fewer database queries', async () => {
-      const task = await createTask('Task with relations')
-      const duplicateTarget = await createTask('Related task')
-      const incomingTask = await createTask('Incoming task')
+    it('returns all related task rows', async () => {
+      const fixture = await createTaskWithAllRelations()
 
-      await app.request(`/api/tasks/${task.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: `See #${String(duplicateTarget.number)}`,
-        }),
-      })
-      await app.request(`/api/tasks/${incomingTask.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: `See #${String(task.number)}` }),
-      })
-      await setBlockedBy(task.id, [duplicateTarget.id])
-      const incomingTaskAfterPatch = await jsonBody<TaskResponse>(
-        await setBlockedBy(incomingTask.id, [task.id]),
+      const res = await app.request(`/api/tasks/${fixture.task.id}`)
+      const body = await jsonBody<TaskResponse>(res)
+      const actual = relatedTaskResponseSnapshot(res.status, body)
+      const expected = relatedTaskResponseSnapshot(
+        200,
+        expectedTaskWithAllRelations(fixture),
       )
 
-      const duplicateTargetAfterComplete = await jsonBody<TaskResponse>(
-        await app.request(`/api/tasks/${duplicateTarget.id}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ statusReason: 'not_planned' }),
-        }),
-      )
-      const completedTask = await jsonBody<TaskResponse>(
-        await app.request(`/api/tasks/${task.id}/complete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            statusReason: 'duplicate',
-            duplicateOfTaskId: duplicateTarget.id,
-          }),
-        }),
-      )
+      expect(actual).toEqual(expected)
+    })
 
-      const { result: res, queries } = await captureDbQueries(async () =>
+    it('hydrates related task rows with fewer database queries', async () => {
+      const { task, duplicateTarget, incomingTask } =
+        await createTaskWithAllRelations()
+
+      const { queries } = await captureDbQueries(async () =>
         app.request(`/api/tasks/${task.id}`),
       )
-      const body = await jsonBody<TaskResponse>(res)
       const relatedTaskIds = new Set([duplicateTarget.id, incomingTask.id])
-      const relatedTaskQueries = queries.filter(({ parameters }) =>
-        parameters.some(
-          (parameter) =>
-            typeof parameter === 'string' && relatedTaskIds.has(parameter),
-        ),
-      )
-      const incomingTaskDetail = toListItemResponse(incomingTaskAfterPatch, {
-        blockedByNumbers: [completedTask.number],
-      })
-      const duplicateTargetDetail = toListItemResponse(
-        duplicateTargetAfterComplete,
-      )
-      const relatedTaskHydrationQueryCount = relatedTaskQueries.length - 1
-      const previousRelatedTaskHydrationQueryCount = 21
-
-      const expectedBody = {
-        ...withoutLinkSync(completedTask),
-        titleAuthor: { kind: 'human', agent: null },
-        descriptionAuthor: { kind: 'human', agent: null },
-        parentNumber: null,
-        childCompletionCount: { total: 0, completed: 0 },
-        pages: [],
-        timeBlocks: [],
-        links: {
-          outgoing: [duplicateTargetDetail],
-          incoming: [incomingTaskDetail],
-        },
-        labels: [],
-        duplicateOfNumber: duplicateTargetAfterComplete.number,
-        duplicateOfTask: duplicateTargetDetail,
-        blockedBy: [duplicateTargetDetail],
-        blocking: [incomingTaskDetail],
-        githubBlockers: [],
-        checklistCompletionCount: { total: 0, completed: 0 },
-        checklists: [],
-      }
-      const actual = relatedTaskQuerySnapshot(
-        res.status,
-        body,
+      const relatedTaskHydrationQueryCount =
+        queries.filter(({ parameters }) =>
+          parameters.some(
+            (parameter) =>
+              typeof parameter === 'string' && relatedTaskIds.has(parameter),
+          ),
+        ).length - 1
+      const actual = relatedTaskQueryCountSnapshot(
         relatedTaskHydrationQueryCount,
-        previousRelatedTaskHydrationQueryCount,
       )
+      const expected = relatedTaskQueryCountSnapshot(7)
 
-      expect(actual).toEqual({
-        status: 200,
-        body: normalizeTaskDetail(expectedBody),
-        relatedTaskHydrationQueryCount: 7,
-        previousRelatedTaskHydrationQueryCount: 21,
-        queryCountDecreased: true,
-      })
+      expect(actual).toEqual(expected)
     })
 
     it('does not query duplicate relations for a non-duplicate task', async () => {
