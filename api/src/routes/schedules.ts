@@ -21,6 +21,7 @@ import {
 } from '#routes/schedule-shared'
 import { findTaskByIdOrNumber, timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { scheduleDateRangeSchema } from '#schemas/schedule'
 
 const timePattern = /^\d{2}:\d{2}$/
 
@@ -37,9 +38,7 @@ const updateTimeBlockSchema = z.object({
   isAutoScheduled: z.boolean().optional(),
 })
 
-const timeBlockDateQuerySchema = z.object({
-  startDate: z.string(),
-  endDate: z.string(),
+const timeBlockDateQuerySchema = scheduleDateRangeSchema.safeExtend({
   tzOffset: z.coerce.number().int().optional(),
 })
 
@@ -59,11 +58,6 @@ const updateScheduleSchema = z.object({
   recurrence: recurrenceRuleSchema.nullable().optional(),
   context: z.enum(['work', 'personal']).nullable().optional(),
   color: z.string().nullable().optional(),
-})
-
-const scheduleDateQuerySchema = z.object({
-  startDate: z.string(),
-  endDate: z.string(),
 })
 
 function recurrenceRuleToResponse(
@@ -278,7 +272,7 @@ export const schedulesApp = new Hono()
   })
   .get(
     '/recurring',
-    zValidator('query', scheduleDateQuerySchema),
+    zValidator('query', scheduleDateRangeSchema),
     async (c) => {
       const { startDate, endDate } = c.req.valid('query')
 

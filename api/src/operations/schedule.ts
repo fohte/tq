@@ -5,17 +5,21 @@ import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment } from '#operations/path-segment'
 import {
   defineOperation,
+  formatInputIssues,
   requestJson,
   requestNoContent,
 } from '#operations/types'
+import {
+  isScheduleDateRangeValid,
+  MAX_SCHEDULE_DATE_RANGE_DAYS,
+  SCHEDULE_DATE_RANGE_ERROR_MESSAGE,
+  scheduleDateRangeInputSchema,
+  scheduleDateRangeSchema,
+} from '#schemas/schedule'
 
 const timeBlockIdSchema = z.object({ id: z.uuid() })
 
-const timeBlockListInputSchema = z.object({
-  startDate: z.iso
-    .date()
-    .describe('First local date to include, as YYYY-MM-DD.'),
-  endDate: z.iso.date().describe('Last local date to include, as YYYY-MM-DD.'),
+const timeBlockListInputSchema = scheduleDateRangeInputSchema.extend({
   tzOffset: z
     .number()
     .int()
@@ -23,6 +27,11 @@ const timeBlockListInputSchema = z.object({
       'Required timezone offset in minutes using the Date.getTimezoneOffset() convention.',
     ),
 })
+
+const timeBlockListMcpInputSchema = timeBlockListInputSchema.refine(
+  isScheduleDateRangeValid,
+  { message: SCHEDULE_DATE_RANGE_ERROR_MESSAGE, path: ['endDate'] },
+)
 
 const createTimeBlockInputSchema = z.object({
   taskId: taskIdOrNumber.describe('Task id or task number.'),
@@ -44,31 +53,7 @@ const updateTimeBlockInputSchema = z.object({
   isAutoScheduled: z.boolean().optional(),
 })
 
-const recurringScheduleListInputSchema = z.object({
-  startDate: z.iso.date().describe('First date to include, as YYYY-MM-DD.'),
-  endDate: z.iso.date().describe('Last date to include, as YYYY-MM-DD.'),
-})
-
-function isRecurringScheduleRangeValid({
-  startDate,
-  endDate,
-}: {
-  startDate: string
-  endDate: string
-}): boolean {
-  const rangeMs =
-    Date.parse(`${endDate}T00:00:00.000Z`) -
-    Date.parse(`${startDate}T00:00:00.000Z`)
-  return rangeMs >= 0 && rangeMs < 31 * 24 * 60 * 60 * 1000
-}
-
-const recurringScheduleMcpInputSchema = recurringScheduleListInputSchema.refine(
-  isRecurringScheduleRangeValid,
-  {
-    message: 'Date range must be chronological and no longer than 31 days',
-    path: ['endDate'],
-  },
-)
+const recurringScheduleListInputSchema = scheduleDateRangeInputSchema
 
 const autoScheduleCliOptions = [
   {
@@ -110,6 +95,7 @@ export const scheduleOperations = [
       'List time blocks that overlap an inclusive local date range. Pass a timezone offset using the Date.getTimezoneOffset() convention.',
     positionalArgs: ['startDate', 'endDate'],
     kind: 'read',
+    mcpInputSchema: timeBlockListMcpInputSchema,
     routes: ['GET /api/schedule/time-blocks'],
     cli: {
       group: { description: 'Manage task schedules', order: 10 },
@@ -124,12 +110,24 @@ export const scheduleOperations = [
       mapInput: mapCliTimezoneOffset,
       output: { kind: 'json' },
     },
-    run: (client, { startDate, endDate, tzOffset }) =>
-      requestJson(
+    run: (client, { startDate, endDate, tzOffset }) => {
+      const dateRange = scheduleDateRangeSchema.safeParse({
+        startDate,
+        endDate,
+      })
+      if (!dateRange.success) {
+        return errAsync({
+          kind: 'input',
+          message: formatInputIssues(dateRange.error),
+        })
+      }
+
+      return requestJson(
         client.api.schedule['time-blocks'].$get({
-          query: { startDate, endDate, tzOffset: String(tzOffset) },
+          query: { ...dateRange.data, tzOffset: String(tzOffset) },
         }),
-      ),
+      )
+    },
   }),
   defineOperation(createTimeBlockInputSchema, {
     path: ['schedule', 'time-blocks', 'create'],
@@ -184,20 +182,23 @@ export const scheduleOperations = [
   }),
   defineOperation(recurringScheduleListInputSchema, {
     path: ['schedule', 'recurring', 'list'],
-    description:
-      'List expanded recurring schedule instances for an inclusive date range of up to 31 calendar days. Split longer ranges into multiple requests.',
+    description: `List expanded recurring schedule instances for an inclusive date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Split longer ranges into multiple requests.`,
     positionalArgs: ['startDate', 'endDate'],
     kind: 'read',
-    mcpInputSchema: recurringScheduleMcpInputSchema,
+    mcpInputSchema: scheduleDateRangeSchema,
     routes: ['GET /api/schedule/recurring'],
     cli: { output: { kind: 'json' } },
-    run: (client, query) =>
-      isRecurringScheduleRangeValid(query)
-        ? requestJson(client.api.schedule.recurring.$get({ query }))
-        : errAsync({
-            kind: 'input',
-            message:
-              'endDate: Date range must be chronological and no longer than 31 days',
-          }),
+    run: (client, query) => {
+      const dateRange = scheduleDateRangeSchema.safeParse(query)
+      if (!dateRange.success) {
+        return errAsync({
+          kind: 'input',
+          message: formatInputIssues(dateRange.error),
+        })
+      }
+      return requestJson(
+        client.api.schedule.recurring.$get({ query: dateRange.data }),
+      )
+    },
   }),
 ] as const

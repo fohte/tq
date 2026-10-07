@@ -265,6 +265,45 @@ describe('schedule time blocks delete', () => {
 })
 
 describe('schedule recurring list', () => {
+  it('accepts an inclusive 42-day date range', async () => {
+    expect(
+      await runScheduleCli(
+        ['schedule', 'recurring', 'list', '2099-01-01', '2099-02-11'],
+        new Response('[]', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/schedule/recurring',
+          query: { startDate: '2099-01-01', endDate: '2099-02-11' },
+          body: undefined,
+        },
+      ],
+      stderr: [],
+      stdout: [['[]\n']],
+    })
+  })
+
+  it('rejects date ranges longer than 42 days before sending a request', async () => {
+    expect(
+      await runScheduleCli(
+        ['schedule', 'recurring', 'list', '2099-01-01', '2099-02-12'],
+        new Response('[]', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: endDate: Date range must be chronological and no longer than 42 days\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
+
   it('requests expanded recurring instances for the supplied date range', async () => {
     const instances: unknown[] = []
 
