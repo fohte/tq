@@ -11,22 +11,59 @@ import {
   getLabelNamesByTaskId,
   getRecurrenceRulesByTemplateIds,
   githubLinkToResponse,
+  hydrateTaskListRows,
   requireTask,
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
 import { getTaskGithubBlockers } from '#services/task-github-blockers'
-import { getTaskLinks } from '#services/task-links'
+import { getTaskLinkRows } from '#services/task-links'
 import {
   getDuplicateOfNumbersByTaskId,
-  getDuplicateOfTask,
-  getTaskBlockedByRelations,
+  getDuplicateOfTaskRow,
+  getTaskBlockedByRelationRows,
 } from '#services/task-relations'
 
 export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
   const task = c.get('task')
   const id = task.id
   const templateId = task.templateId
+
+  const relatedTasksPromise = Promise.all([
+    getTaskLinkRows(id),
+    task.statusReason === 'duplicate'
+      ? getDuplicateOfTaskRow(id)
+      : Promise.resolve(null),
+    getTaskBlockedByRelationRows(id),
+  ]).then(async ([taskLinkRows, duplicateOfTaskRow, blockedByRows]) => {
+    const hydratedRows = await hydrateTaskListRows([
+      ...taskLinkRows.outgoing,
+      ...taskLinkRows.incoming,
+      ...(duplicateOfTaskRow == null ? [] : [duplicateOfTaskRow]),
+      ...blockedByRows.blockedBy,
+      ...blockedByRows.blocking,
+    ])
+    let offset = 0
+    const takeRows = (count: number) => {
+      const rows = hydratedRows.slice(offset, offset + count)
+      offset += count
+      return rows
+    }
+
+    const outgoing = takeRows(taskLinkRows.outgoing.length)
+    const incoming = takeRows(taskLinkRows.incoming.length)
+    const duplicateOfTask =
+      duplicateOfTaskRow == null ? null : (takeRows(1)[0] ?? null)
+    const blockedBy = takeRows(blockedByRows.blockedBy.length)
+    const blocking = takeRows(blockedByRows.blocking.length)
+
+    return {
+      links: { outgoing, incoming },
+      duplicateOfTask,
+      blockedBy,
+      blocking,
+    }
+  })
 
   const [
     childStats,
@@ -35,14 +72,12 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     taskTimeBlocks,
     rule,
     githubLinksByTaskId,
-    links,
     taskFieldAuthors,
     labelsByTaskId,
     duplicateOfNumbersByTaskId,
-    duplicateOfTask,
-    blockedByRelations,
     githubBlockers,
     checklistData,
+    relatedTasks,
   ] = await Promise.all([
     db
       .select({
@@ -79,14 +114,14 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
           })
         : Promise.resolve(null),
     getGithubLinksByTaskId([id], { role: 'subject' }),
-    getTaskLinks(id),
     getTaskFieldAuthors(id),
     getLabelNamesByTaskId([id]),
-    getDuplicateOfNumbersByTaskId([id]),
-    getDuplicateOfTask(id),
-    getTaskBlockedByRelations(id),
+    task.statusReason === 'duplicate'
+      ? getDuplicateOfNumbersByTaskId([id])
+      : Promise.resolve(new Map<string, number>()),
     getTaskGithubBlockers(id),
     getTaskChecklistData(id),
+    relatedTasksPromise,
   ])
 
   const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -110,16 +145,15 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
         pageToResponse(page, pageAuthors.get(page.id) ?? null),
       ),
       timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
-      links,
+      links: relatedTasks.links,
       labels: labelsByTaskId.get(id) ?? [],
       duplicateOfNumber:
         task.statusReason === 'duplicate'
           ? (duplicateOfNumbersByTaskId.get(id) ?? null)
           : null,
-      duplicateOfTask:
-        task.statusReason === 'duplicate' ? duplicateOfTask : null,
-      blockedBy: blockedByRelations.blockedBy,
-      blocking: blockedByRelations.blocking,
+      duplicateOfTask: relatedTasks.duplicateOfTask,
+      blockedBy: relatedTasks.blockedBy,
+      blocking: relatedTasks.blocking,
       githubBlockers: githubBlockers.map(githubLinkToResponse),
       ...checklistData,
     },

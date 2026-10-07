@@ -3,22 +3,11 @@ import { z } from 'zod'
 
 import { db, type DbTransaction } from '#db/connection'
 import { taskRelations, tasks } from '#db/schema'
-import { selectTaskListRows } from '#routes/tasks/list-query'
-import {
-  hydrateTaskListRows,
-  type TaskListItemResponse,
-} from '#routes/tasks/shared'
+import { selectTaskListRows, type TaskListRow } from '#routes/tasks/list-query'
 import {
   type PreparedGithubBlockers,
   replaceTaskGithubBlockers,
 } from '#services/task-github-blockers'
-
-// Mirrors `LinkedTaskDetail` in task-links.ts: the task-detail page renders
-// a duplicate-of target with the same row appearance as any other linked
-// task.
-type LinkedTaskDetail = TaskListItemResponse & {
-  childCompletionCount: { completed: number; total: number }
-}
 
 // Batch-fetches each task's latest `duplicate_of` target number, keyed by
 // source id. A source can carry more than one row (old ones aren't deleted
@@ -46,13 +35,12 @@ export async function getDuplicateOfNumbersByTaskId(
   return new Map(rows.map((row) => [row.sourceTaskId, row.number]))
 }
 
-// The full task-list-row shape of the task `taskId` is a `duplicate_of`, for
-// the task-detail page's "Duplicate of" block. `null` when the task has no
-// `duplicate_of` relation. See `getDuplicateOfNumbersByTaskId` for why the
-// most recently created relation wins when more than one exists.
-export async function getDuplicateOfTask(
+// Selects the latest `duplicate_of` target row for task detail. See
+// `getDuplicateOfNumbersByTaskId` for why the most recently created relation
+// wins when more than one exists.
+export async function getDuplicateOfTaskRow(
   taskId: string,
-): Promise<LinkedTaskDetail | null> {
+): Promise<TaskListRow | null> {
   const [relation] = await db
     .select({ targetTaskId: taskRelations.targetTaskId })
     .from(taskRelations)
@@ -70,8 +58,7 @@ export async function getDuplicateOfTask(
   const rows = await selectTaskListRows().where(
     eq(tasks.id, relation.targetTaskId),
   )
-  const [hydrated] = await hydrateTaskListRows(rows)
-  return hydrated ?? null
+  return rows[0] ?? null
 }
 
 // Batch-fetches each task's `blocked_by` target numbers, keyed by source
@@ -126,19 +113,16 @@ export async function getIncompleteBlockerNumbers(
   return rows.map((row) => row.number)
 }
 
-export interface TaskBlockedByRelations {
-  // Tasks that block `taskId`.
-  blockedBy: LinkedTaskDetail[]
-  // Tasks that `taskId` blocks.
-  blocking: LinkedTaskDetail[]
+export interface TaskBlockedByRelationRows {
+  blockedBy: TaskListRow[]
+  blocking: TaskListRow[]
 }
 
-// The full task-list-row shape of every task on both sides of `taskId`'s
-// `blocked_by` relations, for the task-detail page's blocked-by section.
-export async function getTaskBlockedByRelations(
+// Selects both sides of `taskId`'s `blocked_by` relations for task detail.
+export async function getTaskBlockedByRelationRows(
   taskId: string,
-): Promise<TaskBlockedByRelations> {
-  const [blockedByRows, blockingRows] = await Promise.all([
+): Promise<TaskBlockedByRelationRows> {
+  const [blockedBy, blocking] = await Promise.all([
     selectTaskListRows()
       .innerJoin(taskRelations, eq(taskRelations.targetTaskId, tasks.id))
       .where(
@@ -159,17 +143,7 @@ export async function getTaskBlockedByRelations(
       .orderBy(tasks.number),
   ])
 
-  // Hydrated together (not per-direction) so labels and progress counts are
-  // fetched in a fixed number of queries regardless of relation direction.
-  const hydrated = await hydrateTaskListRows([
-    ...blockedByRows,
-    ...blockingRows,
-  ])
-
-  return {
-    blockedBy: hydrated.slice(0, blockedByRows.length),
-    blocking: hydrated.slice(blockedByRows.length),
-  }
+  return { blockedBy, blocking }
 }
 
 // True when adding a `blocked_by` edge from `taskId` to any id in

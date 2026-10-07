@@ -31,7 +31,12 @@ import {
   toListItemResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
-import { assertDefined, jsonBody, setupTestDb } from '#testing'
+import {
+  assertDefined,
+  captureDbQueries,
+  jsonBody,
+  setupTestDb,
+} from '#testing'
 
 setupTestDb()
 
@@ -118,6 +123,50 @@ function normalizeTaskListItem(
     parentId: fields.parentId === null ? null : 'PARENT_ID',
     parentNumber: fields.parentNumber === null ? null : -1,
     ancestorOnly: ancestorOnly ?? false,
+  }
+}
+
+function normalizeDetailedTaskListItem(task: TaskListItemResponse) {
+  return {
+    ...normalizeTaskListItem(task),
+    duplicateOfNumber: task.duplicateOfNumber === null ? null : -1,
+    blockedByNumbers: task.blockedByNumbers.map(() => -1),
+  }
+}
+
+function normalizeTaskDetail(task: TaskResponse) {
+  return {
+    ...normalizeTask(task),
+    parentId: task.parentId === null ? null : 'PARENT_ID',
+    parentNumber: task.parentNumber == null ? task.parentNumber : -1,
+    duplicateOfNumber:
+      task.duplicateOfNumber == null ? task.duplicateOfNumber : -1,
+    links: {
+      outgoing: (task.links?.outgoing ?? []).map(normalizeDetailedTaskListItem),
+      incoming: (task.links?.incoming ?? []).map(normalizeDetailedTaskListItem),
+    },
+    duplicateOfTask:
+      task.duplicateOfTask == null
+        ? null
+        : normalizeDetailedTaskListItem(task.duplicateOfTask),
+    blockedBy: (task.blockedBy ?? []).map(normalizeDetailedTaskListItem),
+    blocking: (task.blocking ?? []).map(normalizeDetailedTaskListItem),
+  }
+}
+
+function relatedTaskQuerySnapshot(
+  status: number,
+  body: TaskResponse,
+  relatedTaskHydrationQueryCount: number,
+  previousRelatedTaskHydrationQueryCount: number,
+) {
+  return {
+    status,
+    body: normalizeTaskDetail(body),
+    relatedTaskHydrationQueryCount,
+    previousRelatedTaskHydrationQueryCount,
+    queryCountDecreased:
+      relatedTaskHydrationQueryCount < previousRelatedTaskHydrationQueryCount,
   }
 }
 
@@ -2128,6 +2177,120 @@ describe('tasks CRUD API', () => {
   })
 
   describe('GET /api/tasks/:id', () => {
+    it('returns all related task rows with fewer database queries', async () => {
+      const task = await createTask('Task with relations')
+      const duplicateTarget = await createTask('Related task')
+      const incomingTask = await createTask('Incoming task')
+
+      await app.request(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: `See #${String(duplicateTarget.number)}`,
+        }),
+      })
+      await app.request(`/api/tasks/${incomingTask.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: `See #${String(task.number)}` }),
+      })
+      await setBlockedBy(task.id, [duplicateTarget.id])
+      const incomingTaskAfterPatch = await jsonBody<TaskResponse>(
+        await setBlockedBy(incomingTask.id, [task.id]),
+      )
+
+      const duplicateTargetAfterComplete = await jsonBody<TaskResponse>(
+        await app.request(`/api/tasks/${duplicateTarget.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ statusReason: 'not_planned' }),
+        }),
+      )
+      const completedTask = await jsonBody<TaskResponse>(
+        await app.request(`/api/tasks/${task.id}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusReason: 'duplicate',
+            duplicateOfTaskId: duplicateTarget.id,
+          }),
+        }),
+      )
+
+      const { result: res, queries } = await captureDbQueries(async () =>
+        app.request(`/api/tasks/${task.id}`),
+      )
+      const body = await jsonBody<TaskResponse>(res)
+      const relatedTaskIds = new Set([duplicateTarget.id, incomingTask.id])
+      const relatedTaskQueries = queries.filter(({ parameters }) =>
+        parameters.some(
+          (parameter) =>
+            typeof parameter === 'string' && relatedTaskIds.has(parameter),
+        ),
+      )
+      const incomingTaskDetail = toListItemResponse(incomingTaskAfterPatch, {
+        blockedByNumbers: [completedTask.number],
+      })
+      const duplicateTargetDetail = toListItemResponse(
+        duplicateTargetAfterComplete,
+      )
+      const relatedTaskHydrationQueryCount = relatedTaskQueries.length - 1
+      const previousRelatedTaskHydrationQueryCount = 21
+
+      const expectedBody = {
+        ...withoutLinkSync(completedTask),
+        titleAuthor: { kind: 'human', agent: null },
+        descriptionAuthor: { kind: 'human', agent: null },
+        parentNumber: null,
+        childCompletionCount: { total: 0, completed: 0 },
+        pages: [],
+        timeBlocks: [],
+        links: {
+          outgoing: [duplicateTargetDetail],
+          incoming: [incomingTaskDetail],
+        },
+        labels: [],
+        duplicateOfNumber: duplicateTargetAfterComplete.number,
+        duplicateOfTask: duplicateTargetDetail,
+        blockedBy: [duplicateTargetDetail],
+        blocking: [incomingTaskDetail],
+        githubBlockers: [],
+        checklistCompletionCount: { total: 0, completed: 0 },
+        checklists: [],
+      }
+      const actual = relatedTaskQuerySnapshot(
+        res.status,
+        body,
+        relatedTaskHydrationQueryCount,
+        previousRelatedTaskHydrationQueryCount,
+      )
+
+      expect(actual).toEqual({
+        status: 200,
+        body: normalizeTaskDetail(expectedBody),
+        relatedTaskHydrationQueryCount: 7,
+        previousRelatedTaskHydrationQueryCount: 21,
+        queryCountDecreased: true,
+      })
+    })
+
+    it('does not query duplicate relations for a non-duplicate task', async () => {
+      const task = await createTask('Open task')
+
+      const { queries } = await captureDbQueries(async () =>
+        app.request(`/api/tasks/${task.id}`),
+      )
+
+      expect(
+        queries.filter(
+          ({ query, parameters }) =>
+            query.includes('"task_relations"') &&
+            parameters.includes(task.id) &&
+            parameters.includes('duplicate_of'),
+        ),
+      ).toEqual([])
+    })
+
     it('returns a task by ID', async () => {
       const created = await createTask('My task')
 
