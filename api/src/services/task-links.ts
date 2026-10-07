@@ -4,11 +4,7 @@ import { db } from '#db/connection'
 import { taskComments, taskLinks, taskPages, tasks } from '#db/schema'
 import { matchByIdOrNumber } from '#lib/drizzle-utils'
 import type { NumericOrId } from '#lib/numeric-id'
-import { selectTaskListRows } from '#routes/tasks/list-query'
-import {
-  hydrateTaskListRows,
-  type TaskListItemResponse,
-} from '#routes/tasks/shared'
+import { selectTaskListRows, type TaskListRow } from '#routes/tasks/list-query'
 import {
   dedupeRefs,
   extractMentionedTaskRefs,
@@ -154,20 +150,13 @@ export async function syncTaskLinks(
   })
 }
 
-// The task-detail page renders linked tasks with the same row appearance as
-// every other task list, so this carries the full list-item shape rather
-// than the minimal `LinkedTaskSummary` used for a link-sync result.
-type LinkedTaskDetail = TaskListItemResponse & {
-  childCompletionCount: { completed: number; total: number }
+export interface TaskLinkRows {
+  outgoing: TaskListRow[]
+  incoming: TaskListRow[]
 }
 
-export interface TaskLinks {
-  outgoing: LinkedTaskDetail[]
-  incoming: LinkedTaskDetail[]
-}
-
-export async function getTaskLinks(taskId: string): Promise<TaskLinks> {
-  const [outgoingRows, incomingRows] = await Promise.all([
+export async function getTaskLinkRows(taskId: string): Promise<TaskLinkRows> {
+  const [outgoing, incoming] = await Promise.all([
     selectTaskListRows()
       .innerJoin(taskLinks, eq(taskLinks.targetTaskId, tasks.id))
       .where(eq(taskLinks.sourceTaskId, taskId))
@@ -178,12 +167,5 @@ export async function getTaskLinks(taskId: string): Promise<TaskLinks> {
       .orderBy(tasks.number),
   ])
 
-  // Hydrated together (not per-direction) so labels and progress counts are
-  // fetched in a fixed number of queries regardless of link direction.
-  const hydrated = await hydrateTaskListRows([...outgoingRows, ...incomingRows])
-
-  return {
-    outgoing: hydrated.slice(0, outgoingRows.length),
-    incoming: hydrated.slice(outgoingRows.length),
-  }
+  return { outgoing, incoming }
 }

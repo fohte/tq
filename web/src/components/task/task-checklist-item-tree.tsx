@@ -1,32 +1,33 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  CornerDownRight,
-  CornerUpLeft,
-  Pencil,
-  Plus,
-  Trash2,
-} from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import type { KeyboardEvent } from 'react'
 import { useEffect, useState } from 'react'
 
+import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
+import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
+import { ChecklistItemComposer } from '#components/task/task-checklist-item-composer'
+import { TaskChecklistItemLinkedTargets } from '#components/task/task-checklist-item-linked-targets'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { Checkbox } from '#components/ui/checkbox'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
+import type { GithubLink } from '#hooks/use-github-link'
 import type {
   MoveTaskChecklistItemInput,
   TaskChecklistItem,
   UpdateTaskChecklistItemInput,
 } from '#hooks/use-task-checklists'
+import type { Task } from '#hooks/use-tasks'
 import { countChecklistLeaves } from '#lib/task-checklist-tree'
 
 interface TaskChecklistItemTreeProps {
   items: TaskChecklistItem[]
+  githubLinks: GithubLink[]
+  subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   parentItem?: TaskChecklistItem | undefined
   depth?: number
   addingItemParentId: string | null | undefined
@@ -36,12 +37,18 @@ interface TaskChecklistItemTreeProps {
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
+  onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   initiallyCollapsedItemIds?: string[] | undefined
 }
 
 export function TaskChecklistItemTree({
   items,
+  githubLinks,
+  subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   parentItem,
   depth = 0,
   addingItemParentId,
@@ -51,6 +58,8 @@ export function TaskChecklistItemTree({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
+  onLinkGithub,
+  onPromoteItem,
   onStartAddingItem,
   initiallyCollapsedItemIds = [],
 }: TaskChecklistItemTreeProps) {
@@ -62,6 +71,10 @@ export function TaskChecklistItemTree({
         <ChecklistItemRow
           key={item.id}
           item={item}
+          githubLinks={githubLinks}
+          subtasks={subtasks}
+          linkGithubErrorMessage={linkGithubErrorMessage}
+          isLinkingGithub={isLinkingGithub}
           siblings={items}
           index={index}
           parentItem={parentItem}
@@ -70,6 +83,8 @@ export function TaskChecklistItemTree({
           onDeleteItem={onDeleteItem}
           onMoveItem={onMoveItem}
           onSetItemChecked={onSetItemChecked}
+          onLinkGithub={onLinkGithub}
+          onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
           addingItemParentId={addingItemParentId}
           onCancelAddingItem={onCancelAddingItem}
@@ -92,6 +107,10 @@ export function TaskChecklistItemTree({
 
 function ChecklistItemRow({
   item,
+  githubLinks,
+  subtasks,
+  linkGithubErrorMessage,
+  isLinkingGithub,
   siblings,
   index,
   parentItem,
@@ -100,6 +119,8 @@ function ChecklistItemRow({
   onDeleteItem,
   onMoveItem,
   onSetItemChecked,
+  onLinkGithub,
+  onPromoteItem,
   onStartAddingItem,
   addingItemParentId,
   onCancelAddingItem,
@@ -107,6 +128,10 @@ function ChecklistItemRow({
   initiallyCollapsedItemIds,
 }: {
   item: TaskChecklistItem
+  githubLinks: GithubLink[]
+  subtasks: Task[]
+  linkGithubErrorMessage: string | undefined
+  isLinkingGithub: boolean
   siblings: TaskChecklistItem[]
   index: number
   parentItem: TaskChecklistItem | undefined
@@ -115,6 +140,8 @@ function ChecklistItemRow({
   onDeleteItem: (itemId: string) => void
   onMoveItem: (itemId: string, input: MoveTaskChecklistItemInput) => void
   onSetItemChecked: (itemId: string, checked: boolean) => void
+  onLinkGithub: (itemId: string, url: string, onSuccess: () => void) => void
+  onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   addingItemParentId: string | null | undefined
   onCancelAddingItem: () => void
@@ -129,6 +156,7 @@ function ChecklistItemRow({
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [editingNote, setEditingNote] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const { onChange: onNoteChange, flush: flushNoteChange } = useDebouncedSave(
     (note) => {
       onUpdateItem(item.id, { note })
@@ -140,6 +168,8 @@ function ChecklistItemRow({
   }, [editingContent, item.content])
 
   const hasChildren = item.children.length > 0
+  const githubLink = githubLinks.find((link) => link.id === item.githubLinkId)
+  const subtask = subtasks.find((task) => task.id === item.subtaskId)
   const isLocked =
     hasChildren || item.githubLinkId != null || item.subtaskId != null
   const previousSibling = index > 0 ? siblings[index - 1] : undefined
@@ -159,95 +189,38 @@ function ChecklistItemRow({
           afterItemId: parentItem.id,
         }
   const counts = countChecklistLeaves([item])
+  const canLinkOrPromote = !isLocked
 
-  const itemActions = [
-    {
-      icon: <Pencil className="size-4" />,
-      label: 'edit',
-      onClick: () => {
-        setEditingContent(true)
-      },
+  const itemActions = createChecklistItemActions({
+    item,
+    index,
+    nextSibling,
+    previousBeforeItem,
+    indentMove,
+    outdentMove,
+    canLinkOrPromote,
+    onEdit: () => {
+      setEditingContent(true)
     },
-    ...(item.githubLinkId == null && item.subtaskId == null
-      ? [
-          {
-            icon: <Plus className="size-4" />,
-            label: 'add subitem',
-            onClick: () => {
-              setCollapsed(false)
-              onStartAddingItem(item.id)
-            },
-          },
-        ]
-      : []),
-    {
-      icon: <Pencil className="size-4" />,
-      label:
-        item.note == null || item.note === '' ? 'add details' : 'edit details',
-      onClick: () => {
-        setDetailsOpen(true)
-        setEditingNote(true)
-      },
+    onAddSubitem: () => {
+      setCollapsed(false)
+      onStartAddingItem(item.id)
     },
-    ...(index > 0
-      ? [
-          {
-            icon: <ArrowUp className="size-4" />,
-            label: 'move up',
-            onClick: () => {
-              onMoveItem(item.id, {
-                parentItemId: item.parentItemId,
-                afterItemId: previousBeforeItem?.id ?? null,
-              })
-            },
-          },
-        ]
-      : []),
-    ...(nextSibling != null
-      ? [
-          {
-            icon: <ArrowDown className="size-4" />,
-            label: 'move down',
-            onClick: () => {
-              onMoveItem(item.id, {
-                parentItemId: item.parentItemId,
-                afterItemId: nextSibling.id,
-              })
-            },
-          },
-        ]
-      : []),
-    ...(indentMove != null
-      ? [
-          {
-            icon: <CornerDownRight className="size-4" />,
-            label: 'indent',
-            onClick: () => {
-              onMoveItem(item.id, indentMove)
-            },
-          },
-        ]
-      : []),
-    ...(outdentMove != null
-      ? [
-          {
-            icon: <CornerUpLeft className="size-4" />,
-            label: 'outdent',
-            onClick: () => {
-              onMoveItem(item.id, outdentMove)
-            },
-          },
-        ]
-      : []),
-    {
-      icon: <Trash2 className="size-4" />,
-      label: 'delete…',
-      onClick: () => {
-        setDeleteDialogOpen(true)
-      },
-      destructive: true,
+    onLinkGithub: () => {
+      setLinkDialogOpen(true)
     },
-  ]
+    onPromote: () => {
+      onPromoteItem(item.id)
+    },
+    onEditDetails: () => {
+      setDetailsOpen(true)
+      setEditingNote(true)
+    },
+    onMoveItem,
+    onDelete: () => {
+      setDeleteDialogOpen(true)
+    },
+  })
 
   const saveContent = () => {
     const content = contentDraft.trim()
@@ -341,6 +314,10 @@ function ChecklistItemRow({
               </span>
             </Button>
           )}
+          <TaskChecklistItemLinkedTargets
+            githubLink={githubLink}
+            subtask={subtask}
+          />
         </div>
         {hasChildren && (
           <span className="shrink-0 font-mono text-2xs text-muted-foreground-faint">
@@ -389,6 +366,12 @@ function ChecklistItemRow({
           onDeleteItem={onDeleteItem}
           onMoveItem={onMoveItem}
           onSetItemChecked={onSetItemChecked}
+          githubLinks={githubLinks}
+          subtasks={subtasks}
+          linkGithubErrorMessage={linkGithubErrorMessage}
+          isLinkingGithub={isLinkingGithub}
+          onLinkGithub={onLinkGithub}
+          onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
         />
@@ -423,50 +406,15 @@ function ChecklistItemRow({
           onDeleteItem(item.id)
         }}
       />
-    </div>
-  )
-}
-
-function ChecklistItemComposer({
-  depth,
-  onSave,
-  onCancel,
-}: {
-  depth: number
-  onSave: (content: string) => void
-  onCancel: () => void
-}) {
-  const [content, setContent] = useState('')
-
-  const save = () => {
-    const trimmed = content.trim()
-    if (trimmed.length > 0) onSave(trimmed)
-    else onCancel()
-  }
-
-  return (
-    <div
-      className="flex min-h-10 items-center px-3 py-1"
-      style={{ paddingLeft: `${String(36 + depth * 20)}px` }}
-    >
-      <Input
-        aria-label="New checklist item"
-        autoFocus
-        value={content}
-        onChange={(event) => {
-          setContent(event.currentTarget.value)
+      <ChecklistItemGithubLinkDialog
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
+        itemContent={item.content}
+        errorMessage={linkGithubErrorMessage}
+        isPending={isLinkingGithub}
+        onSubmit={(url, onSuccess) => {
+          onLinkGithub(item.id, url, onSuccess)
         }}
-        onBlur={save}
-        onKeyDown={(event) => {
-          if (event.nativeEvent.isComposing) return
-
-          if (event.key === 'Enter') event.currentTarget.blur()
-          if (event.key === 'Escape') {
-            onCancel()
-          }
-        }}
-        placeholder="Item title"
-        className="h-7 min-w-0 border-0 px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
       />
     </div>
   )
