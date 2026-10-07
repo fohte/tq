@@ -6,8 +6,6 @@ import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 import { timeBlockKeys } from '#lib/query-keys'
 
-export { timeBlockKeys }
-
 type TimeBlock = InferResponseType<
   (typeof api.api.schedule)['time-blocks']['$get']
 >[number]
@@ -173,7 +171,7 @@ export function useUpdateTimeBlock() {
   })
 }
 
-function useDeleteTimeBlock() {
+function useDeleteTimeBlockMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -213,9 +211,9 @@ function useDeleteTimeBlock() {
   })
 }
 
-export function useDeleteManualTimeBlock(taskId: string, blockId: string) {
+export function useDeleteTimeBlock(taskId: string, blockId: string) {
   const queryClient = useQueryClient()
-  const deleteTimeBlock = useDeleteTimeBlock()
+  const deleteTimeBlock = useDeleteTimeBlockMutation()
 
   return {
     onDelete: () => {

@@ -25,7 +25,6 @@ import { queuesApp } from '#routes/queues'
 import { recurringTaskTemplatesApp } from '#routes/recurring-task-templates'
 import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
-import { schedulingSettingsApp } from '#routes/scheduling-settings'
 import { taskAgentSessionsApp } from '#routes/task-agent-sessions'
 import { taskChecklistsApp } from '#routes/task-checklists'
 import { taskCommentsApp } from '#routes/task-comments'
@@ -86,7 +85,6 @@ const app = new Hono()
   .route('/api/assets', assetsApp)
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
-  .route('/api/scheduling-settings', schedulingSettingsApp)
   .route('/api/mcp', mcpApp)
   .onError(onError)
 

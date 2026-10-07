@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import type { InferResponseType } from 'hono/client'
-import { useEffect, useRef } from 'react'
 
 import { api } from '#lib/api'
 import { assertStatus, unwrapOrThrow } from '#lib/assert-response'
@@ -52,35 +51,4 @@ export function useGcalEvents(
     retry: false,
     refetchInterval: GCAL_POLL_INTERVAL_MS,
   })
-}
-
-// Runs `onChange` whenever `gcalEvents` changes to a new value after the
-// first render. Relies on TanStack Query's structural sharing keeping the
-// query data reference stable across refetches when nothing changed, so
-// this only fires on an actual content change, not every poll.
-export function useAutoRescheduleOnGcalChange(
-  gcalEvents: GcalEvent[] | undefined,
-  onChange: () => void,
-  enabled: boolean,
-) {
-  const previousEventsRef = useRef<GcalEvent[] | undefined>(undefined)
-  const hasSeenDataRef = useRef(false)
-  const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
-
-  useEffect(() => {
-    if (!enabled) return
-    if (gcalEvents == null) return
-
-    if (!hasSeenDataRef.current) {
-      hasSeenDataRef.current = true
-      previousEventsRef.current = gcalEvents
-      return
-    }
-
-    if (previousEventsRef.current !== gcalEvents) {
-      previousEventsRef.current = gcalEvents
-      onChangeRef.current()
-    }
-  }, [gcalEvents, enabled])
 }

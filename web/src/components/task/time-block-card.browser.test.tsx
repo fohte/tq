@@ -5,6 +5,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { TimeBlockCard } from '#components/task/time-block-card'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 
+function getConfirmationCopy(title: string | null, description: string | null) {
+  return { title, description }
+}
+
 describe('TimeBlockCard', () => {
   describe('manual time block', () => {
     it('shows a confirmation dialog with the delete copy', async () => {
@@ -38,7 +42,7 @@ describe('TimeBlockCard', () => {
   })
 
   describe('auto-scheduled time block', () => {
-    it('shows a confirmation dialog with the remove-from-queue copy', async () => {
+    it('shows the time-block deletion confirmation', async () => {
       const user = userEvent.setup()
       render(
         <TimeBlockCard
@@ -48,15 +52,21 @@ describe('TimeBlockCard', () => {
       )
 
       await user.click(
-        screen.getByRole('button', { name: 'Remove from queue' }),
+        screen.getByRole('button', { name: 'Delete time block' }),
       )
 
-      expect(await screen.findByText('Remove from queue')).toBeInTheDocument()
       expect(
-        screen.getByText(
-          "This task will be removed from that day's queue and won't be auto-scheduled again unless you re-add it.",
+        getConfirmationCopy(
+          (await screen.findByText('Delete time block')).textContent,
+          screen.getByText(
+            'Are you sure you want to delete this time block? This action cannot be undone.',
+          ).textContent,
         ),
-      ).toBeInTheDocument()
+      ).toEqual({
+        title: 'Delete time block',
+        description:
+          'Are you sure you want to delete this time block? This action cannot be undone.',
+      })
     })
 
     it('calls onDelete when the removal is confirmed', async () => {
@@ -70,7 +80,7 @@ describe('TimeBlockCard', () => {
       )
 
       await user.click(
-        screen.getByRole('button', { name: 'Remove from queue' }),
+        screen.getByRole('button', { name: 'Delete time block' }),
       )
       await user.click(await screen.findByRole('button', { name: 'Delete' }))
 

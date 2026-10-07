@@ -1,4 +1,3 @@
-import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
 import type { Context } from 'hono'
 import { err, ok, type Result, ResultAsync } from 'neverthrow'
@@ -6,10 +5,6 @@ import { err, ok, type Result, ResultAsync } from 'neverthrow'
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
-
-// Auto-assign and the focus view depend on the day queue by name. Carry-over
-// processing also addresses the day and week queues by name.
-const DAY_QUEUE_KEY = 'day'
 
 export type TaskQueue = typeof taskQueues.$inferSelect
 
@@ -19,24 +14,7 @@ function getQueueByKey(key: string): ResultAsync<TaskQueue, RowNotFoundError> {
   ).andThen((rows) => firstOrErr(rows))
 }
 
-// Shared route-level wiring (RowNotFoundError -> 500 response, Sentry
-// capture) for the auto-assign handler, which looks up the day queue before
-// doing anything else.
-//
-// No explicit return type: Hono's RPC client derives each route's response
-// union from the literal `TypedResponse` returned by `c.json(...)`, so
-// annotating this with a widened `Response` type would collapse that route's
-// inferred response type.
-export function getDayQueueOrRespond(c: Context, fingerprint: string) {
-  return getQueueByKey(DAY_QUEUE_KEY).mapErr((error) => {
-    captureWithFingerprint(error, fingerprint)
-    return c.json({ error: 'Internal server error' }, 500)
-  })
-}
-
-// Counterpart of getDayQueueOrRespond for the generic /api/queues/:key
-// routes: the key comes from the request path, so a missing queue is a
-// routine 404, not a Sentry-worthy misconfiguration.
+// A missing queue from the generic /api/queues/:key routes is a routine 404.
 export function getQueueByKeyOrRespond(c: Context, key: string) {
   return getQueueByKey(key).mapErr(() =>
     c.json({ error: 'Queue not found' }, 404),
