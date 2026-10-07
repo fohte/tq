@@ -115,7 +115,6 @@ function resolveTimeBlocks(
       end == null ||
       end <= start ||
       event == null ||
-      event.type === 'completed' ||
       task?.status === 'completed'
     ) {
       return []

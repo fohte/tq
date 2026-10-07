@@ -20,17 +20,13 @@ function block(id: string, taskId: string, startTime: string, endTime: string) {
   return makeTimeBlock({ id, taskId, startTime, endTime })
 }
 
-function blockEvent(
-  timeBlock: TimeBlock,
-  title: string,
-  type: 'manual' | 'completed' = 'manual',
-) {
+function blockEvent(timeBlock: TimeBlock, title: string) {
   return makeTimeBlockEvent({
     id: timeBlock.id,
     title,
     start: timeBlock.startTime,
     end: timeBlock.endTime,
-    type,
+    type: 'manual',
     taskId: timeBlock.taskId,
   })
 }
@@ -128,7 +124,7 @@ describe('buildNowPanelModel', () => {
         calendarEvents: [
           blockEvent(ended, unfinished.title),
           blockEvent(activeBlock, active.title),
-          blockEvent(completedBlock, completed.title, 'completed'),
+          blockEvent(completedBlock, completed.title),
         ],
         tasks: taskMap(unfinished, active, completed),
       }),

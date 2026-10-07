@@ -98,7 +98,6 @@ const meta = {
         'gcal-solo',
         'gcal-status',
         'gcal-info',
-        'completed',
         'schedule',
         'day-queue',
       ] satisfies EventType[],
@@ -274,15 +273,6 @@ export const GoogleCalendarRedacted: Story = {
     timeText: '11:00–11:30',
     calendarColor: '#039BE5',
     redacted: true,
-  },
-}
-
-export const Completed: Story = {
-  name: 'a completed task remains visible as a calendar block',
-  args: {
-    type: 'completed',
-    title: 'CI パイプライン構築',
-    timeText: '14:00–15:00',
   },
 }
 
