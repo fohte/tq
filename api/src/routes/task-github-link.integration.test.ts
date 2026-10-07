@@ -9,6 +9,7 @@ import {
   mockGithubIssueResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import type {
   GithubLinkResponse,
@@ -20,8 +21,12 @@ import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+let stopWatchingChanges: (() => void) | undefined
+
 afterEach(() => {
   vi.restoreAllMocks()
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
 })
 
 function normalizeLink(link: GithubLinkResponse) {
@@ -628,6 +633,32 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     ])
   })
 
+  it('emits one task event for changed links with the requesting screen as origin', async () => {
+    const task = await createTask('My task')
+    const issueUrl = 'https://github.com/example-owner/example-repo/issues/42'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: issueUrl })
+    await app.request(`/api/tasks/${task.id}/github-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: issueUrl }),
+    })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    mockGithubIssueResponse({ title: 'Renamed on GitHub', html_url: issueUrl })
+    const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
+      method: 'POST',
+      headers: { 'X-Author': 'human:screen-id' },
+    })
+
+    const snapshot = () => ({ status: res.status, events })
+    expect(snapshot()).toEqual({
+      status: 204,
+      events: [{ resource: 'task', id: task.id, origin: 'screen-id' }],
+    })
+  })
+
   it('syncs every linked issue, not just the first', async () => {
     const task = await createTask('My task')
     await upsertGithubToken('valid-token')
@@ -719,12 +750,15 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
 
   it('is a no-op when the task has no link', async () => {
     const task = await createTask('My task')
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
 
     const res = await app.request(`/api/tasks/${task.id}/github-link/sync`, {
       method: 'POST',
     })
 
-    expect(res.status).toBe(204)
+    const snapshot = () => ({ status: res.status, events })
+    expect(snapshot()).toEqual({ status: 204, events: [] })
   })
 
   it('returns 404 for a non-existent task', async () => {

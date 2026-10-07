@@ -5,12 +5,14 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 
 import { authorMiddleware } from '#lib/author'
+import { changeEventMiddleware } from '#lib/change-events'
 import { agentSessionsApp } from '#routes/agent-sessions'
 import { assetsApp } from '#routes/assets'
 import { calendarApp } from '#routes/calendar'
 import { checklistItemsByIdApp } from '#routes/checklist-items'
 import { checklistsApp } from '#routes/checklists'
 import { descriptionTemplatesApp } from '#routes/description-templates'
+import { eventsApp } from '#routes/events'
 import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
 import { integrationsApp } from '#routes/integrations'
@@ -56,9 +58,11 @@ const app = new Hono()
     }),
   )
   .use('*', authorMiddleware)
+  .use('*', changeEventMiddleware)
   .get('/health', (c) => {
     return c.json({ status: 'ok' })
   })
+  .route('/api', eventsApp)
   .route('/api/agent-sessions', agentSessionsApp)
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)

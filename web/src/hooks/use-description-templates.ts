@@ -8,6 +8,7 @@ import {
   assertOkWithMessage,
   unwrapOrThrow,
 } from '#lib/assert-response'
+import { descriptionTemplateKeys } from '#lib/query-keys'
 
 export type DescriptionTemplate = InferResponseType<
   (typeof api.api)['description-templates']['$get'],
@@ -21,12 +22,6 @@ export type CreateDescriptionTemplateInput = InferRequestType<
 export type UpdateDescriptionTemplateInput = InferRequestType<
   (typeof api.api)['description-templates'][':name']['$patch']
 >['json']
-
-const descriptionTemplateKeys = {
-  all: ['description-templates'] as const,
-  lists: ['description-templates', 'list'] as const,
-  list: () => descriptionTemplateKeys.lists,
-}
 
 export function useDescriptionTemplates({
   enabled = true,

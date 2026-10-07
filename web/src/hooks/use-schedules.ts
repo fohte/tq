@@ -3,18 +3,12 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { scheduleKeys } from '#lib/query-keys'
 
 type Schedule = InferResponseType<
   typeof api.api.schedule.recurring.$get,
   200
 >[number]
-
-const scheduleKeys = {
-  all: ['schedules'] as const,
-  lists: ['schedules', 'list'] as const,
-  list: (startDate: string, endDate: string) =>
-    [...scheduleKeys.lists, { startDate, endDate }] as const,
-}
 
 export type { Schedule }
 

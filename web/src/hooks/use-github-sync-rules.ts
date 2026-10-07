@@ -3,15 +3,12 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { githubSyncRuleKeys } from '#lib/query-keys'
 
 export type SyncRule = InferResponseType<
   (typeof api.api.github)['sync-rules']['$get'],
   200
 >[number]
-
-const githubSyncRuleKeys = {
-  list: ['github-sync-rules'] as const,
-}
 
 export function useGithubSyncRules() {
   return useQuery({

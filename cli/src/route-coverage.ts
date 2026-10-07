@@ -66,6 +66,9 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/push/subscriptions': 'web push is a browser-only capability',
   'POST /api/push/test': 'web push is a browser-only capability',
 
+  // The web UI consumes the live event stream through EventSource.
+  'GET /api/events': 'live refresh is a browser-only capability',
+
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
 
