@@ -1,8 +1,13 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import { ChevronDown } from 'lucide-react'
-import type { KeyboardEvent } from 'react'
-import { useEffect, useState } from 'react'
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
 import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
@@ -20,6 +25,7 @@ import type {
   UpdateTaskChecklistItemInput,
 } from '#hooks/use-task-checklists'
 import type { Task } from '#hooks/use-tasks'
+import { renderChecklistItemMarkdown } from '#lib/checklist-item-markdown'
 import { countChecklistLeaves } from '#lib/task-checklist-tree'
 
 interface TaskChecklistItemTreeProps {
@@ -157,6 +163,9 @@ function ChecklistItemRow({
   const [editingNote, setEditingNote] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const startEditingContent = useCallback(() => {
+    setEditingContent(true)
+  }, [])
   const { onChange: onNoteChange, flush: flushNoteChange } = useDebouncedSave(
     (note) => {
       onUpdateItem(item.id, { note })
@@ -168,6 +177,16 @@ function ChecklistItemRow({
   }, [editingContent, item.content])
 
   const hasChildren = item.children.length > 0
+  const checklistItemMarkdown = useMemo(
+    () =>
+      renderChecklistItemMarkdown({
+        content: item.content,
+        checked: item.checkedAt != null,
+        bold: hasChildren,
+        onEdit: startEditingContent,
+      }),
+    [item.content, item.checkedAt, hasChildren, startEditingContent],
+  )
   const githubLink = githubLinks.find((link) => link.id === item.githubLinkId)
   const subtask = subtasks.find((task) => task.id === item.subtaskId)
   const isLocked =
@@ -301,18 +320,7 @@ function ChecklistItemRow({
               className="h-7 min-w-0 border-0 px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
             />
           ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setEditingContent(true)
-              }}
-              className={`h-auto min-h-0 justify-start overflow-hidden rounded-none border-0 bg-transparent p-0 text-left font-mono text-xs font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 ${item.checkedAt == null ? 'text-foreground' : 'text-muted-foreground line-through'}`}
-            >
-              <span className={hasChildren ? 'font-semibold' : undefined}>
-                {item.content}
-              </span>
-            </Button>
+            checklistItemMarkdown
           )}
           <TaskChecklistItemLinkedTargets
             githubLink={githubLink}
