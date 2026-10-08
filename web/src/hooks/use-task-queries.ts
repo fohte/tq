@@ -24,6 +24,7 @@ export type TaskSortBy = 'created' | 'updated' | 'due'
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 
 export interface TaskListFilter {
+  ids?: string[]
   q?: string
   status?: TaskStatus | TaskStatus[]
   hasDue?: boolean
@@ -84,12 +85,27 @@ export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
 
 export function useTaskList(
   filter?: TaskListFilter,
-  options?: { enabled?: boolean },
+  options?: {
+    enabled?: boolean
+    placeholderData?: (
+      previousData: Task[] | undefined,
+      previousFilter: unknown,
+    ) => Task[] | undefined
+  },
 ) {
   const query = useQuery({
     queryKey: taskKeys.list(filter),
     queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
+    ...(options?.placeholderData == null
+      ? {}
+      : {
+          placeholderData: (
+            previousData: Task[] | undefined,
+            previousQuery: { queryKey: readonly unknown[] } | undefined,
+          ) =>
+            options.placeholderData?.(previousData, previousQuery?.queryKey[2]),
+        }),
   })
 
   const categorized = useMemo((): CategorizedTasks => {

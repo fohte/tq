@@ -184,6 +184,45 @@ describe('useInfiniteTaskList', () => {
 })
 
 describe('useTaskList', () => {
+  it('serializes an ID-scoped list with its context and all statuses', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () =>
+        useTaskList({
+          ids: ['task-a', 'task-b'],
+          context: 'work',
+          status: ['todo', 'completed'],
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([])
+    })
+
+    expect(mockGet.mock.calls).toEqual([
+      [
+        {
+          query: {
+            ids: ['task-a', 'task-b'],
+            context: 'work',
+            status: ['todo', 'completed'],
+          },
+        },
+      ],
+    ])
+  })
+
+  it('does not request an empty ID filter while disabled', () => {
+    renderHook(
+      () => useTaskList({ ids: [], context: 'work' }, { enabled: false }),
+      { wrapper },
+    )
+
+    expect(mockGet.mock.calls).toEqual([])
+  })
+
   it('serializes the due-date filter as an HTTP query string', async () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
