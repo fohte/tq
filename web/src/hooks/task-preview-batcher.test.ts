@@ -123,6 +123,17 @@ describe('task preview batcher', () => {
     expect(getRequestedIds()).toEqual([ids.slice(0, 100), ids.slice(100)])
   })
 
+  it('resolves missing previews when the API returns an unsuccessful response', async () => {
+    fetchPreviewRequest.mockResolvedValue({
+      ok: false,
+      json: () => Promise.reject(new Error('response body is unavailable')),
+    })
+
+    const result = await getTaskPreview('12')
+
+    expect(result).toEqual(null)
+  })
+
   it('rejects every lookup when its batch request fails', async () => {
     const error = new Error('preview request failed')
     fetchPreviewRequest.mockRejectedValue(error)
