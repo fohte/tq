@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { labelNameSchema } from '#schemas/label-name'
+import { queueDateSchema } from '#schemas/queue-date'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 import { queryTimezoneOffsetMinutesSchema } from '#schemas/timezone'
 
@@ -132,6 +133,18 @@ export const listTasksQuerySchema = z.object({
   label: z.string().optional(),
   hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
+  dateFrom: queueDateSchema
+    .describe('Inclusive lower bound of the task date range filter.')
+    .optional(),
+  dateTo: queueDateSchema
+    .describe('Inclusive upper bound of the task date range filter.')
+    .optional(),
+  dueTo: queueDateSchema
+    .describe('Only return tasks due on or before this date.')
+    .optional(),
+  candidatesOn: queueDateSchema
+    .describe('Only return tasks that can be added to a queue on this date.')
+    .optional(),
   context: taskListContext,
   commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),

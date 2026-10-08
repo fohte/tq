@@ -101,6 +101,26 @@ it('declares task read tools as read-only', async () => {
   ])
 })
 
+it('exposes date filters without candidatesOn in task list and search tools', async () => {
+  const result = await client.listTools()
+  const dateFilters = ['dateFrom', 'dateTo', 'dueTo', 'candidatesOn']
+
+  expect(
+    result.tools
+      .filter((tool) => ['task_list', 'task_search'].includes(tool.name))
+      .map((tool) => ({
+        name: tool.name,
+        dateFilters: Object.keys(tool.inputSchema.properties ?? {}).filter(
+          (field) => dateFilters.includes(field),
+        ),
+      }))
+      .toSorted((left, right) => left.name.localeCompare(right.name)),
+  ).toEqual([
+    { name: 'task_list', dateFilters: ['dateFrom', 'dateTo', 'dueTo'] },
+    { name: 'task_search', dateFilters: ['dateFrom', 'dateTo', 'dueTo'] },
+  ])
+})
+
 describe('task_list', () => {
   it('defaults to all contexts and todo status when context and status are omitted', async () => {
     const workTodo = await createTask('Work todo', { context: 'work' })
