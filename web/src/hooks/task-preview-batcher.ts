@@ -3,7 +3,7 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 
-export type TaskPreview = InferResponseType<
+type TaskPreview = InferResponseType<
   typeof api.api.tasks.preview.$get,
   200
 >[string]
@@ -28,7 +28,7 @@ function fetchTaskPreviews(ids: string[]): Promise<TaskPreviewResponse> {
     })
 }
 
-export function createTaskPreviewBatcher(fetchPreviews: FetchPreviews) {
+function createTaskPreviewBatcher(fetchPreviews: FetchPreviews) {
   let pendingRequests = new Map<string, PendingRequest[]>()
   let flushScheduled = false
 

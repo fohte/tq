@@ -1,7 +1,54 @@
-import { describe, expect, it, vi } from 'vitest'
+import type { InferResponseType } from 'hono/client'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { TaskPreview } from '#hooks/task-preview-batcher'
-import { createTaskPreviewBatcher } from '#hooks/task-preview-batcher'
+import { getTaskPreview } from '#hooks/task-preview-batcher'
+import type { api } from '#lib/api'
+
+type TaskPreview = InferResponseType<
+  typeof api.api.tasks.preview.$get,
+  200
+>[string]
+type PreviewRequest = { query: { ids: string } }
+type PreviewResponse = {
+  ok: boolean
+  json: () => Promise<Record<string, TaskPreview>>
+}
+
+const { fetchPreviewRequest } = vi.hoisted(() => ({
+  fetchPreviewRequest:
+    vi.fn<(request: PreviewRequest) => Promise<PreviewResponse>>(),
+}))
+
+vi.mock('#lib/api', () => ({
+  api: {
+    api: { tasks: { preview: { $get: fetchPreviewRequest } } },
+  },
+}))
+
+beforeEach(() => {
+  fetchPreviewRequest.mockReset()
+})
+
+function mockPreviews(previews: Record<string, TaskPreview>) {
+  fetchPreviewRequest.mockImplementation(({ query: { ids } }) => {
+    const batch = Object.fromEntries(
+      ids
+        .split(',')
+        .flatMap((id) => (previews[id] ? [[id, previews[id]]] : [])),
+    )
+
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(batch),
+    })
+  })
+}
+
+function getRequestedIds() {
+  return fetchPreviewRequest.mock.calls.map(([{ query }]) =>
+    query.ids.split(','),
+  )
+}
 
 function makePreview(id: string, number: number): TaskPreview {
   return {
@@ -32,14 +79,7 @@ describe('task preview batcher', () => {
       '12': numberPreview,
       [uuidPreview.id]: uuidPreview,
     }
-    const fetchPreviews = vi.fn((ids: string[]) =>
-      Promise.resolve(
-        Object.fromEntries(
-          ids.flatMap((id) => (previews[id] ? [[id, previews[id]]] : [])),
-        ),
-      ),
-    )
-    const getTaskPreview = createTaskPreviewBatcher(fetchPreviews)
+    mockPreviews(previews)
 
     const results = await Promise.all([
       getTaskPreview('12'),
@@ -47,10 +87,7 @@ describe('task preview batcher', () => {
       getTaskPreview(uuidPreview.id),
     ])
 
-    const actual = makeBatcherOutput(
-      fetchPreviews.mock.calls.map(([ids]) => ids),
-      results,
-    )
+    const actual = makeBatcherOutput(getRequestedIds(), results)
 
     expect(actual).toEqual({
       requests: [['12', '00000000-0000-4000-8000-000000000002']],
@@ -60,10 +97,7 @@ describe('task preview batcher', () => {
 
   it('resolves missing and invalid identifiers to null without interrupting valid lookups', async () => {
     const preview = makePreview('00000000-0000-4000-8000-000000000001', 12)
-    const fetchPreviews = vi.fn((ids: string[]) =>
-      Promise.resolve(ids.includes('12') ? { '12': preview } : {}),
-    )
-    const getTaskPreview = createTaskPreviewBatcher(fetchPreviews)
+    mockPreviews({ '12': preview })
 
     const results = await Promise.all([
       getTaskPreview('12'),
@@ -72,10 +106,7 @@ describe('task preview batcher', () => {
       getTaskPreview('2147483648'),
     ])
 
-    const actual = makeBatcherOutput(
-      fetchPreviews.mock.calls.map(([ids]) => ids),
-      results,
-    )
+    const actual = makeBatcherOutput(getRequestedIds(), results)
 
     expect(actual).toEqual({
       requests: [['12', '999']],
@@ -84,25 +115,17 @@ describe('task preview batcher', () => {
   })
 
   it('splits more than one hundred identifiers across requests', async () => {
-    const requests: string[][] = []
-    const fetchPreviews = vi.fn(
-      (ids: string[]): Promise<Record<string, TaskPreview>> => {
-        requests.push(ids)
-        return Promise.resolve({})
-      },
-    )
-    const getTaskPreview = createTaskPreviewBatcher(fetchPreviews)
+    mockPreviews({})
     const ids = Array.from({ length: 101 }, (_, index) => String(index + 1))
 
     await Promise.all(ids.map((id) => getTaskPreview(id)))
 
-    expect(requests).toEqual([ids.slice(0, 100), ids.slice(100)])
+    expect(getRequestedIds()).toEqual([ids.slice(0, 100), ids.slice(100)])
   })
 
   it('rejects every lookup when its batch request fails', async () => {
     const error = new Error('preview request failed')
-    const fetchPreviews = vi.fn(() => Promise.reject(error))
-    const getTaskPreview = createTaskPreviewBatcher(fetchPreviews)
+    fetchPreviewRequest.mockRejectedValue(error)
 
     const results = await Promise.allSettled([
       getTaskPreview('12'),
