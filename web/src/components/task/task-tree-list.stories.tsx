@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskTreeList } from '#components/task/task-tree-list'
-import type { Task, TreeNode } from '#hooks/use-tasks'
+import { allTasksFilter, type Task, type TreeNode } from '#hooks/use-tasks'
 import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -180,10 +180,6 @@ export const LazyChildrenCollapsed: Story = {
     isLoading: false,
     tasks: [lazyRootTask],
     sessionsByTaskId: new Map(),
-    lazyChildrenFilter: {
-      context: 'all',
-      status: 'all',
-      limit: 'unlimited',
-    },
+    lazyChildrenFilter: allTasksFilter,
   },
 }

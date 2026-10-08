@@ -10,6 +10,7 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { allTasksFilter } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 // Import after mocks
 import { Route as TaskDetailRoute } from '#routes/tasks/$taskId'
@@ -320,9 +321,7 @@ describe('TaskPage', () => {
     await renderTaskPage()
 
     expect(mockUseTaskList).toHaveBeenCalledWith({
-      context: 'all',
-      status: 'all',
-      limit: 'unlimited',
+      ...allTasksFilter,
       parentId: mockTask.id,
     })
 

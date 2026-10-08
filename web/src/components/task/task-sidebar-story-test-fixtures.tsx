@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import type { ProjectDetail } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
-import { taskKeys } from '#hooks/use-tasks'
+import { allTasksFilter, taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { labelKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -19,10 +19,7 @@ export function TaskSidebarStoryProviders({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(
-    taskKeys.list({ context: 'all', status: 'all', limit: 'unlimited' }),
-    [],
-  )
+  queryClient.setQueryData(taskKeys.list(allTasksFilter), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
     projectKeys.list(undefined),

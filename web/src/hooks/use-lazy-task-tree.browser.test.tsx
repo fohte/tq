@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
 import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
+import { allTasksFilter } from '#hooks/use-tasks'
 
 // vi.hoisted is required: this file's imports transitively reach
 // '#hooks/use-tasks' before a plain top-level const would initialize.
@@ -69,9 +70,7 @@ describe('useLazyTaskTree', () => {
       () =>
         useLazyTaskTree([root], {
           q: 'is:todo',
-          context: 'all',
-          status: 'all',
-          limit: 'unlimited',
+          ...allTasksFilter,
         }),
       { wrapper },
     )
@@ -98,9 +97,7 @@ describe('useLazyTaskTree', () => {
       () =>
         useLazyTaskTree([root], {
           q: 'is:todo',
-          context: 'all',
-          status: 'all',
-          limit: 'unlimited',
+          ...allTasksFilter,
         }),
       { wrapper },
     )
@@ -117,9 +114,7 @@ describe('useLazyTaskTree', () => {
 
     expect(mockFetchTaskList).toHaveBeenCalledWith({
       q: 'is:todo',
-      context: 'all',
-      status: 'all',
-      limit: 'unlimited',
+      ...allTasksFilter,
       parentId: 'root-1',
     })
     expect(result.current.isExpanded('root-1')).toBe(true)
@@ -135,9 +130,7 @@ describe('useLazyTaskTree', () => {
       () =>
         useLazyTaskTree([root], {
           q: 'is:todo',
-          context: 'all',
-          status: 'all',
-          limit: 'unlimited',
+          ...allTasksFilter,
         }),
       { wrapper },
     )
@@ -151,9 +144,7 @@ describe('useLazyTaskTree', () => {
       () =>
         useLazyTaskTree([root], {
           q: 'is:todo',
-          context: 'all',
-          status: 'all',
-          limit: 'unlimited',
+          ...allTasksFilter,
         }),
       { wrapper },
     )

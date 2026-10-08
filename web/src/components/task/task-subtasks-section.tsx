@@ -10,7 +10,7 @@ import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
 import type { Task } from '#hooks/use-tasks'
-import { useTaskList } from '#hooks/use-tasks'
+import { allTasksFilter, useTaskList } from '#hooks/use-tasks'
 
 export interface InheritedTaskAttributes {
   context: ContextValue
@@ -32,9 +32,7 @@ export function TaskSubtasksSection({
   inherited: InheritedTaskAttributes
 }) {
   const { categorized, isLoading, isError } = useTaskList({
-    context: 'all',
-    status: 'all',
-    limit: 'unlimited',
+    ...allTasksFilter,
     parentId: taskId,
   })
 

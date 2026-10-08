@@ -1284,6 +1284,27 @@ describe('tasks CRUD API', () => {
       expect(body).toHaveLength(2)
     })
 
+    it('returns more than 100 tasks when limit is unlimited', async () => {
+      const createdTasks: Awaited<ReturnType<typeof createTask>>[] = []
+      for (let index = 0; index < 101; index += 1) {
+        createdTasks.push(await createTask(`Task ${String(index + 1)}`))
+      }
+
+      const res = await app.request(
+        '/api/tasks?context=all&status=all&limit=unlimited',
+      )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+
+      expect(
+        responseSnapshot(res.status, normalizeTaskListItems(body)),
+      ).toEqual({
+        status: 200,
+        body: createdTasks
+          .toSorted((left, right) => left.title.localeCompare(right.title))
+          .map((task) => expectedTaskListItem(task, null)),
+      })
+    }, 15_000)
+
     it('filters by parentId', async () => {
       const parent = await createTask('Parent')
       const child1 = await createTask('Child 1', { parentId: parent.id })

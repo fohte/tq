@@ -27,7 +27,7 @@ import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskChecklist } from '#hooks/use-task-checklists'
 import type { TaskPage } from '#hooks/use-task-pages'
 import type { Task, TaskDetail } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
+import { allTasksFilter, taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import {
   activityKeys,
@@ -132,10 +132,7 @@ function Providers({
   queryClient.setQueryData(commentKeys.all(baseTask.id), [])
   queryClient.setQueryData(activityKeys.all(baseTask.id), [])
   queryClient.setQueryData(taskChecklistKeys.all(baseTask.id), checklists)
-  queryClient.setQueryData(
-    taskKeys.list({ context: 'all', status: 'all', limit: 'unlimited' }),
-    [],
-  )
+  queryClient.setQueryData(taskKeys.list(allTasksFilter), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
     projectKeys.list(undefined),

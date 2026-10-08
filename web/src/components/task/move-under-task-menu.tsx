@@ -2,7 +2,11 @@ import { useCallback, useMemo } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { type SearchResult } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  allTasksFilter,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { getDescendantIds } from '#lib/task-tree'
 
 export function MoveUnderTaskMenu({
@@ -16,10 +20,7 @@ export function MoveUnderTaskMenu({
   taskId: string
   taskNumber: number
 }) {
-  const { categorized } = useTaskList(
-    { context: 'all', status: 'all', limit: 'unlimited' },
-    { enabled: open },
-  )
+  const { categorized } = useTaskList(allTasksFilter, { enabled: open })
   const updateTaskParent = useUpdateTaskParent()
 
   // A task can't become its own ancestor, so both itself and every current

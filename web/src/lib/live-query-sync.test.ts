@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { allTasksFilter } from '#hooks/use-tasks'
 import { connectLiveQuerySync } from '#lib/live-query-sync'
 import {
   activityKeys,
@@ -137,14 +138,7 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
   const taskId = 'target-task-id'
   const otherTaskId = 'other-task-id'
   const queries = {
-    taskList: observeQuery(
-      queryClient,
-      taskKeys.list({
-        context: 'all',
-        status: 'all',
-        limit: 'unlimited',
-      }),
-    ),
+    taskList: observeQuery(queryClient, taskKeys.list(allTasksFilter)),
     taskInfiniteList: observeQuery(
       queryClient,
       taskKeys.infiniteList({ context: 'all', status: 'all' }),
@@ -534,14 +528,7 @@ describe('connectLiveQuerySync', () => {
       const queryClient = new QueryClient()
       const taskId = 'sample-task-id'
       const queries = [
-        observeQuery(
-          queryClient,
-          taskKeys.list({
-            context: 'all',
-            status: 'all',
-            limit: 'unlimited',
-          }),
-        ),
+        observeQuery(queryClient, taskKeys.list(allTasksFilter)),
         observeQuery(
           queryClient,
           taskKeys.infiniteList({ context: 'all', status: 'all' }),

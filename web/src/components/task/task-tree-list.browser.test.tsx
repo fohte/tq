@@ -13,7 +13,7 @@ import { ROW_INDENT_CLASS_NAME } from '#components/task/task-row-shared'
 import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
 import type { TaskTreeListProps } from '#components/task/task-tree-list'
 import { TaskTreeList } from '#components/task/task-tree-list'
-import type { TreeNode } from '#hooks/use-tasks'
+import { allTasksFilter, type TreeNode } from '#hooks/use-tasks'
 import { assertDefined, atIndex } from '#lib/test-utils'
 
 // fetchTaskList is only exercised by the lazy-mode tests below (regular
@@ -333,9 +333,7 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     await renderTaskTreeList([root], {
       lazyChildrenFilter: {
         q: 'is:todo',
-        context: 'all',
-        status: 'all',
-        limit: 'unlimited',
+        ...allTasksFilter,
       },
     })
 
@@ -348,9 +346,7 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     expect(await screen.findByText('Lazily Fetched Child')).toBeInTheDocument()
     expect(mockFetchTaskList).toHaveBeenCalledWith({
       q: 'is:todo',
-      context: 'all',
-      status: 'all',
-      limit: 'unlimited',
+      ...allTasksFilter,
       parentId: 'root-1',
     })
   })

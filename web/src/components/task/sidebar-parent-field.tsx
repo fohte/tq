@@ -2,7 +2,11 @@ import { useState } from 'react'
 
 import { SidebarParentFieldAppearance } from '#components/task/sidebar-parent-field-appearance'
 import { useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  allTasksFilter,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { getDescendantIds } from '#lib/task-tree'
 
 export function SidebarParentField({
@@ -15,11 +19,7 @@ export function SidebarParentField({
   const [isEditing, setIsEditing] = useState(false)
   const [query, setQuery] = useState('')
 
-  const { categorized } = useTaskList({
-    context: 'all',
-    status: 'all',
-    limit: 'unlimited',
-  })
+  const { categorized } = useTaskList(allTasksFilter)
   const updateParent = useUpdateTaskParent()
 
   const allTasks = categorized.all

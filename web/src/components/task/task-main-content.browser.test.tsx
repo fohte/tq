@@ -20,7 +20,7 @@ import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
+import { allTasksFilter, taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import {
   activityKeys,
@@ -40,10 +40,7 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
 
   queryClient.setQueryData(commentKeys.all(task.id), [])
   queryClient.setQueryData(activityKeys.all(task.id), [])
-  queryClient.setQueryData(
-    taskKeys.list({ context: 'all', status: 'all', limit: 'unlimited' }),
-    [],
-  )
+  queryClient.setQueryData(taskKeys.list(allTasksFilter), [])
   queryClient.setQueryData(
     taskKeys.list({ context, status: 'all', limit: 'unlimited' }),
     [],

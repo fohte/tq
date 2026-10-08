@@ -40,6 +40,12 @@ export interface TaskListFilter {
   offset?: number
 }
 
+export const allTasksFilter = {
+  context: 'all',
+  status: 'all',
+  limit: 'unlimited',
+} as const satisfies TaskListFilter
+
 export type InfiniteTaskListFilter = Omit<TaskListFilter, 'limit'>
 
 export interface TaskCountFilter {

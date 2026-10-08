@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
+import { allTasksQuery } from '#operations/task-query-defaults'
 import {
   defineOperation,
   requestJson,
@@ -118,9 +119,7 @@ export const projectOperations = [
         requestJson(
           client.api.tasks.$get({
             query: {
-              context: 'all',
-              status: 'all',
-              limit: 'unlimited',
+              ...allTasksQuery,
               projectId: id,
             },
           }),

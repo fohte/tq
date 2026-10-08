@@ -4,6 +4,11 @@ import { z } from 'zod'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { nestTaskListRows } from '#lib/task-tree'
 import {
+  allTasksQuery,
+  taskListDefaults,
+  taskSearchDefaults,
+} from '#operations/task-query-defaults'
+import {
   defineOperation,
   type OperationClient,
   type OperationError,
@@ -77,7 +82,9 @@ const taskListInputSchema = listTasksQuerySchema
     ),
     status: listTasksQuerySchema.shape.status
       .optional()
-      .describe('Only return tasks in this status. Defaults to todo.'),
+      .describe(
+        `Only return tasks in this status. Defaults to ${taskListDefaults.status.join(', ')}.`,
+      ),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason.',
     ),
@@ -89,10 +96,14 @@ const taskListInputSchema = listTasksQuerySchema
     ),
     context: taskListContext
       .optional()
-      .describe('Only return tasks in this context. Defaults to all.'),
+      .describe(
+        'Only return tasks in this context. Defaults to the TQ_CONTEXT environment variable when set in the CLI, or all otherwise.',
+      ),
     limit: listTasksQuerySchema.shape.limit
       .optional()
-      .describe('Maximum number of results to return (1-100). Defaults to 20.'),
+      .describe(
+        `Maximum number of results to return (1-100). Defaults to ${String(taskListDefaults.limit)}.`,
+      ),
   })
 
 const taskSearchInputSchema = listTasksQuerySchema
@@ -125,7 +136,7 @@ const taskSearchInputSchema = listTasksQuerySchema
     context: taskListContext
       .optional()
       .describe(
-        'Only return tasks in this context. Equivalent to context: in q.',
+        'Only return tasks in this context. Equivalent to context: in q. Defaults to the TQ_CONTEXT environment variable when set in the CLI, or all otherwise.',
       ),
     hasEstimate: booleanOption
       .optional()
@@ -142,22 +153,26 @@ const taskSearchInputSchema = listTasksQuerySchema
     ),
     limit: listTasksQuerySchema.shape.limit
       .optional()
-      .describe('Maximum number of results to return (1-100). Defaults to 20.'),
+      .describe(
+        `Maximum number of results to return (1-100). Defaults to ${String(taskSearchDefaults.limit)}.`,
+      ),
     offset: listTasksQuerySchema.shape.offset.describe(
       'Number of results to skip, for pagination.',
     ),
   })
 
 const taskListMcpInputSchema = taskListInputSchema.extend({
-  status: taskListInputSchema.shape.status.default(['todo']),
-  context: taskListInputSchema.shape.context.default('all'),
-  limit: taskListInputSchema.shape.limit.default(20),
+  status: taskListInputSchema.shape.status.default(taskListDefaults.status),
+  context: taskListInputSchema.shape.context.default(taskListDefaults.context),
+  limit: taskListInputSchema.shape.limit.default(taskListDefaults.limit),
   tzOffset: timezoneOffsetMinutesSchema,
 })
 
 const taskSearchMcpInputSchema = taskSearchInputSchema.extend({
-  context: taskSearchInputSchema.shape.context.default('all'),
-  limit: taskSearchInputSchema.shape.limit.default(20),
+  context: taskSearchInputSchema.shape.context.default(
+    taskSearchDefaults.context,
+  ),
+  limit: taskSearchInputSchema.shape.limit.default(taskSearchDefaults.limit),
   tzOffset: timezoneOffsetMinutesSchema,
 })
 
@@ -208,9 +223,7 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
     return requestJson(
       client.api.tasks.$get({
         query: {
-          context: 'all',
-          status: 'all',
-          limit: 'unlimited',
+          ...allTasksQuery,
           descendantOf: taskResult.id,
         },
       }),
@@ -255,9 +268,9 @@ export const taskReadOperations = [
         client.api.tasks.$get({
           query: toTaskQuery({
             ...input,
-            context: input.context ?? 'all',
-            status: input.status ?? ['todo'],
-            limit: input.limit ?? 20,
+            context: input.context ?? taskListDefaults.context,
+            status: input.status ?? taskListDefaults.status,
+            limit: input.limit ?? taskListDefaults.limit,
           }),
         }),
       ),
@@ -296,9 +309,9 @@ export const taskReadOperations = [
         client.api.tasks.$get({
           query: toTaskQuery({
             ...input,
-            context: input.context ?? 'all',
-            status: input.status ?? ['all'],
-            limit: input.limit ?? 20,
+            context: input.context ?? taskSearchDefaults.context,
+            status: input.status ?? taskSearchDefaults.status,
+            limit: input.limit ?? taskSearchDefaults.limit,
           }),
         }),
       ),

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
+  allTasksFilter,
   useInfiniteTaskList,
   useTaskCount,
   useTaskList,
@@ -251,15 +252,7 @@ describe('useTaskList', () => {
     try {
       mockGet.mockResolvedValue(jsonResponse([]))
 
-      renderHook(
-        () =>
-          useTaskList({
-            context: 'all',
-            status: 'all',
-            limit: 'unlimited',
-          }),
-        { wrapper },
-      )
+      renderHook(() => useTaskList(allTasksFilter), { wrapper })
 
       let initialCallCount = 0
       const getCallCounts = () => ({

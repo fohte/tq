@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { LinkExistingTaskMenuAppearance } from '#components/task/link-existing-task-menu-appearance'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  allTasksFilter,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { getDescendantIds } from '#lib/task-tree'
 
 export function LinkExistingTaskMenu({
@@ -27,10 +31,7 @@ export function LinkExistingTaskMenu({
     }
   }, [open])
 
-  const { categorized } = useTaskList(
-    { context: 'all', status: 'all', limit: 'unlimited' },
-    { enabled: open },
-  )
+  const { categorized } = useTaskList(allTasksFilter, { enabled: open })
   const updateTaskParent = useUpdateTaskParent()
 
   const excludedTaskIds = useMemo(
