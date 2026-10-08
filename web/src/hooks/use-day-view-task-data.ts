@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import type { QueueItem } from '#hooks/use-queues'
 import type { TaskContext } from '#hooks/use-tasks'
@@ -16,7 +16,6 @@ interface UseDayViewTaskDataOptions {
   visibleDayQueueItems: { item: QueueItem }[]
   visibleTimeBlocks: TimeBlock[] | undefined
   nowPanelTimeBlocks: TimeBlock[] | undefined
-  queuedTaskIds: ReadonlySet<string>
   isCompactLayout: boolean
 }
 
@@ -28,7 +27,6 @@ export function useDayViewTaskData({
   visibleDayQueueItems,
   visibleTimeBlocks,
   nowPanelTimeBlocks,
-  queuedTaskIds,
   isCompactLayout,
 }: UseDayViewTaskDataOptions) {
   const selectedDateStr = formatLocalDate(selectedDate)
@@ -45,18 +43,9 @@ export function useDayViewTaskData({
       ].sort(),
     [nowPanelTimeBlocks, queueItems, visibleDayQueueItems, visibleTimeBlocks],
   )
-  const referencedTasksQuery = useTaskList(
-    { ids: taskIds, context, includeAncestors: true },
-    {
-      enabled: taskIds.length > 0,
-      placeholderData: (previousData, previousFilter) =>
-        selectQueueTaskPlaceholderData(
-          previousData,
-          previousFilter,
-          taskIds,
-          context,
-        ),
-    },
+  const queuedTaskIds = useMemo(
+    () => new Set(queueItems.map((item) => item.taskId)),
+    [queueItems],
   )
   const candidateTasksQuery = useTaskList({
     context,
@@ -71,9 +60,36 @@ export function useDayViewTaskData({
   })
   const todayIsVisible =
     visibleRange.startDate <= todayStr && todayStr <= visibleRange.endDate
+  const shouldFetchDueTasks = isCompactLayout || todayIsVisible
   const dueTasksQuery = useTaskList(
-    { context, status: 'todo', dueTo: todayStr },
-    { enabled: isCompactLayout || todayIsVisible },
+    { context, status: 'todo', dueTo: todayStr, sortBy: 'due' },
+    { enabled: shouldFetchDueTasks },
+  )
+  const referencedTasksQuery = useTaskList(
+    { ids: taskIds, context, includeAncestors: true },
+    {
+      enabled: taskIds.length > 0,
+      placeholderData: (previousData, previousFilter) => {
+        const previousTasks = selectQueueTaskPlaceholderData(
+          previousData,
+          previousFilter,
+          taskIds,
+          context,
+        )
+        if (previousTasks == null) return undefined
+
+        return Array.from(
+          new Map(
+            [
+              ...previousTasks,
+              ...(candidateTasksQuery.data ?? []),
+              ...(taskDateTasksQuery.data ?? []),
+              ...(dueTasksQuery.data ?? []),
+            ].map((task) => [task.id, task]),
+          ).values(),
+        )
+      },
+    },
   )
   const referencedTasks = useMemo(
     () =>
@@ -82,7 +98,46 @@ export function useDayViewTaskData({
       ),
     [context, referencedTasksQuery.data],
   )
-  const taskMap = useTaskMap(referencedTasks)
+  useEffect(() => {
+    if (candidateTasksQuery.error == null) return
+    console.error(
+      'Failed to fetch day-view queue candidates',
+      candidateTasksQuery.error,
+    )
+  }, [candidateTasksQuery.error])
+  useEffect(() => {
+    if (taskDateTasksQuery.error == null) return
+    console.error(
+      'Failed to fetch day-view task dates',
+      taskDateTasksQuery.error,
+    )
+  }, [taskDateTasksQuery.error])
+  useEffect(() => {
+    if (isCompactLayout || !todayIsVisible || dueTasksQuery.error == null) {
+      return
+    }
+    console.error('Failed to fetch day-view overdue tasks', dueTasksQuery.error)
+  }, [dueTasksQuery.error, isCompactLayout, todayIsVisible])
+  const tasksForTaskMap = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [
+            ...(candidateTasksQuery.data ?? []),
+            ...(taskDateTasksQuery.data ?? []),
+            ...(dueTasksQuery.data ?? []),
+            ...referencedTasks,
+          ].map((task) => [task.id, task]),
+        ).values(),
+      ),
+    [
+      candidateTasksQuery.data,
+      dueTasksQuery.data,
+      referencedTasks,
+      taskDateTasksQuery.data,
+    ],
+  )
+  const taskMap = useTaskMap(tasksForTaskMap)
   const queueCandidates = useMemo(
     () =>
       getQueueCandidates(

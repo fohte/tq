@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -19,6 +20,7 @@ import type { Task } from '#hooks/use-tasks'
 import { getNowPanelQueryDateRange } from '#lib/compact-layout'
 import { formatLocalDate } from '#lib/date-range'
 import type { QueueCandidate } from '#lib/queue-candidates'
+import { formatShortDate } from '#lib/task-due-date'
 import { assertDefined } from '#lib/test-utils'
 import { Route as RootRoute } from '#routes/__root'
 import { Route as DayRoute } from '#routes/index'
@@ -66,6 +68,7 @@ type QueueMutationOptions = {
 type DayViewMockProps = {
   layout?: string
   isLoading?: boolean
+  calendarEvents?: TimeBlockEvent[]
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
   queueSections?: QueueSectionData[]
@@ -82,8 +85,12 @@ type MemosMock = (
   isError: boolean
 }
 
+function isTaskListFilterWith(filter: unknown, field: string): boolean {
+  return typeof filter === 'object' && filter !== null && field in filter
+}
+
 function isDueTaskQuery(filter: unknown): boolean {
-  return typeof filter === 'object' && filter !== null && 'dueTo' in filter
+  return isTaskListFilterWith(filter, 'dueTo')
 }
 
 function getEnabledTaskListFilters(): unknown[] {
@@ -91,25 +98,17 @@ function getEnabledTaskListFilters(): unknown[] {
   mocks.useTaskList.mock.calls
     .filter(([, options]) => options?.enabled !== false)
     .forEach(([filter]) => {
-      const key =
-        typeof filter === 'object' && filter !== null && 'ids' in filter
-          ? 'ids'
-          : typeof filter === 'object' &&
-              filter !== null &&
-              'candidatesOn' in filter
-            ? 'candidatesOn'
-            : typeof filter === 'object' &&
-                filter !== null &&
-                ('dateFrom' in filter || 'dateTo' in filter)
-              ? 'dateRange'
-              : JSON.stringify(filter)
+      const key = isTaskListFilterWith(filter, 'ids')
+        ? 'ids'
+        : isTaskListFilterWith(filter, 'candidatesOn')
+          ? 'candidatesOn'
+          : isTaskListFilterWith(filter, 'dateFrom') ||
+              isTaskListFilterWith(filter, 'dateTo')
+            ? 'dateRange'
+            : JSON.stringify(filter)
       filters.set(key, filter)
     })
   return [...filters.values()]
-}
-
-function isTaskListFilterWith(filter: unknown, field: string): boolean {
-  return typeof filter === 'object' && filter !== null && field in filter
 }
 
 function taskListQuerySnapshot(
@@ -391,8 +390,70 @@ describe('day-view route task queries', () => {
           .filter(([filter]) => isDueTaskQuery(filter))
           .at(-1),
       ).toEqual([
-        { context: 'work', status: 'todo', dueTo: todayStr },
+        {
+          context: 'work',
+          status: 'todo',
+          dueTo: todayStr,
+          sortBy: 'due',
+        },
         { enabled: true },
+      ])
+    })
+
+    queryClient.clear()
+  })
+
+  it('uses overdue query results to render today reminders outside the task date range', async () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayStr = formatLocalDate(today)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = formatLocalDate(yesterday)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = formatLocalDate(tomorrow)
+    const overdueTask = makeTask({
+      id: 'overdue-task',
+      title: 'Review a sample note',
+      dueDate: yesterdayStr,
+    })
+    mocks.selectedDate = today
+    mocks.useTaskList.mockImplementation((filter) => ({
+      data: isTaskListFilterWith(filter, 'dueTo') ? [overdueTask] : [],
+      isLoading: false,
+      categorized: { all: [] },
+    }))
+
+    const { queryClient } = await renderDayRoute('/')
+    const presentationProps = assertDefined(
+      mocks.dayViewProps.mock.lastCall?.[0],
+    )
+    const onVisibleRangeChange = assertDefined(
+      presentationProps.onVisibleRangeChange,
+    )
+    act(() => {
+      onVisibleRangeChange({
+        start: new Date(`${todayStr}T00:00:00`),
+        end: new Date(`${tomorrowStr}T00:00:00`),
+      })
+    })
+
+    await waitFor(() => {
+      expect(mocks.dayViewProps.mock.lastCall?.[0].calendarEvents).toEqual([
+        {
+          id: 'task-date-overdue-task-overdue-today',
+          title: 'Review a sample note',
+          start: todayStr,
+          end: tomorrowStr,
+          type: 'task-date',
+          taskId: 'overdue-task',
+          allDay: true,
+          dateTaskKind: 'overdue-today',
+          dateTaskOverdue: true,
+          dateTaskDueDateLabel: formatShortDate(yesterdayStr, today),
+          displayPriority: 1,
+        },
       ])
     })
 
@@ -465,16 +526,6 @@ describe('day-view route task queries', () => {
         taskListQuerySnapshot(
           [
             {
-              ids: [
-                'future-day-task',
-                'queued-task',
-                'time-block-task',
-                'visible-calendar-day-task',
-              ],
-              context: 'work',
-              includeAncestors: true,
-            },
-            {
               context: 'work',
               status: 'todo',
               candidatesOn: selectedDateStr,
@@ -484,6 +535,16 @@ describe('day-view route task queries', () => {
               status: 'todo',
               dateFrom: calendarDate,
               dateTo: '2026-07-28',
+            },
+            {
+              ids: [
+                'future-day-task',
+                'queued-task',
+                'time-block-task',
+                'visible-calendar-day-task',
+              ],
+              context: 'work',
+              includeAncestors: true,
             },
           ],
           { enabled: true, placeholderData: () => undefined },
@@ -634,7 +695,12 @@ describe('day-view route compact layout', () => {
         layout: 'compact',
         appLayoutVisible: false,
         dueTaskCall: [
-          { context: 'work', status: 'todo', dueTo: todayStr },
+          {
+            context: 'work',
+            status: 'todo',
+            dueTo: todayStr,
+            sortBy: 'due',
+          },
           { enabled: true },
         ],
         memoArgs: ['work', true],
@@ -683,7 +749,12 @@ describe('day-view route compact layout', () => {
         layout: 'default',
         appLayoutVisible: true,
         dueTaskCall: [
-          { context: 'work', status: 'todo', dueTo: todayStr },
+          {
+            context: 'work',
+            status: 'todo',
+            dueTo: todayStr,
+            sortBy: 'due',
+          },
           { enabled: false },
         ],
         memoArgs: ['work', false],

@@ -12,7 +12,11 @@ import type { TaskContext } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 import { formatLocalDate } from '#lib/date-range'
-import { queueKeys } from '#lib/query-keys'
+import {
+  isTaskCandidateListQueryKey,
+  queueKeys,
+  taskKeys,
+} from '#lib/query-keys'
 
 export { queueKeys }
 
@@ -162,6 +166,10 @@ export function useSetQueueItems() {
       // PUT responses follow request order, while queue reads follow due date.
       void queryClient.invalidateQueries({
         queryKey: queueKeys.items(key, date),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: taskKeys.lists,
+        predicate: ({ queryKey }) => isTaskCandidateListQueryKey(queryKey),
       })
     },
   })

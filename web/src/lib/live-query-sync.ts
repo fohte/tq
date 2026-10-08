@@ -9,6 +9,7 @@ import { Result } from 'neverthrow'
 import {
   descriptionTemplateKeys,
   githubSyncRuleKeys,
+  isTaskCandidateListQueryKey,
   labelKeys,
   matchesTaskSpecificQuery,
   projectKeys,
@@ -150,7 +151,15 @@ const resourceQueryFilters: Record<
           : [],
     })
   },
-  queue: () => ({ filters: [{ queryKey: queueKeys.all }] }),
+  queue: () => ({
+    filters: [
+      { queryKey: queueKeys.all },
+      {
+        queryKey: taskKeys.lists,
+        predicate: ({ queryKey }) => isTaskCandidateListQueryKey(queryKey),
+      },
+    ],
+  }),
   time_block: ({ taskIds }) =>
     withFilters(
       taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),

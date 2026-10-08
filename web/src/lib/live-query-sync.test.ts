@@ -132,6 +132,16 @@ function observeQuery(
   return { observer, queryFn, unsubscribe }
 }
 
+function getRefetchCounts(queries: {
+  candidateList: ReturnType<typeof observeQuery>
+  unfilteredTaskList: ReturnType<typeof observeQuery>
+}) {
+  return {
+    candidateRefetches: queries.candidateList.queryFn.mock.calls.length,
+    unfilteredRefetches: queries.unfilteredTaskList.queryFn.mock.calls.length,
+  }
+}
+
 function observeTaskInvalidationQueries(queryClient: QueryClient) {
   const taskId = 'target-task-id'
   const otherTaskId = 'other-task-id'
@@ -356,6 +366,40 @@ describe('connectLiveQuerySync', () => {
         { queryKey: taskMentionKeys.suggestionsPrefix },
         'predicate',
       ],
+    })
+  })
+
+  it('invalidates candidate task lists after a queue changes on another screen', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const candidateList = observeQuery(
+      queryClient,
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        candidatesOn: '2026-08-01',
+      }),
+    )
+    const unfilteredTaskList = observeQuery(
+      queryClient,
+      taskKeys.list({ context: 'work' }),
+    )
+    const { eventStream } = createConnection({ queryClient })
+
+    eventStream.sendChange(
+      JSON.stringify({
+        resource: 'queue',
+        id: 'day',
+        origin: 'screen-two',
+      }),
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    candidateList.unsubscribe()
+    unfilteredTaskList.unsubscribe()
+
+    expect(getRefetchCounts({ candidateList, unfilteredTaskList })).toEqual({
+      candidateRefetches: 1,
+      unfilteredRefetches: 0,
     })
   })
 

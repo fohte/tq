@@ -224,18 +224,6 @@ function DayView() {
     return map
   }, [canReadQueueItems, queuesData, queueItemsResults])
 
-  const allQueuedTaskIds = useMemo(() => {
-    const ids = new Set<string>()
-    rawItemsByKey.forEach((items) => {
-      items.forEach((item) => {
-        ids.add(item.taskId)
-      })
-    })
-    futureDayQueueItems.forEach(({ item }) => {
-      ids.add(item.taskId)
-    })
-    return ids
-  }, [rawItemsByKey, futureDayQueueItems])
   const referencedQueueItems = useMemo(
     () => [
       ...[...rawItemsByKey.values()].flat(),
@@ -253,7 +241,6 @@ function DayView() {
     nowPanelTimeBlocks: isCompactLayout
       ? nowPanelQueryData.timeBlocksData
       : undefined,
-    queuedTaskIds: allQueuedTaskIds,
     isCompactLayout,
   })
   const {
