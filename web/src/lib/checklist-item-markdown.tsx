@@ -1,12 +1,9 @@
 import { Button } from '@fohte/ui/button'
+import { Pencil } from 'lucide-react'
 import { fromMarkdown } from 'mdast-util-from-markdown'
-import { createElement, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
-import { projectUrlProvider } from '#lib/inline-reference/providers/project-url'
-import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
-import { taskUrlProvider } from '#lib/inline-reference/providers/task-url'
-import type { InlineReferenceProvider } from '#lib/inline-reference/types'
+import { findInlineReferenceMatches } from '#lib/inline-reference/providers/index'
 import { cn } from '#lib/utils'
 
 interface MarkdownNode {
@@ -21,14 +18,6 @@ interface RenderedSegment {
   kind: 'text' | 'interactive'
   key: string
   node: ReactNode
-}
-
-interface InlineReferenceMatch {
-  start: number
-  end: number
-  raw: string
-  key: string
-  chip: ReactNode
 }
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
@@ -63,35 +52,6 @@ function normalizeNode(value: unknown): MarkdownNode | undefined {
   }
 }
 
-function findProviderMatches<TData>(
-  provider: InlineReferenceProvider<TData>,
-  text: string,
-  fallbackText?: string,
-): InlineReferenceMatch[] {
-  return provider.findMatches(text).map((match) => ({
-    start: match.start,
-    end: match.end,
-    raw: match.raw,
-    key: `${provider.id}:${match.raw}:${String(match.start)}`,
-    chip: createElement(provider.Chip, {
-      data: match.data,
-      raw: fallbackText ?? match.raw,
-    }),
-  }))
-}
-
-function findInlineReferenceMatches(
-  text: string,
-  fallbackText?: string,
-): InlineReferenceMatch[] {
-  return [
-    ...findProviderMatches(taskMentionProvider, text, fallbackText),
-    ...findProviderMatches(taskUrlProvider, text, fallbackText),
-    ...findProviderMatches(projectUrlProvider, text, fallbackText),
-    ...findProviderMatches(githubUrlProvider, text, fallbackText),
-  ].sort((left, right) => left.start - right.start || right.end - left.end)
-}
-
 function plainText(nodes: MarkdownNode[]): string {
   return nodes
     .map((node) => {
@@ -110,40 +70,6 @@ function safeHref(href: string): string | undefined {
     : undefined
 }
 
-function renderSimpleNodes(
-  nodes: MarkdownNode[],
-  keyPrefix: string,
-): ReactNode[] {
-  return nodes.map((node, index) => {
-    const key = `${keyPrefix}:${node.type}:${String(index)}`
-    const children = renderSimpleNodes(node.children, key)
-
-    switch (node.type) {
-      case 'text':
-      case 'html':
-        return node.value ?? ''
-      case 'emphasis':
-        return <em key={key}>{children}</em>
-      case 'strong':
-        return <strong key={key}>{children}</strong>
-      case 'delete':
-        return <del key={key}>{children}</del>
-      case 'inlineCode':
-        return (
-          <code key={key} className="rounded-sm bg-muted px-1 py-0.5 text-xs">
-            {node.value}
-          </code>
-        )
-      case 'break':
-        return <br key={key} />
-      case 'image':
-        return node.alt ?? ''
-      default:
-        return children.length > 0 ? <span key={key}>{children}</span> : ''
-    }
-  })
-}
-
 function wrapNode(
   node: MarkdownNode,
   content: ReactNode,
@@ -159,6 +85,58 @@ function wrapNode(
     default:
       return content
   }
+}
+
+function renderLeafNode(
+  node: MarkdownNode,
+  key: string,
+): ReactNode | undefined {
+  switch (node.type) {
+    case 'text':
+    case 'html':
+      return node.value ?? ''
+    case 'inlineCode':
+      return (
+        <code key={key} className="rounded-sm bg-muted px-1 py-0.5 text-xs">
+          {node.value}
+        </code>
+      )
+    case 'break':
+      return <br key={key} />
+    case 'image':
+      return node.alt ?? ''
+    default:
+      return undefined
+  }
+}
+
+function renderSimpleNodes(
+  nodes: MarkdownNode[],
+  keyPrefix: string,
+): ReactNode[] {
+  return nodes.map((node, index) => {
+    const key = `${keyPrefix}:${node.type}:${String(index)}`
+    const leaf = renderLeafNode(node, key)
+    if (leaf !== undefined) return leaf
+
+    const children = renderSimpleNodes(node.children, key)
+    if (
+      node.type === 'emphasis' ||
+      node.type === 'strong' ||
+      node.type === 'delete'
+    )
+      return wrapNode(node, children, key)
+
+    return children.length > 0 ? <span key={key}>{children}</span> : ''
+  })
+}
+
+function renderChip(chip: ReactNode): ReactNode {
+  return (
+    <span className="inline-reference-chip inline-flex select-none align-middle">
+      {chip}
+    </span>
+  )
 }
 
 function renderInlineNodes(
@@ -198,12 +176,7 @@ function renderInlineNodes(
           continue
         if (match.start > cursor)
           textNodes.push(text.slice(cursor, match.start))
-        addInteractive(
-          <span className="inline-reference-chip inline-flex select-none align-middle">
-            {match.chip}
-          </span>,
-          `${key}:${match.key}`,
-        )
+        addInteractive(renderChip(match.chip), `${key}:${match.key}`)
         cursor = match.end
       }
       if (cursor < text.length) textNodes.push(text.slice(cursor))
@@ -223,12 +196,7 @@ function renderInlineNodes(
         label || undefined,
       ).find((match) => match.start === 0 && match.end === href.length)
       if (reference != null) {
-        addInteractive(
-          <span className="inline-reference-chip inline-flex select-none align-middle">
-            {reference.chip}
-          </span>,
-          `${key}:${reference.key}`,
-        )
+        addInteractive(renderChip(reference.chip), `${key}:${reference.key}`)
         return
       }
 
@@ -260,27 +228,9 @@ function renderInlineNodes(
       return
     }
 
-    if (node.type === 'inlineCode') {
-      textNodes.push(
-        <code key={key} className="rounded-sm bg-muted px-1 py-0.5 text-xs">
-          {node.value}
-        </code>,
-      )
-      return
-    }
-
-    if (node.type === 'break') {
-      textNodes.push(<br key={key} />)
-      return
-    }
-
-    if (node.type === 'image') {
-      textNodes.push(node.alt ?? '')
-      return
-    }
-
-    if (node.type === 'html') {
-      textNodes.push(node.value ?? '')
+    const leaf = renderLeafNode(node, key)
+    if (leaf !== undefined) {
+      textNodes.push(leaf)
       return
     }
 
@@ -302,9 +252,9 @@ export function renderChecklistItemMarkdown({
   bold: boolean
   onEdit: () => void
 }): ReactNode {
-  // A text prefix keeps the parser in a paragraph for input such as `1. step`;
+  // A punctuation prefix keeps the parser in a paragraph for input such as `1. step`;
   // checklist content supports inline Markdown, not block-level Markdown.
-  const paragraph = fromMarkdown(`x${content}`).children[0]
+  const paragraph = fromMarkdown(`!${content}`).children[0]
   const parsedNodes =
     paragraph?.type === 'paragraph'
       ? paragraph.children
@@ -313,10 +263,11 @@ export function renderChecklistItemMarkdown({
       : []
   const [firstNode, ...remainingNodes] = parsedNodes
   const nodes =
-    firstNode?.type === 'text' && firstNode.value?.startsWith('x') === true
+    firstNode?.type === 'text' && firstNode.value?.startsWith('!') === true
       ? [{ ...firstNode, value: firstNode.value.slice(1) }, ...remainingNodes]
       : parsedNodes
   const segments = renderInlineNodes(nodes, 'checklist-item')
+  const hasEditableText = segments.some((segment) => segment.kind === 'text')
 
   return (
     <span
@@ -344,6 +295,19 @@ export function renderChecklistItemMarkdown({
         ) : (
           <span key={segment.key}>{segment.node}</span>
         ),
+      )}
+      {!hasEditableText && (
+        <Button
+          key="checklist-item:edit"
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={`Edit ${content}`}
+          onClick={onEdit}
+          className="ml-1 inline-flex align-middle text-muted-foreground"
+        >
+          <Pencil className="size-3" />
+        </Button>
       )}
     </span>
   )

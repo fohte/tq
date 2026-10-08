@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import {
   CHECKLIST_ITEM_GITHUB_URL,
   CHECKLIST_ITEM_TASK_NUMBER,
+  checklistItemProjectUrl,
   seedChecklistItemMarkdownReferences,
 } from '#components/task/checklist-item-markdown-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
@@ -78,11 +79,15 @@ const inlineMarkdownItems = [
   }),
   makeTaskChecklistItem({
     id: '30000000-0000-4000-8000-000000000212',
-    content: `Read [the guide](https://example.org/guide), ${CHECKLIST_ITEM_GITHUB_URL}, and [the pull request](${CHECKLIST_ITEM_GITHUB_URL}).`,
+    content: `Read [the guide](https://example.org/guide), visit ${checklistItemProjectUrl(window.location.origin)}, see ${CHECKLIST_ITEM_GITHUB_URL}, and [the pull request](${CHECKLIST_ITEM_GITHUB_URL}).`,
   }),
   makeTaskChecklistItem({
     id: '30000000-0000-4000-8000-000000000213',
     content: `Open the related task #${String(CHECKLIST_ITEM_TASK_NUMBER)}.`,
+  }),
+  makeTaskChecklistItem({
+    id: '30000000-0000-4000-8000-000000000214',
+    content: `#${String(CHECKLIST_ITEM_TASK_NUMBER)}`,
   }),
 ]
 

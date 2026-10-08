@@ -7,8 +7,10 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   CHECKLIST_ITEM_GITHUB_TITLE,
   CHECKLIST_ITEM_GITHUB_URL,
+  CHECKLIST_ITEM_PROJECT_TITLE,
   CHECKLIST_ITEM_TASK_NUMBER,
   CHECKLIST_ITEM_TASK_TITLE,
+  checklistItemProjectUrl,
   checklistItemTaskUrl,
   seedChecklistItemMarkdownReferences,
 } from '#components/task/checklist-item-markdown-test-fixtures'
@@ -214,6 +216,17 @@ function getChecklistMarkdownState(root: Element) {
   }
 }
 
+function getChecklistInlineEditState(content: string) {
+  const input = screen.queryByRole<HTMLInputElement>('textbox', {
+    name: `Edit ${content}`,
+  })
+  return {
+    inputValue: input?.value ?? null,
+    editButtonPresent:
+      screen.queryByRole('button', { name: `Edit ${content}` }) != null,
+  }
+}
+
 function getNoteEditorState(
   container: HTMLElement,
   onUpdateItem: ReturnType<typeof vi.fn>,
@@ -233,7 +246,7 @@ describe('TaskChecklistList', () => {
     })
     seedChecklistItemMarkdownReferences(queryClient)
 
-    const content = `Review **the plan**, keep *the wording*, run \`the check\`, read [the guide](https://example.org/guide), see ${CHECKLIST_ITEM_GITHUB_URL} and [the pull request](${CHECKLIST_ITEM_GITHUB_URL}), open ${checklistItemTaskUrl(window.location.origin)}, then #${String(CHECKLIST_ITEM_TASK_NUMBER)}.`
+    const content = `_start with emphasis_, Review **the plan**, keep *the wording*, run \`the check\`, read [the guide](https://example.org/guide), visit ${checklistItemProjectUrl(window.location.origin)}, see ${CHECKLIST_ITEM_GITHUB_URL} and [the pull request](${CHECKLIST_ITEM_GITHUB_URL}), open ${checklistItemTaskUrl(window.location.origin)}, then #${String(CHECKLIST_ITEM_TASK_NUMBER)} and [a blocked link](javascript:alert(1)).`
     const rendered = renderChecklist({
       queryClient,
       checklists: [
@@ -254,19 +267,51 @@ describe('TaskChecklistList', () => {
     )
 
     expect(getChecklistMarkdownState(contentElement)).toEqual({
-      text: `Review the plan, keep the wording, run the check, read the guide, see example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE} and example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}, open #${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}, then #${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}.`,
+      text: `start with emphasis, Review the plan, keep the wording, run the check, read the guide, visit ${CHECKLIST_ITEM_PROJECT_TITLE}, see example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE} and example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}, open #${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}, then #${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE} and a blocked link.`,
       markdown: [
+        { tag: 'em', text: 'start with emphasis', href: null },
         { tag: 'strong', text: 'the plan', href: null },
         { tag: 'em', text: 'the wording', href: null },
         { tag: 'code', text: 'the check', href: null },
         { tag: 'a', text: 'the guide', href: 'https://example.org/guide' },
       ],
       chips: [
+        CHECKLIST_ITEM_PROJECT_TITLE,
         `example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}`,
         `example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}`,
         `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
         `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
       ],
+    })
+  })
+
+  it('keeps a click-to-edit target when an item contains only a reference chip', async () => {
+    const user = userEvent.setup()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    seedChecklistItemMarkdownReferences(queryClient)
+    const content = `#${String(CHECKLIST_ITEM_TASK_NUMBER)}`
+
+    renderChecklist({
+      queryClient,
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000743',
+              content,
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Check ${content}` })
+    await user.click(screen.getByRole('button', { name: `Edit ${content}` }))
+
+    expect(getChecklistInlineEditState(content)).toEqual({
+      inputValue: content,
+      editButtonPresent: false,
     })
   })
 
