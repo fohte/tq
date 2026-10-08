@@ -121,6 +121,28 @@ async function dragByTitle(sourceTitle: string, targetTitle: string) {
   fireEvent.mouseUp(document, { button: 0, clientX: targetX, clientY: targetY })
 }
 
+async function waitForDndClickSuppressionToClear() {
+  const probe = document.createElement('div')
+  document.body.append(probe)
+
+  let clickReachedWindow = false
+  const markClickAsReachedWindow = () => {
+    clickReachedWindow = true
+  }
+  window.addEventListener('click', markClickAsReachedWindow)
+
+  const waiting = waitFor(() => {
+    clickReachedWindow = false
+    probe.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(clickReachedWindow).toBe(true)
+  })
+
+  await waiting.finally(() => {
+    window.removeEventListener('click', markClickAsReachedWindow)
+    probe.remove()
+  })
+}
+
 describe('QueuePane dragging', () => {
   it('does not reorder tasks dragged within the same queue', async () => {
     const { onMoveTask } = renderQueuePane()
@@ -161,6 +183,7 @@ describe('QueuePane dragging', () => {
       name: 'Remove day from Scheduled task',
     })
     const row = removeButton.closest('[data-queue-key]')
+    await waitForDndClickSuppressionToClear()
     await user.click(removeButton)
 
     const readResult = () => ({
