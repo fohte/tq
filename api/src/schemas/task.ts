@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { labelNameSchema } from '#schemas/label-name'
-import { queueDateSchema } from '#schemas/queue'
+import { queueDateSchema } from '#schemas/queue-date'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 import { queryTimezoneOffsetMinutesSchema } from '#schemas/timezone'
 
