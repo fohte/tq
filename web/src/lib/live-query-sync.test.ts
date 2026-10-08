@@ -10,7 +10,6 @@ import { connectLiveQuerySync } from '#lib/live-query-sync'
 import {
   activityKeys,
   commentKeys,
-  githubSyncKeys,
   githubUrlPreviewKeys,
   labelKeys,
   projectKeys,
@@ -226,7 +225,6 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     agentSessions: observeQuery(queryClient, ['agent-sessions', 'by-task']),
     projects: observeQuery(queryClient, projectKeys.all),
     queues: observeQuery(queryClient, queueKeys.all),
-    githubSync: observeQuery(queryClient, githubSyncKeys.all),
   }
 
   queryClient.setQueryData(taskMentionKeys.preview(101), { id: taskId })
@@ -301,7 +299,6 @@ function taskInvalidationSnapshot(
       fetchCount('agentSessions'),
       fetchCount('projects'),
       fetchCount('queues'),
-      fetchCount('githubSync'),
     ],
   }
 }
@@ -581,7 +578,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 1,
       expectedLabelCounts: 1,
-      expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
     },
     {
@@ -596,7 +593,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 0,
       expectedLabelCounts: 1,
-      expectedOtherQueries: [0, 1, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 1, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -605,7 +602,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [0, 0],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 1, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -614,7 +611,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [0, 0],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 1, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -627,7 +624,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -640,7 +637,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
   ] as const)(
@@ -703,7 +700,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskPreviews: [1, 1, 1, 1],
       expectedOtherTaskPreviews: [1, 1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 1, 1],
     },
     {
       resource: 'label',
@@ -716,7 +713,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskPreviews: [1, 1, 1, 1],
       expectedOtherTaskPreviews: [1, 1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 1, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [1, 1, 0, 0, 0, 0],
     },
     {
       resource: 'time_block',
@@ -729,7 +726,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskPreviews: [0, 0, 0, 0],
       expectedOtherTaskPreviews: [0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
-      expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 1, 0, 0, 0],
     },
     {
       resource: 'agent_session',
@@ -742,7 +739,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskPreviews: [0, 0, 0, 0],
       expectedOtherTaskPreviews: [0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
-      expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 1, 0, 0],
     },
     {
       resource: 'checklist',
@@ -755,7 +752,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskPreviews: [1, 1, 1, 1],
       expectedOtherTaskPreviews: [1, 1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 0, 0],
     },
     {
       resource: 'checklist_item',
@@ -768,7 +765,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskPreviews: [1, 1, 1, 1],
       expectedOtherTaskPreviews: [1, 1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 0, 0],
     },
   ] as const)(
     'keeps the existing $resource invalidation range when task IDs are null',
@@ -925,7 +922,7 @@ describe('connectLiveQuerySync', () => {
         taskPreviews: [0, 0, 0, 0],
         otherTaskPreviews: [0, 0, 0, 0],
         unresolvedPreviews: [0, 0],
-        otherQueries: [0, 0, 0, 0, 0, 0, 0],
+        otherQueries: [0, 0, 0, 0, 0, 0],
       },
     })
   })
@@ -978,13 +975,12 @@ describe('connectLiveQuerySync', () => {
     })
   })
 
-  it('skips GitHub sync queries during unknown-event and reconnect refreshes', async () => {
+  it('refreshes all queries during unknown-event and reconnect refreshes', async () => {
     vi.useFakeTimers()
     const queryClient = new QueryClient()
     const queries = [
       observeQuery(queryClient, ['tasks']),
-      observeQuery(queryClient, githubSyncKeys.all),
-      observeQuery(queryClient, githubSyncKeys.task('task-one')),
+      observeQuery(queryClient, ['projects']),
     ]
     const { eventStream } = createConnection({ queryClient })
 
@@ -1009,8 +1005,8 @@ describe('connectLiveQuerySync', () => {
       queryCountsAfterReconnect,
     })
     expect(snapshot()).toEqual({
-      queryCountsAfterUnknownEvent: [1, 0, 0],
-      queryCountsAfterReconnect: [2, 0, 0],
+      queryCountsAfterUnknownEvent: [1, 1],
+      queryCountsAfterReconnect: [2, 2],
     })
   })
 
@@ -1114,7 +1110,7 @@ describe('connectLiveQuerySync', () => {
         { closed: false, opened: true },
       ],
       sessionChecks: [[]],
-      invalidations: [{ hasPredicate: true, cancelRefetch: false }],
+      invalidations: [{ hasPredicate: false, cancelRefetch: false }],
     })
   })
 
