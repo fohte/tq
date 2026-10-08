@@ -15,13 +15,11 @@ export type { Schedule }
 export function useScheduleList(
   startDate: string,
   endDate: string,
-  refetchInterval?: number,
   enabled = true,
 ) {
   return useQuery({
     queryKey: scheduleKeys.list(startDate, endDate),
     enabled,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     queryFn: async () => {
       const res = await api.api.schedule.recurring.$get({
         query: { startDate, endDate },

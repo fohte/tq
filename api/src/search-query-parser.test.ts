@@ -128,6 +128,10 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('has:no-blockers').hasNoBlockers).toBe(true)
   })
 
+  it('parses has:follow-up-due prefix', () => {
+    expect(parseSearchQuery('has:follow-up-due').hasFollowUpDue).toBe(true)
+  })
+
   it('lets a later has:no-blockers override an earlier has:blockers', () => {
     expect(parseSearchQuery('has:blockers has:no-blockers')).toEqual({
       freeText: '',
@@ -257,6 +261,11 @@ describe('getSearchQuerySuggestions', () => {
         display: 'Has no blockers',
         category: 'has',
       },
+      {
+        value: 'has:follow-up-due',
+        display: 'Has follow-up due',
+        category: 'has',
+      },
       { value: 'reason:completed', display: 'Completed', category: 'reason' },
       {
         value: 'reason:not_planned',
@@ -295,12 +304,13 @@ describe('buildSearchQuery', () => {
         hasNoChildren: true,
         hasBlockers: true,
         hasNoBlockers: true,
+        hasFollowUpDue: true,
         parentId: 'parent-1',
         projectId: 'proj-1',
         sortBy: 'due',
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children has:blockers has:no-blockers parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due parent:parent-1 project:proj-1 sort:due',
     )
   })
 
@@ -377,6 +387,14 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
       hasNoBlockers: true,
+    })
+  })
+
+  it('round-trips has:follow-up-due', () => {
+    const q = 'has:follow-up-due'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      hasFollowUpDue: true,
     })
   })
 

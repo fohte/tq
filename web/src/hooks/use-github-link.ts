@@ -6,7 +6,6 @@ import { taskKeys } from '#hooks/use-task-queries'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { api } from '#lib/api'
 import {
-  assertOkOrThrow,
   assertOkWithMessage,
   assertOkWithMessageOrThrow,
   unwrapOrThrow,
@@ -143,53 +142,5 @@ export function useUpdateGithubLinkNotifyEvents(taskId: string) {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })
       void queryClient.invalidateQueries({ queryKey: projectKeys.all })
     },
-  })
-}
-
-// Mounted once at the app root, this client sync covers "on open" and "on
-// window focus regain" via React Query's defaults, and "periodically while
-// focused" via refetchInterval, which pauses while the tab isn't visible.
-// The server scheduler also syncs due links when no client is active.
-const GITHUB_SYNC_INTERVAL_MS = 60_000
-
-export function useGithubSync() {
-  const queryClient = useQueryClient()
-
-  return useQuery({
-    queryKey: ['github-sync'],
-    queryFn: async () => {
-      const res = await api.api.github.sync.$post()
-      assertOkOrThrow(res)
-      await queryClient.invalidateQueries({ queryKey: taskKeys.all })
-      return null
-    },
-    staleTime: 0,
-    retry: false,
-    refetchInterval: GITHUB_SYNC_INTERVAL_MS,
-  })
-}
-
-// Single-task counterpart of useGithubSync, for an immediate refresh of one
-// task's link when its detail view opens, instead of waiting for the next
-// app-wide sync. `hasLink` gates the query so an unlinked task's detail view
-// doesn't fire a request the server would just no-op anyway.
-export function useSyncTaskGithubLink(taskId: string, hasLink: boolean) {
-  const queryClient = useQueryClient()
-
-  return useQuery({
-    queryKey: ['github-sync', 'task', taskId],
-    queryFn: async () => {
-      const res = await api.api.tasks[':taskId']['github-link'].sync.$post({
-        param: { taskId },
-      })
-      assertOkOrThrow(res)
-      await queryClient.invalidateQueries({
-        queryKey: taskKeys.detail(taskId),
-      })
-      return null
-    },
-    enabled: hasLink,
-    staleTime: 0,
-    retry: false,
   })
 }

@@ -218,16 +218,25 @@ describe('TaskPage', () => {
     expect(editorWithDescription).toBeTruthy()
   })
 
-  it('renders sidebar fields', async () => {
+  it('renders sidebar fields without an estimate', async () => {
     mockUseTask.mockReturnValue({
       data: mockTask,
       isLoading: false,
       error: null,
     })
     await renderTaskPage()
-    expect(screen.getAllByText('STATUS').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('ESTIMATE').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('CONTEXT').length).toBeGreaterThanOrEqual(2)
+    const getActual = () => ({
+      statusFields: screen.getAllByText('STATUS').length,
+      estimateFields: screen.queryAllByText('ESTIMATE').length,
+      contextFields: screen.getAllByText('CONTEXT').length,
+    })
+    const expected = {
+      statusFields: 2,
+      estimateFields: 0,
+      contextFields: 2,
+    }
+
+    expect(getActual()).toEqual(expected)
   })
 
   it('allows inline title editing', async () => {
@@ -253,16 +262,6 @@ describe('TaskPage', () => {
       id: mockTask.id,
       input: { title: 'Updated title' },
     })
-  })
-
-  it('renders estimate in sidebar', async () => {
-    mockUseTask.mockReturnValue({
-      data: mockTask,
-      isLoading: false,
-      error: null,
-    })
-    await renderTaskPage()
-    expect(screen.getAllByText('1h30m').length).toBeGreaterThan(0)
   })
 
   it('renders subtasks and links to their detail pages', async () => {

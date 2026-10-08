@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
 import {
@@ -11,10 +11,8 @@ import {
   taskFixture,
   taskId,
 } from '#components/calendar/time-block-preview-trigger-test-fixtures'
-import { useRemoveFromDayQueue } from '#hooks/use-queues'
 import { useTask } from '#hooks/use-tasks'
-import { useDeleteManualTimeBlock } from '#hooks/use-time-blocks'
-import { formatLocalDate } from '#lib/date-range'
+import { useDeleteTimeBlock } from '#hooks/use-time-blocks'
 import { partialMutation } from '#lib/test-utils'
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -44,27 +42,29 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 vi.mock('#hooks/use-time-blocks', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('#hooks/use-time-blocks')>()
-  return { ...original, useDeleteManualTimeBlock: vi.fn() }
-})
-
-vi.mock('#hooks/use-queues', async (importOriginal) => {
-  const original = await importOriginal<typeof import('#hooks/use-queues')>()
-  return { ...original, useRemoveFromDayQueue: vi.fn() }
+  return { ...original, useDeleteTimeBlock: vi.fn() }
 })
 
 const mockUseTask = vi.mocked(useTask)
-const mockUseDeleteManualTimeBlock = vi.mocked(useDeleteManualTimeBlock)
-const mockUseRemoveFromDayQueue = vi.mocked(useRemoveFromDayQueue)
+const mockUseDeleteTimeBlock = vi.mocked(useDeleteTimeBlock)
 
 type UseTaskResult = ReturnType<typeof useTask>
+
+beforeEach(() => {
+  mockUseTask.mockReset()
+  mockUseDeleteTimeBlock.mockReset()
+})
 
 function getTaskDatePreviewOutput() {
   return {
     text: screen.getByText('Dated task').textContent,
     taskCalls: mockUseTask.mock.calls,
-    manualDeleteCalls: mockUseDeleteManualTimeBlock.mock.calls,
-    queueRemovalCalls: mockUseRemoveFromDayQueue.mock.calls,
+    deleteCalls: mockUseDeleteTimeBlock.mock.calls,
   }
+}
+
+function getDeleteOutput(deleteHookCalls: unknown, deleteCalls: number) {
+  return { deleteHookCalls, deleteCalls }
 }
 
 function Chip({ label }: { label: string }) {
@@ -76,7 +76,7 @@ describe('TimeBlockPreviewTrigger', () => {
     mockUseTask.mockReturnValue(
       partialMutation<UseTaskResult>({ data: taskFixture, isError: false }),
     )
-    mockUseDeleteManualTimeBlock.mockReturnValue({
+    mockUseDeleteTimeBlock.mockReturnValue({
       onDelete: vi.fn(),
       isDeleting: false,
     })
@@ -100,7 +100,7 @@ describe('TimeBlockPreviewTrigger', () => {
     mockUseTask.mockReturnValue(
       partialMutation<UseTaskResult>({ data: taskFixture, isError: false }),
     )
-    mockUseDeleteManualTimeBlock.mockReturnValue({
+    mockUseDeleteTimeBlock.mockReturnValue({
       onDelete,
       isDeleting: false,
     })
@@ -116,18 +116,22 @@ describe('TimeBlockPreviewTrigger', () => {
     )
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
-    expect(mockUseDeleteManualTimeBlock).toHaveBeenCalledWith(
-      taskId,
-      manualEvent.id,
-    )
-    expect(onDelete).toHaveBeenCalled()
+    expect(
+      getDeleteOutput(
+        mockUseDeleteTimeBlock.mock.calls,
+        onDelete.mock.calls.length,
+      ),
+    ).toEqual({
+      deleteHookCalls: [[taskId, manualEvent.id]],
+      deleteCalls: 1,
+    })
   })
 
   it('shows the task on hover for an auto block', async () => {
     mockUseTask.mockReturnValue(
       partialMutation<UseTaskResult>({ data: taskFixture, isError: false }),
     )
-    mockUseRemoveFromDayQueue.mockReturnValue({
+    mockUseDeleteTimeBlock.mockReturnValue({
       onDelete: vi.fn(),
       isDeleting: false,
     })
@@ -146,12 +150,12 @@ describe('TimeBlockPreviewTrigger', () => {
     expect(screen.getByText(taskFixture.title)).toBeVisible()
   })
 
-  it('calls the remove-from-queue mutation when an auto block is removed', async () => {
+  it('deletes an auto block by its time-block id', async () => {
     const onDelete = vi.fn()
     mockUseTask.mockReturnValue(
       partialMutation<UseTaskResult>({ data: taskFixture, isError: false }),
     )
-    mockUseRemoveFromDayQueue.mockReturnValue({ onDelete, isDeleting: false })
+    mockUseDeleteTimeBlock.mockReturnValue({ onDelete, isDeleting: false })
     const user = userEvent.setup()
     render(
       <TimeBlockPreviewTrigger event={autoEvent} defaultOpen>
@@ -160,16 +164,19 @@ describe('TimeBlockPreviewTrigger', () => {
     )
 
     await user.click(
-      await screen.findByRole('button', { name: 'Remove from queue' }),
+      await screen.findByRole('button', { name: 'Delete time block' }),
     )
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
 
-    expect(mockUseRemoveFromDayQueue).toHaveBeenCalledWith(
-      taskId,
-      formatLocalDate(autoEvent.start),
-      { enabled: true },
-    )
-    expect(onDelete).toHaveBeenCalled()
+    expect(
+      getDeleteOutput(
+        mockUseDeleteTimeBlock.mock.calls,
+        onDelete.mock.calls.length,
+      ),
+    ).toEqual({
+      deleteHookCalls: [[taskId, autoEvent.id]],
+      deleteCalls: 1,
+    })
   })
 
   it('renders children without a popup for a redacted block', async () => {
@@ -187,8 +194,7 @@ describe('TimeBlockPreviewTrigger', () => {
 
   it('renders task-date events without loading a time-block preview', () => {
     mockUseTask.mockClear()
-    mockUseDeleteManualTimeBlock.mockClear()
-    mockUseRemoveFromDayQueue.mockClear()
+    mockUseDeleteTimeBlock.mockClear()
     render(
       <TimeBlockPreviewTrigger event={taskDateEvent}>
         <Chip label="Dated task" />
@@ -198,8 +204,7 @@ describe('TimeBlockPreviewTrigger', () => {
     const expected = {
       text: 'Dated task',
       taskCalls: [],
-      manualDeleteCalls: [],
-      queueRemovalCalls: [],
+      deleteCalls: [],
     }
 
     expect(getTaskDatePreviewOutput()).toEqual(expected)
@@ -209,7 +214,7 @@ describe('TimeBlockPreviewTrigger', () => {
     mockUseTask.mockReturnValue(
       partialMutation<UseTaskResult>({ data: taskFixture, isError: false }),
     )
-    mockUseDeleteManualTimeBlock.mockReturnValue({
+    mockUseDeleteTimeBlock.mockReturnValue({
       onDelete: vi.fn(),
       isDeleting: false,
     })

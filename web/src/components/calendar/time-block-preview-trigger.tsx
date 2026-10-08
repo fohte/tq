@@ -10,12 +10,10 @@ import {
   PreviewCardPositioner,
   PreviewCardTrigger,
 } from '#components/ui/preview-card'
-import { useRemoveFromDayQueue } from '#hooks/use-queues'
 import { useTask } from '#hooks/use-tasks'
 import type { TimeBlock } from '#hooks/use-time-blocks'
-import { useDeleteManualTimeBlock } from '#hooks/use-time-blocks'
+import { useDeleteTimeBlock } from '#hooks/use-time-blocks'
 import type { CalendarEventProps } from '#lib/calendar-utils'
-import { formatLocalDate } from '#lib/date-range'
 
 interface PreviewableEvent {
   id: string
@@ -60,63 +58,19 @@ export function TimeBlockPreviewTrigger({
     isAutoScheduled: isAutoScheduled ?? false,
   }
 
-  return isAutoScheduled === true ? (
-    <AutoTimeBlockPreview
-      taskId={taskId}
-      block={block}
-      defaultOpen={defaultOpen}
-    >
-      {children}
-    </AutoTimeBlockPreview>
-  ) : (
-    <ManualTimeBlockPreview
+  return (
+    <TimeBlockPreview
       taskId={taskId}
       blockId={event.id}
       block={block}
       defaultOpen={defaultOpen}
     >
       {children}
-    </ManualTimeBlockPreview>
+    </TimeBlockPreview>
   )
 }
 
-function AutoTimeBlockPreview({
-  taskId,
-  block,
-  children,
-  defaultOpen,
-}: {
-  taskId: string
-  block: PreviewBlock
-  children: React.ReactNode
-  defaultOpen?: boolean | undefined
-}) {
-  const [open, setOpen] = useState(defaultOpen ?? false)
-  const { onDelete, isDeleting } = useRemoveFromDayQueue(
-    taskId,
-    formatLocalDate(new Date(block.startTime)),
-    { enabled: open },
-  )
-  const { data: task, isError: isTaskError } = useTask(taskId, {
-    enabled: open,
-  })
-
-  return (
-    <TimeBlockPreviewPopup
-      task={task ?? null}
-      isTaskError={isTaskError}
-      block={block}
-      onDelete={onDelete}
-      isDeleting={isDeleting}
-      defaultOpen={defaultOpen}
-      onOpenChange={setOpen}
-    >
-      {children}
-    </TimeBlockPreviewPopup>
-  )
-}
-
-function ManualTimeBlockPreview({
+function TimeBlockPreview({
   taskId,
   blockId,
   block,
@@ -130,7 +84,7 @@ function ManualTimeBlockPreview({
   defaultOpen?: boolean | undefined
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false)
-  const { onDelete, isDeleting } = useDeleteManualTimeBlock(taskId, blockId)
+  const { onDelete, isDeleting } = useDeleteTimeBlock(taskId, blockId)
   const { data: task, isError: isTaskError } = useTask(taskId, {
     enabled: open,
   })

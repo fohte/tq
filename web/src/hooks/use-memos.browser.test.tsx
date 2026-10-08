@@ -73,6 +73,7 @@ beforeEach(() => {
 
 afterEach(() => {
   queryClient.clear()
+  vi.useRealTimers()
 })
 
 describe('useUpdateMemo', () => {
@@ -218,5 +219,27 @@ describe('useUpdateMemo', () => {
         ],
       ),
     )
+  })
+})
+
+describe('useMemos', () => {
+  it('does not poll after fetching compact memo data', async () => {
+    vi.useFakeTimers()
+    mockGet.mockResolvedValue(
+      memoResponse(makeMemo({ content: 'Memo content' })),
+    )
+
+    renderHook(() => useMemos('work', true), { wrapper })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    const initialCallCount = mockGet.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000)
+    })
+
+    const getCallCounts = () => [initialCallCount, mockGet.mock.calls.length]
+    expect(getCallCounts()).toEqual([1, 1])
   })
 })

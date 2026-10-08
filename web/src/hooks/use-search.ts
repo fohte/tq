@@ -7,9 +7,16 @@ import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
-import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
+import {
+  extractTaskNumber,
+  filterSearchSuggestions,
+  taskDetailToSearchResult,
+} from '#lib/search-utils'
 
-type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
+type SearchResult = Omit<
+  InferResponseType<typeof api.api.tasks.$get, 200>[number],
+  'estimatedMinutes'
+>
 
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
@@ -53,7 +60,9 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
           ...(hasFreeText ? { includeMatch: 'true' } : {}),
         },
       })
-      return unwrapOrThrow(assertOk(res)).json()
+      return unwrapOrThrow(assertOk(res))
+        .json()
+        .then((results): SearchResult[] => results)
     },
     enabled: debouncedQuery.length > 0,
     placeholderData: (prev, prevQuery) => {
@@ -146,7 +155,7 @@ export function useSearchSuggestions(prefix: string) {
       const res = await api.api.tasks.search.suggest.$get({
         query: { prefix: debouncedPrefix },
       })
-      return unwrapOrThrow(assertOk(res)).json()
+      return unwrapOrThrow(assertOk(res)).json().then(filterSearchSuggestions)
     },
     enabled: debouncedPrefix.length > 0,
   })

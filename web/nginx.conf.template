@@ -27,6 +27,10 @@ server {
 
     # Reverse proxy to API backend
     location /api {
+        gzip on;
+        gzip_types application/json;
+        gzip_proxied any;
+
         resolver ${NGINX_RESOLVER} valid=30s;
         set $api_backend "${API_BACKEND_URL}";
         proxy_pass $api_backend;

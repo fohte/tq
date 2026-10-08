@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { formatDateAtOffset } from '#lib/timezone'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
@@ -112,9 +113,4 @@ export const queueOperations = [
 
 function formatLocalDate(date: Date): string {
   return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function formatDateAtOffset(date: Date, tzOffset: number): string {
-  const localDate = new Date(date.getTime() - tzOffset * 60_000)
-  return `${String(localDate.getUTCFullYear())}-${String(localDate.getUTCMonth() + 1).padStart(2, '0')}-${String(localDate.getUTCDate()).padStart(2, '0')}`
 }

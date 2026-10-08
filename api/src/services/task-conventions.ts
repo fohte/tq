@@ -2,12 +2,13 @@ import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import type { Node } from '@milkdown/kit/prose/model'
 import { asc, desc, eq } from 'drizzle-orm'
 
-import { db } from '#db/connection'
+import { db, type DbTransaction } from '#db/connection'
 import { taskDescriptionTemplates } from '#db/schema'
 import type { Author } from '#lib/author'
 import { parseMarkdown } from '#lib/markdown-parser'
 import { validateTaskDescriptionTemplate } from '#routes/tasks/description-template-validation'
 import type { TaskStatusReason } from '#schemas/task'
+import { getUncheckedLeafChecklistItems } from '#services/task-checklist-leaves'
 
 export type TaskConventionViolation =
   | {
@@ -25,7 +26,14 @@ export type TaskConventionViolation =
       kind: 'unchecked-completion-criteria'
       items: string[]
       descriptionParseFailed: boolean
+      uncheckedChecklistItems: UncheckedChecklistItem[]
     }
+
+type UncheckedChecklistItem = {
+  id: string
+  checklistName: string | null
+  content: string
+}
 
 type DescriptionTemplate = typeof taskDescriptionTemplates.$inferSelect
 
@@ -151,37 +159,43 @@ function collectUncheckedCompletionCriteria(node: Node): string[] {
 
 export async function checkTaskComplete(
   author: Author,
-  task: { description: string | null },
+  task: { id: string; description: string | null },
   statusReason: TaskStatusReason | undefined,
+  tx: DbTransaction,
 ): Promise<TaskConventionViolation | null> {
-  if (
-    !appliesTaskConventions(author) ||
-    statusReason !== 'completed' ||
-    task.description === null
-  ) {
+  if (!appliesTaskConventions(author) || statusReason !== 'completed') {
     return null
   }
 
-  const parsed = await parseMarkdown(task.description)
-  if (parsed.isErr()) {
-    captureWithFingerprint(
-      parsed.error,
-      'api.task-conventions.completion-parse-failed',
-    )
-    return {
-      kind: 'unchecked-completion-criteria',
-      items: [],
-      descriptionParseFailed: true,
+  const uncheckedChecklistItems = await getUncheckedLeafChecklistItems(
+    tx,
+    task.id,
+  )
+
+  let items: string[] = []
+  let descriptionParseFailed = false
+  if (task.description !== null) {
+    const parsed = await parseMarkdown(task.description)
+    if (parsed.isErr()) {
+      captureWithFingerprint(
+        parsed.error,
+        'api.task-conventions.completion-parse-failed',
+      )
+      descriptionParseFailed = true
+    } else {
+      items = collectUncheckedCompletionCriteria(parsed.value)
     }
   }
 
-  const items = collectUncheckedCompletionCriteria(parsed.value)
-  return items.length === 0
+  return items.length === 0 &&
+    !descriptionParseFailed &&
+    uncheckedChecklistItems.length === 0
     ? null
     : {
         kind: 'unchecked-completion-criteria',
         items,
-        descriptionParseFailed: false,
+        descriptionParseFailed,
+        uncheckedChecklistItems,
       }
 }
 
@@ -205,17 +219,49 @@ export function taskConventionViolationBody(
   }
 
   if (violation.kind === 'unchecked-completion-criteria') {
+    const hasDescriptionCriteria = violation.items.length > 0
+    const hasChecklistItems = violation.uncheckedChecklistItems.length > 0
+    const completionInstruction =
+      hasDescriptionCriteria && hasChecklistItems
+        ? 'Check off each verified completion criterion and checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".'
+        : hasDescriptionCriteria
+          ? 'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".'
+          : hasChecklistItems
+            ? 'Check off each verified checklist item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".'
+            : null
+    const instructions = [
+      ...(violation.descriptionParseFailed
+        ? [
+            'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".',
+          ]
+        : []),
+      ...(completionInstruction === null ? [] : [completionInstruction]),
+    ]
     return {
       error: [
         violation.descriptionParseFailed
           ? 'Could not inspect completion criteria because the description could not be parsed as Markdown.'
-          : 'Unchecked completion criteria:',
+          : hasDescriptionCriteria
+            ? 'Unchecked completion criteria:'
+            : null,
         ...violation.items,
-        violation.descriptionParseFailed
-          ? 'Simplify the description and verify its criteria before completing the task, or close it with statusReason "not_planned".'
-          : 'Check off each verified item before completing the task. If you decide not to do the work, close it with statusReason "not_planned".',
-      ].join('\n'),
+        ...(hasChecklistItems
+          ? [
+              'Unchecked checklist items:',
+              ...violation.uncheckedChecklistItems.map(
+                ({ checklistName, content }) =>
+                  `- ${checklistName ?? 'Checklist'}: ${content}`,
+              ),
+            ]
+          : []),
+        ...instructions,
+      ]
+        .filter((line): line is string => line !== null)
+        .join('\n'),
       uncheckedCompletionCriteria: violation.items,
+      ...(hasChecklistItems
+        ? { uncheckedChecklistItems: violation.uncheckedChecklistItems }
+        : {}),
     }
   }
 

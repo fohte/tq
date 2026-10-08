@@ -1,5 +1,5 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
-import { and, eq, isNull, lt, ne, or } from 'drizzle-orm'
+import { and, eq, isNull, lt } from 'drizzle-orm'
 import { okAsync, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
@@ -43,9 +43,6 @@ class GithubLinkNotifyError extends Error {
     this.name = 'GithubLinkNotifyError'
   }
 }
-
-const SUBJECT_SYNC_INTERVAL_MS = 60 * 60 * 1000
-const BLOCKER_SYNC_INTERVAL_MS = 24 * SUBJECT_SYNC_INTERVAL_MS
 
 function candidateEvents(link: LinkRow, issue: GithubIssueData): NotifyEvent[] {
   const candidates: NotifyEvent[] = []
@@ -324,11 +321,10 @@ async function hasGithubAccess(): Promise<boolean> {
 
 async function syncLinks(
   links: LinkRow[],
-  syncStartedAt?: Date,
   onWrite?: (taskId: string) => void,
 ): Promise<void> {
   for (const link of links) {
-    const result = await syncLinkFromGithub(link, syncStartedAt, onWrite)
+    const result = await syncLinkFromGithub(link, undefined, onWrite)
     if (result.isErr() && !isQuietProviderError(result.error)) {
       captureWithFingerprint(result.error, 'api.github-sync.sync-link-failed', {
         extras: { linkId: link.id },
@@ -345,7 +341,7 @@ async function runSync(origin: string | null): Promise<void> {
   const links = await db.select().from(taskGithubLinks)
   const changedTaskIds = new Set<string>()
   const changedRuleIds = new Set<string>()
-  await syncLinks(links, undefined, (taskId) => changedTaskIds.add(taskId))
+  await syncLinks(links, (taskId) => changedTaskIds.add(taskId))
 
   await syncGithubAssignedIssues({
     onTaskCreated: (taskId) => changedTaskIds.add(taskId),
@@ -353,51 +349,22 @@ async function runSync(origin: string | null): Promise<void> {
   })
 
   for (const id of changedTaskIds) {
-    publishChangeEvent({ resource: 'task', id, origin })
+    publishChangeEvent({ resource: 'task', id, origin, taskIds: [id] })
   }
   for (const id of changedRuleIds) {
-    publishChangeEvent({ resource: 'github_sync_rule', id, origin })
-  }
-}
-
-export async function syncDueGithubLinks(): Promise<void> {
-  const now = new Date()
-  const subjectCutoff = new Date(now.getTime() - SUBJECT_SYNC_INTERVAL_MS)
-  const blockerCutoff = new Date(now.getTime() - BLOCKER_SYNC_INTERVAL_MS)
-  const links = await db
-    .select()
-    .from(taskGithubLinks)
-    .where(
-      and(
-        ne(taskGithubLinks.state, 'merged'),
-        or(
-          and(
-            eq(taskGithubLinks.role, 'subject'),
-            lt(taskGithubLinks.lastSyncedAt, subjectCutoff),
-          ),
-          and(
-            eq(taskGithubLinks.role, 'blocker'),
-            lt(taskGithubLinks.lastSyncedAt, blockerCutoff),
-          ),
-        ),
-      ),
-    )
-
-  if (links.length === 0 || !(await hasGithubAccess())) {
-    return
-  }
-
-  const changedTaskIds = new Set<string>()
-  await syncLinks(links, now, (taskId) => changedTaskIds.add(taskId))
-  for (const id of changedTaskIds) {
-    publishChangeEvent({ resource: 'task', id, origin: null })
+    publishChangeEvent({
+      resource: 'github_sync_rule',
+      id,
+      origin,
+      taskIds: [],
+    })
   }
 }
 
 let inFlightSync: Promise<void> | null = null
 
-// The client-triggered pass refreshes links while the app is open; the
-// server-side scheduler also checks links when no client is active.
+// Manual requests and the server scheduler share one pass so overlapping calls
+// do not issue duplicate GitHub requests.
 export function syncAllGithubLinks(
   origin: string | null = null,
 ): Promise<void> {

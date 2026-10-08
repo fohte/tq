@@ -207,7 +207,7 @@ function BlockedByGroup({
         onSelectCandidate={(candidate: SearchResult) => {
           updateBlockedBy.mutate({
             id: taskId,
-            blockedBy: [...blockedBy, candidate],
+            blockedBy: [...blockedBy, { ...candidate, estimatedMinutes: null }],
             githubBlockerUrls,
           })
           setDialogOpen(false)

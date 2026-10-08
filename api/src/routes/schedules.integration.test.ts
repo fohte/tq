@@ -1,16 +1,25 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import {
-  assertDefined,
-  jsonBody,
-  patchSchedulingSettings,
-  setupTestDb,
-} from '#testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
+import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+let stopWatchingChanges: (() => void) | undefined
+
+afterEach(() => {
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
+})
+
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
+
+const invalidScheduleDateRanges = [
+  ['invalid format', 'startDate=not-a-date&endDate=2099-01-01'],
+  ['start after end', 'startDate=2099-01-02&endDate=2099-01-01'],
+  ['more than 42 days', 'startDate=2099-01-01&endDate=2099-02-12'],
+] as const
 
 interface TimeBlockResponse {
   id: string
@@ -50,15 +59,6 @@ interface ExpandedBlock {
   recurrence: ScheduleResponse['recurrence']
 }
 
-interface QueueItemResponse {
-  id: string
-  taskId: string
-  periodStart: string | null
-  sortOrder: number
-  createdAt: string
-  updatedAt: string
-}
-
 async function createTask(title: string, extra: Record<string, unknown> = {}) {
   const res = await app.request('/api/tasks', {
     method: 'POST',
@@ -68,43 +68,14 @@ async function createTask(title: string, extra: Record<string, unknown> = {}) {
   return jsonBody<{ id: string; number: number }>(res)
 }
 
-async function completeTask(taskId: string) {
-  await app.request(`/api/tasks/${taskId}/status`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'completed' }),
-  })
-}
-
-async function putDayQueueItems(taskIds: string[], date: string) {
-  const res = await app.request('/api/queues/day/items', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ taskIds, date }),
-  })
-  return { res, body: await jsonBody<QueueItemResponse[]>(res) }
-}
-
-async function requestAutoAssign(date: string, tzOffset = 0) {
-  const res = await app.request('/api/schedule/auto-assign', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ date, tzOffset }),
-  })
-  return { res, body: await jsonBody<TimeBlockResponse[]>(res) }
+function watchChangeEvents() {
+  const events: ChangeEvent[] = []
+  stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+  return events
 }
 
 function normalizeTimeBlock(block: TimeBlockResponse) {
   return { ...block, id: 'ID', createdAt: 'TIMESTAMP', updatedAt: 'TIMESTAMP' }
-}
-
-function normalizeAutoAssignResult(
-  result: Awaited<ReturnType<typeof requestAutoAssign>>,
-) {
-  return {
-    status: result.res.status,
-    body: result.body.map(normalizeTimeBlock),
-  }
 }
 
 async function createTimeBlock(
@@ -147,6 +118,30 @@ async function putScheduleOverride(
 
 describe('schedule/time-blocks API', () => {
   describe('POST /api/schedule/time-blocks', () => {
+    it('emits the resolved task ID when creating a time block', async () => {
+      const task = await createTask('Scheduled task')
+      const events = watchChangeEvents()
+
+      const { res } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 201,
+        events: [
+          {
+            resource: 'time_block',
+            id: null,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('creates a time block', async () => {
       const task = await createTask('Test task')
       const { res, body } = await createTimeBlock(
@@ -230,6 +225,23 @@ describe('schedule/time-blocks API', () => {
   })
 
   describe('GET /api/schedule/time-blocks', () => {
+    it.each(invalidScheduleDateRanges)(
+      'returns 400 for a date range with %s',
+      async (_, query) => {
+        const res = await app.request(`/api/schedule/time-blocks?${query}`)
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('accepts an inclusive 42-day range', async () => {
+      const res = await app.request(
+        '/api/schedule/time-blocks?startDate=2099-01-01&endDate=2099-02-11',
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('returns time blocks for a given date', async () => {
       const task = await createTask('Test task')
       await createTimeBlock(
@@ -297,6 +309,35 @@ describe('schedule/time-blocks API', () => {
   })
 
   describe('PATCH /api/schedule/time-blocks/:id', () => {
+    it('emits the time block task ID when updating a time block', async () => {
+      const task = await createTask('Movable task')
+      const { body: created } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+      const events = watchChangeEvents()
+
+      const res = await app.request(`/api/schedule/time-blocks/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startTime: '2026-03-22T11:00:00.000Z' }),
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'time_block',
+            id: created.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('updates start and end time (simulating drag move)', async () => {
       const task = await createTask('Movable task')
       const { body: created } = await createTimeBlock(
@@ -388,6 +429,33 @@ describe('schedule/time-blocks API', () => {
   })
 
   describe('DELETE /api/schedule/time-blocks/:id', () => {
+    it('emits the time block task ID when deleting a time block', async () => {
+      const task = await createTask('Deletable task')
+      const { body: created } = await createTimeBlock(
+        task.id,
+        '2026-03-22T09:00:00.000Z',
+        '2026-03-22T10:00:00.000Z',
+      )
+      const events = watchChangeEvents()
+
+      const res = await app.request(`/api/schedule/time-blocks/${created.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({ status: res.status, events })
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'time_block',
+            id: created.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
     it('deletes a time block', async () => {
       const task = await createTask('Deletable task')
       const { body: created } = await createTimeBlock(
@@ -486,6 +554,23 @@ describe('schedules API', () => {
   })
 
   describe('GET /api/schedule/recurring', () => {
+    it.each(invalidScheduleDateRanges)(
+      'returns 400 for a date range with %s',
+      async (_, query) => {
+        const res = await app.request(`/api/schedule/recurring?${query}`)
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('accepts an inclusive 42-day range', async () => {
+      const res = await app.request(
+        '/api/schedule/recurring?startDate=2099-01-01&endDate=2099-02-11',
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('returns expanded schedules for a date', async () => {
       await createSchedule({
         title: 'Morning Routine',
@@ -869,398 +954,5 @@ describe('schedule overrides API', () => {
     })
 
     expect(response.status).toBe(404)
-  })
-})
-
-// These tests rely on no oauth_tokens row existing in the test DB, so
-// getEvents() always resolves to no connected accounts and auto-assign
-// proceeds as if no Google Calendar events exist.
-describe('schedule/auto-assign API', () => {
-  describe('POST /api/schedule/auto-assign', () => {
-    it('uses the overridden recurring schedule as a fixed time range', async () => {
-      const task = await createTask('Queued task', { estimatedMinutes: 30 })
-      await putDayQueueItems([task.id], '2026-03-22')
-      const { body: schedule } = await createSchedule({
-        title: 'Routine',
-        startTime: '09:00',
-        endTime: '10:00',
-      })
-      await putScheduleOverride(schedule.id, '2026-03-22', {
-        startTime: '12:00',
-        endTime: '13:00',
-      })
-
-      const { body } = await requestAutoAssign('2026-03-22')
-
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: task.id,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T09:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('assigns queued tasks back-to-back starting at the start of working hours', async () => {
-      const taskA = await createTask('Task A', { estimatedMinutes: 30 })
-      const taskB = await createTask('Task B', { estimatedMinutes: 60 })
-      await putDayQueueItems([taskA.id, taskB.id], '2026-03-22')
-
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T09:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        {
-          id: 'ID',
-          taskId: taskB.id,
-          startTime: '2026-03-22T09:30:00.000Z',
-          endTime: '2026-03-22T10:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('orders queued tasks by due date and keeps insertion order for ties and missing dates', async () => {
-      const noDueFirst = await createTask('No due first', {
-        estimatedMinutes: 30,
-      })
-      const laterDue = await createTask('Later due', {
-        dueDate: '2026-03-29',
-        estimatedMinutes: 30,
-      })
-      const sameDueFirst = await createTask('Same due first', {
-        dueDate: '2026-03-22',
-        estimatedMinutes: 30,
-      })
-      const earliestDue = await createTask('Earliest due', {
-        dueDate: '2026-03-20',
-        estimatedMinutes: 30,
-      })
-      const sameDueSecond = await createTask('Same due second', {
-        dueDate: '2026-03-22',
-        estimatedMinutes: 30,
-      })
-      const noDueSecond = await createTask('No due second', {
-        estimatedMinutes: 30,
-      })
-      await putDayQueueItems(
-        [
-          noDueFirst.id,
-          laterDue.id,
-          sameDueFirst.id,
-          earliestDue.id,
-          sameDueSecond.id,
-          noDueSecond.id,
-        ],
-        '2026-03-22',
-      )
-
-      const result = await requestAutoAssign('2026-03-22')
-
-      expect(normalizeAutoAssignResult(result)).toEqual({
-        status: 200,
-        body: [
-          {
-            id: 'ID',
-            taskId: earliestDue.id,
-            startTime: '2026-03-22T09:00:00.000Z',
-            endTime: '2026-03-22T09:30:00.000Z',
-            isAutoScheduled: true,
-            createdAt: 'TIMESTAMP',
-            updatedAt: 'TIMESTAMP',
-          },
-          {
-            id: 'ID',
-            taskId: sameDueFirst.id,
-            startTime: '2026-03-22T09:30:00.000Z',
-            endTime: '2026-03-22T10:00:00.000Z',
-            isAutoScheduled: true,
-            createdAt: 'TIMESTAMP',
-            updatedAt: 'TIMESTAMP',
-          },
-          {
-            id: 'ID',
-            taskId: sameDueSecond.id,
-            startTime: '2026-03-22T10:00:00.000Z',
-            endTime: '2026-03-22T10:30:00.000Z',
-            isAutoScheduled: true,
-            createdAt: 'TIMESTAMP',
-            updatedAt: 'TIMESTAMP',
-          },
-          {
-            id: 'ID',
-            taskId: laterDue.id,
-            startTime: '2026-03-22T10:30:00.000Z',
-            endTime: '2026-03-22T11:00:00.000Z',
-            isAutoScheduled: true,
-            createdAt: 'TIMESTAMP',
-            updatedAt: 'TIMESTAMP',
-          },
-          {
-            id: 'ID',
-            taskId: noDueFirst.id,
-            startTime: '2026-03-22T11:00:00.000Z',
-            endTime: '2026-03-22T11:30:00.000Z',
-            isAutoScheduled: true,
-            createdAt: 'TIMESTAMP',
-            updatedAt: 'TIMESTAMP',
-          },
-          {
-            id: 'ID',
-            taskId: noDueSecond.id,
-            startTime: '2026-03-22T11:30:00.000Z',
-            endTime: '2026-03-22T12:00:00.000Z',
-            isAutoScheduled: true,
-            createdAt: 'TIMESTAMP',
-            updatedAt: 'TIMESTAMP',
-          },
-        ],
-      })
-    })
-
-    it('schedules around an existing manual time block', async () => {
-      const busyTask = await createTask('Busy task')
-      await createTimeBlock(
-        busyTask.id,
-        '2026-03-22T09:00:00.000Z',
-        '2026-03-22T10:00:00.000Z',
-      )
-
-      const queuedTask = await createTask('Queued task', {
-        estimatedMinutes: 30,
-      })
-      await putDayQueueItems([queuedTask.id], '2026-03-22')
-
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: queuedTask.id,
-          startTime: '2026-03-22T10:00:00.000Z',
-          endTime: '2026-03-22T10:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('excludes tasks without an estimate', async () => {
-      const noEstimateTask = await createTask('No estimate')
-      const withEstimateTask = await createTask('With estimate', {
-        estimatedMinutes: 30,
-      })
-      await putDayQueueItems(
-        [noEstimateTask.id, withEstimateTask.id],
-        '2026-03-22',
-      )
-
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: withEstimateTask.id,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T09:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('excludes completed tasks', async () => {
-      const completedTask = await createTask('Completed', {
-        estimatedMinutes: 30,
-      })
-      await completeTask(completedTask.id)
-      const pendingTask = await createTask('Pending', { estimatedMinutes: 30 })
-      await putDayQueueItems([completedTask.id, pendingTask.id], '2026-03-22')
-
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: pendingTask.id,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T09:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('replaces the previous auto-assigned blocks on re-run (idempotent)', async () => {
-      const taskA = await createTask('Task A', { estimatedMinutes: 30 })
-      await putDayQueueItems([taskA.id], '2026-03-22')
-      await requestAutoAssign('2026-03-22')
-
-      const taskB = await createTask('Task B', { estimatedMinutes: 30 })
-      await putDayQueueItems([taskB.id, taskA.id], '2026-03-22')
-      await requestAutoAssign('2026-03-22')
-
-      const listRes = await app.request(
-        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
-      )
-
-      expect(listRes.status).toBe(200)
-      const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
-      expect(blocks.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T09:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        {
-          id: 'ID',
-          taskId: taskB.id,
-          startTime: '2026-03-22T09:30:00.000Z',
-          endTime: '2026-03-22T10:00:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('does not schedule anything when the queue is empty', async () => {
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body).toEqual([])
-    })
-
-    it('keeps a block promoted to manual instead of overwriting it on re-run', async () => {
-      const taskA = await createTask('Task A', { estimatedMinutes: 30 })
-      await putDayQueueItems([taskA.id], '2026-03-22')
-      const { body: firstRun } = await requestAutoAssign('2026-03-22')
-      const dragged = firstRun[0]
-      assertDefined(dragged)
-
-      // Simulate the user dragging the auto-placed block to a new time,
-      // which promotes it to manual.
-      await app.request(`/api/schedule/time-blocks/${dragged.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startTime: '2026-03-22T02:00:00.000Z',
-          endTime: '2026-03-22T02:30:00.000Z',
-          isAutoScheduled: false,
-        }),
-      })
-
-      const taskB = await createTask('Task B', { estimatedMinutes: 30 })
-      await putDayQueueItems([taskB.id], '2026-03-22')
-      await requestAutoAssign('2026-03-22')
-
-      const listRes = await app.request(
-        '/api/schedule/time-blocks?startDate=2026-03-22&endDate=2026-03-22',
-      )
-      const blocks = await jsonBody<TimeBlockResponse[]>(listRes)
-      expect(blocks.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: taskA.id,
-          startTime: '2026-03-22T02:00:00.000Z',
-          endTime: '2026-03-22T02:30:00.000Z',
-          isAutoScheduled: false,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        {
-          id: 'ID',
-          taskId: taskB.id,
-          startTime: '2026-03-22T09:00:00.000Z',
-          endTime: '2026-03-22T09:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('returns 400 for a malformed date', async () => {
-      const { res } = await requestAutoAssign('2026/03/22')
-      expect(res.status).toBe(400)
-    })
-
-    it('does not place blocks outside custom working hours', async () => {
-      await patchSchedulingSettings({
-        workingHoursStart: '10:00',
-        workingHoursEnd: '12:00',
-      })
-      const task = await createTask('Task', { estimatedMinutes: 30 })
-      await putDayQueueItems([task.id], '2026-03-22')
-
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: task.id,
-          startTime: '2026-03-22T10:00:00.000Z',
-          endTime: '2026-03-22T10:30:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
-
-    it('skips a free slot shorter than the configured minimum block duration', async () => {
-      // A manual block from 09:20-09:30 splits the working day into a
-      // 20-minute free slot (09:00-09:20, too short) and the remaining
-      // 09:30-19:00 (plenty), given the default minimumBlockMinutes of 30.
-      const busyTask = await createTask('Busy task')
-      await createTimeBlock(
-        busyTask.id,
-        '2026-03-22T09:20:00.000Z',
-        '2026-03-22T09:30:00.000Z',
-      )
-      const task = await createTask('Short task', { estimatedMinutes: 5 })
-      await putDayQueueItems([task.id], '2026-03-22')
-
-      const { res, body } = await requestAutoAssign('2026-03-22')
-
-      expect(res.status).toBe(200)
-      expect(body.map(normalizeTimeBlock)).toEqual([
-        {
-          id: 'ID',
-          taskId: task.id,
-          startTime: '2026-03-22T09:30:00.000Z',
-          endTime: '2026-03-22T09:35:00.000Z',
-          isAutoScheduled: true,
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-      ])
-    })
   })
 })

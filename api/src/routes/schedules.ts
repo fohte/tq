@@ -6,10 +6,10 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { recurrenceRules, schedules, timeBlocks } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { localDateBoundsToUtc } from '#lib/timezone'
-import { autoAssignApp } from '#routes/schedule-auto-assign'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -21,6 +21,7 @@ import {
 } from '#routes/schedule-shared'
 import { findTaskByIdOrNumber, timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { scheduleDateRangeSchema } from '#schemas/schedule'
 
 const timePattern = /^\d{2}:\d{2}$/
 
@@ -37,9 +38,7 @@ const updateTimeBlockSchema = z.object({
   isAutoScheduled: z.boolean().optional(),
 })
 
-const timeBlockDateQuerySchema = z.object({
-  startDate: z.string(),
-  endDate: z.string(),
+const timeBlockDateQuerySchema = scheduleDateRangeSchema.safeExtend({
   tzOffset: z.coerce.number().int().optional(),
 })
 
@@ -59,11 +58,6 @@ const updateScheduleSchema = z.object({
   recurrence: recurrenceRuleSchema.nullable().optional(),
   context: z.enum(['work', 'personal']).nullable().optional(),
   color: z.string().nullable().optional(),
-})
-
-const scheduleDateQuerySchema = z.object({
-  startDate: z.string(),
-  endDate: z.string(),
 })
 
 function recurrenceRuleToResponse(
@@ -153,6 +147,8 @@ export const schedulesApp = new Hono()
           .returning(),
       )
 
+      setChangeEventTaskIds(c, [task.id])
+
       return c.json(timeBlockToResponse(block), 201)
     },
   )
@@ -205,6 +201,7 @@ export const schedulesApp = new Hono()
       }
 
       if (Object.keys(updates).length === 0) {
+        setChangeEventTaskIds(c, [])
         return c.json(timeBlockToResponse(existing), 200)
       }
 
@@ -215,6 +212,8 @@ export const schedulesApp = new Hono()
           .where(eq(timeBlocks.id, id))
           .returning(),
       )
+
+      setChangeEventTaskIds(c, [existing.taskId])
 
       return c.json(timeBlockToResponse(updated), 200)
     },
@@ -230,6 +229,8 @@ export const schedulesApp = new Hono()
     }
 
     await db.delete(timeBlocks).where(eq(timeBlocks.id, id))
+
+    setChangeEventTaskIds(c, [existing.taskId])
 
     return c.body(null, 204)
   })
@@ -271,7 +272,7 @@ export const schedulesApp = new Hono()
   })
   .get(
     '/recurring',
-    zValidator('query', scheduleDateQuerySchema),
+    zValidator('query', scheduleDateRangeSchema),
     async (c) => {
       const { startDate, endDate } = c.req.valid('query')
 
@@ -404,5 +405,4 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  .route('/', autoAssignApp)
   .route('/', scheduleOverridesApp)

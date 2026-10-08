@@ -93,8 +93,6 @@ const meta = {
     setStartDate: fn(),
     dueDate: '',
     setDueDate: fn(),
-    estimateInput: '',
-    setEstimateInput: fn(),
     context: '',
     setContext: fn(),
     commitment: '',

@@ -71,15 +71,6 @@ interface SelectedRange {
   end: Date
 }
 
-// A plain click (no drag) reports a range as short as one snap increment —
-// treat anything under 30 minutes as "just a click" and default to 30.
-function estimateMinutesForRange(range: SelectedRange): number {
-  const rawMinutes = Math.round(
-    (range.end.getTime() - range.start.getTime()) / 60_000,
-  )
-  return Math.max(30, rawMinutes)
-}
-
 export interface DayViewPresentationProps {
   isLoading: boolean
   calendarEvents: TimeBlockEvent[]
@@ -94,8 +85,8 @@ export interface DayViewPresentationProps {
   gcalAuthUrl?: string
   queueSections: QueueSectionData[]
   /** The day queue's own (unfiltered — completed tasks included) items, for
-   * the progress bar and auto-assign eligibility, which only ever apply to
-   * "today" regardless of how many other queues exist. */
+   * the progress bar, which only ever applies to "today" regardless of how
+   * many other queues exist. */
   dayQueueTasks: Task[]
   queueCandidates: QueueCandidate<Task>[]
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
@@ -105,8 +96,7 @@ export interface DayViewPresentationProps {
    * onInsertCandidate instead. */
   onAddCandidate: (taskId: string) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
-  onAutoAssign: () => void
-  isAutoAssigning: boolean
+  onMoveScheduledTaskToWeek: (taskId: string, date: string) => void
   selectedDate: Date
   onDateChange: (date: Date) => void
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
@@ -143,8 +133,7 @@ export function DayViewPresentation({
   onInsertCandidate,
   onAddCandidate,
   onRemoveFromQueue,
-  onAutoAssign,
-  isAutoAssigning,
+  onMoveScheduledTaskToWeek,
   selectedDate,
   onDateChange,
   onVisibleRangeChange,
@@ -194,8 +183,6 @@ export function DayViewPresentation({
     setIsCreateModalOpen(true)
   }, [])
   const taskListRef = useRef<HTMLDivElement>(null)
-
-  const canAutoAssign = dayQueueTasks.some((t) => t.estimatedMinutes != null)
 
   const layoutItems: ActionsMenuItem[] = [
     {
@@ -284,21 +271,6 @@ export function DayViewPresentation({
           </div>
 
           <Button
-            variant="outline"
-            size="xs"
-            onClick={onAutoAssign}
-            disabled={isAutoAssigning || !canAutoAssign}
-            title={
-              canAutoAssign
-                ? undefined
-                : 'Set an estimate on at least one queued task to auto-schedule'
-            }
-            className="ml-auto"
-          >
-            {isAutoAssigning ? 'scheduling…' : 'auto'}
-          </Button>
-
-          <Button
             variant="ghost"
             size="icon-xs"
             onClick={() => {
@@ -341,9 +313,6 @@ export function DayViewPresentation({
         open={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
         defaultStartDate={formatLocalDate(pendingRange?.start ?? new Date())}
-        {...(pendingRange
-          ? { defaultEstimateMinutes: estimateMinutesForRange(pendingRange) }
-          : {})}
         onCreated={(task) => {
           if (!pendingRange) return
           onCreateTimeBlock({
@@ -403,6 +372,7 @@ export function DayViewPresentation({
               onMoveTask={onMoveTask}
               onInsertCandidate={onInsertCandidate}
               onRemoveFromQueue={onRemoveFromQueue}
+              onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
               {...(isCompactLayout && taskRowStates != null
                 ? { taskRowStates }
                 : {})}

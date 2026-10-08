@@ -13,7 +13,6 @@ import {
   buildQueueSections,
   filterTasksDueOnOrBeforeToday,
 } from '#components/day-view/queue-sections'
-import { useAutoAssign } from '#hooks/use-auto-assign'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCompactMemoData } from '#hooks/use-compact-memo-data'
 import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-logging'
@@ -21,11 +20,8 @@ import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
-import {
-  GcalAuthRequiredError,
-  useAutoRescheduleOnGcalChange,
-  useGcalEvents,
-} from '#hooks/use-gcal-events'
+import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
+import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useNowPanelData } from '#hooks/use-now-panel-data'
 import { useProjects } from '#hooks/use-projects'
@@ -37,9 +33,9 @@ import {
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
+  WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import { useScheduleList } from '#hooks/use-schedules'
-import { useSchedulingSettings } from '#hooks/use-scheduling-settings'
 import { useSelectedDate } from '#hooks/use-selected-date'
 import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import {
@@ -47,10 +43,7 @@ import {
   useTimeBlocks,
   useUpdateTimeBlock,
 } from '#hooks/use-time-blocks'
-import {
-  getCompactRefetchInterval,
-  isCompactDayLayoutSearch,
-} from '#lib/compact-layout'
+import { isCompactDayLayoutSearch } from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
 import { getQueueCandidates } from '#lib/queue-candidates'
@@ -90,18 +83,11 @@ function DayView() {
     layout,
   } = Route.useSearch()
   const isCompactLayout = layout === 'compact'
-  const refetchInterval = getCompactRefetchInterval(isCompactLayout)
-  const { isLoading, categorized } = useTaskList(
-    baseFilter,
-    refetchInterval === undefined ? undefined : { refetchInterval },
-  )
+  const { isLoading, categorized } = useTaskList(baseFilter)
   const taskMap = useTaskMap(categorized.all)
   const dueDateTasksQuery = useTaskList(
     { ...baseFilter, status: 'todo', hasDue: true, sortBy: 'due' },
-    {
-      enabled: isCompactLayout,
-      ...(refetchInterval === undefined ? {} : { refetchInterval }),
-    },
+    { enabled: isCompactLayout },
   )
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
@@ -166,13 +152,11 @@ function DayView() {
   const timeBlocksQuery = useTimeBlocks(
     visibleRange.startDate,
     visibleRange.endDate,
-    refetchInterval,
   )
   const { data: timeBlocksData } = timeBlocksQuery
   const schedulesQuery = useScheduleList(
     visibleRange.startDate,
     visibleRange.endDate,
-    refetchInterval,
   )
   const { data: schedulesData } = schedulesQuery
   useCompactRefreshErrorLogging(isCompactLayout, 'day view', {
@@ -180,11 +164,10 @@ function DayView() {
     schedules: schedulesQuery.error,
     dueTasks: dueDateTasksQuery.error,
   })
-  const { data: queuesData } = useQueues(refetchInterval)
+  const { data: queuesData } = useQueues()
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
     selectedDateStr,
-    refetchInterval,
     { enabled: canReadQueueItems },
   )
   const updateTimeBlock = useUpdateTimeBlock()
@@ -200,7 +183,6 @@ function DayView() {
     context,
     taskMap,
     isTasksLoading: isLoading,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
   })
   const compactMemoProps = useCompactMemoData({
     enabled: isCompactLayout,
@@ -221,7 +203,6 @@ function DayView() {
     visibleRange.endDate,
     context,
   )
-  const schedulingSettings = useSchedulingSettings()
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError ||
     nowPanelGcalAuthRequired
@@ -238,15 +219,19 @@ function DayView() {
   }, [gcalEventsQuery.error])
 
   const setQueueItems = useSetQueueItems()
-  const autoAssign = useAutoAssign()
   const { dayQueueItems, dndCallbacks } = useDayQueueCalendar({
     queues: queuesData,
     startDate: visibleRange.startDate,
     endDate: visibleRange.endDate,
-    ...(refetchInterval === undefined ? {} : { refetchInterval }),
     createTimeBlock,
     setQueueItems,
     onTimeBlockChange: handleTimeBlockChange,
+  })
+
+  const futureDayQueueItems = useFutureDayQueueItems({
+    selectedDate,
+    hasDayQueue:
+      queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
   })
 
   // Queue updates replace the full list, so keep stored IDs separate from
@@ -264,18 +249,38 @@ function DayView() {
 
   // Completed tasks remain stored but are omitted from non-day queue sections.
   const queueSections = useMemo(
-    () => buildQueueSections(queuesData, rawItemsByKey, taskMap, selectedDate),
-    [queuesData, rawItemsByKey, taskMap, selectedDate],
+    () =>
+      buildQueueSections(
+        queuesData,
+        rawItemsByKey,
+        taskMap,
+        selectedDate,
+        futureDayQueueItems,
+      ),
+    [queuesData, rawItemsByKey, taskMap, selectedDate, futureDayQueueItems],
   )
 
   const filteredQueueSections = useMemo(
     () =>
       filterTaskIds == null
         ? queueSections
-        : queueSections.map((section) => ({
-            ...section,
-            items: section.items.filter((task) => filterTaskIds.has(task.id)),
-          })),
+        : queueSections.map((section) => {
+            const items = section.items.filter((task) =>
+              filterTaskIds.has(task.id),
+            )
+            const dayGroups = section.dayGroups
+              ?.map((group) => ({
+                ...group,
+                items: group.items.filter((task) => filterTaskIds.has(task.id)),
+              }))
+              .filter((group) => group.items.length > 0)
+
+            return {
+              ...section,
+              items,
+              ...(dayGroups == null ? {} : { dayGroups }),
+            }
+          }),
     [queueSections, filterTaskIds],
   )
 
@@ -305,8 +310,11 @@ function DayView() {
         ids.add(item.taskId)
       })
     })
+    futureDayQueueItems.forEach(({ item }) => {
+      ids.add(item.taskId)
+    })
     return ids
-  }, [rawItemsByKey])
+  }, [rawItemsByKey, futureDayQueueItems])
 
   const allQueueCandidates = useMemo(
     () => getQueueCandidates(categorized.all, allQueuedTaskIds),
@@ -367,6 +375,31 @@ function DayView() {
     })
   }
 
+  const handleMoveScheduledTaskToWeek = (taskId: string, date: string) => {
+    const weekQueueIndex =
+      queuesData?.findIndex((queue) => queue.key === WEEK_QUEUE_KEY) ?? -1
+    if (
+      weekQueueIndex === -1 ||
+      queueItemsResults[weekQueueIndex]?.data == null
+    )
+      return
+    const taskIds = appendedTaskIdsFor(WEEK_QUEUE_KEY, taskId)
+    if (taskIds == null) return
+    setQueueItems.mutate(
+      { key: WEEK_QUEUE_KEY, date, taskIds },
+      {
+        onSuccess: () => {
+          void queryClient.invalidateQueries({
+            queryKey: [...queueKeys.all, WEEK_QUEUE_KEY, 'items'],
+          })
+          void queryClient.invalidateQueries({
+            queryKey: queueKeys.items(DAY_QUEUE_KEY, date),
+          })
+        },
+      },
+    )
+  }
+
   const handleMoveTask = (
     taskId: string,
     fromQueueKey: string,
@@ -395,27 +428,6 @@ function DayView() {
       },
     )
   }
-
-  const handleAutoAssign = () => {
-    if (autoAssign.isPending) return
-    autoAssign.mutate(
-      {
-        date: selectedDateStr,
-        tzOffset: new Date().getTimezoneOffset(),
-      },
-      {
-        onError: (error) => {
-          console.error('Failed to auto-assign tasks', error)
-        },
-      },
-    )
-  }
-
-  useAutoRescheduleOnGcalChange(
-    gcalEventsQuery.data,
-    handleAutoAssign,
-    schedulingSettings.data?.autoRescheduleOnGcalChange ?? true,
-  )
 
   return (
     <>
@@ -446,8 +458,7 @@ function DayView() {
         onInsertCandidate={handleInsertCandidate}
         onAddCandidate={handleAddCandidate}
         onRemoveFromQueue={handleRemoveFromQueue}
-        onAutoAssign={handleAutoAssign}
-        isAutoAssigning={autoAssign.isPending}
+        onMoveScheduledTaskToWeek={handleMoveScheduledTaskToWeek}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         onVisibleRangeChange={handleVisibleRangeChange}

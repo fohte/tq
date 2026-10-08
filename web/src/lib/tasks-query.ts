@@ -6,11 +6,12 @@ import type { TaskSortBy } from '#hooks/use-tasks'
 export const sortOptionValues = [
   'updated',
   'due',
-  'estimate',
   'created',
 ] as const satisfies readonly TaskSortBy[]
 
 export const defaultTaskSort = 'updated' as const
+export const legacyTaskSortBy = 'estimate' as const
+export const legacyTaskSortSyntax = `sort:${legacyTaskSortBy}` as const
 
 export const tasksSearchDefaultQuery = buildSearchQuery({
   freeText: '',
@@ -19,7 +20,13 @@ export const tasksSearchDefaultQuery = buildSearchQuery({
 })
 
 export function withDefaultSort(parsed: ParsedQuery): ParsedQuery {
-  return { ...parsed, sortBy: parsed.sortBy ?? defaultTaskSort }
+  return {
+    ...parsed,
+    sortBy:
+      parsed.sortBy == null || parsed.sortBy === legacyTaskSortBy
+        ? defaultTaskSort
+        : parsed.sortBy,
+  }
 }
 
 export const sortLabels: Partial<
@@ -27,7 +34,6 @@ export const sortLabels: Partial<
 > = {
   updated: 'Updated',
   due: 'Due',
-  estimate: 'Estimate',
   created: 'Created',
 }
 

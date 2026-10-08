@@ -4,15 +4,25 @@ import postgres from 'postgres'
 import { afterAll, aroundEach, expect } from 'vitest'
 import { z, type ZodType } from 'zod'
 
-import { app } from '#app'
 import type { DbContextValue } from '#db/connection'
 import { dbContext } from '#db/context'
 import * as schema from '#db/schema'
 import { DATABASE_URL } from '#env'
 
+interface CapturedDbQuery {
+  query: string
+  parameters: unknown[]
+}
+
+let activeQueryCapture: CapturedDbQuery[] | undefined
 // Single connection so the transaction below and every query issued during
 // a test run on the same underlying Postgres session.
-const testClient = postgres(DATABASE_URL, { max: 1 })
+const testClient = postgres(DATABASE_URL, {
+  max: 1,
+  debug: (_connection, query, parameters) => {
+    activeQueryCapture?.push({ query, parameters })
+  },
+})
 const testDb = drizzle(testClient, { schema })
 
 function runWithDb<T>(current: DbContextValue, fn: () => T): T {
@@ -53,6 +63,21 @@ export function setupTestDb() {
   afterAll(async () => {
     await testClient.end()
   })
+}
+
+export function captureDbQueries<T>(
+  operation: () => Promise<T>,
+): Promise<{ result: T; queries: CapturedDbQuery[] }> {
+  const previousCapture = activeQueryCapture
+  const queries: CapturedDbQuery[] = []
+  activeQueryCapture = queries
+
+  return Promise.resolve()
+    .then(operation)
+    .then((result) => ({ result, queries }))
+    .finally(() => {
+      activeQueryCapture = previousCapture
+    })
 }
 
 /**
@@ -99,16 +124,4 @@ export function assertDefined<T>(
  */
 export function makeFile(name: string, type: string, sizeBytes: number): File {
   return new File([Buffer.alloc(sizeBytes)], name, { type })
-}
-
-/**
- * PATCH /api/scheduling-settings, returning the raw response so callers can
- * assert on failures instead of having them pass silently.
- */
-export function patchSchedulingSettings(body: Record<string, unknown>) {
-  return app.request('/api/scheduling-settings', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
 }

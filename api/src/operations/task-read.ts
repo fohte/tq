@@ -10,6 +10,8 @@ import {
   requestJson,
 } from '#operations/types'
 import { contextEnum, listTasksQuerySchema } from '#schemas/task'
+import { timezoneOffsetMinutesSchema } from '#schemas/timezone'
+import { parseSearchQuery } from '#search-query-parser'
 
 type TaskDetail = Record<string, unknown> & {
   id: string
@@ -61,6 +63,7 @@ const taskListInputSchema = listTasksQuerySchema
     hasEstimate: true,
     hasDue: true,
     includeMatch: true,
+    candidatesOn: true,
   })
   .extend({
     includeMatch: booleanOption
@@ -94,6 +97,7 @@ const taskSearchInputSchema = listTasksQuerySchema
     hasEstimate: true,
     hasDue: true,
     includeMatch: true,
+    candidatesOn: true,
   })
   .extend({
     includeMatch: booleanOption
@@ -140,6 +144,14 @@ const taskSearchInputSchema = listTasksQuerySchema
     ),
   })
 
+const taskListMcpInputSchema = taskListInputSchema.extend({
+  tzOffset: timezoneOffsetMinutesSchema,
+})
+
+const taskSearchMcpInputSchema = taskSearchInputSchema.extend({
+  tzOffset: timezoneOffsetMinutesSchema,
+})
+
 const taskIdInputSchema = z.object({
   taskId: taskIdOrNumber.describe(
     'The task id (UUID) or task number to look up.',
@@ -147,8 +159,16 @@ const taskIdInputSchema = z.object({
 })
 
 function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
+  const queryFields = { ...fields }
+  if (
+    queryFields['tzOffset'] === undefined &&
+    typeof queryFields['q'] === 'string' &&
+    parseSearchQuery(queryFields['q']).hasFollowUpDue === true
+  ) {
+    queryFields['tzOffset'] = new Date().getTimezoneOffset()
+  }
   const query = Object.fromEntries(
-    Object.entries(fields)
+    Object.entries(queryFields)
       .filter(([, value]) => value !== undefined)
       .map(([key, value]) => [
         key,
@@ -196,9 +216,11 @@ export const taskReadOperations = [
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/tasks'],
+    mcpInputSchema: taskListMcpInputSchema,
     cli: {
       group: { description: 'Manage tasks', order: 1 },
       commandOrder: 0,
+      excludeFields: ['tzOffset'],
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
@@ -223,12 +245,14 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|estimate. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|estimate. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],
+    mcpInputSchema: taskSearchMcpInputSchema,
     cli: {
       commandOrder: 9,
+      excludeFields: ['tzOffset'],
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',

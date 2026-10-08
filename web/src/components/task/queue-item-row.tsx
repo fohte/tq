@@ -1,11 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode } from 'react'
 
 import { QueueItemRowAppearance } from '#components/task/queue-item-row-appearance'
 import type { Task } from '#hooks/use-tasks'
-import { useUpdateTask } from '#hooks/use-tasks'
-import { parseDurationToMinutes } from '#lib/parse-duration'
 
 export interface QueueTaskDragData extends Record<string, unknown> {
   type: 'queue-task'
@@ -43,27 +41,10 @@ export function QueueItemRow({
     // Queue rows stay draggable for cross-queue moves; drops target the section.
     disabled: { droppable: true },
   })
-  const updateTask = useUpdateTask()
-  const [isEditingEstimate, setIsEditingEstimate] = useState(false)
-  const [estimateInput, setEstimateInput] = useState('')
-  const cancelingRef = useRef(false)
-
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   } as CSSProperties
-
-  const commitEstimate = () => {
-    if (cancelingRef.current) {
-      cancelingRef.current = false
-      return
-    }
-    const parsed = parseDurationToMinutes(estimateInput)
-    if (parsed != null) {
-      updateTask.mutate({ id: task.id, input: { estimatedMinutes: parsed } })
-    }
-    setIsEditingEstimate(false)
-  }
 
   return (
     <QueueItemRowAppearance
@@ -78,18 +59,6 @@ export function QueueItemRow({
       setNodeRef={setNodeRef}
       style={style}
       isDragging={isDragging}
-      isEditingEstimate={isEditingEstimate}
-      estimateInput={estimateInput}
-      onEstimateInputChange={setEstimateInput}
-      onStartEditingEstimate={() => {
-        setEstimateInput('')
-        setIsEditingEstimate(true)
-      }}
-      onCommitEstimate={commitEstimate}
-      onCancelEstimate={() => {
-        cancelingRef.current = true
-        setIsEditingEstimate(false)
-      }}
     />
   )
 }

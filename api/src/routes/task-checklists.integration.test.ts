@@ -9,9 +9,11 @@ import {
   mockGithubPullResponse,
   upsertGithubToken,
 } from '#integrations/github/testing'
-import type { TaskListItemResponse, TaskResponse } from '#routes/tasks/testing'
+import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import {
   createTask,
+  type TaskListItemResponse,
+  type TaskResponse,
   TEST_UUID,
   toListItemResponse,
 } from '#routes/tasks/testing'
@@ -19,9 +21,19 @@ import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
 
+let stopWatchingChanges: (() => void) | undefined
+
 afterEach(() => {
   vi.restoreAllMocks()
+  stopWatchingChanges?.()
+  stopWatchingChanges = undefined
 })
+
+function watchChangeEvents(): ChangeEvent[] {
+  const events: ChangeEvent[] = []
+  stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+  return events
+}
 
 interface ItemResponse {
   id: string
@@ -1969,6 +1981,321 @@ describe('task checklists API', () => {
           error: 'Checklist items linked to GitHub cannot be promoted',
         },
       },
+    })
+  })
+
+  describe('change event task IDs', () => {
+    it('includes the task ID when a checklist is created', async () => {
+      const task = await createTask('Checklist task')
+      const events = watchChangeEvents()
+
+      await createChecklist(task.id)
+
+      expect(events).toEqual([
+        {
+          resource: 'task',
+          id: task.id,
+          origin: null,
+          taskIds: [task.id],
+        },
+      ])
+    })
+
+    it('includes the owning task when an item is added', async () => {
+      const task = await createTask('Checklist task')
+      const checklist = await createChecklist(task.id)
+      const events = watchChangeEvents()
+
+      await addItem(checklist.id, 'Checklist item')
+
+      expect(events).toEqual([
+        {
+          resource: 'checklist',
+          id: checklist.id,
+          origin: null,
+          taskIds: [task.id],
+        },
+      ])
+    })
+
+    it('includes the owning task when a checklist is updated', async () => {
+      const task = await createTask('Checklist task')
+      const checklist = await createChecklist(task.id)
+      const events = watchChangeEvents()
+
+      const response = await app.request(`/api/checklists/${checklist.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Renamed checklist' }),
+      })
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'checklist',
+            id: checklist.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
+    it('includes the owner before deleting a checklist and its item cascade', async () => {
+      const task = await createTask('Checklist task')
+      const checklist = await createChecklist(task.id)
+      const root = await addItem(checklist.id, 'Root item')
+      await addItem(checklist.id, 'Nested item', { parentItemId: root.id })
+      const events = watchChangeEvents()
+
+      const response = await app.request(`/api/checklists/${checklist.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'checklist',
+            id: checklist.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
+    it('includes the owner for item updates and leaf completion changes', async () => {
+      const task = await createTask('Checklist task')
+      const checklist = await createChecklist(task.id)
+      const item = await addItem(checklist.id, 'Initial item')
+      const events = watchChangeEvents()
+
+      await app.request(`/api/checklist-items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: 'Updated item' }),
+      })
+      await setChecked(item.id, true)
+      await setChecked(item.id, false)
+
+      expect(events).toEqual([
+        {
+          resource: 'checklist_item',
+          id: item.id,
+          origin: null,
+          taskIds: [task.id],
+        },
+        {
+          resource: 'checklist_item',
+          id: item.id,
+          origin: null,
+          taskIds: [task.id],
+        },
+        {
+          resource: 'checklist_item',
+          id: item.id,
+          origin: null,
+          taskIds: [task.id],
+        },
+      ])
+    })
+
+    it('includes the owner before deleting an item and its nested items', async () => {
+      const task = await createTask('Checklist task')
+      const checklist = await createChecklist(task.id)
+      const root = await addItem(checklist.id, 'Root item')
+      await addItem(checklist.id, 'Nested item', { parentItemId: root.id })
+      const events = watchChangeEvents()
+
+      const response = await app.request(`/api/checklist-items/${root.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'checklist_item',
+            id: root.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
+    it('includes the single owner when an item moves between parent chains', async () => {
+      const task = await createTask('Checklist task')
+      const checklist = await createChecklist(task.id)
+      const oldParent = await addItem(checklist.id, 'Old parent')
+      const item = await addItem(checklist.id, 'Moved item', {
+        parentItemId: oldParent.id,
+      })
+      const newParent = await addItem(checklist.id, 'New parent')
+      const events = watchChangeEvents()
+
+      const response = await app.request(
+        `/api/checklist-items/${item.id}/move`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parentItemId: newParent.id }),
+        },
+      )
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'checklist_item',
+            id: item.id,
+            origin: null,
+            taskIds: [task.id],
+          },
+        ],
+      })
+    })
+
+    it('includes a checklist owner when its promoted subtask changes status', async () => {
+      const owner = await createTask('Checklist owner')
+      const otherParent = await createTask('Other parent')
+      const checklist = await createChecklist(owner.id)
+      const item = await addItem(checklist.id, 'Promoted item')
+      const promotion = await app.request(
+        `/api/checklist-items/${item.id}/promote`,
+        { method: 'POST' },
+      )
+      const promoted = await jsonBody<ItemResponse>(promotion)
+      const subtaskId = promoted.subtaskId
+      assertDefined(subtaskId)
+      const reparent = await app.request(`/api/tasks/${subtaskId}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: otherParent.id }),
+      })
+      const events = watchChangeEvents()
+
+      const response = await setTaskStatus(subtaskId, 'completed')
+
+      const snapshot = () => ({
+        promotionStatus: promotion.status,
+        reparentStatus: reparent.status,
+        status: response.status,
+        events,
+      })
+      expect(snapshot()).toEqual({
+        promotionStatus: 200,
+        reparentStatus: 200,
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: subtaskId,
+            origin: null,
+            taskIds: [subtaskId, otherParent.id, owner.id],
+          },
+        ],
+      })
+    })
+
+    it('includes a checklist owner when its promoted subtask is deleted', async () => {
+      const owner = await createTask('Checklist owner')
+      const otherParent = await createTask('Other parent')
+      const checklist = await createChecklist(owner.id)
+      const item = await addItem(checklist.id, 'Promoted item')
+      const promotion = await app.request(
+        `/api/checklist-items/${item.id}/promote`,
+        { method: 'POST' },
+      )
+      const promoted = await jsonBody<ItemResponse>(promotion)
+      const subtaskId = promoted.subtaskId
+      assertDefined(subtaskId)
+      const reparent = await app.request(`/api/tasks/${subtaskId}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: otherParent.id }),
+      })
+      const events = watchChangeEvents()
+
+      const response = await app.request(`/api/tasks/${subtaskId}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({
+        promotionStatus: promotion.status,
+        reparentStatus: reparent.status,
+        status: response.status,
+        events,
+      })
+      expect(snapshot()).toEqual({
+        promotionStatus: 200,
+        reparentStatus: 200,
+        status: 204,
+        events: [
+          {
+            resource: 'task',
+            id: subtaskId,
+            origin: null,
+            taskIds: [subtaskId, owner.id, otherParent.id],
+          },
+        ],
+      })
+    })
+
+    it('includes parent, promoted subtask, and reparented descendant tasks', async () => {
+      const task = await createTask('Parent task')
+      const mentionedTask = await createTask('Mentioned task')
+      const existingSubtask = await createTask('Existing child task', {
+        parentId: task.id,
+      })
+      const checklist = await createChecklist(task.id)
+      const item = await addItem(checklist.id, 'Promote item', {
+        note: `See #${String(mentionedTask.number)}`,
+      })
+      const descendant = await addItem(checklist.id, 'Linked child item', {
+        parentItemId: item.id,
+      })
+      await db
+        .update(taskChecklistItems)
+        .set({ subtaskId: existingSubtask.id })
+        .where(eq(taskChecklistItems.id, descendant.id))
+      const events = watchChangeEvents()
+
+      const response = await app.request(
+        `/api/checklist-items/${item.id}/promote`,
+        { method: 'POST' },
+      )
+      const promoted = await jsonBody<ItemResponse>(response)
+      assertDefined(promoted.subtaskId)
+
+      const snapshot = () => ({ status: response.status, events })
+
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'checklist_item',
+            id: item.id,
+            origin: null,
+            taskIds: [
+              task.id,
+              existingSubtask.id,
+              mentionedTask.id,
+              promoted.subtaskId,
+            ].sort(),
+          },
+        ],
+      })
     })
   })
 })

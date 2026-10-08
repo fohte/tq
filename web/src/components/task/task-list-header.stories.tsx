@@ -39,24 +39,24 @@ export const Empty: Story = {
 }
 
 export const NoneCompleted: Story = {
-  name: 'the header shows estimated time with no tasks completed',
+  name: 'the header shows three unfinished tasks',
   args: {
     tasks: makeTasks([
-      { title: 'Task A', estimatedMinutes: 60 },
-      { title: 'Task B', estimatedMinutes: 30 },
-      { title: 'Task C', estimatedMinutes: 45 },
+      { title: 'Task A' },
+      { title: 'Task B' },
+      { title: 'Task C' },
     ]),
   },
 }
 
 export const PartiallyCompleted: Story = {
-  name: 'the header shows partial completion and estimated time',
+  name: 'the header shows partially completed tasks',
   args: {
     tasks: makeTasks([
-      { title: 'Task A', status: 'completed', estimatedMinutes: 60 },
-      { title: 'Task B', status: 'completed', estimatedMinutes: 30 },
-      { title: 'Task C', estimatedMinutes: 45 },
-      { title: 'Task D', estimatedMinutes: 120 },
+      { title: 'Task A', status: 'completed' },
+      { title: 'Task B', status: 'completed' },
+      { title: 'Task C' },
+      { title: 'Task D' },
     ]),
   },
 }
@@ -65,14 +65,14 @@ export const AllCompleted: Story = {
   name: 'the header shows every task completed',
   args: {
     tasks: makeTasks([
-      { title: 'Task A', status: 'completed', estimatedMinutes: 60 },
-      { title: 'Task B', status: 'completed', estimatedMinutes: 30 },
+      { title: 'Task A', status: 'completed' },
+      { title: 'Task B', status: 'completed' },
     ]),
   },
 }
 
-export const NoEstimates: Story = {
-  name: 'the header omits estimated time when tasks have no estimates',
+export const OneCompleted: Story = {
+  name: 'the header shows one completed task',
   args: {
     tasks: makeTasks([
       { title: 'Task A' },

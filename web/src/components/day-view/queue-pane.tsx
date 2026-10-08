@@ -20,6 +20,11 @@ export interface QueueSectionData {
   key: string
   title: string
   items: Task[]
+  dayGroups?: {
+    date: string
+    label: string
+    items: Task[]
+  }[]
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; omit for a queue with no periodUnit. */
   dateRangeLabel?: string
   isReadOnly?: boolean
@@ -40,6 +45,7 @@ export interface QueuePaneProps {
   onMoveTask: (taskId: string, fromQueueKey: string, toQueueKey: string) => void
   onInsertCandidate: (queueKey: string, taskId: string) => void
   onRemoveFromQueue: (queueKey: string, taskId: string) => void
+  onMoveScheduledTaskToWeek: (taskId: string, date: string) => void
   taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   className?: string
 }
@@ -52,6 +58,7 @@ export function QueuePane({
   onMoveTask,
   onInsertCandidate,
   onRemoveFromQueue,
+  onMoveScheduledTaskToWeek,
   taskRowStates,
   className,
 }: QueuePaneProps) {
@@ -106,12 +113,16 @@ export function QueuePane({
               queueDate={queueDate}
               title={section.title}
               items={section.items}
+              {...(section.dayGroups == null
+                ? {}
+                : { dayGroups: section.dayGroups })}
               {...(taskRowStates == null ? {} : { taskRowStates })}
               {...(section.dateRangeLabel != null
                 ? { dateRangeLabel: section.dateRangeLabel }
                 : {})}
               {...(section.isReadOnly === true ? { isReadOnly: true } : {})}
               emptyMessage={section.emptyMessage}
+              onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
               onRemove={(taskId) => {
                 onRemoveFromQueue(section.key, taskId)
               }}

@@ -2,7 +2,12 @@ import type { LabelFilter } from '#hooks/use-labels'
 import type { ProjectFilter } from '#hooks/use-projects'
 import type { RecurringTemplateFilter } from '#hooks/use-recurring-templates'
 import type { SavedViewFilter } from '#hooks/use-saved-views'
-import type { TaskListFilter } from '#hooks/use-task-queries'
+import type {
+  TaskContext,
+  TaskCountFilter,
+  TaskListFilter,
+} from '#hooks/use-task-queries'
+import { isRecord } from '#lib/type-guards'
 
 // infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
 // runs optimistic updates against every `lists`-prefixed cache entry assuming
@@ -15,7 +20,14 @@ export const taskKeys = {
   infiniteLists: ['tasks', 'infinite-list'] as const,
   infiniteList: (filter?: TaskListFilter) =>
     [...taskKeys.infiniteLists, filter] as const,
-  detail: (id: string) => [...taskKeys.all, 'detail', id] as const,
+  details: ['tasks', 'detail'] as const,
+  detail: (id: string) => [...taskKeys.details, id] as const,
+  countPrefix: ['tasks', 'count'] as const,
+  count: (filter: TaskCountFilter) =>
+    [...taskKeys.countPrefix, filter] as const,
+  labelCountsPrefix: ['tasks', 'label-counts'] as const,
+  labelCounts: (context: NonNullable<LabelFilter['context']>) =>
+    [...taskKeys.labelCountsPrefix, context] as const,
 }
 
 export const taskChecklistKeys = {
@@ -34,8 +46,14 @@ export const queueKeys = {
   all: ['queues'] as const,
   // Broad queue invalidations should not repeat this date-scoped write.
   carryOver: (date: string) => ['queue-carry-over', date] as const,
-  items: (key: string, date: string) =>
-    [...queueKeys.all, key, 'items', date] as const,
+  items: (key: string, date: string, context?: TaskContext) =>
+    [
+      ...queueKeys.all,
+      key,
+      'items',
+      date,
+      ...(context == null ? [] : [context]),
+    ] as const,
 }
 
 export const timeBlockKeys = {
@@ -52,6 +70,11 @@ export const gcalCalendarsKeys = {
 const githubUrlPreviewKeyPrefix = [
   ...taskKeys.all,
   'github-url-preview',
+] as const
+
+const mentionSuggestionsKeyPrefix = [
+  ...taskKeys.all,
+  'mention-suggestions',
 ] as const
 
 export const githubUrlPreviewKeys = {
@@ -130,8 +153,9 @@ const mentionPreviewKeyPrefix = [...taskKeys.all, 'mention-preview'] as const
 
 export const taskMentionKeys = {
   preview: (number: number) => [...mentionPreviewKeyPrefix, number] as const,
+  suggestionsPrefix: mentionSuggestionsKeyPrefix,
   suggestions: (query: string) =>
-    [...taskKeys.all, 'mention-suggestions', query] as const,
+    [...mentionSuggestionsKeyPrefix, query] as const,
 }
 
 // A null result must not share the non-null task detail cache.
@@ -139,4 +163,69 @@ const taskUrlPreviewKeyPrefix = [...taskKeys.all, 'task-url-preview'] as const
 
 export const taskUrlPreviewKeys = {
   preview: (id: string) => [...taskUrlPreviewKeyPrefix, id] as const,
+}
+
+function hasQueryKeyPrefix(
+  queryKey: readonly unknown[],
+  prefix: readonly unknown[],
+): boolean {
+  return prefix.every((part, index) => queryKey[index] === part)
+}
+
+function taskIdFromData(data: unknown): string | null {
+  if (!isRecord(data)) return null
+  if (typeof data['id'] === 'string') return data['id']
+  const task = data['task']
+  return isRecord(task) && typeof task['id'] === 'string' ? task['id'] : null
+}
+
+function matchesTaskPreview(
+  data: unknown,
+  taskIds: ReadonlySet<string>,
+  includeUnresolvedPreviews: boolean,
+): boolean {
+  const taskId = taskIdFromData(data)
+  return taskId == null ? includeUnresolvedPreviews : taskIds.has(taskId)
+}
+
+function isTaskNumber(value: unknown): boolean {
+  return typeof value === 'string' && /^\d+$/.test(value)
+}
+
+export function matchesTaskSpecificQuery(
+  queryKey: readonly unknown[],
+  data: unknown,
+  taskIds: ReadonlySet<string>,
+  includeUnresolvedPreviews: boolean,
+): boolean {
+  if (hasQueryKeyPrefix(queryKey, taskKeys.details)) {
+    const taskId = queryKey[taskKeys.details.length]
+    return typeof taskId === 'string' && taskIds.has(taskId)
+  }
+
+  if (
+    queryKey[0] === taskKeys.all[0] &&
+    (queryKey[2] === 'comments' || queryKey[2] === 'activity')
+  ) {
+    const taskId = queryKey[1]
+    return typeof taskId === 'string' && taskIds.has(taskId)
+  }
+
+  if (hasQueryKeyPrefix(queryKey, mentionPreviewKeyPrefix)) {
+    return matchesTaskPreview(data, taskIds, includeUnresolvedPreviews)
+  }
+
+  if (hasQueryKeyPrefix(queryKey, taskUrlPreviewKeyPrefix)) {
+    const taskId = queryKey[taskUrlPreviewKeyPrefix.length]
+    if (typeof taskId === 'string' && taskIds.has(taskId)) return true
+    const dataTaskId = taskIdFromData(data)
+    if (dataTaskId != null) return taskIds.has(dataTaskId)
+    return includeUnresolvedPreviews && isTaskNumber(taskId)
+  }
+
+  if (hasQueryKeyPrefix(queryKey, githubUrlPreviewKeyPrefix)) {
+    return matchesTaskPreview(data, taskIds, includeUnresolvedPreviews)
+  }
+
+  return false
 }

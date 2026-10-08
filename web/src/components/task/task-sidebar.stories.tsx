@@ -52,7 +52,7 @@ function SidebarStory({
   scrollToTimeBlocks?: boolean | undefined
 }) {
   return (
-    <TaskSidebarStoryProviders task={task} project={project}>
+    <TaskSidebarStoryProviders project={project}>
       <SidebarPanelStoryView
         task={task}
         defaultOpen={defaultOpen}
@@ -85,7 +85,6 @@ export const SidebarMinimal: Story = {
   args: {
     task: {
       ...baseTask,
-      estimatedMinutes: null,
       startDate: null,
       dueDate: null,
       parentId: null,

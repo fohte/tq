@@ -1,5 +1,4 @@
 import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
 
 import { db } from '#db/connection'
 import { taskChecklistItems, taskChecklists } from '#db/schema'
@@ -7,6 +6,10 @@ import {
   checklistItemTree,
   checklistToResponse,
 } from '#routes/checklist-response'
+import {
+  checklistItemChildrenJoin,
+  getLeafChecklistItems,
+} from '#services/task-checklist-leaves'
 
 export interface ChecklistCompletionCount {
   completed: number
@@ -23,25 +26,21 @@ export async function getChecklistCompletionCountsByTaskId(
 ): Promise<Map<string, ChecklistCompletionCount>> {
   if (taskIds.length === 0) return new Map()
 
-  const items = alias(taskChecklistItems, 'checklist_item')
-  const children = alias(taskChecklistItems, 'checklist_child')
+  const { children, condition } = checklistItemChildrenJoin()
   const rows = await db
     .select({
       taskId: taskChecklists.taskId,
       total: count(),
       completed: count(
-        sql`CASE WHEN ${items.checkedAt} IS NOT NULL THEN 1 END`,
+        sql`CASE WHEN ${taskChecklistItems.checkedAt} IS NOT NULL THEN 1 END`,
       ),
     })
     .from(taskChecklists)
-    .innerJoin(items, eq(items.checklistId, taskChecklists.id))
-    .leftJoin(
-      children,
-      and(
-        eq(children.checklistId, items.checklistId),
-        eq(children.parentItemId, items.id),
-      ),
+    .innerJoin(
+      taskChecklistItems,
+      eq(taskChecklistItems.checklistId, taskChecklists.id),
     )
+    .leftJoin(children, condition)
     .where(and(inArray(taskChecklists.taskId, taskIds), isNull(children.id)))
     .groupBy(taskChecklists.taskId)
 
@@ -92,12 +91,7 @@ export async function getTaskChecklistData(taskId: string) {
     }
   }
 
-  const parentItemIds = new Set(
-    items.flatMap((item) =>
-      item.parentItemId == null ? [] : [item.parentItemId],
-    ),
-  )
-  const leafItems = items.filter((item) => !parentItemIds.has(item.id))
+  const leafItems = getLeafChecklistItems(items)
 
   return {
     checklists: checklists.map((checklist) =>

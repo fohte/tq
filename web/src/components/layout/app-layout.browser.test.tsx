@@ -51,6 +51,12 @@ vi.mock('#lib/api', () => ({
         $get: vi
           .fn()
           .mockResolvedValue({ ok: true, json: () => Promise.resolve([]) }),
+        count: {
+          $get: vi.fn().mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ count: 0 }),
+          }),
+        },
         ':id': {
           $get: vi.fn().mockResolvedValue({
             ok: true,
@@ -152,8 +158,7 @@ function renderDayViewWithManyCandidates(queryClient: QueryClient) {
           onInsertCandidate={vi.fn()}
           onAddCandidate={vi.fn()}
           onRemoveFromQueue={vi.fn()}
-          onAutoAssign={vi.fn()}
-          isAutoAssigning={false}
+          onMoveScheduledTaskToWeek={vi.fn()}
           selectedDate={today}
           onDateChange={vi.fn()}
           viewMode="queue"

@@ -17,7 +17,6 @@ import { githubApp } from '#routes/github'
 import { githubSyncRulesApp } from '#routes/github-sync-rules'
 import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
-import { mcpApp } from '#routes/mcp/index'
 import { memosApp } from '#routes/memos'
 import { projectsApp } from '#routes/projects'
 import { pushApp } from '#routes/push'
@@ -25,12 +24,12 @@ import { queuesApp } from '#routes/queues'
 import { recurringTaskTemplatesApp } from '#routes/recurring-task-templates'
 import { savedViewsApp } from '#routes/saved-views'
 import { schedulesApp } from '#routes/schedules'
-import { schedulingSettingsApp } from '#routes/scheduling-settings'
 import { taskAgentSessionsApp } from '#routes/task-agent-sessions'
 import { taskChecklistsApp } from '#routes/task-checklists'
 import { taskCommentsApp } from '#routes/task-comments'
 import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
+import { taskWaitsApp } from '#routes/task-waits'
 import { tasksApp } from '#routes/tasks/index'
 
 // Final safety net: any error that escapes a route handler without being
@@ -50,6 +49,11 @@ export function onError(err: Error, c: Context): Response {
   return c.json({ error: 'Internal server error' }, 500)
 }
 
+const mcpApp = new Hono().all('/', async (c) => {
+  const { handleMcpRequest } = await import('#routes/mcp/index')
+  return handleMcpRequest(c.req.raw)
+})
+
 const app = new Hono()
   .use(
     '*',
@@ -67,6 +71,7 @@ const app = new Hono()
   .route('/api/tasks', tasksApp)
   .route('/api/tasks', taskCommentsApp)
   .route('/api/tasks/:taskId/pages', taskPagesApp)
+  .route('/api/tasks/:taskId/waits', taskWaitsApp)
   .route('/api/tasks/:taskId/checklists', taskChecklistsApp)
   .route('/api/checklists', checklistsApp)
   .route('/api/checklist-items', checklistItemsByIdApp)
@@ -86,7 +91,6 @@ const app = new Hono()
   .route('/api/assets', assetsApp)
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
-  .route('/api/scheduling-settings', schedulingSettingsApp)
   .route('/api/mcp', mcpApp)
   .onError(onError)
 

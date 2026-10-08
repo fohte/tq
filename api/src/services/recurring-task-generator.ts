@@ -139,7 +139,12 @@ export async function generateDueRecurringTasks(): Promise<void> {
   for (const template of templates) {
     const result = await ResultAsync.fromPromise(
       generateForTemplate(template, today, (id) => {
-        publishChangeEvent({ resource: 'task', id, origin: null })
+        publishChangeEvent({
+          resource: 'task',
+          id,
+          origin: null,
+          taskIds: template.parentId == null ? [id] : [id, template.parentId],
+        })
       }),
       toError,
     )

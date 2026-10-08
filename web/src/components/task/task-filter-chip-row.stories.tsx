@@ -194,7 +194,7 @@ export const ChangedFilters: Story = {
       status: ['todo', 'completed'],
       projectId: 'proj-1',
       label: 'research',
-      sortBy: 'estimate',
+      sortBy: 'created',
     }),
   },
 }
@@ -215,7 +215,7 @@ export const ManyFiltersWrap: Story = {
       label: 'research',
       hasPages: true,
       parentId: 'parent-wrap',
-      sortBy: 'estimate',
+      sortBy: 'created',
     }),
   },
 }

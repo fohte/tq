@@ -2,11 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { StatusLine } from '#components/layout/status-line'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { QueueItem } from '#hooks/use-queues'
 import { queueKeys } from '#hooks/use-queues'
-import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { getSearchKeybinding, type SearchKeybinding } from '#lib/keybindings'
@@ -14,50 +13,43 @@ import { StoryRouter } from '#storybook-config/story-router'
 
 const todayStr = formatLocalDate(new Date())
 
-const baseTask: Task = makeTask({
-  id: '00000000-0000-0000-0000-000000000001',
-  title: 'Implement task list UI',
-  estimatedMinutes: 30,
-})
-
-const tasks: Task[] = [
-  { ...baseTask, id: '1', title: 'Task A', estimatedMinutes: 30 },
-  { ...baseTask, id: '2', title: 'Task B', estimatedMinutes: 60 },
-  {
-    ...baseTask,
-    id: '3',
-    title: 'Task C',
-    status: 'completed',
-    estimatedMinutes: 45,
-  },
+const queueItems: QueueItem[] = [
+  makeQueueItem({
+    id: 'queue-item-1',
+    taskId: 'task-1',
+    periodStart: todayStr,
+  }),
+  makeQueueItem({
+    id: 'queue-item-2',
+    taskId: 'task-2',
+    periodStart: todayStr,
+  }),
+  makeQueueItem({
+    id: 'queue-item-3',
+    taskId: 'task-3',
+    periodStart: todayStr,
+  }),
 ]
-
-const queueTasks: QueueItem[] = tasks.map((task, index) => ({
-  id: `queue-${task.id}`,
-  taskId: task.id,
-  periodStart: todayStr,
-  sortOrder: index,
-  createdAt: '2026-03-20T00:00:00.000Z',
-  updatedAt: '2026-03-20T00:00:00.000Z',
-}))
 
 function StatusLineStory({
   searchKeybinding,
 }: {
   searchKeybinding: SearchKeybinding
 }) {
-  // Pins the context this story's contract depends on, rather than relying
-  // on DEFAULT_SETTINGS, so an unrelated change to the hook's default can't
-  // silently change which tasks useFilteredTaskList() below matches.
+  // Pin the context used by both count and queue queries to this story.
   resetSessionOpenSettings({ localContext: 'personal' })
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  // StatusLine's useFilteredTaskList() always includes the machine's
-  // configured context (set above), with no tag/project filter active.
-  queryClient.setQueryData(taskKeys.list({ context: 'personal' }), tasks)
-  queryClient.setQueryData(queueKeys.items('day', todayStr), queueTasks)
+  queryClient.setQueryData(
+    taskKeys.count({ context: 'personal', status: 'todo' }),
+    24,
+  )
+  queryClient.setQueryData(
+    queueKeys.items('day', todayStr, 'personal'),
+    queueItems,
+  )
 
   return (
     <QueryClientProvider client={queryClient}>

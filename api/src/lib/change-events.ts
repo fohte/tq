@@ -21,7 +21,6 @@ const routeResources: Record<string, ChangeResource> = {
   'recurring-task-templates': 'recurring_task_template',
   'description-templates': 'description_template',
   'saved-views': 'saved_view',
-  'scheduling-settings': 'scheduling_setting',
   memos: 'memo',
   push: 'push',
   calendar: 'calendar',
@@ -39,6 +38,19 @@ const postQueryRoutes = new Set([
 
 type ChangeEventEnv = {
   Variables: Partial<TaskEnv['Variables']>
+}
+
+declare module 'hono' {
+  interface ContextVariableMap {
+    changeEventTaskIds?: string[] | null
+  }
+}
+
+export function setChangeEventTaskIds(
+  c: Context,
+  taskIds: string[] | null,
+): void {
+  c.set('changeEventTaskIds', taskIds)
 }
 
 export function subscribeToChangeEvents(
@@ -64,9 +76,7 @@ function resourceFromRoute(routePattern: string): ChangeResource | null {
 
   const rootResource = segments[1]
   if (rootResource === 'schedule') {
-    return ['time-blocks', 'auto-assign'].includes(segments[2] ?? '')
-      ? 'time_block'
-      : 'schedule'
+    return segments[2] === 'time-blocks' ? 'time_block' : 'schedule'
   }
   if (rootResource === 'github' && segments[2] === 'sync-rules') {
     return 'github_sync_rule'
@@ -115,9 +125,17 @@ export const changeEventMiddleware: MiddlewareHandler<ChangeEventEnv> = async (
   const resource = resourceFromRoute(routePattern)
   if (resource == null) return
 
+  const id = idFromRoute(routePattern, resource, c)
+  const configuredTaskIds = c.get('changeEventTaskIds')
   publishChangeEvent({
     resource,
-    id: idFromRoute(routePattern, resource, c),
+    id,
     origin: c.get('origin'),
+    taskIds:
+      configuredTaskIds === undefined
+        ? resource === 'task' && id != null
+          ? [id]
+          : null
+        : configuredTaskIds,
   })
 }

@@ -15,6 +15,7 @@ import {
   DayViewPresentation,
   type DayViewPresentationProps,
 } from '#components/day-view/day-view'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import {
   makeQueueCandidate,
@@ -32,7 +33,6 @@ let capturedShowViewSwitcher: boolean | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
-  defaultEstimateMinutes?: number
   onCreated?: (task: { id: string }) => void
 } = { open: false }
 
@@ -80,8 +80,7 @@ async function renderDayView(
     onInsertCandidate: vi.fn(),
     onAddCandidate: vi.fn(),
     onRemoveFromQueue: vi.fn(),
-    onAutoAssign: vi.fn(),
-    isAutoAssigning: false,
+    onMoveScheduledTaskToWeek: vi.fn(),
     selectedDate: new Date('2026-07-20T00:00:00'),
     onDateChange: vi.fn(),
     viewMode: 'queue',
@@ -114,20 +113,30 @@ async function renderDayView(
 }
 
 describe('DayViewPresentation', () => {
-  it('clamps a short calendar selection to the minimum estimate', async () => {
+  it('passes the selected start date without an estimate default', async () => {
     await renderDayView()
+    const start = new Date('2026-07-20T09:00:00')
+    const end = new Date('2026-07-20T10:00:00')
 
     act(() => {
-      capturedOnSelectRange?.({
-        start: new Date('2026-07-20T09:00:00'),
-        end: new Date('2026-07-20T09:15:00'),
-      })
+      capturedOnSelectRange?.({ start, end })
     })
 
-    expect(capturedModalProps.defaultEstimateMinutes).toBe(30)
+    const getActual = () => ({
+      open: capturedModalProps.open,
+      defaultStartDate: capturedModalProps.defaultStartDate,
+      hasEstimateDefault: 'defaultEstimateMinutes' in capturedModalProps,
+    })
+    const expected = {
+      open: true,
+      defaultStartDate: '2026-07-20',
+      hasEstimateDefault: false,
+    }
+
+    expect(getActual()).toEqual(expected)
   })
 
-  it('prefills the modal from a calendar selection and creates a time block once the task is created', async () => {
+  it('creates a time block for the selected range when the task is created', async () => {
     const { onCreateTimeBlock } = await renderDayView()
     const start = new Date('2026-07-20T09:00:00')
     const end = new Date('2026-07-20T10:00:00')
@@ -136,19 +145,19 @@ describe('DayViewPresentation', () => {
       capturedOnSelectRange?.({ start, end })
     })
 
-    expect(capturedModalProps.open).toBe(true)
-    expect(capturedModalProps.defaultStartDate).toBe('2026-07-20')
-    expect(capturedModalProps.defaultEstimateMinutes).toBe(60)
-
     act(() => {
       capturedModalProps.onCreated?.({ id: 'task-1' })
     })
 
-    expect(onCreateTimeBlock).toHaveBeenCalledExactlyOnceWith({
-      taskId: 'task-1',
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
-    })
+    expect(onCreateTimeBlock.mock.calls).toEqual([
+      [
+        {
+          taskId: 'task-1',
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+        },
+      ],
+    ])
   })
 
   it('does not create a time block when the task is created from the "New task" button', async () => {
@@ -283,18 +292,19 @@ describe('DayViewPresentation', () => {
       viewMode: 'kanban',
       kanbanFilterRow: <div data-testid="kanban-filter" />,
       queueSections: [
-        {
+        makeQueueSectionData({
           key: 'day',
           title: 'today',
           items: [todayTask],
           emptyMessage: "No tasks in today's queue",
-        },
-        {
+        }),
+        makeQueueSectionData({
           key: 'week',
           title: 'this week',
           items: [weekTask],
+          dayGroups: [],
           emptyMessage: "No tasks in this week's queue",
-        },
+        }),
       ],
       dayQueueTasks: [todayTask],
       queueCandidates: [candidate],

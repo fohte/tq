@@ -8,6 +8,8 @@ import {
   recurringTaskTemplates,
   taskDescriptionTemplates,
   taskGithubLinks,
+  taskQueueItems,
+  taskQueues,
   taskRelations,
   tasks,
 } from '#db/schema'
@@ -31,7 +33,12 @@ import {
   toListItemResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
-import { assertDefined, jsonBody, setupTestDb } from '#testing'
+import {
+  assertDefined,
+  captureDbQueries,
+  jsonBody,
+  setupTestDb,
+} from '#testing'
 
 setupTestDb()
 
@@ -109,6 +116,18 @@ function normalizeTask<
   }
 }
 
+function normalizeChangeEvents(
+  events: ChangeEvent[],
+  taskIds: Map<string, string>,
+) {
+  const normalizeId = (id: string) => taskIds.get(id) ?? id
+  return events.map((event) => ({
+    ...event,
+    id: event.id === null ? null : normalizeId(event.id),
+    taskIds: event.taskIds?.map(normalizeId) ?? null,
+  }))
+}
+
 function normalizeTaskListItem(
   task: TaskListItemResponse & { ancestorOnly?: boolean },
 ) {
@@ -118,6 +137,133 @@ function normalizeTaskListItem(
     parentId: fields.parentId === null ? null : 'PARENT_ID',
     parentNumber: fields.parentNumber === null ? null : -1,
     ancestorOnly: ancestorOnly ?? false,
+  }
+}
+
+function normalizeDetailedTaskListItem(task: TaskListItemResponse) {
+  return {
+    ...normalizeTaskListItem(task),
+    duplicateOfNumber: task.duplicateOfNumber === null ? null : -1,
+    blockedByNumbers: task.blockedByNumbers.map(() => -1),
+  }
+}
+
+function normalizeTaskDetail(task: TaskResponse) {
+  return {
+    ...normalizeTask(task),
+    parentId: task.parentId === null ? null : 'PARENT_ID',
+    parentNumber: task.parentNumber == null ? task.parentNumber : -1,
+    duplicateOfNumber:
+      task.duplicateOfNumber == null ? task.duplicateOfNumber : -1,
+    links: {
+      outgoing: (task.links?.outgoing ?? []).map(normalizeDetailedTaskListItem),
+      incoming: (task.links?.incoming ?? []).map(normalizeDetailedTaskListItem),
+    },
+    duplicateOfTask:
+      task.duplicateOfTask == null
+        ? null
+        : normalizeDetailedTaskListItem(task.duplicateOfTask),
+    blockedBy: (task.blockedBy ?? []).map(normalizeDetailedTaskListItem),
+    blocking: (task.blocking ?? []).map(normalizeDetailedTaskListItem),
+  }
+}
+
+function relatedTaskResponseSnapshot(status: number, body: TaskResponse) {
+  return {
+    status,
+    body: normalizeTaskDetail(body),
+  }
+}
+
+function relatedTaskQueryCountSnapshot(currentCount: number) {
+  const previousCount = 21
+  return {
+    previousCount,
+    currentCount,
+    decreased: currentCount < previousCount,
+  }
+}
+
+async function createTaskWithAllRelations() {
+  const task = await createTask('Task with relations')
+  const duplicateTarget = await createTask('Related task')
+  const incomingTask = await createTask('Incoming task')
+
+  await app.request(`/api/tasks/${task.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      description: `See #${String(duplicateTarget.number)}`,
+    }),
+  })
+  await app.request(`/api/tasks/${incomingTask.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description: `See #${String(task.number)}` }),
+  })
+  await setBlockedBy(task.id, [duplicateTarget.id])
+  const incomingTaskAfterPatch = await jsonBody<TaskResponse>(
+    await setBlockedBy(incomingTask.id, [task.id]),
+  )
+
+  const duplicateTargetAfterComplete = await jsonBody<TaskResponse>(
+    await app.request(`/api/tasks/${duplicateTarget.id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statusReason: 'not_planned' }),
+    }),
+  )
+  const completedTask = await jsonBody<TaskResponse>(
+    await app.request(`/api/tasks/${task.id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        statusReason: 'duplicate',
+        duplicateOfTaskId: duplicateTarget.id,
+      }),
+    }),
+  )
+
+  return {
+    task,
+    duplicateTarget,
+    incomingTask,
+    incomingTaskAfterPatch,
+    duplicateTargetAfterComplete,
+    completedTask,
+  }
+}
+
+function expectedTaskWithAllRelations({
+  completedTask,
+  duplicateTargetAfterComplete,
+  incomingTaskAfterPatch,
+}: Awaited<ReturnType<typeof createTaskWithAllRelations>>) {
+  const incomingTaskDetail = toListItemResponse(incomingTaskAfterPatch, {
+    blockedByNumbers: [completedTask.number],
+  })
+  const duplicateTargetDetail = toListItemResponse(duplicateTargetAfterComplete)
+
+  return {
+    ...withoutLinkSync(completedTask),
+    titleAuthor: { kind: 'human', agent: null },
+    descriptionAuthor: { kind: 'human', agent: null },
+    parentNumber: null,
+    childCompletionCount: { total: 0, completed: 0 },
+    pages: [],
+    timeBlocks: [],
+    links: {
+      outgoing: [duplicateTargetDetail],
+      incoming: [incomingTaskDetail],
+    },
+    labels: [],
+    duplicateOfNumber: duplicateTargetAfterComplete.number,
+    duplicateOfTask: duplicateTargetDetail,
+    blockedBy: [duplicateTargetDetail],
+    blocking: [incomingTaskDetail],
+    githubBlockers: [],
+    checklistCompletionCount: { total: 0, completed: 0 },
+    checklists: [],
   }
 }
 
@@ -280,6 +426,190 @@ function normalizeTemplate(
 }
 
 describe('tasks CRUD API', () => {
+  describe('change event task IDs', () => {
+    it('includes the created task and its parent', async () => {
+      const parent = await createTask('Parent')
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Child', parentId: parent.id }),
+      })
+      const child = await jsonBody<TaskResponse>(res)
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [child.id, 'CHILD_ID'],
+            [parent.id, 'PARENT_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 201,
+        events: [
+          {
+            resource: 'task',
+            id: null,
+            origin: null,
+            taskIds: ['CHILD_ID', 'PARENT_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes the task and parent when a child status changes', async () => {
+      const parent = await createTask('Parent')
+      const child = await createTask('Child', { parentId: parent.id })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await setStatus(child.id, 'completed')
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [child.id, 'CHILD_ID'],
+            [parent.id, 'PARENT_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: 'CHILD_ID',
+            origin: null,
+            taskIds: ['CHILD_ID', 'PARENT_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes both parents when a task is moved', async () => {
+      const previousParent = await createTask('Previous parent')
+      const nextParent = await createTask('Next parent')
+      const task = await createTask('Task', { parentId: previousParent.id })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/tasks/${task.id}/parent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentId: nextParent.id }),
+      })
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [task.id, 'TASK_ID'],
+            [previousParent.id, 'PREVIOUS_PARENT_ID'],
+            [nextParent.id, 'NEXT_PARENT_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: 'TASK_ID',
+            origin: null,
+            taskIds: ['TASK_ID', 'PREVIOUS_PARENT_ID', 'NEXT_PARENT_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes reparented children and the former parent when deleting a task', async () => {
+      const grandparent = await createTask('Grandparent')
+      const parent = await createTask('Parent', { parentId: grandparent.id })
+      const child = await createTask('Child', { parentId: parent.id })
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await app.request(`/api/tasks/${parent.id}`, {
+        method: 'DELETE',
+      })
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [parent.id, 'PARENT_ID'],
+            [grandparent.id, 'GRANDPARENT_ID'],
+            [child.id, 'CHILD_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 204,
+        events: [
+          {
+            resource: 'task',
+            id: 'PARENT_ID',
+            origin: null,
+            taskIds: ['PARENT_ID', 'GRANDPARENT_ID', 'CHILD_ID'],
+          },
+        ],
+      })
+    })
+
+    it('includes old and new blocker tasks when blockedBy changes', async () => {
+      const source = await createTask('Source')
+      const previousBlocker = await createTask('Previous blocker')
+      const nextBlocker = await createTask('Next blocker')
+      await setBlockedBy(source.id, [previousBlocker.id])
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await setBlockedBy(source.id, [nextBlocker.id])
+
+      const snapshot = () => ({
+        status: res.status,
+        events: normalizeChangeEvents(
+          events,
+          new Map([
+            [source.id, 'SOURCE_ID'],
+            [previousBlocker.id, 'PREVIOUS_BLOCKER_ID'],
+            [nextBlocker.id, 'NEXT_BLOCKER_ID'],
+          ]),
+        ),
+      })
+      expect(snapshot()).toEqual({
+        status: 200,
+        events: [
+          {
+            resource: 'task',
+            id: 'SOURCE_ID',
+            origin: null,
+            taskIds: ['SOURCE_ID', 'PREVIOUS_BLOCKER_ID', 'NEXT_BLOCKER_ID'],
+          },
+        ],
+      })
+    })
+  })
+
   describe('POST /api/tasks', () => {
     it('creates a task with only title', async () => {
       const res = await app.request('/api/tasks', {
@@ -1225,6 +1555,283 @@ describe('tasks CRUD API', () => {
     })
   })
 
+  describe('GET /api/tasks with date filters', () => {
+    it('matches inclusive date range overlaps and date-only tasks', async () => {
+      const rangeSpansFilter = await createTask('Range spans filter', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-25',
+      })
+      const endsAtRangeStart = await createTask('Ends at range start', {
+        startDate: '2026-03-14',
+        dueDate: '2026-03-16',
+      })
+      const startsAtRangeEnd = await createTask('Starts at range end', {
+        startDate: '2026-03-19',
+        dueDate: '2026-03-22',
+      })
+      const dueDateInside = await createTask('Due date inside', {
+        dueDate: '2026-03-18',
+      })
+      const startDateInside = await createTask('Start date inside', {
+        startDate: '2026-03-17',
+      })
+      const reversedStartDateInside = await createTask(
+        'Reversed start date inside',
+        { startDate: '2026-03-18', dueDate: '2026-03-10' },
+      )
+      const reversedDueDateInside = await createTask(
+        'Reversed due date inside',
+        { startDate: '2026-03-22', dueDate: '2026-03-18' },
+      )
+      await createTask('Range before filter', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-15',
+      })
+      await createTask('Range after filter', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      await createTask('Reversed range outside filter', {
+        startDate: '2026-03-22',
+        dueDate: '2026-03-10',
+      })
+      await createTask('No task dates')
+
+      const res = await app.request(
+        '/api/tasks?dateFrom=2026-03-16&dateTo=2026-03-19',
+      )
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeSpansFilter.id,
+          endsAtRangeStart.id,
+          startsAtRangeEnd.id,
+          dueDateInside.id,
+          startDateInside.id,
+          reversedStartDateInside.id,
+          reversedDueDateInside.id,
+        ].toSorted(),
+      )
+    })
+
+    it('matches task date ranges that reach dateFrom', async () => {
+      const rangeReachesBoundary = await createTask(
+        'Range reaches lower bound',
+        {
+          startDate: '2026-03-10',
+          dueDate: '2026-03-16',
+        },
+      )
+      const rangeAfterBoundary = await createTask('Range after lower bound', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      const startDateAfterBoundary = await createTask(
+        'Start after lower bound',
+        { startDate: '2026-03-16' },
+      )
+      await createTask('Range before lower bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-15',
+      })
+      await createTask('Due before lower bound', {
+        dueDate: '2026-03-15',
+      })
+
+      const res = await app.request('/api/tasks?dateFrom=2026-03-16')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeReachesBoundary.id,
+          rangeAfterBoundary.id,
+          startDateAfterBoundary.id,
+        ].toSorted(),
+      )
+    })
+
+    it('matches task date ranges that begin by dateTo', async () => {
+      const rangeSpansBoundary = await createTask('Range spans upper bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-25',
+      })
+      const rangeBeforeBoundary = await createTask('Range before upper bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-19',
+      })
+      const startDateAtBoundary = await createTask('Start at upper bound', {
+        startDate: '2026-03-19',
+      })
+      await createTask('Range after upper bound', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      await createTask('Start after upper bound', {
+        startDate: '2026-03-20',
+      })
+
+      const res = await app.request('/api/tasks?dateTo=2026-03-19')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeSpansBoundary.id,
+          rangeBeforeBoundary.id,
+          startDateAtBoundary.id,
+        ].toSorted(),
+      )
+    })
+
+    it('includes tasks due on or before dueTo', async () => {
+      const beforeBoundary = await createTask('Due before boundary', {
+        dueDate: '2026-03-17',
+      })
+      const onBoundary = await createTask('Due on boundary', {
+        dueDate: '2026-03-18',
+      })
+      await createTask('Due after boundary', { dueDate: '2026-03-19' })
+      await createTask('No due date')
+
+      const res = await app.request('/api/tasks?dueTo=2026-03-18')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual([beforeBoundary.id, onBoundary.id].toSorted())
+    })
+
+    it('filters candidates by date and queue membership across queue periods', async () => {
+      const dueCandidate = await createTask('Due candidate', {
+        dueDate: '2026-03-17',
+      })
+      const startCandidate = await createTask('Start candidate', {
+        startDate: '2026-03-18',
+      })
+      const activeCandidate = await createTask('Active candidate', {
+        commitment: 'active',
+      })
+      const dueOnCandidateDate = await createTask('Due on candidate date', {
+        dueDate: '2026-03-18',
+      })
+      const completedCandidate = await createTask('Completed candidate', {
+        dueDate: '2026-03-16',
+      })
+      await setStatus(completedCandidate.id, 'completed')
+
+      const dayQueued = await createTask('Day queued', {
+        dueDate: '2026-03-17',
+      })
+      const weekQueued = await createTask('Week queued', {
+        dueDate: '2026-03-17',
+      })
+      const monthQueued = await createTask('Month queued', {
+        dueDate: '2026-03-17',
+      })
+      const staticQueued = await createTask('Static queued', {
+        dueDate: '2026-03-17',
+      })
+      const otherWeekQueued = await createTask('Other week queued', {
+        dueDate: '2026-03-17',
+      })
+      await createTask('Not a candidate', {
+        startDate: '2026-03-19',
+        dueDate: '2026-03-20',
+        commitment: 'someday',
+      })
+
+      const queues = await db.select().from(taskQueues)
+      const dayQueue = firstOrThrow(queues.filter(({ key }) => key === 'day'))
+      const weekQueue = firstOrThrow(queues.filter(({ key }) => key === 'week'))
+      const monthQueue = firstOrThrow(
+        await db
+          .insert(taskQueues)
+          .values({ key: 'monthly-test', name: 'Monthly', periodUnit: 'month' })
+          .returning(),
+      )
+      const staticQueue = firstOrThrow(
+        await db
+          .insert(taskQueues)
+          .values({ key: 'static-test', name: 'Static', periodUnit: null })
+          .returning(),
+      )
+      await db.insert(taskQueueItems).values([
+        {
+          queueId: dayQueue.id,
+          periodStart: '2026-03-18',
+          taskId: dayQueued.id,
+        },
+        {
+          queueId: weekQueue.id,
+          periodStart: '2026-03-16',
+          taskId: weekQueued.id,
+        },
+        {
+          queueId: monthQueue.id,
+          periodStart: '2026-03-01',
+          taskId: monthQueued.id,
+        },
+        {
+          queueId: staticQueue.id,
+          periodStart: null,
+          taskId: staticQueued.id,
+        },
+        {
+          queueId: weekQueue.id,
+          periodStart: '2026-03-09',
+          taskId: otherWeekQueued.id,
+        },
+      ])
+
+      const [allRes, todoRes] = await Promise.all([
+        app.request('/api/tasks?candidatesOn=2026-03-18'),
+        app.request('/api/tasks?candidatesOn=2026-03-18&status=todo'),
+      ])
+      const [allTasks, todoTasks] = await Promise.all([
+        jsonBody<TaskListItemResponse[]>(allRes),
+        jsonBody<TaskListItemResponse[]>(todoRes),
+      ])
+
+      const actualOutput = `${allTasks
+        .map(({ id }) => id)
+        .toSorted()
+        .join('\n')}\n---\n${todoTasks
+        .map(({ id }) => id)
+        .toSorted()
+        .join('\n')}`
+      const expectedOutput = `${[
+        dueCandidate.id,
+        startCandidate.id,
+        activeCandidate.id,
+        dueOnCandidateDate.id,
+        completedCandidate.id,
+        otherWeekQueued.id,
+      ]
+        .toSorted()
+        .join('\n')}\n---\n${[
+        dueCandidate.id,
+        startCandidate.id,
+        activeCandidate.id,
+        dueOnCandidateDate.id,
+        otherWeekQueued.id,
+      ]
+        .toSorted()
+        .join('\n')}`
+
+      expect(actualOutput).toBe(expectedOutput)
+    })
+  })
+
   describe('GET /api/tasks with extended predicates', () => {
     it('filters by free text via q', async () => {
       await createTask('Deploy to production')
@@ -2128,6 +2735,60 @@ describe('tasks CRUD API', () => {
   })
 
   describe('GET /api/tasks/:id', () => {
+    it('returns all related task rows', async () => {
+      const fixture = await createTaskWithAllRelations()
+
+      const res = await app.request(`/api/tasks/${fixture.task.id}`)
+      const body = await jsonBody<TaskResponse>(res)
+      const actual = relatedTaskResponseSnapshot(res.status, body)
+      const expected = relatedTaskResponseSnapshot(
+        200,
+        expectedTaskWithAllRelations(fixture),
+      )
+
+      expect(actual).toEqual(expected)
+    })
+
+    it('hydrates related task rows with fewer database queries', async () => {
+      const { task, duplicateTarget, incomingTask } =
+        await createTaskWithAllRelations()
+
+      const { queries } = await captureDbQueries(async () =>
+        app.request(`/api/tasks/${task.id}`),
+      )
+      const relatedTaskIds = new Set([duplicateTarget.id, incomingTask.id])
+      const relatedTaskHydrationQueryCount =
+        queries.filter(({ parameters }) =>
+          parameters.some(
+            (parameter) =>
+              typeof parameter === 'string' && relatedTaskIds.has(parameter),
+          ),
+        ).length - 1
+      const actual = relatedTaskQueryCountSnapshot(
+        relatedTaskHydrationQueryCount,
+      )
+      const expected = relatedTaskQueryCountSnapshot(8)
+
+      expect(actual).toEqual(expected)
+    })
+
+    it('does not query duplicate relations for a non-duplicate task', async () => {
+      const task = await createTask('Open task')
+
+      const { queries } = await captureDbQueries(async () =>
+        app.request(`/api/tasks/${task.id}`),
+      )
+
+      expect(
+        queries.filter(
+          ({ query, parameters }) =>
+            query.includes('"task_relations"') &&
+            parameters.includes(task.id) &&
+            parameters.includes('duplicate_of'),
+        ),
+      ).toEqual([])
+    })
+
     it('returns a task by ID', async () => {
       const created = await createTask('My task')
 
@@ -2374,14 +3035,21 @@ describe('tasks CRUD API', () => {
         body: JSON.stringify({ title: 'Updated task title' }),
       })
 
-      const eventSnapshot = events.map((event) => ({
-        ...event,
-        id: event.id === task.id ? 'TASK_ID' : event.id,
-      }))
+      const eventSnapshot = normalizeChangeEvents(
+        events,
+        new Map([[task.id, 'TASK_ID']]),
+      )
       const snapshot = () => ({ status: res.status, events: eventSnapshot })
       expect(snapshot()).toEqual({
         status: 200,
-        events: [{ resource: 'task', id: 'TASK_ID', origin: null }],
+        events: [
+          {
+            resource: 'task',
+            id: 'TASK_ID',
+            origin: null,
+            taskIds: ['TASK_ID'],
+          },
+        ],
       })
     })
 

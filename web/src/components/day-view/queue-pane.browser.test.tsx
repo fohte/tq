@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { QueuePane } from '#components/day-view/queue-pane'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { getQueueCandidates } from '#lib/queue-candidates'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
@@ -22,6 +24,11 @@ const weekTask = makeTask({
   id: 'week-task',
   title: 'Week task',
   estimatedMinutes: 30,
+})
+const scheduledTask = makeTask({
+  id: 'scheduled-task',
+  title: 'Scheduled task',
+  estimatedMinutes: 90,
 })
 const candidateTask = makeTask({
   id: 'candidate-task',
@@ -42,7 +49,11 @@ function Providers({ children }: { children: ReactNode }) {
   )
 }
 
-function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
+function renderQueuePane(
+  onMoveTask = vi.fn(),
+  onInsertCandidate = vi.fn(),
+  onMoveScheduledTaskToWeek = vi.fn(),
+) {
   render(
     <Providers>
       <div style={{ height: 600, width: 480 }}>
@@ -50,28 +61,36 @@ function renderQueuePane(onMoveTask = vi.fn(), onInsertCandidate = vi.fn()) {
           isLoading={false}
           queueDate="2026-01-01"
           queueSections={[
-            {
+            makeQueueSectionData({
               key: 'day',
               title: 'today',
               items: [dayTask, anotherDayTask],
               emptyMessage: "No tasks in today's queue",
-            },
-            {
+            }),
+            makeQueueSectionData({
               key: 'week',
               title: 'this week',
               items: [weekTask],
+              dayGroups: [
+                {
+                  date: '2026-01-03',
+                  label: 'Sat 01-03',
+                  items: [scheduledTask],
+                },
+              ],
               emptyMessage: "No tasks in this week's queue",
-            },
+            }),
           ]}
           queueCandidates={getQueueCandidates([candidateTask], new Set())}
           onMoveTask={onMoveTask}
           onInsertCandidate={onInsertCandidate}
           onRemoveFromQueue={vi.fn()}
+          onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
         />
       </div>
     </Providers>,
   )
-  return { onMoveTask, onInsertCandidate }
+  return { onMoveTask, onInsertCandidate, onMoveScheduledTaskToWeek }
 }
 
 async function dragByTitle(sourceTitle: string, targetTitle: string) {
@@ -130,6 +149,42 @@ describe('QueuePane dragging', () => {
 
     await waitFor(() => {
       expect(onInsertCandidate.mock.calls).toEqual([['week', 'candidate-task']])
+    })
+  })
+
+  it('passes the scheduled date when a task is returned to the week queue', async () => {
+    const onMoveScheduledTaskToWeek = vi.fn()
+    const user = userEvent.setup()
+    renderQueuePane(vi.fn(), vi.fn(), onMoveScheduledTaskToWeek)
+
+    const removeButton = await screen.findByRole('button', {
+      name: 'Remove day from Scheduled task',
+    })
+    const row = removeButton.closest('[data-queue-key]')
+    await user.click(removeButton)
+
+    const readResult = () => ({
+      callbackCalls: onMoveScheduledTaskToWeek.mock.calls,
+      queueSource: {
+        key: row?.getAttribute('data-queue-key'),
+        date: row?.getAttribute('data-queue-date'),
+        taskId: row
+          ?.querySelector('[data-task-id]')
+          ?.getAttribute('data-task-id'),
+      },
+      rowText: row?.textContent,
+      weekCount: screen.getByText('1 + 1').textContent,
+    })
+
+    expect(readResult()).toEqual({
+      callbackCalls: [[scheduledTask.id, '2026-01-03']],
+      queueSource: {
+        key: 'day',
+        date: '2026-01-03',
+        taskId: scheduledTask.id,
+      },
+      rowText: 'Scheduled task',
+      weekCount: '1 + 1',
     })
   })
 })

@@ -655,7 +655,14 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     const snapshot = () => ({ status: res.status, events })
     expect(snapshot()).toEqual({
       status: 204,
-      events: [{ resource: 'task', id: task.id, origin: 'screen-id' }],
+      events: [
+        {
+          resource: 'task',
+          id: task.id,
+          origin: 'screen-id',
+          taskIds: [task.id],
+        },
+      ],
     })
   })
 
@@ -672,7 +679,7 @@ describe('POST /api/tasks/:taskId/github-link/sync', () => {
     const storedLink = firstOrThrow(
       await db
         .update(taskGithubLinks)
-        .set({ etag: '"unchanged"' })
+        .set({ etag: '"unchanged"', lastSyncedAt: new Date(0) })
         .where(eq(taskGithubLinks.id, link.id))
         .returning(),
     )

@@ -6,20 +6,20 @@ import {
   makeLabel,
   makeProject,
   makeSavedView,
-  makeTask,
 } from '#components/layout/sidebar-test-fixtures'
 import type { Label } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import type { Task } from '#hooks/use-tasks'
 import { taskKeys } from '#hooks/use-tasks'
 import { labelKeys, savedViewKeys } from '#lib/query-keys'
+import type { TagCount } from '#lib/tag-tree'
+import { makeTagCount } from '#lib/tag-tree-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const tasksWithTags: Task[] = [
-  makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
-  makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
+const tagCountsWithTags: TagCount[] = [
+  makeTagCount({ name: 'dev:tq', count: 2 }),
+  makeTagCount({ name: 'urgent', count: 1 }),
 ]
 
 const labelsForTasksWithTags = [
@@ -27,18 +27,15 @@ const labelsForTasksWithTags = [
   makeLabel({ id: '2', name: 'urgent' }),
 ]
 
-const tasksWithNestedTags: Task[] = [
-  makeTask({ id: '4', title: 'Task X', labels: ['dev/tq'] }),
-  makeTask({ id: '5', title: 'Task Y', labels: ['dev/infra'] }),
+const tagCountsWithNestedTags: TagCount[] = [
+  makeTagCount({ name: 'dev', count: 2 }),
+  makeTagCount({ name: 'dev/tq', count: 1 }),
+  makeTagCount({ name: 'dev/infra', count: 1 }),
 ]
 
 const labelsForNestedTags = [
   makeLabel({ id: '4', name: 'dev/tq' }),
   makeLabel({ id: '5', name: 'dev/infra' }),
-]
-
-const tasksWithInboxItems: Task[] = [
-  makeTask({ id: '3', title: 'Untriaged task', commitment: 'inbox' }),
 ]
 
 const projectsAcrossStatuses: Project[] = [
@@ -62,21 +59,25 @@ const savedViews: SavedView[] = [
 ]
 
 function SidebarContentStory({
-  tasks = tasksWithTags,
+  inboxCount = 0,
   labels = labelsForTasksWithTags,
+  tagCounts = tagCountsWithTags,
 }: {
-  tasks?: Task[]
+  inboxCount?: number
   labels?: Label[]
+  tagCounts?: TagCount[]
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(taskKeys.list(undefined), tasks)
+  queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts)
   queryClient.setQueryData(
-    taskKeys.list({ context: 'personal', commitment: 'inbox', status: 'todo' }),
-    tasks.filter(
-      (task) => task.commitment === 'inbox' && task.status === 'todo',
-    ),
+    taskKeys.count({
+      context: 'personal',
+      commitment: 'inbox',
+      status: 'todo',
+    }),
+    inboxCount,
   )
   queryClient.setQueryData(
     projectKeys.list({ context: 'personal' }),
@@ -98,18 +99,21 @@ function SidebarContentStory({
 }
 
 function SidebarContentWithRouter({
-  tasks,
+  inboxCount,
   labels,
+  tagCounts,
 }: {
-  tasks?: Task[]
+  inboxCount?: number
   labels?: Label[]
+  tagCounts?: TagCount[]
 }) {
   return (
     <StoryRouter
       component={() => (
         <SidebarContentStory
-          {...(tasks != null ? { tasks } : {})}
+          {...(inboxCount != null ? { inboxCount } : {})}
           {...(labels != null ? { labels } : {})}
+          {...(tagCounts != null ? { tagCounts } : {})}
         />
       )}
     />
@@ -135,14 +139,15 @@ export const Default: Story = {
 export const WithNestedTags: Story = {
   name: 'the sidebar groups tasks under nested labels',
   args: {
-    tasks: tasksWithNestedTags,
+    tagCounts: tagCountsWithNestedTags,
     labels: labelsForNestedTags,
   },
 }
 
 export const WithInboxTasks: Story = {
-  name: 'the sidebar includes a task in the inbox section',
+  name: 'the sidebar shows the inbox task count',
   args: {
-    tasks: tasksWithInboxItems,
+    inboxCount: 1,
+    tagCounts: [],
   },
 }

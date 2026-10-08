@@ -92,7 +92,11 @@ export function TaskMainContent({
         author={task.descriptionAuthor}
       />
 
-      <TaskChecklistSection taskId={task.id} />
+      <TaskChecklistSection
+        taskId={task.id}
+        githubLinks={task.githubLinks}
+        subtasks={subtasks}
+      />
 
       {/* Pages */}
       {pages ? (

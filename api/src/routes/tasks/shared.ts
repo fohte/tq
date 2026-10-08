@@ -12,7 +12,12 @@ import {
   tasks,
   timeBlocks,
 } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import {
+  getTaskChangeEventIds,
+  getTaskChecklistOwnerIds,
+} from '#routes/tasks/change-event-task-ids'
 import {
   type ChecklistCompletionCount,
   EMPTY_CHECKLIST_COMPLETION_COUNT,
@@ -27,6 +32,10 @@ import {
   getBlockedByNumbersByTaskId,
   getDuplicateOfNumbersByTaskId,
 } from '#services/task-relations'
+import {
+  getTaskWaitSummariesByTaskId,
+  type TaskWaitSummary,
+} from '#services/task-waits'
 
 function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
   switch (sortBy) {
@@ -260,6 +269,7 @@ function taskListItemToResponse(
   duplicateOfNumber: number | null = null,
   blockedByNumbers: number[] = [],
   blockedByGithubRefs: GithubBlockerRef[] = [],
+  waits: TaskWaitSummary[] = [],
 ) {
   return {
     ...taskCoreToResponse(task, rule, githubLinks, labelNames),
@@ -267,6 +277,7 @@ function taskListItemToResponse(
     duplicateOfNumber,
     blockedByNumbers,
     blockedByGithubRefs,
+    ...(waits.length > 0 ? { waits } : {}),
     checklistCompletionCount,
   }
 }
@@ -314,6 +325,7 @@ export async function hydrateTaskListRows(
     duplicateOfNumbersByTaskId,
     blockedByNumbersByTaskId,
     openGithubBlockerRefsByTaskId,
+    waitsByTaskId,
     recurrenceRulesById,
     recurrenceRulesByTemplateId,
   ] = await Promise.all([
@@ -324,6 +336,7 @@ export async function hydrateTaskListRows(
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getOpenGithubBlockerRefsByTaskId(ids),
+    getTaskWaitSummariesByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
   ])
@@ -346,6 +359,7 @@ export async function hydrateTaskListRows(
         : null,
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
       openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
+      waitsByTaskId.get(r.task.id) ?? [],
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,
@@ -445,5 +459,35 @@ export const requireTask = factory.createMiddleware(async (c, next) => {
   }
 
   c.set('task', task)
-  return next()
+  await next()
+
+  const isStatusWrite =
+    (c.req.method === 'PATCH' && c.req.path.endsWith('/status')) ||
+    (c.req.method === 'POST' && c.req.path.endsWith('/complete'))
+  const isParentWrite =
+    c.req.method === 'PATCH' && c.req.path.endsWith('/parent')
+  if (
+    (!isStatusWrite && !isParentWrite) ||
+    c.res.status < 200 ||
+    c.res.status >= 300
+  ) {
+    return
+  }
+
+  const currentTask = await db.query.tasks.findFirst({
+    where: eq(tasks.id, task.id),
+    columns: { parentId: true, status: true },
+  })
+  const taskIds = [task.id]
+  if (isStatusWrite && currentTask?.status !== task.status) {
+    if (task.parentId != null) taskIds.push(task.parentId)
+    taskIds.push(...(await getTaskChecklistOwnerIds(task.id)))
+  }
+  if (isParentWrite && currentTask?.parentId !== task.parentId) {
+    if (task.parentId != null) taskIds.push(task.parentId)
+    if (currentTask?.parentId != null) taskIds.push(currentTask.parentId)
+  }
+
+  setChangeEventTaskIds(c, await getTaskChangeEventIds(taskIds))
+  return undefined
 })

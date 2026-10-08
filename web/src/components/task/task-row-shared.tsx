@@ -8,7 +8,7 @@ import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
 import type { BlockedByGithubRef, Task } from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
-import { formatMinutes, formatReminderTime } from '#lib/format'
+import { formatReminderTime } from '#lib/format'
 import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
 import { tagFilterSearch } from '#lib/tasks-query'
@@ -230,14 +230,6 @@ export function RecurrenceLabel({
       <Repeat className="size-3" />
       {summary}
     </Button>
-  )
-}
-
-export function EstimateLabel({ minutes }: { minutes: number }) {
-  return (
-    <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-      {formatMinutes(minutes)}
-    </span>
   )
 }
 

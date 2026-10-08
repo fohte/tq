@@ -31,7 +31,9 @@ function SessionStatusDot({ active }: { active: boolean }) {
   )
 }
 
-function durationMinutes(session: AgentSession): number {
+function durationMinutes(
+  session: Pick<AgentSession, 'startedAt' | 'endedAt' | 'lastActiveAt'>,
+): number {
   const start = new Date(session.startedAt).getTime()
   const end = new Date(session.endedAt ?? session.lastActiveAt).getTime()
   return Math.round((end - start) / 60_000)
@@ -193,7 +195,7 @@ export function SessionRow({
   isDimmed,
   labelDefaultEditing,
 }: {
-  session: AgentSession
+  session: Omit<AgentSession, 'lastMessage'>
   isDimmed: boolean
   labelDefaultEditing?: boolean | undefined
 }) {

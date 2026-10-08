@@ -14,16 +14,15 @@ import {
   makeLabel,
   makeProject,
   makeSavedView,
-  makeTask,
 } from '#components/layout/sidebar-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { Label } from '#hooks/use-labels'
 import type { Project } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
-import type { Task } from '#hooks/use-tasks'
-import { taskKeys } from '#hooks/use-tasks'
-import { labelKeys, savedViewKeys } from '#lib/query-keys'
+import { labelKeys, savedViewKeys, taskKeys } from '#lib/query-keys'
+import type { TagCount } from '#lib/tag-tree'
+import { makeTagCount } from '#lib/tag-tree-test-fixtures'
 import { assertDefined } from '#lib/test-utils'
 
 // Only Link/useMatchRoute are stubbed — useSearch stays real so the
@@ -56,9 +55,9 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
-const tasksWithTags: Task[] = [
-  makeTask({ id: '1', title: 'Task A', labels: ['dev:tq', 'urgent'] }),
-  makeTask({ id: '2', title: 'Task B', labels: ['dev:tq'] }),
+const tagCountsWithTags: TagCount[] = [
+  makeTagCount({ name: 'dev:tq', count: 2 }),
+  makeTagCount({ name: 'urgent', count: 1 }),
 ]
 
 const labelsForTasksWithTags: Label[] = [
@@ -70,38 +69,48 @@ const labelsForTasksWithTags: Label[] = [
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
 async function renderSidebar({
-  tasks = [],
+  tagCounts = [],
+  inboxCount = 0,
   projects = [],
   initialEntry = '/',
   savedViews = [],
   labels = [],
-  pendingTaskList = false,
+  pendingTagCounts = false,
 }: {
-  tasks?: Task[]
+  tagCounts?: TagCount[]
+  inboxCount?: number
   projects?: Project[]
   initialEntry?: string
   savedViews?: SavedView[]
   labels?: Label[]
-  pendingTaskList?: boolean
+  pendingTagCounts?: boolean
 } = {}) {
   resetSessionOpenSettings({ localContext: 'personal' })
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  let resolveTaskList: (tasks: Task[]) => void = () => {}
-  let pendingTaskListRequest: Promise<Task[]> | undefined
-  if (pendingTaskList) {
-    const request = new Promise<Task[]>((resolve) => {
-      resolveTaskList = resolve
+  let resolveTagCounts: (counts: TagCount[]) => void = () => {}
+  let pendingTagCountsRequest: Promise<TagCount[]> | undefined
+  if (pendingTagCounts) {
+    const request = new Promise<TagCount[]>((resolve) => {
+      resolveTagCounts = resolve
     })
-    pendingTaskListRequest = queryClient.fetchQuery({
-      queryKey: taskKeys.list(undefined),
+    pendingTagCountsRequest = queryClient.fetchQuery({
+      queryKey: taskKeys.labelCounts('personal'),
       queryFn: () => request,
     })
   } else {
-    queryClient.setQueryData(taskKeys.list(undefined), tasks)
+    queryClient.setQueryData(taskKeys.labelCounts('personal'), tagCounts)
   }
+  queryClient.setQueryData(
+    taskKeys.count({
+      context: 'personal',
+      commitment: 'inbox',
+      status: 'todo',
+    }),
+    inboxCount,
+  )
   queryClient.setQueryData(projectKeys.list({ context: 'personal' }), projects)
   queryClient.setQueryData(
     savedViewKeys.list({ context: 'personal' }),
@@ -125,8 +134,8 @@ async function renderSidebar({
         <RouterProvider router={router} />
       </QueryClientProvider>,
     ),
-    resolveTaskList,
-    pendingTaskListRequest,
+    resolveTagCounts,
+    pendingTagCountsRequest,
   }
 }
 
@@ -138,6 +147,12 @@ function readBreakpointVisibility(sidebar: HTMLElement) {
 }
 
 describe('Sidebar', () => {
+  it('shows the inbox badge from the task count query', async () => {
+    await renderSidebar({ inboxCount: 3 })
+
+    expect(screen.getByText('3').textContent).toEqual('3')
+  })
+
   it('is hidden below the md breakpoint', async () => {
     await renderSidebar()
     const sidebar = screen.getByRole('complementary')
@@ -278,7 +293,7 @@ describe('Sidebar', () => {
         ...labelsForTasksWithTags,
         makeLabel({ id: '3', name: 'orphan' }),
       ]
-      await renderSidebar({ tasks: tasksWithTags, labels })
+      await renderSidebar({ tagCounts: tagCountsWithTags, labels })
 
       const states = [getTagSectionState()]
       await user.click(screen.getByRole('button', { name: 'See all tags' }))
@@ -296,20 +311,25 @@ describe('Sidebar', () => {
       ])
     })
 
-    it('waits for the task list before showing the orphan toggle', async () => {
+    it('waits for tag counts before showing the orphan toggle', async () => {
       const labels = [
         makeLabel({ id: '1', name: 'assigned' }),
         makeLabel({ id: '2', name: 'orphan' }),
       ]
-      const { resolveTaskList, pendingTaskListRequest } = await renderSidebar({
-        labels,
-        pendingTaskList: true,
-      })
+      const { resolveTagCounts, pendingTagCountsRequest } = await renderSidebar(
+        {
+          labels,
+          pendingTagCounts: true,
+        },
+      )
       const states = [getTagSectionState()]
 
       await act(async () => {
-        resolveTaskList([makeTask({ id: '1', labels: ['assigned'] })])
-        await assertDefined(pendingTaskListRequest, 'task list request missing')
+        resolveTagCounts([makeTagCount({ name: 'assigned', count: 1 })])
+        await assertDefined(
+          pendingTagCountsRequest,
+          'tag counts request missing',
+        )
       })
       states.push(getTagSectionState())
 
@@ -321,9 +341,7 @@ describe('Sidebar', () => {
 
     it('keeps a completed-only tag visible without showing the orphan toggle', async () => {
       await renderSidebar({
-        tasks: [
-          makeTask({ id: '1', status: 'completed', labels: ['finished'] }),
-        ],
+        tagCounts: [makeTagCount({ name: 'finished' })],
         labels: [makeLabel({ id: '1', name: 'finished' })],
       })
 
@@ -359,7 +377,7 @@ describe('Sidebar', () => {
 
     it('shows each tag with its name and count', async () => {
       await renderSidebar({
-        tasks: tasksWithTags,
+        tagCounts: tagCountsWithTags,
         labels: labelsForTasksWithTags,
       })
 
@@ -369,23 +387,9 @@ describe('Sidebar', () => {
       expect(urgentLink).toHaveTextContent('#urgent1')
     })
 
-    it('excludes a tag whose label does not belong to the current context', async () => {
-      await renderSidebar({
-        tasks: [
-          ...tasksWithTags,
-          makeTask({ id: '3', title: 'Task C', labels: ['other-context'] }),
-        ],
-        labels: labelsForTasksWithTags,
-      })
-
-      expect(
-        screen.queryByRole('link', { name: /other-context/ }),
-      ).not.toBeInTheDocument()
-    })
-
     it('links each tag to /tasks scoped to that tag, replacing the query', async () => {
       await renderSidebar({
-        tasks: tasksWithTags,
+        tagCounts: tagCountsWithTags,
         labels: labelsForTasksWithTags,
       })
 
@@ -400,7 +404,7 @@ describe('Sidebar', () => {
 
     it('does not highlight any tag when the current query has none', async () => {
       await renderSidebar({
-        tasks: tasksWithTags,
+        tagCounts: tagCountsWithTags,
         labels: labelsForTasksWithTags,
       })
       expect(screen.getByRole('link', { name: /dev:tq/ })).toHaveClass(
@@ -410,7 +414,7 @@ describe('Sidebar', () => {
 
     it('highlights the tag matching the current query, derived from it', async () => {
       await renderSidebar({
-        tasks: tasksWithTags,
+        tagCounts: tagCountsWithTags,
         labels: labelsForTasksWithTags,
         initialEntry: '/?q=label:dev:tq',
       })
@@ -426,7 +430,7 @@ describe('Sidebar', () => {
     it('opens the actions menu with edit/delete items on trigger click', async () => {
       const user = userEvent.setup()
       const { container } = await renderSidebar({
-        tasks: tasksWithTags,
+        tagCounts: tagCountsWithTags,
         labels: labelsForTasksWithTags,
       })
       const trigger = assertDefined(
@@ -443,9 +447,10 @@ describe('Sidebar', () => {
     })
 
     describe('with a "/"-separated tag hierarchy', () => {
-      const nestedTasks: Task[] = [
-        makeTask({ id: '10', title: 'Task X', labels: ['dev/tq'] }),
-        makeTask({ id: '11', title: 'Task Y', labels: ['dev/infra'] }),
+      const nestedTagCounts: TagCount[] = [
+        makeTagCount({ name: 'dev', count: 2 }),
+        makeTagCount({ name: 'dev/tq', count: 1 }),
+        makeTagCount({ name: 'dev/infra', count: 1 }),
       ]
       const nestedLabels: Label[] = [
         makeLabel({ id: '10', name: 'dev/tq' }),
@@ -453,7 +458,10 @@ describe('Sidebar', () => {
       ]
 
       it('renders the tree returned by useTagCounts as nested rows, parent above children', async () => {
-        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+        await renderSidebar({
+          tagCounts: nestedTagCounts,
+          labels: nestedLabels,
+        })
 
         const links = screen.getAllByRole('link', { name: /^#/ })
         expect(links.map((link) => link.textContent)).toEqual([
@@ -464,13 +472,19 @@ describe('Sidebar', () => {
       })
 
       it('shows a nested tag by its last path segment only, not its full name', async () => {
-        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+        await renderSidebar({
+          tagCounts: nestedTagCounts,
+          labels: nestedLabels,
+        })
 
         expect(screen.getByRole('link', { name: '# tq 1' })).toBeInTheDocument()
       })
 
       it('links a synthesized parent to /tasks scoped to its own name', async () => {
-        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+        await renderSidebar({
+          tagCounts: nestedTagCounts,
+          labels: nestedLabels,
+        })
 
         const devLink = screen.getByRole('link', { name: /dev/ })
         expect(devLink).toHaveAttribute('href', '/tasks')
@@ -480,7 +494,10 @@ describe('Sidebar', () => {
       })
 
       it('does not offer edit/delete actions for a synthesized parent', async () => {
-        await renderSidebar({ tasks: nestedTasks, labels: nestedLabels })
+        await renderSidebar({
+          tagCounts: nestedTagCounts,
+          labels: nestedLabels,
+        })
 
         const devLink = screen.getByRole('link', { name: /dev/ })
         expect(within(devLink).queryAllByRole('button')).toHaveLength(0)

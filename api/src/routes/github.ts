@@ -95,8 +95,7 @@ export const githubApp = new Hono()
       (error) => githubLinkErrorResponse(c, error, 'github.link'),
     )
   })
-  // The client keeps links fresh while the app is open; the hourly server
-  // scheduler handles links while no client is active.
+  // This endpoint remains available for explicit manual sync requests.
   .post('/sync', async (c) => {
     await syncAllGithubLinks(c.get('origin'))
     return c.body(null, 204)

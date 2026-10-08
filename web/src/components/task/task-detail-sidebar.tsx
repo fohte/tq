@@ -1,4 +1,3 @@
-import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import {
   Select,
@@ -10,12 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@fohte/ui/select'
-import { useEffect, useRef, useState } from 'react'
 
-import {
-  SidebarField,
-  sidebarFieldValueButtonClassName,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
@@ -31,8 +26,6 @@ import { SectionLabel } from '#components/ui/section-label'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
-import { formatMinutes } from '#lib/format'
-import { parseDurationToMinutes } from '#lib/parse-duration'
 import { cn } from '#lib/utils'
 
 const fieldValueClassName = 'w-full justify-start gap-1'
@@ -63,10 +56,6 @@ export function TaskSidebar({
         </SidebarField>
       )}
       <SidebarPlanField taskId={task.id} commitment={task.commitment} />
-      <SidebarEstimateField
-        taskId={task.id}
-        estimatedMinutes={task.estimatedMinutes}
-      />
       <SidebarDateField
         taskId={task.id}
         field="startDate"
@@ -146,12 +135,6 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
         )}
         <MobileFieldCell className="col-span-2">
           <SidebarPlanField taskId={task.id} commitment={task.commitment} />
-        </MobileFieldCell>
-        <MobileFieldCell>
-          <SidebarEstimateField
-            taskId={task.id}
-            estimatedMinutes={task.estimatedMinutes}
-          />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarDateField
@@ -280,85 +263,6 @@ function SidebarStatusField({
         </div>
       </Select>
       {duplicatePicker}
-    </SidebarField>
-  )
-}
-
-function SidebarEstimateField({
-  taskId,
-  estimatedMinutes,
-}: {
-  taskId: string
-  estimatedMinutes: number | null
-}) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [input, setInput] = useState(
-    estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '',
-  )
-  const updateTask = useUpdateTask()
-  const savingRef = useRef(false)
-
-  useEffect(() => {
-    if (!isEditing)
-      setInput(estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '')
-  }, [estimatedMinutes, isEditing])
-
-  const save = () => {
-    if (savingRef.current) {
-      savingRef.current = false
-      return
-    }
-    const parsed = parseDurationToMinutes(input)
-    if (parsed !== estimatedMinutes) {
-      updateTask.mutate({
-        id: taskId,
-        input: { estimatedMinutes: parsed },
-      })
-    }
-    setIsEditing(false)
-  }
-
-  return (
-    <SidebarField label="ESTIMATE">
-      {isEditing ? (
-        <div className="px-1">
-          <Input
-            type="text"
-            variant="ghost"
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-            }}
-            onBlur={save}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur()
-              if (e.key === 'Escape') {
-                savingRef.current = true
-                setInput(
-                  estimatedMinutes != null
-                    ? formatMinutes(estimatedMinutes)
-                    : '',
-                )
-                setIsEditing(false)
-              }
-            }}
-            placeholder="1h30m"
-            autoFocus
-            className={fieldValueClassName}
-          />
-        </div>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-          className={sidebarFieldValueButtonClassName}
-        >
-          {estimatedMinutes != null ? formatMinutes(estimatedMinutes) : '—'}
-        </Button>
-      )}
     </SidebarField>
   )
 }

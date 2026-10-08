@@ -28,7 +28,11 @@ describe('change events', () => {
         c.set('task', { id: taskId })
         return next()
       })
-      .patch('/:id', (c) => c.json({ author: c.get('author') }))
+      .patch('/:id', (c) => {
+        c.set('changeEventTaskIds', [taskId])
+        return c.json({ author: c.get('author') })
+      })
+      .patch('/default-task-ids/:id', (c) => c.json({ ok: true }))
       .patch('/failed/:id', (c) => c.json({ error: 'failed' }, 409))
       .get('/:id', (c) => c.json({ id: c.req.param('id') }))
 
@@ -37,6 +41,10 @@ describe('change events', () => {
       .use('*', authorMiddleware)
       .use('*', changeEventMiddleware)
       .route('/api/tasks', routes)
+      .route(
+        '/api/labels',
+        new Hono().patch('/:id', (c) => c.json({ ok: true })),
+      )
       .route(
         '/api/mcp',
         new Hono().post('/', (c) => c.json({ ok: true })),
@@ -74,7 +82,14 @@ describe('change events', () => {
     ).toEqual({
       status: 200,
       body: { author: { kind: 'human', agent: null } },
-      events: [{ resource: 'task', id: taskId, origin: 'screen-id' }],
+      events: [
+        {
+          resource: 'task',
+          id: taskId,
+          origin: 'screen-id',
+          taskIds: [taskId],
+        },
+      ],
     })
   })
 
@@ -87,7 +102,36 @@ describe('change events', () => {
     ).toEqual({
       status: 200,
       body: { author: { kind: 'llm', agent: 'agent' } },
-      events: [{ resource: 'task', id: taskId, origin: null }],
+      events: [
+        { resource: 'task', id: taskId, origin: null, taskIds: [taskId] },
+      ],
+    })
+  })
+
+  it('defaults task resource events to the resolved task ID', async () => {
+    expect(
+      await request('/api/tasks/default-task-ids/task-id', { method: 'PATCH' }),
+    ).toEqual({
+      status: 200,
+      body: { ok: true },
+      events: [
+        { resource: 'task', id: taskId, origin: null, taskIds: [taskId] },
+      ],
+    })
+  })
+
+  it('leaves task IDs unknown when a non-task route does not set them', async () => {
+    expect(await request('/api/labels/label-id', { method: 'PATCH' })).toEqual({
+      status: 200,
+      body: { ok: true },
+      events: [
+        {
+          resource: 'label',
+          id: 'label-id',
+          origin: null,
+          taskIds: null,
+        },
+      ],
     })
   })
 
@@ -95,7 +139,9 @@ describe('change events', () => {
     expect(await request('/api/tasks/task-id', { method: 'PATCH' })).toEqual({
       status: 200,
       body: { author: { kind: 'human', agent: null } },
-      events: [{ resource: 'task', id: taskId, origin: null }],
+      events: [
+        { resource: 'task', id: taskId, origin: null, taskIds: [taskId] },
+      ],
     })
   })
 
@@ -107,7 +153,10 @@ describe('change events', () => {
         '/api',
         new Hono().route(
           '/schedule',
-          new Hono().patch('/time-blocks/:id', (c) => c.json({ ok: true })),
+          new Hono().patch('/time-blocks/:id', (c) => {
+            c.set('changeEventTaskIds', [])
+            return c.json({ ok: true })
+          }),
         ),
       )
     unsubscribe = subscribeToChangeEvents((event) => events.push(event))
@@ -119,7 +168,14 @@ describe('change events', () => {
     const snapshot = () => ({ status: response.status, events })
     expect(snapshot()).toEqual({
       status: 200,
-      events: [{ resource: 'time_block', id: 'block-id', origin: null }],
+      events: [
+        {
+          resource: 'time_block',
+          id: 'block-id',
+          origin: null,
+          taskIds: [],
+        },
+      ],
     })
   })
 
@@ -170,7 +226,7 @@ describe('change events', () => {
     })
   })
 
-  it('does not emit generic events for client-triggered GitHub sync', async () => {
+  it('does not emit generic events for manual GitHub sync', async () => {
     expect(await request('/api/github/sync', { method: 'POST' })).toEqual({
       status: 204,
       body: null,
@@ -194,7 +250,12 @@ describe('change events', () => {
       .request('/api/events')
     const reader = response.body?.getReader() as
       ReadableStreamDefaultReader<Uint8Array> | undefined
-    publishChangeEvent({ resource: 'task', id: 'task-id', origin: null })
+    publishChangeEvent({
+      resource: 'task',
+      id: 'task-id',
+      origin: null,
+      taskIds: ['task-id'],
+    })
     const firstChunk = await reader?.read()
     await reader?.cancel()
 
@@ -210,7 +271,7 @@ describe('change events', () => {
       status: 200,
       contentType: 'text/event-stream',
       chunk:
-        'event: change\ndata: {"resource":"task","id":"task-id","origin":null}\n\n',
+        'event: change\ndata: {"resource":"task","id":"task-id","origin":null,"taskIds":["task-id"]}\n\n',
     })
   })
 
@@ -229,6 +290,6 @@ describe('change events', () => {
 
     const snapshot = () =>
       chunk?.value == null ? null : new TextDecoder().decode(chunk.value)
-    expect(snapshot()).toEqual(': heartbeat\n\n')
+    expect(snapshot()).toEqual('event: heartbeat\ndata: \n\n')
   })
 })

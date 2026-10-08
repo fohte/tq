@@ -20,6 +20,19 @@ export function getLocalDateRangeDays(
   return dates
 }
 
+export function getLocalWeekDateRange(date: Date): {
+  startDate: string
+  endDate: string
+} {
+  const dayOfWeek = date.getDay()
+  const start = new Date(date)
+  start.setDate(start.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+  const end = new Date(start)
+  end.setDate(end.getDate() + 6)
+
+  return { startDate: formatLocalDate(start), endDate: formatLocalDate(end) }
+}
+
 /** Format a Date as local "MM-DD", for a queue section's date-range label. */
 export function formatShortDate(date: Date): string {
   return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -32,12 +45,8 @@ export function formatShortDate(date: Date): string {
  * period the server stored the queue's items under.
  */
 export function formatWeekRangeLabel(date: Date): string {
-  const dow = date.getDay()
-  const monday = new Date(date)
-  monday.setDate(monday.getDate() - (dow === 0 ? 6 : dow - 1))
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  return `${formatShortDate(monday)} – ${formatShortDate(sunday)}`
+  const { startDate, endDate } = getLocalWeekDateRange(date)
+  return `${startDate.slice(5)} – ${endDate.slice(5)}`
 }
 
 /**

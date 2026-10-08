@@ -359,17 +359,6 @@ export const WithMultipleBlockedBy: Story = {
   },
 }
 
-export const WithEstimate: Story = {
-  name: 'the row shows a task estimate',
-  args: {
-    task: {
-      ...baseTask,
-      title: 'Task with an estimate',
-      estimatedMinutes: 90,
-    },
-  },
-}
-
 export const WithRecurrence: Story = {
   name: 'the row shows a task with a weekly recurrence',
   args: {

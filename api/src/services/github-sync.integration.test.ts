@@ -19,11 +19,7 @@ import {
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { createTask } from '#routes/tasks/testing'
-import {
-  syncAllGithubLinks,
-  syncDueGithubLinks,
-  syncLinkFromGithub,
-} from '#services/github-sync'
+import { syncAllGithubLinks, syncLinkFromGithub } from '#services/github-sync'
 import { createTaskFromGithubUrl } from '#services/task-github-links'
 import { setupTestDb } from '#testing'
 
@@ -1216,8 +1212,31 @@ describe('syncAllGithubLinks', () => {
     expect(snapshot()).toEqual(
       [first.task.id, second.task.id]
         .toSorted((left, right) => left.localeCompare(right))
-        .map((id) => ({ resource: 'task', id, origin: 'screen-id' })),
+        .map((id) => ({
+          resource: 'task',
+          id,
+          origin: 'screen-id',
+          taskIds: [id],
+        })),
     )
+  })
+
+  it('publishes task changes without an origin for server-triggered sync', async () => {
+    const { task } = await createLinkedTask()
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubIssueResponse({ title: 'Synced by trigger' })
+    await syncAllGithubLinks()
+
+    expect(events).toEqual([
+      {
+        resource: 'task',
+        id: task.id,
+        origin: null,
+        taskIds: [task.id],
+      },
+    ])
   })
 
   it('does not publish task changes when GitHub confirms a link is unchanged', async () => {
@@ -1233,89 +1252,5 @@ describe('syncAllGithubLinks', () => {
     await syncAllGithubLinks('screen-id')
 
     expect(events).toEqual([])
-  })
-})
-
-describe('syncDueGithubLinks', () => {
-  it('syncs subjects hourly and blockers daily, leaving recent and merged links alone', async () => {
-    await upsertGithubToken('valid-token')
-    const now = Date.now()
-    const subjectDue = await createScheduledLink(
-      'subject',
-      51,
-      new Date(now - 2 * 60 * 60 * 1000),
-    )
-    const subjectRecent = await createScheduledLink(
-      'subject',
-      52,
-      new Date(now - 59 * 60 * 1000),
-    )
-    const blockerDue = await createScheduledLink(
-      'blocker',
-      53,
-      new Date(now - 25 * 60 * 60 * 1000),
-    )
-    const blockerRecent = await createScheduledLink(
-      'blocker',
-      54,
-      new Date(now - 23 * 60 * 60 * 1000 - 59 * 60 * 1000),
-    )
-    const mergedSubject = await createScheduledLink(
-      'subject',
-      55,
-      new Date(now - 2 * 60 * 60 * 1000),
-      'merged',
-    )
-    const events: ChangeEvent[] = []
-    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
-
-    queueGithubIssueResponse()
-    queueGithubIssueResponse()
-    await syncDueGithubLinks()
-
-    const synced = await Promise.all(
-      [subjectDue, subjectRecent, blockerDue, blockerRecent, mergedSubject].map(
-        async (link) =>
-          (await loadLink(link.id)).lastSyncedAt > link.lastSyncedAt,
-      ),
-    )
-
-    const snapshot = () => ({
-      synced,
-      events: events.toSorted((left, right) =>
-        String(left.id).localeCompare(String(right.id)),
-      ),
-    })
-    expect(snapshot()).toEqual({
-      synced: [true, false, true, false, false],
-      events: [subjectDue.taskId, blockerDue.taskId]
-        .toSorted((left, right) => left.localeCompare(right))
-        .map((id) => ({ resource: 'task', id, origin: null })),
-    })
-  })
-
-  it('does not publish task changes when a due link is unchanged on GitHub', async () => {
-    await upsertGithubToken('valid-token')
-    const link = await createScheduledLink(
-      'subject',
-      57,
-      new Date(Date.now() - 2 * 60 * 60 * 1000),
-    )
-    await db
-      .update(taskGithubLinks)
-      .set({ etag: '"unchanged"' })
-      .where(eq(taskGithubLinks.id, link.id))
-    const events: ChangeEvent[] = []
-    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
-
-    queueGithubNotModifiedResponse()
-    await syncDueGithubLinks()
-
-    const updatedLink = await loadLink(link.id)
-    const snapshot = () => ({
-      lastSyncedAtAdvanced: updatedLink.lastSyncedAt > link.lastSyncedAt,
-      events,
-    })
-    expect(snapshot()).toEqual({ lastSyncedAtAdvanced: true, events: [] })
   })
 })

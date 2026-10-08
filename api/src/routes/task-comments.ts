@@ -5,8 +5,13 @@ import { createFactory } from 'hono/factory'
 
 import { db } from '#db/connection'
 import { taskComments } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { type EditAuthorInfo, getCommentAuthors, recordEdit } from '#lib/edits'
+import {
+  getOutgoingTaskLinkIds,
+  getTaskLinkChangeEventIds,
+} from '#routes/tasks/change-event-task-ids'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { syncTaskLinks } from '#services/task-links'
@@ -60,6 +65,7 @@ export const taskCommentsApp = new Hono<TaskEnv>()
     zValidator('json', createCommentSchema),
     async (c) => {
       const taskId = c.get('task').id
+      const previousTaskLinkIds = await getOutgoingTaskLinkIds(taskId)
       const input = c.req.valid('json')
       const author = c.get('author')
 
@@ -85,6 +91,15 @@ export const taskCommentsApp = new Hono<TaskEnv>()
       })
 
       const linkSync = await syncTaskLinks(taskId)
+      setChangeEventTaskIds(
+        c,
+        getTaskLinkChangeEventIds(
+          taskId,
+          previousTaskLinkIds,
+          linkSync.outgoing.map(({ id }) => id),
+          false,
+        ),
+      )
 
       return c.json({ ...commentToResponse(comment, author), linkSync }, 201)
     },
@@ -94,6 +109,7 @@ export const taskCommentsApp = new Hono<TaskEnv>()
     zValidator('json', updateCommentSchema),
     async (c) => {
       const taskId = c.get('task').id
+      const previousTaskLinkIds = await getOutgoingTaskLinkIds(taskId)
       const commentId = c.req.param('commentId')
       const author = c.get('author')
 
@@ -132,6 +148,15 @@ export const taskCommentsApp = new Hono<TaskEnv>()
       })
 
       const linkSync = await syncTaskLinks(taskId)
+      setChangeEventTaskIds(
+        c,
+        getTaskLinkChangeEventIds(
+          taskId,
+          previousTaskLinkIds,
+          linkSync.outgoing.map(({ id }) => id),
+          false,
+        ),
+      )
 
       const authors = await getCommentAuthors([commentId])
 
@@ -146,6 +171,7 @@ export const taskCommentsApp = new Hono<TaskEnv>()
   )
   .delete('/:taskId/comments/:commentId', async (c) => {
     const taskId = c.get('task').id
+    const previousTaskLinkIds = await getOutgoingTaskLinkIds(taskId)
     const commentId = c.req.param('commentId')
 
     const existing = await db.query.taskComments.findFirst({
@@ -160,7 +186,16 @@ export const taskCommentsApp = new Hono<TaskEnv>()
 
     await db.delete(taskComments).where(eq(taskComments.id, commentId))
 
-    await syncTaskLinks(taskId)
+    const linkSync = await syncTaskLinks(taskId)
+    setChangeEventTaskIds(
+      c,
+      getTaskLinkChangeEventIds(
+        taskId,
+        previousTaskLinkIds,
+        linkSync.outgoing.map(({ id }) => id),
+        false,
+      ),
+    )
 
     return c.body(null, 204)
   })
