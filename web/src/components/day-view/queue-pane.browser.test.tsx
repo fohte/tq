@@ -13,27 +13,22 @@ import { MemoizedStoryRouter } from '#storybook-config/story-router'
 const dayTask = makeTask({
   id: 'day-task',
   title: 'Day task',
-  estimatedMinutes: 30,
 })
 const anotherDayTask = makeTask({
   id: 'another-day-task',
   title: 'Another day task',
-  estimatedMinutes: 30,
 })
 const weekTask = makeTask({
   id: 'week-task',
   title: 'Week task',
-  estimatedMinutes: 30,
 })
 const scheduledTask = makeTask({
   id: 'scheduled-task',
   title: 'Scheduled task',
-  estimatedMinutes: 90,
 })
 const candidateTask = makeTask({
   id: 'candidate-task',
   title: 'Candidate task',
-  estimatedMinutes: 30,
 })
 
 function Providers({ children }: { children: ReactNode }) {

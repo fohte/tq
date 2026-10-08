@@ -22,7 +22,6 @@ export const recurringTaskTemplates = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     title: text('title').notNull(),
     description: text('description'),
-    estimatedMinutes: integer('estimated_minutes'),
     projectId: text('project_id').references(() => projects.id, {
       onDelete: 'set null',
     }),

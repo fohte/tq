@@ -234,7 +234,6 @@ describe('project operation tools', () => {
         labels: [],
         startDate: null,
         dueDate: null,
-        estimatedMinutes: null,
         remindAt: null,
         parentId: null,
         projectId: '<uuid>',

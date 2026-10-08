@@ -95,7 +95,6 @@ async function generateForTemplate(
                 ? subtractDays(occurrenceDate, template.startOffsetDays)
                 : null,
             dueDate: occurrenceDate,
-            estimatedMinutes: template.estimatedMinutes,
             parentId: template.parentId,
             projectId: template.projectId,
             context: template.context,

@@ -92,7 +92,6 @@ export interface TaskResponse {
   labels: string[]
   startDate: string | null
   dueDate: string | null
-  estimatedMinutes: number | null
   remindAt: string | null
   parentId: string | null
   projectId: string | null
@@ -138,7 +137,6 @@ export interface TaskListItemResponse {
   labels: string[]
   startDate: string | null
   dueDate: string | null
-  estimatedMinutes: number | null
   remindAt: string | null
   parentId: string | null
   projectId: string | null
@@ -217,7 +215,6 @@ export function toListItemResponse(
     | 'labels'
     | 'startDate'
     | 'dueDate'
-    | 'estimatedMinutes'
     | 'remindAt'
     | 'parentId'
     | 'projectId'
@@ -249,7 +246,6 @@ export function toListItemResponse(
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
     remindAt: task.remindAt,
     parentId: task.parentId,
     projectId: task.projectId,
@@ -357,7 +353,6 @@ const taskListItemResponseSchema = z.object({
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
-  estimatedMinutes: z.number().nullable(),
   remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
@@ -401,7 +396,6 @@ const taskResponseSchema = z.object({
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
-  estimatedMinutes: z.number().nullable(),
   remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
@@ -453,7 +447,6 @@ export async function createTask(
     description?: string
     startDate?: string
     dueDate?: string
-    estimatedMinutes?: number
     context?: string
     commitment?: string
     labels?: string[]
@@ -479,7 +472,6 @@ export async function createRecurringTask(
   opts: {
     dueDate?: string
     description?: string
-    estimatedMinutes?: number
     context?: string
     labels?: string[]
   } = {},

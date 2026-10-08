@@ -1,7 +1,6 @@
 import { getSearchQueryHelpTokens } from 'api/search-query-parser'
 
 import { SEARCH_MODE_DEFINITIONS } from '#components/search/search-modal-mode'
-import { legacyTaskSortBy, legacyTaskSortSyntax } from '#lib/tasks-query'
 
 interface SearchSyntaxHelpEntry {
   syntax: string
@@ -26,17 +25,7 @@ export function getSearchSyntaxHelpSections({
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
 } = {}): SearchSyntaxHelpSection[] {
-  const queryTokens = getSearchQueryHelpTokens().map((token) => {
-    if (token.key !== 'sort') return token
-
-    return {
-      ...token,
-      description: token.description.replace(` or ${legacyTaskSortBy}.`, '.'),
-      values: token.values.filter(
-        ({ syntax }) => syntax !== legacyTaskSortSyntax,
-      ),
-    }
-  })
+  const queryTokens = getSearchQueryHelpTokens()
   const filterTokens =
     audience === 'task-filter'
       ? queryTokens.filter(
