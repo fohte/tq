@@ -601,27 +601,6 @@ describe('task_search', () => {
     ])
   })
 
-  it('translates hasEstimate into the REST string param', async () => {
-    await createTask('With estimate', { estimatedMinutes: 30 })
-    const withoutEstimate = await createTask('Without estimate')
-
-    const toolResult = await callTaskReadTool('task_search', {
-      hasEstimate: false,
-    })
-
-    expect(parseToolJson(toolResult)).toEqual([
-      {
-        ...withoutLinkSync(withoutEstimate),
-        parentNumber: null,
-        duplicateOfNumber: null,
-        blockedByNumbers: [],
-        blockedByGithubRefs: [],
-        childCompletionCount: { total: 0, completed: 0 },
-        checklistCompletionCount: { total: 0, completed: 0 },
-      },
-    ])
-  })
-
   it('translates hasDue into the REST string param', async () => {
     const withDue = await createTask('With due date', {
       dueDate: '2026-02-01',

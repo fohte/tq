@@ -744,23 +744,14 @@ describe('task search', () => {
     })
   })
 
-  it('converts boolean filters to REST query strings', async () => {
+  it('converts hasDue to a REST query string', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response('[]', { status: 200 }),
     )
     const write = spyStdout()
 
     const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'task',
-        'search',
-        '--has-estimate',
-        'false',
-        '--has-due',
-        'true',
-      ],
+      ['--api-url', apiUrl, 'task', 'search', '--has-due', 'true'],
       fetchStub,
       fakeStdin(true),
     )
@@ -774,7 +765,6 @@ describe('task search', () => {
           query: {
             context: 'all',
             status: 'all',
-            hasEstimate: 'false',
             hasDue: 'true',
             limit: '20',
           },

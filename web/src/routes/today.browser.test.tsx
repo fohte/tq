@@ -10,28 +10,61 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
-import type { Task } from '#hooks/use-tasks'
+import type { Task, TaskListFilter } from '#hooks/use-tasks'
 import { TodayFocus } from '#routes/today'
 
-const mockUseTaskList = vi.fn()
+type TaskListOptions = {
+  enabled?: boolean
+  placeholderData?: (
+    previousData: Task[] | undefined,
+    previousFilter: TaskListFilter | undefined,
+  ) => Task[] | undefined
+}
+
+type QueueItemsOptions = { enabled?: boolean; context?: Task['context'] }
+type QueueItem = { taskId: string; sortOrder: number }
+
+const mockUseTaskList = vi.fn<
+  (
+    filter: TaskListFilter,
+    options?: TaskListOptions,
+  ) => {
+    data?: Task[]
+    isLoading: boolean
+    isPlaceholderData: boolean
+    isError: boolean
+  }
+>()
+const mockUseCurrentContext = vi.fn<() => Task['context']>()
 const mockUseQueueCarryOver = vi.fn<(date: string) => unknown>()
-const mockUseQueueItems = vi.fn()
+const mockUseQueueItems =
+  vi.fn<
+    (
+      key: string,
+      date: string,
+      options?: QueueItemsOptions,
+    ) => { data: QueueItem[]; isLoading: boolean }
+  >()
 const mockUseSetQueueItems = vi.fn()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
   return {
     ...actual,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-    useTaskList: (...args: unknown[]) => mockUseTaskList(...args),
+    useTaskList: (...args: Parameters<typeof mockUseTaskList>) =>
+      mockUseTaskList(...args),
   }
 })
+
+vi.mock('#hooks/use-current-context', () => ({
+  useCurrentContext: () => mockUseCurrentContext(),
+}))
 
 vi.mock('#hooks/use-queues', () => ({
   DAY_QUEUE_KEY: 'day',
   useQueueCarryOver: (date: string) => mockUseQueueCarryOver(date),
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useQueueItems: (...args: unknown[]) => mockUseQueueItems(...args),
+  useQueueItems: (...args: Parameters<typeof mockUseQueueItems>) =>
+    mockUseQueueItems(...args),
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useSetQueueItems: (...args: unknown[]) => mockUseSetQueueItems(...args),
 }))
@@ -41,7 +74,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     id: 'task-1',
     title: 'Task 1',
     context: 'work',
-    estimatedMinutes: 30,
     ...overrides,
   })
 }
@@ -50,20 +82,54 @@ function focusTransition(before: string | null, after: string | null) {
   return { before, after }
 }
 
+function todayTaskRequestSnapshot(
+  taskQueries: unknown[],
+  queueOptions: QueueItemsOptions | undefined,
+) {
+  return { taskQueries, queueOptions }
+}
+
 function setup({
   all,
   queue,
   queueSortOrders = queue.map((_, index) => index),
+  context = 'work',
   isLoading = false,
+  isSubtasksLoading = false,
+  subtasksError = false,
   isTodayTasksLoading = false,
 }: {
   all: Task[]
   queue: Task[]
   queueSortOrders?: number[]
+  context?: Task['context']
   isLoading?: boolean
+  isSubtasksLoading?: boolean
+  subtasksError?: boolean
   isTodayTasksLoading?: boolean
 }) {
-  mockUseTaskList.mockReturnValue({ isLoading, categorized: { all } })
+  mockUseCurrentContext.mockReturnValue(context)
+  mockUseTaskList.mockImplementation(
+    (filter: TaskListFilter, options?: TaskListOptions) => {
+      const tasks = all.filter((task) => {
+        if (task.context !== filter.context) {
+          return false
+        }
+        if (filter.ids != null) return filter.ids.includes(task.id)
+        if (filter.parentId != null) return task.parentId === filter.parentId
+        return false
+      })
+      return {
+        data: tasks,
+        isLoading:
+          options?.enabled !== false &&
+          ((filter.ids != null && isLoading) ||
+            (filter.parentId != null && isSubtasksLoading)),
+        isPlaceholderData: false,
+        isError: filter.parentId != null && subtasksError,
+      }
+    },
+  )
   mockUseQueueCarryOver.mockReturnValue({
     isSuccess: true,
     isPending: false,
@@ -72,13 +138,14 @@ function setup({
     isCarryingOver: false,
     canReadQueueItems: true,
   })
-  mockUseQueueItems.mockReturnValue({
-    data: queue.map((t, index) => ({
-      taskId: t.id,
-      sortOrder: queueSortOrders[index],
-    })),
+  mockUseQueueItems.mockImplementation((_key, _date, options) => ({
+    data: queue.flatMap((task, index) =>
+      task.context === options?.context
+        ? [{ taskId: task.id, sortOrder: queueSortOrders[index] ?? index }]
+        : [],
+    ),
     isLoading: isTodayTasksLoading,
-  })
+  }))
   const mutate = vi.fn()
   mockUseSetQueueItems.mockReturnValue({ mutate, isPending: false })
   return { mutate }
@@ -151,7 +218,7 @@ describe('TodayFocus', () => {
     ]
     expect(getOutput()).toEqual([
       ['2026-03-20'],
-      [['day', '2026-03-20', { enabled: false }]],
+      [['day', '2026-03-20', { enabled: false, context: 'work' }]],
     ])
   })
 
@@ -170,7 +237,7 @@ describe('TodayFocus', () => {
     await renderToday()
 
     expect(mockUseQueueItems.mock.calls).toEqual([
-      ['day', '2026-03-20', { enabled: true }],
+      ['day', '2026-03-20', { enabled: true, context: 'work' }],
     ])
   })
 
@@ -191,10 +258,113 @@ describe('TodayFocus', () => {
     expect(getOutput()).toEqual([
       ['2026-03-20', '2026-03-21'],
       [
-        ['day', '2026-03-20', { enabled: true }],
-        ['day', '2026-03-21', { enabled: true }],
+        ['day', '2026-03-20', { enabled: true, context: 'work' }],
+        ['day', '2026-03-21', { enabled: true, context: 'work' }],
       ],
     ])
+  })
+
+  it('fetches only current-context queue tasks and subtasks of the focus task', async () => {
+    const focus = makeTask({ id: 'focus', title: 'Focus task' })
+    const next = makeTask({ id: 'next', title: 'Next task' })
+    const otherContext = makeTask({
+      id: 'other-context',
+      context: 'personal',
+      title: 'Other context task',
+    })
+    const child = makeTask({ id: 'child', parentId: 'focus' })
+    setup({
+      all: [focus, next, otherContext, child],
+      queue: [focus, next, otherContext],
+    })
+
+    await renderToday()
+
+    const taskQueries = mockUseTaskList.mock.calls.map(([filter, options]) => ({
+      filter,
+      enabled: options?.enabled,
+      hasPlaceholderData: options?.placeholderData != null,
+    }))
+    expect(
+      todayTaskRequestSnapshot(
+        taskQueries,
+        mockUseQueueItems.mock.calls[0]?.[2],
+      ),
+    ).toEqual({
+      taskQueries: [
+        {
+          filter: {
+            ids: ['focus', 'next'],
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: true,
+          hasPlaceholderData: true,
+        },
+        {
+          filter: {
+            parentId: 'focus',
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: true,
+          hasPlaceholderData: false,
+        },
+      ],
+      queueOptions: { enabled: true, context: 'work' },
+    })
+  })
+
+  it('passes the selected context to queue and task queries', async () => {
+    const focus = makeTask({ id: 'focus', context: 'personal' })
+    const child = makeTask({
+      id: 'child',
+      context: 'personal',
+      parentId: 'focus',
+    })
+    const otherContext = makeTask({ id: 'other-context', context: 'work' })
+    setup({
+      all: [focus, child, otherContext],
+      queue: [focus, otherContext],
+      context: 'personal',
+    })
+
+    await renderToday()
+
+    const taskQueries = mockUseTaskList.mock.calls.map(([filter, options]) => ({
+      filter,
+      enabled: options?.enabled,
+    }))
+    expect(
+      todayTaskRequestSnapshot(
+        taskQueries,
+        mockUseQueueItems.mock.calls[0]?.[2],
+      ),
+    ).toEqual({
+      taskQueries: [
+        {
+          filter: {
+            ids: ['focus'],
+            context: 'personal',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: true,
+        },
+        {
+          filter: {
+            parentId: 'focus',
+            context: 'personal',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: true,
+        },
+      ],
+      queueOptions: { enabled: true, context: 'personal' },
+    })
   })
 
   it('focuses the first non-completed task in queue order', async () => {
@@ -307,7 +477,65 @@ describe('TodayFocus', () => {
 
     await renderToday()
 
-    expect(screen.getByText("No tasks in today's queue")).toBeInTheDocument()
+    const getOutput = () => ({
+      taskQueries: mockUseTaskList.mock.calls.map(([filter, options]) => ({
+        filter,
+        enabled: options?.enabled,
+      })),
+      queueOptions: mockUseQueueItems.mock.calls[0]?.[2],
+      emptyMessage: screen.getByText("No tasks in today's queue").textContent,
+    })
+    expect(getOutput()).toEqual({
+      taskQueries: [
+        {
+          filter: {
+            ids: [],
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: false,
+        },
+        {
+          filter: { context: 'work', status: 'all', limit: 'unlimited' },
+          enabled: false,
+        },
+      ],
+      queueOptions: { enabled: true, context: 'work' },
+      emptyMessage: "No tasks in today's queue",
+    })
+  })
+
+  it('keeps the focus task visible while its subtasks are loading', async () => {
+    const focus = makeTask({ id: 'focus', title: 'Focus task' })
+    setup({ all: [focus], queue: [focus], isSubtasksLoading: true })
+
+    await renderToday()
+
+    const getOutput = () => ({
+      focusTitle: screen.getByRole('heading', { level: 1 }).textContent,
+      loadingIndicators: document.querySelectorAll('.animate-spin').length,
+    })
+    expect(getOutput()).toEqual({
+      focusTitle: 'Focus task',
+      loadingIndicators: 0,
+    })
+  })
+
+  it('shows a subtask load failure without hiding the focus task', async () => {
+    const focus = makeTask({ id: 'focus', title: 'Focus task' })
+    setup({ all: [focus], queue: [focus], subtasksError: true })
+
+    await renderToday()
+
+    const getOutput = () => ({
+      focusTitle: screen.getByRole('heading', { level: 1 }).textContent,
+      subtaskError: screen.getByRole('alert').textContent,
+    })
+    expect(getOutput()).toEqual({
+      focusTitle: 'Focus task',
+      subtaskError: 'Failed to load subtasks.',
+    })
   })
 
   it('shows the all-done state when every queued task is completed', async () => {
@@ -322,7 +550,8 @@ describe('TodayFocus', () => {
   })
 
   it('shows a loading spinner while tasks are loading', async () => {
-    setup({ all: [], queue: [], isLoading: true })
+    const queuedTask = makeTask({ id: 'queued', title: 'Queued task' })
+    setup({ all: [], queue: [queuedTask], isLoading: true })
 
     await renderToday()
 

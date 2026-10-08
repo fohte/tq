@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 
 import { FocusViewPresentation } from '#components/focus/focus-view'
-import { useBaseFilter } from '#hooks/use-filtered-tasks'
+import { useCurrentContext } from '#hooks/use-current-context'
 import { useLiveToday } from '#hooks/use-live-today'
 import {
   DAY_QUEUE_KEY,
@@ -15,17 +15,14 @@ import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { sortQueueTasksByDue } from '#lib/queue-task-due-order'
 import { sortQueueItemsBySortOrder } from '#lib/queue-task-order'
+import { selectQueueTaskPlaceholderData } from '#lib/queue-task-placeholder'
 
 export const Route = createFileRoute('/today')({
   component: TodayFocus,
 })
 
 export function TodayFocus() {
-  const baseFilter = useBaseFilter(true)
-  const { isLoading: isTaskListLoading, categorized } = useTaskList({
-    ...baseFilter,
-    limit: 'unlimited',
-  })
+  const context = useCurrentContext()
 
   const liveToday = useLiveToday()
   const todayStr = useMemo(() => formatLocalDate(liveToday), [liveToday])
@@ -34,31 +31,67 @@ export function TodayFocus() {
   const { data: todayTasksData, isLoading: isTodayTasksLoading } =
     useQueueItems(DAY_QUEUE_KEY, todayStr, {
       enabled: queueCarryOver.canReadQueueItems,
+      context,
     })
-  const isLoading =
-    isTaskListLoading || queueCarryOver.isCarryingOver || isTodayTasksLoading
-
-  const setQueueItems = useSetQueueItems()
-
-  const taskMap = useTaskMap(categorized.all)
   const queueItemsInSortOrder = useMemo(
     () => sortQueueItemsBySortOrder(todayTasksData ?? []),
     [todayTasksData],
   )
-
+  const queueTaskIds = useMemo(
+    () => [...new Set(queueItemsInSortOrder.map((item) => item.taskId))],
+    [queueItemsInSortOrder],
+  )
+  const queueTasksQuery = useTaskList(
+    {
+      ids: queueTaskIds,
+      context,
+      status: 'all',
+      limit: 'unlimited',
+    },
+    {
+      enabled:
+        queueCarryOver.canReadQueueItems &&
+        todayTasksData != null &&
+        queueTaskIds.length > 0,
+      placeholderData: (previousData, previousFilter) =>
+        selectQueueTaskPlaceholderData(
+          previousData,
+          previousFilter,
+          queueTaskIds,
+          context,
+        ),
+    },
+  )
+  const taskMap = useTaskMap(queueTasksQuery.data ?? [])
   const queueTasks = useMemo(
     () =>
       sortQueueTasksByDue(
-        queueItemsInSortOrder
-          .map((t) => taskMap.get(t.taskId))
-          .filter((t): t is Task => t != null),
+        queueTasksQuery.isPlaceholderData
+          ? queueTasksQuery.data
+          : queueItemsInSortOrder
+              .map((item) => taskMap.get(item.taskId))
+              .filter((task): task is Task => task != null),
       ),
-    [queueItemsInSortOrder, taskMap],
+    [
+      queueItemsInSortOrder,
+      queueTasksQuery.data,
+      queueTasksQuery.isPlaceholderData,
+      taskMap,
+    ],
   )
 
   const focusTask = useMemo(
     () => queueTasks.find((t) => t.status !== 'completed') ?? null,
     [queueTasks],
+  )
+  const subtasksQuery = useTaskList(
+    {
+      ...(focusTask == null ? {} : { parentId: focusTask.id }),
+      context,
+      status: 'all',
+      limit: 'unlimited',
+    },
+    { enabled: focusTask != null },
   )
 
   const nextTask = useMemo(() => {
@@ -70,10 +103,13 @@ export function TodayFocus() {
     )
   }, [queueTasks, focusTask])
 
-  const subtasks = useMemo(() => {
-    if (!focusTask) return []
-    return categorized.all.filter((t) => t.parentId === focusTask.id)
-  }, [categorized.all, focusTask])
+  const subtasks = subtasksQuery.data ?? []
+  const isLoading =
+    queueCarryOver.isCarryingOver ||
+    isTodayTasksLoading ||
+    queueTasksQuery.isLoading
+
+  const setQueueItems = useSetQueueItems()
 
   const handleDefer = (taskId: string) => {
     if (setQueueItems.isPending) return
@@ -93,6 +129,7 @@ export function TodayFocus() {
       focusTask={focusTask}
       nextTask={nextTask}
       subtasks={subtasks}
+      subtasksError={subtasksQuery.isError}
       onDefer={handleDefer}
     />
   )

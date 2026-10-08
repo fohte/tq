@@ -26,7 +26,7 @@ import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
 
 export interface TaskRowAppearanceProps {
-  task: Omit<Task, 'estimatedMinutes'>
+  task: Task
   sessions?: TaskAgentSession[]
   depth?: number
   selected?: boolean

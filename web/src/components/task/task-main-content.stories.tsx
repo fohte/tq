@@ -86,7 +86,6 @@ const sampleSubtasks: Task[] = [
     title: 'Add inline editing',
     status: 'completed',
     context: 'work',
-    estimatedMinutes: 30,
     parentId: baseTask.id,
     parentNumber: baseTask.number,
   }),

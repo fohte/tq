@@ -15,7 +15,7 @@ export interface ParsedQuery {
   hasFollowUpDue?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated' | 'estimate'
+  sortBy?: 'due' | 'created' | 'updated'
 }
 
 export interface SearchQueryTokenRange {
@@ -105,9 +105,8 @@ const searchQueryTokenDefinitions = new Map(
         ['due', 'Sort by due date'],
         ['created', 'Sort by creation date'],
         ['updated', 'Sort by update date'],
-        ['estimate', 'Sort by estimate'],
       ],
-      'Sort results by date or estimate.',
+      'Sort results by date.',
       (result, value) => {
         result.sortBy = value
       },
@@ -269,7 +268,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
     if ('values' in definition) {
       const option = definition.values.find((item) => item.value === value)
       if (option === undefined) {
-        freeTextParts.push(token)
+        // Stored queries may retain sort keys after their options are removed.
+        if (prefix !== 'sort') freeTextParts.push(token)
       } else {
         option.parse(result)
       }
