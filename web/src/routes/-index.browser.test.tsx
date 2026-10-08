@@ -166,8 +166,6 @@ vi.mock('#hooks/use-gcal-events', () => ({
   },
 }))
 
-vi.mock('#hooks/use-github-link', () => ({ useGithubSync: () => {} }))
-
 vi.mock('#hooks/use-integrations', () => ({
   useIntegrationAuthUrl: () => ({ data: undefined }),
 }))
