@@ -176,6 +176,10 @@ vi.mock('#hooks/use-memos', () => ({
 }))
 
 vi.mock('#hooks/use-projects', () => ({
+  ALL_PROJECTS_FILTER: {
+    context: 'all',
+    status: 'all',
+  },
   useProjects: () => ({ data: [] }),
 }))
 
