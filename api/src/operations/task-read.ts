@@ -63,6 +63,7 @@ const taskListInputSchema = listTasksQuerySchema
     hasEstimate: true,
     hasDue: true,
     includeMatch: true,
+    candidatesOn: true,
   })
   .extend({
     includeMatch: booleanOption
@@ -96,6 +97,7 @@ const taskSearchInputSchema = listTasksQuerySchema
     hasEstimate: true,
     hasDue: true,
     includeMatch: true,
+    candidatesOn: true,
   })
   .extend({
     includeMatch: booleanOption

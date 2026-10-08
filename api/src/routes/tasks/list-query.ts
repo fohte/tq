@@ -28,6 +28,7 @@ import {
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
 import { formatDateAtOffset } from '#lib/timezone'
+import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import {
   followUpDueTaskWaitSubquery,
   unresolvedTaskWaitSubquery,
@@ -333,6 +334,8 @@ function buildConditions(
   } else if (query.hasDue === false) {
     conditions.push(isNull(tasks.dueDate))
   }
+
+  conditions.push(...buildTaskDateConditions(query))
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
