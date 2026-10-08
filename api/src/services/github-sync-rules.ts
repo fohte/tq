@@ -86,11 +86,8 @@ async function seedIgnoredIssues(
   if (updatedRules.length > 0) onRuleUpdated?.(rule.id)
 }
 
-// Runs alongside syncAllGithubLinks (see github-sync.ts) so new-assignment
-// detection piggybacks on the same client-driven activity signal instead of
-// a dedicated poll: `GET /issues` only ever returns currently-assigned
-// issues, so anything in it that isn't linked or ignored yet is a fresh
-// assignment.
+// Runs in the full sync pass because `GET /issues` only returns currently
+// assigned issues, so any unlinked, non-ignored result is a fresh assignment.
 export async function syncGithubAssignedIssues(
   callbacks: SyncChangeCallbacks = {},
 ): Promise<void> {

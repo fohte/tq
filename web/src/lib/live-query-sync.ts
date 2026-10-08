@@ -8,7 +8,6 @@ import { Result } from 'neverthrow'
 
 import {
   descriptionTemplateKeys,
-  githubSyncKeys,
   githubSyncRuleKeys,
   labelKeys,
   matchesTaskSpecificQuery,
@@ -191,7 +190,6 @@ const resourceQueryFilters: Record<
       { queryKey: ['integrations'] },
       { queryKey: ['gcal-calendars'] },
       { queryKey: ['gcal-events'] },
-      { queryKey: githubSyncKeys.all },
     ],
   }),
   unknown: () => null,
@@ -295,11 +293,7 @@ export function connectLiveQuerySync(
     if (pendingAll) {
       pendingAll = false
       pendingFilters.clear()
-      invalidateFilters([
-        {
-          predicate: (query) => query.queryKey[0] !== githubSyncKeys.all[0],
-        },
-      ])
+      invalidateFilters([{}])
       return
     }
 
