@@ -128,7 +128,6 @@ describe('syncGithubAssignedIssues', () => {
       statusReason: null,
       startDate: null,
       dueDate: null,
-      estimatedMinutes: null,
       descriptionTemplateId: null,
       remindAt: null,
       parentId: null,

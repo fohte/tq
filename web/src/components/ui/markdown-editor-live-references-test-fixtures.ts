@@ -22,7 +22,6 @@ export function seedLiveReferenceFixtures(queryClient: QueryClient): void {
     description: null,
     startDate: null,
     dueDate: null,
-    estimatedMinutes: null,
   })
   queryClient.setQueryData(
     taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),

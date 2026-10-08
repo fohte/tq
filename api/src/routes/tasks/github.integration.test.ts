@@ -81,7 +81,6 @@ describe('POST /api/tasks/from-github', () => {
         labels: [],
         startDate: null,
         dueDate: null,
-        estimatedMinutes: null,
         remindAt: null,
         parentId: null,
         projectId: null,
