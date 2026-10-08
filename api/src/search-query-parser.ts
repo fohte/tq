@@ -268,7 +268,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
     if ('values' in definition) {
       const option = definition.values.find((item) => item.value === value)
       if (option === undefined) {
-        freeTextParts.push(token)
+        // Stored queries may retain sort keys after their options are removed.
+        if (prefix !== 'sort') freeTextParts.push(token)
       } else {
         option.parse(result)
       }

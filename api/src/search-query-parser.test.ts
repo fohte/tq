@@ -160,10 +160,8 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('sort:updated').sortBy).toBe('updated')
   })
 
-  it('treats invalid sort: value as free text', () => {
-    const result = parseSearchQuery('sort:invalid')
-    expect(result.sortBy).toBeUndefined()
-    expect(result.freeText).toBe('sort:invalid')
+  it('ignores unsupported sort values in stored queries', () => {
+    expect(parseSearchQuery('sort:invalid')).toEqual({ freeText: '' })
   })
 
   it('combines free text with multiple prefixes', () => {

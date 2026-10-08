@@ -1,3 +1,4 @@
+import { parseSearchQuery } from 'api/search-query-parser'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -23,6 +24,13 @@ describe('sortOptionValues', () => {
 describe('withDefaultSort', () => {
   it('defaults the sort when the query has none', () => {
     expect(withDefaultSort({ freeText: '' })).toEqual({
+      freeText: '',
+      sortBy: 'updated',
+    })
+  })
+
+  it('defaults the sort when a stored query uses an unsupported sort', () => {
+    expect(withDefaultSort(parseSearchQuery('sort:invalid'))).toEqual({
       freeText: '',
       sortBy: 'updated',
     })
