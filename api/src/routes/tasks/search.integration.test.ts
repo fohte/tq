@@ -25,6 +25,13 @@ function makePageSearchResponse(status: number, results: PageSearchResult[]) {
   return { status, body: { results } }
 }
 
+function makeTaskPreviewResponse(
+  status: number,
+  body: Record<string, unknown>,
+) {
+  return { status, body }
+}
+
 describe('tasks search API', () => {
   describe('GET /api/tasks/preview', () => {
     it('returns requested tasks by mixed numbers and UUIDs', async () => {
@@ -37,11 +44,11 @@ describe('tasks search API', () => {
       )
       const body = await jsonBody<Record<string, unknown>>(res)
 
-      const actual = Array.of(res.status, body)
+      const actual = makeTaskPreviewResponse(res.status, body)
 
-      expect(actual).toEqual([
-        200,
-        {
+      expect(actual).toEqual({
+        status: 200,
+        body: {
           [String(task.number)]: {
             id: task.id,
             number: task.number,
@@ -59,7 +66,7 @@ describe('tasks search API', () => {
             description,
           },
         },
-      ])
+      })
     })
 
     it('requires between one and one hundred valid identifiers', async () => {
@@ -87,9 +94,9 @@ describe('tasks search API', () => {
         `/api/tasks/preview?ids=${encodeURIComponent(ids.join(','))}`,
       )
       const body = await jsonBody<Record<string, unknown>>(res)
-      const actual = Array.of(res.status, body)
+      const actual = makeTaskPreviewResponse(res.status, body)
 
-      expect(actual).toEqual([200, {}])
+      expect(actual).toEqual({ status: 200, body: {} })
     })
   })
 

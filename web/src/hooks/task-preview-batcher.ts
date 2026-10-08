@@ -1,4 +1,4 @@
-import { isTaskPreviewId } from 'api/lib/task-preview-id'
+import { isTaskIdentifier } from 'api/lib/task-identifier'
 import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
@@ -63,7 +63,7 @@ export function createTaskPreviewBatcher(fetchPreviews: FetchPreviews) {
   }
 
   return (id: string): Promise<TaskPreview | null> => {
-    if (!isTaskPreviewId(id)) return Promise.resolve(null)
+    if (!isTaskIdentifier(id)) return Promise.resolve(null)
 
     return new Promise((resolve, reject) => {
       const current = pendingRequests.get(id) ?? []

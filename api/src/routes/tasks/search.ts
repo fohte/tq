@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { taskPreviewIdSchema } from '#lib/numeric-id'
 import { splitCommaList } from '#lib/split-comma-list'
+import { numericIdPattern } from '#lib/task-identifier'
 import { queryTaskList } from '#routes/tasks/list-query'
 import { queryPageSearch } from '#routes/tasks/page-search-query'
 import { resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
@@ -38,7 +39,7 @@ export const tasksSearchApp = new Hono()
   .get('/preview', zValidator('query', taskPreviewQuerySchema), async (c) => {
     const { ids } = c.req.valid('query')
     const lookupIdByParam = new Map(
-      ids.map((id) => [id, /^\d+$/.test(id) ? id : id.toLowerCase()]),
+      ids.map((id) => [id, numericIdPattern.test(id) ? id : id.toLowerCase()]),
     )
     const { byParam } = await resolveTasksByIdsOrNumbers([
       ...lookupIdByParam.values(),

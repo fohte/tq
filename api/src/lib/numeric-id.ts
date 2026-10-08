@@ -1,12 +1,10 @@
 import { z } from 'zod'
 
 import {
-  isTaskPreviewId,
+  isTaskIdentifier,
   numericIdPattern,
   PG_INTEGER_MAX,
-} from '#lib/task-preview-id'
-
-export { isTaskPreviewId } from '#lib/task-preview-id'
+} from '#lib/task-identifier'
 
 // `tasks.number` is a Postgres `integer`; comparing/inserting a digit string
 // past this range would make an `eq`/`inArray` query throw instead of simply
@@ -35,4 +33,4 @@ export const taskIdOrNumber = z.union([
 
 export const taskPreviewIdSchema = z
   .string()
-  .refine(isTaskPreviewId, 'Expected a UUID or PostgreSQL integer task number')
+  .refine(isTaskIdentifier, 'Expected a UUID or PostgreSQL integer task number')

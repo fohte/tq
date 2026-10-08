@@ -4,7 +4,7 @@ const taskUuidPattern =
 
 export const PG_INTEGER_MAX = 2_147_483_647
 
-export function isTaskPreviewId(value: string) {
+export function isTaskIdentifier(value: string) {
   return numericIdPattern.test(value)
     ? Number(value) <= PG_INTEGER_MAX
     : taskUuidPattern.test(value)

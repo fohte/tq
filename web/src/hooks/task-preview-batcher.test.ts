@@ -14,6 +14,13 @@ function makePreview(id: string, number: number): TaskPreview {
   }
 }
 
+function makeBatcherOutput(
+  requests: string[][],
+  results: (TaskPreview | null)[],
+) {
+  return { requests, results }
+}
+
 describe('task preview batcher', () => {
   it('batches valid identifiers and shares duplicate lookups', async () => {
     const numberPreview = makePreview(
@@ -40,15 +47,15 @@ describe('task preview batcher', () => {
       getTaskPreview(uuidPreview.id),
     ])
 
-    const actual = Array.of(
+    const actual = makeBatcherOutput(
       fetchPreviews.mock.calls.map(([ids]) => ids),
       results,
     )
 
-    expect(actual).toEqual([
-      [['12', '00000000-0000-4000-8000-000000000002']],
-      [numberPreview, numberPreview, uuidPreview],
-    ])
+    expect(actual).toEqual({
+      requests: [['12', '00000000-0000-4000-8000-000000000002']],
+      results: [numberPreview, numberPreview, uuidPreview],
+    })
   })
 
   it('resolves missing and invalid identifiers to null without interrupting valid lookups', async () => {
@@ -65,12 +72,15 @@ describe('task preview batcher', () => {
       getTaskPreview('2147483648'),
     ])
 
-    const actual = Array.of(
+    const actual = makeBatcherOutput(
       fetchPreviews.mock.calls.map(([ids]) => ids),
       results,
     )
 
-    expect(actual).toEqual([[['12', '999']], [preview, null, null, null]])
+    expect(actual).toEqual({
+      requests: [['12', '999']],
+      results: [preview, null, null, null],
+    })
   })
 
   it('splits more than one hundred identifiers across requests', async () => {

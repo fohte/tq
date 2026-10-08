@@ -10,7 +10,7 @@
     "./lib/change-event-contract": "./src/lib/change-event-contract.ts",
     "./lib/markdown-parser": "./src/lib/markdown-parser.ts",
     "./lib/split-comma-list": "./src/lib/split-comma-list.ts",
-    "./lib/task-preview-id": "./src/lib/task-preview-id.ts",
+    "./lib/task-identifier": "./src/lib/task-identifier.ts",
     "./lib/test-utils": "./src/lib/test-utils.ts",
     "./lib/text-scan": "./src/lib/text-scan.ts",
     "./operations": "./src/operations/index.ts",
