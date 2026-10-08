@@ -12,6 +12,7 @@ import {
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
+import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
 import {
   makeTask,
   makeTaskDetail,
@@ -1039,7 +1040,7 @@ describe('CreateTaskModal', () => {
       })
       queryClient.setQueryData(
         taskPreviewKeys.preview('34'),
-        makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
+        makeTaskPreview({ number: 34, title: 'Refactor auth module' }),
       )
       // TaskTitleInput's own suggestion popup (separate from the
       // parent-preview lookup above) also queries on '^' — useDebounce
@@ -1088,7 +1089,7 @@ describe('CreateTaskModal', () => {
       })
       queryClient.setQueryData(
         taskPreviewKeys.preview('34'),
-        makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
+        makeTaskPreview({ number: 34, title: 'Refactor auth module' }),
       )
       queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
       queryClient.setQueryData(taskMentionKeys.suggestions('3'), [])

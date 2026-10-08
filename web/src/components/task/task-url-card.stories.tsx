@@ -2,9 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
 import { TaskUrlCard } from '#components/task/task-url-card'
-import type { TaskDetail } from '#hooks/use-tasks'
 import { taskPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -13,14 +12,14 @@ const TASK_URL = 'https://tq.fohte.net/tasks/42'
 const UNRESOLVED_ID = '999'
 const UNRESOLVED_URL = 'https://tq.fohte.net/tasks/999'
 
-const baseTask: TaskDetail = makeTaskDetail({
+type TaskPreview = ReturnType<typeof makeTaskPreview>
+
+const baseTask = makeTaskPreview({
   id: '00000000-0000-0000-0000-000000000001',
   number: 42,
   title: 'Implement task URL live preview',
   description:
     'Adds live preview cards for pasted tq task URLs when they are the entire content of a paragraph.',
-  startDate: null,
-  dueDate: null,
 })
 
 function Providers({
@@ -29,7 +28,7 @@ function Providers({
   children,
 }: {
   id: string
-  task: TaskDetail | null
+  task: TaskPreview | null
   children: ReactNode
 }) {
   const queryClient = new QueryClient({
@@ -54,7 +53,7 @@ function TaskUrlCardWithProviders({
 }: {
   id: string
   raw: string
-  task: TaskDetail | null
+  task: TaskPreview | null
 }) {
   return (
     <Providers id={id} task={task}>
