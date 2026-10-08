@@ -120,13 +120,6 @@ export function buildQueueSections(
   })
 }
 
-export function filterTasksDueOnOrBeforeToday(
-  tasks: Task[],
-  today: string,
-): Task[] {
-  return tasks.filter((task) => task.dueDate != null && task.dueDate <= today)
-}
-
 export function buildCompactQueueSections(
   queueSections: QueueSectionData[],
   tasksDueOnOrBeforeToday: Task[],
