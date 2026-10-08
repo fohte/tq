@@ -1655,7 +1655,7 @@ describe('tasks CRUD API', () => {
       await createTask('No task dates')
 
       const res = await app.request(
-        '/api/tasks?dateFrom=2026-03-16&dateTo=2026-03-19',
+        '/api/tasks?context=all&status=all&limit=unlimited&dateFrom=2026-03-16&dateTo=2026-03-19',
       )
 
       expect(
@@ -1699,7 +1699,9 @@ describe('tasks CRUD API', () => {
         dueDate: '2026-03-15',
       })
 
-      const res = await app.request('/api/tasks?dateFrom=2026-03-16')
+      const res = await app.request(
+        '/api/tasks?context=all&status=all&limit=unlimited&dateFrom=2026-03-16',
+      )
 
       expect(
         (await jsonBody<TaskListItemResponse[]>(res))
@@ -1734,7 +1736,9 @@ describe('tasks CRUD API', () => {
         startDate: '2026-03-20',
       })
 
-      const res = await app.request('/api/tasks?dateTo=2026-03-19')
+      const res = await app.request(
+        '/api/tasks?context=all&status=all&limit=unlimited&dateTo=2026-03-19',
+      )
 
       expect(
         (await jsonBody<TaskListItemResponse[]>(res))
@@ -1759,7 +1763,9 @@ describe('tasks CRUD API', () => {
       await createTask('Due after boundary', { dueDate: '2026-03-19' })
       await createTask('No due date')
 
-      const res = await app.request('/api/tasks?dueTo=2026-03-18')
+      const res = await app.request(
+        '/api/tasks?context=all&status=all&limit=unlimited&dueTo=2026-03-18',
+      )
 
       expect(
         (await jsonBody<TaskListItemResponse[]>(res))
@@ -1851,8 +1857,12 @@ describe('tasks CRUD API', () => {
       ])
 
       const [allRes, todoRes] = await Promise.all([
-        app.request('/api/tasks?candidatesOn=2026-03-18'),
-        app.request('/api/tasks?candidatesOn=2026-03-18&status=todo'),
+        app.request(
+          '/api/tasks?context=all&status=all&limit=unlimited&candidatesOn=2026-03-18',
+        ),
+        app.request(
+          '/api/tasks?context=all&status=todo&limit=unlimited&candidatesOn=2026-03-18',
+        ),
       ])
       const [allTasks, todoTasks] = await Promise.all([
         jsonBody<TaskListItemResponse[]>(allRes),
