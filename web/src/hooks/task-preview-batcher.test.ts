@@ -1,6 +1,7 @@
 import type { InferResponseType } from 'hono/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
 import { getTaskPreview } from '#hooks/task-preview-batcher'
 import type { api } from '#lib/api'
 
@@ -50,17 +51,6 @@ function getRequestedIds() {
   )
 }
 
-function makePreview(id: string, number: number): TaskPreview {
-  return {
-    id,
-    number,
-    title: `Task ${String(number)}`,
-    status: 'todo',
-    statusReason: null,
-    description: null,
-  }
-}
-
 function makeBatcherOutput(
   requests: string[][],
   results: (TaskPreview | null)[],
@@ -70,11 +60,14 @@ function makeBatcherOutput(
 
 describe('task preview batcher', () => {
   it('batches valid identifiers and shares duplicate lookups', async () => {
-    const numberPreview = makePreview(
-      '00000000-0000-4000-8000-000000000001',
-      12,
-    )
-    const uuidPreview = makePreview('00000000-0000-4000-8000-000000000002', 34)
+    const numberPreview = makeTaskPreview({
+      id: '20000000-0000-4000-8000-000000000012',
+      number: 12,
+    })
+    const uuidPreview = makeTaskPreview({
+      id: '20000000-0000-4000-8000-000000000034',
+      number: 34,
+    })
     const previews: Record<string, TaskPreview> = {
       '12': numberPreview,
       [uuidPreview.id]: uuidPreview,
@@ -90,13 +83,16 @@ describe('task preview batcher', () => {
     const actual = makeBatcherOutput(getRequestedIds(), results)
 
     expect(actual).toEqual({
-      requests: [['12', '00000000-0000-4000-8000-000000000002']],
+      requests: [['12', uuidPreview.id]],
       results: [numberPreview, numberPreview, uuidPreview],
     })
   })
 
   it('resolves missing and invalid identifiers to null without interrupting valid lookups', async () => {
-    const preview = makePreview('00000000-0000-4000-8000-000000000001', 12)
+    const preview = makeTaskPreview({
+      id: '20000000-0000-4000-8000-000000000012',
+      number: 12,
+    })
     mockPreviews({ '12': preview })
 
     const results = await Promise.all([
