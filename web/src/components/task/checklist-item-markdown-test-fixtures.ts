@@ -11,12 +11,12 @@ import {
 } from '#lib/query-keys'
 
 export const CHECKLIST_ITEM_TASK_NUMBER = 7401
-export const CHECKLIST_ITEM_TASK_ID = '00000000-0000-4000-8000-000000000741'
+const CHECKLIST_ITEM_TASK_ID = '00000000-0000-4000-8000-000000000741'
 export const CHECKLIST_ITEM_TASK_TITLE = 'Write sample release notes'
 export const CHECKLIST_ITEM_GITHUB_URL =
   'https://github.com/example-org/sample-app/pull/14'
 export const CHECKLIST_ITEM_GITHUB_TITLE = 'Add sample import flow'
-export const CHECKLIST_ITEM_PROJECT_ID = '00000000-0000-4000-8000-000000000742'
+const CHECKLIST_ITEM_PROJECT_ID = '00000000-0000-4000-8000-000000000742'
 export const CHECKLIST_ITEM_PROJECT_TITLE = 'Sample project'
 
 export function checklistItemTaskUrl(origin: string): string {
