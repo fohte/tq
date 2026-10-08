@@ -21,7 +21,6 @@ const baseTask: TaskDetail = makeTaskDetail({
     'Adds live preview cards for pasted tq task URLs when they are the entire content of a paragraph.',
   startDate: null,
   dueDate: null,
-  estimatedMinutes: null,
 })
 
 function Providers({

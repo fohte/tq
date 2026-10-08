@@ -22,7 +22,6 @@ interface TemplateResponse {
   id: string
   title: string
   description: string | null
-  estimatedMinutes: number | null
   projectId: string | null
   parentId: string | null
   context: 'work' | 'personal'
@@ -68,7 +67,6 @@ async function createTemplate(
   anchorDate: string,
   opts: {
     description?: string
-    estimatedMinutes?: number
     projectId?: string
     parentId?: string
     context?: string
@@ -119,7 +117,6 @@ describe('recurring task templates CRUD API', () => {
         id: 'ID',
         title: 'Daily standup',
         description: null,
-        estimatedMinutes: null,
         projectId: null,
         parentId: null,
         context: 'personal',
@@ -148,7 +145,6 @@ describe('recurring task templates CRUD API', () => {
       const res = await postTemplate({
         title: 'Weekly review',
         description: 'Review the week',
-        estimatedMinutes: 45,
         projectId: project.id,
         parentId: parent.id,
         context: 'work',
@@ -165,7 +161,6 @@ describe('recurring task templates CRUD API', () => {
         id: 'ID',
         title: 'Weekly review',
         description: 'Review the week',
-        estimatedMinutes: 45,
         projectId: project.id,
         parentId: parent.id,
         context: 'work',
@@ -334,13 +329,12 @@ describe('recurring task templates CRUD API', () => {
         'Original title',
         { type: 'daily', interval: 1 },
         '2026-04-01',
-        { description: 'Original description', estimatedMinutes: 30 },
+        { description: 'Original description' },
       )
 
       const res = await patchTemplate(created.id, {
         title: 'Updated title',
         description: 'Updated description',
-        estimatedMinutes: 60,
       })
 
       expect(res.status).toBe(200)
@@ -349,7 +343,6 @@ describe('recurring task templates CRUD API', () => {
         ...normalizeTemplate(created),
         title: 'Updated title',
         description: 'Updated description',
-        estimatedMinutes: 60,
       })
     })
 
@@ -406,7 +399,6 @@ describe('recurring task templates CRUD API', () => {
         '2026-04-01',
         {
           description: 'Some description',
-          estimatedMinutes: 30,
           projectId: project.id,
           parentId: parent.id,
           startOffsetDays: 2,
@@ -415,7 +407,6 @@ describe('recurring task templates CRUD API', () => {
 
       const res = await patchTemplate(created.id, {
         description: null,
-        estimatedMinutes: null,
         projectId: null,
         parentId: null,
         startOffsetDays: null,
@@ -426,7 +417,6 @@ describe('recurring task templates CRUD API', () => {
       expect(normalizeTemplate(body)).toEqual({
         ...normalizeTemplate(created),
         description: null,
-        estimatedMinutes: null,
         projectId: null,
         parentId: null,
         startOffsetDays: null,

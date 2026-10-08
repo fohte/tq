@@ -67,7 +67,6 @@ export function useCreateTask() {
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
-        estimatedMinutes: null,
         remindAt: null,
         parentId: input.parentId ?? null,
         parentNumber: null,

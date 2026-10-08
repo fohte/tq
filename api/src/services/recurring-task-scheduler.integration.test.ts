@@ -79,7 +79,6 @@ function expectedTask(
     statusReason: null,
     startDate: null,
     dueDate: null,
-    estimatedMinutes: template.estimatedMinutes,
     descriptionTemplateId: null,
     parentId: template.parentId,
     projectId: template.projectId,
@@ -303,14 +302,13 @@ describe('generateDueRecurringTasks', () => {
     })
   })
 
-  it('copies description, estimatedMinutes, and context from the template', async () => {
+  it('copies description and context from the template', async () => {
     fakeToday('2026-03-23')
     const template = await createTemplate(
       { type: 'daily', interval: 1 },
       {
         anchorDate: '2026-03-22',
         description: 'Weekly grocery run notes',
-        estimatedMinutes: 45,
         context: 'work',
       },
     )
