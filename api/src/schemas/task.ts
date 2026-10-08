@@ -167,14 +167,13 @@ export const listTasksQuerySchema = z.object({
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
 
-export const taskFilterQuerySchema = listTasksQuerySchema.omit({
+const taskFilterQuerySchema = listTasksQuerySchema.omit({
   includeAncestors: true,
   includeMatch: true,
   limit: true,
   offset: true,
   sortBy: true,
 })
-export type TaskFilterQuery = z.infer<typeof taskFilterQuerySchema>
 
 export const countTasksQuerySchema = taskFilterQuerySchema
 export type CountTasksQuery = z.infer<typeof countTasksQuerySchema>

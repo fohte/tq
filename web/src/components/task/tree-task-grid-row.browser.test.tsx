@@ -32,6 +32,7 @@ const mockUseProject = vi.fn()
 // Row subcomponents and task-row-shared import these hooks, so their exports
 // must exist in this mock.
 vi.mock('#hooks/use-tasks', () => ({
+  allTasksFilter: { context: 'all', status: 'all', limit: 'unlimited' },
   useTaskList: () => ({ categorized: { all: [] } }),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
   useUpdateTask: () => ({ mutate: vi.fn() }),

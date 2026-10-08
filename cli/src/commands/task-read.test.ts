@@ -99,9 +99,12 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            context: 'all',
+            status: 'todo',
             dateFrom: '2026-03-16',
             dateTo: '2026-03-19',
             dueTo: '2026-03-18',
+            limit: '20',
           },
           body: undefined,
         },
