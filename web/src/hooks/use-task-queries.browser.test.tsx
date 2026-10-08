@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
+  type TaskListFilter,
   useInfiniteTaskList,
   useTaskCount,
   useTaskList,
@@ -47,6 +48,18 @@ function taskCountQuerySnapshot(
   listCalls: unknown,
 ) {
   return { counts, countCalls, listCalls }
+}
+
+function taskListQuerySnapshot(data: unknown, calls: unknown) {
+  return { data, calls }
+}
+
+function taskListPlaceholderSnapshot(
+  data: unknown,
+  isPlaceholderData: boolean,
+  previousFilter: TaskListFilter | undefined,
+) {
+  return { data, isPlaceholderData, previousFilter }
 }
 
 function useTaskCountConsumers() {
@@ -184,6 +197,105 @@ describe('useInfiniteTaskList', () => {
 })
 
 describe('useTaskList', () => {
+  it('serializes an ID-scoped list with its context and all statuses', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () =>
+        useTaskList({
+          ids: ['task-a', 'task-b'],
+          context: 'work',
+          status: ['todo', 'completed'],
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(
+        taskListQuerySnapshot(result.current.data, mockGet.mock.calls),
+      ).toEqual({
+        data: [],
+        calls: [
+          [
+            {
+              query: {
+                ids: ['task-a', 'task-b'],
+                context: 'work',
+                status: ['todo', 'completed'],
+                hasDue: undefined,
+                includeAncestors: undefined,
+              },
+            },
+          ],
+        ],
+      })
+    })
+  })
+
+  it('passes the previous list filter to placeholder data', async () => {
+    const previousTask = makeTask({ id: 'previous' })
+    let resolveCurrentQuery: ((tasks: unknown[]) => void) | undefined
+    mockGet.mockImplementation(({ query }: { query: { ids: string[] } }) => {
+      if (query.ids[0] === 'previous') {
+        return Promise.resolve(jsonResponse([previousTask]))
+      }
+      return new Promise((resolve) => {
+        resolveCurrentQuery = (tasks) => {
+          resolve(jsonResponse(tasks))
+        }
+      })
+    })
+    let previousFilter: TaskListFilter | undefined
+
+    const { result, rerender } = renderHook(
+      ({ ids }: { ids: string[] }) =>
+        useTaskList(
+          { ids, context: 'work' },
+          {
+            placeholderData: (previousData, filter) => {
+              previousFilter = filter
+              return previousData
+            },
+          },
+        ),
+      { wrapper, initialProps: { ids: ['previous'] } },
+    )
+
+    await waitFor(() => {
+      if (!result.current.isSuccess) {
+        throw new Error('the previous task query has not completed')
+      }
+    })
+    rerender({ ids: ['current'] })
+    await waitFor(() => {
+      expect(
+        taskListPlaceholderSnapshot(
+          result.current.data,
+          result.current.isPlaceholderData,
+          previousFilter,
+        ),
+      ).toEqual({
+        data: [previousTask],
+        isPlaceholderData: true,
+        previousFilter: { ids: ['previous'], context: 'work' },
+      })
+    })
+
+    await act(async () => {
+      resolveCurrentQuery?.([makeTask({ id: 'current' })])
+      await Promise.resolve()
+    })
+  })
+
+  it('does not request an empty ID filter while disabled', () => {
+    renderHook(
+      () => useTaskList({ ids: [], context: 'work' }, { enabled: false }),
+      { wrapper },
+    )
+
+    expect(mockGet.mock.calls).toEqual([])
+  })
+
   it('serializes the due-date filter as an HTTP query string', async () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
