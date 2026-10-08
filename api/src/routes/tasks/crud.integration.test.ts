@@ -8,6 +8,8 @@ import {
   recurringTaskTemplates,
   taskDescriptionTemplates,
   taskGithubLinks,
+  taskQueueItems,
+  taskQueues,
   taskRelations,
   tasks,
 } from '#db/schema'
@@ -315,7 +317,6 @@ function createdTaskResponse(
     labels: [],
     startDate: null,
     dueDate: null,
-    estimatedMinutes: null,
     remindAt: null,
     parentId: null,
     projectId: null,
@@ -1059,7 +1060,6 @@ describe('tasks CRUD API', () => {
           description: 'Deploy to production',
           startDate: '2026-03-20',
           dueDate: '2026-03-25',
-          estimatedMinutes: 120,
           context: 'work',
           commitment: 'inbox',
         }),
@@ -1071,7 +1071,6 @@ describe('tasks CRUD API', () => {
       expect(body.description).toBe('Deploy to production')
       expect(body.startDate).toBe('2026-03-20')
       expect(body.dueDate).toBe('2026-03-25')
-      expect(body.estimatedMinutes).toBe(120)
       expect(body.context).toBe('work')
       expect(body.commitment).toBe('inbox')
     })
@@ -1097,7 +1096,6 @@ describe('tasks CRUD API', () => {
         labels: [],
         startDate: null,
         dueDate: null,
-        estimatedMinutes: null,
         remindAt: null,
         parentId: null,
         projectId: null,
@@ -1553,6 +1551,283 @@ describe('tasks CRUD API', () => {
     })
   })
 
+  describe('GET /api/tasks with date filters', () => {
+    it('matches inclusive date range overlaps and date-only tasks', async () => {
+      const rangeSpansFilter = await createTask('Range spans filter', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-25',
+      })
+      const endsAtRangeStart = await createTask('Ends at range start', {
+        startDate: '2026-03-14',
+        dueDate: '2026-03-16',
+      })
+      const startsAtRangeEnd = await createTask('Starts at range end', {
+        startDate: '2026-03-19',
+        dueDate: '2026-03-22',
+      })
+      const dueDateInside = await createTask('Due date inside', {
+        dueDate: '2026-03-18',
+      })
+      const startDateInside = await createTask('Start date inside', {
+        startDate: '2026-03-17',
+      })
+      const reversedStartDateInside = await createTask(
+        'Reversed start date inside',
+        { startDate: '2026-03-18', dueDate: '2026-03-10' },
+      )
+      const reversedDueDateInside = await createTask(
+        'Reversed due date inside',
+        { startDate: '2026-03-22', dueDate: '2026-03-18' },
+      )
+      await createTask('Range before filter', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-15',
+      })
+      await createTask('Range after filter', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      await createTask('Reversed range outside filter', {
+        startDate: '2026-03-22',
+        dueDate: '2026-03-10',
+      })
+      await createTask('No task dates')
+
+      const res = await app.request(
+        '/api/tasks?dateFrom=2026-03-16&dateTo=2026-03-19',
+      )
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeSpansFilter.id,
+          endsAtRangeStart.id,
+          startsAtRangeEnd.id,
+          dueDateInside.id,
+          startDateInside.id,
+          reversedStartDateInside.id,
+          reversedDueDateInside.id,
+        ].toSorted(),
+      )
+    })
+
+    it('matches task date ranges that reach dateFrom', async () => {
+      const rangeReachesBoundary = await createTask(
+        'Range reaches lower bound',
+        {
+          startDate: '2026-03-10',
+          dueDate: '2026-03-16',
+        },
+      )
+      const rangeAfterBoundary = await createTask('Range after lower bound', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      const startDateAfterBoundary = await createTask(
+        'Start after lower bound',
+        { startDate: '2026-03-16' },
+      )
+      await createTask('Range before lower bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-15',
+      })
+      await createTask('Due before lower bound', {
+        dueDate: '2026-03-15',
+      })
+
+      const res = await app.request('/api/tasks?dateFrom=2026-03-16')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeReachesBoundary.id,
+          rangeAfterBoundary.id,
+          startDateAfterBoundary.id,
+        ].toSorted(),
+      )
+    })
+
+    it('matches task date ranges that begin by dateTo', async () => {
+      const rangeSpansBoundary = await createTask('Range spans upper bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-25',
+      })
+      const rangeBeforeBoundary = await createTask('Range before upper bound', {
+        startDate: '2026-03-10',
+        dueDate: '2026-03-19',
+      })
+      const startDateAtBoundary = await createTask('Start at upper bound', {
+        startDate: '2026-03-19',
+      })
+      await createTask('Range after upper bound', {
+        startDate: '2026-03-20',
+        dueDate: '2026-03-25',
+      })
+      await createTask('Start after upper bound', {
+        startDate: '2026-03-20',
+      })
+
+      const res = await app.request('/api/tasks?dateTo=2026-03-19')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual(
+        [
+          rangeSpansBoundary.id,
+          rangeBeforeBoundary.id,
+          startDateAtBoundary.id,
+        ].toSorted(),
+      )
+    })
+
+    it('includes tasks due on or before dueTo', async () => {
+      const beforeBoundary = await createTask('Due before boundary', {
+        dueDate: '2026-03-17',
+      })
+      const onBoundary = await createTask('Due on boundary', {
+        dueDate: '2026-03-18',
+      })
+      await createTask('Due after boundary', { dueDate: '2026-03-19' })
+      await createTask('No due date')
+
+      const res = await app.request('/api/tasks?dueTo=2026-03-18')
+
+      expect(
+        (await jsonBody<TaskListItemResponse[]>(res))
+          .map(({ id }) => id)
+          .toSorted(),
+      ).toEqual([beforeBoundary.id, onBoundary.id].toSorted())
+    })
+
+    it('filters candidates by date and queue membership across queue periods', async () => {
+      const dueCandidate = await createTask('Due candidate', {
+        dueDate: '2026-03-17',
+      })
+      const startCandidate = await createTask('Start candidate', {
+        startDate: '2026-03-18',
+      })
+      const activeCandidate = await createTask('Active candidate', {
+        commitment: 'active',
+      })
+      const dueOnCandidateDate = await createTask('Due on candidate date', {
+        dueDate: '2026-03-18',
+      })
+      const completedCandidate = await createTask('Completed candidate', {
+        dueDate: '2026-03-16',
+      })
+      await setStatus(completedCandidate.id, 'completed')
+
+      const dayQueued = await createTask('Day queued', {
+        dueDate: '2026-03-17',
+      })
+      const weekQueued = await createTask('Week queued', {
+        dueDate: '2026-03-17',
+      })
+      const monthQueued = await createTask('Month queued', {
+        dueDate: '2026-03-17',
+      })
+      const staticQueued = await createTask('Static queued', {
+        dueDate: '2026-03-17',
+      })
+      const otherWeekQueued = await createTask('Other week queued', {
+        dueDate: '2026-03-17',
+      })
+      await createTask('Not a candidate', {
+        startDate: '2026-03-19',
+        dueDate: '2026-03-20',
+        commitment: 'someday',
+      })
+
+      const queues = await db.select().from(taskQueues)
+      const dayQueue = firstOrThrow(queues.filter(({ key }) => key === 'day'))
+      const weekQueue = firstOrThrow(queues.filter(({ key }) => key === 'week'))
+      const monthQueue = firstOrThrow(
+        await db
+          .insert(taskQueues)
+          .values({ key: 'monthly-test', name: 'Monthly', periodUnit: 'month' })
+          .returning(),
+      )
+      const staticQueue = firstOrThrow(
+        await db
+          .insert(taskQueues)
+          .values({ key: 'static-test', name: 'Static', periodUnit: null })
+          .returning(),
+      )
+      await db.insert(taskQueueItems).values([
+        {
+          queueId: dayQueue.id,
+          periodStart: '2026-03-18',
+          taskId: dayQueued.id,
+        },
+        {
+          queueId: weekQueue.id,
+          periodStart: '2026-03-16',
+          taskId: weekQueued.id,
+        },
+        {
+          queueId: monthQueue.id,
+          periodStart: '2026-03-01',
+          taskId: monthQueued.id,
+        },
+        {
+          queueId: staticQueue.id,
+          periodStart: null,
+          taskId: staticQueued.id,
+        },
+        {
+          queueId: weekQueue.id,
+          periodStart: '2026-03-09',
+          taskId: otherWeekQueued.id,
+        },
+      ])
+
+      const [allRes, todoRes] = await Promise.all([
+        app.request('/api/tasks?candidatesOn=2026-03-18'),
+        app.request('/api/tasks?candidatesOn=2026-03-18&status=todo'),
+      ])
+      const [allTasks, todoTasks] = await Promise.all([
+        jsonBody<TaskListItemResponse[]>(allRes),
+        jsonBody<TaskListItemResponse[]>(todoRes),
+      ])
+
+      const actualOutput = `${allTasks
+        .map(({ id }) => id)
+        .toSorted()
+        .join('\n')}\n---\n${todoTasks
+        .map(({ id }) => id)
+        .toSorted()
+        .join('\n')}`
+      const expectedOutput = `${[
+        dueCandidate.id,
+        startCandidate.id,
+        activeCandidate.id,
+        dueOnCandidateDate.id,
+        completedCandidate.id,
+        otherWeekQueued.id,
+      ]
+        .toSorted()
+        .join('\n')}\n---\n${[
+        dueCandidate.id,
+        startCandidate.id,
+        activeCandidate.id,
+        dueOnCandidateDate.id,
+        otherWeekQueued.id,
+      ]
+        .toSorted()
+        .join('\n')}`
+
+      expect(actualOutput).toBe(expectedOutput)
+    })
+  })
+
   describe('GET /api/tasks with extended predicates', () => {
     it('filters by free text via q', async () => {
       await createTask('Deploy to production')
@@ -1749,21 +2024,6 @@ describe('tasks CRUD API', () => {
       expect(body.map((t) => t.id).toSorted()).toEqual(
         [exactMatch.id, descendantMatch.id].toSorted(),
       )
-    })
-
-    it('filters by hasEstimate', async () => {
-      const withEstimate = await createTask('With estimate', {
-        estimatedMinutes: 30,
-      })
-      await createTask('Without estimate')
-
-      const res = await app.request('/api/tasks?hasEstimate=true')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].id).toBe(withEstimate.id)
     })
 
     it('filters by hasDue', async () => {
@@ -2441,18 +2701,6 @@ describe('tasks CRUD API', () => {
         taskWithoutDueSecond.id,
       ])
     })
-
-    it('sorts by estimate ascending when sortBy=estimate', async () => {
-      const taskA = await createTask('Task A', { estimatedMinutes: 90 })
-      const taskB = await createTask('Task B', { estimatedMinutes: 15 })
-      const taskC = await createTask('Task C', { estimatedMinutes: 45 })
-
-      const res = await app.request('/api/tasks?sortBy=estimate')
-
-      expect(res.status).toBe(200)
-      const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id)).toEqual([taskB.id, taskC.id, taskA.id])
-    })
   })
 
   describe('GET /api/tasks/:id', () => {
@@ -2488,7 +2736,7 @@ describe('tasks CRUD API', () => {
       const actual = relatedTaskQueryCountSnapshot(
         relatedTaskHydrationQueryCount,
       )
-      const expected = relatedTaskQueryCountSnapshot(7)
+      const expected = relatedTaskQueryCountSnapshot(8)
 
       expect(actual).toEqual(expected)
     })
@@ -4138,7 +4386,6 @@ describe('tasks CRUD API', () => {
           labels: [],
           startDate: null,
           dueDate: '2026-03-22',
-          estimatedMinutes: null,
           remindAt: null,
           parentId: null,
           projectId: null,
@@ -4168,7 +4415,6 @@ describe('tasks CRUD API', () => {
           id: 'ID',
           title: 'Daily standup',
           description: null,
-          estimatedMinutes: null,
           projectId: null,
           parentId: null,
           context: 'personal',
@@ -4282,7 +4528,6 @@ describe('tasks CRUD API', () => {
           id: 'ID',
           title: 'New title',
           description: null,
-          estimatedMinutes: null,
           projectId: null,
           parentId: null,
           context: 'personal',

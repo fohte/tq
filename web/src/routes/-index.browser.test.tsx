@@ -24,12 +24,11 @@ import { Route as DayRoute } from '#routes/index'
 
 type TaskListMock = (
   filter: unknown,
-  options?: { enabled?: boolean; refetchInterval?: number },
+  options?: { enabled?: boolean },
 ) => unknown
 type DateRangeQueryMock = (
   startDate: string,
   endDate: string,
-  refetchInterval?: number,
   enabled?: boolean,
 ) => unknown
 type GcalQueryMock = (
@@ -38,11 +37,10 @@ type GcalQueryMock = (
   context: 'work' | 'personal',
   enabled?: boolean,
 ) => unknown
-type QueueListMock = (refetchInterval?: number) => unknown
+type QueueListMock = () => unknown
 type QueueItemsMock = (
   queues: unknown,
   date: string,
-  refetchInterval?: number,
   options?: { enabled?: boolean },
 ) => unknown
 type QueueCarryOverMock = (date: string) => {
@@ -53,11 +51,7 @@ type QueueCarryOverMock = (date: string) => {
   isCarryingOver: boolean
   canReadQueueItems: boolean
 }
-type QueueDatesMock = (
-  key: string | undefined,
-  dates: string[],
-  refetchInterval?: number,
-) => unknown
+type QueueDatesMock = (key: string | undefined, dates: string[]) => unknown
 type TaskMapMock = () => ReadonlyMap<string, Task>
 type QueueMutationVariables = {
   key: string
@@ -171,8 +165,6 @@ vi.mock('#hooks/use-gcal-events', () => ({
     return { data: [], error: null }
   },
 }))
-
-vi.mock('#hooks/use-github-link', () => ({ useGithubSync: () => {} }))
 
 vi.mock('#hooks/use-integrations', () => ({
   useIntegrationAuthUrl: () => ({ data: undefined }),
@@ -352,7 +344,6 @@ describe('day-view route compact layout', () => {
         [
           [makeQueue({ key: 'day', name: 'today' })],
           todayStr,
-          undefined,
           { enabled: false },
         ],
       ])
@@ -382,7 +373,6 @@ describe('day-view route compact layout', () => {
       expect(mocks.useQueueItemsForQueues.mock.calls.at(-1)).toEqual([
         [],
         todayStr,
-        undefined,
         { enabled: true },
       ])
     })
@@ -405,7 +395,7 @@ describe('day-view route compact layout', () => {
       ]
       expect(getOutput()).toEqual([
         [pastDateStr],
-        [[], pastDateStr, undefined, { enabled: true }],
+        [[], pastDateStr, { enabled: true }],
       ])
     })
 
@@ -427,37 +417,33 @@ describe('day-view route compact layout', () => {
       ]
       expect(getOutput()).toEqual([
         [futureDateStr],
-        [[], futureDateStr, undefined, { enabled: true }],
+        [[], futureDateStr, { enabled: true }],
       ])
     })
 
     queryClient.clear()
   })
 
-  it('activates the compact shell and polls every visible data query from the URL', async () => {
+  it('activates the compact shell without polling SSE-backed queries', async () => {
     const { queryClient, router } = await renderDayRoute('/?layout=compact')
     const nowPanelRange = getNowPanelQueryDateRange(new Date())
     const getCompactRouteState = () => ({
       pathname: router.state.location.pathname,
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
       appLayoutVisible: screen.queryByTestId('app-layout') != null,
-      taskListInterval: mocks.useTaskList.mock.calls[0]?.[1]?.refetchInterval,
       dueTaskFilter: mocks.useTaskList.mock.calls[1]?.[0],
       dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
-      timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
-      schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
       memoArgs: mocks.useMemos.mock.calls.at(-1),
       nowPanelTimeBlocksRange: mocks.useTimeBlocks.mock.calls
-        .find((call) => call[3] === true)
+        .find((call) => call[2] === true)
         ?.slice(0, 2),
       nowPanelSchedulesRange: mocks.useScheduleList.mock.calls
-        .find((call) => call[3] === true)
+        .find((call) => call[2] === true)
         ?.slice(0, 2),
       nowPanelGcalRange: mocks.useGcalEvents.mock.calls
         .find((call) => call[3] === true)
         ?.slice(0, 2),
-      queuesInterval: mocks.useQueues.mock.calls[0]?.[0],
-      queueItemsInterval: mocks.useQueueItemsForQueues.mock.calls[0]?.[2],
+      queueItemsOptions: mocks.useQueueItemsForQueues.mock.calls[0]?.[2],
     })
 
     await waitFor(() => {
@@ -465,11 +451,8 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'compact',
         appLayoutVisible: false,
-        taskListInterval: 60_000,
         dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
-        dueTaskOptions: { enabled: true, refetchInterval: 60_000 },
-        timeBlocksInterval: 60_000,
-        schedulesInterval: 60_000,
+        dueTaskOptions: { enabled: true },
         memoArgs: ['work', true],
         nowPanelTimeBlocksRange: [
           nowPanelRange.startDate,
@@ -480,8 +463,7 @@ describe('day-view route compact layout', () => {
           nowPanelRange.endDate,
         ],
         nowPanelGcalRange: [nowPanelRange.startDate, nowPanelRange.endDate],
-        queuesInterval: 60_000,
-        queueItemsInterval: 60_000,
+        queueItemsOptions: { enabled: true },
       })
     })
 
@@ -494,23 +476,19 @@ describe('day-view route compact layout', () => {
       pathname: router.state.location.pathname,
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
       appLayoutVisible: screen.queryByTestId('app-layout') != null,
-      taskListInterval: mocks.useTaskList.mock.calls[0]?.[1]?.refetchInterval,
       dueTaskFilter: mocks.useTaskList.mock.calls[1]?.[0],
       dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
-      timeBlocksInterval: mocks.useTimeBlocks.mock.calls[0]?.[2],
-      schedulesInterval: mocks.useScheduleList.mock.calls[0]?.[2],
       memoArgs: mocks.useMemos.mock.calls.at(-1),
       nowPanelTimeBlocksEnabled: mocks.useTimeBlocks.mock.calls.some(
-        (call) => call[3] === false,
+        (call) => call[2] === false,
       ),
       nowPanelSchedulesEnabled: mocks.useScheduleList.mock.calls.some(
-        (call) => call[3] === false,
+        (call) => call[2] === false,
       ),
       nowPanelGcalEnabled: mocks.useGcalEvents.mock.calls.some(
         (call) => call[3] === false,
       ),
-      queuesInterval: mocks.useQueues.mock.calls[0]?.[0],
-      queueItemsInterval: mocks.useQueueItemsForQueues.mock.calls[0]?.[2],
+      queueItemsOptions: mocks.useQueueItemsForQueues.mock.calls[0]?.[2],
     })
 
     await waitFor(() => {
@@ -518,17 +496,13 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'default',
         appLayoutVisible: true,
-        taskListInterval: undefined,
         dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
         dueTaskOptions: { enabled: false },
-        timeBlocksInterval: undefined,
-        schedulesInterval: undefined,
         memoArgs: ['work', false],
         nowPanelTimeBlocksEnabled: true,
         nowPanelSchedulesEnabled: true,
         nowPanelGcalEnabled: true,
-        queuesInterval: undefined,
-        queueItemsInterval: undefined,
+        queueItemsOptions: { enabled: true },
       })
     })
 
@@ -798,7 +772,6 @@ describe('day queue calendar interactions', () => {
       expect(calendarQuery).toEqual([
         'day',
         ['2026-07-19', '2026-07-20', '2026-07-21', '2026-07-22'],
-        undefined,
       ])
     })
     queryClient.clear()

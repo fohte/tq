@@ -8,7 +8,6 @@ import type {
 import { saveMemoWithConflictResolution } from '#hooks/memo-save'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
-import { getCompactRefetchInterval } from '#lib/compact-layout'
 
 export type { Memo, MemoContext, SaveMemoInput } from '#hooks/memo-save'
 export { appendMemoContent } from '#hooks/memo-save'
@@ -47,7 +46,6 @@ export function useMemos(context: MemoContext, isCompactLayout: boolean) {
     queryKey: memoKeys.detail(context),
     queryFn: () => memoTransport.read(context),
     enabled: isCompactLayout,
-    refetchInterval: getCompactRefetchInterval(isCompactLayout) ?? false,
   })
 }
 

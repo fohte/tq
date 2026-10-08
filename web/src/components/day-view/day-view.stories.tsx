@@ -31,7 +31,6 @@ const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
   title: '#506 fohte.net を astro で作る',
   startDate: dateStr,
-  estimatedMinutes: 180,
 })
 
 const sampleTasks: Task[] = [
@@ -40,28 +39,24 @@ const sampleTasks: Task[] = [
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000002',
     title: '#503 dotfiles 管理ツール整理',
-    estimatedMinutes: 120,
     context: 'personal',
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000003',
     title: '投資信託の状況を見直す',
-    estimatedMinutes: 60,
     context: 'personal',
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000004',
     title: 'Terraform state リファクタ',
-    estimatedMinutes: 45,
     context: 'work',
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000005',
     title: 'sccache ログ確認',
-    estimatedMinutes: 15,
     context: 'personal',
     dueDate: overdueDateStr,
   },
@@ -69,21 +64,18 @@ const sampleTasks: Task[] = [
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000006',
     title: 'cache hit rate 改善',
-    estimatedMinutes: 30,
     context: 'personal',
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000007',
     title: 'ブログ記事を書く',
-    estimatedMinutes: null,
     context: 'personal',
   },
   {
     ...baseTask,
     id: '00000000-0000-0000-0000-000000000008',
     title: '歯医者の予約',
-    estimatedMinutes: null,
     context: 'personal',
   },
 ]
@@ -95,7 +87,6 @@ const noDateTasks: Task[] = [
     title: 'タスク管理アプリの UX 見直し',
     status: 'todo',
     startDate: null,
-    estimatedMinutes: null,
     context: 'personal',
   },
   {
@@ -104,7 +95,6 @@ const noDateTasks: Task[] = [
     title: 'CI パイプライン最適化',
     status: 'todo',
     startDate: null,
-    estimatedMinutes: null,
     context: 'personal',
   },
 ]
@@ -219,7 +209,6 @@ const compactUpcomingTask = makeTask({
   id: 'compact-task-2',
   number: 2,
   title: 'Draft the onboarding guide',
-  estimatedMinutes: 30,
 })
 const compactCurrentTaskId = 'compact-task-1'
 const compactTasks = compactTaskTitles.map((title, index) =>
@@ -229,15 +218,13 @@ const compactTasks = compactTaskTitles.map((title, index) =>
         id: `compact-task-${String(index + 1)}`,
         number: index + 1,
         title,
-        estimatedMinutes: 30,
         ...(index === 0 ? { dueDate: overdueDateStr } : {}),
       }),
 )
 const compactExternalDueTask = makeTask({
   id: 'compact-external-due-task',
-  title: 'Confirm the supplier estimate',
+  title: 'Confirm supplier pricing',
   dueDate: dateStr,
-  estimatedMinutes: 45,
 })
 const compactDueTodayTasks = [
   ...compactTasks.slice(0, 1),
@@ -431,7 +418,6 @@ const weekQueuedTasks = sampleTasks.slice(4, 6)
 const scheduledWeekdayTask = makeTask({
   id: 'scheduled-weekday-task',
   title: 'Review the release checklist',
-  estimatedMinutes: 45,
 })
 const queuedTaskIds = new Set(
   [...queuedTasks, ...weekQueuedTasks, scheduledWeekdayTask].map((t) => t.id),

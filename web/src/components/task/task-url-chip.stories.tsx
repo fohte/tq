@@ -20,7 +20,6 @@ const baseTask: TaskDetail = makeTaskDetail({
   description: 'Adds live preview chips for pasted tq task URLs.',
   startDate: null,
   dueDate: null,
-  estimatedMinutes: null,
 })
 
 function Providers({

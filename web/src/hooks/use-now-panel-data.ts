@@ -20,7 +20,6 @@ interface UseNowPanelDataOptions {
   context: 'work' | 'personal'
   taskMap: Map<string, Task>
   isTasksLoading: boolean
-  refetchInterval?: number
 }
 
 export interface NowPanelData {
@@ -35,20 +34,17 @@ export function useNowPanelData({
   context,
   taskMap,
   isTasksLoading,
-  refetchInterval,
 }: UseNowPanelDataOptions): NowPanelData {
   const now = useNowPanelClock(enabled)
   const dateRange = getNowPanelQueryDateRange(now)
   const timeBlocksQuery = useTimeBlocks(
     dateRange.startDate,
     dateRange.endDate,
-    refetchInterval,
     enabled,
   )
   const schedulesQuery = useScheduleList(
     dateRange.startDate,
     dateRange.endDate,
-    refetchInterval,
     enabled,
   )
   const gcalEventsQuery = useGcalEvents(

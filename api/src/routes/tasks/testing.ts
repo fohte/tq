@@ -66,6 +66,20 @@ export interface GithubLinkResponse {
   lastSyncedAt: string
 }
 
+export interface TaskWaitSummaryResponse {
+  id: string
+  label: string
+  followUpDate: string
+  resolvedAt: string | null
+}
+
+export interface TaskWaitResponse extends TaskWaitSummaryResponse {
+  taskId: string
+  body: string
+  acknowledgedAt: string | null
+  createdAt: string
+}
+
 export interface TaskResponse {
   id: string
   number: number
@@ -78,7 +92,6 @@ export interface TaskResponse {
   labels: string[]
   startDate: string | null
   dueDate: string | null
-  estimatedMinutes: number | null
   remindAt: string | null
   parentId: string | null
   projectId: string | null
@@ -89,6 +102,7 @@ export interface TaskResponse {
   githubLinks: GithubLinkResponse[]
   // Present only on the single-task detail response.
   githubBlockers?: GithubLinkResponse[]
+  waits?: TaskWaitResponse[]
   createdAt: string
   updatedAt: string
   childCompletionCount?: { completed: number; total: number }
@@ -123,7 +137,6 @@ export interface TaskListItemResponse {
   labels: string[]
   startDate: string | null
   dueDate: string | null
-  estimatedMinutes: number | null
   remindAt: string | null
   parentId: string | null
   projectId: string | null
@@ -143,6 +156,7 @@ export interface TaskListItemResponse {
     number: number
     url: string
   }[]
+  waits?: TaskWaitSummaryResponse[]
   childCompletionCount?: { completed: number; total: number }
   checklistCompletionCount: { completed: number; total: number }
   children?: TaskListItemResponse[]
@@ -201,7 +215,6 @@ export function toListItemResponse(
     | 'labels'
     | 'startDate'
     | 'dueDate'
-    | 'estimatedMinutes'
     | 'remindAt'
     | 'parentId'
     | 'projectId'
@@ -218,6 +231,7 @@ export function toListItemResponse(
     checklistCompletionCount?: { completed: number; total: number }
     blockedByNumbers?: number[]
     blockedByGithubRefs?: TaskListItemResponse['blockedByGithubRefs']
+    waits?: TaskWaitSummaryResponse[]
   } = {},
 ): TaskListItemResponse {
   return {
@@ -232,7 +246,6 @@ export function toListItemResponse(
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
     remindAt: task.remindAt,
     parentId: task.parentId,
     projectId: task.projectId,
@@ -247,6 +260,9 @@ export function toListItemResponse(
     duplicateOfNumber: null,
     blockedByNumbers: opts.blockedByNumbers ?? [],
     blockedByGithubRefs: opts.blockedByGithubRefs ?? [],
+    ...(opts.waits != null && opts.waits.length > 0
+      ? { waits: opts.waits }
+      : {}),
     childCompletionCount: opts.childCompletionCount ?? {
       completed: 0,
       total: 0,
@@ -311,6 +327,20 @@ const githubLinkResponseSchema = z.object({
   lastSyncedAt: z.string(),
 })
 
+const taskWaitSummaryResponseSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  followUpDate: z.iso.date(),
+  resolvedAt: z.string().nullable(),
+})
+
+const taskWaitResponseSchema = taskWaitSummaryResponseSchema.extend({
+  taskId: z.string(),
+  body: z.string(),
+  acknowledgedAt: z.string().nullable(),
+  createdAt: z.string(),
+})
+
 const taskListItemResponseSchema = z.object({
   id: z.string(),
   number: z.number(),
@@ -323,7 +353,6 @@ const taskListItemResponseSchema = z.object({
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
-  estimatedMinutes: z.number().nullable(),
   remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
@@ -345,6 +374,7 @@ const taskListItemResponseSchema = z.object({
       url: z.string(),
     }),
   ),
+  waits: z.array(taskWaitSummaryResponseSchema).optional(),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
     .optional(),
@@ -366,7 +396,6 @@ const taskResponseSchema = z.object({
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
-  estimatedMinutes: z.number().nullable(),
   remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
@@ -376,6 +405,7 @@ const taskResponseSchema = z.object({
   occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   githubBlockers: z.array(githubLinkResponseSchema).optional(),
+  waits: z.array(taskWaitResponseSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   childCompletionCount: z
@@ -415,8 +445,8 @@ export async function createTask(
   opts: {
     parentId?: string
     description?: string
+    startDate?: string
     dueDate?: string
-    estimatedMinutes?: number
     context?: string
     commitment?: string
     labels?: string[]
@@ -442,7 +472,6 @@ export async function createRecurringTask(
   opts: {
     dueDate?: string
     description?: string
-    estimatedMinutes?: number
     context?: string
     labels?: string[]
   } = {},

@@ -19,7 +19,6 @@ interface UseDayQueueCalendarOptions {
   queues: Queue[] | undefined
   startDate: string
   endDate: string
-  refetchInterval?: number
   createTimeBlock: ReturnType<typeof useCreateTimeBlock>
   setQueueItems: ReturnType<typeof useSetQueueItems>
   onTimeBlockChange: NonNullable<CalendarDndCallbacks['onEventResize']>
@@ -29,7 +28,6 @@ export function useDayQueueCalendar({
   queues,
   startDate,
   endDate,
-  refetchInterval,
   createTimeBlock,
   setQueueItems,
   onTimeBlockChange,
@@ -44,7 +42,6 @@ export function useDayQueueCalendar({
       ? DAY_QUEUE_KEY
       : undefined,
     visibleDates,
-    refetchInterval,
   )
   const loggedQueryErrors = useRef(new Map<string, number>())
   useEffect(() => {

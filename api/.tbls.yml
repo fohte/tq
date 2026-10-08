@@ -275,6 +275,14 @@ comments:
       source_task_id: 'Task whose relationship is described; read the relation from source to target.'
       target_task_id: 'Task at the target end of the directed relationship.'
       type: 'Relation read as source type target: duplicate_of or blocked_by.'
+  - table: task_waits
+    tableComment: 'Response waits attached to tasks, including their resolution history.'
+    columnComments:
+      task_id: 'Task waiting for a response.'
+      body: 'Markdown describing the response or action the task is waiting for.'
+      follow_up_date: 'Date to follow up when no response has arrived.'
+      resolved_at: 'Time when the response wait was resolved; null while it blocks the task.'
+      acknowledged_at: 'Time when the resolution was acknowledged by the user.'
   - table: tasks
     tableComment: 'Tasks with optional parent, project, recurrence, and template relationships.'
     columnComments:

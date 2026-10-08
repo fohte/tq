@@ -226,7 +226,7 @@ describe('change events', () => {
     })
   })
 
-  it('does not emit generic events for client-triggered GitHub sync', async () => {
+  it('does not emit generic events for manual GitHub sync', async () => {
     expect(await request('/api/github/sync', { method: 'POST' })).toEqual({
       status: 204,
       body: null,
@@ -290,6 +290,6 @@ describe('change events', () => {
 
     const snapshot = () =>
       chunk?.value == null ? null : new TextDecoder().decode(chunk.value)
-    expect(snapshot()).toEqual(': heartbeat\n\n')
+    expect(snapshot()).toEqual('event: heartbeat\ndata: \n\n')
   })
 })

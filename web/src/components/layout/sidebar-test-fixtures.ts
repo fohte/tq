@@ -2,7 +2,6 @@ import type { SavedView } from '#hooks/use-saved-views'
 
 export { makeLabel } from '#components/label/label-test-fixtures'
 export { makeProject } from '#components/project/project-test-fixtures'
-export { makeTask } from '#components/task/task-row-test-fixtures'
 
 export function makeSavedView(overrides: Partial<SavedView> = {}): SavedView {
   return {

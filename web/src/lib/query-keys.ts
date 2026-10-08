@@ -2,7 +2,11 @@ import type { LabelFilter } from '#hooks/use-labels'
 import type { ProjectFilter } from '#hooks/use-projects'
 import type { RecurringTemplateFilter } from '#hooks/use-recurring-templates'
 import type { SavedViewFilter } from '#hooks/use-saved-views'
-import type { TaskListFilter } from '#hooks/use-task-queries'
+import type {
+  TaskContext,
+  TaskCountFilter,
+  TaskListFilter,
+} from '#hooks/use-task-queries'
 import { isRecord } from '#lib/type-guards'
 
 // infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
@@ -18,6 +22,9 @@ export const taskKeys = {
     [...taskKeys.infiniteLists, filter] as const,
   details: ['tasks', 'detail'] as const,
   detail: (id: string) => [...taskKeys.details, id] as const,
+  countPrefix: ['tasks', 'count'] as const,
+  count: (filter: TaskCountFilter) =>
+    [...taskKeys.countPrefix, filter] as const,
   labelCountsPrefix: ['tasks', 'label-counts'] as const,
   labelCounts: (context: NonNullable<LabelFilter['context']>) =>
     [...taskKeys.labelCountsPrefix, context] as const,
@@ -39,8 +46,14 @@ export const queueKeys = {
   all: ['queues'] as const,
   // Broad queue invalidations should not repeat this date-scoped write.
   carryOver: (date: string) => ['queue-carry-over', date] as const,
-  items: (key: string, date: string) =>
-    [...queueKeys.all, key, 'items', date] as const,
+  items: (key: string, date: string, context?: TaskContext) =>
+    [
+      ...queueKeys.all,
+      key,
+      'items',
+      date,
+      ...(context == null ? [] : [context]),
+    ] as const,
 }
 
 export const timeBlockKeys = {
@@ -112,11 +125,6 @@ export const descriptionTemplateKeys = {
 
 export const githubSyncRuleKeys = {
   list: ['github-sync-rules'] as const,
-}
-
-export const githubSyncKeys = {
-  all: ['github-sync'] as const,
-  task: (taskId: string) => ['github-sync', 'task', taskId] as const,
 }
 
 export type SearchContext = 'work' | 'personal'

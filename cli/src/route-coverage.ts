@@ -82,8 +82,9 @@ export const EXCLUDED_ROUTES = {
   'GET /api/tasks/preview':
     'backs task-chip previews in the web UI, not a CLI concern',
 
-  // The web sidebar is the only consumer of these aggregated badge counts.
+  // The web layout is the only consumer of these aggregated counts.
   'GET /api/labels/counts': 'sidebar badge data, not a CLI concern',
+  'GET /api/tasks/count': 'layout badge data, not a CLI concern',
 
   // Backs the web project detail page's task tree (ids only, no task data);
   // `GET /api/projects/:id` already covers a CLI's project-summary use case.

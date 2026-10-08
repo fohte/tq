@@ -16,7 +16,6 @@ const baseTask = makeTaskDetail({
     'Adds live preview chips for #123-style task mentions in the editor.',
   startDate: null,
   dueDate: null,
-  estimatedMinutes: null,
 })
 
 function Providers({

@@ -1,5 +1,6 @@
 import {
   and,
+  count,
   desc,
   eq,
   exists,
@@ -26,6 +27,12 @@ import {
   tasks,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
+import { formatDateAtOffset } from '#lib/timezone'
+import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
+import {
+  followUpDueTaskWaitSubquery,
+  unresolvedTaskWaitSubquery,
+} from '#routes/tasks/list-query-waits'
 import {
   buildTitleMatchCondition,
   queryTaskSearchMatches,
@@ -36,7 +43,11 @@ import {
   resolveTasksByIdsOrNumbers,
   type TaskSearchMatch,
 } from '#routes/tasks/shared'
-import type { ListTasksQuery } from '#schemas/task'
+import type {
+  CountTasksQuery,
+  ListTasksQuery,
+  TaskFilterQuery,
+} from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
@@ -236,6 +247,7 @@ function buildConditions(
       or(
         exists(unresolvedTaskBlockerSubquery()),
         exists(unresolvedGithubBlockerSubquery()),
+        exists(unresolvedTaskWaitSubquery()),
       ),
     )
   }
@@ -245,6 +257,17 @@ function buildConditions(
       and(
         notExists(unresolvedTaskBlockerSubquery()),
         notExists(unresolvedGithubBlockerSubquery()),
+        notExists(unresolvedTaskWaitSubquery()),
+      ),
+    )
+  }
+
+  if (parsed?.hasFollowUpDue === true) {
+    conditions.push(
+      exists(
+        followUpDueTaskWaitSubquery(
+          formatDateAtOffset(new Date(), query.tzOffset ?? 0),
+        ),
       ),
     )
   }
@@ -301,16 +324,13 @@ function buildConditions(
     }
   }
 
-  if (query.hasEstimate === true) {
-    conditions.push(isNotNull(tasks.estimatedMinutes))
-  } else if (query.hasEstimate === false) {
-    conditions.push(isNull(tasks.estimatedMinutes))
-  }
   if (query.hasDue === true) {
     conditions.push(isNotNull(tasks.dueDate))
   } else if (query.hasDue === false) {
     conditions.push(isNull(tasks.dueDate))
   }
+
+  conditions.push(...buildTaskDateConditions(query))
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
@@ -356,19 +376,7 @@ function buildConditions(
   }
 }
 
-const ancestorIdSchema = z.array(z.object({ id: z.string() }))
-
-export async function queryTaskList(
-  query: ListTasksQuery,
-  options: {
-    includeSearchMatch?: boolean
-    prioritizeTitleMatches?: boolean
-  } = {},
-): Promise<{
-  rows: TaskListRow[]
-  ancestorOnlyIds: Set<string>
-  matchByTaskId: Map<string, TaskSearchMatch> | undefined
-}> {
+async function buildTaskFilterConditions(query: TaskFilterQuery) {
   const { ids: rawIds, ...filters } = query
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const parentIdentifier = parsed?.parentId ?? filters.parentId
@@ -400,11 +408,39 @@ export async function queryTaskList(
     rawIds === undefined
       ? undefined
       : (await resolveTasksByIdsOrNumbers(rawIds.map(String))).ids
+
+  return buildConditions(filters, ids, parsed, resolvedFilters)
+}
+
+export async function queryTaskCount(query: CountTasksQuery): Promise<number> {
+  const { conditions } = await buildTaskFilterConditions(query)
+  const [result] = await db
+    .select({ count: count() })
+    .from(tasks)
+    .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+
+  return result?.count ?? 0
+}
+
+const ancestorIdSchema = z.array(z.object({ id: z.string() }))
+
+export async function queryTaskList(
+  query: ListTasksQuery,
+  options: {
+    includeSearchMatch?: boolean
+    prioritizeTitleMatches?: boolean
+  } = {},
+): Promise<{
+  rows: TaskListRow[]
+  ancestorOnlyIds: Set<string>
+  matchByTaskId: Map<string, TaskSearchMatch> | undefined
+}> {
   const {
     conditions,
     sortBy,
     freeTextWords: words,
-  } = buildConditions(filters, ids, parsed, resolvedFilters)
+  } = await buildTaskFilterConditions(query)
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
     sortBy == null &&
