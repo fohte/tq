@@ -37,7 +37,6 @@ export function seedChecklistItemMarkdownReferences(
     description: null,
     startDate: null,
     dueDate: null,
-    estimatedMinutes: null,
   })
 
   queryClient.setQueryData(
