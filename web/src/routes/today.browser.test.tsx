@@ -17,7 +17,7 @@ type TaskListOptions = {
   enabled?: boolean
   placeholderData?: (
     previousData: Task[] | undefined,
-    previousFilter: unknown,
+    previousFilter: TaskListFilter | undefined,
   ) => Task[] | undefined
 }
 
@@ -32,6 +32,7 @@ const mockUseTaskList = vi.fn<
     data?: Task[]
     isLoading: boolean
     isPlaceholderData: boolean
+    isError: boolean
   }
 >()
 const mockUseCurrentContext = vi.fn<() => Task['context']>()
@@ -93,16 +94,22 @@ function setup({
   all,
   queue,
   queueSortOrders = queue.map((_, index) => index),
+  context = 'work',
   isLoading = false,
+  isSubtasksLoading = false,
+  subtasksError = false,
   isTodayTasksLoading = false,
 }: {
   all: Task[]
   queue: Task[]
   queueSortOrders?: number[]
+  context?: Task['context']
   isLoading?: boolean
+  isSubtasksLoading?: boolean
+  subtasksError?: boolean
   isTodayTasksLoading?: boolean
 }) {
-  mockUseCurrentContext.mockReturnValue('work')
+  mockUseCurrentContext.mockReturnValue(context)
   mockUseTaskList.mockImplementation(
     (filter?: TaskListFilter, options?: TaskListOptions) => {
       const tasks = all.filter((task) => {
@@ -116,10 +123,11 @@ function setup({
       return {
         data: tasks,
         isLoading:
-          isLoading &&
           options?.enabled !== false &&
-          (filter?.ids?.length != null || filter?.parentId != null),
+          ((filter?.ids != null && isLoading) ||
+            (filter?.parentId != null && isSubtasksLoading)),
         isPlaceholderData: false,
+        isError: filter?.parentId != null && subtasksError,
       }
     },
   )
@@ -300,37 +308,38 @@ describe('TodayFocus', () => {
     })
   })
 
-  it('preserves the previous queue order while task IDs change', async () => {
-    const focus = makeTask({ id: 'focus', title: 'Focus task' })
-    const next = makeTask({ id: 'next', title: 'Next task' })
-    setup({ all: [focus, next], queue: [focus, next] })
+  it('passes the selected context to queue and task queries', async () => {
+    const focus = makeTask({ id: 'focus', context: 'personal' })
+    const child = makeTask({
+      id: 'child',
+      context: 'personal',
+      parentId: 'focus',
+    })
+    const otherContext = makeTask({ id: 'other-context', context: 'work' })
+    setup({
+      all: [focus, child, otherContext],
+      queue: [focus, otherContext],
+      context: 'personal',
+    })
 
     await renderToday()
 
-    const placeholderData = mockUseTaskList.mock.calls[0]?.[1]?.placeholderData
-
+    const taskQueries = mockUseTaskList.mock.calls.map(([filter, options]) => ({
+      filter,
+      enabled: options?.enabled,
+    }))
     expect(
-      placeholderData?.([next, focus], {
-        ids: ['next', 'focus'],
-        context: 'work',
-      })?.map((task) => task.id),
-    ).toEqual(['next', 'focus'])
-  })
-
-  it('drops previous queue data when the context changes', async () => {
-    const next = makeTask({ id: 'next', title: 'Next task' })
-    setup({ all: [next], queue: [next] })
-
-    await renderToday()
-
-    const placeholderData = mockUseTaskList.mock.calls[0]?.[1]?.placeholderData
-
-    expect(
-      placeholderData?.([next], {
-        ids: ['next'],
-        context: 'personal',
-      }),
-    ).toEqual(undefined)
+      todayTaskRequestSnapshot(
+        taskQueries,
+        mockUseQueueItems.mock.calls[0]?.[2],
+      ),
+    ).toEqual({
+      taskQueries: [
+        { filter: { ids: ['focus'], context: 'personal' }, enabled: true },
+        { filter: { parentId: 'focus', context: 'personal' }, enabled: true },
+      ],
+      queueOptions: { enabled: true, context: 'personal' },
+    })
   })
 
   it('focuses the first non-completed task in queue order', async () => {
@@ -443,7 +452,54 @@ describe('TodayFocus', () => {
 
     await renderToday()
 
-    expect(screen.getByText("No tasks in today's queue")).toBeInTheDocument()
+    const getOutput = () => ({
+      taskQueries: mockUseTaskList.mock.calls.map(([filter, options]) => ({
+        filter,
+        enabled: options?.enabled,
+      })),
+      queueOptions: mockUseQueueItems.mock.calls[0]?.[2],
+      emptyMessage: screen.getByText("No tasks in today's queue").textContent,
+    })
+    expect(getOutput()).toEqual({
+      taskQueries: [
+        { filter: { ids: [], context: 'work' }, enabled: false },
+        { filter: { context: 'work' }, enabled: false },
+      ],
+      queueOptions: { enabled: true, context: 'work' },
+      emptyMessage: "No tasks in today's queue",
+    })
+  })
+
+  it('keeps the focus task visible while its subtasks are loading', async () => {
+    const focus = makeTask({ id: 'focus', title: 'Focus task' })
+    setup({ all: [focus], queue: [focus], isSubtasksLoading: true })
+
+    await renderToday()
+
+    const getOutput = () => ({
+      focusTitle: screen.getByRole('heading', { level: 1 }).textContent,
+      loadingIndicators: document.querySelectorAll('.animate-spin').length,
+    })
+    expect(getOutput()).toEqual({
+      focusTitle: 'Focus task',
+      loadingIndicators: 0,
+    })
+  })
+
+  it('shows a subtask load failure without hiding the focus task', async () => {
+    const focus = makeTask({ id: 'focus', title: 'Focus task' })
+    setup({ all: [focus], queue: [focus], subtasksError: true })
+
+    await renderToday()
+
+    const getOutput = () => ({
+      focusTitle: screen.getByRole('heading', { level: 1 }).textContent,
+      subtaskError: screen.getByRole('alert').textContent,
+    })
+    expect(getOutput()).toEqual({
+      focusTitle: 'Focus task',
+      subtaskError: 'Failed to load subtasks.',
+    })
   })
 
   it('shows the all-done state when every queued task is completed', async () => {

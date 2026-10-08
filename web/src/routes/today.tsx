@@ -15,7 +15,7 @@ import { useTaskList, useTaskMap } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
 import { sortQueueTasksByDue } from '#lib/queue-task-due-order'
 import { sortQueueItemsBySortOrder } from '#lib/queue-task-order'
-import { isRecord } from '#lib/type-guards'
+import { selectQueueTaskPlaceholderData } from '#lib/queue-task-placeholder'
 
 export const Route = createFileRoute('/today')({
   component: TodayFocus,
@@ -48,29 +48,13 @@ export function TodayFocus() {
         queueCarryOver.canReadQueueItems &&
         todayTasksData != null &&
         queueTaskIds.length > 0,
-      placeholderData: (previousData, previousFilter) => {
-        if (!isRecord(previousFilter)) return undefined
-        const previousIds = previousFilter['ids']
-        if (
-          queueTaskIds.length === 0 ||
-          previousFilter['context'] !== context ||
-          !Array.isArray(previousIds)
-        ) {
-          return undefined
-        }
-
-        const ids = previousIds.filter(
-          (id: unknown): id is string => typeof id === 'string',
-        )
-        if (ids.length !== previousIds.length) return undefined
-
-        const tasksById = new Map(
-          (previousData ?? []).map((task) => [task.id, task]),
-        )
-        return ids
-          .map((id) => tasksById.get(id))
-          .filter((task): task is Task => task != null)
-      },
+      placeholderData: (previousData, previousFilter) =>
+        selectQueueTaskPlaceholderData(
+          previousData,
+          previousFilter,
+          queueTaskIds,
+          context,
+        ),
     },
   )
   const taskMap = useTaskMap(queueTasksQuery.data ?? [])
@@ -113,8 +97,7 @@ export function TodayFocus() {
   const isLoading =
     queueCarryOver.isCarryingOver ||
     isTodayTasksLoading ||
-    queueTasksQuery.isLoading ||
-    subtasksQuery.isLoading
+    queueTasksQuery.isLoading
 
   const setQueueItems = useSetQueueItems()
 
@@ -136,6 +119,7 @@ export function TodayFocus() {
       focusTask={focusTask}
       nextTask={nextTask}
       subtasks={subtasks}
+      subtasksError={subtasksQuery.isError}
       onDefer={handleDefer}
     />
   )

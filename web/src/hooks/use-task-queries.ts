@@ -89,21 +89,23 @@ export function useTaskList(
     enabled?: boolean
     placeholderData?: (
       previousData: Task[] | undefined,
-      previousFilter: unknown,
+      previousFilter: TaskListFilter | undefined,
     ) => Task[] | undefined
   },
 ) {
-  const query = useQuery({
+  const query = useQuery<
+    Task[],
+    Error,
+    Task[],
+    ReturnType<typeof taskKeys.list>
+  >({
     queryKey: taskKeys.list(filter),
     queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
     ...(options?.placeholderData == null
       ? {}
       : {
-          placeholderData: (
-            previousData: Task[] | undefined,
-            previousQuery: { queryKey: readonly unknown[] } | undefined,
-          ) =>
+          placeholderData: (previousData: Task[] | undefined, previousQuery) =>
             options.placeholderData?.(previousData, previousQuery?.queryKey[2]),
         }),
   })
