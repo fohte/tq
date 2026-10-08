@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { TaskUrlCard } from '#components/task/task-url-card'
 import type { TaskDetail } from '#hooks/use-tasks'
-import { taskUrlPreviewKeys } from '#lib/query-keys'
+import { taskPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const TASK_ID = '42'
@@ -36,7 +36,7 @@ function Providers({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(taskUrlPreviewKeys.preview(id), task)
+  queryClient.setQueryData(taskPreviewKeys.preview(id), task)
 
   return (
     <QueryClientProvider client={queryClient}>

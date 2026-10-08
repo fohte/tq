@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
+import { githubUrlPreviewKeys, taskPreviewKeys } from '#lib/query-keys'
 
 export const MENTION_FIXTURE_NUMBER = 9101
 export const MENTION_FIXTURE_TASK_ID = '00000000-0000-0000-0000-000000000099'
@@ -25,7 +25,7 @@ export function seedLiveReferenceFixtures(queryClient: QueryClient): void {
     estimatedMinutes: null,
   })
   queryClient.setQueryData(
-    taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),
+    taskPreviewKeys.preview(String(MENTION_FIXTURE_NUMBER)),
     task,
   )
 

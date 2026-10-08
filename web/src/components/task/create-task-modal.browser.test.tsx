@@ -24,7 +24,11 @@ import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
+import {
+  githubUrlPreviewKeys,
+  taskMentionKeys,
+  taskPreviewKeys,
+} from '#lib/query-keys'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import {
   assertDefined,
@@ -1034,7 +1038,7 @@ describe('CreateTaskModal', () => {
         defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(
-        taskMentionKeys.preview(34),
+        taskPreviewKeys.preview('34'),
         makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
       )
       // TaskTitleInput's own suggestion popup (separate from the
@@ -1083,7 +1087,7 @@ describe('CreateTaskModal', () => {
         defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(
-        taskMentionKeys.preview(34),
+        taskPreviewKeys.preview('34'),
         makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
       )
       queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
@@ -1126,7 +1130,7 @@ describe('CreateTaskModal', () => {
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
-      queryClient.setQueryData(taskMentionKeys.preview(999), null)
+      queryClient.setQueryData(taskPreviewKeys.preview('999'), null)
       queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
       queryClient.setQueryData(taskMentionKeys.suggestions('9'), [])
       queryClient.setQueryData(taskMentionKeys.suggestions('99'), [])

@@ -2,8 +2,11 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
+import { taskPreviewIdSchema } from '#lib/numeric-id'
+import { splitCommaList } from '#lib/split-comma-list'
 import { queryTaskList } from '#routes/tasks/list-query'
 import { queryPageSearch } from '#routes/tasks/page-search-query'
+import { resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import { getSearchQuerySuggestions } from '#search-query-parser'
 
 const suggestQuerySchema = z.object({
@@ -22,7 +25,47 @@ const pageSearchQuerySchema = z.object({
   source: z.enum(['page', 'comment', 'task']).optional(),
 })
 
+const taskPreviewQuerySchema = z.object({
+  ids: z
+    .union([z.string(), z.array(z.string())])
+    .transform((values) =>
+      (Array.isArray(values) ? values : [values]).flatMap(splitCommaList),
+    )
+    .pipe(z.array(taskPreviewIdSchema).min(1).max(100)),
+})
+
 export const tasksSearchApp = new Hono()
+  .get('/preview', zValidator('query', taskPreviewQuerySchema), async (c) => {
+    const { ids } = c.req.valid('query')
+    const lookupIdByParam = new Map(
+      ids.map((id) => [id, /^\d+$/.test(id) ? id : id.toLowerCase()]),
+    )
+    const { byParam } = await resolveTasksByIdsOrNumbers([
+      ...lookupIdByParam.values(),
+    ])
+    const previews = Object.fromEntries(
+      [...lookupIdByParam].flatMap(([id, lookupId]) => {
+        const task = byParam.get(lookupId)
+        if (task == null) return []
+
+        return [
+          [
+            id,
+            {
+              id: task.id,
+              number: task.number,
+              title: task.title,
+              status: task.status,
+              statusReason: task.statusReason,
+              description: task.description,
+            },
+          ],
+        ]
+      }),
+    )
+
+    return c.json(previews, 200)
+  })
   .get('/search/suggest', zValidator('query', suggestQuerySchema), (c) => {
     const { prefix, category } = c.req.valid('query')
     return c.json(getSearchQuerySuggestions(prefix, category), 200)

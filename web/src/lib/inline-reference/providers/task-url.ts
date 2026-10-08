@@ -11,11 +11,8 @@ export interface TaskUrlData {
 export const taskUrlProvider: InlineReferenceProvider<TaskUrlData> = {
   id: 'task-url',
 
-  // Matches a task URL's path shape (`/tasks/<number-or-uuid>`) on this
-  // page's own host, then hands the extracted id straight to
-  // `GET /api/tasks/:id` — the same endpoint `#123` mentions resolve
-  // through (see `findTaskByIdOrNumber`), which already accepts either
-  // form.
+  // Task URL and mention chips resolve through the shared preview query,
+  // keyed by the extracted number-or-UUID string.
   findMatches(text) {
     return matchAppResourceUrls(text, location.host, 'tasks').map((match) => ({
       start: match.start,
