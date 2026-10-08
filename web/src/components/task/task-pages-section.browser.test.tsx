@@ -72,10 +72,10 @@ beforeEach(() => {
 })
 
 function pageEditorLoadResult<TRequests>(
-  body: string | null,
+  editorContent: string,
   requests: TRequests,
 ) {
-  return { body, singlePageRequests: requests }
+  return { editorContent, singlePageRequests: requests }
 }
 
 function pageEditorRefetchResult(
@@ -229,23 +229,45 @@ describe('PageCardPresentation', () => {
     getPages.mockImplementation(() => jsonResponse([page]))
     getPage.mockImplementation(() => jsonResponse(fullPage))
     const user = userEvent.setup()
-    await renderTaskPagesSection()
+    const { container } = await renderTaskPagesSection()
 
     await user.click(await screen.findByRole('button', { name: 'Expand' }))
-    const bodyHeading = await screen.findByText(
+    await screen.findByText(
       'Full body from the single-page endpoint',
       {},
       { timeout: 5000 },
     )
 
-    expect(
-      pageEditorLoadResult(bodyHeading.textContent, getPage.mock.calls),
-    ).toEqual({
-      body: 'Full body from the single-page endpoint',
+    const editor = assertDefined(
+      container.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="Page editor"]',
+      ),
+    )
+    expect(pageEditorLoadResult(editor.value, getPage.mock.calls)).toEqual({
+      editorContent:
+        '## Full body from the single-page endpoint\n\nLoaded in the editor.',
       singlePageRequests: [
         [{ param: { taskId: 'task-001', pageId: 'page-001' } }],
       ],
     })
+  })
+
+  it('shows an error when the expanded page body request fails', async () => {
+    const page = makeTaskPage({
+      preview: '## Short list preview',
+      contentTruncated: false,
+    })
+    getPages.mockImplementation(() => jsonResponse([page]))
+    getPage.mockImplementation(
+      () => new Response('Internal server error', { status: 500 }),
+    )
+    const user = userEvent.setup()
+    await renderTaskPagesSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Expand' }))
+    const alert = await screen.findByRole('alert')
+
+    expect(alert.textContent).toEqual('Could not load this page.')
   })
 
   it('keeps edited input when the page list and body queries refetch', async () => {

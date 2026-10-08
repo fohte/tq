@@ -11,7 +11,6 @@ import type { TaskPage } from '#hooks/use-task-pages'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const samplePage = makeTaskPage()
-const samplePageBody = samplePage.content
 
 const emptyPage = makeTaskPage({
   id: 'page-003',
@@ -32,7 +31,6 @@ const htmlPage = makeTaskPage({
   createdAt: '2026-03-23T00:00:00.000Z',
   updatedAt: '2026-03-23T00:00:00.000Z',
 })
-const htmlPageBody = htmlPage.content
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -74,13 +72,7 @@ function Story({
           page={page}
           onDelete={() => {}}
           isExpanded={isExpanded}
-          expandedContent={
-            bodyState === 'loaded'
-              ? page.format === 'html'
-                ? htmlPageBody
-                : samplePageBody
-              : undefined
-          }
+          expandedContent={bodyState === 'loaded' ? page.content : undefined}
           contentLoadError={bodyState === 'error'}
           isDeleting={isDeleting}
           defaultEditing={defaultEditing}
