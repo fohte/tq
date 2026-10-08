@@ -93,6 +93,28 @@ function renderQueuePane(
   return { onMoveTask, onInsertCandidate, onMoveScheduledTaskToWeek }
 }
 
+async function waitForDndClickSuppressionToClear() {
+  const probe = document.createElement('div')
+  document.body.append(probe)
+
+  let clickReachedWindow = false
+  const markClickAsReachedWindow = () => {
+    clickReachedWindow = true
+  }
+  window.addEventListener('click', markClickAsReachedWindow)
+
+  const waiting = waitFor(() => {
+    clickReachedWindow = false
+    probe.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(clickReachedWindow).toBe(true)
+  })
+
+  await waiting.finally(() => {
+    window.removeEventListener('click', markClickAsReachedWindow)
+    probe.remove()
+  })
+}
+
 async function dragByTitle(sourceTitle: string, targetTitle: string) {
   const source = (await screen.findByText(sourceTitle)).closest('.cursor-grab')
   const target = (await screen.findByText(targetTitle)).closest('.cursor-grab')
@@ -119,28 +141,7 @@ async function dragByTitle(sourceTitle: string, targetTitle: string) {
     clientY: targetY,
   })
   fireEvent.mouseUp(document, { button: 0, clientX: targetX, clientY: targetY })
-}
-
-async function waitForDndClickSuppressionToClear() {
-  const probe = document.createElement('div')
-  document.body.append(probe)
-
-  let clickReachedWindow = false
-  const markClickAsReachedWindow = () => {
-    clickReachedWindow = true
-  }
-  window.addEventListener('click', markClickAsReachedWindow)
-
-  const waiting = waitFor(() => {
-    clickReachedWindow = false
-    probe.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    expect(clickReachedWindow).toBe(true)
-  })
-
-  await waiting.finally(() => {
-    window.removeEventListener('click', markClickAsReachedWindow)
-    probe.remove()
-  })
+  await waitForDndClickSuppressionToClear()
 }
 
 describe('QueuePane dragging', () => {
@@ -183,7 +184,6 @@ describe('QueuePane dragging', () => {
       name: 'Remove day from Scheduled task',
     })
     const row = removeButton.closest('[data-queue-key]')
-    await waitForDndClickSuppressionToClear()
     await user.click(removeButton)
 
     const readResult = () => ({
