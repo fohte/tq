@@ -7,7 +7,6 @@ import { syncTemplateLabels } from '#services/recurring-task-template-labels'
 export interface TemplateSourceFields {
   title: string
   description: string | null
-  estimatedMinutes: number | null
   projectId: string | null
   parentId: string | null
   context: 'work' | 'personal'
@@ -65,7 +64,6 @@ export async function createTemplateFromTaskFields(
       .values({
         title: fields.title,
         description: fields.description,
-        estimatedMinutes: fields.estimatedMinutes,
         projectId: fields.projectId,
         parentId: fields.parentId,
         context: fields.context,

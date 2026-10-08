@@ -91,6 +91,7 @@ export const Default: Story = {
     focusTask: baseTask,
     nextTask,
     subtasks,
+    subtasksError: false,
   },
 }
 
@@ -102,6 +103,7 @@ export const NoSubtasksOrNextTask: Story = {
     focusTask: baseTask,
     nextTask: null,
     subtasks: [],
+    subtasksError: false,
   },
 }
 
@@ -113,6 +115,7 @@ export const Loading: Story = {
     focusTask: null,
     nextTask: null,
     subtasks: [],
+    subtasksError: false,
   },
 }
 
@@ -124,6 +127,7 @@ export const EmptyQueue: Story = {
     focusTask: null,
     nextTask: null,
     subtasks: [],
+    subtasksError: false,
   },
 }
 
@@ -135,5 +139,18 @@ export const AllDone: Story = {
     focusTask: null,
     nextTask: null,
     subtasks: [],
+    subtasksError: false,
+  },
+}
+
+export const SubtasksError: Story = {
+  name: 'the focus view explains that subtasks could not be loaded',
+  args: {
+    isLoading: false,
+    queueTasks: [baseTask],
+    focusTask: baseTask,
+    nextTask: null,
+    subtasks: [],
+    subtasksError: true,
   },
 }

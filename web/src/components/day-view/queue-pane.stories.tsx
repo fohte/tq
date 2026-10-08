@@ -24,14 +24,12 @@ function Providers({ children }: { children: ReactNode }) {
 
 const dayTasks = [
   makeTask({ id: '1', title: 'Write the quarterly report', context: 'work' }),
-  makeTask({ id: '2', title: 'Plan the launch', estimatedMinutes: null }),
 ]
 
 const weekTasks = [
   makeTask({
     id: '3',
     title: 'Fix the queue schema',
-    estimatedMinutes: 120,
   }),
 ]
 
@@ -93,7 +91,6 @@ export const Default: Story = {
               makeTask({
                 id: '5',
                 title: 'Review the release checklist',
-                estimatedMinutes: 45,
               }),
             ],
           },
