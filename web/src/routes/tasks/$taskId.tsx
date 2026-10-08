@@ -8,7 +8,6 @@ import {
 } from '#components/task/task-detail'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
-import { useSyncTaskGithubLink } from '#hooks/use-github-link'
 import { useTask } from '#hooks/use-tasks'
 import { recordRecentSearchItem } from '#lib/recent-search-items'
 
@@ -19,8 +18,6 @@ export const Route = createFileRoute('/tasks/$taskId')({
 function TaskPage() {
   const { taskId } = Route.useParams()
   const { data: task, isLoading, error } = useTask(taskId)
-  useSyncTaskGithubLink(taskId, (task?.githubLinks.length ?? 0) > 0)
-
   useEffect(() => {
     if (isLoading || error || task == null) return
     recordRecentSearchItem({

@@ -16,7 +16,6 @@ vi.mock('#components/layout/app-layout', () => ({
   ),
 }))
 
-vi.mock('#hooks/use-github-link', () => ({ useGithubSync: () => {} }))
 vi.mock('#hooks/use-push-notifications', () => ({
   usePushResubscribe: () => {},
 }))

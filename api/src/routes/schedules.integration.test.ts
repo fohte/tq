@@ -15,6 +15,12 @@ afterEach(() => {
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
 
+const invalidScheduleDateRanges = [
+  ['invalid format', 'startDate=not-a-date&endDate=2099-01-01'],
+  ['start after end', 'startDate=2099-01-02&endDate=2099-01-01'],
+  ['more than 42 days', 'startDate=2099-01-01&endDate=2099-02-12'],
+] as const
+
 interface TimeBlockResponse {
   id: string
   taskId: string
@@ -219,6 +225,23 @@ describe('schedule/time-blocks API', () => {
   })
 
   describe('GET /api/schedule/time-blocks', () => {
+    it.each(invalidScheduleDateRanges)(
+      'returns 400 for a date range with %s',
+      async (_, query) => {
+        const res = await app.request(`/api/schedule/time-blocks?${query}`)
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('accepts an inclusive 42-day range', async () => {
+      const res = await app.request(
+        '/api/schedule/time-blocks?startDate=2099-01-01&endDate=2099-02-11',
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('returns time blocks for a given date', async () => {
       const task = await createTask('Test task')
       await createTimeBlock(
@@ -531,6 +554,23 @@ describe('schedules API', () => {
   })
 
   describe('GET /api/schedule/recurring', () => {
+    it.each(invalidScheduleDateRanges)(
+      'returns 400 for a date range with %s',
+      async (_, query) => {
+        const res = await app.request(`/api/schedule/recurring?${query}`)
+
+        expect(res.status).toBe(400)
+      },
+    )
+
+    it('accepts an inclusive 42-day range', async () => {
+      const res = await app.request(
+        '/api/schedule/recurring?startDate=2099-01-01&endDate=2099-02-11',
+      )
+
+      expect(res.status).toBe(200)
+    })
+
     it('returns expanded schedules for a date', async () => {
       await createSchedule({
         title: 'Morning Routine',

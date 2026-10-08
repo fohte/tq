@@ -127,11 +127,6 @@ export const githubSyncRuleKeys = {
   list: ['github-sync-rules'] as const,
 }
 
-export const githubSyncKeys = {
-  all: ['github-sync'] as const,
-  task: (taskId: string) => ['github-sync', 'task', taskId] as const,
-}
-
 export type SearchContext = 'work' | 'personal'
 
 export const searchKeys = {
