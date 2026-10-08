@@ -101,6 +101,15 @@ export function useTaskList(
   return { ...query, categorized }
 }
 
+export function useSelfAndDescendantIds(taskId: string, enabled: boolean) {
+  const { categorized } = useTaskList({ descendantOf: taskId }, { enabled })
+
+  return useMemo(
+    () => new Set([taskId, ...categorized.all.map((task) => task.id)]),
+    [taskId, categorized.all],
+  )
+}
+
 export function useTaskCount(
   filter: TaskCountFilter,
   options?: { enabled?: boolean },

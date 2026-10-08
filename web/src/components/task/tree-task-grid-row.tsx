@@ -166,6 +166,7 @@ export function TreeTaskGridRow({
         onOpenChange={setLinkMenuOpen}
         parentId={node.id}
         parentNumber={node.number}
+        parentTitle={node.title}
       />
       <MoveUnderTaskMenu
         open={moveMenuOpen}

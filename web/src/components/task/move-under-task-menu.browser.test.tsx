@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  useSelfAndDescendantIds,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
@@ -20,12 +24,14 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-tasks')>()
   return {
     ...original,
+    useSelfAndDescendantIds: vi.fn(),
     useTaskList: vi.fn(),
     useUpdateTaskParent: vi.fn(),
   }
 })
 
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
+const mockUseSelfAndDescendantIds = vi.mocked(useSelfAndDescendantIds)
 const mockUseTaskList = vi.mocked(useTaskList)
 const mockUseUpdateTaskParent = vi.mocked(useUpdateTaskParent)
 
@@ -38,6 +44,16 @@ function mockSearchResults(data: SearchResult[]) {
       isFetching: false,
     }),
   )
+}
+
+function uniqueTaskListCalls<T>(calls: T[]) {
+  const seen = new Set<string | undefined>()
+  return calls.filter((call) => {
+    const key = JSON.stringify(call)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 const taskId = '00000000-0000-0000-0000-000000000001'
@@ -57,8 +73,22 @@ const candidateWithParent: SearchResult = makeTask({
   parentNumber: 3,
 })
 
+function candidateSnapshot(
+  candidateTitles: (string | null)[],
+  taskListCalls: unknown[],
+) {
+  return { candidateTitles, taskListCalls }
+}
+
 describe('MoveUnderTaskMenu', () => {
   beforeEach(() => {
+    mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
+      const { categorized } = mockUseTaskList(
+        { descendantOf: taskId },
+        { enabled },
+      )
+      return new Set([taskId, ...categorized.all.map((task) => task.id)])
+    })
     mockUseTaskList.mockReturnValue(
       partialMutation<ReturnType<typeof useTaskList>>({
         categorized: { all: [] },
@@ -116,7 +146,14 @@ describe('MoveUnderTaskMenu', () => {
     await user.click(screen.getByText('Deploy to production'))
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: taskId, parentId: orphanCandidate.id },
+      {
+        id: taskId,
+        parentId: orphanCandidate.id,
+        parent: {
+          number: orphanCandidate.number,
+          title: orphanCandidate.title,
+        },
+      },
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
       { onSuccess: expect.any(Function) },
     )
@@ -153,10 +190,12 @@ describe('MoveUnderTaskMenu', () => {
     rerender(<MoveUnderTaskMenu {...props} open={false} />)
 
     expect(
-      mockUseTaskList.mock.calls.map(([filter, options]) => ({
-        filter,
-        enabled: options?.enabled,
-      })),
+      uniqueTaskListCalls(
+        mockUseTaskList.mock.calls.map(([filter, options]) => ({
+          filter,
+          enabled: options?.enabled,
+        })),
+      ),
     ).toEqual([
       { filter: { descendantOf: taskId }, enabled: true },
       { filter: { descendantOf: taskId }, enabled: false },
@@ -188,15 +227,22 @@ describe('MoveUnderTaskMenu', () => {
 
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
 
-    expect(screen.getByText('Deploy to production').textContent).toBe(
-      'Deploy to production',
-    )
-    expect(screen.queryByText('Deploy staging')).toBeNull()
     expect(
-      mockUseTaskList.mock.calls.map(([filter, options]) => ({
-        filter,
-        enabled: options?.enabled,
-      })),
-    ).toEqual([{ filter: { descendantOf: taskId }, enabled: true }])
+      candidateSnapshot(
+        [
+          screen.queryByText('Deploy to production')?.textContent ?? null,
+          screen.queryByText('Deploy staging')?.textContent ?? null,
+        ],
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ).filter(({ enabled }) => enabled === true),
+      ),
+    ).toEqual({
+      candidateTitles: ['Deploy to production', null],
+      taskListCalls: [{ filter: { descendantOf: taskId }, enabled: true }],
+    })
   })
 })

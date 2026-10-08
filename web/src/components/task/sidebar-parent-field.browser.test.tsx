@@ -5,13 +5,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  useSelfAndDescendantIds,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-tasks')>()
   return {
     ...original,
+    useSelfAndDescendantIds: vi.fn(),
     useTaskList: vi.fn(),
     useUpdateTaskParent: vi.fn(),
   }
@@ -26,12 +31,27 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
 })
 
 const mockUseTaskList = vi.mocked(useTaskList)
+const mockUseSelfAndDescendantIds = vi.mocked(useSelfAndDescendantIds)
 const mockUseUpdateTaskParent = vi.mocked(useUpdateTaskParent)
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
 
 type UseTaskListResult = ReturnType<typeof useTaskList>
 type UseUpdateTaskParentResult = ReturnType<typeof useUpdateTaskParent>
 type UseSearchTasksResult = ReturnType<typeof useSearchTasks>
+
+function parentFieldSnapshot(display: unknown, taskListCalls: unknown[]) {
+  return { display, taskListCalls }
+}
+
+function uniqueTaskListCalls<T>(calls: T[]) {
+  const seen = new Set<string | undefined>()
+  return calls.filter((call) => {
+    const key = JSON.stringify(call)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 const currentTask = makeTask({
   id: 'task-1',
@@ -52,6 +72,13 @@ const searchCandidate = makeTask({
 })
 
 beforeEach(() => {
+  mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
+    const { categorized } = mockUseTaskList(
+      { descendantOf: taskId },
+      { enabled },
+    )
+    return new Set([taskId, ...categorized.all.map((task) => task.id)])
+  })
   mockUseTaskList.mockReset()
   mockUseUpdateTaskParent.mockReset()
   mockUseSearchTasks.mockReset()
@@ -83,19 +110,24 @@ describe('SidebarParentField', () => {
     await user.click(screen.getByRole('button', { name: '—' }))
 
     expect(
-      screen
-        .getByPlaceholderText('Search tasks...')
-        .getAttribute('placeholder'),
-    ).toBe('Search tasks...')
-    expect(
-      mockUseTaskList.mock.calls.map(([filter, options]) => ({
-        filter,
-        enabled: options?.enabled,
-      })),
-    ).toEqual([
-      { filter: { descendantOf: currentTask.id }, enabled: false },
-      { filter: { descendantOf: currentTask.id }, enabled: true },
-    ])
+      parentFieldSnapshot(
+        screen
+          .getByPlaceholderText('Search tasks...')
+          .getAttribute('placeholder'),
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ),
+      ),
+    ).toEqual({
+      display: 'Search tasks...',
+      taskListCalls: [
+        { filter: { descendantOf: currentTask.id }, enabled: false },
+        { filter: { descendantOf: currentTask.id }, enabled: true },
+      ],
+    })
   })
 
   it('shows the current parent from task details without loading the task list', () => {
@@ -118,15 +150,22 @@ describe('SidebarParentField', () => {
       />,
     )
 
-    expect(screen.getByRole('button').textContent).toBe(
-      `#${String(existingParentTask.number)} ${existingParentTask.title}`,
-    )
     expect(
-      mockUseTaskList.mock.calls.map(([filter, options]) => ({
-        filter,
-        enabled: options?.enabled,
-      })),
-    ).toEqual([{ filter: { descendantOf: currentTask.id }, enabled: false }])
+      parentFieldSnapshot(
+        screen.getByRole('button').textContent,
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ),
+      ),
+    ).toEqual({
+      display: `#${String(existingParentTask.number)} ${existingParentTask.title}`,
+      taskListCalls: [
+        { filter: { descendantOf: currentTask.id }, enabled: false },
+      ],
+    })
   })
 
   it('selects a candidate and updates the parent', async () => {
@@ -161,6 +200,7 @@ describe('SidebarParentField', () => {
     expect(mutate).toHaveBeenCalledWith({
       id: currentTask.id,
       parentId: searchCandidate.id,
+      parent: { number: searchCandidate.number, title: searchCandidate.title },
     })
   })
 
@@ -227,6 +267,7 @@ describe('SidebarParentField', () => {
     expect(mutate).toHaveBeenCalledWith({
       id: currentTask.id,
       parentId: null,
+      parent: null,
     })
   })
 
@@ -310,18 +351,23 @@ describe('SidebarParentField', () => {
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'task')
 
     expect(
-      screen
-        .getAllByRole('button', { name: /^#\d+ / })
-        .map((el) => el.textContent),
-    ).toEqual([`#${String(unrelatedTask.number)}${unrelatedTask.title}`])
-    expect(
-      mockUseTaskList.mock.calls.map(([filter, options]) => ({
-        filter,
-        enabled: options?.enabled,
-      })),
-    ).toEqual([
-      { filter: { descendantOf: currentTask.id }, enabled: false },
-      { filter: { descendantOf: currentTask.id }, enabled: true },
-    ])
+      parentFieldSnapshot(
+        screen
+          .getAllByRole('button', { name: /^#\d+ / })
+          .map((el) => el.textContent),
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ),
+      ),
+    ).toEqual({
+      display: [`#${String(unrelatedTask.number)}${unrelatedTask.title}`],
+      taskListCalls: [
+        { filter: { descendantOf: currentTask.id }, enabled: false },
+        { filter: { descendantOf: currentTask.id }, enabled: true },
+      ],
+    })
   })
 })

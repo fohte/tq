@@ -1,20 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { LinkExistingTaskMenuAppearance } from '#components/task/link-existing-task-menu-appearance'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
-import { getDescendantIds } from '#lib/task-tree'
+import { useSelfAndDescendantIds, useUpdateTaskParent } from '#hooks/use-tasks'
 
 export function LinkExistingTaskMenu({
   open,
   onOpenChange,
   parentId,
   parentNumber,
+  parentTitle,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   parentId: string
   parentNumber: number
+  parentTitle: string
 }) {
   const [linkDialogCandidate, setLinkDialogCandidate] =
     useState<SearchResult | null>(null)
@@ -27,16 +28,8 @@ export function LinkExistingTaskMenu({
     }
   }, [open])
 
-  const { categorized } = useTaskList(
-    { descendantOf: parentId },
-    { enabled: open },
-  )
+  const excludedTaskIds = useSelfAndDescendantIds(parentId, open)
   const updateTaskParent = useUpdateTaskParent()
-
-  const excludedTaskIds = useMemo(
-    () => new Set([parentId, ...getDescendantIds(categorized.all, parentId)]),
-    [parentId, categorized.all],
-  )
 
   const { data: searchResults, isFetching } = useSearchTasks(query)
   const candidates = (searchResults ?? []).filter(
@@ -51,14 +44,18 @@ export function LinkExistingTaskMenu({
     (candidate: SearchResult) => {
       if (candidate.parentId == null) {
         updateTaskParent.mutate(
-          { id: candidate.id, parentId },
+          {
+            id: candidate.id,
+            parentId,
+            parent: { number: parentNumber, title: parentTitle },
+          },
           { onSuccess: closeAndReset },
         )
       } else {
         setLinkDialogCandidate(candidate)
       }
     },
-    [parentId, updateTaskParent, closeAndReset],
+    [parentId, parentNumber, parentTitle, updateTaskParent, closeAndReset],
   )
 
   return (
@@ -78,7 +75,11 @@ export function LinkExistingTaskMenu({
       onConfirm={() => {
         if (linkDialogCandidate == null) return
         updateTaskParent.mutate(
-          { id: linkDialogCandidate.id, parentId },
+          {
+            id: linkDialogCandidate.id,
+            parentId,
+            parent: { number: parentNumber, title: parentTitle },
+          },
           {
             onSuccess: () => {
               setLinkDialogCandidate(null)

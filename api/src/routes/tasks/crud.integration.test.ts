@@ -2807,25 +2807,27 @@ describe('tasks CRUD API', () => {
       const res = await app.request(`/api/tasks/${child.id}`)
       const body = await jsonBody<TaskResponse>(res)
 
-      expect(res.status).toBe(200)
-      expect(body).toEqual({
-        ...withoutLinkSync(child),
-        titleAuthor: { kind: 'human', agent: null },
-        descriptionAuthor: { kind: 'human', agent: null },
-        childCompletionCount: { total: 0, completed: 0 },
-        checklistCompletionCount: { total: 0, completed: 0 },
-        checklists: [],
-        pages: [],
-        timeBlocks: [],
-        links: { outgoing: [], incoming: [] },
-        labels: [],
-        parentNumber: parent.number,
-        parentTitle: parent.title,
-        duplicateOfNumber: null,
-        duplicateOfTask: null,
-        githubBlockers: [],
-        blockedBy: [],
-        blocking: [],
+      expect(responseSnapshot(res.status, body)).toEqual({
+        status: 200,
+        body: {
+          ...withoutLinkSync(child),
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
+          checklists: [],
+          pages: [],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          labels: [],
+          parentNumber: parent.number,
+          parentTitle: parent.title,
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          githubBlockers: [],
+          blockedBy: [],
+          blocking: [],
+        },
       })
     })
 

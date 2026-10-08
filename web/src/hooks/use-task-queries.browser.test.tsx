@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
   useInfiniteTaskList,
+  useSelfAndDescendantIds,
   useTaskCount,
   useTaskList,
 } from '#hooks/use-task-queries'
@@ -47,6 +48,14 @@ function taskCountQuerySnapshot(
   listCalls: unknown,
 ) {
   return { counts, countCalls, listCalls }
+}
+
+function descendantIdSnapshot(
+  initialCallCount: number,
+  ids: string[],
+  requests: unknown[],
+) {
+  return { initialCallCount, ids, requests }
 }
 
 function useTaskCountConsumers() {
@@ -184,6 +193,38 @@ describe('useInfiniteTaskList', () => {
 })
 
 describe('useTaskList', () => {
+  it('queries descendant IDs only when enabled and includes the task itself', async () => {
+    const descendantTasks = [
+      makeTask({ id: 'child-task' }),
+      makeTask({ id: 'grandchild-task' }),
+    ]
+    mockGet.mockResolvedValue(jsonResponse(descendantTasks))
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useSelfAndDescendantIds('root-task', enabled),
+      { initialProps: { enabled: false }, wrapper },
+    )
+    const initialCallCount = mockGet.mock.calls.length
+
+    rerender({ enabled: true })
+    await waitFor(() => {
+      if (!result.current.has('grandchild-task')) {
+        throw new Error('Descendant IDs have not loaded')
+      }
+    })
+
+    expect(
+      descendantIdSnapshot(
+        initialCallCount,
+        [...result.current],
+        mockGet.mock.calls,
+      ),
+    ).toEqual({
+      initialCallCount: 0,
+      ids: ['root-task', 'child-task', 'grandchild-task'],
+      requests: [[{ query: { descendantOf: 'root-task' } }]],
+    })
+  })
+
   it('serializes task-list filters including descendants as an HTTP query string', async () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
