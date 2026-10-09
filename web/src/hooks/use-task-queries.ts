@@ -102,10 +102,12 @@ export async function fetchTaskList<View extends TaskListView>(
       ...(offset != null ? { offset: String(offset) } : {}),
     },
   })
-  // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow handles assertOk before reading the body.
-  const response = await unwrapOrThrow(assertOk(res)).json()
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- The required request view selects the matching response array; Hono exposes both variants as a union.
-  return response as TaskForView<View>[]
+  return (
+    unwrapOrThrow(assertOk(res))
+      .json()
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- The required request view selects the matching response array; Hono exposes both variants as a union.
+      .then((response) => response as TaskForView<View>[])
+  )
 }
 
 async function fetchTaskCount(filter: TaskCountFilter): Promise<number> {
