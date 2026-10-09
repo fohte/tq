@@ -4,7 +4,6 @@ import {
   desc,
   eq,
   exists,
-  getTableColumns,
   inArray,
   isNotNull,
   isNull,
@@ -31,6 +30,10 @@ import { classifyNumericOrId } from '#lib/numeric-id'
 import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import {
+  selectTaskListRows,
+  selectTaskListRowsWithoutDescription,
+} from '#routes/tasks/list-query-rows'
+import {
   followUpDueTaskWaitSubquery,
   unresolvedTaskWaitSubquery,
 } from '#routes/tasks/list-query-waits'
@@ -46,6 +49,8 @@ import {
 } from '#routes/tasks/shared'
 import type { CountTasksQuery, ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
+
+export { selectTaskListRows } from '#routes/tasks/list-query-rows'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
 // to keep an adversarial `q` from generating an unbounded number of them.
@@ -131,30 +136,6 @@ function projectMismatch(projectIdColumn: AnyPgColumn, identifier: string) {
             ),
           ),
       )
-}
-
-export function selectTaskListRows() {
-  return db
-    .select({
-      task: tasks,
-      parentNumber: parentTasks.number,
-    })
-    .from(tasks)
-    .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
-}
-
-const { description: taskDescriptionColumn, ...taskRowColumns } =
-  getTableColumns(tasks)
-void taskDescriptionColumn
-
-function selectTaskListRowsWithoutDescription() {
-  return db
-    .select({
-      task: taskRowColumns,
-      parentNumber: parentTasks.number,
-    })
-    .from(tasks)
-    .leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))
 }
 
 export type TaskListRow = Awaited<ReturnType<typeof selectTaskListRows>>[number]
