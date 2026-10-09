@@ -168,6 +168,17 @@ function hasQueryKeyPrefix(
   return prefix.every((part, index) => queryKey[index] === part)
 }
 
+export function isTaskCandidateListQueryKey(
+  queryKey: readonly unknown[],
+): boolean {
+  if (!hasQueryKeyPrefix(queryKey, taskKeys.lists)) return false
+  const filter = queryKey[taskKeys.lists.length]
+  if (!isRecord(filter) || typeof filter['candidatesOn'] !== 'string') {
+    return false
+  }
+  return true
+}
+
 function taskIdFromData(data: unknown): string | null {
   if (!isRecord(data)) return null
   if (typeof data['id'] === 'string') return data['id']

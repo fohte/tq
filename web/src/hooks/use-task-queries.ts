@@ -28,6 +28,10 @@ export interface TaskListFilter {
   q?: string
   status?: TaskStatus | TaskStatus[]
   hasDue?: boolean
+  dateFrom?: string
+  dateTo?: string
+  dueTo?: string
+  candidatesOn?: string
   context?: TaskContext
   commitment?: TaskCommitment
   parentId?: string

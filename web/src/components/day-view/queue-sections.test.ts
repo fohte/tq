@@ -4,7 +4,6 @@ import {
   buildCompactQueueSections,
   buildQueueSections,
   DUE_TODAY_SECTION_KEY,
-  filterTasksDueOnOrBeforeToday,
   findWritableQueueSection,
 } from '#components/day-view/queue-sections'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
@@ -354,20 +353,6 @@ describe('buildQueueSections', () => {
 })
 
 describe('compact queue sections', () => {
-  it('includes tasks due on or before today while excluding later and undated tasks', () => {
-    const overdueTask = makeTask({ id: 'overdue', dueDate: '2026-07-29' })
-    const dueTodayTask = makeTask({ id: 'due-today', dueDate: '2026-07-30' })
-    const futureTask = makeTask({ id: 'future', dueDate: '2026-07-31' })
-    const undatedTask = makeTask({ id: 'undated' })
-
-    expect(
-      filterTasksDueOnOrBeforeToday(
-        [overdueTask, dueTodayTask, futureTask, undatedTask],
-        '2026-07-30',
-      ),
-    ).toEqual([overdueTask, dueTodayTask])
-  })
-
   it('does not resolve a read-only section as a drop target', () => {
     const dueTask = makeTask({ id: 'due' })
     const section = {
