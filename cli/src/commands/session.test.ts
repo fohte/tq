@@ -59,6 +59,14 @@ function summarizeSessionCommand<Output>(
   return { exitCode, request: requestDetails, output }
 }
 
+function summarizeSessionListCommand<Output>(
+  exitCode: number,
+  requests: ReturnType<typeof request>[],
+  output: Output,
+) {
+  return { exitCode, requests, output }
+}
+
 describe('session list', () => {
   it('lists sessions with the tasks each is linked to, defaulting unlinked sessions to an empty array', async () => {
     const sessions = [session1, session2]
@@ -101,13 +109,18 @@ describe('session list', () => {
     expect(request(calls[0])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions',
-      query: {},
+      query: { limit: '20' },
       body: undefined,
     })
     expect(request(calls[1])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions/by-task',
-      query: {},
+      query: {
+        sessionId: ['sess-1', 'sess-2'],
+        taskIds: 'all',
+        active: 'all',
+        limit: 'unlimited',
+      },
       body: undefined,
     })
     expect(write.mock.calls).toEqual([
@@ -210,6 +223,48 @@ describe('session list', () => {
     ])
   })
 
+  it('keeps the task query unfiltered by sessionId when the session limit is unlimited', async () => {
+    const responses = [
+      new Response(JSON.stringify([]), { status: 200 }),
+      new Response(JSON.stringify([]), { status: 200 }),
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'session', 'list', '--limit', 'unlimited'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizeSessionListCommand(
+        exitCode,
+        calls.map(request),
+        write.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/agent-sessions',
+          query: { limit: 'unlimited' },
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: '/api/agent-sessions/by-task',
+          query: { taskIds: 'all', active: 'all', limit: 'unlimited' },
+          body: undefined,
+        },
+      ],
+      output: [[`${JSON.stringify([], null, 2)}\n`]],
+    })
+  })
+
   it('includes lastMessage when --full is passed', async () => {
     const responses = [
       new Response(JSON.stringify([session1]), { status: 200 }),
@@ -234,7 +289,7 @@ describe('session list', () => {
 
   it('sends each repeated --session-id to both APIs as a query param', async () => {
     const responses = [
-      new Response(JSON.stringify([session1]), { status: 200 }),
+      new Response(JSON.stringify([session1, session2]), { status: 200 }),
       new Response(JSON.stringify([]), { status: 200 }),
     ]
     const { fetchStub, calls } = captureFetch(
@@ -248,6 +303,8 @@ describe('session list', () => {
         apiUrl,
         'session',
         'list',
+        '--limit',
+        '5',
         '--session-id',
         'sess-1',
         '--session-id',
@@ -261,20 +318,23 @@ describe('session list', () => {
     expect(request(calls[0])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions',
-      query: { sessionId: ['sess-1', 'sess-2'] },
+      query: { sessionId: ['sess-1', 'sess-2'], limit: '5' },
       body: undefined,
     })
     expect(request(calls[1])).toEqual({
       method: 'GET',
       pathname: '/api/agent-sessions/by-task',
-      query: { sessionId: ['sess-1', 'sess-2'] },
+      query: {
+        sessionId: ['sess-1', 'sess-2'],
+        taskIds: 'all',
+        active: 'all',
+        limit: 'unlimited',
+      },
       body: undefined,
     })
   })
 
-  it('reports the API error when either request fails', async () => {
-    // Both requests fire concurrently (Promise.all), so both come back with
-    // this same error response regardless of which one the command reports.
+  it('reports the API error when listing sessions fails', async () => {
     const { fetchStub, calls } = captureFetch(
       () =>
         new Response(JSON.stringify({ error: 'Internal error' }), {
@@ -289,9 +349,73 @@ describe('session list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(1)
-    expect(calls.length).toBe(2)
-    expect(stderr.mock.calls).toEqual([['Error: Internal error (HTTP 500)\n']])
+    expect(
+      summarizeSessionListCommand(
+        exitCode,
+        calls.map(request),
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/agent-sessions',
+          query: { limit: '20' },
+          body: undefined,
+        },
+      ],
+      output: [['Error: Internal error (HTTP 500)\n']],
+    })
+  })
+
+  it('reports the API error when loading linked tasks fails', async () => {
+    const responses = [
+      new Response(JSON.stringify([session1]), { status: 200 }),
+      new Response(JSON.stringify({ error: 'Internal error' }), {
+        status: 500,
+      }),
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'session', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      summarizeSessionListCommand(
+        exitCode,
+        calls.map(request),
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/agent-sessions',
+          query: { limit: '20' },
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: '/api/agent-sessions/by-task',
+          query: {
+            sessionId: 'sess-1',
+            taskIds: 'all',
+            active: 'all',
+            limit: 'unlimited',
+          },
+          body: undefined,
+        },
+      ],
+      output: [['Error: Internal error (HTTP 500)\n']],
+    })
   })
 })
 

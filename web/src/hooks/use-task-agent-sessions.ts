@@ -21,7 +21,9 @@ export function useTaskAgentSessionsByTaskId() {
   return useQuery({
     queryKey: taskAgentSessionKeys.all,
     queryFn: async () => {
-      const res = await api.api['agent-sessions']['by-task'].$get()
+      const res = await api.api['agent-sessions']['by-task'].$get({
+        query: { taskIds: 'all', active: 'all', limit: 'unlimited' },
+      })
       return unwrapOrThrow(assertOk(res)).json()
     },
     select: (rows) => {

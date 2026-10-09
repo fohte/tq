@@ -8,8 +8,13 @@ import {
   requestJson,
   requestNoContent,
 } from '#operations/types'
+import { listAgentSessionsQuerySchema } from '#schemas/agent-session'
 
 const agentSessionSchema = z.looseObject({ id: z.string() })
+const agentSessionListSchema = agentSessionSchema.refine(
+  (session): session is typeof session & { sessionId: string } =>
+    typeof session['sessionId'] === 'string',
+)
 const agentSessionByTaskSchema = z.looseObject({
   id: z.string(),
   taskId: z.string(),
@@ -30,6 +35,8 @@ type LinkedTask = {
   status: 'todo' | 'completed'
   linkedAt: string
 }
+
+const DEFAULT_SESSION_LIST_LIMIT = 20
 
 function groupTasksBySessionId(
   rows: AgentSessionByTask[],
@@ -55,6 +62,11 @@ const listSessionsInputSchema = z.object({
     .array(z.string())
     .describe('Only list the session with this session id')
     .optional(),
+  limit: listAgentSessionsQuerySchema.shape.limit
+    .describe(
+      `Maximum number of sessions to return (1-100 or unlimited). Defaults to ${String(DEFAULT_SESSION_LIST_LIMIT)}.`,
+    )
+    .optional(),
   full: z.boolean().optional().describe("Include each session's last message"),
 })
 const sessionRefInputSchema = z.object({
@@ -72,6 +84,7 @@ export const sessionOperations = [
     cli: {
       group: { description: 'Manage agent sessions', order: 15 },
       repeatableOptions: ['sessionId'],
+      optionDefaults: { limit: String(DEFAULT_SESSION_LIST_LIMIT) },
       output: {
         kind: 'list',
         omitKey: 'lastMessage',
@@ -80,19 +93,36 @@ export const sessionOperations = [
         fullField: 'full',
       },
     },
-    run: (client, { sessionId, full }) => {
-      const query = sessionId == null ? {} : { sessionId }
+    run: (client, { sessionId, limit, full }) => {
+      const query = {
+        limit: String(limit ?? DEFAULT_SESSION_LIST_LIMIT),
+        ...(sessionId == null ? {} : { sessionId }),
+      }
       const sessions = requestJson(
         client.api['agent-sessions'].$get({ query }),
-      ).andThen((value) => parseResponse(z.array(agentSessionSchema), value))
-      const sessionsByTask = requestJson(
-        client.api['agent-sessions']['by-task'].$get({ query }),
       ).andThen((value) =>
-        parseResponse(z.array(agentSessionByTaskSchema), value),
+        parseResponse(z.array(agentSessionListSchema), value),
       )
 
-      return sessions.andThen((sessionRows) =>
-        sessionsByTask.map((taskRows) => {
+      return sessions.andThen((sessionRows) => {
+        const sessionIds =
+          limit === 'unlimited'
+            ? sessionId
+            : sessionRows.map((session) => session.sessionId)
+        const sessionsByTask = requestJson(
+          client.api['agent-sessions']['by-task'].$get({
+            query: {
+              ...(sessionIds == null ? {} : { sessionId: sessionIds }),
+              taskIds: 'all',
+              active: 'all',
+              limit: 'unlimited',
+            },
+          }),
+        ).andThen((value) =>
+          parseResponse(z.array(agentSessionByTaskSchema), value),
+        )
+
+        return sessionsByTask.map((taskRows) => {
           const tasksBySessionId = groupTasksBySessionId(taskRows)
           const sessionsWithTasks = sessionRows.map((session) => ({
             ...session,
@@ -101,8 +131,8 @@ export const sessionOperations = [
           return full === true
             ? sessionsWithTasks
             : omitKeyRecursively(sessionsWithTasks, 'lastMessage')
-        }),
-      )
+        })
+      })
     },
   }),
   defineOperation(sessionRefInputSchema, {
