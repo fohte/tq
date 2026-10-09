@@ -11,7 +11,7 @@ export { taskKeys }
 type TaskListResponse = InferResponseType<typeof api.api.tasks.$get>
 type TaskListResponseItem = TaskListResponse[number]
 type Task = TaskListResponseItem & { description: string | null }
-export type TaskRow = Omit<Task, 'description'>
+type TaskRow = Omit<Task, 'description'>
 export type TaskListView = 'row' | 'full'
 type TaskForView<View extends TaskListView> = View extends 'full'
   ? Task

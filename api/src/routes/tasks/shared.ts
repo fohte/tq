@@ -306,7 +306,7 @@ type TaskListItemFieldsResponse = ReturnType<
   typeof taskListItemFieldsToResponse
 >
 type TaskDescription = (typeof tasks.$inferSelect)['description']
-export type TaskListItemResponse = TaskListItemFieldsResponse & {
+type TaskListItemResponse = TaskListItemFieldsResponse & {
   description: TaskDescription
 }
 type TaskListItemRowResponse = TaskListItemFieldsResponse
