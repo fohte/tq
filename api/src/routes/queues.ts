@@ -4,8 +4,10 @@ import {
   and,
   asc,
   eq,
+  gte,
   inArray,
   isNull,
+  lte,
   notInArray,
   or,
   type SQL,
@@ -53,6 +55,20 @@ function periodStartCondition(periodStart: string | null): SQL {
     : eq(taskQueueItems.periodStart, periodStart)
 }
 
+function periodStartRangeConditions(
+  periodUnit: TaskQueue['periodUnit'],
+  from: string,
+  to: string,
+): SQL[] {
+  const periodStart = resolvePeriodStart(periodUnit, from)
+  if (periodStart == null) return [isNull(taskQueueItems.periodStart)]
+
+  return [
+    gte(taskQueueItems.periodStart, periodStart),
+    lte(taskQueueItems.periodStart, to),
+  ]
+}
+
 export const queuesApp = new Hono()
   .get('/', async (c) => {
     const rows = await db.select().from(taskQueues).orderBy(taskQueues.position)
@@ -79,13 +95,26 @@ export const queuesApp = new Hono()
     zValidator('query', getQueueItemsQuerySchema),
     async (c) => {
       const key = c.req.param('key')
-      const { date, context } = c.req.valid('query')
+      const { date, from, to, context } = c.req.valid('query')
 
       const queueResult = await getQueueByKeyOrRespond(c, key)
       if (queueResult.isErr()) return queueResult.error
       const queue = queueResult.value
 
-      const periodStart = resolvePeriodStart(queue.periodUnit, date)
+      let periodConditions: SQL[]
+      if (date != null) {
+        periodConditions = [
+          periodStartCondition(resolvePeriodStart(queue.periodUnit, date)),
+        ]
+      } else if (from != null && to != null) {
+        periodConditions = periodStartRangeConditions(
+          queue.periodUnit,
+          from,
+          to,
+        )
+      } else {
+        return c.json({ error: 'Invalid queue items query' }, 400)
+      }
 
       const rows = await db
         .select({ item: taskQueueItems })
@@ -94,11 +123,15 @@ export const queuesApp = new Hono()
         .where(
           and(
             eq(taskQueueItems.queueId, queue.id),
-            periodStartCondition(periodStart),
+            ...periodConditions,
             context == null ? undefined : eq(tasks.context, context),
           ),
         )
-        .orderBy(asc(tasks.dueDate), taskQueueItems.sortOrder)
+        .orderBy(
+          asc(taskQueueItems.periodStart),
+          asc(tasks.dueDate),
+          taskQueueItems.sortOrder,
+        )
 
       return c.json(
         rows.map(({ item }) => itemToResponse(item)),
