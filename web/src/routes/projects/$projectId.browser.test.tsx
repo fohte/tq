@@ -53,7 +53,6 @@ const baseTask = {
   labels: [],
   startDate: null,
   dueDate: null,
-  estimatedMinutes: null,
   parentId: null,
   projectId: 'p1',
   recurrenceRuleId: null,

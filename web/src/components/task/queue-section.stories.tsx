@@ -72,9 +72,7 @@ export const DayQueue: Story = {
         id: '1',
         title: 'Write the quarterly report',
         context: 'work',
-        estimatedMinutes: 30,
       }),
-      makeTask({ id: '2', title: 'Plan the launch', estimatedMinutes: null }),
     ],
   },
 }
@@ -89,7 +87,7 @@ export const DueToday: Story = {
     items: [
       makeTask({
         id: '1',
-        title: 'Send the revised estimate',
+        title: 'Send the revised pricing',
         dueDate: yesterdayDate,
       }),
       makeTask({
@@ -137,7 +135,6 @@ export const WeekWithScheduledDays: Story = {
       makeTask({
         id: 'week-task',
         title: 'Prepare the weekly summary',
-        estimatedMinutes: 30,
       }),
     ],
     dayGroups: [
@@ -148,7 +145,6 @@ export const WeekWithScheduledDays: Story = {
           makeTask({
             id: 'tuesday-task',
             title: 'Review the release notes',
-            estimatedMinutes: 45,
           }),
           makeTask({
             id: 'tuesday-task-2',
@@ -214,7 +210,6 @@ export const StaticQueueWithoutRange: Story = {
       makeTask({
         id: '1',
         title: 'Renew SSL certificate',
-        estimatedMinutes: 15,
       }),
     ],
   },

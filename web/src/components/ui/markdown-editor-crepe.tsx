@@ -25,11 +25,8 @@ import {
 } from '#lib/asset-upload'
 import { createImageSourceRevealPlugin } from '#lib/image-source-reveal/plugin'
 import { createInlineReferencePlugin } from '#lib/inline-reference/plugin'
-import { githubUrlProvider } from '#lib/inline-reference/providers/github-url'
-import { projectUrlProvider } from '#lib/inline-reference/providers/project-url'
-import { taskMentionProvider } from '#lib/inline-reference/providers/task-mention'
+import { inlineReferenceProviders } from '#lib/inline-reference/providers/index'
 import { taskMentionAutocompletePlugin } from '#lib/inline-reference/providers/task-mention-autocomplete-plugin'
-import { taskUrlProvider } from '#lib/inline-reference/providers/task-url'
 import { createInlineReferenceViewModeStore } from '#lib/inline-reference/view-mode'
 import { listIndentKeymap } from '#lib/list-indent-keymap'
 
@@ -196,37 +193,23 @@ function CrepeEditor({
             ),
         }))
       })
-      .use(
-        createInlineReferencePlugin(
-          taskMentionProvider,
-          widgetViewFactory,
-          viewModeStore,
-        ),
-      )
       .use(taskMentionAutocompletePlugin)
-      .use(
-        createInlineReferencePlugin(
-          taskUrlProvider,
-          widgetViewFactory,
-          viewModeStore,
-        ),
-      )
-      .use(
-        createInlineReferencePlugin(
-          projectUrlProvider,
-          widgetViewFactory,
-          viewModeStore,
-        ),
-      )
-      .use(
-        createInlineReferencePlugin(
-          githubUrlProvider,
-          widgetViewFactory,
-          viewModeStore,
-        ),
-      )
       .use(createImageSourceRevealPlugin(widgetViewFactory, viewModeStore))
       .use(listIndentKeymap)
+
+    for (const provider of inlineReferenceProviders) {
+      provider.registerPlugin(
+        (inlineReferenceProvider) =>
+          createInlineReferencePlugin(
+            inlineReferenceProvider,
+            widgetViewFactory,
+            viewModeStore,
+          ),
+        (plugin) => {
+          crepe.editor.use(plugin)
+        },
+      )
+    }
 
     if (onFocusedDocumentChange != null) {
       crepe.editor.use(

@@ -26,7 +26,6 @@ function templateToResponse(
     id: template.id,
     title: template.title,
     description: template.description,
-    estimatedMinutes: template.estimatedMinutes,
     projectId: template.projectId,
     parentId: template.parentId,
     context: template.context,
@@ -89,7 +88,6 @@ export const recurringTaskTemplatesApp = new Hono()
               .values({
                 title: input.title,
                 description: input.description ?? null,
-                estimatedMinutes: input.estimatedMinutes ?? null,
                 projectId: input.projectId ?? null,
                 parentId,
                 context: input.context,

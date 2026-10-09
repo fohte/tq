@@ -116,7 +116,6 @@ export const tasksCrudApp = new Hono()
             {
               title: input.title,
               description: input.description ?? null,
-              estimatedMinutes: input.estimatedMinutes ?? null,
               projectId: input.projectId ?? null,
               parentId,
               context: input.context ?? 'personal',
@@ -147,7 +146,6 @@ export const tasksCrudApp = new Hono()
               descriptionTemplateId,
               startDate: input.startDate ?? null,
               dueDate: templateFields?.occurrenceDate ?? input.dueDate ?? null,
-              estimatedMinutes: input.estimatedMinutes ?? null,
               parentId,
               projectId: input.projectId ?? null,
               context: input.context,
@@ -356,10 +354,6 @@ export const tasksCrudApp = new Hono()
             'description' in taskFields
               ? (taskFields.description ?? null)
               : existing.description
-          const effectiveEstimatedMinutes =
-            'estimatedMinutes' in taskFields
-              ? (taskFields.estimatedMinutes ?? null)
-              : existing.estimatedMinutes
           const effectiveProjectId =
             'projectId' in taskFields
               ? (taskFields.projectId ?? null)
@@ -380,7 +374,6 @@ export const tasksCrudApp = new Hono()
             {
               title: effectiveTitle,
               description: effectiveDescription,
-              estimatedMinutes: effectiveEstimatedMinutes,
               projectId: effectiveProjectId,
               parentId: existing.parentId,
               context: effectiveContext,
