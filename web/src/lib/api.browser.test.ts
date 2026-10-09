@@ -24,10 +24,20 @@ describe('api author header', () => {
     )
 
     await api.api.tasks.$get({
-      query: { context: 'all', status: 'all', limit: 'unlimited' },
+      query: {
+        view: 'full',
+        context: 'all',
+        status: 'all',
+        limit: 'unlimited',
+      },
     })
     await api.api.tasks.$get({
-      query: { context: 'all', status: 'all', limit: 'unlimited' },
+      query: {
+        view: 'full',
+        context: 'all',
+        status: 'all',
+        limit: 'unlimited',
+      },
     })
 
     expect(authors).toEqual([

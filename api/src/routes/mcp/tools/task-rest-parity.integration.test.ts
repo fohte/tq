@@ -102,7 +102,7 @@ describe('REST/MCP parity', () => {
     const data = passthroughSchema<TaskResponse>().parse(parseToolJson(created))
 
     const res = await app.request(
-      '/api/tasks?status=all&limit=unlimited&context=work',
+      '/api/tasks?view=full&status=all&limit=unlimited&context=work',
     )
     expect(res.status).toBe(200)
 

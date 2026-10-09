@@ -47,7 +47,7 @@ export function ProjectMainContent({
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isTasksLoading: boolean
-  lazyChildrenFilter: TaskListFilter | undefined
+  lazyChildrenFilter: TaskListFilter<'full'> | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   hasNextPage: boolean
   isFetchingNextPage: boolean
@@ -266,7 +266,7 @@ function ProjectTaskList({
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isLoading: boolean
-  lazyChildrenFilter: TaskListFilter | undefined
+  lazyChildrenFilter: TaskListFilter<'full'> | undefined
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   hasNextPage: boolean
   isFetchingNextPage: boolean

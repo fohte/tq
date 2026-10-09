@@ -831,13 +831,13 @@ describe('githubLinks embedded in task responses', () => {
     expect(detailBody.githubLinks).toEqual([])
 
     const listRes = await app.request(
-      '/api/tasks?context=all&status=all&limit=unlimited',
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited',
     )
     const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
     expect(listBody.find((t) => t.id === task.id)?.githubLinks).toEqual([])
 
     const searchRes = await app.request(
-      '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
         encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
@@ -860,13 +860,13 @@ describe('githubLinks embedded in task responses', () => {
     expect(detailBody.githubLinks).toEqual([link])
 
     const listRes = await app.request(
-      '/api/tasks?context=all&status=all&limit=unlimited',
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited',
     )
     const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
     expect(listBody.find((t) => t.id === task.id)?.githubLinks).toEqual([link])
 
     const searchRes = await app.request(
-      '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
         encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)
@@ -901,7 +901,7 @@ describe('githubLinks embedded in task responses', () => {
     expect(detailBody.githubLinks).toEqual([firstLink, secondLink])
 
     const listRes = await app.request(
-      '/api/tasks?context=all&status=all&limit=unlimited',
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited',
     )
     const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
     expect(listBody.find((t) => t.id === task.id)?.githubLinks).toEqual([
@@ -910,7 +910,7 @@ describe('githubLinks embedded in task responses', () => {
     ])
 
     const searchRes = await app.request(
-      '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
         encodeURIComponent('My task'),
     )
     const searchBody = await jsonBody<TaskListItemResponse[]>(searchRes)

@@ -260,6 +260,7 @@ describe('project tasks', () => {
       method: 'GET',
       pathname: '/api/tasks',
       query: {
+        view: 'full',
         context: 'all',
         status: 'all',
         limit: 'unlimited',

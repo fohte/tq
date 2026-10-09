@@ -3,13 +3,14 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
 
 import { useDebounce } from '#hooks/use-debounce'
+import { fetchTaskList, type Task } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
 import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
 
-type SearchResult = InferResponseType<typeof api.api.tasks.$get, 200>[number]
+type SearchResult = Task
 
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
@@ -44,20 +45,15 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
 
   const queryResult = useQuery({
     queryKey: searchKeys.results(debouncedQuery, context),
-    queryFn: async () => {
-      const res = await api.api.tasks.$get({
-        query: {
-          q: debouncedQuery,
-          limit: '20',
-          context: context ?? 'all',
-          status: 'all',
-          ...(hasFreeText ? { includeMatch: 'true' } : {}),
-        },
-      })
-      return unwrapOrThrow(assertOk(res))
-        .json()
-        .then((results): SearchResult[] => results)
-    },
+    queryFn: () =>
+      fetchTaskList({
+        view: 'full',
+        q: debouncedQuery,
+        limit: 20,
+        context: context ?? 'all',
+        status: 'all',
+        includeMatch: hasFreeText,
+      }),
     enabled: debouncedQuery.length > 0,
     placeholderData: (prev, prevQuery) => {
       const [, , , prevContext] = prevQuery?.queryKey ?? []

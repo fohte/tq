@@ -44,6 +44,19 @@ describe('GET /api/tasks/count', () => {
     })
   })
 
+  it('ignores the view parameter', async () => {
+    await createTask('Task to count', { context: 'work' })
+
+    const response = await app.request(
+      '/api/tasks/count?context=all&status=all&view=row',
+    )
+
+    expect(await normalizeCountResponse(response)).toEqual({
+      status: 200,
+      body: { count: 1 },
+    })
+  })
+
   it('counts matching tasks without applying list pagination or ordering', async () => {
     await createTask('Work inbox task', {
       context: 'work',
