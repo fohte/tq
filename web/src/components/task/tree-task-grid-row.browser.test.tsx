@@ -34,6 +34,7 @@ const mockUseProject = vi.fn()
 vi.mock('#hooks/use-tasks', () => ({
   allTasksFilter: { context: 'all', status: 'all', limit: 'unlimited' },
   useTaskList: () => ({ categorized: { all: [] } }),
+  useSelfAndDescendantIds: () => new Set<string>(),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),

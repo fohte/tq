@@ -99,6 +99,7 @@ export function TaskSubtasksList({
         <LinkExistingTaskRow
           parentId={taskId}
           parentTaskNumber={parentTaskNumber}
+          parentTaskTitle={parentTaskTitle}
         />
       </Panel>
     </div>
@@ -108,9 +109,11 @@ export function TaskSubtasksList({
 function LinkExistingTaskRow({
   parentId,
   parentTaskNumber,
+  parentTaskTitle,
 }: {
   parentId: string
   parentTaskNumber: number
+  parentTaskTitle: string
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -132,6 +135,7 @@ function LinkExistingTaskRow({
         onOpenChange={setIsMenuOpen}
         parentId={parentId}
         parentNumber={parentTaskNumber}
+        parentTitle={parentTaskTitle}
       />
     </>
   )

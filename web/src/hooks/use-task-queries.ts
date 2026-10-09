@@ -37,6 +37,7 @@ export interface TaskListFilter {
   commitment?: TaskCommitment
   parentId?: string
   templateId?: string
+  descendantOf?: string
   label?: string
   projectId?: string
   sortBy?: TaskSortBy
@@ -129,6 +130,18 @@ export function useTaskList(
   }, [query.data])
 
   return { ...query, categorized }
+}
+
+export function useSelfAndDescendantIds(taskId: string, enabled: boolean) {
+  const { categorized } = useTaskList(
+    { ...allTasksFilter, descendantOf: taskId },
+    { enabled },
+  )
+
+  return useMemo(
+    () => new Set([taskId, ...categorized.all.map((task) => task.id)]),
+    [taskId, categorized.all],
+  )
 }
 
 export function useTaskCount(
