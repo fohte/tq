@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Loader2, Plus } from 'lucide-react'
+import { useState } from 'react'
 
 import { PageCardPresentation } from '#components/task/page-card'
 import { HtmlPageEditor } from '#components/ui/html-page-editor'
@@ -11,6 +12,7 @@ import type { TaskPage } from '#hooks/use-task-pages'
 import {
   useCreateTaskPage,
   useDeleteTaskPage,
+  useTaskPage,
   useTaskPages,
   useUpdateTaskPage,
 } from '#hooks/use-task-pages'
@@ -117,12 +119,22 @@ function PagesSectionHeader({
 // --- Page Card (collapsible preview) ---
 
 function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const deletePage = useDeleteTaskPage(taskId)
+  const { data: expandedPage, isError: isContentLoadError } = useTaskPage(
+    taskId,
+    page.id,
+    isExpanded,
+  )
 
   return (
     <PageCardPresentation
       taskId={taskId}
       page={page}
+      isExpanded={isExpanded}
+      onExpandedChange={setIsExpanded}
+      expandedContent={expandedPage?.content}
+      contentLoadError={expandedPage === undefined && isContentLoadError}
       onDelete={() => {
         deletePage.mutate(page.id)
       }}
@@ -131,7 +143,7 @@ function PageCard({ taskId, page }: { taskId: string; page: TaskPage }) {
         <PageInlineEditor
           taskId={taskId}
           pageId={page.id}
-          format={page.format}
+          format={expandedPage?.format ?? page.format}
           defaultValue={defaultValue}
           editing={editing}
           onEditingChange={onEditingChange}

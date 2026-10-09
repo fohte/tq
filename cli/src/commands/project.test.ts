@@ -11,6 +11,7 @@ import {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 function summarizeProjectListRequest(exitCode: number, url: string) {
@@ -21,12 +22,11 @@ function summarizeProjectListRequest(exitCode: number, url: string) {
 }
 
 describe('project list', () => {
-  it('sends an empty query and prints the projects returned by the server as JSON', async () => {
-    const projects = [{ id: 'p1', title: 'Website' }]
+  it('defaults to all contexts and active projects', async () => {
+    vi.stubEnv('TQ_CONTEXT', '')
     const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(projects), { status: 200 }),
+      () => new Response(JSON.stringify([]), { status: 200 }),
     )
-    const write = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'project', 'list'],
@@ -34,11 +34,28 @@ describe('project list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(new URL(calls[0]?.url ?? '').search).toBe('')
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(projects, null, 2)}\n`],
-    ])
+    expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
+      exitCode: 0,
+      query: { context: 'all', status: 'active' },
+    })
+  })
+
+  it('uses TQ_CONTEXT when the context flag is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify([]), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'project', 'list'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
+      exitCode: 0,
+      query: { context: 'work', status: 'active' },
+    })
   })
 
   it('omits description from the printed output by default', async () => {

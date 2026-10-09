@@ -38,7 +38,7 @@ export const taskChecklistKeys = {
 export const projectKeys = {
   all: ['projects'] as const,
   lists: ['projects', 'list'] as const,
-  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
+  list: (filter: ProjectFilter) => [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
   taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }
@@ -167,6 +167,17 @@ function hasQueryKeyPrefix(
   prefix: readonly unknown[],
 ): boolean {
   return prefix.every((part, index) => queryKey[index] === part)
+}
+
+export function isTaskCandidateListQueryKey(
+  queryKey: readonly unknown[],
+): boolean {
+  if (!hasQueryKeyPrefix(queryKey, taskKeys.lists)) return false
+  const filter = queryKey[taskKeys.lists.length]
+  if (!isRecord(filter) || typeof filter['candidatesOn'] !== 'string') {
+    return false
+  }
+  return true
 }
 
 function taskIdFromData(data: unknown): string | null {

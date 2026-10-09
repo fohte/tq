@@ -6,13 +6,13 @@ import { GithubSyncRuleFormModal } from '#components/settings/github-sync-rule-f
 import { GithubSyncRuleRow } from '#components/settings/github-sync-rule-row'
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { useGithubSyncRules } from '#hooks/use-github-sync-rules'
-import { useProjects } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 
 export function GithubSyncRuleList() {
   const [createOpen, setCreateOpen] = useState(false)
 
   const syncRules = useGithubSyncRules()
-  const projects = useProjects()
+  const projects = useProjects(ALL_PROJECTS_FILTER)
 
   return (
     <div className="flex flex-col gap-3">

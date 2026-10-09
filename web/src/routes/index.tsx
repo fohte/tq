@@ -11,7 +11,6 @@ import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import {
   buildCompactQueueSections,
   buildQueueSections,
-  filterTasksDueOnOrBeforeToday,
 } from '#components/day-view/queue-sections'
 import { useCalendarChangeFeedback } from '#hooks/use-calendar-change-feedback'
 import { useCompactMemoData } from '#hooks/use-compact-memo-data'
@@ -19,12 +18,13 @@ import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
+import { useDayViewTaskData } from '#hooks/use-day-view-task-data'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
 import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
-import { useNowPanelData } from '#hooks/use-now-panel-data'
-import { useProjects } from '#hooks/use-projects'
+import { useNowPanelData, useNowPanelQueries } from '#hooks/use-now-panel-data'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
   type QueueItem,
@@ -37,7 +37,7 @@ import {
 } from '#hooks/use-queues'
 import { useScheduleList } from '#hooks/use-schedules'
 import { useSelectedDate } from '#hooks/use-selected-date'
-import { useTaskList, useTaskMap } from '#hooks/use-tasks'
+import { useTaskList } from '#hooks/use-tasks'
 import {
   useCreateTimeBlock,
   useTimeBlocks,
@@ -46,7 +46,6 @@ import {
 import { isCompactDayLayoutSearch } from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
-import { getQueueCandidates } from '#lib/queue-candidates'
 import { appendQueueTaskId } from '#lib/queue-task-order'
 
 const dayViewSearchDefaults = { view: 'queue', q: '' } as const
@@ -83,21 +82,6 @@ function DayView() {
     layout,
   } = Route.useSearch()
   const isCompactLayout = layout === 'compact'
-  const { isLoading, categorized } = useTaskList({
-    ...baseFilter,
-    limit: 'unlimited',
-  })
-  const taskMap = useTaskMap(categorized.all)
-  const dueDateTasksQuery = useTaskList(
-    {
-      ...baseFilter,
-      status: 'todo',
-      hasDue: true,
-      sortBy: 'due',
-      limit: 'unlimited',
-    },
-    { enabled: isCompactLayout },
-  )
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
   const filteredTasksQuery = useTaskList(
@@ -168,11 +152,6 @@ function DayView() {
     visibleRange.endDate,
   )
   const { data: schedulesData } = schedulesQuery
-  useCompactRefreshErrorLogging(isCompactLayout, 'day view', {
-    timeBlocks: timeBlocksQuery.error,
-    schedules: schedulesQuery.error,
-    dueTasks: dueDateTasksQuery.error,
-  })
   const { data: queuesData } = useQueues()
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
@@ -182,23 +161,12 @@ function DayView() {
   const updateTimeBlock = useUpdateTimeBlock()
   const createTimeBlock = useCreateTimeBlock()
   const context = useCurrentContext()
-  const {
-    now,
-    nowPanelProps,
-    taskRowStates: compactTaskRowStates,
-    gcalAuthRequired: nowPanelGcalAuthRequired,
-  } = useNowPanelData({
-    enabled: isCompactLayout,
-    context,
-    taskMap,
-    isTasksLoading: isLoading,
-  })
-  const compactMemoProps = useCompactMemoData({
+  const nowPanelQueryData = useNowPanelQueries({
     enabled: isCompactLayout,
     context,
   })
   const queryClient = useQueryClient()
-  const projects = useProjects()
+  const projects = useProjects(ALL_PROJECTS_FILTER)
 
   const {
     changeFeedback,
@@ -214,7 +182,7 @@ function DayView() {
   )
   const gcalAuthRequired =
     gcalEventsQuery.error instanceof GcalAuthRequiredError ||
-    nowPanelGcalAuthRequired
+    nowPanelQueryData.gcalAuthRequired
   const gcalAuthUrlQuery = useIntegrationAuthUrl(
     'google_calendar',
     gcalAuthRequired,
@@ -256,6 +224,51 @@ function DayView() {
     return map
   }, [canReadQueueItems, queuesData, queueItemsResults])
 
+  const referencedQueueItems = useMemo(
+    () => [
+      ...[...rawItemsByKey.values()].flat(),
+      ...futureDayQueueItems.map(({ item }) => item),
+    ],
+    [rawItemsByKey, futureDayQueueItems],
+  )
+  const dayViewTaskData = useDayViewTaskData({
+    context,
+    selectedDate,
+    visibleRange,
+    queueItems: referencedQueueItems,
+    visibleDayQueueItems: dayQueueItems,
+    visibleTimeBlocks: timeBlocksData,
+    nowPanelTimeBlocks: isCompactLayout
+      ? nowPanelQueryData.timeBlocksData
+      : undefined,
+    isCompactLayout,
+  })
+  const {
+    isLoading,
+    taskMap,
+    queueCandidates: allQueueCandidates,
+    taskDateTasks,
+    tasksDueOnOrBeforeToday,
+  } = dayViewTaskData
+  useCompactRefreshErrorLogging(isCompactLayout, 'day view', {
+    timeBlocks: timeBlocksQuery.error,
+    schedules: schedulesQuery.error,
+    dueTasks: dayViewTaskData.dueTasksError,
+  })
+  const {
+    now,
+    nowPanelProps,
+    taskRowStates: compactTaskRowStates,
+  } = useNowPanelData({
+    queryData: nowPanelQueryData,
+    taskMap,
+    isTasksLoading: isLoading,
+  })
+  const compactMemoProps = useCompactMemoData({
+    enabled: isCompactLayout,
+    context,
+  })
+
   // Completed tasks remain stored but are omitted from non-day queue sections.
   const queueSections = useMemo(
     () =>
@@ -293,11 +306,6 @@ function DayView() {
     [queueSections, filterTaskIds],
   )
 
-  const todayStr = formatLocalDate(new Date())
-  const tasksDueOnOrBeforeToday = useMemo(
-    () => filterTasksDueOnOrBeforeToday(dueDateTasksQuery.data ?? [], todayStr),
-    [dueDateTasksQuery.data, todayStr],
-  )
   const visibleQueueSections = useMemo(
     () =>
       isCompactLayout
@@ -312,23 +320,6 @@ function DayView() {
   const dayQueueTasks =
     queueSections.find((q) => q.key === DAY_QUEUE_KEY)?.items ?? []
 
-  const allQueuedTaskIds = useMemo(() => {
-    const ids = new Set<string>()
-    rawItemsByKey.forEach((items) => {
-      items.forEach((item) => {
-        ids.add(item.taskId)
-      })
-    })
-    futureDayQueueItems.forEach(({ item }) => {
-      ids.add(item.taskId)
-    })
-    return ids
-  }, [rawItemsByKey, futureDayQueueItems])
-
-  const allQueueCandidates = useMemo(
-    () => getQueueCandidates(categorized.all, allQueuedTaskIds),
-    [categorized.all, allQueuedTaskIds],
-  )
   const queueCandidates = useMemo(
     () =>
       filterTaskIds == null
@@ -344,7 +335,7 @@ function DayView() {
     dayQueueItems,
     taskMap,
     context,
-    taskDateTasks: categorized.all,
+    taskDateTasks,
     visibleRange,
   })
 
@@ -450,7 +441,6 @@ function DayView() {
         isLoading={
           isLoading ||
           queueCarryOver.isCarryingOver ||
-          (isCompactLayout && dueDateTasksQuery.isLoading) ||
           (isKanbanFiltering && filteredTasksQuery.isLoading)
         }
         calendarEvents={calendarEvents}

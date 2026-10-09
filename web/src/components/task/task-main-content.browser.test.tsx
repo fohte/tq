@@ -17,7 +17,7 @@ import {
   TaskSidebarMobile,
 } from '#components/task/task-detail'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { projectKeys } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskDetail } from '#hooks/use-tasks'
 import { allTasksFilter, taskKeys } from '#hooks/use-tasks'
@@ -55,8 +55,8 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
     [],
   )
   queryClient.setQueryData(labelKeys.list({ context }), [])
-  queryClient.setQueryData(projectKeys.list(undefined), [])
-  queryClient.setQueryData(projectKeys.list({ context }), [])
+  queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), [])
+  queryClient.setQueryData(projectKeys.list({ context, status: 'all' }), [])
   queryClient.setQueryData(savedViewKeys.list({ context }), [])
   // TaskSidebarMobile's SidebarPlanField reads both via useTaskPlan.
   queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, todayStr), [])

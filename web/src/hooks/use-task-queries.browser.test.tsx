@@ -346,6 +346,48 @@ describe('useTaskList', () => {
     expect(mockGet.mock.calls).toEqual([])
   })
 
+  it('serializes server-side day-view filters as an HTTP query string', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    const { result } = renderHook(
+      () =>
+        useTaskList({
+          ids: ['task-b', 'task-a'],
+          context: 'work',
+          includeAncestors: true,
+          status: 'todo',
+          dateFrom: '2032-05-11',
+          dateTo: '2032-05-15',
+          dueTo: '2032-05-13',
+          candidatesOn: '2032-05-12',
+          limit: 'unlimited',
+        }),
+      { wrapper },
+    )
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([])
+    })
+
+    expect(mockGet.mock.calls).toEqual([
+      [
+        {
+          query: {
+            ids: ['task-b', 'task-a'],
+            context: 'work',
+            includeAncestors: 'true',
+            status: 'todo',
+            dateFrom: '2032-05-11',
+            dateTo: '2032-05-15',
+            dueTo: '2032-05-13',
+            candidatesOn: '2032-05-12',
+            limit: 'unlimited',
+          },
+        },
+      ],
+    ])
+  })
+
   it('serializes the due-date filter as an HTTP query string', async () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 

@@ -1,4 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { Mock } from 'vitest'
@@ -21,6 +25,7 @@ import {
 } from '#hooks/use-queues'
 import { useUpdateTask } from '#hooks/use-task-mutations'
 import { formatLocalDate } from '#lib/date-range'
+import { taskKeys } from '#lib/query-keys'
 import { assertDefined } from '#lib/test-utils'
 
 vi.mock('#lib/api', () => {
@@ -101,6 +106,30 @@ function dayFetchCount(mockGet: Mock) {
   }).length
 }
 
+function observeCachedQuery(queryKey: readonly unknown[]) {
+  const queryFn = vi.fn(() => Promise.resolve([]))
+  const observer = new QueryObserver(queryClient, {
+    queryKey,
+    queryFn,
+    initialData: [],
+    staleTime: Infinity,
+  })
+  const unsubscribe = observer.subscribe(() => undefined)
+  return { queryFn, unsubscribe }
+}
+
+function getRefetchCounts(queries: {
+  matchingDate: ReturnType<typeof observeCachedQuery>
+  otherDate: ReturnType<typeof observeCachedQuery>
+  unfiltered: ReturnType<typeof observeCachedQuery>
+}) {
+  return {
+    matchingDate: queries.matchingDate.queryFn.mock.calls.length,
+    otherDate: queries.otherDate.queryFn.mock.calls.length,
+    unfiltered: queries.unfiltered.queryFn.mock.calls.length,
+  }
+}
+
 describe('useTaskPlan', () => {
   it('invalidates the previous queue after switching from today to this week', async () => {
     const mockGet = assertDefined((await getMocks())['mockGet'])
@@ -145,6 +174,53 @@ describe('useTaskPlan', () => {
 })
 
 describe('queue ordering cache', () => {
+  it('refreshes candidate lists after replacing queue items', async () => {
+    const mockPut = assertDefined((await getMocks())['mockPut'])
+    mockPut.mockResolvedValue(jsonResponse([]))
+    const matchingCandidateList = observeCachedQuery(
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        candidatesOn: date,
+        limit: 'unlimited',
+      }),
+    )
+    const otherCandidateList = observeCachedQuery(
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        candidatesOn: '2026-08-02',
+        limit: 'unlimited',
+      }),
+    )
+    const unfilteredTaskList = observeCachedQuery(
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        limit: 'unlimited',
+      }),
+    )
+    const { result } = renderHook(() => useSetQueueItems(), { wrapper })
+
+    act(() => {
+      result.current.mutate({ key: DAY_QUEUE_KEY, date, taskIds: [taskId] })
+    })
+
+    await waitFor(() => {
+      expect(
+        getRefetchCounts({
+          matchingDate: matchingCandidateList,
+          otherDate: otherCandidateList,
+          unfiltered: unfilteredTaskList,
+        }),
+      ).toEqual({ matchingDate: 1, otherDate: 1, unfiltered: 0 })
+    })
+
+    matchingCandidateList.unsubscribe()
+    otherCandidateList.unsubscribe()
+    unfilteredTaskList.unsubscribe()
+  })
+
   it('requests queue items for the selected task context', async () => {
     const mockGet = assertDefined((await getMocks())['mockGet'])
     mockGet.mockResolvedValue(jsonResponse([]))

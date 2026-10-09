@@ -80,7 +80,7 @@ function SidebarContentStory({
     inboxCount,
   )
   queryClient.setQueryData(
-    projectKeys.list({ context: 'personal' }),
+    projectKeys.list({ context: 'personal', status: 'all' }),
     projectsAcrossStatuses,
   )
   queryClient.setQueryData(

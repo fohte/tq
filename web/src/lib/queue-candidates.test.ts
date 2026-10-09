@@ -53,6 +53,15 @@ describe('getCandidateReason', () => {
     ).toEqual({ kind: 'due-today' })
   })
 
+  it('uses the displayed date when assigning a candidate reason', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({ dueDate: '2026-03-22' }),
+        new Date('2026-03-22T12:00:00'),
+      ),
+    ).toEqual({ kind: 'due-today' })
+  })
+
   it('returns starts with days=0 when the start date is today', () => {
     expect(
       getCandidateReason(makeCandidateTask({ startDate: '2026-03-20' }), now),

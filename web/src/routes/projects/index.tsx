@@ -24,7 +24,7 @@ function ProjectList() {
 
   const { data: projects, isLoading } = useProjects({
     context,
-    ...(filter === 'active' ? { status: 'active' as const } : {}),
+    status: filter === 'active' ? 'active' : 'all',
   })
 
   return (

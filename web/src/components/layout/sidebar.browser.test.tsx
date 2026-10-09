@@ -111,7 +111,10 @@ async function renderSidebar({
     }),
     inboxCount,
   )
-  queryClient.setQueryData(projectKeys.list({ context: 'personal' }), projects)
+  queryClient.setQueryData(
+    projectKeys.list({ context: 'personal', status: 'all' }),
+    projects,
+  )
   queryClient.setQueryData(
     savedViewKeys.list({ context: 'personal' }),
     savedViews,

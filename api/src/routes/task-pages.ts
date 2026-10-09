@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import {
@@ -47,7 +47,7 @@ function validateContentLength(
     : null
 }
 
-export function pageToResponse(
+function pageToResponse(
   page: typeof taskPages.$inferSelect,
   author: EditAuthorInfo | null = null,
 ) {
@@ -61,6 +61,45 @@ export function pageToResponse(
     createdAt: page.createdAt.toISOString(),
     updatedAt: page.updatedAt.toISOString(),
     author,
+  }
+}
+
+type TaskPageListRow = typeof taskPages.$inferSelect & {
+  preview: string | null
+  contentTruncated: boolean
+}
+
+export function taskPageListSelection() {
+  return {
+    id: taskPages.id,
+    taskId: taskPages.taskId,
+    title: taskPages.title,
+    content: taskPages.content,
+    format: taskPages.format,
+    sortOrder: taskPages.sortOrder,
+    createdAt: taskPages.createdAt,
+    updatedAt: taskPages.updatedAt,
+    preview: sql<string | null>`
+      CASE
+        WHEN ${taskPages.format} = 'markdown'
+        THEN left(${taskPages.content}, 500)
+        ELSE NULL
+      END
+    `.as('preview'),
+    contentTruncated: sql<boolean>`char_length(${taskPages.content}) > 500`.as(
+      'contentTruncated',
+    ),
+  }
+}
+
+export function pageToListResponse(
+  page: TaskPageListRow,
+  author: EditAuthorInfo | null = null,
+) {
+  return {
+    ...pageToResponse(page, author),
+    preview: page.preview,
+    contentTruncated: page.contentTruncated,
   }
 }
 
@@ -83,7 +122,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
     const taskId = c.get('task').id
 
     const pages = await db
-      .select()
+      .select(taskPageListSelection())
       .from(taskPages)
       .where(eq(taskPages.taskId, taskId))
       .orderBy(taskPages.sortOrder, taskPages.createdAt)
@@ -91,7 +130,9 @@ export const taskPagesApp = new Hono<TaskEnv>()
     const authors = await getPageAuthors(pages.map((page) => page.id))
 
     return c.json(
-      pages.map((page) => pageToResponse(page, authors.get(page.id) ?? null)),
+      pages.map((page) =>
+        pageToListResponse(page, authors.get(page.id) ?? null),
+      ),
       200,
     )
   })

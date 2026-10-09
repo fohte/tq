@@ -204,7 +204,9 @@ function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
 
 function toPageMetadata(page: Record<string, unknown>) {
   return Object.fromEntries(
-    Object.entries(page).filter(([key]) => key !== 'content'),
+    Object.entries(page).filter(
+      ([key]) => !['content', 'preview', 'contentTruncated'].includes(key),
+    ),
   )
 }
 
