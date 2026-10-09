@@ -1,8 +1,19 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
+import {
+  CHECKLIST_ITEM_GITHUB_TITLE,
+  CHECKLIST_ITEM_GITHUB_URL,
+  CHECKLIST_ITEM_PROJECT_TITLE,
+  CHECKLIST_ITEM_TASK_NUMBER,
+  CHECKLIST_ITEM_TASK_TITLE,
+  checklistItemProjectUrl,
+  checklistItemTaskUrl,
+  seedChecklistItemMarkdownReferences,
+} from '#components/task/checklist-item-markdown-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskChecklistList } from '#components/task/task-checklist-list'
 import {
@@ -74,6 +85,7 @@ function renderChecklist({
   linkGithubErrorMessage,
   isLinkingGithub = false,
   onLinkGithub,
+  queryClient,
 }: {
   checklists?: ComponentProps<typeof TaskChecklistList>['checklists']
   githubLinks?: ComponentProps<typeof TaskChecklistList>['githubLinks']
@@ -83,6 +95,7 @@ function renderChecklist({
   >['linkGithubErrorMessage']
   isLinkingGithub?: ComponentProps<typeof TaskChecklistList>['isLinkingGithub']
   onLinkGithub?: ComponentProps<typeof TaskChecklistList>['onLinkGithub']
+  queryClient?: QueryClient
 } = {}) {
   const actions = {
     onCreateChecklist: vi.fn(),
@@ -103,7 +116,7 @@ function renderChecklist({
     onPromoteItem: vi.fn(),
   }
 
-  const rendered = render(
+  const checklist = (
     <TaskChecklistList
       {...actions}
       checklists={checklists}
@@ -111,9 +124,24 @@ function renderChecklist({
       subtasks={subtasks}
       linkGithubErrorMessage={linkGithubErrorMessage}
       isLinkingGithub={isLinkingGithub}
-    />,
+    />
   )
-  return { ...actions, unmount: rendered.unmount }
+  const rendered =
+    queryClient == null
+      ? render(checklist)
+      : render(
+          <QueryClientProvider client={queryClient}>
+            <StoryRouter
+              component={() => checklist}
+              paths={['/tasks/$taskId']}
+            />
+          </QueryClientProvider>,
+        )
+  return {
+    ...actions,
+    container: rendered.container,
+    unmount: rendered.unmount,
+  }
 }
 
 function readLinkSubmissionState(
@@ -172,6 +200,33 @@ function getLinkedItemState(
   }
 }
 
+function getChecklistMarkdownState(root: Element) {
+  return {
+    text: root.textContent,
+    markdown: [...root.querySelectorAll('strong, em, code, a')].map(
+      (element) => ({
+        tag: element.tagName.toLowerCase(),
+        text: element.textContent,
+        href: element.getAttribute('href'),
+      }),
+    ),
+    chips: [...root.querySelectorAll('.inline-reference-chip')].map(
+      (element) => element.textContent,
+    ),
+  }
+}
+
+function getChecklistInlineEditState(content: string) {
+  const input = screen.queryByRole<HTMLInputElement>('textbox', {
+    name: `Edit ${content}`,
+  })
+  return {
+    inputValue: input?.value ?? null,
+    editButtonPresent:
+      screen.queryByRole('button', { name: `Edit ${content}` }) != null,
+  }
+}
+
 function getNoteEditorState(
   container: HTMLElement,
   onUpdateItem: ReturnType<typeof vi.fn>,
@@ -185,6 +240,81 @@ function getNoteEditorState(
 }
 
 describe('TaskChecklistList', () => {
+  it('renders inline Markdown and the existing reference chips', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    seedChecklistItemMarkdownReferences(queryClient)
+
+    const content = `_start with emphasis_, Review **the plan**, keep *the wording*, run \`the check\`, read [the guide](https://example.org/guide), visit ${checklistItemProjectUrl(window.location.origin)}, see ${CHECKLIST_ITEM_GITHUB_URL} and [the pull request](${CHECKLIST_ITEM_GITHUB_URL}), open ${checklistItemTaskUrl(window.location.origin)}, then #${String(CHECKLIST_ITEM_TASK_NUMBER)} and [a blocked link](javascript:alert(1)).`
+    const rendered = renderChecklist({
+      queryClient,
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000741',
+              content,
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Check ${content}` })
+    const contentElement = assertDefined(
+      rendered.container.querySelector('strong')?.parentElement?.parentElement,
+      'the checklist item has a Markdown content view',
+    )
+
+    expect(getChecklistMarkdownState(contentElement)).toEqual({
+      text: `start with emphasis, Review the plan, keep the wording, run the check, read the guide, visit ${CHECKLIST_ITEM_PROJECT_TITLE}, see example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE} and example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}, open #${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}, then #${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE} and a blocked link.`,
+      markdown: [
+        { tag: 'em', text: 'start with emphasis', href: null },
+        { tag: 'strong', text: 'the plan', href: null },
+        { tag: 'em', text: 'the wording', href: null },
+        { tag: 'code', text: 'the check', href: null },
+        { tag: 'a', text: 'the guide', href: 'https://example.org/guide' },
+      ],
+      chips: [
+        CHECKLIST_ITEM_PROJECT_TITLE,
+        `example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}`,
+        `example-org/sample-app#14${CHECKLIST_ITEM_GITHUB_TITLE}`,
+        `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
+        `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
+      ],
+    })
+  })
+
+  it('keeps a click-to-edit target when an item contains only a reference chip', async () => {
+    const user = userEvent.setup()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    seedChecklistItemMarkdownReferences(queryClient)
+    const content = `#${String(CHECKLIST_ITEM_TASK_NUMBER)}`
+
+    renderChecklist({
+      queryClient,
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000743',
+              content,
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Check ${content}` })
+    await user.click(screen.getByRole('button', { name: `Edit ${content}` }))
+
+    expect(getChecklistInlineEditState(content)).toEqual({
+      inputValue: content,
+      editButtonPresent: false,
+    })
+  })
+
   it('counts only leaf items and locks a parent checkbox', () => {
     renderChecklist()
 

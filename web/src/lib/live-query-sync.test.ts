@@ -16,7 +16,7 @@ import {
   queueKeys,
   taskKeys,
   taskMentionKeys,
-  taskUrlPreviewKeys,
+  taskPreviewKeys,
   timeBlockKeys,
 } from '#lib/query-keys'
 
@@ -179,30 +179,22 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     otherTaskComments: observeQuery(queryClient, commentKeys.all(otherTaskId)),
     taskActivity: observeQuery(queryClient, activityKeys.all(taskId)),
     otherTaskActivity: observeQuery(queryClient, activityKeys.all(otherTaskId)),
-    taskMentionPreview: observeQuery(queryClient, taskMentionKeys.preview(101)),
-    unresolvedTaskMentionPreview: observeQuery(
+    taskPreviewById: observeQuery(queryClient, taskPreviewKeys.preview(taskId)),
+    otherTaskPreviewById: observeQuery(
       queryClient,
-      taskMentionKeys.preview(103),
+      taskPreviewKeys.preview(otherTaskId),
     ),
-    otherTaskMentionPreview: observeQuery(
+    taskPreviewByNumber: observeQuery(
       queryClient,
-      taskMentionKeys.preview(102),
+      taskPreviewKeys.preview('101'),
     ),
-    taskUrlPreviewById: observeQuery(
+    otherTaskPreviewByNumber: observeQuery(
       queryClient,
-      taskUrlPreviewKeys.preview(taskId),
+      taskPreviewKeys.preview('102'),
     ),
-    otherTaskUrlPreviewById: observeQuery(
+    unresolvedTaskPreviewByNumber: observeQuery(
       queryClient,
-      taskUrlPreviewKeys.preview(otherTaskId),
-    ),
-    taskUrlPreviewByNumber: observeQuery(
-      queryClient,
-      taskUrlPreviewKeys.preview('101'),
-    ),
-    otherTaskUrlPreviewByNumber: observeQuery(
-      queryClient,
-      taskUrlPreviewKeys.preview('102'),
+      taskPreviewKeys.preview('103'),
     ),
     taskGithubUrlPreview: observeQuery(
       queryClient,
@@ -227,13 +219,13 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     queues: observeQuery(queryClient, queueKeys.all),
   }
 
-  queryClient.setQueryData(taskMentionKeys.preview(101), { id: taskId })
-  queryClient.setQueryData(taskMentionKeys.preview(102), { id: otherTaskId })
-  queryClient.setQueryData(taskMentionKeys.preview(103), null)
-  queryClient.setQueryData(taskUrlPreviewKeys.preview('101'), { id: taskId })
-  queryClient.setQueryData(taskUrlPreviewKeys.preview('102'), {
+  queryClient.setQueryData(taskPreviewKeys.preview(taskId), { id: taskId })
+  queryClient.setQueryData(taskPreviewKeys.preview(otherTaskId), {
     id: otherTaskId,
   })
+  queryClient.setQueryData(taskPreviewKeys.preview('101'), { id: taskId })
+  queryClient.setQueryData(taskPreviewKeys.preview('102'), { id: otherTaskId })
+  queryClient.setQueryData(taskPreviewKeys.preview('103'), null)
   queryClient.setQueryData(
     githubUrlPreviewKeys.preview('https://github.test/target'),
     { linked: true, task: { id: taskId } },
@@ -277,19 +269,17 @@ function taskInvalidationSnapshot(
       fetchCount('otherTaskActivity'),
     ],
     taskPreviews: [
-      fetchCount('taskMentionPreview'),
-      fetchCount('taskUrlPreviewById'),
-      fetchCount('taskUrlPreviewByNumber'),
+      fetchCount('taskPreviewById'),
+      fetchCount('taskPreviewByNumber'),
       fetchCount('taskGithubUrlPreview'),
     ],
     otherTaskPreviews: [
-      fetchCount('otherTaskMentionPreview'),
-      fetchCount('otherTaskUrlPreviewById'),
-      fetchCount('otherTaskUrlPreviewByNumber'),
+      fetchCount('otherTaskPreviewById'),
+      fetchCount('otherTaskPreviewByNumber'),
       fetchCount('otherTaskGithubUrlPreview'),
     ],
     unresolvedPreviews: [
-      fetchCount('unresolvedTaskMentionPreview'),
+      fetchCount('unresolvedTaskPreviewByNumber'),
       fetchCount('unlinkedGithubUrlPreview'),
     ],
     otherQueries: [
@@ -679,8 +669,8 @@ describe('connectLiveQuerySync', () => {
           labelCounts: expectedLabelCounts,
           taskDetails: [1, 1, 1, 1, 1, 1],
           otherTaskDetails: [0, 0, 0, 0, 0, 0],
-          taskPreviews: [1, 1, 1, 1],
-          otherTaskPreviews: [0, 0, 0, 0],
+          taskPreviews: [1, 1, 1],
+          otherTaskPreviews: [0, 0, 0],
           unresolvedPreviews: expectedUnresolvedPreviews,
           otherQueries: expectedOtherQueries,
         },
@@ -697,8 +687,8 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 0, 0, 0, 1, 1],
     },
@@ -710,8 +700,8 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 1, 0, 0, 0, 0],
     },
@@ -723,8 +713,8 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 0,
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
-      expectedTaskPreviews: [0, 0, 0, 0],
-      expectedOtherTaskPreviews: [0, 0, 0, 0],
+      expectedTaskPreviews: [0, 0, 0],
+      expectedOtherTaskPreviews: [0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
       expectedOtherQueries: [0, 0, 1, 0, 0, 0],
     },
@@ -736,8 +726,8 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 0,
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
-      expectedTaskPreviews: [0, 0, 0, 0],
-      expectedOtherTaskPreviews: [0, 0, 0, 0],
+      expectedTaskPreviews: [0, 0, 0],
+      expectedOtherTaskPreviews: [0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
       expectedOtherQueries: [0, 0, 0, 1, 0, 0],
     },
@@ -749,8 +739,8 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 0, 0, 0, 0, 0],
     },
@@ -762,8 +752,8 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
       expectedOtherQueries: [1, 0, 0, 0, 0, 0],
     },
@@ -919,8 +909,8 @@ describe('connectLiveQuerySync', () => {
         labelCounts: 0,
         taskDetails: [0, 0, 0, 0, 0, 0],
         otherTaskDetails: [0, 0, 0, 0, 0, 0],
-        taskPreviews: [0, 0, 0, 0],
-        otherTaskPreviews: [0, 0, 0, 0],
+        taskPreviews: [0, 0, 0],
+        otherTaskPreviews: [0, 0, 0],
         unresolvedPreviews: [0, 0],
         otherQueries: [0, 0, 0, 0, 0, 0],
       },
