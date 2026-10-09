@@ -23,11 +23,9 @@ export interface AppResourceUrlMatch {
 // trailing query string, fragment, or single optional slash does not. Callers
 // decide what to do with the raw matches themselves (dedup, classify the id,
 // place editor widgets, ...) since that differs per call site — `web`'s
-// task-url/project-url providers call this directly (via the `api` package's
-// `./lib/app-url` export) with `window.location.host` as a client-side
-// pre-filter, then hand the extracted id to the existing
-// `GET /api/tasks/:id` / `GET /api/projects/:id` endpoints, which resolve by
-// id alone with no domain check.
+// task-url/project-url providers call this with `window.location.host` as a
+// client-side pre-filter, then resolve the extracted id through their
+// resource-specific preview query. This helper does not validate task IDs.
 export function matchAppResourceUrls(
   text: string,
   host: string,
