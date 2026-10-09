@@ -718,7 +718,7 @@ describe('GET /api/queues/:key/items', () => {
     const response = await getQueueItemsInRange(
       'week',
       '2030-04-03',
-      '2030-04-10',
+      '2030-04-08',
       'work',
     )
 
