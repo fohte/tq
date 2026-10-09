@@ -7,7 +7,7 @@ import { makeComment } from '#components/task/task-activity-test-fixtures'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
-import { taskMentionKeys } from '#lib/query-keys'
+import { taskPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const baseComments: Comment[] = [
@@ -55,7 +55,7 @@ function Providers({
   // hitting the network; harmless for stories whose comments don't mention
   // any of these numbers.
   for (let number = 1; number <= 10; number++) {
-    queryClient.setQueryData(taskMentionKeys.preview(number), null)
+    queryClient.setQueryData(taskPreviewKeys.preview(String(number)), null)
   }
 
   return (

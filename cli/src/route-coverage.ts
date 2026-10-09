@@ -79,6 +79,8 @@ export const EXCLUDED_ROUTES = {
     'backs the web search bar autocomplete, not a CLI concern',
   'GET /api/tasks/mentions':
     "backs the editor's # mention autocomplete, not a CLI concern",
+  'GET /api/tasks/preview':
+    'backs task-chip previews in the web UI, not a CLI concern',
 
   // The web layout is the only consumer of these aggregated counts.
   'GET /api/labels/counts': 'sidebar badge data, not a CLI concern',

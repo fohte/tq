@@ -25,7 +25,81 @@ function makePageSearchResponse(status: number, results: PageSearchResult[]) {
   return { status, body: { results } }
 }
 
+function makeTaskPreviewResponse(
+  status: number,
+  body: Record<string, unknown>,
+) {
+  return { status, body }
+}
+
 describe('tasks search API', () => {
+  describe('GET /api/tasks/preview', () => {
+    it('returns requested tasks by mixed numbers and UUIDs', async () => {
+      const description = 'Long task description. '.repeat(400)
+      const task = await createTask('Task preview fixture', { description })
+      const uppercaseTaskId = task.id.toUpperCase()
+
+      const res = await app.request(
+        `/api/tasks/preview?ids=${encodeURIComponent(`${String(task.number)},${uppercaseTaskId},999999`)}`,
+      )
+      const body = await jsonBody<Record<string, unknown>>(res)
+
+      const actual = makeTaskPreviewResponse(res.status, body)
+
+      expect(actual).toEqual({
+        status: 200,
+        body: {
+          [String(task.number)]: {
+            id: task.id,
+            number: task.number,
+            title: task.title,
+            status: task.status,
+            statusReason: task.statusReason ?? null,
+            description,
+          },
+          [uppercaseTaskId]: {
+            id: task.id,
+            number: task.number,
+            title: task.title,
+            status: task.status,
+            statusReason: task.statusReason ?? null,
+            description,
+          },
+        },
+      })
+    })
+
+    it('requires between one and one hundred valid identifiers', async () => {
+      const invalidIds = [
+        '',
+        Array.from({ length: 101 }, () => '1').join(','),
+        'not-a-task-id',
+        '2147483648',
+      ]
+      const statuses = await Promise.all(
+        invalidIds.map(async (ids) => {
+          const res = await app.request(
+            `/api/tasks/preview?ids=${encodeURIComponent(ids)}`,
+          )
+          return res.status
+        }),
+      )
+
+      expect(statuses).toEqual([400, 400, 400, 400])
+    })
+
+    it('accepts one hundred identifiers', async () => {
+      const ids = Array.from({ length: 100 }, (_, index) => String(index + 1))
+      const res = await app.request(
+        `/api/tasks/preview?ids=${encodeURIComponent(ids.join(','))}`,
+      )
+      const body = await jsonBody<Record<string, unknown>>(res)
+      const actual = makeTaskPreviewResponse(res.status, body)
+
+      expect(actual).toEqual({ status: 200, body: {} })
+    })
+  })
+
   describe('GET /api/tasks/search/suggest', () => {
     it('returns suggestions for prefix', async () => {
       const res = await app.request('/api/tasks/search/suggest?prefix=is:')

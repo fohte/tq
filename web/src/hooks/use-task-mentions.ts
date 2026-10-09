@@ -3,7 +3,7 @@ import type { InferResponseType } from 'hono/client'
 import { useEffect } from 'react'
 
 import { useDebounce } from '#hooks/use-debounce'
-import type { TaskDetail } from '#hooks/use-tasks'
+import { useTaskPreview } from '#hooks/use-task-preview'
 import { api } from '#lib/api'
 import { taskMentionKeys } from '#lib/query-keys'
 
@@ -12,37 +12,8 @@ export type MentionSuggestion = InferResponseType<
   200
 >[number]
 
-function taskMentionPreviewQueryOptions(number: number) {
-  return {
-    queryKey: taskMentionKeys.preview(number),
-    queryFn: async (): Promise<TaskDetail | null> => {
-      const res = await api.api.tasks[':id'].$get({
-        param: { id: String(number) },
-      })
-      if (res.status === 404) return null
-      return res.json()
-    },
-    // A 404 here means the mentioned number doesn't exist; retrying the
-    // same request would just 404 again.
-    retry: false,
-    staleTime: 60_000,
-  }
-}
-
 export function useTaskMentionPreview(number: number, enabled = true) {
-  return useQuery({
-    ...taskMentionPreviewQueryOptions(number),
-    enabled,
-    // A 404 above already resolves to `null` without throwing; reaching
-    // here means `queryFn` itself threw (network error, bad JSON, ...),
-    // which is unexpected and worth surfacing for debugging. The chip still
-    // falls back to the raw matched text either way, so this only logs — it
-    // must not throw to an error boundary.
-    throwOnError: (error) => {
-      console.error('Failed to load task mention preview', error)
-      return false
-    },
-  })
+  return useTaskPreview(String(number), enabled)
 }
 
 export function useTaskMentionSuggestions(query: string, enabled: boolean) {

@@ -2,12 +2,11 @@ import type { QueryClient } from '@tanstack/react-query'
 
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
 import {
   githubUrlPreviewKeys,
   projectUrlPreviewKeys,
-  taskMentionKeys,
-  taskUrlPreviewKeys,
+  taskPreviewKeys,
 } from '#lib/query-keys'
 
 export const CHECKLIST_ITEM_TASK_NUMBER = 7401
@@ -30,21 +29,19 @@ export function checklistItemProjectUrl(origin: string): string {
 export function seedChecklistItemMarkdownReferences(
   queryClient: QueryClient,
 ): void {
-  const task = makeTaskDetail({
+  const task = makeTaskPreview({
     id: CHECKLIST_ITEM_TASK_ID,
     number: CHECKLIST_ITEM_TASK_NUMBER,
     title: CHECKLIST_ITEM_TASK_TITLE,
     description: null,
-    startDate: null,
-    dueDate: null,
   })
 
   queryClient.setQueryData(
-    taskMentionKeys.preview(CHECKLIST_ITEM_TASK_NUMBER),
+    taskPreviewKeys.preview(String(CHECKLIST_ITEM_TASK_NUMBER)),
     task,
   )
   queryClient.setQueryData(
-    taskUrlPreviewKeys.preview(CHECKLIST_ITEM_TASK_ID),
+    taskPreviewKeys.preview(CHECKLIST_ITEM_TASK_ID),
     task,
   )
   queryClient.setQueryData(
