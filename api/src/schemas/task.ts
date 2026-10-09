@@ -116,8 +116,13 @@ export const updateTaskSchema = z.object({
 export const listTasksQuerySchema = z.object({
   ids: taskIdsQuerySchema,
   status: z
-    .union([taskListStatus, z.array(taskStatus)])
-    .transform((v) => (Array.isArray(v) ? v : [v])),
+    .union([taskListStatus, z.array(taskListStatus)])
+    .transform((value): z.infer<typeof taskListStatus>[] => {
+      const statuses: z.infer<typeof taskListStatus>[] = Array.isArray(value)
+        ? value
+        : [value]
+      return statuses.includes('all') ? ['all'] : statuses
+    }),
   statusReason: z
     .union([taskStatusReason, z.array(taskStatusReason)])
     .transform((v) => (Array.isArray(v) ? v : [v]))

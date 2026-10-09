@@ -69,6 +69,41 @@ describe('task list', () => {
     })
   })
 
+  it('accepts all statuses', async () => {
+    const tasks = [
+      { id: 'task-open', number: 1, title: 'Open task', status: 'todo' },
+      {
+        id: 'task-closed',
+        number: 2,
+        title: 'Completed task',
+        status: 'completed',
+      },
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--status', 'all'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { context: 'all', status: 'all', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
+    })
+  })
+
   it('sends task date filters to the API', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response('[]', { status: 200 }),
@@ -594,6 +629,41 @@ describe('task search', () => {
         },
       ],
       stdout: [['[]\n']],
+    })
+  })
+
+  it('accepts all statuses', async () => {
+    const tasks = [
+      { id: 'task-open', number: 1, title: 'Open task', status: 'todo' },
+      {
+        id: 'task-closed',
+        number: 2,
+        title: 'Completed task',
+        status: 'completed',
+      },
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'search', '--status', 'all'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: { context: 'all', status: 'all', limit: '20' },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
     })
   })
 
