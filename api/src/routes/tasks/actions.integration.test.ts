@@ -657,7 +657,7 @@ describe('tasks actions API', () => {
         })
 
         const listRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = listBody.find((t) => t.id === task.id)
@@ -946,7 +946,7 @@ describe('tasks actions API', () => {
         })
 
         const listRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = listBody.find((t) => t.id === task.id)
@@ -1000,7 +1000,7 @@ describe('tasks actions API', () => {
         })
 
         const listRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = listBody.find((t) => t.id === task.id)

@@ -221,7 +221,7 @@ describe('task waits API', () => {
     const [detailRes, listRes] = await Promise.all([
       app.request(`/api/tasks/${task.id}`),
       app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&ids=${task.id}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id}`,
       ),
     ])
     const detail = await jsonBody<TaskResponse>(detailRes)
@@ -310,7 +310,7 @@ describe('task waits API', () => {
 
     const taskIds = async (query: string) => {
       const response = await app.request(
-        `/api/tasks?${new URLSearchParams({
+        `/api/tasks?view=full&${new URLSearchParams({
           context: 'all',
           status: 'all',
           limit: 'unlimited',

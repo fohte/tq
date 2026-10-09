@@ -1,4 +1,5 @@
 export const allTasksQuery = {
+  view: 'full',
   context: 'all',
   status: 'all',
   limit: 'unlimited',

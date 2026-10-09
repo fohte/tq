@@ -24,8 +24,9 @@ function InboxKanban() {
   const queryClient = useQueryClient()
   const updateTask = useUpdateTask()
 
-  const columnFilters: Record<TaskCommitment, TaskListFilter> = {
+  const columnFilters: Record<TaskCommitment, TaskListFilter<'full'>> = {
     inbox: {
+      view: 'full',
       context,
       commitment: 'inbox',
       status: 'todo',
@@ -33,6 +34,7 @@ function InboxKanban() {
       limit: 'unlimited',
     },
     active: {
+      view: 'full',
       context,
       commitment: 'active',
       status: 'todo',
@@ -40,6 +42,7 @@ function InboxKanban() {
       limit: 'unlimited',
     },
     someday: {
+      view: 'full',
       context,
       commitment: 'someday',
       status: 'todo',

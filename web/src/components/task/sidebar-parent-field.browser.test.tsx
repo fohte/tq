@@ -75,6 +75,7 @@ beforeEach(() => {
   mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
     const { categorized } = mockUseTaskList(
       {
+        view: 'full',
         context: 'all',
         status: 'all',
         limit: 'unlimited',
@@ -131,6 +132,7 @@ describe('SidebarParentField', () => {
       taskListCalls: [
         {
           filter: {
+            view: 'full',
             context: 'all',
             status: 'all',
             limit: 'unlimited',
@@ -140,6 +142,7 @@ describe('SidebarParentField', () => {
         },
         {
           filter: {
+            view: 'full',
             context: 'all',
             status: 'all',
             limit: 'unlimited',
@@ -186,6 +189,7 @@ describe('SidebarParentField', () => {
       taskListCalls: [
         {
           filter: {
+            view: 'full',
             context: 'all',
             status: 'all',
             limit: 'unlimited',
@@ -396,6 +400,7 @@ describe('SidebarParentField', () => {
       taskListCalls: [
         {
           filter: {
+            view: 'full',
             context: 'all',
             status: 'all',
             limit: 'unlimited',
@@ -405,6 +410,7 @@ describe('SidebarParentField', () => {
         },
         {
           filter: {
+            view: 'full',
             context: 'all',
             status: 'all',
             limit: 'unlimited',

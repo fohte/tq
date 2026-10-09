@@ -14,7 +14,7 @@ type TaskListResult = {
   error: unknown
 }
 type TaskListMock = (
-  filter?: TaskListFilter,
+  filter?: TaskListFilter<'full'>,
   options?: { enabled?: boolean; placeholderData?: unknown },
 ) => TaskListResult
 type TaskMapMock = (tasks: Task[]) => Map<string, Task>

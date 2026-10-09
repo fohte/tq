@@ -93,6 +93,7 @@ export const tasksSearchApp = new Hono()
     const { q, limit } = c.req.valid('query')
 
     const { rows } = await queryTaskList({
+      view: 'row',
       q,
       context: 'all',
       status: ['all'],

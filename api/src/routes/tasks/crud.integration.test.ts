@@ -289,6 +289,17 @@ function responseSnapshot<T>(status: number, body: T) {
   return { status, body }
 }
 
+function rowListResultSnapshot<T>(
+  status: number,
+  body: T,
+  selectedDescription: boolean | undefined,
+) {
+  return {
+    response: responseSnapshot(status, body),
+    selectedDescription,
+  }
+}
+
 function taskConventionSnapshot(
   ...entries: (readonly [string, unknown])[]
 ): Record<string, unknown> {
@@ -1251,19 +1262,50 @@ describe('tasks CRUD API', () => {
   describe('GET /api/tasks', () => {
     it('rejects requests that omit any required list filter', async () => {
       const responses = await Promise.all([
-        app.request('/api/tasks?status=all&limit=unlimited'),
-        app.request('/api/tasks?context=all&limit=unlimited'),
-        app.request('/api/tasks?context=all&status=all'),
+        app.request('/api/tasks?view=full&status=all&limit=unlimited'),
+        app.request('/api/tasks?view=full&context=all&limit=unlimited'),
+        app.request('/api/tasks?view=full&context=all&status=all'),
+        app.request('/api/tasks?context=all&status=all&limit=unlimited'),
       ])
 
       expect(responses.map((response) => response.status)).toEqual([
-        400, 400, 400,
+        400, 400, 400, 400,
       ])
+    })
+
+    it('omits description from row responses', async () => {
+      const task = await createTask('Task with a description', {
+        description: 'Task body',
+      })
+
+      const { result: response, queries } = await captureDbQueries(async () =>
+        app.request(
+          '/api/tasks?view=row&context=all&status=all&limit=unlimited',
+        ),
+      )
+      const body =
+        await jsonBody<Omit<TaskListItemResponse, 'description'>[]>(response)
+      const { description, ...expectedItem } = toListItemResponse(task)
+      void description
+      const taskListQuery = queries.find(({ query }) =>
+        query.includes('"parent_task"'),
+      )
+
+      expect(
+        rowListResultSnapshot(
+          response.status,
+          body,
+          taskListQuery?.query.includes('"tasks"."description"'),
+        ),
+      ).toEqual({
+        response: { status: 200, body: [expectedItem] },
+        selectedDescription: false,
+      })
     })
 
     it('returns empty list when no tasks exist', async () => {
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
 
       expect(res.status).toBe(200)
@@ -1275,7 +1317,7 @@ describe('tasks CRUD API', () => {
       await createTask('Task B')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
 
       expect(res.status).toBe(200)
@@ -1290,7 +1332,7 @@ describe('tasks CRUD API', () => {
       }
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
       const body = await jsonBody<TaskListItemResponse[]>(res)
 
@@ -1312,10 +1354,10 @@ describe('tasks CRUD API', () => {
 
       const [uuidRes, numberRes] = await Promise.all([
         app.request(
-          `/api/tasks?context=all&status=all&limit=unlimited&parentId=${parent.id}`,
+          `/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=${parent.id}`,
         ),
         app.request(
-          `/api/tasks?context=all&status=all&limit=unlimited&parentId=${String(parent.number)}`,
+          `/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=${String(parent.number)}`,
         ),
       ])
       const [uuidBody, numberBody] = await Promise.all([
@@ -1357,7 +1399,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&parentId=${String(parent.number + 100_000)}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=${String(parent.number + 100_000)}`,
       )
 
       expect(
@@ -1373,7 +1415,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&parentId=2147483648',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=2147483648',
       )
 
       expect(
@@ -1393,7 +1435,7 @@ describe('tasks CRUD API', () => {
       await createTask('Plain')
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&templateId=${templateTask.templateId}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&templateId=${templateTask.templateId}`,
       )
 
       expect(res.status).toBe(200)
@@ -1407,7 +1449,7 @@ describe('tasks CRUD API', () => {
       await createTask('Orphan')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&parentId=root',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=root',
       )
 
       expect(res.status).toBe(200)
@@ -1426,7 +1468,7 @@ describe('tasks CRUD API', () => {
       })
 
       const res = await app.request(
-        '/api/tasks?context=all&limit=unlimited&status=todo',
+        '/api/tasks?view=full&context=all&limit=unlimited&status=todo',
       )
 
       expect(res.status).toBe(200)
@@ -1444,7 +1486,7 @@ describe('tasks CRUD API', () => {
       const taskC = await createTask('Task C')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
@@ -1475,7 +1517,7 @@ describe('tasks CRUD API', () => {
         .where(eq(tasks.id, taskB.id))
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
 
       expect(res.status).toBe(200)
@@ -1510,10 +1552,10 @@ describe('tasks CRUD API', () => {
       // All three share one now()-derived createdAt (see setupTestDb), so
       // this exercises the tiebreaker itself rather than createdAt ordering.
       const page1 = await app.request(
-        '/api/tasks?context=all&status=all&limit=2&offset=0',
+        '/api/tasks?view=full&context=all&status=all&limit=2&offset=0',
       )
       const page2 = await app.request(
-        '/api/tasks?context=all&status=all&limit=2&offset=2',
+        '/api/tasks?view=full&context=all&status=all&limit=2&offset=2',
       )
 
       expect(page1.status).toBe(200)
@@ -1572,7 +1614,7 @@ describe('tasks CRUD API', () => {
       )
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&sortBy=updated',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&sortBy=updated',
       )
 
       expect(res.status).toBe(200)
@@ -1652,7 +1694,7 @@ describe('tasks CRUD API', () => {
       await createTask('No task dates')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&dateFrom=2026-03-16&dateTo=2026-03-19',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&dateFrom=2026-03-16&dateTo=2026-03-19',
       )
 
       expect(
@@ -1697,7 +1739,7 @@ describe('tasks CRUD API', () => {
       })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&dateFrom=2026-03-16',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&dateFrom=2026-03-16',
       )
 
       expect(
@@ -1734,7 +1776,7 @@ describe('tasks CRUD API', () => {
       })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&dateTo=2026-03-19',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&dateTo=2026-03-19',
       )
 
       expect(
@@ -1761,7 +1803,7 @@ describe('tasks CRUD API', () => {
       await createTask('No due date')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&dueTo=2026-03-18',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&dueTo=2026-03-18',
       )
 
       expect(
@@ -1855,10 +1897,10 @@ describe('tasks CRUD API', () => {
 
       const [allRes, todoRes] = await Promise.all([
         app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&candidatesOn=2026-03-18',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&candidatesOn=2026-03-18',
         ),
         app.request(
-          '/api/tasks?context=all&status=todo&limit=unlimited&candidatesOn=2026-03-18',
+          '/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=2026-03-18',
         ),
       ])
       const [allTasks, todoTasks] = await Promise.all([
@@ -1902,7 +1944,7 @@ describe('tasks CRUD API', () => {
       await createTask('Buy groceries')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('deploy'),
       )
 
@@ -1921,7 +1963,7 @@ describe('tasks CRUD API', () => {
       // title, so this exercises order-independence rather than
       // coincidentally passing under an order-dependent match too.
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('bar foo'),
       )
 
@@ -1938,7 +1980,7 @@ describe('tasks CRUD API', () => {
       await createTask('suppression only')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('overflow suppression'),
       )
 
@@ -1953,7 +1995,7 @@ describe('tasks CRUD API', () => {
       await createTask('overflow only')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('overflow suppression'),
       )
 
@@ -1966,7 +2008,7 @@ describe('tasks CRUD API', () => {
       await createTask('overflow only')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('overflow suppression'),
       )
 
@@ -1980,7 +2022,7 @@ describe('tasks CRUD API', () => {
       await createTask('Unrelated task')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('デプロイ手順'),
       )
 
@@ -1994,7 +2036,7 @@ describe('tasks CRUD API', () => {
       const task = await createTask(words.join(' '))
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent([...words, 'excess'].join(' ')),
       )
 
@@ -2008,7 +2050,7 @@ describe('tasks CRUD API', () => {
       await createTask('Another task')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent(String(task.number)),
       )
 
@@ -2030,7 +2072,7 @@ describe('tasks CRUD API', () => {
 
       const prefix = String(task.number).slice(0, -1)
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent(prefix),
       )
 
@@ -2046,7 +2088,7 @@ describe('tasks CRUD API', () => {
       await createTask('Another task')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent(`#${String(task.number)}`),
       )
 
@@ -2063,7 +2105,7 @@ describe('tasks CRUD API', () => {
       await setStatus(completedTask.id, 'completed')
 
       const res = await app.request(
-        '/api/tasks?context=all&limit=unlimited&status=todo&q=' +
+        '/api/tasks?view=full&context=all&limit=unlimited&status=todo&q=' +
           encodeURIComponent('is:completed'),
       )
 
@@ -2080,7 +2122,7 @@ describe('tasks CRUD API', () => {
       await createTask('Unlabeled')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&label=urgent',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&label=urgent',
       )
 
       expect(res.status).toBe(200)
@@ -2099,7 +2141,7 @@ describe('tasks CRUD API', () => {
       await createTask('Unlabeled')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&label=dev',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&label=dev',
       )
 
       expect(res.status).toBe(200)
@@ -2114,7 +2156,7 @@ describe('tasks CRUD API', () => {
       const withoutDue = await createTask('Without due date')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&hasDue=false',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&hasDue=false',
       )
 
       expect(res.status).toBe(200)
@@ -2129,7 +2171,7 @@ describe('tasks CRUD API', () => {
       await createTask('Personal task')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('context:work'),
       )
 
@@ -2145,7 +2187,7 @@ describe('tasks CRUD API', () => {
       await createTask('Active task')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('commitment:someday'),
       )
 
@@ -2171,7 +2213,7 @@ describe('tasks CRUD API', () => {
       })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('reason:not_planned'),
       )
       expect(res.status).toBe(200)
@@ -2196,7 +2238,7 @@ describe('tasks CRUD API', () => {
       })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('reason:duplicate'),
       )
       expect(res.status).toBe(200)
@@ -2212,7 +2254,7 @@ describe('tasks CRUD API', () => {
       await createPage(task.id, 'Page', 'content')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:pages'),
       )
 
@@ -2229,7 +2271,7 @@ describe('tasks CRUD API', () => {
       await createComment(task.id, 'A comment')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:comments'),
       )
 
@@ -2245,7 +2287,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:no-children'),
       )
 
@@ -2262,7 +2304,7 @@ describe('tasks CRUD API', () => {
       await setStatus(child.id, 'completed')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:no-children'),
       )
 
@@ -2280,7 +2322,7 @@ describe('tasks CRUD API', () => {
       await setBlockedBy(task.id, [blocker.id])
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:blockers'),
       )
 
@@ -2295,7 +2337,7 @@ describe('tasks CRUD API', () => {
       await setBlockedBy(task.id, [blocker.id])
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:no-blockers'),
       )
 
@@ -2311,7 +2353,7 @@ describe('tasks CRUD API', () => {
       await setStatus(blocker.id, 'completed')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:no-blockers'),
       )
 
@@ -2336,7 +2378,7 @@ describe('tasks CRUD API', () => {
       })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('has:blockers'),
       )
 
@@ -2351,11 +2393,11 @@ describe('tasks CRUD API', () => {
 
       const [uuidRes, numberRes] = await Promise.all([
         app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
             encodeURIComponent(`parent:${parent.id}`),
         ),
         app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
             encodeURIComponent(`parent:${String(parent.number)}`),
         ),
       ])
@@ -2392,7 +2434,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent(`parent:${String(parent.number + 100_000)}`),
       )
 
@@ -2409,7 +2451,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('parent:2147483648'),
       )
 
@@ -2426,7 +2468,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('parent:root'),
       )
 
@@ -2442,7 +2484,7 @@ describe('tasks CRUD API', () => {
       await createTask('Task without project')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent(`project:${project.id}`),
       )
 
@@ -2458,7 +2500,7 @@ describe('tasks CRUD API', () => {
       await createTask('Task without project')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
           encodeURIComponent('project:"My project"'),
       )
 
@@ -2476,7 +2518,7 @@ describe('tasks CRUD API', () => {
       await setProjectId(taskInB.id, projectB.id)
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&projectId=${projectA.id}&q=` +
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&projectId=${projectA.id}&q=` +
           encodeURIComponent('project:"Project B"'),
       )
 
@@ -2492,7 +2534,7 @@ describe('tasks CRUD API', () => {
       await createTask('Task without project')
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&projectId=${project.id}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&projectId=${project.id}`,
       )
 
       expect(res.status).toBe(200)
@@ -2513,7 +2555,7 @@ describe('tasks CRUD API', () => {
       await setProjectId(realRoot.id, project.id)
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&projectId=${project.id}&parentId=root`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&projectId=${project.id}&parentId=root`,
       )
 
       expect(res.status).toBe(200)
@@ -2533,7 +2575,7 @@ describe('tasks CRUD API', () => {
       await setProjectId(child.id, project.id)
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&projectId=${project.id}&parentId=root`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&projectId=${project.id}&parentId=root`,
       )
 
       expect(res.status).toBe(200)
@@ -2548,7 +2590,7 @@ describe('tasks CRUD API', () => {
       await setProjectId(task.id, project.id)
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&projectId=${project.id}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&projectId=${project.id}`,
       )
 
       expect(res.status).toBe(200)
@@ -2566,10 +2608,10 @@ describe('tasks CRUD API', () => {
 
       const [uuidRes, numberRes] = await Promise.all([
         app.request(
-          `/api/tasks?context=all&status=all&limit=unlimited&descendantOf=${root.id}`,
+          `/api/tasks?view=full&context=all&status=all&limit=unlimited&descendantOf=${root.id}`,
         ),
         app.request(
-          `/api/tasks?context=all&status=all&limit=unlimited&descendantOf=${String(root.number)}`,
+          `/api/tasks?view=full&context=all&status=all&limit=unlimited&descendantOf=${String(root.number)}`,
         ),
       ])
       const [uuidBody, numberBody] = await Promise.all([
@@ -2617,7 +2659,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: root.id })
 
       const res = await app.request(
-        `/api/tasks?context=all&status=all&limit=unlimited&descendantOf=${String(root.number + 100_000)}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&descendantOf=${String(root.number + 100_000)}`,
       )
 
       expect(
@@ -2633,7 +2675,7 @@ describe('tasks CRUD API', () => {
       await createTask('Child', { parentId: root.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&descendantOf=2147483648',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&descendantOf=2147483648',
       )
 
       expect(
@@ -2662,7 +2704,7 @@ describe('tasks CRUD API', () => {
 
       const ids = [selectedByNumber.number, selectedById.id, completed.id]
       const res = await app.request(
-        `/api/tasks?ids=${ids.join(',')}&status=todo&context=all&limit=unlimited&includeAncestors=true`,
+        `/api/tasks?view=full&ids=${ids.join(',')}&status=todo&context=all&limit=unlimited&includeAncestors=true`,
       )
       const body =
         await jsonBody<
@@ -2699,7 +2741,7 @@ describe('tasks CRUD API', () => {
 
     it('returns an empty list when no requested task identifier exists', async () => {
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&ids=00000000-0000-4000-8000-000000000001',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=00000000-0000-4000-8000-000000000001',
       )
 
       expect(
@@ -2712,7 +2754,7 @@ describe('tasks CRUD API', () => {
 
     it('rejects an invalid includeAncestors value', async () => {
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&includeAncestors=typo',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&includeAncestors=typo',
       )
 
       expect(res.status).toBe(400)
@@ -2723,7 +2765,9 @@ describe('tasks CRUD API', () => {
       await createTask('Task 2')
       await createTask('Task 3')
 
-      const res = await app.request('/api/tasks?context=all&status=all&limit=1')
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=1',
+      )
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
@@ -2754,7 +2798,7 @@ describe('tasks CRUD API', () => {
         .where(eq(tasks.id, grandchild2.id))
 
       const res = await app.request(
-        `/api/tasks?context=all&descendantOf=${root.id}&status=todo&includeAncestors=true&limit=1`,
+        `/api/tasks?view=full&context=all&descendantOf=${root.id}&status=todo&includeAncestors=true&limit=1`,
       )
 
       expect(res.status).toBe(200)
@@ -2785,7 +2829,7 @@ describe('tasks CRUD API', () => {
       await setStatus(child2.id, 'completed')
 
       const res = await app.request(
-        '/api/tasks?context=all&limit=unlimited&status=todo',
+        '/api/tasks?view=full&context=all&limit=unlimited&status=todo',
       )
 
       expect(res.status).toBe(200)
@@ -2806,7 +2850,7 @@ describe('tasks CRUD API', () => {
       const taskWithoutDueSecond = await createTask('No due date second')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited&sortBy=due',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&sortBy=due',
       )
 
       expect(res.status).toBe(200)
@@ -4203,7 +4247,7 @@ describe('tasks CRUD API', () => {
         await setBlockedBy(task.id, [blockerB.id, blockerA.id])
 
         const res = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
 
         expect(res.status).toBe(200)
@@ -4224,17 +4268,17 @@ describe('tasks CRUD API', () => {
         mockGithubIssueResponse({ title: 'External blocker', html_url: url })
         const patchRes = await setBlockedBy(task.id, [url])
         const listRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
         const list = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = list.find((item) => item.id === task.id)
         assertDefined(listItem)
         const hasBlockersRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
             encodeURIComponent('has:blockers'),
         )
         const hasNoBlockersRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
             encodeURIComponent('has:no-blockers'),
         )
         const detailRes = await app.request(`/api/tasks/${task.id}`)
@@ -4313,17 +4357,17 @@ describe('tasks CRUD API', () => {
         const detailRes = await app.request(`/api/tasks/${task.id}`)
         const detail = await jsonBody<TaskResponse>(detailRes)
         const listRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
         const list = await jsonBody<TaskListItemResponse[]>(listRes)
         const item = list.find(({ id }) => id === task.id)
         assertDefined(item)
         const hasBlockersRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
             encodeURIComponent('has:blockers'),
         )
         const hasNoBlockersRes = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited&q=' +
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
             encodeURIComponent('has:no-blockers'),
         )
         const hasBlockerTasks =
@@ -4503,7 +4547,7 @@ describe('tasks CRUD API', () => {
       const parent = await createTask('Parent')
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
       const body = await jsonBody<TaskListItemResponse[]>(res)
 
@@ -4517,7 +4561,7 @@ describe('tasks CRUD API', () => {
       const child = await createTask('Child', { parentId: parent.id })
 
       const res = await app.request(
-        '/api/tasks?context=all&status=all&limit=unlimited',
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited',
       )
       const body = await jsonBody<TaskListItemResponse[]>(res)
 
@@ -4889,7 +4933,7 @@ describe('tasks CRUD API', () => {
         assertDefined(task.occurrenceDate)
 
         const res = await app.request(
-          '/api/tasks?context=all&status=all&limit=unlimited',
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited',
         )
 
         expect(res.status).toBe(200)

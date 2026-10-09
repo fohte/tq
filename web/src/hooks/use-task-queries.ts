@@ -8,7 +8,14 @@ import { taskKeys } from '#lib/query-keys'
 
 export { taskKeys }
 
-type Task = InferResponseType<typeof api.api.tasks.$get>[number]
+type TaskListResponse = InferResponseType<typeof api.api.tasks.$get>
+type TaskListResponseItem = TaskListResponse[number]
+type Task = TaskListResponseItem & { description: string | null }
+export type TaskRow = Omit<Task, 'description'>
+export type TaskListView = 'row' | 'full'
+type TaskForView<View extends TaskListView> = View extends 'full'
+  ? Task
+  : TaskRow
 
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
@@ -24,10 +31,11 @@ export type TaskSortBy = 'created' | 'updated' | 'due'
 
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 
-export interface TaskListFilter {
+type TaskListFilterOptions = {
   ids?: string[]
   q?: string
   status: TaskStatus | 'all' | TaskStatus[]
+  includeMatch?: boolean
   hasDue?: boolean
   dateFrom?: string
   dateTo?: string
@@ -46,13 +54,23 @@ export interface TaskListFilter {
   offset?: number
 }
 
+export type TaskListFilter<View extends TaskListView = TaskListView> =
+  TaskListFilterOptions & { view: View }
+
+type TaskListQueryKey<View extends TaskListView> = readonly [
+  ...typeof taskKeys.lists,
+  TaskListFilter<View>,
+]
+
 export const allTasksFilter = {
+  view: 'full',
   context: 'all',
   status: 'all',
   limit: 'unlimited',
 } as const satisfies TaskListFilter
 
-export type InfiniteTaskListFilter = Omit<TaskListFilter, 'limit'>
+export type InfiniteTaskListFilter<View extends TaskListView = TaskListView> =
+  Omit<TaskListFilter<View>, 'limit'>
 
 export interface TaskCountFilter {
   context: TaskListContext
@@ -64,23 +82,30 @@ const TASK_LIST_PAGE_SIZE = 50
 
 export type { LinkedTaskSummary, Task, TaskDetail }
 
-export interface CategorizedTasks {
+export interface CategorizedTasks<TaskItem extends Task | TaskRow = Task> {
   /** All tasks from the API */
-  all: Task[]
+  all: TaskItem[]
 }
 
-export async function fetchTaskList(filter: TaskListFilter): Promise<Task[]> {
-  const { limit, offset, hasDue, includeAncestors, ...rest } = filter
+export async function fetchTaskList<View extends TaskListView>(
+  filter: TaskListFilter<View>,
+): Promise<TaskForView<View>[]> {
+  const { limit, offset, hasDue, includeMatch, includeAncestors, ...rest } =
+    filter
   const res = await api.api.tasks.$get({
     query: {
       ...rest,
+      ...(includeMatch === true ? { includeMatch: 'true' } : {}),
       ...(hasDue == null ? {} : { hasDue: String(hasDue) }),
       ...(includeAncestors === true ? { includeAncestors: 'true' } : {}),
       limit: String(limit),
       ...(offset != null ? { offset: String(offset) } : {}),
     },
   })
-  return unwrapOrThrow(assertOk(res)).json()
+  // eslint-disable-next-line neverthrow/must-use-result -- unwrapOrThrow handles assertOk before reading the body.
+  const response = await unwrapOrThrow(assertOk(res)).json()
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- The required request view selects the matching response array; Hono exposes both variants as a union.
+  return response as TaskForView<View>[]
 }
 
 async function fetchTaskCount(filter: TaskCountFilter): Promise<number> {
@@ -97,21 +122,21 @@ export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
   return unwrapOrThrow(assertOk(res)).json()
 }
 
-export function useTaskList(
-  filter: TaskListFilter,
+export function useTaskList<View extends TaskListView>(
+  filter: TaskListFilter<View>,
   options?: {
     enabled?: boolean
     placeholderData?: (
-      previousData: Task[] | undefined,
-      previousFilter: TaskListFilter | undefined,
-    ) => Task[] | undefined
+      previousData: TaskForView<View>[] | undefined,
+      previousFilter: TaskListFilter<View> | undefined,
+    ) => TaskForView<View>[] | undefined
   },
 ) {
   const query = useQuery<
-    Task[],
+    TaskForView<View>[],
     Error,
-    Task[],
-    ReturnType<typeof taskKeys.list>
+    TaskForView<View>[],
+    TaskListQueryKey<View>
   >({
     queryKey: taskKeys.list(filter),
     queryFn: () => fetchTaskList(filter),
@@ -119,12 +144,21 @@ export function useTaskList(
     ...(options?.placeholderData == null
       ? {}
       : {
-          placeholderData: (previousData: Task[] | undefined, previousQuery) =>
-            options.placeholderData?.(previousData, previousQuery?.queryKey[2]),
+          placeholderData: (
+            previousData: TaskForView<View>[] | undefined,
+            previousQuery,
+          ) => {
+            const previousFilter = previousQuery?.queryKey[2]
+            const sameView = previousFilter?.view === filter.view
+            return options.placeholderData?.(
+              sameView ? previousData : undefined,
+              sameView ? previousFilter : undefined,
+            )
+          },
         }),
   })
 
-  const categorized = useMemo((): CategorizedTasks => {
+  const categorized = useMemo((): CategorizedTasks<TaskForView<View>> => {
     const all = query.data ?? []
     return { all }
   }, [query.data])
@@ -162,8 +196,8 @@ export function useTaskCount(
  * across pages if a task is inserted or removed between page fetches, and
  * tree-builder.ts would otherwise render it as two rows.
  */
-export function useInfiniteTaskList(
-  filter: InfiniteTaskListFilter,
+export function useInfiniteTaskList<View extends TaskListView>(
+  filter: InfiniteTaskListFilter<View>,
   options?: { enabled?: boolean },
 ) {
   const query = useInfiniteQuery({

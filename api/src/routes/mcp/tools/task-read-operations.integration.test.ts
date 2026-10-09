@@ -65,6 +65,24 @@ function expectedTaskListItem(task: CreatedTaskResponse) {
   }
 }
 
+function withoutDescription(task: CreatedTaskResponse) {
+  const { description, ...taskWithoutDescription } = withoutLinkSync(task)
+  void description
+  return taskWithoutDescription
+}
+
+function expectedTaskListRowItem(task: CreatedTaskResponse) {
+  return {
+    ...withoutDescription(task),
+    parentNumber: null,
+    duplicateOfNumber: null,
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    childCompletionCount: { total: 0, completed: 0 },
+    checklistCompletionCount: { total: 0, completed: 0 },
+  }
+}
+
 beforeEach(async () => {
   client = await connectMcpClient()
 })
@@ -137,9 +155,19 @@ describe('task_list', () => {
     })
 
     expect(parseToolJson(toolResult)).toEqual([
-      expectedTaskListItem(workTodo),
-      expectedTaskListItem(personalTodo),
+      expectedTaskListRowItem(workTodo),
+      expectedTaskListRowItem(personalTodo),
     ])
+  })
+
+  it('includes descriptions when full is true', async () => {
+    const task = await createTask('Task with a description', {
+      description: 'Task body',
+    })
+
+    const toolResult = await callTaskReadTool('task_list', { full: true })
+
+    expect(parseToolJson(toolResult)).toEqual([expectedTaskListItem(task)])
   })
 
   it('rejects invalid input', async () => {
@@ -160,7 +188,7 @@ describe('task_list', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(task),
+        ...withoutDescription(task),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -205,7 +233,7 @@ describe('task_list', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(task),
+        ...withoutDescription(task),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -227,7 +255,7 @@ describe('task_list', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(parent),
+        ...withoutDescription(parent),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -249,7 +277,7 @@ describe('task_list', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(child),
+        ...withoutDescription(child),
         parentNumber: parent.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -272,7 +300,7 @@ describe('task_list', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(child),
+        ...withoutDescription(child),
         parentNumber: root.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -281,7 +309,7 @@ describe('task_list', () => {
         checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
-        ...withoutLinkSync(grandchild),
+        ...withoutDescription(grandchild),
         parentNumber: child.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -309,7 +337,7 @@ describe('task_list', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(selectedByNumber),
+        ...withoutDescription(selectedByNumber),
         parentNumber: root.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -319,7 +347,7 @@ describe('task_list', () => {
         checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
-        ...withoutLinkSync(selectedById),
+        ...withoutDescription(selectedById),
         parentNumber: root.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -329,7 +357,7 @@ describe('task_list', () => {
         checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
-        ...withoutLinkSync(root),
+        ...withoutDescription(root),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],

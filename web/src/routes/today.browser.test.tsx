@@ -17,7 +17,7 @@ type TaskListOptions = {
   enabled?: boolean
   placeholderData?: (
     previousData: Task[] | undefined,
-    previousFilter: TaskListFilter | undefined,
+    previousFilter: TaskListFilter<'full'> | undefined,
   ) => Task[] | undefined
 }
 
@@ -26,7 +26,7 @@ type QueueItem = { taskId: string; sortOrder: number }
 
 const mockUseTaskList = vi.fn<
   (
-    filter: TaskListFilter,
+    filter: TaskListFilter<'full'>,
     options?: TaskListOptions,
   ) => {
     data?: Task[]
@@ -110,7 +110,7 @@ function setup({
 }) {
   mockUseCurrentContext.mockReturnValue(context)
   mockUseTaskList.mockImplementation(
-    (filter: TaskListFilter, options?: TaskListOptions) => {
+    (filter: TaskListFilter<'full'>, options?: TaskListOptions) => {
       const tasks = all.filter((task) => {
         if (task.context !== filter.context) {
           return false
@@ -294,6 +294,7 @@ describe('TodayFocus', () => {
       taskQueries: [
         {
           filter: {
+            view: 'full',
             ids: ['focus', 'next'],
             context: 'work',
             status: 'all',
@@ -304,6 +305,7 @@ describe('TodayFocus', () => {
         },
         {
           filter: {
+            view: 'full',
             parentId: 'focus',
             context: 'work',
             status: 'all',
@@ -346,6 +348,7 @@ describe('TodayFocus', () => {
       taskQueries: [
         {
           filter: {
+            view: 'full',
             ids: ['focus'],
             context: 'personal',
             status: 'all',
@@ -355,6 +358,7 @@ describe('TodayFocus', () => {
         },
         {
           filter: {
+            view: 'full',
             parentId: 'focus',
             context: 'personal',
             status: 'all',
@@ -489,6 +493,7 @@ describe('TodayFocus', () => {
       taskQueries: [
         {
           filter: {
+            view: 'full',
             ids: [],
             context: 'work',
             status: 'all',
@@ -497,7 +502,12 @@ describe('TodayFocus', () => {
           enabled: false,
         },
         {
-          filter: { context: 'work', status: 'all', limit: 'unlimited' },
+          filter: {
+            view: 'full',
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
           enabled: false,
         },
       ],

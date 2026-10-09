@@ -88,8 +88,8 @@ export function githubLinkToResponse(
   }
 }
 
-function taskCoreToResponse(
-  task: typeof tasks.$inferSelect,
+function taskCoreFieldsToResponse(
+  task: Omit<typeof tasks.$inferSelect, 'description'>,
   rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
@@ -98,7 +98,6 @@ function taskCoreToResponse(
     id: task.id,
     number: task.number,
     title: task.title,
-    description: task.description,
     status: task.status,
     statusReason: task.statusReason,
     context: task.context,
@@ -116,6 +115,18 @@ function taskCoreToResponse(
     githubLinks: githubLinks.map(githubLinkToResponse),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
+  }
+}
+
+function taskCoreToResponse(
+  task: typeof tasks.$inferSelect,
+  rule: typeof recurrenceRules.$inferSelect | null = null,
+  githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
+  labelNames: string[] = [],
+) {
+  return {
+    ...taskCoreFieldsToResponse(task, rule, githubLinks, labelNames),
+    description: task.description,
   }
 }
 
@@ -247,7 +258,7 @@ async function getChildCompletionCountsByTaskId(
 // endpoints that render a "← #<parent number>" reference without fetching
 // the whole parent task. Callers add `.leftJoin(parentTasks, eq(parentTasks.id, tasks.parentId))`
 // and select `parentTasks.number`, then format the row with
-// `taskListItemToResponse`.
+// `hydrateTaskListRows`.
 export const parentTasks = alias(tasks, 'parent_task')
 
 export type TaskSearchMatch =
@@ -256,8 +267,8 @@ export type TaskSearchMatch =
   | { field: 'page'; pageTitle: string; snippet: string }
 
 // Shared response shape for the list-returning endpoint (`/api/tasks`).
-function taskListItemToResponse(
-  task: typeof tasks.$inferSelect,
+function taskListItemFieldsToResponse(
+  task: Omit<typeof tasks.$inferSelect, 'description'>,
   parentNumber: number | null,
   checklistCompletionCount: ChecklistCompletionCount,
   rule: typeof recurrenceRules.$inferSelect | null = null,
@@ -269,7 +280,7 @@ function taskListItemToResponse(
   waits: TaskWaitSummary[] = [],
 ) {
   return {
-    ...taskCoreToResponse(task, rule, githubLinks, labelNames),
+    ...taskCoreFieldsToResponse(task, rule, githubLinks, labelNames),
     parentNumber,
     duplicateOfNumber,
     blockedByNumbers,
@@ -291,19 +302,50 @@ export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {
   }
 }
 
-export type TaskListItemResponse = ReturnType<typeof taskListItemToResponse>
+type TaskListItemFieldsResponse = ReturnType<
+  typeof taskListItemFieldsToResponse
+>
+type TaskDescription = (typeof tasks.$inferSelect)['description']
+export type TaskListItemResponse = TaskListItemFieldsResponse & {
+  description: TaskDescription
+}
+type TaskListItemRowResponse = TaskListItemFieldsResponse
+
+type TaskListItemChildCompletionCount = {
+  completed: number
+  total: number
+}
+type TaskListItemWithChildCompletionCount = TaskListItemResponse & {
+  childCompletionCount: TaskListItemChildCompletionCount
+}
+type TaskListRowWithChildCompletionCount = TaskListItemRowResponse & {
+  childCompletionCount: TaskListItemChildCompletionCount
+}
 
 // Batch-hydrates list-query rows into `TaskListItemResponse`s in a fixed
 // number of queries regardless of row count.
-export async function hydrateTaskListRows(
+export function hydrateTaskListRows(
   rows: {
     task: typeof tasks.$inferSelect
     parentNumber: number | null
   }[],
+): Promise<TaskListItemWithChildCompletionCount[]>
+export function hydrateTaskListRows(
+  rows: {
+    task: Omit<typeof tasks.$inferSelect, 'description'>
+    parentNumber: number | null
+  }[],
+  view: 'row',
+): Promise<TaskListRowWithChildCompletionCount[]>
+export async function hydrateTaskListRows(
+  rows: {
+    task:
+      typeof tasks.$inferSelect | Omit<typeof tasks.$inferSelect, 'description'>
+    parentNumber: number | null
+  }[],
+  view: 'row' | 'full' = 'full',
 ): Promise<
-  (TaskListItemResponse & {
-    childCompletionCount: { completed: number; total: number }
-  })[]
+  (TaskListItemWithChildCompletionCount | TaskListRowWithChildCompletionCount)[]
 > {
   const ids = rows.map((r) => r.task.id)
   const ruleIds = [
@@ -338,8 +380,8 @@ export async function hydrateTaskListRows(
     getRecurrenceRulesByTemplateIds(templateIds),
   ])
 
-  return rows.map((r) => ({
-    ...taskListItemToResponse(
+  return rows.map((r) => {
+    const itemFields = taskListItemFieldsToResponse(
       r.task,
       r.parentNumber,
       checklistCompletionCountsByTaskId.get(r.task.id) ??
@@ -357,12 +399,27 @@ export async function hydrateTaskListRows(
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
       openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
       waitsByTaskId.get(r.task.id) ?? [],
-    ),
-    childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
+    )
+    const childCompletionCount = childCompletionCountsByTaskId.get(
+      r.task.id,
+    ) ?? {
       completed: 0,
       total: 0,
-    },
-  }))
+    }
+
+    if (view === 'full') {
+      return {
+        ...itemFields,
+        description: 'description' in r.task ? r.task.description : null,
+        childCompletionCount,
+      }
+    }
+
+    return {
+      ...itemFields,
+      childCompletionCount,
+    }
+  })
 }
 
 export type TaskEnv = {
