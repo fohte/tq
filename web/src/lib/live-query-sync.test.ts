@@ -9,14 +9,13 @@ import { connectLiveQuerySync } from '#lib/live-query-sync'
 import {
   activityKeys,
   commentKeys,
-  githubSyncKeys,
   githubUrlPreviewKeys,
   labelKeys,
   projectKeys,
   queueKeys,
   taskKeys,
   taskMentionKeys,
-  taskUrlPreviewKeys,
+  taskPreviewKeys,
   timeBlockKeys,
 } from '#lib/query-keys'
 
@@ -133,6 +132,16 @@ function observeQuery(
   return { observer, queryFn, unsubscribe }
 }
 
+function getRefetchCounts(queries: {
+  candidateList: ReturnType<typeof observeQuery>
+  unfilteredTaskList: ReturnType<typeof observeQuery>
+}) {
+  return {
+    candidateRefetches: queries.candidateList.queryFn.mock.calls.length,
+    unfilteredRefetches: queries.unfilteredTaskList.queryFn.mock.calls.length,
+  }
+}
+
 function observeTaskInvalidationQueries(queryClient: QueryClient) {
   const taskId = 'target-task-id'
   const otherTaskId = 'other-task-id'
@@ -176,30 +185,22 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     otherTaskComments: observeQuery(queryClient, commentKeys.all(otherTaskId)),
     taskActivity: observeQuery(queryClient, activityKeys.all(taskId)),
     otherTaskActivity: observeQuery(queryClient, activityKeys.all(otherTaskId)),
-    taskMentionPreview: observeQuery(queryClient, taskMentionKeys.preview(101)),
-    unresolvedTaskMentionPreview: observeQuery(
+    taskPreviewById: observeQuery(queryClient, taskPreviewKeys.preview(taskId)),
+    otherTaskPreviewById: observeQuery(
       queryClient,
-      taskMentionKeys.preview(103),
+      taskPreviewKeys.preview(otherTaskId),
     ),
-    otherTaskMentionPreview: observeQuery(
+    taskPreviewByNumber: observeQuery(
       queryClient,
-      taskMentionKeys.preview(102),
+      taskPreviewKeys.preview('101'),
     ),
-    taskUrlPreviewById: observeQuery(
+    otherTaskPreviewByNumber: observeQuery(
       queryClient,
-      taskUrlPreviewKeys.preview(taskId),
+      taskPreviewKeys.preview('102'),
     ),
-    otherTaskUrlPreviewById: observeQuery(
+    unresolvedTaskPreviewByNumber: observeQuery(
       queryClient,
-      taskUrlPreviewKeys.preview(otherTaskId),
-    ),
-    taskUrlPreviewByNumber: observeQuery(
-      queryClient,
-      taskUrlPreviewKeys.preview('101'),
-    ),
-    otherTaskUrlPreviewByNumber: observeQuery(
-      queryClient,
-      taskUrlPreviewKeys.preview('102'),
+      taskPreviewKeys.preview('103'),
     ),
     taskGithubUrlPreview: observeQuery(
       queryClient,
@@ -222,16 +223,15 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     agentSessions: observeQuery(queryClient, ['agent-sessions', 'by-task']),
     projects: observeQuery(queryClient, projectKeys.all),
     queues: observeQuery(queryClient, queueKeys.all),
-    githubSync: observeQuery(queryClient, githubSyncKeys.all),
   }
 
-  queryClient.setQueryData(taskMentionKeys.preview(101), { id: taskId })
-  queryClient.setQueryData(taskMentionKeys.preview(102), { id: otherTaskId })
-  queryClient.setQueryData(taskMentionKeys.preview(103), null)
-  queryClient.setQueryData(taskUrlPreviewKeys.preview('101'), { id: taskId })
-  queryClient.setQueryData(taskUrlPreviewKeys.preview('102'), {
+  queryClient.setQueryData(taskPreviewKeys.preview(taskId), { id: taskId })
+  queryClient.setQueryData(taskPreviewKeys.preview(otherTaskId), {
     id: otherTaskId,
   })
+  queryClient.setQueryData(taskPreviewKeys.preview('101'), { id: taskId })
+  queryClient.setQueryData(taskPreviewKeys.preview('102'), { id: otherTaskId })
+  queryClient.setQueryData(taskPreviewKeys.preview('103'), null)
   queryClient.setQueryData(
     githubUrlPreviewKeys.preview('https://github.test/target'),
     { linked: true, task: { id: taskId } },
@@ -275,19 +275,17 @@ function taskInvalidationSnapshot(
       fetchCount('otherTaskActivity'),
     ],
     taskPreviews: [
-      fetchCount('taskMentionPreview'),
-      fetchCount('taskUrlPreviewById'),
-      fetchCount('taskUrlPreviewByNumber'),
+      fetchCount('taskPreviewById'),
+      fetchCount('taskPreviewByNumber'),
       fetchCount('taskGithubUrlPreview'),
     ],
     otherTaskPreviews: [
-      fetchCount('otherTaskMentionPreview'),
-      fetchCount('otherTaskUrlPreviewById'),
-      fetchCount('otherTaskUrlPreviewByNumber'),
+      fetchCount('otherTaskPreviewById'),
+      fetchCount('otherTaskPreviewByNumber'),
       fetchCount('otherTaskGithubUrlPreview'),
     ],
     unresolvedPreviews: [
-      fetchCount('unresolvedTaskMentionPreview'),
+      fetchCount('unresolvedTaskPreviewByNumber'),
       fetchCount('unlinkedGithubUrlPreview'),
     ],
     otherQueries: [
@@ -297,7 +295,6 @@ function taskInvalidationSnapshot(
       fetchCount('agentSessions'),
       fetchCount('projects'),
       fetchCount('queues'),
-      fetchCount('githubSync'),
     ],
   }
 }
@@ -359,6 +356,40 @@ describe('connectLiveQuerySync', () => {
         { queryKey: taskMentionKeys.suggestionsPrefix },
         'predicate',
       ],
+    })
+  })
+
+  it('invalidates candidate task lists after a queue changes on another screen', async () => {
+    vi.useFakeTimers()
+    const queryClient = new QueryClient()
+    const candidateList = observeQuery(
+      queryClient,
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        candidatesOn: '2026-08-01',
+      }),
+    )
+    const unfilteredTaskList = observeQuery(
+      queryClient,
+      taskKeys.list({ context: 'work' }),
+    )
+    const { eventStream } = createConnection({ queryClient })
+
+    eventStream.sendChange(
+      JSON.stringify({
+        resource: 'queue',
+        id: 'day',
+        origin: 'screen-two',
+      }),
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    candidateList.unsubscribe()
+    unfilteredTaskList.unsubscribe()
+
+    expect(getRefetchCounts({ candidateList, unfilteredTaskList })).toEqual({
+      candidateRefetches: 1,
+      unfilteredRefetches: 0,
     })
   })
 
@@ -574,7 +605,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 1,
       expectedLabelCounts: 1,
-      expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
     },
     {
@@ -589,7 +620,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 0,
       expectedLabelCounts: 1,
-      expectedOtherQueries: [0, 1, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 1, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -598,7 +629,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [0, 0],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 1, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -607,7 +638,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [0, 0],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 1, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -620,7 +651,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
     {
@@ -633,7 +664,7 @@ describe('connectLiveQuerySync', () => {
       expectedTaskLists: [1, 1],
       expectedTaskCounts: 0,
       expectedLabelCounts: 0,
-      expectedOtherQueries: [0, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
     },
   ] as const)(
@@ -675,8 +706,8 @@ describe('connectLiveQuerySync', () => {
           labelCounts: expectedLabelCounts,
           taskDetails: [1, 1, 1, 1, 1, 1],
           otherTaskDetails: [0, 0, 0, 0, 0, 0],
-          taskPreviews: [1, 1, 1, 1],
-          otherTaskPreviews: [0, 0, 0, 0],
+          taskPreviews: [1, 1, 1],
+          otherTaskPreviews: [0, 0, 0],
           unresolvedPreviews: expectedUnresolvedPreviews,
           otherQueries: expectedOtherQueries,
         },
@@ -693,10 +724,10 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 0, 0, 0, 1, 1, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 1, 1],
     },
     {
       resource: 'label',
@@ -706,10 +737,10 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 1, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [1, 1, 0, 0, 0, 0],
     },
     {
       resource: 'time_block',
@@ -719,10 +750,10 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 0,
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
-      expectedTaskPreviews: [0, 0, 0, 0],
-      expectedOtherTaskPreviews: [0, 0, 0, 0],
+      expectedTaskPreviews: [0, 0, 0],
+      expectedOtherTaskPreviews: [0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
-      expectedOtherQueries: [0, 0, 1, 0, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 1, 0, 0, 0],
     },
     {
       resource: 'agent_session',
@@ -732,10 +763,10 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 0,
       expectedTaskDetails: [1, 1, 1, 1, 0, 0],
       expectedOtherTaskDetails: [1, 1, 1, 1, 0, 0],
-      expectedTaskPreviews: [0, 0, 0, 0],
-      expectedOtherTaskPreviews: [0, 0, 0, 0],
+      expectedTaskPreviews: [0, 0, 0],
+      expectedOtherTaskPreviews: [0, 0, 0],
       expectedUnresolvedPreviews: [0, 0],
-      expectedOtherQueries: [0, 0, 0, 1, 0, 0, 0],
+      expectedOtherQueries: [0, 0, 0, 1, 0, 0],
     },
     {
       resource: 'checklist',
@@ -745,10 +776,10 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 0, 0],
     },
     {
       resource: 'checklist_item',
@@ -758,10 +789,10 @@ describe('connectLiveQuerySync', () => {
       expectedLabelCounts: 1,
       expectedTaskDetails: [1, 1, 1, 1, 1, 1],
       expectedOtherTaskDetails: [1, 1, 1, 1, 1, 1],
-      expectedTaskPreviews: [1, 1, 1, 1],
-      expectedOtherTaskPreviews: [1, 1, 1, 1],
+      expectedTaskPreviews: [1, 1, 1],
+      expectedOtherTaskPreviews: [1, 1, 1],
       expectedUnresolvedPreviews: [1, 1],
-      expectedOtherQueries: [1, 0, 0, 0, 0, 0, 0],
+      expectedOtherQueries: [1, 0, 0, 0, 0, 0],
     },
   ] as const)(
     'keeps the existing $resource invalidation range when task IDs are null',
@@ -915,10 +946,10 @@ describe('connectLiveQuerySync', () => {
         labelCounts: 0,
         taskDetails: [0, 0, 0, 0, 0, 0],
         otherTaskDetails: [0, 0, 0, 0, 0, 0],
-        taskPreviews: [0, 0, 0, 0],
-        otherTaskPreviews: [0, 0, 0, 0],
+        taskPreviews: [0, 0, 0],
+        otherTaskPreviews: [0, 0, 0],
         unresolvedPreviews: [0, 0],
-        otherQueries: [0, 0, 0, 0, 0, 0, 0],
+        otherQueries: [0, 0, 0, 0, 0, 0],
       },
     })
   })
@@ -971,13 +1002,12 @@ describe('connectLiveQuerySync', () => {
     })
   })
 
-  it('skips GitHub sync queries during unknown-event and reconnect refreshes', async () => {
+  it('refreshes all queries during unknown-event and reconnect refreshes', async () => {
     vi.useFakeTimers()
     const queryClient = new QueryClient()
     const queries = [
       observeQuery(queryClient, ['tasks']),
-      observeQuery(queryClient, githubSyncKeys.all),
-      observeQuery(queryClient, githubSyncKeys.task('task-one')),
+      observeQuery(queryClient, ['projects']),
     ]
     const { eventStream } = createConnection({ queryClient })
 
@@ -1002,8 +1032,8 @@ describe('connectLiveQuerySync', () => {
       queryCountsAfterReconnect,
     })
     expect(snapshot()).toEqual({
-      queryCountsAfterUnknownEvent: [1, 0, 0],
-      queryCountsAfterReconnect: [2, 0, 0],
+      queryCountsAfterUnknownEvent: [1, 1],
+      queryCountsAfterReconnect: [2, 2],
     })
   })
 
@@ -1107,7 +1137,7 @@ describe('connectLiveQuerySync', () => {
         { closed: false, opened: true },
       ],
       sessionChecks: [[]],
-      invalidations: [{ hasPredicate: true, cancelRefetch: false }],
+      invalidations: [{ hasPredicate: false, cancelRefetch: false }],
     })
   })
 

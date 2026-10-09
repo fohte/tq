@@ -37,7 +37,6 @@ interface MockTask {
   labels: string[]
   startDate: null
   dueDate: null
-  estimatedMinutes: number
   parentId: null
   parentNumber: null
   projectId: null
@@ -68,7 +67,6 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
     labels: [],
     startDate: null,
     dueDate: null,
-    estimatedMinutes: 120,
     parentId: null,
     parentNumber: null,
     projectId: null,
@@ -95,7 +93,6 @@ const mockTasks = [
     title: 'Review pull request',
     status: 'completed',
     context: 'work',
-    estimatedMinutes: 30,
   }),
 ]
 
@@ -104,7 +101,6 @@ const personalTask = makeTask({
   number: 3,
   title: 'Plan weekend trip',
   context: 'personal',
-  estimatedMinutes: 60,
 })
 
 const parentTaskDetail = makeTaskDetail({
@@ -617,7 +613,7 @@ describe('SearchModal', () => {
       })
       expect(getOutput()).toEqual({
         project: {
-          filter: { q: 'active', context: 'work' },
+          filter: { q: 'active', context: 'work', status: 'all' },
           options: { enabled: true },
         },
         view: {
@@ -1597,7 +1593,7 @@ describe('SearchModal', () => {
         result: null,
         mode: '!',
         lastProjectSearch: {
-          filter: { q: 'foo bar' },
+          filter: { q: 'foo bar', context: 'all', status: 'all' },
           options: { enabled: true },
         },
       })

@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { type SearchResult, useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  useSelfAndDescendantIds,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import {
   mutateInvokingOnSuccess,
   partialMutation,
@@ -24,12 +28,14 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-tasks')>()
   return {
     ...original,
+    useSelfAndDescendantIds: vi.fn(),
     useTaskList: vi.fn(),
     useUpdateTaskParent: vi.fn(),
   }
 })
 
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
+const mockUseSelfAndDescendantIds = vi.mocked(useSelfAndDescendantIds)
 const mockUseTaskList = vi.mocked(useTaskList)
 const mockUseUpdateTaskParent = vi.mocked(useUpdateTaskParent)
 
@@ -44,13 +50,30 @@ function mockSearchResults(data: SearchResult[]) {
   )
 }
 
+function uniqueTaskListCalls<T>(calls: T[]) {
+  const seen = new Set<string | undefined>()
+  return calls.filter((call) => {
+    const key = JSON.stringify(call)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 const parentId = '00000000-0000-0000-0000-000000000001'
 const parentNumber = 1
+const parentTitle = 'Current parent'
 
 const orphanCandidate: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000011',
   number: 12,
   title: 'Deploy to production',
+})
+
+const parentCandidate: SearchResult = makeTask({
+  id: parentId,
+  number: parentNumber,
+  title: parentTitle,
 })
 
 const candidateWithParent: SearchResult = makeTask({
@@ -63,6 +86,13 @@ const candidateWithParent: SearchResult = makeTask({
 
 describe('LinkExistingTaskMenu', () => {
   beforeEach(() => {
+    mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
+      const { categorized } = mockUseTaskList(
+        { descendantOf: taskId },
+        { enabled },
+      )
+      return new Set([taskId, ...categorized.all.map((task) => task.id)])
+    })
     mockUseTaskList.mockReturnValue(
       partialMutation<ReturnType<typeof useTaskList>>({
         categorized: { all: [] },
@@ -82,6 +112,7 @@ describe('LinkExistingTaskMenu', () => {
         onOpenChange={vi.fn()}
         parentId={parentId}
         parentNumber={parentNumber}
+        parentTitle={parentTitle}
       />,
     )
 
@@ -101,6 +132,7 @@ describe('LinkExistingTaskMenu', () => {
         onOpenChange={vi.fn()}
         parentId={parentId}
         parentNumber={parentNumber}
+        parentTitle={parentTitle}
       />,
     )
 
@@ -129,6 +161,7 @@ describe('LinkExistingTaskMenu', () => {
         onOpenChange={onOpenChange}
         parentId={parentId}
         parentNumber={parentNumber}
+        parentTitle={parentTitle}
       />,
     )
 
@@ -136,7 +169,11 @@ describe('LinkExistingTaskMenu', () => {
     await user.click(screen.getByText('Deploy to production'))
 
     expect(mutate).toHaveBeenCalledWith(
-      { id: orphanCandidate.id, parentId },
+      {
+        id: orphanCandidate.id,
+        parentId,
+        parent: { number: parentNumber, title: parentTitle },
+      },
       withOnSuccess,
     )
     expect(screen.queryByText('Change parent task?')).not.toBeInTheDocument()
@@ -152,6 +189,7 @@ describe('LinkExistingTaskMenu', () => {
         onOpenChange={vi.fn()}
         parentId={parentId}
         parentNumber={parentNumber}
+        parentTitle={parentTitle}
       />,
     )
 
@@ -159,4 +197,83 @@ describe('LinkExistingTaskMenu', () => {
 
     expect(screen.getByText('no results for "Deploy"')).toBeInTheDocument()
   })
+
+  it('loads descendants only while the menu is open', () => {
+    mockSearchResults([])
+    mockUseTaskList.mockClear()
+    const props = {
+      onOpenChange: vi.fn(),
+      parentId,
+      parentNumber,
+      parentTitle,
+    }
+    const { rerender } = render(<LinkExistingTaskMenu {...props} open />)
+
+    rerender(<LinkExistingTaskMenu {...props} open={false} />)
+
+    expect(
+      uniqueTaskListCalls(
+        mockUseTaskList.mock.calls.map(([filter, options]) => ({
+          filter,
+          enabled: options?.enabled,
+        })),
+      ),
+    ).toEqual([
+      { filter: { descendantOf: parentId }, enabled: true },
+      { filter: { descendantOf: parentId }, enabled: false },
+    ])
+  })
+
+  it('excludes the parent and descendants from link candidates', async () => {
+    const descendant = makeTask({
+      id: '00000000-0000-0000-0000-000000000013',
+      number: 18,
+      title: 'Deploy staging',
+      parentId,
+    })
+    mockUseTaskList.mockReturnValue(
+      partialMutation<ReturnType<typeof useTaskList>>({
+        categorized: { all: [descendant] },
+      }),
+    )
+    mockSearchResults([parentCandidate, orphanCandidate, descendant])
+    const user = userEvent.setup()
+    render(
+      <LinkExistingTaskMenu
+        open
+        onOpenChange={vi.fn()}
+        parentId={parentId}
+        parentNumber={parentNumber}
+        parentTitle={parentTitle}
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
+
+    expect(
+      candidateSnapshot(
+        screen
+          .getAllByRole('button', { name: /^#\d+ / })
+          .map((element) => element.textContent),
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ).filter(({ enabled }) => enabled === true),
+      ),
+    ).toEqual({
+      candidateTitles: [
+        `#${String(orphanCandidate.number)}${orphanCandidate.title}`,
+      ],
+      taskListCalls: [{ filter: { descendantOf: parentId }, enabled: true }],
+    })
+  })
 })
+
+function candidateSnapshot(
+  candidateTitles: (string | null)[],
+  taskListCalls: unknown[],
+) {
+  return { candidateTitles, taskListCalls }
+}

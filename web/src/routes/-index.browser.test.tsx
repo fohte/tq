@@ -9,22 +9,25 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
+import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import type { QueueItem } from '#hooks/use-queues'
 import type { Task } from '#hooks/use-tasks'
 import { getNowPanelQueryDateRange } from '#lib/compact-layout'
 import { formatLocalDate } from '#lib/date-range'
 import type { QueueCandidate } from '#lib/queue-candidates'
+import { formatShortDate } from '#lib/task-due-date'
 import { assertDefined } from '#lib/test-utils'
 import { Route as RootRoute } from '#routes/__root'
 import { Route as DayRoute } from '#routes/index'
 
 type TaskListMock = (
   filter: unknown,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; placeholderData?: unknown },
 ) => unknown
 type DateRangeQueryMock = (
   startDate: string,
@@ -65,6 +68,7 @@ type QueueMutationOptions = {
 type DayViewMockProps = {
   layout?: string
   isLoading?: boolean
+  calendarEvents?: TimeBlockEvent[]
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
   queueSections?: QueueSectionData[]
@@ -81,13 +85,47 @@ type MemosMock = (
   isError: boolean
 }
 
+function isTaskListFilterWith(filter: unknown, field: string): boolean {
+  return typeof filter === 'object' && filter !== null && field in filter
+}
+
 function isDueTaskQuery(filter: unknown): boolean {
-  return (
-    typeof filter === 'object' &&
-    filter !== null &&
-    'hasDue' in filter &&
-    filter.hasDue === true
-  )
+  return isTaskListFilterWith(filter, 'dueTo')
+}
+
+function getEnabledTaskListFilters(): unknown[] {
+  const filters = new Map<string, unknown>()
+  mocks.useTaskList.mock.calls
+    .filter(([, options]) => options?.enabled !== false)
+    .forEach(([filter]) => {
+      const key = isTaskListFilterWith(filter, 'ids')
+        ? 'ids'
+        : isTaskListFilterWith(filter, 'candidatesOn')
+          ? 'candidatesOn'
+          : isTaskListFilterWith(filter, 'dateFrom') ||
+              isTaskListFilterWith(filter, 'dateTo')
+            ? 'dateRange'
+            : JSON.stringify(filter)
+      filters.set(key, filter)
+    })
+  return [...filters.values()]
+}
+
+function taskListQuerySnapshot(
+  activeFilters: unknown[],
+  idQueryOptions: Parameters<TaskListMock>[1],
+) {
+  return {
+    activeFilters,
+    idQueryOptions:
+      idQueryOptions == null
+        ? undefined
+        : {
+            enabled: idQueryOptions.enabled,
+            hasPlaceholderData:
+              typeof idQueryOptions.placeholderData === 'function',
+          },
+  }
 }
 
 const mocks = vi.hoisted(() => ({
@@ -166,8 +204,6 @@ vi.mock('#hooks/use-gcal-events', () => ({
   },
 }))
 
-vi.mock('#hooks/use-github-link', () => ({ useGithubSync: () => {} }))
-
 vi.mock('#hooks/use-integrations', () => ({
   useIntegrationAuthUrl: () => ({ data: undefined }),
 }))
@@ -177,9 +213,13 @@ vi.mock('#hooks/use-memos', () => ({
   useUpdateMemo: () => ({ mutateAsync: vi.fn() }),
 }))
 
-vi.mock('#hooks/use-projects', () => ({
-  useProjects: () => ({ data: [] }),
-}))
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const original = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...original,
+    useProjects: () => ({ data: [] }),
+  }
+})
 
 vi.mock('#hooks/use-push-notifications', () => ({
   usePushResubscribe: () => {},
@@ -317,6 +357,209 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+describe('day-view route task queries', () => {
+  it('loads tasks referenced by Now panel time blocks', async () => {
+    const taskId = 'now-panel-task'
+    mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
+      data: enabled === true ? [makeTimeBlock({ taskId })] : [],
+      error: null,
+    }))
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      const idQueryCall = mocks.useTaskList.mock.calls
+        .filter(([filter]) => isTaskListFilterWith(filter, 'ids'))
+        .at(-1)
+      expect(idQueryCall?.[0]).toEqual({
+        ids: [taskId],
+        context: 'work',
+        includeAncestors: true,
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it('loads overdue task dates when today is in the visible range', async () => {
+    const today = new Date()
+    const todayStr = formatLocalDate(today)
+    mocks.selectedDate = today
+
+    const { queryClient } = await renderDayRoute('/')
+
+    await waitFor(() => {
+      expect(
+        mocks.useTaskList.mock.calls
+          .filter(([filter]) => isDueTaskQuery(filter))
+          .at(-1),
+      ).toEqual([
+        {
+          context: 'work',
+          status: 'todo',
+          dueTo: todayStr,
+          sortBy: 'due',
+        },
+        { enabled: true },
+      ])
+    })
+
+    queryClient.clear()
+  })
+
+  it('uses overdue query results to render today reminders outside the task date range', async () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayStr = formatLocalDate(today)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = formatLocalDate(yesterday)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowStr = formatLocalDate(tomorrow)
+    const overdueTask = makeTask({
+      id: 'overdue-task',
+      title: 'Review a sample note',
+      dueDate: yesterdayStr,
+    })
+    mocks.selectedDate = today
+    mocks.useTaskList.mockImplementation((filter) => ({
+      data: isTaskListFilterWith(filter, 'dueTo') ? [overdueTask] : [],
+      isLoading: false,
+      categorized: { all: [] },
+    }))
+
+    const { queryClient } = await renderDayRoute('/')
+    const presentationProps = assertDefined(
+      mocks.dayViewProps.mock.lastCall?.[0],
+    )
+    const onVisibleRangeChange = assertDefined(
+      presentationProps.onVisibleRangeChange,
+    )
+    act(() => {
+      onVisibleRangeChange({
+        start: new Date(`${todayStr}T00:00:00`),
+        end: new Date(`${tomorrowStr}T00:00:00`),
+      })
+    })
+
+    await waitFor(() => {
+      expect(mocks.dayViewProps.mock.lastCall?.[0].calendarEvents).toEqual([
+        {
+          id: 'task-date-overdue-task-overdue-today',
+          title: 'Review a sample note',
+          start: todayStr,
+          end: tomorrowStr,
+          type: 'task-date',
+          taskId: 'overdue-task',
+          allDay: true,
+          dateTaskKind: 'overdue-today',
+          dateTaskOverdue: true,
+          dateTaskDueDateLabel: formatShortDate(yesterdayStr, today),
+          displayPriority: 1,
+        },
+      ])
+    })
+
+    queryClient.clear()
+  })
+
+  it('fetches referenced tasks and server-filtered candidates and dates', async () => {
+    const selectedDate = new Date('2026-07-20T00:00:00')
+    const selectedDateStr = formatLocalDate(selectedDate)
+    const futureDate = '2026-07-21'
+    const calendarDate = '2026-07-27'
+    const queueTaskId = 'queued-task'
+    const futureTaskId = 'future-day-task'
+    const calendarTaskId = 'visible-calendar-day-task'
+    const timeBlockTaskId = 'time-block-task'
+    mocks.selectedDate = selectedDate
+    mocks.useQueues.mockReturnValue({
+      data: [
+        makeQueue({ key: 'day', name: 'Today' }),
+        makeQueue({
+          key: 'week',
+          name: 'This week',
+          periodUnit: 'week',
+          position: 1,
+        }),
+      ],
+    })
+    mocks.useQueueItemsForQueues.mockReturnValue([
+      { data: [makeQueueItem({ taskId: queueTaskId })] },
+      { data: [] },
+    ])
+    mocks.useQueueItemsForDates.mockImplementation((_key, dates) =>
+      dates.map((date) => ({
+        data:
+          date === futureDate
+            ? [makeQueueItem({ taskId: futureTaskId })]
+            : date === calendarDate
+              ? [makeQueueItem({ taskId: calendarTaskId })]
+              : [],
+        error: null,
+        errorUpdatedAt: 0,
+      })),
+    )
+    mocks.useTimeBlocks.mockReturnValue({
+      data: [makeTimeBlock({ taskId: timeBlockTaskId })],
+      error: null,
+    })
+
+    const { queryClient } = await renderDayRoute('/')
+    const presentationProps = assertDefined(
+      mocks.dayViewProps.mock.lastCall?.[0],
+    )
+    const onVisibleRangeChange = assertDefined(
+      presentationProps.onVisibleRangeChange,
+    )
+    act(() => {
+      onVisibleRangeChange({
+        start: new Date(`${calendarDate}T00:00:00`),
+        end: new Date('2026-07-29T00:00:00'),
+      })
+    })
+
+    await waitFor(() => {
+      const idQueryCall = mocks.useTaskList.mock.calls
+        .filter(([filter]) => isTaskListFilterWith(filter, 'ids'))
+        .at(-1)
+      expect(
+        taskListQuerySnapshot(getEnabledTaskListFilters(), idQueryCall?.[1]),
+      ).toEqual(
+        taskListQuerySnapshot(
+          [
+            {
+              context: 'work',
+              status: 'todo',
+              candidatesOn: selectedDateStr,
+            },
+            {
+              context: 'work',
+              status: 'todo',
+              dateFrom: calendarDate,
+              dateTo: '2026-07-28',
+            },
+            {
+              ids: [
+                'future-day-task',
+                'queued-task',
+                'time-block-task',
+                'visible-calendar-day-task',
+              ],
+              context: 'work',
+              includeAncestors: true,
+            },
+          ],
+          { enabled: true, placeholderData: () => undefined },
+        ),
+      )
+    })
+
+    queryClient.clear()
+  })
+})
+
 describe('day-view route compact layout', () => {
   it('waits for carry-over before reading today queue items', async () => {
     const today = new Date()
@@ -429,12 +672,14 @@ describe('day-view route compact layout', () => {
   it('activates the compact shell without polling SSE-backed queries', async () => {
     const { queryClient, router } = await renderDayRoute('/?layout=compact')
     const nowPanelRange = getNowPanelQueryDateRange(new Date())
+    const todayStr = formatLocalDate(new Date())
     const getCompactRouteState = () => ({
       pathname: router.state.location.pathname,
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
       appLayoutVisible: screen.queryByTestId('app-layout') != null,
-      dueTaskFilter: mocks.useTaskList.mock.calls[1]?.[0],
-      dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
+      dueTaskCall: mocks.useTaskList.mock.calls.find(([filter]) =>
+        isDueTaskQuery(filter),
+      ),
       memoArgs: mocks.useMemos.mock.calls.at(-1),
       nowPanelTimeBlocksRange: mocks.useTimeBlocks.mock.calls
         .find((call) => call[2] === true)
@@ -453,8 +698,15 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'compact',
         appLayoutVisible: false,
-        dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
-        dueTaskOptions: { enabled: true },
+        dueTaskCall: [
+          {
+            context: 'work',
+            status: 'todo',
+            dueTo: todayStr,
+            sortBy: 'due',
+          },
+          { enabled: true },
+        ],
         memoArgs: ['work', true],
         nowPanelTimeBlocksRange: [
           nowPanelRange.startDate,
@@ -474,12 +726,14 @@ describe('day-view route compact layout', () => {
 
   it('keeps the default shell and does not poll when compact mode is absent', async () => {
     const { queryClient, router } = await renderDayRoute('/?layout=unsupported')
+    const todayStr = formatLocalDate(new Date())
     const getDefaultRouteState = () => ({
       pathname: router.state.location.pathname,
       layout: screen.getByTestId('day-view').getAttribute('data-layout'),
       appLayoutVisible: screen.queryByTestId('app-layout') != null,
-      dueTaskFilter: mocks.useTaskList.mock.calls[1]?.[0],
-      dueTaskOptions: mocks.useTaskList.mock.calls[1]?.[1],
+      dueTaskCall: mocks.useTaskList.mock.calls.find(([filter]) =>
+        isDueTaskQuery(filter),
+      ),
       memoArgs: mocks.useMemos.mock.calls.at(-1),
       nowPanelTimeBlocksEnabled: mocks.useTimeBlocks.mock.calls.some(
         (call) => call[2] === false,
@@ -498,8 +752,15 @@ describe('day-view route compact layout', () => {
         pathname: '/',
         layout: 'default',
         appLayoutVisible: true,
-        dueTaskFilter: { status: 'todo', hasDue: true, sortBy: 'due' },
-        dueTaskOptions: { enabled: false },
+        dueTaskCall: [
+          {
+            context: 'work',
+            status: 'todo',
+            dueTo: todayStr,
+            sortBy: 'due',
+          },
+          { enabled: false },
+        ],
         memoArgs: ['work', false],
         nowPanelTimeBlocksEnabled: true,
         nowPanelSchedulesEnabled: true,

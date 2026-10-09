@@ -9,7 +9,6 @@ import { useEffect } from 'react'
 
 import { AppLayout } from '#components/layout/app-layout'
 import { CompactLayoutFrame } from '#components/layout/compact-layout-frame'
-import { useGithubSync } from '#hooks/use-github-link'
 import { usePushResubscribe } from '#hooks/use-push-notifications'
 import { useServiceWorkerUpdate } from '#hooks/use-service-worker-update'
 import { isCompactDayLayoutMatch } from '#lib/compact-layout'
@@ -43,7 +42,6 @@ function RootComponent() {
     withResolver: false,
   })
 
-  useGithubSync()
   useServiceWorkerUpdate()
   usePushResubscribe()
 

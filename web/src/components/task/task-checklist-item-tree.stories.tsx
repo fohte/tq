@@ -3,6 +3,12 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
+import {
+  CHECKLIST_ITEM_GITHUB_URL,
+  CHECKLIST_ITEM_TASK_NUMBER,
+  checklistItemProjectUrl,
+  seedChecklistItemMarkdownReferences,
+} from '#components/task/checklist-item-markdown-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskChecklistItemTree } from '#components/task/task-checklist-item-tree'
 import { makeTaskChecklistItem } from '#components/task/task-checklist-test-fixtures'
@@ -66,11 +72,30 @@ const linkedItems = [
     subtaskId: promotedSubtask.id,
   }),
 ]
+const inlineMarkdownItems = [
+  makeTaskChecklistItem({
+    id: '30000000-0000-4000-8000-000000000211',
+    content: 'Review **the plan**, keep *the wording*, and run `the check`.',
+  }),
+  makeTaskChecklistItem({
+    id: '30000000-0000-4000-8000-000000000212',
+    content: `Read [the guide](https://example.org/guide), visit ${checklistItemProjectUrl(window.location.origin)}, see ${CHECKLIST_ITEM_GITHUB_URL}, and [the pull request](${CHECKLIST_ITEM_GITHUB_URL}).`,
+  }),
+  makeTaskChecklistItem({
+    id: '30000000-0000-4000-8000-000000000213',
+    content: `Open the related task #${String(CHECKLIST_ITEM_TASK_NUMBER)}.`,
+  }),
+  makeTaskChecklistItem({
+    id: '30000000-0000-4000-8000-000000000214',
+    content: `#${String(CHECKLIST_ITEM_TASK_NUMBER)}`,
+  }),
+]
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
+  seedChecklistItemMarkdownReferences(queryClient)
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -149,4 +174,10 @@ export const LinkedItems: Story = {
     githubLinks: [linkedPullRequest],
     subtasks: [promotedSubtask],
   },
+}
+
+export const InlineMarkdown: Story = {
+  name: 'the checklist shows formatted text and live reference chips',
+  args: { items: inlineMarkdownItems },
+  render: (args) => <ItemTreeStory {...args} />,
 }

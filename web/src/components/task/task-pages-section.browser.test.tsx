@@ -1,14 +1,90 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PageCardPresentation } from '#components/task/page-card'
 import { makeTaskPage } from '#components/task/task-page-test-fixtures'
+import { TaskPagesSection } from '#components/task/task-pages-section'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import type { TaskPage } from '#hooks/use-task-pages'
 import { assertDefined } from '#lib/test-utils'
 import { createStoryRouter } from '#storybook-config/story-router'
+
+const { getPages, getPage } = vi.hoisted(() => ({
+  getPages: vi.fn(),
+  getPage: vi.fn(),
+}))
+
+vi.mock('#lib/api', () => ({
+  api: {
+    api: {
+      tasks: {
+        ':taskId': {
+          pages: {
+            $get: getPages,
+            ':pageId': { $get: getPage },
+          },
+        },
+      },
+    },
+  },
+}))
+
+vi.mock('#components/ui/markdown-editor', async () => {
+  const { useState } = await import('react')
+
+  return {
+    MarkdownEditor: ({
+      defaultValue = '',
+      editing,
+    }: {
+      defaultValue?: string
+      editing?: boolean
+    }) => {
+      const [value, setValue] = useState(defaultValue)
+
+      return (
+        <div
+          className="milkdown-wrapper"
+          data-view-mode={editing === true ? 'edit' : 'view'}
+        >
+          <textarea
+            aria-label="Page editor"
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value)
+            }}
+          />
+          {value.split('\n').map((line, index) => (
+            <p key={index}>{line.replace(/^#+\s*/, '')}</p>
+          ))}
+        </div>
+      )
+    },
+  }
+})
+
+beforeEach(() => {
+  getPages.mockReset()
+  getPage.mockReset()
+})
+
+function pageEditorLoadResult<TRequests>(
+  editorContent: string,
+  requests: TRequests,
+) {
+  return { editorContent, singlePageRequests: requests }
+}
+
+function pageEditorRefetchResult(
+  value: string,
+  listFetches: number,
+  bodyFetches: number,
+) {
+  return { value, listFetches, bodyFetches }
+}
 
 async function renderPageCard({
   page = makeTaskPage(),
@@ -26,6 +102,7 @@ async function renderPageCard({
       <PageCardPresentation
         taskId={page.taskId}
         page={page}
+        expandedContent={page.content}
         onDelete={onDelete}
         isDeleting={isDeleting}
         {...(isExpanded === undefined ? {} : { isExpanded })}
@@ -45,6 +122,33 @@ async function renderPageCard({
 
   return {
     ...render(<RouterProvider router={router} />),
+  }
+}
+
+function jsonResponse(value: unknown) {
+  return new Response(JSON.stringify(value), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+async function renderTaskPagesSection() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const router = createStoryRouter({
+    component: () => (
+      <QueryClientProvider client={queryClient}>
+        <TaskPagesSection taskId="task-001" />
+      </QueryClientProvider>
+    ),
+    paths: ['/tasks/$taskId/pages/$pageId'],
+  })
+  await router.load()
+
+  return {
+    ...render(<RouterProvider router={router} />),
+    queryClient,
   }
 }
 
@@ -96,6 +200,123 @@ describe('PageCardPresentation', () => {
     expect(getCardEditorState(container)).toEqual({
       expanded: true,
       mode: 'edit',
+    })
+  })
+
+  it('uses only the summary preview for a collapsed card', async () => {
+    const page = makeTaskPage({
+      content: 'This body is not the preview.',
+      preview: 'This is the preview.',
+      contentTruncated: true,
+    })
+    await renderPageCard({ page })
+
+    expect(
+      screen.getByText('This is the preview.').parentElement?.textContent,
+    ).toEqual('This is the preview.show more')
+  })
+
+  it('loads the full body from the single-page endpoint when the card expands', async () => {
+    const page = makeTaskPage({
+      content: 'The list body is not used for editing.',
+      preview: '## Short list preview',
+      contentTruncated: false,
+    })
+    const fullPage = makeTaskPage({
+      content:
+        '## Full body from the single-page endpoint\n\nLoaded in the editor.',
+    })
+    getPages.mockImplementation(() => jsonResponse([page]))
+    getPage.mockImplementation(() => jsonResponse(fullPage))
+    const user = userEvent.setup()
+    const { container } = await renderTaskPagesSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Expand' }))
+    await screen.findByText(
+      'Full body from the single-page endpoint',
+      {},
+      { timeout: 5000 },
+    )
+
+    const editor = assertDefined(
+      container.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="Page editor"]',
+      ),
+    )
+    expect(pageEditorLoadResult(editor.value, getPage.mock.calls)).toEqual({
+      editorContent:
+        '## Full body from the single-page endpoint\n\nLoaded in the editor.',
+      singlePageRequests: [
+        [{ param: { taskId: 'task-001', pageId: 'page-001' } }],
+      ],
+    })
+  })
+
+  it('shows an error when the expanded page body request fails', async () => {
+    const page = makeTaskPage({
+      preview: '## Short list preview',
+      contentTruncated: false,
+    })
+    getPages.mockImplementation(() => jsonResponse([page]))
+    getPage.mockImplementation(
+      () => new Response('Internal server error', { status: 500 }),
+    )
+    const user = userEvent.setup()
+    await renderTaskPagesSection()
+
+    await user.click(await screen.findByRole('button', { name: 'Expand' }))
+    const alert = await screen.findByRole('alert')
+
+    expect(alert.textContent).toEqual('Could not load this page.')
+  })
+
+  it('keeps edited input when the page list and body queries refetch', async () => {
+    const page = makeTaskPage({
+      content: 'The list body is not used for editing.',
+      preview: '## Short list preview',
+      contentTruncated: false,
+    })
+    const fullPage = makeTaskPage({
+      content: '## Original body from the endpoint',
+    })
+    getPages.mockImplementation(() => jsonResponse([page]))
+    getPage.mockImplementation(() => jsonResponse(fullPage))
+    const user = userEvent.setup()
+    const { container, queryClient } = await renderTaskPagesSection()
+    await screen.findByRole('button', { name: 'Expand' })
+    const userWithActions = await openPageActions(container)
+
+    await userWithActions.click(await screen.findByText('edit'))
+    const editor = await screen.findByRole('textbox', { name: 'Page editor' })
+    await user.clear(editor)
+    await user.type(editor, 'Unsaved draft')
+
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['tasks', 'detail', 'task-001', 'pages'],
+        exact: true,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['tasks', 'detail', 'task-001', 'pages', 'page-001'],
+        exact: true,
+      })
+    })
+
+    const pageTextArea = assertDefined(
+      container.querySelector<HTMLTextAreaElement>(
+        'textarea[aria-label="Page editor"]',
+      ),
+    )
+    expect(
+      pageEditorRefetchResult(
+        pageTextArea.value,
+        getPages.mock.calls.length,
+        getPage.mock.calls.length,
+      ),
+    ).toEqual({
+      value: 'Unsaved draft',
+      listFetches: 2,
+      bodyFetches: 2,
     })
   })
 

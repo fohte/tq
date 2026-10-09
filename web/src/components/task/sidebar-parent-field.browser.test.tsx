@@ -1,17 +1,22 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
+import {
+  useSelfAndDescendantIds,
+  useTaskList,
+  useUpdateTaskParent,
+} from '#hooks/use-tasks'
 import { partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-tasks')>()
   return {
     ...original,
+    useSelfAndDescendantIds: vi.fn(),
     useTaskList: vi.fn(),
     useUpdateTaskParent: vi.fn(),
   }
@@ -26,12 +31,27 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
 })
 
 const mockUseTaskList = vi.mocked(useTaskList)
+const mockUseSelfAndDescendantIds = vi.mocked(useSelfAndDescendantIds)
 const mockUseUpdateTaskParent = vi.mocked(useUpdateTaskParent)
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
 
 type UseTaskListResult = ReturnType<typeof useTaskList>
 type UseUpdateTaskParentResult = ReturnType<typeof useUpdateTaskParent>
 type UseSearchTasksResult = ReturnType<typeof useSearchTasks>
+
+function parentFieldSnapshot(display: unknown, taskListCalls: unknown[]) {
+  return { display, taskListCalls }
+}
+
+function uniqueTaskListCalls<T>(calls: T[]) {
+  const seen = new Set<string | undefined>()
+  return calls.filter((call) => {
+    const key = JSON.stringify(call)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 const currentTask = makeTask({
   id: 'task-1',
@@ -51,11 +71,24 @@ const searchCandidate = makeTask({
   title: 'Deploy to production',
 })
 
+beforeEach(() => {
+  mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
+    const { categorized } = mockUseTaskList(
+      { descendantOf: taskId },
+      { enabled },
+    )
+    return new Set([taskId, ...categorized.all.map((task) => task.id)])
+  })
+  mockUseTaskList.mockReset()
+  mockUseUpdateTaskParent.mockReset()
+  mockUseSearchTasks.mockReset()
+})
+
 describe('SidebarParentField', () => {
-  it('opens the popup and shows the search input when the closed label is clicked', async () => {
+  it('queries descendants only while parent selection is open', async () => {
     mockUseTaskList.mockReturnValue(
       partialMutation<UseTaskListResult>({
-        categorized: { all: [currentTask] },
+        categorized: { all: [] },
       }),
     )
     mockUseSearchTasks.mockReturnValue(
@@ -65,11 +98,74 @@ describe('SidebarParentField', () => {
       partialMutation<UseUpdateTaskParentResult>({ mutate: vi.fn() }),
     )
     const user = userEvent.setup()
-    render(<SidebarParentField taskId={currentTask.id} parentId={null} />)
+    mockUseTaskList.mockClear()
+    render(
+      <SidebarParentField
+        taskId={currentTask.id}
+        parentNumber={null}
+        parentTitle={null}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: '—' }))
 
-    expect(screen.getByPlaceholderText('Search tasks...')).toBeInTheDocument()
+    expect(
+      parentFieldSnapshot(
+        screen
+          .getByPlaceholderText('Search tasks...')
+          .getAttribute('placeholder'),
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ),
+      ),
+    ).toEqual({
+      display: 'Search tasks...',
+      taskListCalls: [
+        { filter: { descendantOf: currentTask.id }, enabled: false },
+        { filter: { descendantOf: currentTask.id }, enabled: true },
+      ],
+    })
+  })
+
+  it('shows the current parent from task details without loading the task list', () => {
+    mockUseTaskList.mockReturnValue(
+      partialMutation<UseTaskListResult>({ categorized: { all: [] } }),
+    )
+    mockUseSearchTasks.mockReturnValue(
+      partialMutation<UseSearchTasksResult>({ data: [], isFetching: false }),
+    )
+    mockUseUpdateTaskParent.mockReturnValue(
+      partialMutation<UseUpdateTaskParentResult>({ mutate: vi.fn() }),
+    )
+    mockUseTaskList.mockClear()
+
+    render(
+      <SidebarParentField
+        taskId={currentTask.id}
+        parentNumber={existingParentTask.number}
+        parentTitle={existingParentTask.title}
+      />,
+    )
+
+    expect(
+      parentFieldSnapshot(
+        screen.getByRole('button').textContent,
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ),
+      ),
+    ).toEqual({
+      display: `#${String(existingParentTask.number)} ${existingParentTask.title}`,
+      taskListCalls: [
+        { filter: { descendantOf: currentTask.id }, enabled: false },
+      ],
+    })
   })
 
   it('selects a candidate and updates the parent', async () => {
@@ -89,7 +185,13 @@ describe('SidebarParentField', () => {
       partialMutation<UseUpdateTaskParentResult>({ mutate }),
     )
     const user = userEvent.setup()
-    render(<SidebarParentField taskId={currentTask.id} parentId={null} />)
+    render(
+      <SidebarParentField
+        taskId={currentTask.id}
+        parentNumber={null}
+        parentTitle={null}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: '—' }))
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
@@ -98,6 +200,7 @@ describe('SidebarParentField', () => {
     expect(mutate).toHaveBeenCalledWith({
       id: currentTask.id,
       parentId: searchCandidate.id,
+      parent: { number: searchCandidate.number, title: searchCandidate.title },
     })
   })
 
@@ -117,7 +220,13 @@ describe('SidebarParentField', () => {
       partialMutation<UseUpdateTaskParentResult>({ mutate: vi.fn() }),
     )
     const user = userEvent.setup()
-    render(<SidebarParentField taskId={currentTask.id} parentId={null} />)
+    render(
+      <SidebarParentField
+        taskId={currentTask.id}
+        parentNumber={null}
+        parentTitle={null}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: '—' }))
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'Deploy')
@@ -143,7 +252,8 @@ describe('SidebarParentField', () => {
     render(
       <SidebarParentField
         taskId={currentTask.id}
-        parentId={existingParentTask.id}
+        parentNumber={existingParentTask.number}
+        parentTitle={existingParentTask.title}
       />,
     )
 
@@ -157,6 +267,7 @@ describe('SidebarParentField', () => {
     expect(mutate).toHaveBeenCalledWith({
       id: currentTask.id,
       parentId: null,
+      parent: null,
     })
   })
 
@@ -176,7 +287,8 @@ describe('SidebarParentField', () => {
     render(
       <SidebarParentField
         taskId={currentTask.id}
-        parentId={existingParentTask.id}
+        parentNumber={existingParentTask.number}
+        parentTitle={existingParentTask.title}
       />,
     )
 
@@ -213,9 +325,7 @@ describe('SidebarParentField', () => {
 
     mockUseTaskList.mockReturnValue(
       partialMutation<UseTaskListResult>({
-        categorized: {
-          all: [currentTask, childTask, grandchildTask, unrelatedTask],
-        },
+        categorized: { all: [childTask, grandchildTask] },
       }),
     )
     mockUseSearchTasks.mockReturnValue(
@@ -228,15 +338,36 @@ describe('SidebarParentField', () => {
       partialMutation<UseUpdateTaskParentResult>({ mutate: vi.fn() }),
     )
     const user = userEvent.setup()
-    render(<SidebarParentField taskId={currentTask.id} parentId={null} />)
+    mockUseTaskList.mockClear()
+    render(
+      <SidebarParentField
+        taskId={currentTask.id}
+        parentNumber={null}
+        parentTitle={null}
+      />,
+    )
 
     await user.click(screen.getByRole('button', { name: '—' }))
     await user.type(screen.getByPlaceholderText('Search tasks...'), 'task')
 
     expect(
-      screen
-        .getAllByRole('button', { name: /^#\d+ / })
-        .map((el) => el.textContent),
-    ).toEqual([`#${String(unrelatedTask.number)}${unrelatedTask.title}`])
+      parentFieldSnapshot(
+        screen
+          .getAllByRole('button', { name: /^#\d+ / })
+          .map((el) => el.textContent),
+        uniqueTaskListCalls(
+          mockUseTaskList.mock.calls.map(([filter, options]) => ({
+            filter,
+            enabled: options?.enabled,
+          })),
+        ),
+      ),
+    ).toEqual({
+      display: [`#${String(unrelatedTask.number)}${unrelatedTask.title}`],
+      taskListCalls: [
+        { filter: { descendantOf: currentTask.id }, enabled: false },
+        { filter: { descendantOf: currentTask.id }, enabled: true },
+      ],
+    })
   })
 })

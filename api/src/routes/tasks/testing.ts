@@ -92,7 +92,6 @@ export interface TaskResponse {
   labels: string[]
   startDate: string | null
   dueDate: string | null
-  estimatedMinutes: number | null
   remindAt: string | null
   parentId: string | null
   projectId: string | null
@@ -115,6 +114,7 @@ export interface TaskResponse {
   // Only present on the single-task detail response (`GET /:id`), not on any
   // create/update mutation response.
   parentNumber?: number | null
+  parentTitle?: string | null
   duplicateOfNumber?: number | null
   // Same shape as one entry of `links.outgoing`.
   duplicateOfTask?: TaskListItemResponse | null
@@ -138,7 +138,6 @@ export interface TaskListItemResponse {
   labels: string[]
   startDate: string | null
   dueDate: string | null
-  estimatedMinutes: number | null
   remindAt: string | null
   parentId: string | null
   projectId: string | null
@@ -217,7 +216,6 @@ export function toListItemResponse(
     | 'labels'
     | 'startDate'
     | 'dueDate'
-    | 'estimatedMinutes'
     | 'remindAt'
     | 'parentId'
     | 'projectId'
@@ -249,7 +247,6 @@ export function toListItemResponse(
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
     remindAt: task.remindAt,
     parentId: task.parentId,
     projectId: task.projectId,
@@ -357,7 +354,6 @@ const taskListItemResponseSchema = z.object({
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
-  estimatedMinutes: z.number().nullable(),
   remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
@@ -401,7 +397,6 @@ const taskResponseSchema = z.object({
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
-  estimatedMinutes: z.number().nullable(),
   remindAt: z.string().nullable(),
   parentId: z.string().nullable(),
   projectId: z.string().nullable(),
@@ -430,6 +425,7 @@ const taskResponseSchema = z.object({
     .optional(),
   linkSync: linkSyncResponseSchema.optional(),
   parentNumber: z.number().nullable().optional(),
+  parentTitle: z.string().nullable().optional(),
   duplicateOfNumber: z.number().nullable().optional(),
   duplicateOfTask: taskListItemResponseSchema.nullable().optional(),
   blockedBy: z.array(taskListItemResponseSchema).optional(),
@@ -451,8 +447,8 @@ export async function createTask(
   opts: {
     parentId?: string
     description?: string
+    startDate?: string
     dueDate?: string
-    estimatedMinutes?: number
     context?: string
     commitment?: string
     labels?: string[]
@@ -478,7 +474,6 @@ export async function createRecurringTask(
   opts: {
     dueDate?: string
     description?: string
-    estimatedMinutes?: number
     context?: string
     labels?: string[]
   } = {},

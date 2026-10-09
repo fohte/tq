@@ -14,11 +14,16 @@ const baseSession: AgentSession = makeAgentSession({
 describe('isAgentSessionActive', () => {
   const now = new Date('2026-03-20T12:00:00Z')
 
-  it('returns true when not ended and last active within the stale threshold', () => {
-    expect(isAgentSessionActive(baseSession, now)).toBe(true)
+  it('returns true just before the stale cutoff', () => {
+    expect(
+      isAgentSessionActive(
+        { ...baseSession, lastActiveAt: '2026-03-20T11:30:00.001Z' },
+        now,
+      ),
+    ).toBe(true)
   })
 
-  it('returns false when ended, regardless of how recent lastActiveAt is', () => {
+  it('returns false when ended', () => {
     expect(
       isAgentSessionActive(
         { ...baseSession, endedAt: '2026-03-20T11:59:00Z' },
@@ -27,7 +32,7 @@ describe('isAgentSessionActive', () => {
     ).toBe(false)
   })
 
-  it('returns false when archived, regardless of how recent lastActiveAt is', () => {
+  it('returns false when archived', () => {
     expect(
       isAgentSessionActive(
         { ...baseSession, archivedAt: '2026-03-20T11:59:00Z' },
@@ -36,10 +41,10 @@ describe('isAgentSessionActive', () => {
     ).toBe(false)
   })
 
-  it('returns false when not ended but lastActiveAt is stale', () => {
+  it('returns false at the 30-minute boundary', () => {
     expect(
       isAgentSessionActive(
-        { ...baseSession, lastActiveAt: '2026-03-20T11:00:00Z' },
+        { ...baseSession, lastActiveAt: '2026-03-20T11:30:00Z' },
         now,
       ),
     ).toBe(false)

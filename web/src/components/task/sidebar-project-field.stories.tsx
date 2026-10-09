@@ -3,7 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
-import { type Project, projectKeys } from '#hooks/use-projects'
+import {
+  ALL_PROJECTS_FILTER,
+  type Project,
+  projectKeys,
+} from '#hooks/use-projects'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
@@ -23,7 +27,7 @@ function createSeededQueryClient(projects: Project[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  client.setQueryData(projectKeys.list(undefined), projects)
+  client.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
   return client
 }
 

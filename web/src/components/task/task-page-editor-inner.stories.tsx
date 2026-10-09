@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { PageEditorInner } from '#components/task/task-page-editor-inner'
 import { BackLink } from '#components/ui/back-header-bar'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
-import type { TaskPage } from '#hooks/use-task-pages'
+import type { TaskPageBody } from '#hooks/use-task-pages'
 import { StoryRouter } from '#storybook-config/story-router'
 
 function Providers({ children }: { children: ReactNode }) {
@@ -57,7 +57,7 @@ function Story({
   pageId: string
   defaultTitle: string
   defaultContent: string
-  format: TaskPage['format']
+  format: TaskPageBody['format']
   defaultContentEditing?: boolean
 }) {
   return (

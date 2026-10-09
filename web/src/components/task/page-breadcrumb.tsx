@@ -1,7 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import type { TaskPage } from '#hooks/use-task-pages'
+import type { TaskPageBody } from '#hooks/use-task-pages'
 import { formatRelativeTime } from '#lib/format'
 
 const SAVED_TIME_TICK_MS = 30_000
@@ -13,7 +13,7 @@ export function PageBreadcrumb({
 }: {
   isLoading: boolean
   taskNumber: number | undefined
-  page: TaskPage | undefined
+  page: TaskPageBody | undefined
 }) {
   // "saved Xm ago" is only recomputed on render, so tick periodically to
   // keep it from drifting while the tab stays open and focused.

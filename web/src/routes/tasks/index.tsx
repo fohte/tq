@@ -10,7 +10,7 @@ import { TaskTreeList } from '#components/task/task-tree-list'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
-import { useProjects } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import {
   sortOptionValues,
@@ -80,7 +80,7 @@ function TaskList() {
     })
   }
 
-  const projects = useProjects()
+  const projects = useProjects(ALL_PROJECTS_FILTER)
 
   const {
     isLoading,

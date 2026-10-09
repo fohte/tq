@@ -43,8 +43,6 @@ function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
       return desc(tasks.updatedAt)
     case 'due':
       return tasks.dueDate
-    case 'estimate':
-      return tasks.estimatedMinutes
     case 'created':
     default:
       return tasks.createdAt
@@ -108,7 +106,6 @@ function taskCoreToResponse(
     labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
     remindAt: task.remindAt?.toISOString() ?? null,
     parentId: task.parentId,
     projectId: task.projectId,

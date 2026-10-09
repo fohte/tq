@@ -8,8 +8,8 @@ import { Result } from 'neverthrow'
 
 import {
   descriptionTemplateKeys,
-  githubSyncKeys,
   githubSyncRuleKeys,
+  isTaskCandidateListQueryKey,
   labelKeys,
   matchesTaskSpecificQuery,
   projectKeys,
@@ -151,7 +151,15 @@ const resourceQueryFilters: Record<
           : [],
     })
   },
-  queue: () => ({ filters: [{ queryKey: queueKeys.all }] }),
+  queue: () => ({
+    filters: [
+      { queryKey: queueKeys.all },
+      {
+        queryKey: taskKeys.lists,
+        predicate: ({ queryKey }) => isTaskCandidateListQueryKey(queryKey),
+      },
+    ],
+  }),
   time_block: ({ taskIds }) =>
     withFilters(
       taskInvalidation(taskIds, false, { queryKey: taskKeys.details }),
@@ -191,7 +199,6 @@ const resourceQueryFilters: Record<
       { queryKey: ['integrations'] },
       { queryKey: ['gcal-calendars'] },
       { queryKey: ['gcal-events'] },
-      { queryKey: githubSyncKeys.all },
     ],
   }),
   unknown: () => null,
@@ -295,11 +302,7 @@ export function connectLiveQuerySync(
     if (pendingAll) {
       pendingAll = false
       pendingFilters.clear()
-      invalidateFilters([
-        {
-          predicate: (query) => query.queryKey[0] !== githubSyncKeys.all[0],
-        },
-      ])
+      invalidateFilters([{}])
       return
     }
 

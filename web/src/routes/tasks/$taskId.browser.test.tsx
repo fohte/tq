@@ -27,7 +27,6 @@ const mockTask = {
   labels: [],
   startDate: '2026-03-20',
   dueDate: '2026-03-25',
-  estimatedMinutes: 90,
   parentId: null,
   projectId: null,
   githubLinks: [],
@@ -218,7 +217,7 @@ describe('TaskPage', () => {
     expect(editorWithDescription).toBeTruthy()
   })
 
-  it('renders sidebar fields without an estimate', async () => {
+  it('renders status and context fields in the sidebar', async () => {
     mockUseTask.mockReturnValue({
       data: mockTask,
       isLoading: false,
@@ -227,12 +226,10 @@ describe('TaskPage', () => {
     await renderTaskPage()
     const getActual = () => ({
       statusFields: screen.getAllByText('STATUS').length,
-      estimateFields: screen.queryAllByText('ESTIMATE').length,
       contextFields: screen.getAllByText('CONTEXT').length,
     })
     const expected = {
       statusFields: 2,
-      estimateFields: 0,
       contextFields: 2,
     }
 
@@ -279,7 +276,6 @@ describe('TaskPage', () => {
       labels: [],
       startDate: null,
       dueDate: null,
-      estimatedMinutes: null,
       parentId: mockTask.id,
       parentNumber: mockTask.number,
       projectId: null,

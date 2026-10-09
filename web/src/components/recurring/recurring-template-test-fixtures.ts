@@ -7,7 +7,6 @@ export function makeRecurringTemplate(
     id: 'recurring-template-1',
     title: 'Write blog post',
     description: null,
-    estimatedMinutes: null,
     projectId: null,
     parentId: null,
     context: 'personal',

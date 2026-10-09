@@ -60,9 +60,9 @@ const booleanOption = z
 
 const taskListInputSchema = listTasksQuerySchema
   .omit({
-    hasEstimate: true,
     hasDue: true,
     includeMatch: true,
+    candidatesOn: true,
   })
   .extend({
     includeMatch: booleanOption
@@ -93,9 +93,9 @@ const taskListInputSchema = listTasksQuerySchema
 
 const taskSearchInputSchema = listTasksQuerySchema
   .omit({
-    hasEstimate: true,
     hasDue: true,
     includeMatch: true,
+    candidatesOn: true,
   })
   .extend({
     includeMatch: booleanOption
@@ -120,11 +120,6 @@ const taskSearchInputSchema = listTasksQuerySchema
       .optional()
       .describe(
         'Only return tasks in this context. Equivalent to context: in q.',
-      ),
-    hasEstimate: booleanOption
-      .optional()
-      .describe(
-        'Only return tasks that have (true) or lack (false) an estimate.',
       ),
     hasDue: booleanOption
       .optional()
@@ -178,7 +173,9 @@ function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
 
 function toPageMetadata(page: Record<string, unknown>) {
   return Object.fromEntries(
-    Object.entries(page).filter(([key]) => key !== 'content'),
+    Object.entries(page).filter(
+      ([key]) => !['content', 'preview', 'contentTruncated'].includes(key),
+    ),
   )
 }
 
@@ -243,7 +240,7 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|estimate. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],

@@ -37,7 +37,7 @@ export const taskChecklistKeys = {
 export const projectKeys = {
   all: ['projects'] as const,
   lists: ['projects', 'list'] as const,
-  list: (filter?: ProjectFilter) => [...projectKeys.lists, filter] as const,
+  list: (filter: ProjectFilter) => [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
   taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }
@@ -127,11 +127,6 @@ export const githubSyncRuleKeys = {
   list: ['github-sync-rules'] as const,
 }
 
-export const githubSyncKeys = {
-  all: ['github-sync'] as const,
-  task: (taskId: string) => ['github-sync', 'task', taskId] as const,
-}
-
 export type SearchContext = 'work' | 'personal'
 
 export const searchKeys = {
@@ -153,21 +148,17 @@ export const commentKeys = {
   all: (taskId: string) => [...taskKeys.all, taskId, 'comments'] as const,
 }
 
-// Mention previews share the task namespace so task invalidation refreshes them.
-const mentionPreviewKeyPrefix = [...taskKeys.all, 'mention-preview'] as const
+// Preview queries share the task namespace so task invalidation refreshes them.
+const taskPreviewKeyPrefix = [...taskKeys.all, 'preview'] as const
+
+export const taskPreviewKeys = {
+  preview: (id: string) => [...taskPreviewKeyPrefix, id] as const,
+}
 
 export const taskMentionKeys = {
-  preview: (number: number) => [...mentionPreviewKeyPrefix, number] as const,
   suggestionsPrefix: mentionSuggestionsKeyPrefix,
   suggestions: (query: string) =>
     [...mentionSuggestionsKeyPrefix, query] as const,
-}
-
-// A null result must not share the non-null task detail cache.
-const taskUrlPreviewKeyPrefix = [...taskKeys.all, 'task-url-preview'] as const
-
-export const taskUrlPreviewKeys = {
-  preview: (id: string) => [...taskUrlPreviewKeyPrefix, id] as const,
 }
 
 function hasQueryKeyPrefix(
@@ -175,6 +166,17 @@ function hasQueryKeyPrefix(
   prefix: readonly unknown[],
 ): boolean {
   return prefix.every((part, index) => queryKey[index] === part)
+}
+
+export function isTaskCandidateListQueryKey(
+  queryKey: readonly unknown[],
+): boolean {
+  if (!hasQueryKeyPrefix(queryKey, taskKeys.lists)) return false
+  const filter = queryKey[taskKeys.lists.length]
+  if (!isRecord(filter) || typeof filter['candidatesOn'] !== 'string') {
+    return false
+  }
+  return true
 }
 
 function taskIdFromData(data: unknown): string | null {
@@ -216,16 +218,13 @@ export function matchesTaskSpecificQuery(
     return typeof taskId === 'string' && taskIds.has(taskId)
   }
 
-  if (hasQueryKeyPrefix(queryKey, mentionPreviewKeyPrefix)) {
-    return matchesTaskPreview(data, taskIds, includeUnresolvedPreviews)
-  }
-
-  if (hasQueryKeyPrefix(queryKey, taskUrlPreviewKeyPrefix)) {
-    const taskId = queryKey[taskUrlPreviewKeyPrefix.length]
-    if (typeof taskId === 'string' && taskIds.has(taskId)) return true
+  if (hasQueryKeyPrefix(queryKey, taskPreviewKeyPrefix)) {
+    const identifier = queryKey[taskPreviewKeyPrefix.length]
+    if (typeof identifier !== 'string') return false
+    if (taskIds.has(identifier)) return true
     const dataTaskId = taskIdFromData(data)
     if (dataTaskId != null) return taskIds.has(dataTaskId)
-    return includeUnresolvedPreviews && isTaskNumber(taskId)
+    return includeUnresolvedPreviews && isTaskNumber(identifier)
   }
 
   if (hasQueryKeyPrefix(queryKey, githubUrlPreviewKeyPrefix)) {

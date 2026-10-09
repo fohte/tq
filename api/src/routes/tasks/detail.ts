@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { db } from '#db/connection'
 import { recurrenceRules, taskPages, tasks, timeBlocks } from '#db/schema'
 import { getPageAuthors, getTaskFieldAuthors } from '#lib/edits'
-import { pageToResponse } from '#routes/task-pages'
+import { pageToListResponse, taskPageListSelection } from '#routes/task-pages'
 import { getTaskChecklistData } from '#routes/tasks/checklist-data'
 import {
   getGithubLinksByTaskId,
@@ -91,11 +91,11 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     task.parentId != null
       ? db.query.tasks.findFirst({
           where: eq(tasks.id, task.parentId),
-          columns: { number: true },
+          columns: { number: true, title: true },
         })
       : Promise.resolve(null),
     db
-      .select()
+      .select(taskPageListSelection())
       .from(taskPages)
       .where(eq(taskPages.taskId, id))
       .orderBy(taskPages.sortOrder, taskPages.createdAt),
@@ -135,12 +135,13 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       titleAuthor: taskFieldAuthors.title,
       descriptionAuthor: taskFieldAuthors.description,
       parentNumber: parentTask?.number ?? null,
+      parentTitle: parentTask?.title ?? null,
       childCompletionCount: {
         total: childStats[0]?.total ?? 0,
         completed: childStats[0]?.completed ?? 0,
       },
       pages: pages.map((page) =>
-        pageToResponse(page, pageAuthors.get(page.id) ?? null),
+        pageToListResponse(page, pageAuthors.get(page.id) ?? null),
       ),
       timeBlocks: taskTimeBlocks.map(timeBlockToResponse),
       links: relatedTasks.links,

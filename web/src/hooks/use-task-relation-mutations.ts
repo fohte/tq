@@ -20,6 +20,7 @@ export function useUpdateTaskParent() {
     }: {
       id: string
       parentId: string | null
+      parent?: Pick<Task, 'number' | 'title'> | null
     }) => {
       const res = await api.api.tasks[':id'].parent.$patch({
         param: { id },
@@ -27,7 +28,7 @@ export function useUpdateTaskParent() {
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
-    onMutate: async ({ id, parentId }) => {
+    onMutate: async ({ id, parentId, parent }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
 
@@ -37,11 +38,21 @@ export function useUpdateTaskParent() {
       const previousLists = queryClient.getQueriesData<Task[]>({
         queryKey: taskKeys.lists,
       })
+      const parentDetail =
+        parent === undefined
+          ? {}
+          : {
+              parentNumber: parent?.number ?? null,
+              parentTitle: parent?.title ?? null,
+            }
+      const parentNumber =
+        parent === undefined ? undefined : (parent?.number ?? null)
 
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
           parentId,
+          ...parentDetail,
           updatedAt: new Date().toISOString(),
         })
       }
@@ -52,7 +63,12 @@ export function useUpdateTaskParent() {
           if (!old) return old
           return old.map((task) =>
             task.id === id
-              ? { ...task, parentId, updatedAt: new Date().toISOString() }
+              ? {
+                  ...task,
+                  parentId,
+                  ...(parentNumber === undefined ? {} : { parentNumber }),
+                  updatedAt: new Date().toISOString(),
+                }
               : task,
           )
         },

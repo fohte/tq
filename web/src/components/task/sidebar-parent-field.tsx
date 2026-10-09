@@ -2,28 +2,27 @@ import { useState } from 'react'
 
 import { SidebarParentFieldAppearance } from '#components/task/sidebar-parent-field-appearance'
 import { useSearchTasks } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
-import { getDescendantIds } from '#lib/task-tree'
+import { useSelfAndDescendantIds, useUpdateTaskParent } from '#hooks/use-tasks'
 
 export function SidebarParentField({
   taskId,
-  parentId,
+  parentNumber,
+  parentTitle,
 }: {
   taskId: string
-  parentId: string | null
+  parentNumber: number | null
+  parentTitle: string | null
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [query, setQuery] = useState('')
 
-  const { categorized } = useTaskList()
+  const invalidParentIds = useSelfAndDescendantIds(taskId, isEditing)
   const updateParent = useUpdateTaskParent()
 
-  const allTasks = categorized.all
-  const invalidParentIds = new Set([
-    taskId,
-    ...getDescendantIds(allTasks, taskId),
-  ])
-  const currentParent = allTasks.find((t) => t.id === parentId) ?? null
+  const currentParent =
+    parentNumber != null && parentTitle != null
+      ? { number: parentNumber, title: parentTitle }
+      : null
 
   const { data: searchResults, isFetching } = useSearchTasks(query)
   const candidates = (searchResults ?? []).filter(
@@ -37,11 +36,7 @@ export function SidebarParentField({
 
   return (
     <SidebarParentFieldAppearance
-      currentParent={
-        currentParent != null
-          ? { number: currentParent.number, title: currentParent.title }
-          : null
-      }
+      currentParent={currentParent}
       isEditing={isEditing}
       onOpenChange={(open) => {
         if (open) {
@@ -55,11 +50,15 @@ export function SidebarParentField({
       isFetching={isFetching}
       candidates={candidates}
       onClear={() => {
-        updateParent.mutate({ id: taskId, parentId: null })
+        updateParent.mutate({ id: taskId, parentId: null, parent: null })
         stopEditing()
       }}
       onSelectCandidate={(candidate) => {
-        updateParent.mutate({ id: taskId, parentId: candidate.id })
+        updateParent.mutate({
+          id: taskId,
+          parentId: candidate.id,
+          parent: { number: candidate.number, title: candidate.title },
+        })
         stopEditing()
       }}
     />

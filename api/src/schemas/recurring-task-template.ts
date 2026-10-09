@@ -9,7 +9,6 @@ import { contextEnum } from '#schemas/task'
 export const createRecurringTaskTemplateSchema = z.object({
   title: z.string().min(1),
   description: z.string().max(MAX_MARKDOWN_CONTENT_LENGTH).optional(),
-  estimatedMinutes: z.number().int().positive().optional(),
   projectId: z.uuid().optional(),
   parentId: taskIdOrNumber.optional(),
   context: contextEnum.optional(),
@@ -27,7 +26,6 @@ export const updateRecurringTaskTemplateSchema = z.object({
     .max(MAX_MARKDOWN_CONTENT_LENGTH)
     .nullable()
     .optional(),
-  estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   parentId: taskIdOrNumber.nullable().optional(),
   context: contextEnum.optional(),

@@ -7,7 +7,7 @@ import {
 } from '@fohte/ui/select'
 
 import { SidebarField } from '#components/task/sidebar-field'
-import { useProjects } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
 
@@ -20,7 +20,7 @@ export function SidebarProjectField({
   taskId: string
   projectId: string | null
 }) {
-  const { data: projects } = useProjects()
+  const { data: projects } = useProjects(ALL_PROJECTS_FILTER)
   const updateTask = useUpdateTask()
 
   const projectItems = (projects ?? []).map((project) => ({

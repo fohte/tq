@@ -21,17 +21,29 @@ const projectId = pathSegmentSchema('Project ID').refine(
 const projectIdSchema = z.object({ id: projectId })
 const createProjectInputSchema = createProjectSchema
 const updateProjectInputSchema = updateProjectSchema.extend({ id: projectId })
+const listProjectsInputSchema = z.object({
+  q: listProjectsQuerySchema.shape.q,
+  status: listProjectsQuerySchema.shape.status.optional(),
+  context: listProjectsQuerySchema.shape.context.optional(),
+})
+const listProjectsMcpInputSchema = listProjectsInputSchema.extend({
+  status: listProjectsQuerySchema.shape.status.default('active'),
+  context: listProjectsQuerySchema.shape.context.default('all'),
+})
 
 export const projectOperations = [
-  defineOperation(listProjectsQuerySchema, {
+  defineOperation(listProjectsInputSchema, {
     path: ['project', 'list'],
     description:
-      'List projects, optionally filtered by title, status, or context. Use the returned ids to scope project commands and task queries.',
+      'List projects filtered by status and context, optionally by title. Use the returned ids to scope project commands and task queries.',
+    mcpInputSchema: listProjectsMcpInputSchema,
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/projects'],
     cli: {
       group: { description: 'Manage projects', order: 3 },
+      envDefaults: { context: 'TQ_CONTEXT' },
+      optionDefaults: { context: 'all', status: 'active' },
       output: {
         kind: 'list',
         omitKey: 'description',
@@ -39,7 +51,16 @@ export const projectOperations = [
         fullDescription: 'Include full project description in the output',
       },
     },
-    run: (client, query) => requestJson(client.api.projects.$get({ query })),
+    run: (client, input) =>
+      requestJson(
+        client.api.projects.$get({
+          query: {
+            ...(input.q == null ? {} : { q: input.q }),
+            status: input.status ?? 'active',
+            context: input.context ?? 'all',
+          },
+        }),
+      ),
   }),
   defineOperation(projectIdSchema, {
     path: ['project', 'get'],

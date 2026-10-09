@@ -19,6 +19,7 @@ export interface FocusViewPresentationProps {
   focusTask: Task | null
   nextTask: Task | null
   subtasks: Task[]
+  subtasksError: boolean
   onDefer: (taskId: string) => void
 }
 
@@ -108,7 +109,21 @@ function FocusCard({
   )
 }
 
-function FocusSubtasks({ subtasks }: { subtasks: Task[] }) {
+function FocusSubtasks({
+  subtasks,
+  hasError,
+}: {
+  subtasks: Task[]
+  hasError: boolean
+}) {
+  if (hasError) {
+    return (
+      <p role="alert" className="font-mono text-xs text-destructive">
+        Failed to load subtasks.
+      </p>
+    )
+  }
+
   const completed = subtasks.filter((t) => t.status === 'completed').length
 
   return (
@@ -170,6 +185,7 @@ export function FocusViewPresentation({
   focusTask,
   nextTask,
   subtasks,
+  subtasksError,
   onDefer,
 }: FocusViewPresentationProps) {
   if (isLoading) {
@@ -212,7 +228,9 @@ export function FocusViewPresentation({
         <div className="flex w-full max-w-3xl flex-col gap-5 md:gap-7">
           <FocusProgress tasks={queueTasks} />
           <FocusCard task={focusTask} onDefer={onDefer} />
-          {subtasks.length > 0 && <FocusSubtasks subtasks={subtasks} />}
+          {(subtasks.length > 0 || subtasksError) && (
+            <FocusSubtasks subtasks={subtasks} hasError={subtasksError} />
+          )}
           <FocusNotes taskId={focusTask.id} />
           {nextTask && <FocusUpNext task={nextTask} />}
         </div>

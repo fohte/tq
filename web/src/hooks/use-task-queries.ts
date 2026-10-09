@@ -24,13 +24,19 @@ export type TaskSortBy = 'created' | 'updated' | 'due'
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 
 export interface TaskListFilter {
+  ids?: string[]
   q?: string
   status?: TaskStatus | TaskStatus[]
   hasDue?: boolean
+  dateFrom?: string
+  dateTo?: string
+  dueTo?: string
+  candidatesOn?: string
   context?: TaskContext
   commitment?: TaskCommitment
   parentId?: string
   templateId?: string
+  descendantOf?: string
   label?: string
   projectId?: string
   sortBy?: TaskSortBy
@@ -84,12 +90,29 @@ export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
 
 export function useTaskList(
   filter?: TaskListFilter,
-  options?: { enabled?: boolean },
+  options?: {
+    enabled?: boolean
+    placeholderData?: (
+      previousData: Task[] | undefined,
+      previousFilter: TaskListFilter | undefined,
+    ) => Task[] | undefined
+  },
 ) {
-  const query = useQuery({
+  const query = useQuery<
+    Task[],
+    Error,
+    Task[],
+    ReturnType<typeof taskKeys.list>
+  >({
     queryKey: taskKeys.list(filter),
     queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
+    ...(options?.placeholderData == null
+      ? {}
+      : {
+          placeholderData: (previousData: Task[] | undefined, previousQuery) =>
+            options.placeholderData?.(previousData, previousQuery?.queryKey[2]),
+        }),
   })
 
   const categorized = useMemo((): CategorizedTasks => {
@@ -98,6 +121,15 @@ export function useTaskList(
   }, [query.data])
 
   return { ...query, categorized }
+}
+
+export function useSelfAndDescendantIds(taskId: string, enabled: boolean) {
+  const { categorized } = useTaskList({ descendantOf: taskId }, { enabled })
+
+  return useMemo(
+    () => new Set([taskId, ...categorized.all.map((task) => task.id)]),
+    [taskId, categorized.all],
+  )
 }
 
 export function useTaskCount(

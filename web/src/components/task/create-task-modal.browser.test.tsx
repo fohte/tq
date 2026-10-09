@@ -12,6 +12,7 @@ import {
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
+import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
 import {
   makeTask,
   makeTaskDetail,
@@ -24,7 +25,11 @@ import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
-import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
+import {
+  githubUrlPreviewKeys,
+  taskMentionKeys,
+  taskPreviewKeys,
+} from '#lib/query-keys'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import {
   assertDefined,
@@ -1034,8 +1039,8 @@ describe('CreateTaskModal', () => {
         defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(
-        taskMentionKeys.preview(34),
-        makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
+        taskPreviewKeys.preview('34'),
+        makeTaskPreview({ number: 34, title: 'Refactor auth module' }),
       )
       // TaskTitleInput's own suggestion popup (separate from the
       // parent-preview lookup above) also queries on '^' — useDebounce
@@ -1083,8 +1088,8 @@ describe('CreateTaskModal', () => {
         defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
       queryClient.setQueryData(
-        taskMentionKeys.preview(34),
-        makeTaskDetail({ number: 34, title: 'Refactor auth module' }),
+        taskPreviewKeys.preview('34'),
+        makeTaskPreview({ number: 34, title: 'Refactor auth module' }),
       )
       queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
       queryClient.setQueryData(taskMentionKeys.suggestions('3'), [])
@@ -1126,7 +1131,7 @@ describe('CreateTaskModal', () => {
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false, staleTime: Infinity } },
       })
-      queryClient.setQueryData(taskMentionKeys.preview(999), null)
+      queryClient.setQueryData(taskPreviewKeys.preview('999'), null)
       queryClient.setQueryData(taskMentionKeys.suggestions(''), [])
       queryClient.setQueryData(taskMentionKeys.suggestions('9'), [])
       queryClient.setQueryData(taskMentionKeys.suggestions('99'), [])

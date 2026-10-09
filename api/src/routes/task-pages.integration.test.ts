@@ -21,11 +21,28 @@ interface PageResponse {
   linkSync?: unknown
 }
 
+interface PageListResponse extends PageResponse {
+  preview: string | null
+  contentTruncated: boolean
+}
+
 function normalizePage(page: PageResponse) {
   return { ...page, id: 'ID', createdAt: 'DATE', updatedAt: 'DATE' }
 }
 
-function sortPagesById(pages: PageResponse[]) {
+function normalizePageList(page: PageListResponse) {
+  return {
+    ...normalizePage(page),
+    preview: page.preview,
+    contentTruncated: page.contentTruncated,
+  }
+}
+
+function pageListResponse<T>(status: number, pages: T[]) {
+  return { status, pages }
+}
+
+function sortPagesById<T extends { id: string }>(pages: T[]) {
   return pages.toSorted((left, right) => left.id.localeCompare(right.id))
 }
 
@@ -42,16 +59,75 @@ describe('task pages API', () => {
 
     it('returns pages sorted by sortOrder', async () => {
       const task = await createTask('Task')
-      await createPage(task.id, { title: 'Page B', sortOrder: 2 })
-      await createPage(task.id, { title: 'Page A', sortOrder: 1 })
-      await createPage(task.id, { title: 'Page C', sortOrder: 3 })
+      const longMarkdown = 'a'.repeat(501)
+      const boundaryMarkdown = 'b'.repeat(500)
+      const longHtml = `<html>${'c'.repeat(501)}</html>`
+      await createPage(task.id, {
+        title: 'Markdown at the boundary',
+        content: boundaryMarkdown,
+        sortOrder: 2,
+      })
+      await createPage(task.id, {
+        title: 'Long markdown',
+        content: longMarkdown,
+        sortOrder: 1,
+      })
+      await createPage(task.id, {
+        title: 'Long HTML',
+        content: longHtml,
+        format: 'html',
+        sortOrder: 3,
+      })
 
       const res = await app.request(`/api/tasks/${task.id}/pages`)
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<PageResponse[]>(res)
-      expect(body).toHaveLength(3)
-      expect(body.map((p) => p.title)).toEqual(['Page A', 'Page B', 'Page C'])
+      const body = await jsonBody<PageListResponse[]>(res)
+      expect(pageListResponse(res.status, body.map(normalizePageList))).toEqual(
+        {
+          status: 200,
+          pages: [
+            {
+              id: 'ID',
+              taskId: task.id,
+              title: 'Long markdown',
+              content: longMarkdown,
+              format: 'markdown',
+              sortOrder: 1,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+              author: { kind: 'human', agent: null },
+              preview: 'a'.repeat(500),
+              contentTruncated: true,
+            },
+            {
+              id: 'ID',
+              taskId: task.id,
+              title: 'Markdown at the boundary',
+              content: boundaryMarkdown,
+              format: 'markdown',
+              sortOrder: 2,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+              author: { kind: 'human', agent: null },
+              preview: boundaryMarkdown,
+              contentTruncated: false,
+            },
+            {
+              id: 'ID',
+              taskId: task.id,
+              title: 'Long HTML',
+              content: longHtml,
+              format: 'html',
+              sortOrder: 3,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+              author: { kind: 'human', agent: null },
+              preview: null,
+              contentTruncated: true,
+            },
+          ],
+        },
+      )
     })
 
     it('returns 404 for non-existent task', async () => {
@@ -66,11 +142,19 @@ describe('task pages API', () => {
 
       const res = await app.request(`/api/tasks/${String(task.number)}/pages`)
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<PageResponse[]>(res)
-      expect(body.map(normalizePage)).toEqual([
-        normalizePage(withoutLinkSync(page)),
-      ])
+      const body = await jsonBody<PageListResponse[]>(res)
+      expect(pageListResponse(res.status, body.map(normalizePageList))).toEqual(
+        {
+          status: 200,
+          pages: [
+            {
+              ...normalizePage(withoutLinkSync(page)),
+              preview: '',
+              contentTruncated: false,
+            },
+          ],
+        },
+      )
     })
 
     it('reports each page author independently', async () => {
@@ -84,19 +168,24 @@ describe('task pages API', () => {
 
       const res = await app.request(`/api/tasks/${task.id}/pages`)
 
-      expect(res.status).toBe(200)
-      expect(sortPagesById(await jsonBody<PageResponse[]>(res))).toEqual(
-        sortPagesById([
+      const body = await jsonBody<PageListResponse[]>(res)
+      expect(pageListResponse(res.status, sortPagesById(body))).toEqual({
+        status: 200,
+        pages: sortPagesById([
           {
             ...withoutLinkSync(humanPage),
             author: { kind: 'human', agent: null },
+            preview: '',
+            contentTruncated: false,
           },
           {
             ...withoutLinkSync(llmPage),
             author: { kind: 'llm', agent: 'claude-opus-5' },
+            preview: '',
+            contentTruncated: false,
           },
         ]),
-      )
+      })
     })
   })
 
@@ -453,15 +542,56 @@ describe('task pages API', () => {
   describe('GET /api/tasks/:id includes pages', () => {
     it('returns pages in task detail response', async () => {
       const task = await createTask('Task')
-      await createPage(task.id, { title: 'Page 1', sortOrder: 1 })
-      await createPage(task.id, { title: 'Page 2', sortOrder: 2 })
+      const markdown = '## Page details\n'.padEnd(501, 'm')
+      const html = `<main>${'h'.repeat(501)}</main>`
+      await createPage(task.id, {
+        title: 'Markdown page',
+        content: markdown,
+        sortOrder: 1,
+      })
+      await createPage(task.id, {
+        title: 'HTML page',
+        content: html,
+        format: 'html',
+        sortOrder: 2,
+      })
 
       const res = await app.request(`/api/tasks/${task.id}`)
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<{ pages: PageResponse[] }>(res)
-      expect(body.pages).toHaveLength(2)
-      expect(body.pages.map((p) => p.title)).toEqual(['Page 1', 'Page 2'])
+      const body = await jsonBody<{ pages: PageListResponse[] }>(res)
+      expect(
+        pageListResponse(res.status, body.pages.map(normalizePageList)),
+      ).toEqual({
+        status: 200,
+        pages: [
+          {
+            id: 'ID',
+            taskId: task.id,
+            title: 'Markdown page',
+            content: markdown,
+            format: 'markdown',
+            sortOrder: 1,
+            createdAt: 'DATE',
+            updatedAt: 'DATE',
+            author: { kind: 'human', agent: null },
+            preview: markdown.slice(0, 500),
+            contentTruncated: true,
+          },
+          {
+            id: 'ID',
+            taskId: task.id,
+            title: 'HTML page',
+            content: html,
+            format: 'html',
+            sortOrder: 2,
+            createdAt: 'DATE',
+            updatedAt: 'DATE',
+            author: { kind: 'human', agent: null },
+            preview: null,
+            contentTruncated: true,
+          },
+        ],
+      })
     })
 
     it('returns empty pages array when task has no pages', async () => {
@@ -469,9 +599,11 @@ describe('task pages API', () => {
 
       const res = await app.request(`/api/tasks/${task.id}`)
 
-      expect(res.status).toBe(200)
-      const body = await jsonBody<{ pages: PageResponse[] }>(res)
-      expect(body.pages).toEqual([])
+      const body = await jsonBody<{ pages: PageListResponse[] }>(res)
+      expect(pageListResponse(res.status, body.pages)).toEqual({
+        status: 200,
+        pages: [],
+      })
     })
   })
 })

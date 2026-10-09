@@ -1,8 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query'
 
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
-import { githubUrlPreviewKeys, taskMentionKeys } from '#lib/query-keys'
+import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
+import { githubUrlPreviewKeys, taskPreviewKeys } from '#lib/query-keys'
 
 export const MENTION_FIXTURE_NUMBER = 9101
 export const MENTION_FIXTURE_TASK_ID = '00000000-0000-0000-0000-000000000099'
@@ -15,17 +15,14 @@ export const GITHUB_URL_FIXTURE_TITLE =
 // plugin.tsx's `createChipWidgetComponent`), so both providers resolve their
 // chip synchronously instead of via a real network round-trip.
 export function seedLiveReferenceFixtures(queryClient: QueryClient): void {
-  const task = makeTaskDetail({
+  const task = makeTaskPreview({
     id: MENTION_FIXTURE_TASK_ID,
     number: MENTION_FIXTURE_NUMBER,
     title: MENTION_FIXTURE_TITLE,
     description: null,
-    startDate: null,
-    dueDate: null,
-    estimatedMinutes: null,
   })
   queryClient.setQueryData(
-    taskMentionKeys.preview(MENTION_FIXTURE_NUMBER),
+    taskPreviewKeys.preview(String(MENTION_FIXTURE_NUMBER)),
     task,
   )
 

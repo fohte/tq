@@ -9,7 +9,7 @@ import {
   DEBOUNCED_SAVE_DELAY_MS,
   useDebouncedSave,
 } from '#hooks/use-debounced-save'
-import type { TaskPage } from '#hooks/use-task-pages'
+import type { TaskPageBody } from '#hooks/use-task-pages'
 import { useUpdateTaskPage } from '#hooks/use-task-pages'
 
 export function PageEditorInner({
@@ -24,7 +24,7 @@ export function PageEditorInner({
   pageId: string
   defaultTitle: string
   defaultContent: string
-  format: TaskPage['format']
+  format: TaskPageBody['format']
   defaultContentEditing?: boolean
 }) {
   const updatePage = useUpdateTaskPage(taskId)

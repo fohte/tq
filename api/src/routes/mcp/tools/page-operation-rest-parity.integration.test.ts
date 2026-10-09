@@ -19,6 +19,10 @@ setupTestDb()
 
 let client: Client
 
+function pageListItem(page: Record<string, unknown>, preview: string | null) {
+  return { ...page, preview, contentTruncated: false }
+}
+
 beforeEach(async () => {
   client = await connectMcpClient()
 })
@@ -44,7 +48,7 @@ describe('REST/MCP parity', () => {
     const res = await app.request(`/api/tasks/${task.id}/pages`)
     expect(res.status).toBe(200)
 
-    expect(await jsonBody(res)).toEqual([data])
+    expect(await jsonBody(res)).toEqual([pageListItem(data, 'Some content')])
   })
 
   it('a page updated via page_update with an explicit agent is attributed to that agent through GET /api/tasks/:taskId/pages', async () => {
@@ -72,6 +76,6 @@ describe('REST/MCP parity', () => {
     const res = await app.request(`/api/tasks/${task.id}/pages`)
     expect(res.status).toBe(200)
 
-    expect(await jsonBody(res)).toEqual([data])
+    expect(await jsonBody(res)).toEqual([pageListItem(data, 'Updated content')])
   })
 })
