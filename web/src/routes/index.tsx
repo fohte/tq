@@ -196,19 +196,20 @@ function DayView() {
   }, [gcalEventsQuery.error])
 
   const setQueueItems = useSetQueueItems()
-  const { dayQueueItems, dndCallbacks } = useDayQueueCalendar({
-    queues: queuesData,
-    startDate: visibleRange.startDate,
-    endDate: visibleRange.endDate,
-    createTimeBlock,
-    setQueueItems,
-    onTimeBlockChange: handleTimeBlockChange,
-  })
+  const { dayQueueItems, dayQueueItemsInRange, dndCallbacks } =
+    useDayQueueCalendar({
+      queues: queuesData,
+      selectedDate,
+      startDate: visibleRange.startDate,
+      endDate: visibleRange.endDate,
+      createTimeBlock,
+      setQueueItems,
+      onTimeBlockChange: handleTimeBlockChange,
+    })
 
   const futureDayQueueItems = useFutureDayQueueItems({
     selectedDate,
-    hasDayQueue:
-      queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
+    queueItems: dayQueueItemsInRange,
   })
 
   // Queue updates replace the full list, so keep stored IDs separate from
@@ -393,7 +394,7 @@ function DayView() {
             queryKey: [...queueKeys.all, WEEK_QUEUE_KEY, 'items'],
           })
           void queryClient.invalidateQueries({
-            queryKey: queueKeys.items(DAY_QUEUE_KEY, date),
+            queryKey: queueKeys.itemsForQueue(DAY_QUEUE_KEY),
           })
         },
       },
@@ -419,8 +420,21 @@ function DayView() {
           // already dropped this task from fromQueueKey's stored selection
           // — patch its cached items locally instead of refetching so the
           // UI doesn't show the task in both sections until the next fetch.
-          queryClient.setQueryData(
-            queueKeys.items(fromQueueKey, selectedDateStr),
+          queryClient.setQueriesData<QueueItem[]>(
+            {
+              queryKey: queueKeys.itemsForQueue(fromQueueKey),
+              predicate: ({ queryKey }) => {
+                const scope = queryKey[3]
+                if (scope === selectedDateStr) return true
+                return (
+                  scope === 'range' &&
+                  typeof queryKey[4] === 'string' &&
+                  typeof queryKey[5] === 'string' &&
+                  queryKey[4] <= selectedDateStr &&
+                  selectedDateStr <= queryKey[5]
+                )
+              },
+            },
             (old: QueueItem[] | undefined) =>
               old?.filter((item) => item.taskId !== taskId) ?? old,
           )

@@ -48,6 +48,18 @@ export async function fetchQueueItems(
   return unwrapOrThrow(assertOk(res)).json()
 }
 
+export async function fetchQueueItemsForRange(
+  key: string,
+  from: string,
+  to: string,
+): Promise<QueueItem[]> {
+  const res = await api.api.queues[':key'].items.$get({
+    param: { key },
+    query: { from, to },
+  })
+  return unwrapOrThrow(assertOk(res)).json()
+}
+
 export function useQueues() {
   return useQuery({
     queryKey: queueKeys.all,
@@ -128,18 +140,16 @@ export function useQueueItemsForQueues(
   })
 }
 
-export function useQueueItemsForDates(
-  key: string | undefined,
-  dates: string[],
+export function useQueueItemsForRange(
+  key: string,
+  from: string,
+  to: string,
+  options?: { enabled?: boolean },
 ) {
-  return useQueries({
-    queries:
-      key == null
-        ? []
-        : dates.map((date) => ({
-            queryKey: queueKeys.items(key, date),
-            queryFn: () => fetchQueueItems(key, date),
-          })),
+  return useQuery({
+    queryKey: queueKeys.itemsRange(key, from, to),
+    queryFn: () => fetchQueueItemsForRange(key, from, to),
+    ...(options?.enabled === undefined ? {} : { enabled: options.enabled }),
   })
 }
 
@@ -162,10 +172,10 @@ export function useSetQueueItems() {
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
-    onSuccess: (_data, { key, date }) => {
+    onSuccess: (_data, { key }) => {
       // PUT responses follow request order, while queue reads follow due date.
       void queryClient.invalidateQueries({
-        queryKey: queueKeys.items(key, date),
+        queryKey: queueKeys.itemsForQueue(key),
       })
       void queryClient.invalidateQueries({
         queryKey: taskKeys.lists,
@@ -255,7 +265,7 @@ export function useTaskPlan(taskId: string, date: string) {
           : {
               onSuccess: () => {
                 void queryClient.invalidateQueries({
-                  queryKey: queueKeys.items(previousKey, date),
+                  queryKey: queueKeys.itemsForQueue(previousKey),
                 })
               },
             }),

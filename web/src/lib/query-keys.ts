@@ -47,14 +47,15 @@ export const queueKeys = {
   all: ['queues'] as const,
   // Broad queue invalidations should not repeat this date-scoped write.
   carryOver: (date: string) => ['queue-carry-over', date] as const,
+  itemsForQueue: (key: string) => [...queueKeys.all, key, 'items'] as const,
   items: (key: string, date: string, context?: TaskContext) =>
     [
-      ...queueKeys.all,
-      key,
-      'items',
+      ...queueKeys.itemsForQueue(key),
       date,
       ...(context == null ? [] : [context]),
     ] as const,
+  itemsRange: (key: string, from: string, to: string) =>
+    [...queueKeys.itemsForQueue(key), 'range', from, to] as const,
 }
 
 export const timeBlockKeys = {
