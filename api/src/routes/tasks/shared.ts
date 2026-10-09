@@ -322,31 +322,23 @@ type TaskListRowWithChildCompletionCount = TaskListItemRowResponse & {
   childCompletionCount: TaskListItemChildCompletionCount
 }
 
-// Batch-hydrates list-query rows into `TaskListItemResponse`s in a fixed
-// number of queries regardless of row count.
-export function hydrateTaskListRows(
-  rows: {
-    task: typeof tasks.$inferSelect
-    parentNumber: number | null
-  }[],
-): Promise<TaskListItemWithChildCompletionCount[]>
-export function hydrateTaskListRows(
-  rows: {
-    task: Omit<typeof tasks.$inferSelect, 'description'>
-    parentNumber: number | null
-  }[],
-  view: 'row',
-): Promise<TaskListRowWithChildCompletionCount[]>
-export async function hydrateTaskListRows(
-  rows: {
-    task:
-      typeof tasks.$inferSelect | Omit<typeof tasks.$inferSelect, 'description'>
-    parentNumber: number | null
-  }[],
-  view: 'row' | 'full' = 'full',
-): Promise<
-  (TaskListItemWithChildCompletionCount | TaskListRowWithChildCompletionCount)[]
-> {
+type TaskListHydrationRow = {
+  task:
+    typeof tasks.$inferSelect | Omit<typeof tasks.$inferSelect, 'description'>
+  parentNumber: number | null
+}
+
+async function hydrateTaskListRowsWith<
+  Row extends TaskListHydrationRow,
+  Response,
+>(
+  rows: Row[],
+  toResponse: (
+    row: Row,
+    fields: TaskListItemFieldsResponse,
+    childCompletionCount: TaskListItemChildCompletionCount,
+  ) => Response,
+): Promise<Response[]> {
   const ids = rows.map((r) => r.task.id)
   const ruleIds = [
     ...new Set(
@@ -407,19 +399,39 @@ export async function hydrateTaskListRows(
       total: 0,
     }
 
-    if (view === 'full') {
-      return {
-        ...itemFields,
-        description: 'description' in r.task ? r.task.description : null,
-        childCompletionCount,
-      }
-    }
-
-    return {
-      ...itemFields,
-      childCompletionCount,
-    }
+    return toResponse(r, itemFields, childCompletionCount)
   })
+}
+
+// Batch-hydrates full list-query rows into full responses with a fixed number
+// of queries regardless of row count.
+export function hydrateTaskListRows(
+  rows: {
+    task: typeof tasks.$inferSelect
+    parentNumber: number | null
+  }[],
+): Promise<TaskListItemWithChildCompletionCount[]> {
+  return hydrateTaskListRowsWith(rows, (row, fields, childCompletionCount) => ({
+    ...fields,
+    description: row.task.description,
+    childCompletionCount,
+  }))
+}
+
+// Batch-hydrates row list-query rows into responses without descriptions.
+export function hydrateTaskListRowsWithoutDescription(
+  rows: {
+    task: Omit<typeof tasks.$inferSelect, 'description'>
+    parentNumber: number | null
+  }[],
+): Promise<TaskListRowWithChildCompletionCount[]> {
+  return hydrateTaskListRowsWith(
+    rows,
+    (_row, fields, childCompletionCount) => ({
+      ...fields,
+      childCompletionCount,
+    }),
+  )
 }
 
 export type TaskEnv = {

@@ -2,7 +2,10 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 
 import { queryTaskList } from '#routes/tasks/list-query'
-import { hydrateTaskListRows } from '#routes/tasks/shared'
+import {
+  hydrateTaskListRows,
+  hydrateTaskListRowsWithoutDescription,
+} from '#routes/tasks/shared'
 import { listTasksQuerySchema } from '#schemas/task'
 
 export const tasksListApp = new Hono().get(
@@ -18,7 +21,7 @@ export const tasksListApp = new Hono().get(
     const hydratedRows =
       result.view === 'full'
         ? await hydrateTaskListRows(result.rows)
-        : await hydrateTaskListRows(result.rows, 'row')
+        : await hydrateTaskListRowsWithoutDescription(result.rows)
 
     return c.json(
       hydratedRows.map((item) => {

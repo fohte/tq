@@ -53,44 +53,38 @@ type TaskListQueryResult =
       matchByTaskId: Map<string, TaskSearchMatch> | undefined
     }
 
-function hasTaskDescription(
-  row: TaskListRow | TaskListRowWithoutDescription,
-): row is TaskListRow {
-  return 'description' in row.task
-}
-
-function addTaskDescriptionColumn(
-  row: TaskListRow | TaskListRowWithoutDescription,
-): TaskListRow {
-  if (hasTaskDescription(row)) return row
-
-  return {
-    ...row,
-    task: { ...row.task, description: null },
-  }
-}
+type TaskListQueryRows =
+  | { view: 'full'; rows: TaskListRow[] }
+  | { view: 'row'; rows: TaskListRowWithoutDescription[] }
 
 function makeTaskListQueryResult(
-  view: ListTasksQuery['view'],
-  rows: (TaskListRow | TaskListRowWithoutDescription)[],
+  rows: TaskListQueryRows,
   ancestorOnlyIds: Set<string>,
   matchByTaskId: Map<string, TaskSearchMatch> | undefined,
 ): TaskListQueryResult {
-  if (view === 'full') {
-    return {
-      view,
-      rows: rows.map(addTaskDescriptionColumn),
-      ancestorOnlyIds,
-      matchByTaskId,
-    }
-  }
-
   return {
-    view,
-    rows,
+    ...rows,
     ancestorOnlyIds,
     matchByTaskId,
   }
+}
+
+function paginateTaskListQuery<
+  Query extends {
+    limit: (limit: number) => Query
+    offset: (offset: number) => Query
+  },
+>(
+  listQuery: Query,
+  limit: number | 'unlimited',
+  offset: number | undefined,
+): Query {
+  let paginatedQuery = listQuery
+  if (typeof limit === 'number') {
+    paginatedQuery = paginatedQuery.limit(limit)
+  }
+  if (offset != null) paginatedQuery = paginatedQuery.offset(offset)
+  return paginatedQuery
 }
 
 export async function queryTaskList(
@@ -110,39 +104,47 @@ export async function queryTaskList(
     sortBy == null &&
     words.length > 0
 
+  const where = conditions.length > 0 ? and(...conditions) : undefined
+  const orderBy = prioritizeTitleMatches
+    ? [
+        desc(buildTitleMatchCondition(words)),
+        desc(tasks.updatedAt),
+        desc(tasks.number),
+      ]
+    : resolveTaskListOrderBy(sortBy)
+  const fullRowsQuery = selectTaskListRows()
+    .where(where)
+    .orderBy(...orderBy)
+    .$dynamic()
+  const rowRowsQuery = selectTaskListRowsWithoutDescription()
+    .where(where)
+    .orderBy(...orderBy)
+    .$dynamic()
   const selectedRows =
     query.view === 'full'
-      ? selectTaskListRows()
-      : selectTaskListRowsWithoutDescription()
-  let listQuery = selectedRows
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(
-      ...(prioritizeTitleMatches
-        ? [
-            desc(buildTitleMatchCondition(words)),
-            desc(tasks.updatedAt),
-            desc(tasks.number),
-          ]
-        : resolveTaskListOrderBy(sortBy)),
-    )
-    .$dynamic()
-  if (typeof query.limit === 'number') {
-    listQuery = listQuery.limit(query.limit)
-  }
-  if (query.offset != null) listQuery = listQuery.offset(query.offset)
-
-  const matched = await listQuery
+      ? {
+          view: 'full' as const,
+          rows: await paginateTaskListQuery(
+            fullRowsQuery,
+            query.limit,
+            query.offset,
+          ),
+        }
+      : {
+          view: 'row' as const,
+          rows: await paginateTaskListQuery(
+            rowRowsQuery,
+            query.limit,
+            query.offset,
+          ),
+        }
+  const { rows: matched } = selectedRows
   const matchByTaskId =
     options.includeSearchMatch === true && words.length > 0
       ? await queryTaskSearchMatches(matched, words)
       : undefined
   if (query.includeAncestors !== true || matched.length === 0) {
-    return makeTaskListQueryResult(
-      query.view,
-      matched,
-      new Set(),
-      matchByTaskId,
-    )
+    return makeTaskListQueryResult(selectedRows, new Set(), matchByTaskId)
   }
 
   const matchedIds = matched.map((r) => r.task.id)
@@ -164,23 +166,25 @@ export async function queryTaskList(
     .filter((id) => !matchedIdSet.has(id))
 
   if (newAncestorIds.length === 0) {
+    return makeTaskListQueryResult(selectedRows, new Set(), matchByTaskId)
+  }
+
+  if (selectedRows.view === 'full') {
+    const ancestorRows = await selectTaskListRows().where(
+      inArray(tasks.id, newAncestorIds),
+    )
     return makeTaskListQueryResult(
-      query.view,
-      matched,
-      new Set(),
+      { view: 'full', rows: [...selectedRows.rows, ...ancestorRows] },
+      new Set(newAncestorIds),
       matchByTaskId,
     )
   }
 
-  const ancestorRows =
-    query.view === 'full'
-      ? await selectTaskListRows().where(inArray(tasks.id, newAncestorIds))
-      : await selectTaskListRowsWithoutDescription().where(
-          inArray(tasks.id, newAncestorIds),
-        )
+  const ancestorRows = await selectTaskListRowsWithoutDescription().where(
+    inArray(tasks.id, newAncestorIds),
+  )
   return makeTaskListQueryResult(
-    query.view,
-    [...matched, ...ancestorRows],
+    { view: 'row', rows: [...selectedRows.rows, ...ancestorRows] },
     new Set(newAncestorIds),
     matchByTaskId,
   )
