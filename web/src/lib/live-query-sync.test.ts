@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { allTasksFilter } from '#hooks/use-tasks'
 import { connectLiveQuerySync } from '#lib/live-query-sync'
 import {
   activityKeys,
@@ -146,8 +147,11 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
   const taskId = 'target-task-id'
   const otherTaskId = 'other-task-id'
   const queries = {
-    taskList: observeQuery(queryClient, taskKeys.list()),
-    taskInfiniteList: observeQuery(queryClient, taskKeys.infiniteList()),
+    taskList: observeQuery(queryClient, taskKeys.list(allTasksFilter)),
+    taskInfiniteList: observeQuery(
+      queryClient,
+      taskKeys.infiniteList({ context: 'all', status: 'all' }),
+    ),
     taskCounts: observeQuery(
       queryClient,
       taskKeys.count({ context: 'work', status: 'todo' }),
@@ -368,11 +372,16 @@ describe('connectLiveQuerySync', () => {
         context: 'work',
         status: 'todo',
         candidatesOn: '2026-08-01',
+        limit: 'unlimited',
       }),
     )
     const unfilteredTaskList = observeQuery(
       queryClient,
-      taskKeys.list({ context: 'work' }),
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        limit: 'unlimited',
+      }),
     )
     const { eventStream } = createConnection({ queryClient })
 
@@ -555,8 +564,11 @@ describe('connectLiveQuerySync', () => {
       const queryClient = new QueryClient()
       const taskId = 'sample-task-id'
       const queries = [
-        observeQuery(queryClient, taskKeys.list()),
-        observeQuery(queryClient, taskKeys.infiniteList()),
+        observeQuery(queryClient, taskKeys.list(allTasksFilter)),
+        observeQuery(
+          queryClient,
+          taskKeys.infiniteList({ context: 'all', status: 'all' }),
+        ),
         observeQuery(queryClient, taskKeys.detail(taskId)),
         observeQuery(queryClient, [
           ...taskKeys.detail(taskId),

@@ -14,10 +14,34 @@ async function normalizeCountResponse(response: Response) {
 }
 
 describe('GET /api/tasks/count', () => {
-  it('requires a context', async () => {
-    const response = await app.request('/api/tasks/count?status=todo')
+  it('requires a context and status', async () => {
+    const responses = await Promise.all([
+      app.request('/api/tasks/count?status=todo'),
+      app.request('/api/tasks/count?context=work'),
+    ])
 
-    expect(response.status).toEqual(400)
+    expect(responses.map((response) => response.status)).toEqual([400, 400])
+  })
+
+  it("counts tasks across all contexts and statuses when 'all' is explicit", async () => {
+    const completedTask = await createTask('Completed task', {
+      context: 'work',
+    })
+    await app.request(`/api/tasks/${completedTask.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+    await createTask('Personal task', { context: 'personal' })
+
+    const response = await app.request(
+      '/api/tasks/count?context=all&status=all',
+    )
+
+    expect(await normalizeCountResponse(response)).toEqual({
+      status: 200,
+      body: { count: 2 },
+    })
   })
 
   it('counts matching tasks without applying list pagination or ordering', async () => {

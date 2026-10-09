@@ -18,6 +18,7 @@ export type BlockedByGithubRef = Task['blockedByGithubRefs'][number]
 type TaskStatus = 'todo' | 'completed'
 
 export type TaskContext = 'work' | 'personal'
+type TaskListContext = TaskContext | 'all'
 
 export type TaskSortBy = 'created' | 'updated' | 'due'
 
@@ -26,13 +27,13 @@ export type TaskCommitment = 'inbox' | 'active' | 'someday'
 export interface TaskListFilter {
   ids?: string[]
   q?: string
-  status?: TaskStatus | TaskStatus[]
+  status: TaskStatus | 'all' | TaskStatus[]
   hasDue?: boolean
   dateFrom?: string
   dateTo?: string
   dueTo?: string
   candidatesOn?: string
-  context?: TaskContext
+  context: TaskListContext
   commitment?: TaskCommitment
   parentId?: string
   templateId?: string
@@ -41,13 +42,21 @@ export interface TaskListFilter {
   projectId?: string
   sortBy?: TaskSortBy
   includeAncestors?: boolean
-  limit?: number
+  limit: number | 'unlimited'
   offset?: number
 }
 
+export const allTasksFilter = {
+  context: 'all',
+  status: 'all',
+  limit: 'unlimited',
+} as const satisfies TaskListFilter
+
+export type InfiniteTaskListFilter = Omit<TaskListFilter, 'limit'>
+
 export interface TaskCountFilter {
-  context: TaskContext
-  status?: TaskStatus | TaskStatus[]
+  context: TaskListContext
+  status: TaskStatus | 'all' | TaskStatus[]
   commitment?: TaskCommitment
 }
 
@@ -60,14 +69,14 @@ export interface CategorizedTasks {
   all: Task[]
 }
 
-export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
-  const { limit, offset, hasDue, ...rest } = filter ?? {}
+export async function fetchTaskList(filter: TaskListFilter): Promise<Task[]> {
+  const { limit, offset, hasDue, includeAncestors, ...rest } = filter
   const res = await api.api.tasks.$get({
     query: {
       ...rest,
-      hasDue: hasDue == null ? undefined : String(hasDue),
-      includeAncestors: rest.includeAncestors === true ? 'true' : undefined,
-      ...(limit != null ? { limit: String(limit) } : {}),
+      ...(hasDue == null ? {} : { hasDue: String(hasDue) }),
+      ...(includeAncestors === true ? { includeAncestors: 'true' } : {}),
+      limit: String(limit),
       ...(offset != null ? { offset: String(offset) } : {}),
     },
   })
@@ -89,7 +98,7 @@ export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
 }
 
 export function useTaskList(
-  filter?: TaskListFilter,
+  filter: TaskListFilter,
   options?: {
     enabled?: boolean
     placeholderData?: (
@@ -124,7 +133,10 @@ export function useTaskList(
 }
 
 export function useSelfAndDescendantIds(taskId: string, enabled: boolean) {
-  const { categorized } = useTaskList({ descendantOf: taskId }, { enabled })
+  const { categorized } = useTaskList(
+    { ...allTasksFilter, descendantOf: taskId },
+    { enabled },
+  )
 
   return useMemo(
     () => new Set([taskId, ...categorized.all.map((task) => task.id)]),
@@ -151,7 +163,7 @@ export function useTaskCount(
  * tree-builder.ts would otherwise render it as two rows.
  */
 export function useInfiniteTaskList(
-  filter?: TaskListFilter,
+  filter: InfiniteTaskListFilter,
   options?: { enabled?: boolean },
 ) {
   const query = useInfiniteQuery({

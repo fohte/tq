@@ -74,7 +74,12 @@ const searchCandidate = makeTask({
 beforeEach(() => {
   mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
     const { categorized } = mockUseTaskList(
-      { descendantOf: taskId },
+      {
+        context: 'all',
+        status: 'all',
+        limit: 'unlimited',
+        descendantOf: taskId,
+      },
       { enabled },
     )
     return new Set([taskId, ...categorized.all.map((task) => task.id)])
@@ -124,8 +129,24 @@ describe('SidebarParentField', () => {
     ).toEqual({
       display: 'Search tasks...',
       taskListCalls: [
-        { filter: { descendantOf: currentTask.id }, enabled: false },
-        { filter: { descendantOf: currentTask.id }, enabled: true },
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: currentTask.id,
+          },
+          enabled: false,
+        },
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: currentTask.id,
+          },
+          enabled: true,
+        },
       ],
     })
   })
@@ -163,7 +184,15 @@ describe('SidebarParentField', () => {
     ).toEqual({
       display: `#${String(existingParentTask.number)} ${existingParentTask.title}`,
       taskListCalls: [
-        { filter: { descendantOf: currentTask.id }, enabled: false },
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: currentTask.id,
+          },
+          enabled: false,
+        },
       ],
     })
   })
@@ -365,8 +394,24 @@ describe('SidebarParentField', () => {
     ).toEqual({
       display: [`#${String(unrelatedTask.number)}${unrelatedTask.title}`],
       taskListCalls: [
-        { filter: { descendantOf: currentTask.id }, enabled: false },
-        { filter: { descendantOf: currentTask.id }, enabled: true },
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: currentTask.id,
+          },
+          enabled: false,
+        },
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: currentTask.id,
+          },
+          enabled: true,
+        },
       ],
     })
   })

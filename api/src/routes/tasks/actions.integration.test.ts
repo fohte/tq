@@ -656,7 +656,9 @@ describe('tasks actions API', () => {
           }),
         })
 
-        const listRes = await app.request('/api/tasks')
+        const listRes = await app.request(
+          '/api/tasks?context=all&status=all&limit=unlimited',
+        )
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = listBody.find((t) => t.id === task.id)
         assertDefined(listItem)
@@ -943,7 +945,9 @@ describe('tasks actions API', () => {
           body: JSON.stringify({ status: 'todo' }),
         })
 
-        const listRes = await app.request('/api/tasks')
+        const listRes = await app.request(
+          '/api/tasks?context=all&status=all&limit=unlimited',
+        )
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = listBody.find((t) => t.id === task.id)
         assertDefined(listItem)
@@ -995,7 +999,9 @@ describe('tasks actions API', () => {
           }),
         })
 
-        const listRes = await app.request('/api/tasks')
+        const listRes = await app.request(
+          '/api/tasks?context=all&status=all&limit=unlimited',
+        )
         const listBody = await jsonBody<TaskListItemResponse[]>(listRes)
         const listItem = listBody.find((t) => t.id === task.id)
         assertDefined(listItem)

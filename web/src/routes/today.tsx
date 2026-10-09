@@ -42,7 +42,12 @@ export function TodayFocus() {
     [queueItemsInSortOrder],
   )
   const queueTasksQuery = useTaskList(
-    { ids: queueTaskIds, context },
+    {
+      ids: queueTaskIds,
+      context,
+      status: 'all',
+      limit: 'unlimited',
+    },
     {
       enabled:
         queueCarryOver.canReadQueueItems &&
@@ -80,7 +85,12 @@ export function TodayFocus() {
     [queueTasks],
   )
   const subtasksQuery = useTaskList(
-    { ...(focusTask == null ? {} : { parentId: focusTask.id }), context },
+    {
+      ...(focusTask == null ? {} : { parentId: focusTask.id }),
+      context,
+      status: 'all',
+      limit: 'unlimited',
+    },
     { enabled: focusTask != null },
   )
 

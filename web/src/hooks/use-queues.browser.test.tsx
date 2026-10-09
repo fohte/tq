@@ -182,6 +182,7 @@ describe('queue ordering cache', () => {
         context: 'work',
         status: 'todo',
         candidatesOn: date,
+        limit: 'unlimited',
       }),
     )
     const otherCandidateList = observeCachedQuery(
@@ -189,10 +190,15 @@ describe('queue ordering cache', () => {
         context: 'work',
         status: 'todo',
         candidatesOn: '2026-08-02',
+        limit: 'unlimited',
       }),
     )
     const unfilteredTaskList = observeCachedQuery(
-      taskKeys.list({ context: 'work' }),
+      taskKeys.list({
+        context: 'work',
+        status: 'todo',
+        limit: 'unlimited',
+      }),
     )
     const { result } = renderHook(() => useSetQueueItems(), { wrapper })
 

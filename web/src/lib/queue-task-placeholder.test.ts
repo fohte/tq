@@ -11,7 +11,12 @@ describe('selectQueueTaskPlaceholderData', () => {
     expect(
       selectQueueTaskPlaceholderData(
         [taskA, taskB],
-        { ids: ['task-a', 'task-b'], context: 'work' },
+        {
+          ids: ['task-a', 'task-b'],
+          context: 'work',
+          status: 'all',
+          limit: 'unlimited',
+        },
         ['task-b', 'task-c', 'task-a'],
         'work',
       ),
@@ -24,7 +29,12 @@ describe('selectQueueTaskPlaceholderData', () => {
     expect(
       selectQueueTaskPlaceholderData(
         [task],
-        { ids: ['task-a'], context: 'work' },
+        {
+          ids: ['task-a'],
+          context: 'work',
+          status: 'all',
+          limit: 'unlimited',
+        },
         ['task-a'],
         'personal',
       ),
@@ -37,7 +47,11 @@ describe('selectQueueTaskPlaceholderData', () => {
     expect(
       selectQueueTaskPlaceholderData(
         [task],
-        { context: 'work' },
+        {
+          context: 'work',
+          status: 'all',
+          limit: 'unlimited',
+        },
         ['task-a'],
         'work',
       ),

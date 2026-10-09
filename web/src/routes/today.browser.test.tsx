@@ -26,7 +26,7 @@ type QueueItem = { taskId: string; sortOrder: number }
 
 const mockUseTaskList = vi.fn<
   (
-    filter?: TaskListFilter,
+    filter: TaskListFilter,
     options?: TaskListOptions,
   ) => {
     data?: Task[]
@@ -110,23 +110,23 @@ function setup({
 }) {
   mockUseCurrentContext.mockReturnValue(context)
   mockUseTaskList.mockImplementation(
-    (filter?: TaskListFilter, options?: TaskListOptions) => {
+    (filter: TaskListFilter, options?: TaskListOptions) => {
       const tasks = all.filter((task) => {
-        if (filter?.context != null && task.context !== filter.context) {
+        if (task.context !== filter.context) {
           return false
         }
-        if (filter?.ids != null) return filter.ids.includes(task.id)
-        if (filter?.parentId != null) return task.parentId === filter.parentId
+        if (filter.ids != null) return filter.ids.includes(task.id)
+        if (filter.parentId != null) return task.parentId === filter.parentId
         return false
       })
       return {
         data: tasks,
         isLoading:
           options?.enabled !== false &&
-          ((filter?.ids != null && isLoading) ||
-            (filter?.parentId != null && isSubtasksLoading)),
+          ((filter.ids != null && isLoading) ||
+            (filter.parentId != null && isSubtasksLoading)),
         isPlaceholderData: false,
-        isError: filter?.parentId != null && subtasksError,
+        isError: filter.parentId != null && subtasksError,
       }
     },
   )
@@ -293,12 +293,22 @@ describe('TodayFocus', () => {
     ).toEqual({
       taskQueries: [
         {
-          filter: { ids: ['focus', 'next'], context: 'work' },
+          filter: {
+            ids: ['focus', 'next'],
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
           enabled: true,
           hasPlaceholderData: true,
         },
         {
-          filter: { parentId: 'focus', context: 'work' },
+          filter: {
+            parentId: 'focus',
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
           enabled: true,
           hasPlaceholderData: false,
         },
@@ -334,8 +344,24 @@ describe('TodayFocus', () => {
       ),
     ).toEqual({
       taskQueries: [
-        { filter: { ids: ['focus'], context: 'personal' }, enabled: true },
-        { filter: { parentId: 'focus', context: 'personal' }, enabled: true },
+        {
+          filter: {
+            ids: ['focus'],
+            context: 'personal',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: true,
+        },
+        {
+          filter: {
+            parentId: 'focus',
+            context: 'personal',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: true,
+        },
       ],
       queueOptions: { enabled: true, context: 'personal' },
     })
@@ -461,8 +487,19 @@ describe('TodayFocus', () => {
     })
     expect(getOutput()).toEqual({
       taskQueries: [
-        { filter: { ids: [], context: 'work' }, enabled: false },
-        { filter: { context: 'work' }, enabled: false },
+        {
+          filter: {
+            ids: [],
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          enabled: false,
+        },
+        {
+          filter: { context: 'work', status: 'all', limit: 'unlimited' },
+          enabled: false,
+        },
       ],
       queueOptions: { enabled: true, context: 'work' },
       emptyMessage: "No tasks in today's queue",

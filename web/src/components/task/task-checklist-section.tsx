@@ -18,7 +18,7 @@ import {
   useUpdateTaskChecklistItem,
 } from '#hooks/use-task-checklists'
 import type { Task } from '#hooks/use-tasks'
-import { useTaskList } from '#hooks/use-tasks'
+import { allTasksFilter, useTaskList } from '#hooks/use-tasks'
 
 export function TaskChecklistSection({
   taskId,
@@ -32,7 +32,7 @@ export function TaskChecklistSection({
   const [mutationError, setMutationError] = useState(false)
   const { data: checklists, isLoading, isError } = useTaskChecklists(taskId)
   const subtaskQuery = useTaskList(
-    { parentId: taskId },
+    { ...allTasksFilter, parentId: taskId },
     { enabled: subtasks == null },
   )
   const linkedSubtasks = subtasks ?? subtaskQuery.categorized.all

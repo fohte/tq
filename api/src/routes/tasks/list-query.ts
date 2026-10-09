@@ -43,11 +43,7 @@ import {
   resolveTasksByIdsOrNumbers,
   type TaskSearchMatch,
 } from '#routes/tasks/shared'
-import type {
-  CountTasksQuery,
-  ListTasksQuery,
-  TaskFilterQuery,
-} from '#schemas/task'
+import type { CountTasksQuery, ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
@@ -84,6 +80,8 @@ type ResolvedTaskFilters = {
   parent: 'root' | ResolvedTaskFilter | undefined
   descendantOf: ResolvedTaskFilter | undefined
 }
+
+type TaskConditionsQuery = Omit<ListTasksQuery, 'limit'>
 
 // Extracted so `exists`/`notExists` can both wrap the same predicate for
 // hasBlockers/hasNoBlockers without duplicating the join and where clause.
@@ -147,7 +145,7 @@ export function selectTaskListRows() {
 export type TaskListRow = Awaited<ReturnType<typeof selectTaskListRows>>[number]
 
 function buildConditions(
-  query: Omit<ListTasksQuery, 'ids'>,
+  query: Omit<TaskConditionsQuery, 'ids'>,
   ids: string[] | undefined,
   parsed: ReturnType<typeof parseSearchQuery> | null,
   resolvedFilters: ResolvedTaskFilters,
@@ -159,12 +157,13 @@ function buildConditions(
   }
 
   const statuses = parsed?.status ?? query.status
-  if (statuses != null && statuses.length > 0) {
-    conditions.push(inArray(tasks.status, statuses))
+  const taskStatuses = statuses.filter((status) => status !== 'all')
+  if (taskStatuses.length > 0) {
+    conditions.push(inArray(tasks.status, taskStatuses))
   }
 
   const context = parsed?.context ?? query.context
-  if (context != null) {
+  if (context !== 'all') {
     conditions.push(eq(tasks.context, context))
   }
 
@@ -376,7 +375,7 @@ function buildConditions(
   }
 }
 
-async function buildTaskFilterConditions(query: TaskFilterQuery) {
+async function buildTaskFilterConditions(query: TaskConditionsQuery) {
   const { ids: rawIds, ...filters } = query
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const parentIdentifier = parsed?.parentId ?? filters.parentId
@@ -458,7 +457,9 @@ export async function queryTaskList(
         : resolveTaskListOrderBy(sortBy)),
     )
     .$dynamic()
-  if (query.limit != null) listQuery = listQuery.limit(query.limit)
+  if (typeof query.limit === 'number') {
+    listQuery = listQuery.limit(query.limit)
+  }
   if (query.offset != null) listQuery = listQuery.offset(query.offset)
 
   const matched = await listQuery

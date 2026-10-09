@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
 import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
+import { allTasksFilter } from '#hooks/use-tasks'
 
 // vi.hoisted is required: this file's imports transitively reach
 // '#hooks/use-tasks' before a plain top-level const would initialize.
@@ -66,7 +67,11 @@ describe('useLazyTaskTree', () => {
     })
 
     const { result } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          ...allTasksFilter,
+        }),
       { wrapper },
     )
 
@@ -89,7 +94,11 @@ describe('useLazyTaskTree', () => {
     )
 
     const { result } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          ...allTasksFilter,
+        }),
       { wrapper },
     )
 
@@ -105,6 +114,7 @@ describe('useLazyTaskTree', () => {
 
     expect(mockFetchTaskList).toHaveBeenCalledWith({
       q: 'is:todo',
+      ...allTasksFilter,
       parentId: 'root-1',
     })
     expect(result.current.isExpanded('root-1')).toBe(true)
@@ -117,7 +127,11 @@ describe('useLazyTaskTree', () => {
     })
 
     const { result, unmount } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          ...allTasksFilter,
+        }),
       { wrapper },
     )
     act(() => {
@@ -127,7 +141,11 @@ describe('useLazyTaskTree', () => {
     unmount()
 
     const { result: remounted } = renderHook(
-      () => useLazyTaskTree([root], { q: 'is:todo' }),
+      () =>
+        useLazyTaskTree([root], {
+          q: 'is:todo',
+          ...allTasksFilter,
+        }),
       { wrapper },
     )
     expect(remounted.current.isExpanded('root-1')).toBe(true)

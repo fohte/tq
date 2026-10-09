@@ -374,6 +374,8 @@ describe('day-view route task queries', () => {
       expect(idQueryCall?.[0]).toEqual({
         ids: [taskId],
         context: 'work',
+        status: 'all',
+        limit: 'unlimited',
         includeAncestors: true,
       })
     })
@@ -399,6 +401,7 @@ describe('day-view route task queries', () => {
           status: 'todo',
           dueTo: todayStr,
           sortBy: 'due',
+          limit: 'unlimited',
         },
         { enabled: true },
       ])
@@ -533,12 +536,14 @@ describe('day-view route task queries', () => {
               context: 'work',
               status: 'todo',
               candidatesOn: selectedDateStr,
+              limit: 'unlimited',
             },
             {
               context: 'work',
               status: 'todo',
               dateFrom: calendarDate,
               dateTo: '2026-07-28',
+              limit: 'unlimited',
             },
             {
               ids: [
@@ -548,6 +553,8 @@ describe('day-view route task queries', () => {
                 'visible-calendar-day-task',
               ],
               context: 'work',
+              status: 'all',
+              limit: 'unlimited',
               includeAncestors: true,
             },
           ],
@@ -704,6 +711,7 @@ describe('day-view route compact layout', () => {
             status: 'todo',
             dueTo: todayStr,
             sortBy: 'due',
+            limit: 'unlimited',
           },
           { enabled: true },
         ],
@@ -758,6 +766,7 @@ describe('day-view route compact layout', () => {
             status: 'todo',
             dueTo: todayStr,
             sortBy: 'due',
+            limit: 'unlimited',
           },
           { enabled: false },
         ],

@@ -259,7 +259,12 @@ describe('project tasks', () => {
     expect(request(calls[1])).toEqual({
       method: 'GET',
       pathname: '/api/tasks',
-      query: { projectId: 'p1' },
+      query: {
+        context: 'all',
+        status: 'all',
+        limit: 'unlimited',
+        projectId: 'p1',
+      },
     })
     expect(write.mock.calls).toEqual([[`${JSON.stringify(tasks, null, 2)}\n`]])
   })

@@ -88,7 +88,12 @@ describe('LinkExistingTaskMenu', () => {
   beforeEach(() => {
     mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
       const { categorized } = mockUseTaskList(
-        { descendantOf: taskId },
+        {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: taskId,
+        },
         { enabled },
       )
       return new Set([taskId, ...categorized.all.map((task) => task.id)])
@@ -219,8 +224,24 @@ describe('LinkExistingTaskMenu', () => {
         })),
       ),
     ).toEqual([
-      { filter: { descendantOf: parentId }, enabled: true },
-      { filter: { descendantOf: parentId }, enabled: false },
+      {
+        filter: {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: parentId,
+        },
+        enabled: true,
+      },
+      {
+        filter: {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: parentId,
+        },
+        enabled: false,
+      },
     ])
   })
 
@@ -266,7 +287,17 @@ describe('LinkExistingTaskMenu', () => {
       candidateTitles: [
         `#${String(orphanCandidate.number)}${orphanCandidate.title}`,
       ],
-      taskListCalls: [{ filter: { descendantOf: parentId }, enabled: true }],
+      taskListCalls: [
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: parentId,
+          },
+          enabled: true,
+        },
+      ],
     })
   })
 })

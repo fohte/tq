@@ -84,7 +84,12 @@ describe('MoveUnderTaskMenu', () => {
   beforeEach(() => {
     mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
       const { categorized } = mockUseTaskList(
-        { descendantOf: taskId },
+        {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: taskId,
+        },
         { enabled },
       )
       return new Set([taskId, ...categorized.all.map((task) => task.id)])
@@ -197,8 +202,24 @@ describe('MoveUnderTaskMenu', () => {
         })),
       ),
     ).toEqual([
-      { filter: { descendantOf: taskId }, enabled: true },
-      { filter: { descendantOf: taskId }, enabled: false },
+      {
+        filter: {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: taskId,
+        },
+        enabled: true,
+      },
+      {
+        filter: {
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+          descendantOf: taskId,
+        },
+        enabled: false,
+      },
     ])
   })
 
@@ -242,7 +263,17 @@ describe('MoveUnderTaskMenu', () => {
       ),
     ).toEqual({
       candidateTitles: ['Deploy to production', null],
-      taskListCalls: [{ filter: { descendantOf: taskId }, enabled: true }],
+      taskListCalls: [
+        {
+          filter: {
+            context: 'all',
+            status: 'all',
+            limit: 'unlimited',
+            descendantOf: taskId,
+          },
+          enabled: true,
+        },
+      ],
     })
   })
 })

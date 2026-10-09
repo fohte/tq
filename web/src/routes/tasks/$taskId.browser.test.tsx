@@ -10,6 +10,7 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { allTasksFilter } from '#hooks/use-tasks'
 import { atIndex } from '#lib/test-utils'
 // Import after mocks
 import { Route as TaskDetailRoute } from '#routes/tasks/$taskId'
@@ -315,7 +316,10 @@ describe('TaskPage', () => {
 
     await renderTaskPage()
 
-    expect(mockUseTaskList).toHaveBeenCalledWith({ parentId: mockTask.id })
+    expect(mockUseTaskList).toHaveBeenCalledWith({
+      ...allTasksFilter,
+      parentId: mockTask.id,
+    })
 
     // PC and SP layouts both render TaskMainContent, so each subtask appears
     // twice. The row's title sits inside a larger `<Link>` alongside the

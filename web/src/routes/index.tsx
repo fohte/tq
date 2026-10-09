@@ -85,7 +85,7 @@ function DayView() {
   const viewMode = isCompactLayout ? 'queue' : requestedViewMode
   const isKanbanFiltering = viewMode === 'kanban' && q !== ''
   const filteredTasksQuery = useTaskList(
-    { ...baseFilter, ...(q === '' ? {} : { q }) },
+    { ...baseFilter, ...(q === '' ? {} : { q }), limit: 'unlimited' },
     { enabled: isKanbanFiltering },
   )
   useEffect(() => {

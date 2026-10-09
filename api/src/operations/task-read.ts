@@ -4,12 +4,18 @@ import { z } from 'zod'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { nestTaskListRows } from '#lib/task-tree'
 import {
+  allTasksQuery,
+  taskListDefaults,
+  taskSearchDefaults,
+} from '#operations/task-query-defaults'
+import {
   defineOperation,
   type OperationClient,
   type OperationError,
   requestJson,
 } from '#operations/types'
-import { contextEnum, listTasksQuerySchema } from '#schemas/task'
+import type { ListTasksQuery } from '#schemas/task'
+import { listTasksQuerySchema, taskListContext } from '#schemas/task'
 import { timezoneOffsetMinutesSchema } from '#schemas/timezone'
 import { parseSearchQuery } from '#search-query-parser'
 
@@ -74,9 +80,11 @@ const taskListInputSchema = listTasksQuerySchema
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
-    status: listTasksQuerySchema.shape.status.describe(
-      'Only return tasks in this status.',
-    ),
+    status: listTasksQuerySchema.shape.status
+      .optional()
+      .describe(
+        `Only return tasks in this status. Defaults to ${taskListDefaults.status.join(', ')}.`,
+      ),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason.',
     ),
@@ -86,9 +94,16 @@ const taskListInputSchema = listTasksQuerySchema
     parentId: listTasksQuerySchema.shape.parentId.describe(
       "Only return direct subtasks of this task UUID or number, or 'root' for tasks with no parent.",
     ),
-    context: contextEnum
+    context: taskListContext
       .optional()
-      .describe('Only return tasks in this context.'),
+      .describe(
+        'Only return tasks in this context. Defaults to the TQ_CONTEXT environment variable when set in the CLI, or all otherwise.',
+      ),
+    limit: listTasksQuerySchema.shape.limit
+      .optional()
+      .describe(
+        `Maximum number of results to return (1-100). Defaults to ${String(taskListDefaults.limit)}.`,
+      ),
   })
 
 const taskSearchInputSchema = listTasksQuerySchema
@@ -107,19 +122,21 @@ const taskSearchInputSchema = listTasksQuerySchema
     q: listTasksQuerySchema.shape.q.describe(
       'Free-text query, optionally containing prefixed filter tokens.',
     ),
-    status: listTasksQuerySchema.shape.status.describe(
-      'Only return tasks in this status. Equivalent to is: in q.',
-    ),
+    status: listTasksQuerySchema.shape.status
+      .optional()
+      .describe(
+        'Only return tasks in this status. Equivalent to is: in q. Defaults to all.',
+      ),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason. Equivalent to reason: in q.',
     ),
     label: listTasksQuerySchema.shape.label.describe(
       'Only return tasks with this label or a descendant label. Equivalent to label: in q.',
     ),
-    context: contextEnum
+    context: taskListContext
       .optional()
       .describe(
-        'Only return tasks in this context. Equivalent to context: in q.',
+        'Only return tasks in this context. Equivalent to context: in q. Defaults to the TQ_CONTEXT environment variable when set in the CLI, or all otherwise.',
       ),
     hasDue: booleanOption
       .optional()
@@ -129,19 +146,28 @@ const taskSearchInputSchema = listTasksQuerySchema
     sortBy: listTasksQuerySchema.shape.sortBy.describe(
       'Sort order for results. Defaults to creation date.',
     ),
-    limit: listTasksQuerySchema.shape.limit.describe(
-      'Maximum number of results to return (1-100). Defaults to 20.',
-    ),
+    limit: listTasksQuerySchema.shape.limit
+      .optional()
+      .describe(
+        `Maximum number of results to return (1-100). Defaults to ${String(taskSearchDefaults.limit)}.`,
+      ),
     offset: listTasksQuerySchema.shape.offset.describe(
       'Number of results to skip, for pagination.',
     ),
   })
 
 const taskListMcpInputSchema = taskListInputSchema.extend({
+  status: taskListInputSchema.shape.status.default(taskListDefaults.status),
+  context: taskListInputSchema.shape.context.default(taskListDefaults.context),
+  limit: taskListInputSchema.shape.limit.default(taskListDefaults.limit),
   tzOffset: timezoneOffsetMinutesSchema,
 })
 
 const taskSearchMcpInputSchema = taskSearchInputSchema.extend({
+  context: taskSearchInputSchema.shape.context.default(
+    taskSearchDefaults.context,
+  ),
+  limit: taskSearchInputSchema.shape.limit.default(taskSearchDefaults.limit),
   tzOffset: timezoneOffsetMinutesSchema,
 })
 
@@ -151,7 +177,7 @@ const taskIdInputSchema = z.object({
   ),
 })
 
-function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
+function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
   const queryFields = { ...fields }
   if (
     queryFields['tzOffset'] === undefined &&
@@ -160,7 +186,7 @@ function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
   ) {
     queryFields['tzOffset'] = new Date().getTimezoneOffset()
   }
-  const query = Object.fromEntries(
+  const query: Record<string, string | string[]> = Object.fromEntries(
     Object.entries(queryFields)
       .filter(([, value]) => value !== undefined)
       .map(([key, value]) => [
@@ -168,7 +194,12 @@ function toTaskQuery(fields: Record<string, unknown>): TaskListQuery {
         Array.isArray(value) ? value.map(String) : String(value),
       ]),
   )
-  return query
+  return {
+    ...query,
+    context: fields.context,
+    status: fields.status,
+    limit: String(fields.limit),
+  }
 }
 
 function toPageMetadata(page: Record<string, unknown>) {
@@ -187,7 +218,12 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
       return errAsync(invalidResponse('The task detail response is invalid.'))
     }
     return requestJson(
-      client.api.tasks.$get({ query: { descendantOf: taskResult.id } }),
+      client.api.tasks.$get({
+        query: {
+          ...allTasksQuery,
+          descendantOf: taskResult.id,
+        },
+      }),
     ).andThen((descendantResult) => {
       if (!isTaskListRows(descendantResult)) {
         return errAsync(
@@ -225,7 +261,16 @@ export const taskReadOperations = [
       },
     },
     run: (client, input) =>
-      requestJson(client.api.tasks.$get({ query: toTaskQuery(input) })),
+      requestJson(
+        client.api.tasks.$get({
+          query: toTaskQuery({
+            ...input,
+            context: input.context ?? taskListDefaults.context,
+            status: input.status ?? taskListDefaults.status,
+            limit: input.limit ?? taskListDefaults.limit,
+          }),
+        }),
+      ),
   }),
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
@@ -259,7 +304,12 @@ export const taskReadOperations = [
     run: (client, input) =>
       requestJson(
         client.api.tasks.$get({
-          query: toTaskQuery({ ...input, limit: input.limit ?? 20 }),
+          query: toTaskQuery({
+            ...input,
+            context: input.context ?? taskSearchDefaults.context,
+            status: input.status ?? taskSearchDefaults.status,
+            limit: input.limit ?? taskSearchDefaults.limit,
+          }),
         }),
       ),
   }),

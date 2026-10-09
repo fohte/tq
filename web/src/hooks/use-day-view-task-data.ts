@@ -51,22 +51,36 @@ export function useDayViewTaskData({
     context,
     status: 'todo',
     candidatesOn: selectedDateStr,
+    limit: 'unlimited',
   })
   const taskDateTasksQuery = useTaskList({
     context,
     status: 'todo',
     dateFrom: visibleRange.startDate,
     dateTo: visibleRange.endDate,
+    limit: 'unlimited',
   })
   const todayIsVisible =
     visibleRange.startDate <= todayStr && todayStr <= visibleRange.endDate
   const shouldFetchDueTasks = isCompactLayout || todayIsVisible
   const dueTasksQuery = useTaskList(
-    { context, status: 'todo', dueTo: todayStr, sortBy: 'due' },
+    {
+      context,
+      status: 'todo',
+      dueTo: todayStr,
+      sortBy: 'due',
+      limit: 'unlimited',
+    },
     { enabled: shouldFetchDueTasks },
   )
   const referencedTasksQuery = useTaskList(
-    { ids: taskIds, context, includeAncestors: true },
+    {
+      ids: taskIds,
+      context,
+      status: 'all',
+      limit: 'unlimited',
+      includeAncestors: true,
+    },
     {
       enabled: taskIds.length > 0,
       placeholderData: (previousData, previousFilter) => {

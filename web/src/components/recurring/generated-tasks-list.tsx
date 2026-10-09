@@ -3,10 +3,14 @@ import { Link } from '@tanstack/react-router'
 import { DateRangeBadge } from '#components/task/task-row-shared'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import { SectionHeading } from '#components/ui/section-heading'
-import { useTaskList } from '#hooks/use-tasks'
+import { allTasksFilter, useTaskList } from '#hooks/use-tasks'
 
 export function GeneratedTasksList({ templateId }: { templateId: string }) {
-  const { data: tasks, isLoading, isError } = useTaskList({ templateId })
+  const {
+    data: tasks,
+    isLoading,
+    isError,
+  } = useTaskList({ ...allTasksFilter, templateId })
 
   const sorted = [...(tasks ?? [])].sort((a, b) =>
     (b.dueDate ?? '').localeCompare(a.dueDate ?? ''),

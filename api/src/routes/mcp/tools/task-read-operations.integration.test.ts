@@ -20,6 +20,7 @@ import { jsonBody, setupTestDb } from '#testing'
 setupTestDb()
 
 let client: Client
+type CreatedTaskResponse = Awaited<ReturnType<typeof createTask>>
 
 function callTaskReadTool(
   name: 'task_list' | 'task_search',
@@ -39,6 +40,29 @@ function normalizeActivities(value: unknown): unknown {
       ? { ...activity, id: '<activity-id>', createdAt: '<timestamp>' }
       : activity,
   )
+}
+
+async function completeTask(
+  task: CreatedTaskResponse,
+): Promise<CreatedTaskResponse> {
+  const response = await app.request(`/api/tasks/${task.id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'completed' }),
+  })
+  return jsonBody<CreatedTaskResponse>(response)
+}
+
+function expectedTaskListItem(task: CreatedTaskResponse) {
+  return {
+    ...withoutLinkSync(task),
+    parentNumber: null,
+    duplicateOfNumber: null,
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    childCompletionCount: { total: 0, completed: 0 },
+    checklistCompletionCount: { total: 0, completed: 0 },
+  }
 }
 
 beforeEach(async () => {
@@ -98,6 +122,26 @@ it('exposes date filters without candidatesOn in task list and search tools', as
 })
 
 describe('task_list', () => {
+  it('defaults to all contexts and todo status when context and status are omitted', async () => {
+    const workTodo = await createTask('Work todo', { context: 'work' })
+    const personalTodo = await createTask('Personal todo', {
+      context: 'personal',
+    })
+    await completeTask(await createTask('Work completed', { context: 'work' }))
+    await completeTask(
+      await createTask('Personal completed', { context: 'personal' }),
+    )
+
+    const toolResult = await callTaskReadTool('task_list', {
+      sortBy: 'created',
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      expectedTaskListItem(workTodo),
+      expectedTaskListItem(personalTodo),
+    ])
+  })
+
   it('rejects invalid input', async () => {
     const result = await callTaskReadTool('task_list', {
       projectId: 'not-a-uuid',
@@ -406,6 +450,30 @@ describe('task_get', () => {
 })
 
 describe('task_search', () => {
+  it('defaults to all contexts and statuses when context and status are omitted', async () => {
+    const workTodo = await createTask('Work todo', { context: 'work' })
+    const personalTodo = await createTask('Personal todo', {
+      context: 'personal',
+    })
+    const workCompleted = await completeTask(
+      await createTask('Work completed', { context: 'work' }),
+    )
+    const personalCompleted = await completeTask(
+      await createTask('Personal completed', { context: 'personal' }),
+    )
+
+    const toolResult = await callTaskReadTool('task_search', {
+      sortBy: 'created',
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      expectedTaskListItem(workTodo),
+      expectedTaskListItem(personalTodo),
+      expectedTaskListItem(workCompleted),
+      expectedTaskListItem(personalCompleted),
+    ])
+  })
+
   it('rejects invalid input', async () => {
     const result = await callTaskReadTool('task_search', { limit: 0 })
 

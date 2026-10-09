@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import {
+  allTasksFilter,
   type TaskListFilter,
   useInfiniteTaskList,
   useSelfAndDescendantIds,
@@ -86,7 +87,12 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([makeTask({ id: 'a' })]))
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -97,7 +103,9 @@ describe('useInfiniteTaskList', () => {
     })
     expect(mockGet).toHaveBeenCalledWith({
       query: {
+        context: 'all',
         parentId: 'root',
+        status: 'all',
         limit: String(TASK_LIST_PAGE_SIZE),
         offset: '0',
       },
@@ -108,7 +116,12 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([makeTask({ id: 'a' })]))
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -127,7 +140,12 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse(firstPage))
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -142,7 +160,9 @@ describe('useInfiniteTaskList', () => {
     await waitFor(() => {
       expect(mockGet).toHaveBeenLastCalledWith({
         query: {
+          context: 'all',
           parentId: 'root',
+          status: 'all',
           limit: String(TASK_LIST_PAGE_SIZE),
           offset: String(TASK_LIST_PAGE_SIZE),
         },
@@ -169,7 +189,12 @@ describe('useInfiniteTaskList', () => {
     )
 
     const { result } = renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }),
+      () =>
+        useInfiniteTaskList({
+          context: 'all',
+          status: 'all',
+          parentId: 'root',
+        }),
       {
         wrapper,
       },
@@ -197,7 +222,11 @@ describe('useInfiniteTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
     renderHook(
-      () => useInfiniteTaskList({ parentId: 'root' }, { enabled: false }),
+      () =>
+        useInfiniteTaskList(
+          { context: 'all', status: 'all', parentId: 'root' },
+          { enabled: false },
+        ),
       { wrapper },
     )
 
@@ -234,7 +263,18 @@ describe('useTaskList', () => {
     ).toEqual({
       initialCallCount: 0,
       ids: ['root-task', 'child-task', 'grandchild-task'],
-      requests: [[{ query: { descendantOf: 'root-task' } }]],
+      requests: [
+        [
+          {
+            query: {
+              context: 'all',
+              status: 'all',
+              limit: 'unlimited',
+              descendantOf: 'root-task',
+            },
+          },
+        ],
+      ],
     })
   })
 
@@ -247,6 +287,7 @@ describe('useTaskList', () => {
           ids: ['task-a', 'task-b'],
           context: 'work',
           status: ['todo', 'completed'],
+          limit: 'unlimited',
         }),
       { wrapper },
     )
@@ -263,6 +304,7 @@ describe('useTaskList', () => {
                 ids: ['task-a', 'task-b'],
                 context: 'work',
                 status: ['todo', 'completed'],
+                limit: 'unlimited',
                 hasDue: undefined,
                 includeAncestors: undefined,
               },
@@ -291,7 +333,12 @@ describe('useTaskList', () => {
     const { result, rerender } = renderHook(
       ({ ids }: { ids: string[] }) =>
         useTaskList(
-          { ids, context: 'work' },
+          {
+            ids,
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
           {
             placeholderData: (previousData, filter) => {
               previousFilter = filter
@@ -318,7 +365,12 @@ describe('useTaskList', () => {
       ).toEqual({
         data: [previousTask],
         isPlaceholderData: true,
-        previousFilter: { ids: ['previous'], context: 'work' },
+        previousFilter: {
+          ids: ['previous'],
+          context: 'work',
+          status: 'all',
+          limit: 'unlimited',
+        },
       })
     })
 
@@ -330,7 +382,16 @@ describe('useTaskList', () => {
 
   it('does not request an empty ID filter while disabled', () => {
     renderHook(
-      () => useTaskList({ ids: [], context: 'work' }, { enabled: false }),
+      () =>
+        useTaskList(
+          {
+            ids: [],
+            context: 'work',
+            status: 'all',
+            limit: 'unlimited',
+          },
+          { enabled: false },
+        ),
       { wrapper },
     )
 
@@ -351,6 +412,7 @@ describe('useTaskList', () => {
           dateTo: '2032-05-15',
           dueTo: '2032-05-13',
           candidatesOn: '2032-05-12',
+          limit: 'unlimited',
         }),
       { wrapper },
     )
@@ -371,6 +433,7 @@ describe('useTaskList', () => {
             dateTo: '2032-05-15',
             dueTo: '2032-05-13',
             candidatesOn: '2032-05-12',
+            limit: 'unlimited',
           },
         },
       ],
@@ -381,7 +444,14 @@ describe('useTaskList', () => {
     mockGet.mockResolvedValue(jsonResponse([]))
 
     const { result } = renderHook(
-      () => useTaskList({ status: 'todo', hasDue: true, sortBy: 'due' }),
+      () =>
+        useTaskList({
+          context: 'all',
+          status: 'todo',
+          limit: 'unlimited',
+          hasDue: true,
+          sortBy: 'due',
+        }),
       { wrapper },
     )
 
@@ -392,7 +462,13 @@ describe('useTaskList', () => {
     expect(mockGet.mock.calls).toEqual([
       [
         {
-          query: { status: 'todo', hasDue: 'true', sortBy: 'due' },
+          query: {
+            context: 'all',
+            status: 'todo',
+            hasDue: 'true',
+            sortBy: 'due',
+            limit: 'unlimited',
+          },
         },
       ],
     ])
@@ -403,7 +479,7 @@ describe('useTaskList', () => {
     try {
       mockGet.mockResolvedValue(jsonResponse([]))
 
-      renderHook(() => useTaskList(undefined), { wrapper })
+      renderHook(() => useTaskList(allTasksFilter), { wrapper })
 
       let initialCallCount = 0
       const getCallCounts = () => ({
