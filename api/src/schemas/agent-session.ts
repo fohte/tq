@@ -26,10 +26,26 @@ const sessionIdFilterSchema = z
   .transform((v) => (Array.isArray(v) ? v : [v]))
   .optional()
 
+const taskIdsFilterSchema = z.union([
+  z.literal('all'),
+  z
+    .union([z.uuid(), z.array(z.uuid())])
+    .transform((v) => (Array.isArray(v) ? v : [v])),
+])
+
+const listAgentSessionsLimitSchema = z.union([
+  z.literal('unlimited'),
+  z.coerce.number().int().min(1).max(100),
+])
+
 export const listAgentSessionsQuerySchema = z.object({
   sessionId: sessionIdFilterSchema,
+  limit: listAgentSessionsLimitSchema,
 })
 
 export const listAgentSessionsByTaskQuerySchema = z.object({
   sessionId: sessionIdFilterSchema,
+  taskIds: taskIdsFilterSchema,
+  active: z.enum(['true', 'all']),
+  limit: listAgentSessionsLimitSchema,
 })

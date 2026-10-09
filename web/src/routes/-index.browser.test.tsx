@@ -213,9 +213,13 @@ vi.mock('#hooks/use-memos', () => ({
   useUpdateMemo: () => ({ mutateAsync: vi.fn() }),
 }))
 
-vi.mock('#hooks/use-projects', () => ({
-  useProjects: () => ({ data: [] }),
-}))
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const original = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...original,
+    useProjects: () => ({ data: [] }),
+  }
+})
 
 vi.mock('#hooks/use-push-notifications', () => ({
   usePushResubscribe: () => {},

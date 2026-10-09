@@ -11,6 +11,18 @@ import {
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
 const pageContentKey = 'content'
+const pageSummaryKeys = ['preview', 'contentTruncated'] as const
+
+function omitPageSummaryFields(value: unknown, includeContent: boolean) {
+  const keys = includeContent
+    ? pageSummaryKeys
+    : [...pageSummaryKeys, pageContentKey]
+
+  return keys.reduce<unknown>(
+    (result, key) => omitKeyRecursively(result, key),
+    value,
+  )
+}
 
 const taskIdSchema = taskIdOrNumber.describe(
   'The id (UUID) or number of the task the page belongs to.',
@@ -89,9 +101,7 @@ export const pageOperations = [
         client.api.tasks[':taskId'].pages.$get({
           param: { taskId: String(taskId) },
         }),
-      ).map((result) =>
-        full === true ? result : omitKeyRecursively(result, pageContentKey),
-      ),
+      ).map((result) => omitPageSummaryFields(result, full === true)),
   }),
   defineOperation(pageRefSchema, {
     path: ['page', 'get'],

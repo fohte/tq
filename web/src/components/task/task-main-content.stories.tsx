@@ -22,7 +22,7 @@ import {
 } from '#components/task/task-row-test-fixtures'
 import type { AgentSession } from '#hooks/use-agent-sessions'
 import type { ProjectDetail } from '#hooks/use-projects'
-import { projectKeys } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, projectKeys } from '#hooks/use-projects'
 import { DAY_QUEUE_KEY, queueKeys, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import type { TaskChecklist } from '#hooks/use-task-checklists'
 import type { TaskPage } from '#hooks/use-task-pages'
@@ -134,7 +134,7 @@ function Providers({
   queryClient.setQueryData(taskKeys.list(undefined), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
   queryClient.setQueryData(
-    projectKeys.list(undefined),
+    projectKeys.list(ALL_PROJECTS_FILTER),
     project ? [project] : [],
   )
   const todayStr = formatLocalDate(new Date())

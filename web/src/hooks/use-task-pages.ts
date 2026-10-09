@@ -9,6 +9,11 @@ export type TaskPage = InferResponseType<
   200
 >[number]
 
+export type TaskPageBody = InferResponseType<
+  (typeof api.api.tasks)[':taskId']['pages'][':pageId']['$get'],
+  200
+>
+
 const taskPageKeys = {
   all: (taskId: string) => ['tasks', 'detail', taskId, 'pages'] as const,
   detail: (taskId: string, pageId: string) =>
@@ -27,9 +32,10 @@ export function useTaskPages(taskId: string) {
   })
 }
 
-export function useTaskPage(taskId: string, pageId: string) {
+export function useTaskPage(taskId: string, pageId: string, enabled = true) {
   return useQuery({
     queryKey: taskPageKeys.detail(taskId, pageId),
+    enabled,
     queryFn: async () => {
       const res = await api.api.tasks[':taskId'].pages[':pageId'].$get({
         param: { taskId, pageId },
@@ -89,7 +95,7 @@ export function useUpdateTaskPage(taskId: string) {
       const previousPages = queryClient.getQueryData<TaskPage[]>(
         taskPageKeys.all(taskId),
       )
-      const previousPage = queryClient.getQueryData<TaskPage>(
+      const previousPage = queryClient.getQueryData<TaskPageBody>(
         taskPageKeys.detail(taskId, pageId),
       )
 
@@ -107,7 +113,7 @@ export function useUpdateTaskPage(taskId: string) {
       }
 
       if (previousPage) {
-        queryClient.setQueryData<TaskPage>(
+        queryClient.setQueryData<TaskPageBody>(
           taskPageKeys.detail(taskId, pageId),
           { ...previousPage, ...input, updatedAt: optimisticTimestamp },
         )

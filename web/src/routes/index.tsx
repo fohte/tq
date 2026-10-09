@@ -24,7 +24,7 @@ import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
 import { GcalAuthRequiredError, useGcalEvents } from '#hooks/use-gcal-events'
 import { useIntegrationAuthUrl } from '#hooks/use-integrations'
 import { useNowPanelData, useNowPanelQueries } from '#hooks/use-now-panel-data'
-import { useProjects } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 import {
   DAY_QUEUE_KEY,
   type QueueItem,
@@ -166,7 +166,7 @@ function DayView() {
     context,
   })
   const queryClient = useQueryClient()
-  const projects = useProjects()
+  const projects = useProjects(ALL_PROJECTS_FILTER)
 
   const {
     changeFeedback,
