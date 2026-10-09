@@ -25,7 +25,11 @@ import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-pan
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useCurrentRoute } from '#hooks/use-current-route'
 import { useDebounce } from '#hooks/use-debounce'
-import { useProject, useProjects } from '#hooks/use-projects'
+import {
+  type ProjectFilter,
+  useProject,
+  useProjects,
+} from '#hooks/use-projects'
 import { useSavedViews } from '#hooks/use-saved-views'
 import {
   resolveSearchContext,
@@ -155,13 +159,21 @@ export function SearchModal({
     SEARCH_QUERY_DEBOUNCE_MS,
   )
   const debouncedContext = useDebounce(context, SEARCH_QUERY_DEBOUNCE_MS)
-  const searchFilter =
-    debouncedFreeTextQuery.length > 0
-      ? {
-          q: debouncedFreeTextQuery,
-          ...(debouncedContext == null ? {} : { context: debouncedContext }),
-        }
-      : undefined
+  const hasDebouncedFreeTextQuery = debouncedFreeTextQuery.length > 0
+  const projectFilter: ProjectFilter = {
+    q: debouncedFreeTextQuery,
+    context:
+      debouncedContext === 'work' || debouncedContext === 'personal'
+        ? debouncedContext
+        : 'all',
+    status: 'all' as const,
+  }
+  const savedViewFilter = hasDebouncedFreeTextQuery
+    ? {
+        q: debouncedFreeTextQuery,
+        ...(debouncedContext == null ? {} : { context: debouncedContext }),
+      }
+    : undefined
   const hasAuxiliarySearch = freeTextQuery.length > 0
   const searchScopeLabels = useSearchScopeLabels(searchScopeTokens, open)
 
@@ -196,15 +208,15 @@ export function SearchModal({
     isDebouncing: isDebouncingTasks,
   } = useSearchTasks(canSearchTasks ? searchQuery : '', defaultSearchContext)
   const { data: projects, isFetching: isFetchingProjects } = useProjects(
-    searchFilter,
+    projectFilter,
     {
-      enabled: canSearchProjects && searchFilter != null,
+      enabled: canSearchProjects && hasDebouncedFreeTextQuery,
     },
   )
   const { data: savedViews, isFetching: isFetchingSavedViews } = useSavedViews(
-    searchFilter,
+    savedViewFilter,
     {
-      enabled: canSearchViews && searchFilter != null,
+      enabled: canSearchViews && savedViewFilter != null,
     },
   )
 

@@ -61,10 +61,10 @@ export const projectsApp = new Hono()
     const query = c.req.valid('query')
     const conditions = []
 
-    if (query.status) {
+    if (query.status !== 'all') {
       conditions.push(eq(projects.status, query.status))
     }
-    if (query.context) {
+    if (query.context !== 'all') {
       conditions.push(eq(projects.context, query.context))
     }
     if (query.q != null && query.q !== '') {

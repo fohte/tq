@@ -94,7 +94,7 @@ describe('projects API', () => {
 
   describe('GET /api/projects', () => {
     it('returns empty list when no projects exist', async () => {
-      const res = await app.request('/api/projects')
+      const res = await app.request('/api/projects?context=all&status=all')
 
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual([])
@@ -102,9 +102,12 @@ describe('projects API', () => {
 
     it('returns all projects', async () => {
       await createProject('Project A')
-      await createProject('Project B')
+      await createProject('Project B', {
+        status: 'archived',
+        context: 'work',
+      })
 
-      const res = await app.request('/api/projects')
+      const res = await app.request('/api/projects?context=all&status=all')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<ProjectResponse[]>(res)
@@ -115,7 +118,7 @@ describe('projects API', () => {
       await createProject('Active', { status: 'active' })
       await createProject('Completed', { status: 'completed' })
 
-      const res = await app.request('/api/projects?status=active')
+      const res = await app.request('/api/projects?context=all&status=active')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<ProjectResponse[]>(res)
@@ -130,7 +133,7 @@ describe('projects API', () => {
         context: 'work',
       })
 
-      const res = await app.request('/api/projects?context=work')
+      const res = await app.request('/api/projects?context=work&status=all')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<ProjectDetailResponse[]>(res)
@@ -147,7 +150,9 @@ describe('projects API', () => {
       const matchingProject = await createProject('Personal Sample Project')
       await createProject('Another Project')
 
-      const res = await app.request('/api/projects?q=sample%20pro')
+      const res = await app.request(
+        '/api/projects?context=all&q=sample%20pro&status=all',
+      )
 
       expect(res.status).toBe(200)
       expect(await jsonBody<ProjectDetailResponse[]>(res)).toEqual([
@@ -171,7 +176,7 @@ describe('projects API', () => {
         body: JSON.stringify({ status: 'completed' }),
       })
 
-      const res = await app.request('/api/projects')
+      const res = await app.request('/api/projects?context=all&status=all')
 
       expect(res.status).toBe(200)
       const body = await jsonBody<ProjectDetailResponse[]>(res)
@@ -182,6 +187,18 @@ describe('projects API', () => {
           taskCount: { total: 2, completed: 1 },
         },
       ])
+    })
+
+    it('requires context even when other filters are present', async () => {
+      const res = await app.request('/api/projects?q=sample&status=all')
+
+      expect(res.status).toBe(400)
+    })
+
+    it('requires status even when other filters are present', async () => {
+      const res = await app.request('/api/projects?context=all&q=sample')
+
+      expect(res.status).toBe(400)
     })
   })
 
