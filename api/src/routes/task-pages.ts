@@ -47,7 +47,7 @@ function validateContentLength(
     : null
 }
 
-export function pageToResponse(
+function pageToResponse(
   page: typeof taskPages.$inferSelect,
   author: EditAuthorInfo | null = null,
 ) {
