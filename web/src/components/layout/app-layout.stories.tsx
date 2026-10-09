@@ -33,6 +33,7 @@ const meta = {
     msw: {
       handlers: [
         http.get('/api/tasks', () => HttpResponse.json([])),
+        http.get('/api/tasks/count', () => HttpResponse.json({ count: 0 })),
         http.get('/api/projects', () => HttpResponse.json([])),
         http.get('/api/queues/:key/items', () => HttpResponse.json([])),
         http.get('/api/saved-views', () => HttpResponse.json([])),

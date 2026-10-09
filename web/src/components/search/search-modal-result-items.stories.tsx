@@ -40,7 +40,6 @@ const task = makeTask({
   number: 12,
   title: 'Prepare the weekly review',
   context: 'work',
-  estimatedMinutes: 30,
 })
 const taskLongTitle = makeTask({
   id: 'task-long-title-story',

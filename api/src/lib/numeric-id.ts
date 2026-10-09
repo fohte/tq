@@ -1,12 +1,14 @@
 import { z } from 'zod'
 
-const numericIdPattern = /^\d+$/
+import {
+  isTaskIdentifier,
+  numericIdPattern,
+  PG_INTEGER_MAX,
+} from '#lib/task-identifier'
 
 // `tasks.number` is a Postgres `integer`; comparing/inserting a digit string
 // past this range would make an `eq`/`inArray` query throw instead of simply
 // matching nothing.
-const PG_INTEGER_MAX = 2147483647
-
 export type NumericOrId =
   { kind: 'number'; value: number } | { kind: 'id'; value: string }
 
@@ -28,3 +30,7 @@ export const taskIdOrNumber = z.union([
   z.string().regex(numericIdPattern),
   z.number().int().positive(),
 ])
+
+export const taskPreviewIdSchema = z
+  .string()
+  .refine(isTaskIdentifier, 'Expected a UUID or PostgreSQL integer task number')

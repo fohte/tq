@@ -22,6 +22,7 @@ import {
   getDuplicateOfTaskRow,
   getTaskBlockedByRelationRows,
 } from '#services/task-relations'
+import { listTaskWaits, taskWaitToResponse } from '#services/task-waits'
 
 export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
   const task = c.get('task')
@@ -74,6 +75,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     taskFieldAuthors,
     labelsByTaskId,
     githubBlockers,
+    waits,
     checklistData,
     relatedTasks,
   ] = await Promise.all([
@@ -115,6 +117,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     getTaskFieldAuthors(id),
     getLabelNamesByTaskId([id]),
     getTaskGithubBlockers(id),
+    listTaskWaits(id),
     getTaskChecklistData(id),
     relatedTasksPromise,
   ])
@@ -147,6 +150,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       blockedBy: relatedTasks.blockedBy,
       blocking: relatedTasks.blocking,
       githubBlockers: githubBlockers.map(githubLinkToResponse),
+      ...(waits.length > 0 ? { waits: waits.map(taskWaitToResponse) } : {}),
       ...checklistData,
     },
     200,

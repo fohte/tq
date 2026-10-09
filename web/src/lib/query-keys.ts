@@ -2,7 +2,11 @@ import type { LabelFilter } from '#hooks/use-labels'
 import type { ProjectFilter } from '#hooks/use-projects'
 import type { RecurringTemplateFilter } from '#hooks/use-recurring-templates'
 import type { SavedViewFilter } from '#hooks/use-saved-views'
-import type { TaskListFilter } from '#hooks/use-task-queries'
+import type {
+  TaskContext,
+  TaskCountFilter,
+  TaskListFilter,
+} from '#hooks/use-task-queries'
 import { isRecord } from '#lib/type-guards'
 
 // infiniteLists deliberately isn't nested under `lists`: use-task-mutations.ts
@@ -18,6 +22,9 @@ export const taskKeys = {
     [...taskKeys.infiniteLists, filter] as const,
   details: ['tasks', 'detail'] as const,
   detail: (id: string) => [...taskKeys.details, id] as const,
+  countPrefix: ['tasks', 'count'] as const,
+  count: (filter: TaskCountFilter) =>
+    [...taskKeys.countPrefix, filter] as const,
   labelCountsPrefix: ['tasks', 'label-counts'] as const,
   labelCounts: (context: NonNullable<LabelFilter['context']>) =>
     [...taskKeys.labelCountsPrefix, context] as const,
@@ -39,8 +46,14 @@ export const queueKeys = {
   all: ['queues'] as const,
   // Broad queue invalidations should not repeat this date-scoped write.
   carryOver: (date: string) => ['queue-carry-over', date] as const,
-  items: (key: string, date: string) =>
-    [...queueKeys.all, key, 'items', date] as const,
+  items: (key: string, date: string, context?: TaskContext) =>
+    [
+      ...queueKeys.all,
+      key,
+      'items',
+      date,
+      ...(context == null ? [] : [context]),
+    ] as const,
 }
 
 export const timeBlockKeys = {
@@ -114,11 +127,6 @@ export const githubSyncRuleKeys = {
   list: ['github-sync-rules'] as const,
 }
 
-export const githubSyncKeys = {
-  all: ['github-sync'] as const,
-  task: (taskId: string) => ['github-sync', 'task', taskId] as const,
-}
-
 export type SearchContext = 'work' | 'personal'
 
 export const searchKeys = {
@@ -140,21 +148,17 @@ export const commentKeys = {
   all: (taskId: string) => [...taskKeys.all, taskId, 'comments'] as const,
 }
 
-// Mention previews share the task namespace so task invalidation refreshes them.
-const mentionPreviewKeyPrefix = [...taskKeys.all, 'mention-preview'] as const
+// Preview queries share the task namespace so task invalidation refreshes them.
+const taskPreviewKeyPrefix = [...taskKeys.all, 'preview'] as const
+
+export const taskPreviewKeys = {
+  preview: (id: string) => [...taskPreviewKeyPrefix, id] as const,
+}
 
 export const taskMentionKeys = {
-  preview: (number: number) => [...mentionPreviewKeyPrefix, number] as const,
   suggestionsPrefix: mentionSuggestionsKeyPrefix,
   suggestions: (query: string) =>
     [...mentionSuggestionsKeyPrefix, query] as const,
-}
-
-// A null result must not share the non-null task detail cache.
-const taskUrlPreviewKeyPrefix = [...taskKeys.all, 'task-url-preview'] as const
-
-export const taskUrlPreviewKeys = {
-  preview: (id: string) => [...taskUrlPreviewKeyPrefix, id] as const,
 }
 
 function hasQueryKeyPrefix(
@@ -203,16 +207,13 @@ export function matchesTaskSpecificQuery(
     return typeof taskId === 'string' && taskIds.has(taskId)
   }
 
-  if (hasQueryKeyPrefix(queryKey, mentionPreviewKeyPrefix)) {
-    return matchesTaskPreview(data, taskIds, includeUnresolvedPreviews)
-  }
-
-  if (hasQueryKeyPrefix(queryKey, taskUrlPreviewKeyPrefix)) {
-    const taskId = queryKey[taskUrlPreviewKeyPrefix.length]
-    if (typeof taskId === 'string' && taskIds.has(taskId)) return true
+  if (hasQueryKeyPrefix(queryKey, taskPreviewKeyPrefix)) {
+    const identifier = queryKey[taskPreviewKeyPrefix.length]
+    if (typeof identifier !== 'string') return false
+    if (taskIds.has(identifier)) return true
     const dataTaskId = taskIdFromData(data)
     if (dataTaskId != null) return taskIds.has(dataTaskId)
-    return includeUnresolvedPreviews && isTaskNumber(taskId)
+    return includeUnresolvedPreviews && isTaskNumber(identifier)
   }
 
   if (hasQueryKeyPrefix(queryKey, githubUrlPreviewKeyPrefix)) {

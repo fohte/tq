@@ -96,7 +96,6 @@ export const tasks = pgTable(
     }),
     startDate: date('start_date'),
     dueDate: date('due_date'),
-    estimatedMinutes: integer('estimated_minutes'),
     descriptionTemplateId: uuid('description_template_id').references(
       () => taskDescriptionTemplates.id,
       { onDelete: 'set null' },

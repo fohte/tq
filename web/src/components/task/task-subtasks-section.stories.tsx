@@ -16,7 +16,6 @@ const baseSubtask: Task = makeTask({
   number: 11,
   title: 'Sketch wireframes',
   context: 'work',
-  estimatedMinutes: 30,
   parentId: parentTaskId,
   parentNumber: 1,
 })
@@ -28,7 +27,6 @@ const mixedSubtasks: Task[] = [
     number: 11,
     title: 'Sketch wireframes',
     status: 'completed',
-    estimatedMinutes: 30,
   },
   {
     ...baseSubtask,
@@ -36,7 +34,6 @@ const mixedSubtasks: Task[] = [
     number: 12,
     title: 'Get feedback from the team',
     status: 'todo',
-    estimatedMinutes: 15,
   },
   {
     ...baseSubtask,
@@ -44,7 +41,6 @@ const mixedSubtasks: Task[] = [
     number: 13,
     title: 'Finalize the design',
     status: 'todo',
-    estimatedMinutes: null,
   },
 ]
 

@@ -12,9 +12,10 @@ export interface ParsedQuery {
   hasNoChildren?: boolean
   hasBlockers?: boolean
   hasNoBlockers?: boolean
+  hasFollowUpDue?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated' | 'estimate'
+  sortBy?: 'due' | 'created' | 'updated'
 }
 
 export interface SearchQueryTokenRange {
@@ -104,9 +105,8 @@ const searchQueryTokenDefinitions = new Map(
         ['due', 'Sort by due date'],
         ['created', 'Sort by creation date'],
         ['updated', 'Sort by update date'],
-        ['estimate', 'Sort by estimate'],
       ],
-      'Sort results by date or estimate.',
+      'Sort results by date.',
       (result, value) => {
         result.sortBy = value
       },
@@ -119,8 +119,9 @@ const searchQueryTokenDefinitions = new Map(
         ['no-children', 'Has no children'],
         ['blockers', 'Has blockers'],
         ['no-blockers', 'Has no blockers'],
+        ['follow-up-due', 'Has follow-up due'],
       ],
-      'Filter by pages, comments, children, or blockers.',
+      'Filter by pages, comments, children, blockers, or waits due for follow-up.',
       (result, value) => {
         switch (value) {
           case 'pages':
@@ -139,6 +140,9 @@ const searchQueryTokenDefinitions = new Map(
           case 'no-blockers':
             result.hasNoBlockers = true
             delete result.hasBlockers
+            break
+          case 'follow-up-due':
+            result.hasFollowUpDue = true
             break
           default: {
             const unhandledValue: never = value
@@ -264,7 +268,8 @@ export function parseSearchQuery(q: string): ParsedQuery {
     if ('values' in definition) {
       const option = definition.values.find((item) => item.value === value)
       if (option === undefined) {
-        freeTextParts.push(token)
+        // Stored queries may retain sort keys after their options are removed.
+        if (prefix !== 'sort') freeTextParts.push(token)
       } else {
         option.parse(result)
       }
@@ -312,6 +317,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.hasNoBlockers === true) {
     parts.push('has:no-blockers')
+  }
+  if (query.hasFollowUpDue === true) {
+    parts.push('has:follow-up-due')
   }
   if (query.parentId !== undefined) {
     parts.push(`parent:${quoteIfNeeded(query.parentId)}`)

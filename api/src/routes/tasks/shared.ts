@@ -32,6 +32,10 @@ import {
   getBlockedByNumbersByTaskId,
   getDuplicateOfNumbersByTaskId,
 } from '#services/task-relations'
+import {
+  getTaskWaitSummariesByTaskId,
+  type TaskWaitSummary,
+} from '#services/task-waits'
 
 function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
   switch (sortBy) {
@@ -39,8 +43,6 @@ function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
       return desc(tasks.updatedAt)
     case 'due':
       return tasks.dueDate
-    case 'estimate':
-      return tasks.estimatedMinutes
     case 'created':
     default:
       return tasks.createdAt
@@ -104,7 +106,6 @@ function taskCoreToResponse(
     labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,
-    estimatedMinutes: task.estimatedMinutes,
     remindAt: task.remindAt?.toISOString() ?? null,
     parentId: task.parentId,
     projectId: task.projectId,
@@ -265,6 +266,7 @@ function taskListItemToResponse(
   duplicateOfNumber: number | null = null,
   blockedByNumbers: number[] = [],
   blockedByGithubRefs: GithubBlockerRef[] = [],
+  waits: TaskWaitSummary[] = [],
 ) {
   return {
     ...taskCoreToResponse(task, rule, githubLinks, labelNames),
@@ -272,6 +274,7 @@ function taskListItemToResponse(
     duplicateOfNumber,
     blockedByNumbers,
     blockedByGithubRefs,
+    ...(waits.length > 0 ? { waits } : {}),
     checklistCompletionCount,
   }
 }
@@ -319,6 +322,7 @@ export async function hydrateTaskListRows(
     duplicateOfNumbersByTaskId,
     blockedByNumbersByTaskId,
     openGithubBlockerRefsByTaskId,
+    waitsByTaskId,
     recurrenceRulesById,
     recurrenceRulesByTemplateId,
   ] = await Promise.all([
@@ -329,6 +333,7 @@ export async function hydrateTaskListRows(
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getOpenGithubBlockerRefsByTaskId(ids),
+    getTaskWaitSummariesByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
   ])
@@ -351,6 +356,7 @@ export async function hydrateTaskListRows(
         : null,
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
       openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
+      waitsByTaskId.get(r.task.id) ?? [],
     ),
     childCompletionCount: childCompletionCountsByTaskId.get(r.task.id) ?? {
       completed: 0,

@@ -3,7 +3,9 @@ import { z } from 'zod'
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { labelNameSchema } from '#schemas/label-name'
+import { queueDateSchema } from '#schemas/queue-date'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { queryTimezoneOffsetMinutesSchema } from '#schemas/timezone'
 
 export const taskStatus = z.enum(['todo', 'completed'])
 export type TaskStatus = z.infer<typeof taskStatus>
@@ -18,7 +20,7 @@ export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
 const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
-export const taskSortBy = z.enum(['created', 'updated', 'due', 'estimate'])
+export const taskSortBy = z.enum(['created', 'updated', 'due'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 
 const hasFlagSchema = z
@@ -64,7 +66,6 @@ export const createTaskSchema = z.object({
     .optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
-  estimatedMinutes: z.number().int().positive().optional(),
   parentId: taskIdOrNumber.optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
@@ -86,7 +87,6 @@ export const updateTaskSchema = z.object({
     .optional(),
   startDate: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
-  estimatedMinutes: z.number().int().positive().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
@@ -121,9 +121,25 @@ export const listTasksQuerySchema = z.object({
     .transform((v) => (Array.isArray(v) ? v : [v]))
     .optional(),
   q: z.string().optional(),
+  tzOffset: queryTimezoneOffsetMinutesSchema
+    .optional()
+    .describe(
+      'Client timezone offset in minutes. Used to determine today for has:follow-up-due; defaults to UTC when omitted.',
+    ),
   label: z.string().optional(),
-  hasEstimate: hasFlagSchema,
   hasDue: hasFlagSchema,
+  dateFrom: queueDateSchema
+    .describe('Inclusive lower bound of the task date range filter.')
+    .optional(),
+  dateTo: queueDateSchema
+    .describe('Inclusive upper bound of the task date range filter.')
+    .optional(),
+  dueTo: queueDateSchema
+    .describe('Only return tasks due on or before this date.')
+    .optional(),
+  candidatesOn: queueDateSchema
+    .describe('Only return tasks that can be added to a queue on this date.')
+    .optional(),
   context: contextEnum.optional(),
   commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
@@ -142,3 +158,17 @@ export const listTasksQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 })
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>
+
+export const taskFilterQuerySchema = listTasksQuerySchema.omit({
+  includeAncestors: true,
+  includeMatch: true,
+  limit: true,
+  offset: true,
+  sortBy: true,
+})
+export type TaskFilterQuery = z.infer<typeof taskFilterQuerySchema>
+
+export const countTasksQuerySchema = taskFilterQuerySchema.extend({
+  context: contextEnum,
+})
+export type CountTasksQuery = z.infer<typeof countTasksQuerySchema>

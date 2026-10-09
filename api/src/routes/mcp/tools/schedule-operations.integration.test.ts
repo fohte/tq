@@ -135,6 +135,21 @@ describe('schedule operation tools', () => {
     )
   })
 
+  it('rejects time block ranges longer than 42 calendar days', async () => {
+    const result = await callMcpTool(client, 'schedule_time_blocks_list', {
+      startDate: '2099-01-01',
+      endDate: '2099-02-12',
+      tzOffset: 0,
+    })
+
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'schedule_time_blocks_list',
+        'endDate: Date range must be chronological and no longer than 42 days',
+      ),
+    )
+  })
+
   it('creates a time block for a task number', async () => {
     const task = await createTask('Focused work')
 
@@ -296,16 +311,16 @@ describe('schedule operation tools', () => {
     )
   })
 
-  it('limits recurring schedule queries to 31 calendar days', async () => {
+  it('limits recurring schedule queries to 42 calendar days', async () => {
     const result = await callMcpTool(client, 'schedule_recurring_list', {
-      startDate: '2026-12-01',
-      endDate: '2027-01-01',
+      startDate: '2099-01-01',
+      endDate: '2099-02-12',
     })
 
     expect(result).toEqual(
       expectedToolValidationError(
         'schedule_recurring_list',
-        'endDate: Date range must be chronological and no longer than 31 days',
+        'endDate: Date range must be chronological and no longer than 42 days',
       ),
     )
   })

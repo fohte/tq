@@ -113,7 +113,7 @@ async function renderDayView(
 }
 
 describe('DayViewPresentation', () => {
-  it('passes the selected start date without an estimate default', async () => {
+  it('passes the selected start date', async () => {
     await renderDayView()
     const start = new Date('2026-07-20T09:00:00')
     const end = new Date('2026-07-20T10:00:00')
@@ -125,12 +125,10 @@ describe('DayViewPresentation', () => {
     const getActual = () => ({
       open: capturedModalProps.open,
       defaultStartDate: capturedModalProps.defaultStartDate,
-      hasEstimateDefault: 'defaultEstimateMinutes' in capturedModalProps,
     })
     const expected = {
       open: true,
       defaultStartDate: '2026-07-20',
-      hasEstimateDefault: false,
     }
 
     expect(getActual()).toEqual(expected)

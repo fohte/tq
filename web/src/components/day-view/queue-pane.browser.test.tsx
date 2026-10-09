@@ -13,27 +13,22 @@ import { MemoizedStoryRouter } from '#storybook-config/story-router'
 const dayTask = makeTask({
   id: 'day-task',
   title: 'Day task',
-  estimatedMinutes: 30,
 })
 const anotherDayTask = makeTask({
   id: 'another-day-task',
   title: 'Another day task',
-  estimatedMinutes: 30,
 })
 const weekTask = makeTask({
   id: 'week-task',
   title: 'Week task',
-  estimatedMinutes: 30,
 })
 const scheduledTask = makeTask({
   id: 'scheduled-task',
   title: 'Scheduled task',
-  estimatedMinutes: 90,
 })
 const candidateTask = makeTask({
   id: 'candidate-task',
   title: 'Candidate task',
-  estimatedMinutes: 30,
 })
 
 function Providers({ children }: { children: ReactNode }) {
@@ -93,6 +88,28 @@ function renderQueuePane(
   return { onMoveTask, onInsertCandidate, onMoveScheduledTaskToWeek }
 }
 
+async function waitForDndClickSuppressionToClear() {
+  const probe = document.createElement('div')
+  document.body.append(probe)
+
+  let clickReachedWindow = false
+  const markClickAsReachedWindow = () => {
+    clickReachedWindow = true
+  }
+  window.addEventListener('click', markClickAsReachedWindow)
+
+  const waiting = waitFor(() => {
+    clickReachedWindow = false
+    probe.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(clickReachedWindow).toBe(true)
+  })
+
+  await waiting.finally(() => {
+    window.removeEventListener('click', markClickAsReachedWindow)
+    probe.remove()
+  })
+}
+
 async function dragByTitle(sourceTitle: string, targetTitle: string) {
   const source = (await screen.findByText(sourceTitle)).closest('.cursor-grab')
   const target = (await screen.findByText(targetTitle)).closest('.cursor-grab')
@@ -119,6 +136,7 @@ async function dragByTitle(sourceTitle: string, targetTitle: string) {
     clientY: targetY,
   })
   fireEvent.mouseUp(document, { button: 0, clientX: targetX, clientY: targetY })
+  await waitForDndClickSuppressionToClear()
 }
 
 describe('QueuePane dragging', () => {

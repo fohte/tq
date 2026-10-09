@@ -17,13 +17,14 @@ export type BlockedByGithubRef = Task['blockedByGithubRefs'][number]
 
 type TaskStatus = 'todo' | 'completed'
 
-type TaskContext = 'work' | 'personal'
+export type TaskContext = 'work' | 'personal'
 
 export type TaskSortBy = 'created' | 'updated' | 'due'
 
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 
 export interface TaskListFilter {
+  ids?: string[]
   q?: string
   status?: TaskStatus | TaskStatus[]
   hasDue?: boolean
@@ -37,6 +38,12 @@ export interface TaskListFilter {
   includeAncestors?: boolean
   limit?: number
   offset?: number
+}
+
+export interface TaskCountFilter {
+  context: TaskContext
+  status?: TaskStatus | TaskStatus[]
+  commitment?: TaskCommitment
 }
 
 const TASK_LIST_PAGE_SIZE = 50
@@ -62,6 +69,13 @@ export async function fetchTaskList(filter?: TaskListFilter): Promise<Task[]> {
   return unwrapOrThrow(assertOk(res)).json()
 }
 
+async function fetchTaskCount(filter: TaskCountFilter): Promise<number> {
+  const res = await api.api.tasks.count.$get({ query: filter })
+  return unwrapOrThrow(assertOk(res))
+    .json()
+    .then((body) => body.count)
+}
+
 export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
   const res = await api.api.tasks[':id'].$get({
     param: { id },
@@ -71,12 +85,29 @@ export async function fetchTaskDetail(id: string): Promise<TaskDetail> {
 
 export function useTaskList(
   filter?: TaskListFilter,
-  options?: { enabled?: boolean },
+  options?: {
+    enabled?: boolean
+    placeholderData?: (
+      previousData: Task[] | undefined,
+      previousFilter: TaskListFilter | undefined,
+    ) => Task[] | undefined
+  },
 ) {
-  const query = useQuery({
+  const query = useQuery<
+    Task[],
+    Error,
+    Task[],
+    ReturnType<typeof taskKeys.list>
+  >({
     queryKey: taskKeys.list(filter),
     queryFn: () => fetchTaskList(filter),
     enabled: options?.enabled ?? true,
+    ...(options?.placeholderData == null
+      ? {}
+      : {
+          placeholderData: (previousData: Task[] | undefined, previousQuery) =>
+            options.placeholderData?.(previousData, previousQuery?.queryKey[2]),
+        }),
   })
 
   const categorized = useMemo((): CategorizedTasks => {
@@ -85,6 +116,17 @@ export function useTaskList(
   }, [query.data])
 
   return { ...query, categorized }
+}
+
+export function useTaskCount(
+  filter: TaskCountFilter,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: taskKeys.count(filter),
+    queryFn: () => fetchTaskCount(filter),
+    enabled: options?.enabled ?? true,
+  })
 }
 
 /**

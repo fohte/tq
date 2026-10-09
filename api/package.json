@@ -11,6 +11,7 @@
     "./lib/change-event-contract": "./src/lib/change-event-contract.ts",
     "./lib/markdown-parser": "./src/lib/markdown-parser.ts",
     "./lib/split-comma-list": "./src/lib/split-comma-list.ts",
+    "./lib/task-identifier": "./src/lib/task-identifier.ts",
     "./lib/test-utils": "./src/lib/test-utils.ts",
     "./lib/text-scan": "./src/lib/text-scan.ts",
     "./operations": "./src/operations/index.ts",
@@ -59,7 +60,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/sdk": "1.31.0",
     "@types/web-push": "3.6.4",
     "aws-sdk-client-mock": "4.1.0",
     "drizzle-kit": "0.31.10",
