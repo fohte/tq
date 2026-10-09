@@ -48,7 +48,7 @@ export async function fetchQueueItems(
   return unwrapOrThrow(assertOk(res)).json()
 }
 
-export async function fetchQueueItemsForRange(
+async function fetchQueueItemsForRange(
   key: string,
   from: string,
   to: string,
