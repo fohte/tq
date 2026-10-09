@@ -421,22 +421,26 @@ function DayView() {
           // — patch its cached items locally instead of refetching so the
           // UI doesn't show the task in both sections until the next fetch.
           queryClient.setQueriesData<QueueItem[]>(
-            {
-              queryKey: queueKeys.itemsForQueue(fromQueueKey),
-              predicate: ({ queryKey }) => {
-                const scope = queryKey[3]
-                if (scope === selectedDateStr) return true
-                return (
-                  scope === 'range' &&
-                  typeof queryKey[4] === 'string' &&
-                  typeof queryKey[5] === 'string' &&
-                  queryKey[4] <= selectedDateStr &&
-                  selectedDateStr <= queryKey[5]
-                )
-              },
-            },
+            { queryKey: queueKeys.items(fromQueueKey, selectedDateStr) },
             (old: QueueItem[] | undefined) =>
               old?.filter((item) => item.taskId !== taskId) ?? old,
+          )
+          queryClient.setQueriesData<QueueItem[]>(
+            {
+              queryKey: queueKeys.itemsForQueue(fromQueueKey),
+              predicate: ({ queryKey }) =>
+                queueKeys.rangeContainsDate(
+                  queryKey,
+                  fromQueueKey,
+                  selectedDateStr,
+                ),
+            },
+            (old: QueueItem[] | undefined) =>
+              old?.filter(
+                (item) =>
+                  item.taskId !== taskId ||
+                  item.periodStart !== selectedDateStr,
+              ) ?? old,
           )
         },
       },

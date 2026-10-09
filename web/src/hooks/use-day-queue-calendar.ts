@@ -43,6 +43,8 @@ export function useDayQueueCalendar({
     () => getLocalDateRangeDays(startDate, endDate),
     [startDate, endDate],
   )
+  // Future-day queue groups use this result, so keep the selected week covered
+  // even when the visible calendar range is elsewhere.
   const queueRange = useMemo(() => {
     const weekRange = getLocalWeekDateRange(selectedDate)
     return {
@@ -78,7 +80,7 @@ export function useDayQueueCalendar({
       to: queueRange.to,
       errorUpdatedAt: dayQueueItemsQuery.errorUpdatedAt,
     }
-    console.error('Failed to refresh calendar day queue items', {
+    console.error('Failed to refresh day queue items', {
       from: queueRange.from,
       to: queueRange.to,
       error: dayQueueItemsQuery.error,

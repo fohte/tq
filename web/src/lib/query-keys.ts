@@ -56,6 +56,19 @@ export const queueKeys = {
     ] as const,
   itemsRange: (key: string, from: string, to: string) =>
     [...queueKeys.itemsForQueue(key), 'range', from, to] as const,
+  rangeContainsDate: (
+    queryKey: readonly unknown[],
+    key: string,
+    date: string,
+  ) =>
+    queryKey[0] === queueKeys.all[0] &&
+    queryKey[1] === key &&
+    queryKey[2] === 'items' &&
+    queryKey[3] === 'range' &&
+    typeof queryKey[4] === 'string' &&
+    typeof queryKey[5] === 'string' &&
+    queryKey[4] <= date &&
+    date <= queryKey[5],
 }
 
 export const timeBlockKeys = {
