@@ -249,6 +249,7 @@ function expectedTaskWithAllRelations({
     titleAuthor: { kind: 'human', agent: null },
     descriptionAuthor: { kind: 'human', agent: null },
     parentNumber: null,
+    parentTitle: null,
     childCompletionCount: { total: 0, completed: 0 },
     pages: [],
     timeBlocks: [],
@@ -2769,6 +2770,37 @@ describe('tasks CRUD API', () => {
       expect(body.childCompletionCount).toEqual({ completed: 0, total: 0 })
     })
 
+    it('returns the parent title for a child task', async () => {
+      const parent = await createTask('Parent task')
+      const child = await createTask('Child task', { parentId: parent.id })
+
+      const res = await app.request(`/api/tasks/${child.id}`)
+      const body = await jsonBody<TaskResponse>(res)
+
+      expect(responseSnapshot(res.status, body)).toEqual({
+        status: 200,
+        body: {
+          ...withoutLinkSync(child),
+          titleAuthor: { kind: 'human', agent: null },
+          descriptionAuthor: { kind: 'human', agent: null },
+          childCompletionCount: { total: 0, completed: 0 },
+          checklistCompletionCount: { total: 0, completed: 0 },
+          checklists: [],
+          pages: [],
+          timeBlocks: [],
+          links: { outgoing: [], incoming: [] },
+          labels: [],
+          parentNumber: parent.number,
+          parentTitle: parent.title,
+          duplicateOfNumber: null,
+          duplicateOfTask: null,
+          githubBlockers: [],
+          blockedBy: [],
+          blocking: [],
+        },
+      })
+    })
+
     it('returns empty labels array when task has no labels', async () => {
       const created = await createTask('No labels')
 
@@ -2788,6 +2820,7 @@ describe('tasks CRUD API', () => {
         links: { outgoing: [], incoming: [] },
         labels: [],
         parentNumber: null,
+        parentTitle: null,
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
@@ -2820,6 +2853,7 @@ describe('tasks CRUD API', () => {
         links: { outgoing: [], incoming: [] },
         labels: ['bug', 'urgent'],
         parentNumber: null,
+        parentTitle: null,
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
@@ -3994,6 +4028,7 @@ describe('tasks CRUD API', () => {
           links: { outgoing: [], incoming: [] },
           labels: [],
           parentNumber: null,
+          parentTitle: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
@@ -4031,6 +4066,7 @@ describe('tasks CRUD API', () => {
           links: { outgoing: [], incoming: [] },
           labels: [],
           parentNumber: null,
+          parentTitle: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
@@ -4258,6 +4294,7 @@ describe('tasks CRUD API', () => {
         ...withoutLinkSync(child),
         parentId: null,
         parentNumber: null,
+        parentTitle: null,
         updatedAt: body.updatedAt,
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
@@ -4291,6 +4328,7 @@ describe('tasks CRUD API', () => {
         ...withoutLinkSync(child),
         parentId: grandparent.id,
         parentNumber: grandparent.number,
+        parentTitle: grandparent.title,
         updatedAt: body.updatedAt,
         titleAuthor: { kind: 'human', agent: null },
         descriptionAuthor: { kind: 'human', agent: null },
@@ -4658,6 +4696,7 @@ describe('tasks CRUD API', () => {
           timeBlocks: [],
           links: { outgoing: [], incoming: [] },
           parentNumber: null,
+          parentTitle: null,
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],

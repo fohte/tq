@@ -1,9 +1,8 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { type SearchResult } from '#hooks/use-search'
-import { useTaskList, useUpdateTaskParent } from '#hooks/use-tasks'
-import { getDescendantIds } from '#lib/task-tree'
+import { useSelfAndDescendantIds, useUpdateTaskParent } from '#hooks/use-tasks'
 
 export function MoveUnderTaskMenu({
   open,
@@ -16,20 +15,17 @@ export function MoveUnderTaskMenu({
   taskId: string
   taskNumber: number
 }) {
-  const { categorized } = useTaskList(undefined, { enabled: open })
+  const excludedTaskIds = useSelfAndDescendantIds(taskId, open)
   const updateTaskParent = useUpdateTaskParent()
-
-  // A task can't become its own ancestor, so both itself and every current
-  // descendant are excluded from the candidate list.
-  const excludedTaskIds = useMemo(
-    () => new Set([taskId, ...getDescendantIds(categorized.all, taskId)]),
-    [taskId, categorized.all],
-  )
 
   const selectCandidate = useCallback(
     (candidate: SearchResult) => {
       updateTaskParent.mutate(
-        { id: taskId, parentId: candidate.id },
+        {
+          id: taskId,
+          parentId: candidate.id,
+          parent: { number: candidate.number, title: candidate.title },
+        },
         {
           onSuccess: () => {
             onOpenChange(false)

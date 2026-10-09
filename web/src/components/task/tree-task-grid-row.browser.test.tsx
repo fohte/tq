@@ -33,6 +33,7 @@ const mockUseProject = vi.fn()
 // must exist in this mock.
 vi.mock('#hooks/use-tasks', () => ({
   useTaskList: () => ({ categorized: { all: [] } }),
+  useSelfAndDescendantIds: () => new Set<string>(),
   useUpdateTaskParent: () => ({ mutate: vi.fn() }),
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),

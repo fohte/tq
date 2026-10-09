@@ -710,6 +710,7 @@ describe('task_complete tool', () => {
       titleAuthor: { kind: 'human', agent: null },
       descriptionAuthor: { kind: 'human', agent: null },
       parentNumber: null,
+      parentTitle: null,
       childCompletionCount: { total: 0, completed: 0 },
       checklistCompletionCount: { total: 0, completed: 0 },
       checklists: [],
