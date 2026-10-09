@@ -7,16 +7,21 @@ import {
   DAY_QUEUE_KEY,
   fetchQueueItems,
   queueKeys,
-  useQueueItemsForDates,
+  useQueueItemsForRange,
   useSetQueueItems,
   WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import type { useCreateTimeBlock } from '#hooks/use-time-blocks'
-import { formatLocalDate, getLocalDateRangeDays } from '#lib/date-range'
+import {
+  formatLocalDate,
+  getLocalDateRangeDays,
+  getLocalWeekDateRange,
+} from '#lib/date-range'
 import { appendQueueTaskId } from '#lib/queue-task-order'
 
 interface UseDayQueueCalendarOptions {
   queues: Queue[] | undefined
+  selectedDate: Date
   startDate: string
   endDate: string
   createTimeBlock: ReturnType<typeof useCreateTimeBlock>
@@ -26,6 +31,7 @@ interface UseDayQueueCalendarOptions {
 
 export function useDayQueueCalendar({
   queues,
+  selectedDate,
   startDate,
   endDate,
   createTimeBlock,
@@ -37,51 +43,95 @@ export function useDayQueueCalendar({
     () => getLocalDateRangeDays(startDate, endDate),
     [startDate, endDate],
   )
-  const dayQueueItemsResults = useQueueItemsForDates(
-    queues != null && queues.some((queue) => queue.key === DAY_QUEUE_KEY)
-      ? DAY_QUEUE_KEY
-      : undefined,
-    visibleDates,
-  )
-  const loggedQueryErrors = useRef(new Map<string, number>())
-  useEffect(() => {
-    const visibleDateSet = new Set(visibleDates)
-    for (const date of loggedQueryErrors.current.keys()) {
-      if (!visibleDateSet.has(date)) loggedQueryErrors.current.delete(date)
+  // Future-day queue groups use this result, so keep the selected week covered
+  // even when the visible calendar range is elsewhere.
+  const queueRange = useMemo(() => {
+    const weekRange = getLocalWeekDateRange(selectedDate)
+    return {
+      from: weekRange.startDate < startDate ? weekRange.startDate : startDate,
+      to: weekRange.endDate > endDate ? weekRange.endDate : endDate,
     }
-    dayQueueItemsResults.forEach((result, index) => {
-      const date = visibleDates[index]
-      if (date == null || result.error == null) return
-      if (loggedQueryErrors.current.get(date) === result.errorUpdatedAt) return
-      loggedQueryErrors.current.set(date, result.errorUpdatedAt)
-      console.error('Failed to refresh calendar day queue items', {
-        date,
-        error: result.error,
-      })
-    })
-  }, [dayQueueItemsResults, visibleDates])
-  const dayQueueItems = useMemo(
-    () =>
-      visibleDates.flatMap((date, index) =>
-        (dayQueueItemsResults[index]?.data ?? []).map(
-          (item, queuePosition) => ({ date, item, queuePosition }),
-        ),
-      ),
-    [visibleDates, dayQueueItemsResults],
+  }, [endDate, selectedDate, startDate])
+  const dayQueueItemsQuery = useQueueItemsForRange(
+    DAY_QUEUE_KEY,
+    queueRange.from,
+    queueRange.to,
+    {
+      enabled: queues?.some((queue) => queue.key === DAY_QUEUE_KEY) === true,
+    },
   )
+  const loggedQueryError = useRef<{
+    from: string
+    to: string
+    errorUpdatedAt: number
+  } | null>(null)
+  useEffect(() => {
+    if (dayQueueItemsQuery.error == null) return
+    const previous = loggedQueryError.current
+    if (
+      previous?.from === queueRange.from &&
+      previous.to === queueRange.to &&
+      previous.errorUpdatedAt === dayQueueItemsQuery.errorUpdatedAt
+    ) {
+      return
+    }
+    loggedQueryError.current = {
+      from: queueRange.from,
+      to: queueRange.to,
+      errorUpdatedAt: dayQueueItemsQuery.errorUpdatedAt,
+    }
+    console.error('Failed to refresh day queue items', {
+      from: queueRange.from,
+      to: queueRange.to,
+      error: dayQueueItemsQuery.error,
+    })
+  }, [dayQueueItemsQuery.error, dayQueueItemsQuery.errorUpdatedAt, queueRange])
+  const dayQueueItems = useMemo(() => {
+    const visibleDateSet = new Set(visibleDates)
+    const itemsByDate = new Map<string, QueueItem[]>()
+    for (const item of dayQueueItemsQuery.data ?? []) {
+      const date = item.periodStart
+      if (date == null || !visibleDateSet.has(date)) continue
+      const items = itemsByDate.get(date) ?? []
+      items.push(item)
+      itemsByDate.set(date, items)
+    }
+    return visibleDates.flatMap((date) =>
+      (itemsByDate.get(date) ?? []).map((item, queuePosition) => ({
+        date,
+        item,
+        queuePosition,
+      })),
+    )
+  }, [dayQueueItemsQuery.data, visibleDates])
 
   const getQueueItems = useCallback(
     (key: string, date: string) => {
       const queryKey = queueKeys.items(key, date)
       const cachedItems = queryClient.getQueryData<QueueItem[]>(queryKey)
-      return cachedItems == null
-        ? queryClient.fetchQuery({
-            queryKey,
-            queryFn: () => fetchQueueItems(key, date),
-          })
-        : Promise.resolve(cachedItems)
+      if (cachedItems != null) return Promise.resolve(cachedItems)
+
+      if (
+        key === DAY_QUEUE_KEY &&
+        date >= queueRange.from &&
+        date <= queueRange.to
+      ) {
+        const cachedRangeItems = queryClient.getQueryData<QueueItem[]>(
+          queueKeys.itemsRange(key, queueRange.from, queueRange.to),
+        )
+        if (cachedRangeItems != null) {
+          return Promise.resolve(
+            cachedRangeItems.filter((item) => item.periodStart === date),
+          )
+        }
+      }
+
+      return queryClient.fetchQuery({
+        queryKey,
+        queryFn: () => fetchQueueItems(key, date),
+      })
     },
-    [queryClient],
+    [queryClient, queueRange.from, queueRange.to],
   )
 
   const invalidateWeekQueueItems = useCallback(() => {
@@ -246,5 +296,9 @@ export function useDayQueueCalendar({
     [createTimeBlock, onTimeBlockChange, updateDayQueue],
   )
 
-  return { dayQueueItems, dndCallbacks }
+  return {
+    dayQueueItems,
+    dayQueueItemsInRange: dayQueueItemsQuery.data ?? [],
+    dndCallbacks,
+  }
 }

@@ -16,8 +16,8 @@ import {
   type Queue,
   useQueueCarryOver,
   useQueueItems,
-  useQueueItemsForDates,
   useQueueItemsForQueues,
+  useQueueItemsForRange,
   useQueues,
   useSetQueueItems,
   useTaskPlan,
@@ -473,39 +473,103 @@ describe('queue carry-over', () => {
   })
 })
 
-describe('queue items by date', () => {
-  it('fetches each requested date under its own queue query key', async () => {
+describe('queue items by date range', () => {
+  it('fetches one range request and stores the combined result under its range key', async () => {
     const mockGet = assertDefined((await getMocks())['mockGet'])
-    const dates = ['2026-08-03', '2026-08-04']
-    const itemsByDate = [
-      [makeQueueItem({ id: 'queue-item-first', taskId })],
-      [makeQueueItem({ id: 'queue-item-second', taskId: earlierTaskId })],
+    const from = '2026-08-03'
+    const to = '2026-08-09'
+    const items = [
+      makeQueueItem({
+        id: 'queue-item-first',
+        taskId,
+        periodStart: from,
+      }),
+      makeQueueItem({
+        id: 'queue-item-second',
+        taskId: earlierTaskId,
+        periodStart: to,
+      }),
     ]
-    mockGet.mockImplementation(({ query }: { query: { date: string } }) =>
-      Promise.resolve(
-        jsonResponse(itemsByDate[dates.indexOf(query.date)] ?? []),
-      ),
-    )
+    mockGet.mockResolvedValue(jsonResponse(items))
 
     const { result } = renderHook(
-      () => useQueueItemsForDates(DAY_QUEUE_KEY, dates),
+      () => useQueueItemsForRange(DAY_QUEUE_KEY, from, to),
       { wrapper },
     )
 
     await waitFor(() => {
-      expect(result.current.map((query) => query.data)).toEqual(itemsByDate)
+      expect(
+        queueItemsQuerySnapshot(result.current.data, mockGet.mock.calls),
+      ).toEqual({
+        data: items,
+        calls: [
+          [
+            {
+              param: { key: DAY_QUEUE_KEY },
+              query: { from, to },
+            },
+          ],
+        ],
+      })
     })
-    expect(
-      mockGet.mock.calls.map((call) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- vi.fn() call args are the queue item GET signature
-        const [{ param, query }] = call as [
-          { param: { key: string }; query: { date: string } },
-        ]
-        return { key: param.key, date: query.date }
-      }),
-    ).toEqual([
-      { key: DAY_QUEUE_KEY, date: dates[0] },
-      { key: DAY_QUEUE_KEY, date: dates[1] },
-    ])
+  })
+
+  it('refetches a range query after replacing an item in that queue', async () => {
+    const mocks = await getMocks()
+    const mockGet = assertDefined(mocks['mockGet'])
+    const mockPut = assertDefined(mocks['mockPut'])
+    const from = '2026-08-03'
+    const to = '2026-08-09'
+    const beforeUpdate = [makeQueueItem({ taskId, periodStart: from })]
+    const afterUpdate = [
+      makeQueueItem({ taskId: earlierTaskId, periodStart: from }),
+    ]
+    mockGet
+      .mockResolvedValueOnce(jsonResponse(beforeUpdate))
+      .mockResolvedValueOnce(jsonResponse(afterUpdate))
+    mockPut.mockResolvedValue(jsonResponse(afterUpdate))
+
+    const { result: queue } = renderHook(
+      () => useQueueItemsForRange(DAY_QUEUE_KEY, from, to),
+      { wrapper },
+    )
+    await waitFor(() => {
+      if (queue.current.data?.[0]?.taskId !== beforeUpdate[0]?.taskId) {
+        throw new Error('The initial queue range has not loaded')
+      }
+    })
+    const { result: setQueueItems } = renderHook(() => useSetQueueItems(), {
+      wrapper,
+    })
+
+    act(() => {
+      setQueueItems.current.mutate({
+        key: DAY_QUEUE_KEY,
+        date: from,
+        taskIds: [earlierTaskId],
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        queueItemsQuerySnapshot(queue.current.data, mockGet.mock.calls),
+      ).toEqual({
+        data: afterUpdate,
+        calls: [
+          [
+            {
+              param: { key: DAY_QUEUE_KEY },
+              query: { from, to },
+            },
+          ],
+          [
+            {
+              param: { key: DAY_QUEUE_KEY },
+              query: { from, to },
+            },
+          ],
+        ],
+      })
+    })
   })
 })
