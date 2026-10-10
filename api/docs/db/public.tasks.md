@@ -266,6 +266,7 @@ erDiagram
   timestamp_with_time_zone resolved_at
   timestamp_with_time_zone acknowledged_at
   timestamp_with_time_zone created_at
+  text github_link_id FK
 }
 "public.projects" {
   text id

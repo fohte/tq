@@ -36,7 +36,7 @@
 | [public.schedule_overrides](public.schedule_overrides.md)                           | 5       | One-day time changes and skipped schedule occurrences.                               | BASE TABLE |
 | [public.task_checklist_items](public.task_checklist_items.md)                       | 11      | Nested checklist items with completion state and optional Markdown detail.           | BASE TABLE |
 | [public.task_checklists](public.task_checklists.md)                                 | 6       | Named or unnamed checklists associated with tasks.                                   | BASE TABLE |
-| [public.task_waits](public.task_waits.md)                                           | 7       | Response waits attached to tasks, including their resolution history.                | BASE TABLE |
+| [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker links.                 | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -118,6 +118,7 @@ erDiagram
 "public.task_checklist_items" }o--|| "public.task_checklists" : "FOREIGN KEY (checklist_id) REFERENCES task_checklists(id) ON DELETE CASCADE"
 "public.task_checklists" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_waits" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
+"public.task_waits" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
@@ -446,6 +447,7 @@ erDiagram
   timestamp_with_time_zone resolved_at
   timestamp_with_time_zone acknowledged_at
   timestamp_with_time_zone created_at
+  text github_link_id FK
 }
 ```
 

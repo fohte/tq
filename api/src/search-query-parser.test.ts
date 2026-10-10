@@ -132,6 +132,13 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('has:follow-up-due').hasFollowUpDue).toBe(true)
   })
 
+  it('parses has:resolved-wait prefix', () => {
+    expect(parseSearchQuery('has:resolved-wait')).toEqual({
+      freeText: '',
+      hasResolvedWait: true,
+    })
+  })
+
   it('lets a later has:no-blockers override an earlier has:blockers', () => {
     expect(parseSearchQuery('has:blockers has:no-blockers')).toEqual({
       freeText: '',
@@ -258,6 +265,11 @@ describe('getSearchQuerySuggestions', () => {
         display: 'Has follow-up due',
         category: 'has',
       },
+      {
+        value: 'has:resolved-wait',
+        display: 'Has a resolved wait to acknowledge',
+        category: 'has',
+      },
       { value: 'reason:completed', display: 'Completed', category: 'reason' },
       {
         value: 'reason:not_planned',
@@ -297,12 +309,13 @@ describe('buildSearchQuery', () => {
         hasBlockers: true,
         hasNoBlockers: true,
         hasFollowUpDue: true,
+        hasResolvedWait: true,
         parentId: 'parent-1',
         projectId: 'proj-1',
         sortBy: 'due',
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due',
     )
   })
 
@@ -387,6 +400,14 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
       hasFollowUpDue: true,
+    })
+  })
+
+  it('round-trips has:resolved-wait', () => {
+    const q = 'has:resolved-wait'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      hasResolvedWait: true,
     })
   })
 

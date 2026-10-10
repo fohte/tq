@@ -25,7 +25,10 @@ import {
 import { classifyNumericOrId } from '#lib/numeric-id'
 import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
-import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
+import {
+  followUpDueTaskWaitSubquery,
+  unacknowledgedResolvedTaskWaitSubquery,
+} from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
@@ -202,6 +205,10 @@ function buildConditions(
         ),
       ),
     )
+  }
+
+  if (parsed?.hasResolvedWait === true) {
+    conditions.push(exists(unacknowledgedResolvedTaskWaitSubquery()))
   }
 
   // Unlike the other filters above, an explicit `projectId` param wins over
