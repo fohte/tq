@@ -21,6 +21,26 @@ function summarizeProjectListRequest(exitCode: number, url: string) {
   }
 }
 
+async function expectProjectListQuery(
+  args: string[],
+  query: Record<string, string>,
+) {
+  const { fetchStub, calls } = captureFetch(
+    () => new Response(JSON.stringify([]), { status: 200 }),
+  )
+
+  const exitCode = await runCli(
+    ['--api-url', apiUrl, 'project', 'list', ...args],
+    fetchStub,
+    fakeStdin(true),
+  )
+
+  expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
+    exitCode: 0,
+    query,
+  })
+}
+
 describe('project list', () => {
   it('defaults to all contexts and active projects', async () => {
     vi.stubEnv('TQ_CONTEXT', '')
@@ -123,6 +143,28 @@ describe('project list', () => {
       query: { q: 'website', status: 'active', context: 'work' },
     })
   })
+
+  it.each(['paused', 'completed', 'archived', 'all'])(
+    'sends --status %s to the API',
+    async (status) => {
+      await expectProjectListQuery(['--status', status], {
+        context: 'all',
+        status,
+      })
+    },
+  )
+
+  it.each(['personal', 'all'])(
+    'sends explicit --context %s to the API',
+    async (context) => {
+      vi.stubEnv('TQ_CONTEXT', 'work')
+
+      await expectProjectListQuery(['--context', context], {
+        context,
+        status: 'active',
+      })
+    },
+  )
 })
 
 describe('project get', () => {
