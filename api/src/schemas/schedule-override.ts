@@ -7,7 +7,7 @@ const scheduleOverrideTimeSchema = z
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
 export const scheduleOverrideOperationInputSchema = z.object({
-  scheduleId: z.string().min(1).describe('Recurring schedule ID.'),
+  scheduleId: z.string().min(1).describe('Schedule event ID.'),
   occurrenceDate: scheduleOverrideDateSchema.describe(
     'Date on which this occurrence starts, in YYYY-MM-DD format.',
   ),

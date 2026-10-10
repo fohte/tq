@@ -39,7 +39,7 @@ async function findScheduleWithRule(scheduleId: string) {
 
 export const scheduleOverridesApp = new Hono()
   .put(
-    '/recurring/:scheduleId/overrides/:occurrenceDate',
+    '/events/:scheduleId/overrides/:occurrenceDate',
     zValidator('param', scheduleOverrideParamsSchema),
     zValidator('json', setScheduleOverrideBodySchema),
     async (c) => {
@@ -98,7 +98,7 @@ export const scheduleOverridesApp = new Hono()
     },
   )
   .delete(
-    '/recurring/:scheduleId/overrides/:occurrenceDate',
+    '/events/:scheduleId/overrides/:occurrenceDate',
     zValidator('param', scheduleOverrideParamsSchema),
     async (c) => {
       const { scheduleId, occurrenceDate } = c.req.valid('param')
