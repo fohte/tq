@@ -5,19 +5,12 @@ export type ScheduleOverrideTimes = Pick<
   'startTime' | 'endTime' | 'skipped'
 >
 
-/**
- * Check if a date matches the recurrence rule's pattern.
- * A null rule adds no recurrence pattern; callers still enforce the start date.
+/** Check if a date matches the recurrence rule's pattern.
  * - daily: matches every day (interval not yet implemented)
  * - weekly: matches if the date's day-of-week is in daysOfWeek
  * - monthly: matches if the date's day-of-month equals dayOfMonth
  */
-export function matchesDate(
-  rule: typeof recurrenceRules.$inferSelect | null,
-  date: Date,
-): boolean {
-  if (!rule) return true
-
+function matchesDate(rule: typeof recurrenceRules.$inferSelect, date: Date) {
   switch (rule.type) {
     case 'daily':
       return true

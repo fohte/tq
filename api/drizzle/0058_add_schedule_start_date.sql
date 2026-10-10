@@ -1,5 +1,7 @@
 ALTER TABLE "schedules" ADD COLUMN "start_date" date;
 --> statement-breakpoint
+-- Legacy schedules start on their Tokyo-local creation date.
+-- Earlier occurrences are outside the new recurrence range.
 UPDATE "schedules"
 SET "start_date" = ("created_at" AT TIME ZONE 'Asia/Tokyo')::date;
 --> statement-breakpoint

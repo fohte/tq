@@ -5,7 +5,7 @@ import {
   DialogPopup,
   DialogPortal,
 } from '@fohte/ui/dialog'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
 import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
@@ -176,6 +176,14 @@ export function CreateScheduleModal({
     scheduleContext(schedule),
   )
   const [color, setColor] = useState(schedule?.color ?? '')
+  const wasOpenRef = useRef(open)
+
+  useEffect(() => {
+    const didOpen = open && !wasOpenRef.current
+    wasOpenRef.current = open
+    if (didOpen && !schedule) setStartDate(defaultStartDate)
+  }, [defaultStartDate, open, schedule])
+
   const createSchedule = useCreateSchedule()
   const updateSchedule = useUpdateSchedule()
   const deleteSchedule = useDeleteSchedule()

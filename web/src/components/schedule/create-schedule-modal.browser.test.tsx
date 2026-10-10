@@ -1,5 +1,7 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
@@ -65,6 +67,23 @@ function setupMocks() {
   )
 
   return { createMutate, updateMutate, deleteMutate }
+}
+
+function normalizeMutationCalls(calls: readonly unknown[][]) {
+  return calls.map(([input, options]) => {
+    const normalizedOptions =
+      typeof options === 'object' && options !== null && 'onSuccess' in options
+        ? {
+            ...options,
+            onSuccess:
+              typeof options.onSuccess === 'function'
+                ? 'callback'
+                : options.onSuccess,
+          }
+        : options
+
+    return [input, normalizedOptions]
+  })
 }
 
 const sampleSchedule = makeSchedule()
@@ -190,6 +209,55 @@ describe('CreateScheduleModal', () => {
     })
   })
 
+  it('uses the selected calendar day when a new schedule modal opens', async () => {
+    setupMocks()
+    const user = userEvent.setup()
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+
+    function ScheduleModalHarness() {
+      const [open, setOpen] = useState(false)
+      const [selectedDate, setSelectedDate] = useState('2026-07-20')
+
+      return (
+        <QueryClientProvider client={queryClient}>
+          <button
+            onClick={() => {
+              setSelectedDate('2026-07-22')
+            }}
+          >
+            Move to July 22
+          </button>
+          <button
+            onClick={() => {
+              setOpen(true)
+            }}
+          >
+            New schedule
+          </button>
+          <CreateScheduleModal
+            open={open}
+            onOpenChange={setOpen}
+            defaultStartDate={selectedDate}
+          />
+        </QueryClientProvider>
+      )
+    }
+
+    render(<ScheduleModalHarness />)
+
+    await user.click(screen.getByRole('button', { name: 'Move to July 22' }))
+    await user.click(screen.getByRole('button', { name: 'New schedule' }))
+
+    expect(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Start date')),
+        'no visible schedule start date input',
+      ),
+    ).toHaveValue('2026-07-22')
+  })
+
   it('does not show a delete button when creating a new schedule', () => {
     setupMocks()
     renderControlledModal(CreateScheduleModal, {})
@@ -226,13 +294,17 @@ describe('CreateScheduleModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create Schedule' }))
 
-    expect(createMutate).toHaveBeenCalledTimes(1)
-    expect(assertDefined(createMutate.mock.calls[0])[0]).toEqual({
-      title: 'Team sync',
-      startDate: '2026-07-21',
-      startTime: '09:00',
-      endTime: '09:30',
-    })
+    expect(normalizeMutationCalls(createMutate.mock.calls)).toEqual([
+      [
+        {
+          title: 'Team sync',
+          startDate: '2026-07-21',
+          startTime: '09:00',
+          endTime: '09:30',
+        },
+        { onSuccess: 'callback' },
+      ],
+    ])
   })
 
   it('updates the schedule with the edited values when Save is clicked', async () => {
@@ -248,23 +320,27 @@ describe('CreateScheduleModal', () => {
     const saveButtons = screen.getAllByRole('button', { name: 'Save' })
     await user.click(atIndex(saveButtons, 0))
 
-    expect(updateMutate).toHaveBeenCalledTimes(1)
-    expect(assertDefined(updateMutate.mock.calls[0])[0]).toEqual({
-      id: 'schedule-1',
-      input: {
-        title: 'Morning run',
-        startDate: '2026-01-01',
-        startTime: '07:00',
-        endTime: '08:00',
-        recurrence: {
-          type: 'weekly',
-          interval: 1,
-          daysOfWeek: [1, 3, 5],
+    expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
+      [
+        {
+          id: 'schedule-1',
+          input: {
+            title: 'Morning run',
+            startDate: '2026-01-01',
+            startTime: '07:00',
+            endTime: '08:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1, 3, 5],
+            },
+            context: 'personal',
+            color: '#6C63FF',
+          },
         },
-        context: 'personal',
-        color: '#6C63FF',
-      },
-    })
+        { onSuccess: 'callback' },
+      ],
+    ])
   })
 
   it('deletes the schedule when the delete button is confirmed', async () => {
