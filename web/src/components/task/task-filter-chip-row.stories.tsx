@@ -29,6 +29,10 @@ const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
   HttpResponse.json([]),
 )
 const emptyLabelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
+const unavailableProjectHandler = http.get(
+  '/api/projects/missing-project',
+  () => HttpResponse.json({ message: 'Project not found' }, { status: 404 }),
+)
 
 const projectA: Project = makeProject({
   id: 'proj-1',
@@ -50,7 +54,13 @@ const meta = {
   title: 'Task/TaskFilterChipRow',
   component: TaskFilterChipRow,
   parameters: {
-    msw: { handlers: [emptySuggestHandler, emptyLabelsHandler] },
+    msw: {
+      handlers: [
+        emptySuggestHandler,
+        emptyLabelsHandler,
+        unavailableProjectHandler,
+      ],
+    },
   },
   decorators: [
     (Story) => (
@@ -98,6 +108,13 @@ export const ProjectSelected: Story = {
   name: 'the row shows a selected project filter',
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
+  },
+}
+
+export const ProjectUnavailable: Story = {
+  name: 'the row keeps an unavailable project filter clearable',
+  args: {
+    parsed: { ...defaultParsed, projectId: 'missing-project' },
   },
 }
 

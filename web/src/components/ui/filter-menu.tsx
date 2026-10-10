@@ -26,7 +26,6 @@ interface FilterMenuProps {
   title: string
   children: React.ReactNode
   defaultOpen?: boolean | undefined
-  onOpenChange?: ((open: boolean) => void) | undefined
 }
 
 // Picks the container only: a popover on desktop, a bottom sheet below the
@@ -42,15 +41,10 @@ export function FilterMenu({
   title,
   children,
   defaultOpen = false,
-  onOpenChange,
 }: FilterMenuProps) {
   const isDesktop = useIsDesktop()
   const [open, setOpen] = useState(defaultOpen)
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const updateOpen = (nextOpen: boolean) => {
-    setOpen(nextOpen)
-    onOpenChange?.(nextOpen)
-  }
   const triggerClassName = cn(
     triggerVariant === 'filter-chip' &&
       'inline-flex h-5 min-w-0 cursor-pointer items-center gap-1 font-mono text-xs outline-none hover:opacity-80 focus-visible:underline',
@@ -66,12 +60,12 @@ export function FilterMenu({
           aria-label={triggerAriaLabel}
           onClick={() => {
             // Base UI may report this press as an outside dismissal too.
-            updateOpen(!open)
+            setOpen(!open)
           }}
         >
           {trigger}
         </button>
-        <Popover anchor={triggerRef} open={open} onOpenChange={updateOpen}>
+        <Popover anchor={triggerRef} open={open} onOpenChange={setOpen}>
           <PopoverContent
             align="start"
             padding="md"
@@ -85,7 +79,7 @@ export function FilterMenu({
   }
 
   return (
-    <Dialog open={open} onOpenChange={updateOpen}>
+    <Dialog defaultOpen={defaultOpen}>
       <DialogTrigger className={triggerClassName} aria-label={triggerAriaLabel}>
         {trigger}
       </DialogTrigger>

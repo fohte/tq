@@ -11,7 +11,12 @@ import {
 } from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
-import { useProject, useProjects } from '#hooks/use-projects'
+import {
+  ALL_PROJECTS_FILTER,
+  projectKeys,
+  useProject,
+  useProjects,
+} from '#hooks/use-projects'
 import { partialMutation, waitForFocus } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
@@ -42,15 +47,15 @@ vi.mock('#hooks/use-task-queries', async (importOriginal) => {
   }
 })
 
-const mockUseProject = vi.fn()
+const mockUseProject = vi.fn<typeof useProject>()
 const mockUseProjects = vi.fn<typeof useProjects>()
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-projects')>()
   return {
     ...actual,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- test hook mock
-    useProject: (...args: unknown[]) => mockUseProject(...args),
+    useProject: (...args: Parameters<typeof useProject>) =>
+      mockUseProject(...args),
     useProjects: (...args: Parameters<typeof useProjects>) =>
       mockUseProjects(...args),
   }
@@ -67,7 +72,7 @@ const defaultParsed = makeParsedQuery()
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockUseProject.mockImplementation((id: string) =>
+  mockUseProject.mockImplementation((id) =>
     partialMutation<ReturnType<typeof useProject>>({
       data: id === projectA.id ? makeProjectDetail(projectA) : undefined,
     }),
@@ -84,28 +89,61 @@ function renderRow(
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  render(
+  queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
+  const rowProps = {
+    onQueryChange,
+    parsed: defaultParsed,
+    ...props,
+  }
+  const renderWithParsed = (
+    parsed: ComponentProps<typeof TaskFilterChipRow>['parsed'],
+  ) => (
     <QueryClientProvider client={queryClient}>
-      <TaskFilterChipRow
-        onQueryChange={onQueryChange}
-        parsed={defaultParsed}
-        {...props}
-      />
-    </QueryClientProvider>,
+      <TaskFilterChipRow {...rowProps} parsed={parsed} />
+    </QueryClientProvider>
   )
-  return { onQueryChange }
+  const view = render(renderWithParsed(rowProps.parsed))
+  return {
+    onQueryChange,
+    rerenderWithParsed: (
+      parsed: ComponentProps<typeof TaskFilterChipRow>['parsed'],
+    ) => {
+      view.rerender(renderWithParsed(parsed))
+    },
+  }
 }
 
-function getProjectFilterSnapshot() {
+function getProjectFilterSnapshot(
+  projectListCallsBeforeOpen: Parameters<typeof useProjects>[],
+) {
   return {
     selectedProjectQuery: mockUseProject.mock.calls[0],
-    projectListEnabledStates: [
-      ...new Set(
-        mockUseProjects.mock.calls.map(([, options]) => options?.enabled),
-      ),
-    ],
+    projectListCallsBeforeOpen,
+    projectListCallsAfterOpen: mockUseProjects.mock.calls,
     selectedProjectLabel: screen
       .getByRole('button', { name: 'project Website Redesign' })
+      .getAttribute('aria-label'),
+  }
+}
+
+function getProjectSelectionSnapshot(queryChanges: unknown) {
+  return {
+    queryChanges,
+    selectedProjectLabel: screen
+      .getByRole('button', { name: 'project Mobile App' })
+      .getAttribute('aria-label'),
+    openMenuOption: screen.getByRole('button', { name: 'All projects' })
+      .textContent,
+  }
+}
+
+function getUnavailableProjectSnapshot() {
+  return {
+    projectChipLabel: screen
+      .getByRole('button', { name: 'project Unavailable (missing-project)' })
+      .getAttribute('aria-label'),
+    removeButtonLabel: screen
+      .getByRole('button', { name: 'Remove project filter' })
       .getAttribute('aria-label'),
   }
 }
@@ -165,7 +203,7 @@ describe('TaskFilterChipRow', () => {
   })
 
   it('changing the project in its menu reports the updated query', async () => {
-    const { onQueryChange } = renderRow({
+    const { onQueryChange, rerenderWithParsed } = renderRow({
       parsed: { ...defaultParsed, projectId: 'proj-1' },
     })
     const user = userEvent.setup()
@@ -177,24 +215,46 @@ describe('TaskFilterChipRow', () => {
       await screen.findByRole('button', { name: 'All projects' }),
     )
     await user.click(await screen.findByRole('button', { name: 'Mobile App' }))
+    rerenderWithParsed({ ...defaultParsed, projectId: 'proj-2' })
 
-    expect(onQueryChange).toHaveBeenCalledWith(
-      'is:todo project:proj-2 sort:updated',
-    )
+    expect(getProjectSelectionSnapshot(onQueryChange.mock.calls)).toEqual({
+      queryChanges: [['is:todo project:proj-2 sort:updated']],
+      selectedProjectLabel: 'project Mobile App',
+      openMenuOption: 'All projects',
+    })
   })
 
   it('loads the selected project label separately and lists projects only while the menu is open', async () => {
     renderRow({ parsed: { ...defaultParsed, projectId: projectA.id } })
     const user = userEvent.setup()
+    const projectListCallsBeforeOpen = [...mockUseProjects.mock.calls]
 
     await user.click(
       screen.getByRole('button', { name: 'project Website Redesign' }),
     )
 
-    expect(getProjectFilterSnapshot()).toEqual({
+    expect(getProjectFilterSnapshot(projectListCallsBeforeOpen)).toEqual({
       selectedProjectQuery: [projectA.id, { enabled: true }],
-      projectListEnabledStates: [false, true],
+      projectListCallsBeforeOpen: [],
+      projectListCallsAfterOpen: [[ALL_PROJECTS_FILTER]],
       selectedProjectLabel: 'project Website Redesign',
+    })
+  })
+
+  it('keeps an unavailable project filter visible and removable', () => {
+    mockUseProject.mockReturnValue(
+      partialMutation<ReturnType<typeof useProject>>({
+        isError: true,
+        error: new Error('project not found'),
+      }),
+    )
+    renderRow({
+      parsed: { ...defaultParsed, projectId: 'missing-project' },
+    })
+
+    expect(getUnavailableProjectSnapshot()).toEqual({
+      projectChipLabel: 'project Unavailable (missing-project)',
+      removeButtonLabel: 'Remove project filter',
     })
   })
 

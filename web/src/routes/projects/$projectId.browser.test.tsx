@@ -483,10 +483,10 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage()
 
     expect(
-      mockUseProjects.mock.calls.some(
-        ([, options]) => options?.enabled === true,
+      mockUseProjects.mock.calls.filter(
+        ([, options]) => options?.enabled !== false,
       ),
-    ).toBe(false)
+    ).toEqual([])
   })
 
   it('hides the Save view button', async () => {
