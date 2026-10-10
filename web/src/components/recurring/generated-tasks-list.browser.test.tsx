@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GeneratedTasksList } from '#components/recurring/generated-tasks-list'
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import { MockIntersectionObserver } from '#lib/mock-intersection-observer-test-utils'
+import { MockIntersectionObserver } from '#lib/mock-intersection-observer/test-utils'
 
 const { mockGet, mockCount } = vi.hoisted(() => ({
   mockGet: vi.fn(),

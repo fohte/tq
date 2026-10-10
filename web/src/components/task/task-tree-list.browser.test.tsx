@@ -14,7 +14,7 @@ import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
 import type { TaskTreeListProps } from '#components/task/task-tree-list'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { allTasksFilter, type TreeNode } from '#hooks/use-tasks'
-import { MockIntersectionObserver } from '#lib/mock-intersection-observer-test-utils'
+import { MockIntersectionObserver } from '#lib/mock-intersection-observer/test-utils'
 import { assertDefined, atIndex } from '#lib/test-utils'
 
 // fetchTaskList is only exercised by the lazy-mode tests below (regular
