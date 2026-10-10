@@ -12,12 +12,12 @@ const templateId = '00000000-0000-0000-0000-000000000001'
 
 const sampleTasks: Task[] = [
   makeTask({
-    id: 'task-1',
-    number: 10,
-    title: 'Write weekly report — week 1',
-    status: 'completed',
-    startDate: '2026-03-09',
-    dueDate: '2026-03-13',
+    id: 'task-3',
+    number: 20,
+    title: 'Write weekly report — week 3',
+    status: 'todo',
+    startDate: '2026-03-23',
+    dueDate: '2026-03-27',
     templateId,
   }),
   makeTask({
@@ -30,12 +30,12 @@ const sampleTasks: Task[] = [
     templateId,
   }),
   makeTask({
-    id: 'task-3',
-    number: 20,
-    title: 'Write weekly report — week 3',
-    status: 'todo',
-    startDate: '2026-03-23',
-    dueDate: '2026-03-27',
+    id: 'task-1',
+    number: 10,
+    title: 'Write weekly report — week 1',
+    status: 'completed',
+    startDate: '2026-03-09',
+    dueDate: '2026-03-13',
     templateId,
   }),
 ]

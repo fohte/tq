@@ -1,35 +1,65 @@
 import { Link } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
 
 import { DateRangeBadge } from '#components/task/task-row-shared'
 import { ListAreaMessage } from '#components/ui/list-area-message'
 import { SectionHeading } from '#components/ui/section-heading'
-import { allTasksFilter, useTaskList } from '#hooks/use-tasks'
+import { useInfiniteTaskList } from '#hooks/use-tasks'
 
 export function GeneratedTasksList({ templateId }: { templateId: string }) {
   const {
-    data: tasks,
+    tasks,
     isLoading,
     isError,
-  } = useTaskList({ ...allTasksFilter, templateId })
+    hasNextPage,
+    isFetchNextPageError,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteTaskList({
+    view: 'row',
+    context: 'all',
+    status: 'all',
+    templateId,
+    sortBy: 'due',
+    order: 'desc',
+  })
 
-  const sorted = [...(tasks ?? [])].sort((a, b) =>
-    (b.dueDate ?? '').localeCompare(a.dueDate ?? ''),
-  )
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!hasNextPage) return
+    const sentinel = sentinelRef.current
+    if (sentinel == null) return
+
+    const observer = new IntersectionObserver((entries) => {
+      if (
+        entries[0]?.isIntersecting === true &&
+        !isFetchingNextPage &&
+        !isFetchNextPageError
+      ) {
+        void fetchNextPage()
+      }
+    })
+    observer.observe(sentinel)
+    return () => {
+      observer.disconnect()
+    }
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
 
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>Generated tasks</SectionHeading>
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
-      ) : isError ? (
+      ) : isError && tasks.length === 0 ? (
         <p className="font-mono text-xs text-destructive">
           Failed to load generated tasks.
         </p>
-      ) : sorted.length === 0 ? (
+      ) : tasks.length === 0 ? (
         <ListAreaMessage>No tasks generated yet.</ListAreaMessage>
       ) : (
         <div className="border border-border">
-          {sorted.map((task) => (
+          {tasks.map((task) => (
             <Link
               key={task.id}
               to="/tasks/$taskId"
@@ -50,6 +80,7 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
               </span>
             </Link>
           ))}
+          {hasNextPage && <div ref={sentinelRef} aria-hidden />}
         </div>
       )}
     </div>

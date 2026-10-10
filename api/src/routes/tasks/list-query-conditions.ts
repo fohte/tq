@@ -348,6 +348,7 @@ function buildConditions(
   return {
     conditions,
     sortBy: parsed?.sortBy ?? query.sortBy,
+    order: query.order,
     freeTextWords: freeTextWords(parsed?.freeText),
   }
 }
