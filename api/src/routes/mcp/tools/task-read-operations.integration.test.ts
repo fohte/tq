@@ -160,6 +160,21 @@ describe('task_list', () => {
     ])
   })
 
+  it('returns todo and completed tasks when status is all', async () => {
+    const todo = await createTask('Todo task')
+    const completed = await completeTask(await createTask('Completed task'))
+
+    const toolResult = await callTaskReadTool('task_list', {
+      sortBy: 'created',
+      status: 'all',
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      expectedTaskListRowItem(todo),
+      expectedTaskListRowItem(completed),
+    ])
+  })
+
   it('includes descriptions when full is true', async () => {
     const task = await createTask('Task with a description', {
       description: 'Task body',
@@ -499,6 +514,21 @@ describe('task_search', () => {
       expectedTaskListItem(personalTodo),
       expectedTaskListItem(workCompleted),
       expectedTaskListItem(personalCompleted),
+    ])
+  })
+
+  it('returns todo and completed tasks when status is all', async () => {
+    const todo = await createTask('Todo task')
+    const completed = await completeTask(await createTask('Completed task'))
+
+    const toolResult = await callTaskReadTool('task_search', {
+      sortBy: 'created',
+      status: 'all',
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      expectedTaskListItem(todo),
+      expectedTaskListItem(completed),
     ])
   })
 
