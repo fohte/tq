@@ -15,12 +15,10 @@ export const scheduleOverrideOperations = [
   defineOperation(scheduleOverrideOperationInputSchema, {
     path: ['schedule', 'override', 'set'],
     description:
-      'Change or skip one occurrence of a recurring schedule. Provide both startTime and endTime to change its time, or set mode to skip and omit both times.',
+      'Change or skip one occurrence of a recurring event. Provide both startTime and endTime to change its time, or set mode to skip and omit both times.',
     positionalArgs: ['scheduleId', 'occurrenceDate'],
     kind: 'write',
-    routes: [
-      'PUT /api/schedule/recurring/:scheduleId/overrides/:occurrenceDate',
-    ],
+    routes: ['PUT /api/schedule/events/:scheduleId/overrides/:occurrenceDate'],
     cli: {
       group: { description: 'Manage schedule overrides', order: 10 },
       output: { kind: 'json' },
@@ -41,7 +39,7 @@ export const scheduleOverrideOperations = [
         }
 
         return requestJson(
-          client.api.schedule.recurring[':scheduleId'].overrides[
+          client.api.schedule.events[':scheduleId'].overrides[
             ':occurrenceDate'
           ].$put({ param, json: { skipped: true } }),
         )
@@ -55,7 +53,7 @@ export const scheduleOverrideOperations = [
       }
 
       return requestJson(
-        client.api.schedule.recurring[':scheduleId'].overrides[
+        client.api.schedule.events[':scheduleId'].overrides[
           ':occurrenceDate'
         ].$put({ param, json: { startTime, endTime } }),
       )
@@ -64,16 +62,16 @@ export const scheduleOverrideOperations = [
   defineOperation(clearScheduleOverrideInputSchema, {
     path: ['schedule', 'override', 'clear'],
     description:
-      'Clear the override for one occurrence of a recurring schedule and restore its default time.',
+      'Clear the override for one occurrence of a recurring event and restore its default time.',
     positionalArgs: ['scheduleId', 'occurrenceDate'],
     kind: 'delete',
     routes: [
-      'DELETE /api/schedule/recurring/:scheduleId/overrides/:occurrenceDate',
+      'DELETE /api/schedule/events/:scheduleId/overrides/:occurrenceDate',
     ],
     cli: { output: { kind: 'json' } },
     run: (client, { scheduleId, occurrenceDate }) =>
       requestNoContent(
-        client.api.schedule.recurring[':scheduleId'].overrides[
+        client.api.schedule.events[':scheduleId'].overrides[
           ':occurrenceDate'
         ].$delete({
           param: {

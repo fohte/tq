@@ -290,11 +290,11 @@ describe('schedule time blocks delete', () => {
   })
 })
 
-describe('schedule recurring list', () => {
+describe('schedule events list', () => {
   it('accepts an inclusive 42-day date range', async () => {
     expect(
       await runScheduleCli(
-        ['schedule', 'recurring', 'list', '2099-01-01', '2099-02-11'],
+        ['schedule', 'events', 'list', '2099-01-01', '2099-02-11'],
         new Response('[]', { status: 200 }),
       ),
     ).toEqual({
@@ -302,7 +302,7 @@ describe('schedule recurring list', () => {
       requests: [
         {
           method: 'GET',
-          pathname: '/api/schedule/recurring',
+          pathname: '/api/schedule/events',
           query: { startDate: '2099-01-01', endDate: '2099-02-11' },
           body: undefined,
         },
@@ -315,7 +315,7 @@ describe('schedule recurring list', () => {
   it('rejects date ranges longer than 42 days before sending a request', async () => {
     expect(
       await runScheduleCli(
-        ['schedule', 'recurring', 'list', '2099-01-01', '2099-02-12'],
+        ['schedule', 'events', 'list', '2099-01-01', '2099-02-12'],
         new Response('[]', { status: 200 }),
       ),
     ).toEqual({
@@ -330,12 +330,12 @@ describe('schedule recurring list', () => {
     })
   })
 
-  it('requests expanded recurring instances for the supplied date range', async () => {
+  it('requests schedule events for the supplied date range', async () => {
     const instances: unknown[] = []
 
     expect(
       await runScheduleCli(
-        ['schedule', 'recurring', 'list', '2026-12-18', '2026-12-20'],
+        ['schedule', 'events', 'list', '2026-12-18', '2026-12-20'],
         new Response(JSON.stringify(instances), { status: 200 }),
       ),
     ).toEqual({
@@ -343,7 +343,7 @@ describe('schedule recurring list', () => {
       requests: [
         {
           method: 'GET',
-          pathname: '/api/schedule/recurring',
+          pathname: '/api/schedule/events',
           query: { startDate: '2026-12-18', endDate: '2026-12-20' },
           body: undefined,
         },

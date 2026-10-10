@@ -733,7 +733,7 @@ describe('operation tool input schemas', () => {
       saved_view_update: false,
       schedule_override_clear: false,
       schedule_override_set: false,
-      schedule_recurring_list: false,
+      schedule_events_list: false,
       schedule_time_blocks_create: false,
       schedule_time_blocks_delete: false,
       schedule_time_blocks_list: false,
