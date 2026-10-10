@@ -64,16 +64,16 @@ describe('schedule operation tools', () => {
         .sort((left, right) => left.name.localeCompare(right.name)),
     ).toEqual([
       {
+        name: 'schedule_events_list',
+        annotations: { readOnlyHint: true },
+      },
+      {
         name: 'schedule_override_clear',
         annotations: { readOnlyHint: false, destructiveHint: true },
       },
       {
         name: 'schedule_override_set',
         annotations: { readOnlyHint: false, destructiveHint: false },
-      },
-      {
-        name: 'schedule_recurring_list',
-        annotations: { readOnlyHint: true },
       },
       {
         name: 'schedule_time_blocks_create',
@@ -257,8 +257,8 @@ describe('schedule operation tools', () => {
     ).toEqual({ result: { deleted: true, id: block.id }, remaining: [] })
   })
 
-  it('lists expanded recurring schedule instances in the selected date range', async () => {
-    const response = await app.request('/api/schedule/recurring', {
+  it('lists schedule events in the selected date range', async () => {
+    const response = await app.request('/api/schedule/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -272,7 +272,7 @@ describe('schedule operation tools', () => {
       response,
     )
 
-    const result = await callMcpTool(client, 'schedule_recurring_list', {
+    const result = await callMcpTool(client, 'schedule_events_list', {
       startDate: '2026-12-18',
       endDate: '2026-12-18',
     })
@@ -300,26 +300,26 @@ describe('schedule operation tools', () => {
     ])
   })
 
-  it('requires explicit dates when listing recurring schedule instances', async () => {
-    const result = await callMcpTool(client, 'schedule_recurring_list')
+  it('requires explicit dates when listing schedule events', async () => {
+    const result = await callMcpTool(client, 'schedule_events_list')
 
     expect(result).toEqual(
       expectedToolValidationError(
-        'schedule_recurring_list',
+        'schedule_events_list',
         'startDate: Invalid input: expected string, received undefined, endDate: Invalid input: expected string, received undefined',
       ),
     )
   })
 
-  it('limits recurring schedule queries to 42 calendar days', async () => {
-    const result = await callMcpTool(client, 'schedule_recurring_list', {
+  it('limits schedule event queries to 42 calendar days', async () => {
+    const result = await callMcpTool(client, 'schedule_events_list', {
       startDate: '2099-01-01',
       endDate: '2099-02-12',
     })
 
     expect(result).toEqual(
       expectedToolValidationError(
-        'schedule_recurring_list',
+        'schedule_events_list',
         'endDate: Date range must be chronological and no longer than 42 days',
       ),
     )

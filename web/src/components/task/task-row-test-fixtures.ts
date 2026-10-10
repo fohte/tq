@@ -1,4 +1,9 @@
-import type { Task, TaskDetail, TreeNode } from '#hooks/use-tasks'
+import type {
+  Task,
+  TaskDetail,
+  TaskWithDescription,
+  TreeNode,
+} from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 
 export function makeTask(overrides: Partial<Task> = {}): Task {
@@ -6,7 +11,6 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     id: 'task-1',
     number: 1,
     title: 'Task title',
-    description: null,
     status: 'todo',
     statusReason: null,
     duplicateOfNumber: null,
@@ -30,6 +34,16 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     updatedAt: '2026-03-20T00:00:00.000Z',
     childCompletionCount: { completed: 0, total: 0 },
     checklistCompletionCount: { completed: 0, total: 0 },
+    ...overrides,
+  }
+}
+
+export function makeTaskWithDescription(
+  overrides: Partial<TaskWithDescription> = {},
+): TaskWithDescription {
+  return {
+    ...makeTask(overrides),
+    description: null,
     ...overrides,
   }
 }
@@ -94,7 +108,6 @@ export function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     id: 'parent-1',
     number: 1,
     title: 'Parent Task',
-    description: null,
     status: 'todo',
     statusReason: null,
     duplicateOfNumber: null,

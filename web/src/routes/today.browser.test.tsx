@@ -17,7 +17,7 @@ type TaskListOptions = {
   enabled?: boolean
   placeholderData?: (
     previousData: Task[] | undefined,
-    previousFilter: TaskListFilter<'full'> | undefined,
+    previousFilter: TaskListFilter<'row'> | undefined,
   ) => Task[] | undefined
 }
 
@@ -26,7 +26,7 @@ type QueueItem = { taskId: string; sortOrder: number }
 
 const mockUseTaskList = vi.fn<
   (
-    filter: TaskListFilter<'full'>,
+    filter: TaskListFilter<'row'>,
     options?: TaskListOptions,
   ) => {
     data?: Task[]
@@ -110,7 +110,7 @@ function setup({
 }) {
   mockUseCurrentContext.mockReturnValue(context)
   mockUseTaskList.mockImplementation(
-    (filter: TaskListFilter<'full'>, options?: TaskListOptions) => {
+    (filter: TaskListFilter<'row'>, options?: TaskListOptions) => {
       const tasks = all.filter((task) => {
         if (task.context !== filter.context) {
           return false
@@ -294,7 +294,7 @@ describe('TodayFocus', () => {
       taskQueries: [
         {
           filter: {
-            view: 'full',
+            view: 'row',
             ids: ['focus', 'next'],
             context: 'work',
             status: 'all',
@@ -305,7 +305,7 @@ describe('TodayFocus', () => {
         },
         {
           filter: {
-            view: 'full',
+            view: 'row',
             parentId: 'focus',
             context: 'work',
             status: 'all',
@@ -348,7 +348,7 @@ describe('TodayFocus', () => {
       taskQueries: [
         {
           filter: {
-            view: 'full',
+            view: 'row',
             ids: ['focus'],
             context: 'personal',
             status: 'all',
@@ -358,7 +358,7 @@ describe('TodayFocus', () => {
         },
         {
           filter: {
-            view: 'full',
+            view: 'row',
             parentId: 'focus',
             context: 'personal',
             status: 'all',
@@ -493,7 +493,7 @@ describe('TodayFocus', () => {
       taskQueries: [
         {
           filter: {
-            view: 'full',
+            view: 'row',
             ids: [],
             context: 'work',
             status: 'all',
@@ -503,7 +503,7 @@ describe('TodayFocus', () => {
         },
         {
           filter: {
-            view: 'full',
+            view: 'row',
             context: 'work',
             status: 'all',
             limit: 'unlimited',

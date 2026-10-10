@@ -10,11 +10,14 @@ export { taskKeys }
 
 type TaskListResponse = InferResponseType<typeof api.api.tasks.$get>
 type TaskListResponseItem = TaskListResponse[number]
-type Task = TaskListResponseItem & { description: string | null }
-type TaskRow = Omit<Task, 'description'>
+export type TaskWithDescription = TaskListResponseItem & {
+  description: string | null
+}
+type Task = Omit<TaskWithDescription, 'description'>
+type TaskRow = Task
 export type TaskListView = 'row' | 'full'
 type TaskForView<View extends TaskListView> = View extends 'full'
-  ? Task
+  ? TaskWithDescription
   : TaskRow
 
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
@@ -63,7 +66,7 @@ type TaskListQueryKey<View extends TaskListView> = readonly [
 ]
 
 export const allTasksFilter = {
-  view: 'full',
+  view: 'row',
   context: 'all',
   status: 'all',
   limit: 'unlimited',
@@ -82,7 +85,9 @@ const TASK_LIST_PAGE_SIZE = 50
 
 export type { LinkedTaskSummary, Task, TaskDetail }
 
-export interface CategorizedTasks<TaskItem extends Task | TaskRow = Task> {
+export interface CategorizedTasks<
+  TaskItem extends Task | TaskWithDescription = Task,
+> {
   /** All tasks from the API */
   all: TaskItem[]
 }

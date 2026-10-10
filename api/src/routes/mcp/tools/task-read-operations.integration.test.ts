@@ -13,6 +13,7 @@ import {
   createPage,
   createTask,
   TEST_UUID,
+  toListRowResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
@@ -72,15 +73,7 @@ function withoutDescription(task: CreatedTaskResponse) {
 }
 
 function expectedTaskListRowItem(task: CreatedTaskResponse) {
-  return {
-    ...withoutDescription(task),
-    parentNumber: null,
-    duplicateOfNumber: null,
-    blockedByNumbers: [],
-    blockedByGithubRefs: [],
-    childCompletionCount: { total: 0, completed: 0 },
-    checklistCompletionCount: { total: 0, completed: 0 },
-  }
+  return toListRowResponse(task)
 }
 
 beforeEach(async () => {
@@ -420,7 +413,10 @@ describe('task_get', () => {
 
   it('merges the task detail with its subtask tree', async () => {
     const parent = await createTask('Parent')
-    const child = await createTask('Child', { parentId: parent.id })
+    const child = await createTask('Child', {
+      parentId: parent.id,
+      description: 'Subtask body',
+    })
 
     const toolResult = await callMcpTool(client, 'task_get', {
       taskId: parent.number,
@@ -446,7 +442,7 @@ describe('task_get', () => {
       blocking: [],
       subtasks: [
         {
-          ...withoutLinkSync(child),
+          ...withoutDescription(child),
           parentNumber: parent.number,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -535,10 +531,10 @@ describe('task_search', () => {
     })
 
     expect(parseToolJson(toolResult)).toEqual([
-      expectedTaskListItem(workTodo),
-      expectedTaskListItem(personalTodo),
-      expectedTaskListItem(workCompleted),
-      expectedTaskListItem(personalCompleted),
+      expectedTaskListRowItem(workTodo),
+      expectedTaskListRowItem(personalTodo),
+      expectedTaskListRowItem(workCompleted),
+      expectedTaskListRowItem(personalCompleted),
     ])
   })
 
@@ -552,9 +548,19 @@ describe('task_search', () => {
     })
 
     expect(parseToolJson(toolResult)).toEqual([
-      expectedTaskListItem(todo),
-      expectedTaskListItem(completed),
+      expectedTaskListRowItem(todo),
+      expectedTaskListRowItem(completed),
     ])
+  })
+
+  it('includes descriptions when full is true', async () => {
+    const task = await createTask('Task with a description', {
+      description: 'Task body',
+    })
+
+    const toolResult = await callTaskReadTool('task_search', { full: true })
+
+    expect(parseToolJson(toolResult)).toEqual([expectedTaskListItem(task)])
   })
 
   it('rejects invalid input', async () => {
@@ -573,7 +579,7 @@ describe('task_search', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(match),
+        ...withoutDescription(match),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -595,7 +601,7 @@ describe('task_search', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(child),
+        ...withoutDescription(child),
         parentNumber: parent.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -617,7 +623,7 @@ describe('task_search', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(child),
+        ...withoutDescription(child),
         parentNumber: parent.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -640,7 +646,7 @@ describe('task_search', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(grandchild),
+        ...withoutDescription(grandchild),
         parentNumber: child.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -664,7 +670,7 @@ describe('task_search', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(match),
+        ...withoutDescription(match),
         parentNumber: root.number,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -673,7 +679,7 @@ describe('task_search', () => {
         checklistCompletionCount: { total: 0, completed: 0 },
       },
       {
-        ...withoutLinkSync(root),
+        ...withoutDescription(root),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],
@@ -698,7 +704,7 @@ describe('task_search', () => {
 
     expect(parseToolJson(toolResult)).toEqual([
       {
-        ...withoutLinkSync(withDue),
+        ...withoutDescription(withDue),
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],

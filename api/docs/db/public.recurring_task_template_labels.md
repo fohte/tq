@@ -45,7 +45,6 @@ erDiagram
   text id
   text title
   text description
-  integer estimated_minutes
   text project_id FK
   text parent_id FK
   text context

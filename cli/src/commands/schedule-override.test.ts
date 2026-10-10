@@ -64,7 +64,7 @@ describe('schedule override set', () => {
       requests: [
         {
           method: 'PUT',
-          pathname: `/api/schedule/recurring/${SCHEDULE_ID}/overrides/2026-03-22`,
+          pathname: `/api/schedule/events/${SCHEDULE_ID}/overrides/2026-03-22`,
           query: {},
           body: { startTime: '08:30', endTime: '09:45' },
         },
@@ -101,7 +101,7 @@ describe('schedule override set', () => {
       requests: [
         {
           method: 'PUT',
-          pathname: `/api/schedule/recurring/${SCHEDULE_ID}/overrides/2026-03-22`,
+          pathname: `/api/schedule/events/${SCHEDULE_ID}/overrides/2026-03-22`,
           query: {},
           body: { skipped: true },
         },
@@ -124,7 +124,7 @@ describe('schedule override clear', () => {
       requests: [
         {
           method: 'DELETE',
-          pathname: `/api/schedule/recurring/${SCHEDULE_ID}/overrides/2026-03-22`,
+          pathname: `/api/schedule/events/${SCHEDULE_ID}/overrides/2026-03-22`,
           query: {},
           body: undefined,
         },
