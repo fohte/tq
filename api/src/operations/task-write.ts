@@ -2,6 +2,7 @@ import { err, ok } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { optionString } from '#operations/cli-options'
 import { encodePathSegment } from '#operations/path-segment'
 import {
   recurrenceCliOptions,
@@ -38,14 +39,6 @@ const taskCompleteInputSchema = taskIdSchema.extend({
 })
 const fromGithubInputSchema = z.object({ url: z.string() })
 const fromGithubToolInputSchema = z.object({ url: z.string().min(1) })
-
-function optionString(
-  options: Record<string, unknown>,
-  name: string,
-): string | undefined {
-  const value = options[name]
-  return typeof value === 'string' ? value : undefined
-}
 
 function mapCreateCliInput(
   input: Record<string, unknown>,

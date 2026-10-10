@@ -2,6 +2,7 @@ import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { splitCommaList } from '#lib/split-comma-list'
+import { optionString } from '#operations/cli-options'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
 export const recurrenceCliOptions = [
@@ -27,14 +28,6 @@ export const recurrenceCliOptions = [
 ] as const
 
 type RecurrenceRule = z.infer<typeof recurrenceRuleSchema>
-
-function optionString(
-  options: Record<string, unknown>,
-  name: string,
-): string | undefined {
-  const value = options[name]
-  return typeof value === 'string' ? value : undefined
-}
 
 export function recurrenceRuleFromCli(
   options: Record<string, unknown>,

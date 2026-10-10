@@ -1,6 +1,13 @@
+import type { InferResponseType } from 'hono/client'
+
+import type { OperationClient } from '#operations/types'
 import type { timeBlockToResponse } from '#routes/tasks/shared'
 
 export type TimeBlockResponse = ReturnType<typeof timeBlockToResponse>
+export type ScheduleEventResponse = InferResponseType<
+  OperationClient['api']['schedule']['events']['$post'],
+  201
+>
 
 const defaultTimeBlock: TimeBlockResponse = {
   id: '88888888-8888-4888-8888-888888888888',
@@ -16,24 +23,6 @@ export function makeTimeBlock(
   overrides: Partial<TimeBlockResponse> = {},
 ): TimeBlockResponse {
   return { ...defaultTimeBlock, ...overrides }
-}
-
-type ScheduleEventResponse = {
-  id: string
-  title: string
-  startTime: string
-  endTime: string
-  recurrence: {
-    id: string
-    type: 'daily' | 'weekly' | 'monthly' | 'custom'
-    interval: number
-    daysOfWeek: number[] | null
-    dayOfMonth: number | null
-  } | null
-  context: 'work' | 'personal' | null
-  color: string | null
-  createdAt: string
-  updatedAt: string
 }
 
 const defaultScheduleEvent: ScheduleEventResponse = {

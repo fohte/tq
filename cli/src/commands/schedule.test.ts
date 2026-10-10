@@ -225,6 +225,33 @@ describe('schedule time blocks create', () => {
 })
 
 describe('schedule events create', () => {
+  it('creates an event without recurrence flags', async () => {
+    const responseBody = makeScheduleEvent({ title: 'Draft agenda' })
+
+    expect(
+      await runScheduleCli(
+        ['schedule', 'events', 'create', 'Draft agenda', '08:45', '09:15'],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/events',
+          query: {},
+          body: {
+            title: 'Draft agenda',
+            startTime: '08:45',
+            endTime: '09:15',
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
   it('creates an event with recurrence flags', async () => {
     const responseBody = makeScheduleEvent({
       title: 'Draft agenda',
