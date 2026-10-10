@@ -42,7 +42,6 @@ import {
 const MAX_FREE_TEXT_WORDS = 20
 
 const childTasks = alias(tasks, 'child_task')
-
 function freeTextWords(freeText: string | undefined) {
   return (
     freeText

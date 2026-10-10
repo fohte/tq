@@ -3,6 +3,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 export interface KanbanColumnTaskIds {
   id: string
   taskIds: string[]
+  allowsManualMoves?: boolean
 }
 
 export type KanbanCardDropResult =
@@ -31,8 +32,14 @@ export function resolveKanbanCardDrop(
   overId: string | null,
 ): KanbanCardDropResult | null {
   if (overId == null || activeId === overId) return null
+  const sourceColumn = columns.find((column) => column.id === sourceColumnId)
+  if (sourceColumn == null || sourceColumn.allowsManualMoves === false) {
+    return null
+  }
   const targetColumn = findColumn(columns, overId)
-  if (targetColumn == null) return null
+  if (targetColumn == null || targetColumn.allowsManualMoves === false) {
+    return null
+  }
 
   if (targetColumn.id !== sourceColumnId) {
     return { type: 'move', columnId: targetColumn.id }
@@ -59,7 +66,7 @@ export function resolveKanbanCandidateDrop(
 ): { columnId: string } | null {
   if (overId == null) return null
   const column = findColumn(columns, overId)
-  if (column == null) return null
+  if (column == null || column.allowsManualMoves === false) return null
 
   return { columnId: column.id }
 }

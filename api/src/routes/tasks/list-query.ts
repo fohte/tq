@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { tasks } from '#db/schema'
+import { resolveTaskCandidateOrderBy } from '#routes/tasks/list-query-candidate-order'
 import { buildTaskFilterConditions } from '#routes/tasks/list-query-conditions'
 import {
   selectTaskListRows,
@@ -107,13 +108,16 @@ export async function queryTaskList(
     words.length > 0
 
   const where = conditions.length > 0 ? and(...conditions) : undefined
-  const orderBy = prioritizeTitleMatches
-    ? [
-        desc(buildTitleMatchCondition(words)),
-        desc(tasks.updatedAt),
-        desc(tasks.number),
-      ]
-    : resolveTaskListOrderBy(sortBy, order)
+  const orderBy =
+    query.candidatesOn != null
+      ? resolveTaskCandidateOrderBy(query.candidatesOn)
+      : prioritizeTitleMatches
+        ? [
+            desc(buildTitleMatchCondition(words)),
+            desc(tasks.updatedAt),
+            desc(tasks.number),
+          ]
+        : resolveTaskListOrderBy(sortBy, order)
   const fullRowsQuery = selectTaskListRows()
     .where(where)
     .orderBy(...orderBy)

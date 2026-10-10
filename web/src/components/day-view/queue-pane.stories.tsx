@@ -39,6 +39,7 @@ const candidateTasks = [
     title: 'Fix the flaky test',
     dueDate: '2020-01-01',
     context: 'work',
+    candidateReason: { kind: 'overdue', days: 3 },
   }),
 ]
 
@@ -99,7 +100,7 @@ export const Default: Story = {
         emptyMessage: "No tasks in this week's queue",
       }),
     ],
-    queueCandidates: getQueueCandidates(candidateTasks, new Set()),
+    queueCandidates: getQueueCandidates(candidateTasks),
   },
 }
 

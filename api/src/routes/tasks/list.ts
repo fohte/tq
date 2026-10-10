@@ -7,6 +7,7 @@ import {
   hydrateTaskListRowsWithoutDescription,
 } from '#routes/tasks/shared'
 import { listTasksQuerySchema } from '#schemas/task'
+import { getTaskQueueCandidateReason } from '#services/task-queue-candidates'
 
 export const tasksListApp = new Hono().get(
   '/',
@@ -28,6 +29,14 @@ export const tasksListApp = new Hono().get(
         const match = result.matchByTaskId?.get(item.id)
         return {
           ...item,
+          ...(query.candidatesOn == null
+            ? {}
+            : {
+                candidateReason: getTaskQueueCandidateReason(
+                  item,
+                  query.candidatesOn,
+                ),
+              }),
           ...(match === undefined ? {} : { match }),
           ...(result.ancestorOnlyIds.has(item.id)
             ? { ancestorOnly: true }

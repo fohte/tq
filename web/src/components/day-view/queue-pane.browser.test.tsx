@@ -29,6 +29,7 @@ const scheduledTask = makeTask({
 const candidateTask = makeTask({
   id: 'candidate-task',
   title: 'Candidate task',
+  candidateReason: { kind: 'active' },
 })
 
 function Providers({ children }: { children: ReactNode }) {
@@ -76,7 +77,7 @@ function renderQueuePane(
               emptyMessage: "No tasks in this week's queue",
             }),
           ]}
-          queueCandidates={getQueueCandidates([candidateTask], new Set())}
+          queueCandidates={getQueueCandidates([candidateTask])}
           onMoveTask={onMoveTask}
           onInsertCandidate={onInsertCandidate}
           onRemoveFromQueue={vi.fn()}

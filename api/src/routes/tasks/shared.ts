@@ -23,6 +23,7 @@ import {
   EMPTY_CHECKLIST_COMPLETION_COUNT,
   getChecklistCompletionCountsByTaskId,
 } from '#routes/tasks/checklist-data'
+import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
 import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
 import {
   getOpenGithubBlockerRefsByTaskId,
@@ -48,6 +49,10 @@ function resolvePrimaryTaskListOrderBy(
       return order === 'desc'
         ? sql`${tasks.dueDate} DESC NULLS LAST`
         : sql`${tasks.dueDate} ASC NULLS LAST`
+    case 'follow-up':
+      return order === 'desc'
+        ? sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) DESC NULLS LAST`
+        : sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) ASC NULLS LAST`
     case 'created':
     default:
       return order === 'desc' ? desc(tasks.createdAt) : tasks.createdAt
