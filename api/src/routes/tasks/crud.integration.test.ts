@@ -2890,7 +2890,7 @@ describe('tasks CRUD API', () => {
       ).toEqual([
         {
           status: 200,
-          ids: [
+          body: [
             taskB.id,
             taskC.id,
             taskA.id,
@@ -2900,7 +2900,7 @@ describe('tasks CRUD API', () => {
         },
         {
           status: 200,
-          ids: [
+          body: [
             taskB.id,
             taskC.id,
             taskA.id,
@@ -2925,7 +2925,7 @@ describe('tasks CRUD API', () => {
 
       expect(dueOrderResponseSnapshot(res.status, body)).toEqual({
         status: 200,
-        ids: [
+        body: [
           taskA.id,
           taskC.id,
           taskB.id,
