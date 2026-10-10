@@ -14,6 +14,7 @@ import { makeNode, makeTask } from '#components/task/task-row-test-fixtures'
 import type { TaskTreeListProps } from '#components/task/task-tree-list'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { allTasksFilter, type TreeNode } from '#hooks/use-tasks'
+import { MockIntersectionObserver } from '#lib/mock-intersection-observer-test-utils'
 import { assertDefined, atIndex } from '#lib/test-utils'
 
 // fetchTaskList is only exercised by the lazy-mode tests below (regular
@@ -351,26 +352,6 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     })
   })
 })
-
-// jsdom has no IntersectionObserver; this stub captures the callback passed
-// by TaskTreeList's sentinel effect so a test can invoke it directly instead
-// of simulating a real scroll/resize.
-class MockIntersectionObserver {
-  static instances: MockIntersectionObserver[] = []
-  callback: (entries: { isIntersecting: boolean }[]) => void
-  observe = vi.fn()
-  disconnect = vi.fn()
-  unobserve = vi.fn()
-
-  constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
-    this.callback = callback
-    MockIntersectionObserver.instances.push(this)
-  }
-
-  trigger(isIntersecting: boolean) {
-    this.callback([{ isIntersecting }])
-  }
-}
 
 describe('TaskTreeList infinite scroll pagination', () => {
   beforeEach(() => {

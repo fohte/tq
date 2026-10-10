@@ -164,7 +164,11 @@ export const listTasksQuerySchema = z.object({
   includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
   sortBy: taskSortBy.optional(),
-  order: taskSortOrder.optional(),
+  order: taskSortOrder
+    .optional()
+    .describe(
+      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created or sortBy=due.',
+    ),
   limit: z.union([
     z.coerce.number().int().min(1).max(100),
     z.literal('unlimited'),

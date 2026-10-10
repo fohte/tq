@@ -23,6 +23,7 @@ import type { DropTarget } from '#components/task/tree-drag-overlay-content'
 import { TreeDragOverlayContent } from '#components/task/tree-drag-overlay-content'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
 import { ListAreaMessage } from '#components/ui/list-area-message'
+import { useInfiniteScrollSentinel } from '#hooks/use-infinite-scroll-sentinel'
 import { useLazyTaskTree } from '#hooks/use-lazy-task-tree'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task, TaskListFilter, TreeNode } from '#hooks/use-tasks'
@@ -229,27 +230,12 @@ export function TaskTreeList({
 
   const isEmpty = tree.length === 0
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (!hasNextPage) return
-    const sentinel = sentinelRef.current
-    if (sentinel == null) return
-
-    const observer = new IntersectionObserver((entries) => {
-      if (
-        entries[0]?.isIntersecting === true &&
-        !isFetchingNextPage &&
-        !isFetchNextPageError
-      ) {
-        fetchNextPage?.()
-      }
-    })
-    observer.observe(sentinel)
-    return () => {
-      observer.disconnect()
-    }
-  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage])
+  const sentinelRef = useInfiniteScrollSentinel({
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage,
+  })
 
   return (
     <div ref={containerRef} data-testid="task-tree-scroll">

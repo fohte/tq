@@ -188,7 +188,10 @@ function dueOrderResponseSnapshot(
   status: number,
   body: TaskListItemResponse[],
 ) {
-  return { status, ids: body.map((task) => task.id) }
+  return responseSnapshot(
+    status,
+    body.map((task) => task.id),
+  )
 }
 
 function dueOrderResponsesSnapshot(
@@ -197,12 +200,10 @@ function dueOrderResponsesSnapshot(
   ascendingStatus: number,
   ascendingBody: TaskListItemResponse[],
 ) {
-  return {
-    defaultStatus,
-    defaultIds: defaultBody.map((task) => task.id),
-    ascendingStatus,
-    ascendingIds: ascendingBody.map((task) => task.id),
-  }
+  return [
+    dueOrderResponseSnapshot(defaultStatus, defaultBody),
+    dueOrderResponseSnapshot(ascendingStatus, ascendingBody),
+  ]
 }
 
 async function createTaskWithAllRelations() {
@@ -2886,24 +2887,28 @@ describe('tasks CRUD API', () => {
           ascendingRes.status,
           ascendingBody,
         ),
-      ).toEqual({
-        defaultStatus: 200,
-        defaultIds: [
-          taskB.id,
-          taskC.id,
-          taskA.id,
-          taskWithoutDueFirst.id,
-          taskWithoutDueSecond.id,
-        ],
-        ascendingStatus: 200,
-        ascendingIds: [
-          taskB.id,
-          taskC.id,
-          taskA.id,
-          taskWithoutDueFirst.id,
-          taskWithoutDueSecond.id,
-        ],
-      })
+      ).toEqual([
+        {
+          status: 200,
+          ids: [
+            taskB.id,
+            taskC.id,
+            taskA.id,
+            taskWithoutDueFirst.id,
+            taskWithoutDueSecond.id,
+          ],
+        },
+        {
+          status: 200,
+          ids: [
+            taskB.id,
+            taskC.id,
+            taskA.id,
+            taskWithoutDueFirst.id,
+            taskWithoutDueSecond.id,
+          ],
+        },
+      ])
     })
 
     it('sorts by due date descending with tasks without a due date last', async () => {
@@ -2927,6 +2932,36 @@ describe('tasks CRUD API', () => {
           taskWithoutDueFirst.id,
           taskWithoutDueSecond.id,
         ],
+      })
+    })
+
+    it('honors explicit order when includeMatch prioritizes title matches', async () => {
+      const titleOnlyMatch = await createTask('signal report')
+      const descriptionOnlyMatch = await createTask('newer report', {
+        description: 'signal in the description',
+      })
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2025-01-01T00:00:00.000Z') })
+        .where(eq(tasks.id, titleOnlyMatch.id))
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2026-01-01T00:00:00.000Z') })
+        .where(eq(tasks.id, descriptionOnlyMatch.id))
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&includeMatch=true&order=desc&q=signal',
+      )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+
+      expect(
+        responseSnapshot(
+          res.status,
+          body.map((task) => task.id),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [descriptionOnlyMatch.id, titleOnlyMatch.id],
       })
     })
   })

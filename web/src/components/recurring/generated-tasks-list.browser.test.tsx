@@ -7,10 +7,12 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GeneratedTasksList } from '#components/recurring/generated-tasks-list'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { MockIntersectionObserver } from '#lib/mock-intersection-observer-test-utils'
 
 const { mockGet, mockCount } = vi.hoisted(() => ({
   mockGet: vi.fn(),
@@ -52,41 +54,6 @@ async function renderGeneratedTasksList() {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
-}
-
-class MockIntersectionObserver implements IntersectionObserver {
-  static instances: MockIntersectionObserver[] = []
-  private readonly callback: IntersectionObserverCallback
-  readonly root: Element | Document | null = null
-  readonly rootMargin = '0px'
-  readonly thresholds: ReadonlyArray<number> = []
-
-  observe() {}
-  disconnect() {}
-  unobserve() {}
-  takeRecords(): IntersectionObserverEntry[] {
-    return []
-  }
-
-  constructor(callback: IntersectionObserverCallback) {
-    this.callback = callback
-    MockIntersectionObserver.instances.push(this)
-  }
-
-  trigger(isIntersecting: boolean) {
-    const rect = new DOMRectReadOnly(0, 0, 0, 0)
-    const entries: IntersectionObserverEntry[] = [
-      {
-        boundingClientRect: rect,
-        intersectionRatio: isIntersecting ? 1 : 0,
-        intersectionRect: rect,
-        isIntersecting,
-        rootBounds: null,
-        target: document.createElement('div'),
-      },
-    ]
-    this.callback(entries, this)
-  }
 }
 
 beforeEach(() => {
@@ -214,6 +181,94 @@ describe('GeneratedTasksList', () => {
         ],
       ],
       taskIds: [...firstPage, ...secondPage].map((task) => task.id),
+    })
+  })
+
+  it('shows a next-page error and retries the request', async () => {
+    const firstPage = Array.from({ length: 50 }, (_, index) =>
+      makeTask({
+        id: `task-${String(index)}`,
+        number: index + 1,
+        title: `Generated task ${String(index)}`,
+        templateId,
+      }),
+    )
+    const nextPage = [
+      makeTask({
+        id: 'task-next-page',
+        number: firstPage.length + 1,
+        title: 'Next page task',
+        templateId,
+      }),
+    ]
+    let nextPageAttempts = 0
+    mockGet.mockImplementation(({ query }: { query: { offset: string } }) => {
+      if (query.offset === '0') return Promise.resolve(jsonResponse(firstPage))
+      nextPageAttempts += 1
+      return nextPageAttempts === 1
+        ? Promise.reject(new Error('page load failed'))
+        : Promise.resolve(jsonResponse(nextPage))
+    })
+
+    const user = userEvent.setup()
+    const { container } = await renderGeneratedTasksList()
+    await screen.findByText('Generated task 0')
+    const observer = MockIntersectionObserver.instances[0]
+    if (observer == null) throw new Error('expected an IntersectionObserver')
+
+    act(() => {
+      observer.trigger(true)
+    })
+    await screen.findByRole('alert')
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+    await screen.findByText('Next page task')
+
+    expect(generatedTasksListSnapshot(container)).toEqual({
+      requests: [
+        [
+          {
+            query: {
+              view: 'row',
+              context: 'all',
+              status: 'all',
+              templateId,
+              sortBy: 'due',
+              order: 'desc',
+              limit: '50',
+              offset: '0',
+            },
+          },
+        ],
+        [
+          {
+            query: {
+              view: 'row',
+              context: 'all',
+              status: 'all',
+              templateId,
+              sortBy: 'due',
+              order: 'desc',
+              limit: '50',
+              offset: '50',
+            },
+          },
+        ],
+        [
+          {
+            query: {
+              view: 'row',
+              context: 'all',
+              status: 'all',
+              templateId,
+              sortBy: 'due',
+              order: 'desc',
+              limit: '50',
+              offset: '50',
+            },
+          },
+        ],
+      ],
+      taskIds: [...firstPage, ...nextPage].map((task) => task.id),
     })
   })
 })
