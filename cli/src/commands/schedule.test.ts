@@ -225,6 +225,44 @@ describe('schedule time blocks create', () => {
 })
 
 describe('schedule events create', () => {
+  it('shows the schedule interval behavior in CLI help', async () => {
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['schedule', 'events', 'create', '--help'],
+      fetch,
+      fakeStdin(true),
+    )
+
+    expect(`${String(exitCode)}\n${String(stdout.mock.calls[0]?.[0])}`).toBe(
+      [
+        '0',
+        'Usage: tq schedule events create [options] <title> <startTime> <endTime>',
+        '',
+        'Create a schedule event. startTime and endTime are local HH:MM times; if endTime',
+        'is earlier than startTime, it ends the following day. Without recurrence, the',
+        'event appears every day. For recurrence, daily and custom rules appear every',
+        'day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly',
+        'rules use dayOfMonth. interval is stored but does not affect schedule event',
+        'dates yet.',
+        '',
+        'Options:',
+        '  --recurrence-type <type>          Recurrence rule type',
+        '                                    (daily/weekly/monthly/custom); requires',
+        '                                    --recurrence-interval',
+        '  --recurrence-interval <n>         Recurrence interval (stored but currently',
+        '                                    ignored when expanding schedule event dates)',
+        '  --recurrence-days-of-week <days>  Comma-separated days of week for a weekly',
+        '                                    rule (0=Sunday..6=Saturday)',
+        '  --recurrence-day-of-month <day>   Day of month (1-31) for a monthly rule',
+        '  --context <value>                 Context (choices: "work", "personal")',
+        '  --color <value>                   Color',
+        '  -h, --help                        display help for command',
+        '',
+      ].join('\n'),
+    )
+  })
+
   it('creates an event without recurrence flags', async () => {
     const responseBody = makeScheduleEvent({ title: 'Draft agenda' })
 
