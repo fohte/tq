@@ -5,27 +5,30 @@ import { splitCommaList } from '#lib/split-comma-list'
 import { optionString } from '#operations/cli-options'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 
-export const recurrenceCliOptions = [
-  {
-    flags: '--recurrence-type <type>',
-    description:
-      'Recurrence rule type (daily/weekly/monthly/custom); requires --recurrence-interval',
-  },
-  {
-    flags: '--recurrence-interval <n>',
-    description:
-      'Recurrence interval (e.g. 2 with type weekly means every 2 weeks)',
-  },
-  {
-    flags: '--recurrence-days-of-week <days>',
-    description:
-      'Comma-separated days of week for a weekly rule (0=Sunday..6=Saturday)',
-  },
-  {
-    flags: '--recurrence-day-of-month <day>',
-    description: 'Day of month (1-31) for a monthly rule',
-  },
-] as const
+export function recurrenceCliOptions(
+  intervalDescription = 'Recurrence interval (e.g. 2 with type weekly means every 2 weeks)',
+) {
+  return [
+    {
+      flags: '--recurrence-type <type>',
+      description:
+        'Recurrence rule type (daily/weekly/monthly/custom); requires --recurrence-interval',
+    },
+    {
+      flags: '--recurrence-interval <n>',
+      description: intervalDescription,
+    },
+    {
+      flags: '--recurrence-days-of-week <days>',
+      description:
+        'Comma-separated days of week for a weekly rule (0=Sunday..6=Saturday)',
+    },
+    {
+      flags: '--recurrence-day-of-month <day>',
+      description: 'Day of month (1-31) for a monthly rule',
+    },
+  ] as const
+}
 
 type RecurrenceRule = z.infer<typeof recurrenceRuleSchema>
 

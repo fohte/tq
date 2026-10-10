@@ -65,16 +65,6 @@ const autoScheduleCliOptions = [
   { flags: '--manual', description: 'Mark the time block as manual' },
 ] as const
 
-const scheduleRecurrenceCliOptions = recurrenceCliOptions.map((option) =>
-  option.flags === '--recurrence-interval <n>'
-    ? {
-        ...option,
-        description:
-          'Recurrence interval (stored but currently ignored when expanding schedule event dates)',
-      }
-    : option,
-)
-
 function mapCliTimezoneOffset(
   input: Record<string, unknown>,
   options: Record<string, unknown>,
@@ -223,7 +213,9 @@ export const scheduleOperations = [
     kind: 'write',
     routes: ['POST /api/schedule/events'],
     cli: {
-      customOptions: scheduleRecurrenceCliOptions,
+      customOptions: recurrenceCliOptions(
+        'Recurrence interval (stored but currently ignored when expanding schedule event dates)',
+      ),
       excludeFields: ['recurrence'],
       mapInput: (input, options) =>
         recurrenceRuleFromCli(options).map((recurrence) =>

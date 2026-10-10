@@ -119,7 +119,7 @@ export const taskWriteOperations = [
           flags: '--parent-id <id>',
           description: 'Id or number of the parent task',
         },
-        ...recurrenceCliOptions,
+        ...recurrenceCliOptions(),
       ],
       mapInput: mapCreateCliInput,
       output: { kind: 'json-with-link-sync' },
@@ -156,7 +156,7 @@ export const taskWriteOperations = [
       },
       optionMetavars: { labels: 'names', blockedBy: 'items' },
       customOptions: [
-        ...recurrenceCliOptions,
+        ...recurrenceCliOptions(),
         {
           flags: '--no-recurrence',
           description: "Clear the task's recurrence rule",
