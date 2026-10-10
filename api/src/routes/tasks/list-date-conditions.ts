@@ -15,9 +15,9 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
-import { noUnresolvedBlockerCondition } from '#routes/tasks/list-query-blockers'
 import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import type { ListTasksQuery } from '#schemas/task'
+import { hasNoUnresolvedBlockersCondition } from '#services/task-blockers'
 import { resolvePeriodStart } from '#services/task-queues'
 
 type TaskDateFilters = Pick<
@@ -98,7 +98,7 @@ export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
         followUpDue,
       ),
       taskIsNotQueuedOn(query.candidatesOn),
-      or(noUnresolvedBlockerCondition(), followUpDue),
+      or(hasNoUnresolvedBlockersCondition(), followUpDue),
     )
     if (candidateCondition != null) conditions.push(candidateCondition)
   }

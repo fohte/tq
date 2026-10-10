@@ -57,7 +57,7 @@ export const queueOperations = [
   defineOperation(queueGetInputSchema, {
     path: ['queue', 'get'],
     description:
-      "List a queue for a date (YYYY-MM-DD). Defaults to today in the local timezone; reading today's queue first carries unfinished items forward. MCP callers must pass their local timezone offset.",
+      "List a queue for a date (YYYY-MM-DD). Defaults to today in the local timezone; reading today's queue first carries unfinished items forward, except for tasks with unresolved blockers or waits, which stay in their prior periods. MCP callers must pass their local timezone offset.",
     positionalArgs: ['key', { name: 'date', optional: true }],
     mcpInputSchema: queueGetMcpInputSchema,
     kind: 'write',

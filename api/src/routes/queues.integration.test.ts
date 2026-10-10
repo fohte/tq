@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskQueues } from '#db/schema'
+import {
+  defaultGithubNotifyEvents,
+  taskGithubLinks,
+  taskQueues,
+  taskRelations,
+  taskWaits,
+} from '#db/schema'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -88,6 +94,37 @@ async function updateTaskStatus(taskId: string, status: string) {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
+  })
+}
+
+async function addTaskBlocker(taskId: string, blockerTaskId: string) {
+  await db.insert(taskRelations).values({
+    sourceTaskId: taskId,
+    targetTaskId: blockerTaskId,
+    type: 'blocked_by',
+  })
+}
+
+async function addGithubBlocker(taskId: string) {
+  await db.insert(taskGithubLinks).values({
+    taskId,
+    owner: 'example-owner',
+    repo: 'example-repo',
+    number: 42,
+    role: 'blocker',
+    notifyEvents: defaultGithubNotifyEvents('blocker'),
+    kind: 'issue',
+    url: 'https://github.com/example-owner/example-repo/issues/42',
+    state: 'open',
+    title: 'Open blocker',
+  })
+}
+
+async function addTaskWait(taskId: string) {
+  await db.insert(taskWaits).values({
+    taskId,
+    body: 'Waiting for a reply',
+    followUpDate: '2026-03-20',
   })
 }
 
@@ -517,6 +554,50 @@ describe('POST /api/queues/carry-over', () => {
       [currentWeekTask.id],
       [futureWeekTask.id],
     ])
+  })
+
+  it('keeps prior day and week items with any unresolved blocker', async () => {
+    const taskBlockerTask = await createTask('Task with a task blocker')
+    const taskBlocker = await createTask('Unfinished blocker')
+    const githubBlockerTask = await createTask('Task with a GitHub blocker')
+    const waitingTask = await createTask('Task waiting for a reply')
+    const dayCarryTask = await createTask('Unblocked day task')
+    const weekCarryTask = await createTask('Unblocked week task')
+
+    await addTaskBlocker(taskBlockerTask.id, taskBlocker.id)
+    await addGithubBlocker(githubBlockerTask.id)
+    await addTaskWait(waitingTask.id)
+    await putQueueItems(
+      'day',
+      [taskBlockerTask.id, waitingTask.id, dayCarryTask.id],
+      '2026-03-19',
+    )
+    await putQueueItems(
+      'week',
+      [githubBlockerTask.id, weekCarryTask.id],
+      '2026-03-09',
+    )
+
+    const carryResponse = await carryOverQueueItems('2026-03-20')
+    const priorDay = await getQueueItems('day', '2026-03-19')
+    const today = await getQueueItems('day', '2026-03-20')
+    const priorWeek = await getQueueItems('week', '2026-03-09')
+    const thisWeek = await getQueueItems('week', '2026-03-20')
+
+    const getOutput = () => ({
+      status: carryResponse.status,
+      priorDay: priorDay.body.map((item) => item.taskId),
+      today: today.body.map((item) => item.taskId),
+      priorWeek: priorWeek.body.map((item) => item.taskId),
+      thisWeek: thisWeek.body.map((item) => item.taskId),
+    })
+    expect(getOutput()).toEqual({
+      status: 204,
+      priorDay: [taskBlockerTask.id, waitingTask.id],
+      today: [dayCarryTask.id],
+      priorWeek: [githubBlockerTask.id],
+      thisWeek: [weekCarryTask.id],
+    })
   })
 
   it('moves unfinished prior-week items to this week once, deduplicates them, and appends after existing items', async () => {

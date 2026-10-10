@@ -1,9 +1,8 @@
-import { and, eq, exists, ne, notExists, or, sql } from 'drizzle-orm'
+import { and, eq, exists, isNull, ne, not, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 import { db } from '#db/connection'
-import { taskGithubLinks, taskRelations, tasks } from '#db/schema'
-import { unresolvedTaskWaitSubquery } from '#routes/tasks/list-query-waits'
+import { taskGithubLinks, taskRelations, tasks, taskWaits } from '#db/schema'
 
 const blockerTasks = alias(tasks, 'blocker_task')
 
@@ -34,18 +33,17 @@ function unresolvedGithubBlockerSubquery() {
     )
 }
 
-export function unresolvedBlockerCondition() {
-  return or(
-    exists(unresolvedTaskBlockerSubquery()),
-    exists(unresolvedGithubBlockerSubquery()),
-    exists(unresolvedTaskWaitSubquery()),
-  )
+function unresolvedTaskWaitSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskWaits)
+    .where(and(eq(taskWaits.taskId, tasks.id), isNull(taskWaits.resolvedAt)))
 }
 
-export function noUnresolvedBlockerCondition() {
-  return and(
-    notExists(unresolvedTaskBlockerSubquery()),
-    notExists(unresolvedGithubBlockerSubquery()),
-    notExists(unresolvedTaskWaitSubquery()),
-  )
+export function hasUnresolvedBlockersCondition() {
+  return sql`(${exists(unresolvedTaskBlockerSubquery())} OR ${exists(unresolvedGithubBlockerSubquery())} OR ${exists(unresolvedTaskWaitSubquery())})`
+}
+
+export function hasNoUnresolvedBlockersCondition() {
+  return not(hasUnresolvedBlockersCondition())
 }

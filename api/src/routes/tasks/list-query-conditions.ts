@@ -25,14 +25,14 @@ import {
 import { classifyNumericOrId } from '#lib/numeric-id'
 import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
-import {
-  noUnresolvedBlockerCondition,
-  unresolvedBlockerCondition,
-} from '#routes/tasks/list-query-blockers'
 import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
+import {
+  hasNoUnresolvedBlockersCondition,
+  hasUnresolvedBlockersCondition,
+} from '#services/task-blockers'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
 // to keep an adversarial `q` from generating an unbounded number of them.
@@ -187,11 +187,11 @@ function buildConditions(
   }
 
   if (parsed?.hasBlockers === true) {
-    conditions.push(unresolvedBlockerCondition())
+    conditions.push(hasUnresolvedBlockersCondition())
   }
 
   if (parsed?.hasNoBlockers === true) {
-    conditions.push(noUnresolvedBlockerCondition())
+    conditions.push(hasNoUnresolvedBlockersCondition())
   }
 
   if (parsed?.hasFollowUpDue === true) {
