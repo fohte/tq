@@ -1,9 +1,9 @@
 import type { InferResponseType } from 'hono/client'
 
-import type { Task } from '#hooks/use-task-queries'
+import type { TaskWithDescription } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 
-type SearchResult = Task
+type SearchResult = TaskWithDescription
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
 export function extractTaskNumber(query: string): string | undefined {

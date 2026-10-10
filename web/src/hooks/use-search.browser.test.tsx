@@ -45,7 +45,7 @@ describe('useSearchTasks', () => {
         [
           {
             query: {
-              view: 'full',
+              view: 'row',
               q: 'needle',
               limit: '20',
               context: 'all',

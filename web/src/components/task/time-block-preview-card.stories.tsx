@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import { TimeBlockPreviewCard } from '#components/task/time-block-preview-card'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { TimeBlock } from '#hooks/use-time-blocks'
@@ -47,8 +47,11 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-const task = makeTask({ number: 12, title: 'Write onboarding doc' })
-const closedTask = makeTask({
+const task = makeTaskWithDescription({
+  number: 12,
+  title: 'Write onboarding doc',
+})
+const closedTask = makeTaskWithDescription({
   number: 13,
   title: 'Example task closed as not planned',
   status: 'completed',

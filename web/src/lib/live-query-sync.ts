@@ -213,7 +213,7 @@ function filtersForResourceChange(
 async function checkSession(): Promise<unknown> {
   const { api } = await import('#lib/api')
   return api.api.tasks.$get({
-    query: { view: 'full', context: 'all', status: 'all', limit: '1' },
+    query: { view: 'row', context: 'all', status: 'all', limit: '1' },
   })
 }
 

@@ -61,7 +61,7 @@ export interface TaskTreeListProps {
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
-  lazyChildrenFilter?: TaskListFilter<'full'> | undefined
+  lazyChildrenFilter?: TaskListFilter<'row'> | undefined
   /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
