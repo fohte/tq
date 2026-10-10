@@ -143,14 +143,14 @@ export const Empty: Story = {
 export const Waiting: Story = {
   name: 'the waiting column shows blocked tasks',
   args: {
-    columns: [waitingColumn],
+    columns: [waitingColumn, ...baseColumns],
   },
 }
 
 export const WaitingError: Story = {
   name: 'the waiting column shows an error when loading fails',
   args: {
-    columns: [waitingErrorColumn],
+    columns: [waitingErrorColumn, ...baseColumns],
   },
 }
 
