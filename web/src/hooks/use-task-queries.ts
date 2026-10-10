@@ -31,7 +31,7 @@ export type TaskContext = 'work' | 'personal'
 type TaskListContext = TaskContext | 'all'
 
 export type TaskSortBy = 'created' | 'updated' | 'due'
-export type TaskListSortBy = TaskSortBy | 'follow-up'
+type TaskListSortBy = TaskSortBy | 'follow-up'
 type TaskSortOrder = 'asc' | 'desc'
 
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
