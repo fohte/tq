@@ -234,7 +234,6 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  // Schedule event (ScheduleBlock) CRUD
   .post('/events', zValidator('json', createScheduleSchema), async (c) => {
     const input = c.req.valid('json')
 
