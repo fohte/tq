@@ -13,6 +13,7 @@ import {
   createPage,
   createTask,
   TEST_UUID,
+  toListRowResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
@@ -72,15 +73,7 @@ function withoutDescription(task: CreatedTaskResponse) {
 }
 
 function expectedTaskListRowItem(task: CreatedTaskResponse) {
-  return {
-    ...withoutDescription(task),
-    parentNumber: null,
-    duplicateOfNumber: null,
-    blockedByNumbers: [],
-    blockedByGithubRefs: [],
-    childCompletionCount: { total: 0, completed: 0 },
-    checklistCompletionCount: { total: 0, completed: 0 },
-  }
+  return toListRowResponse(task)
 }
 
 beforeEach(async () => {

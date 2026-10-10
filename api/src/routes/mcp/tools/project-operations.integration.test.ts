@@ -10,7 +10,11 @@ import {
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
-import { createTask, toListItemResponse } from '#routes/tasks/testing'
+import {
+  createTask,
+  toListItemResponse,
+  toListRowResponse,
+} from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -66,12 +70,9 @@ function expectedProjectTask(
   projectId: string,
   includeDescription: boolean,
 ) {
-  const item = toListItemResponse({ ...task, projectId })
-  if (!includeDescription) {
-    const { description, ...row } = item
-    void description
-    return normalizeDynamicValues([row], { taskNumbers: true })
-  }
+  const item = includeDescription
+    ? toListItemResponse({ ...task, projectId })
+    : toListRowResponse({ ...task, projectId })
   return normalizeDynamicValues([item], { taskNumbers: true })
 }
 

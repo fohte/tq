@@ -495,6 +495,27 @@ describe('useTaskList', () => {
     ])
   })
 
+  it('requests task rows by default', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    renderHook(() => useTaskList(allTasksFilter), { wrapper })
+
+    await waitFor(() => {
+      expect(mockGet.mock.calls).toEqual([
+        [
+          {
+            query: {
+              view: 'row',
+              context: 'all',
+              status: 'all',
+              limit: 'unlimited',
+            },
+          },
+        ],
+      ])
+    })
+  })
+
   it('does not poll task lists', async () => {
     vi.useFakeTimers()
     try {
@@ -512,14 +533,6 @@ describe('useTaskList', () => {
         await vi.advanceTimersByTimeAsync(0)
       })
       initialCallCount = mockGet.mock.calls.length
-      expect(mockGet).toHaveBeenCalledWith({
-        query: {
-          view: 'row',
-          context: 'all',
-          status: 'all',
-          limit: 'unlimited',
-        },
-      })
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60_000)
