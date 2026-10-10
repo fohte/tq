@@ -133,7 +133,10 @@ describe('parseSearchQuery', () => {
   })
 
   it('parses has:resolved-wait prefix', () => {
-    expect(parseSearchQuery('has:resolved-wait').hasResolvedWait).toBe(true)
+    expect(parseSearchQuery('has:resolved-wait')).toEqual({
+      freeText: '',
+      hasResolvedWait: true,
+    })
   })
 
   it('lets a later has:no-blockers override an earlier has:blockers', () => {
