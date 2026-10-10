@@ -37,12 +37,25 @@ function dateIsInRange(
   )
 }
 
+function addDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00.000Z`)
+  result.setUTCDate(result.getUTCDate() + days)
+  return result.toISOString().slice(0, 10)
+}
+
 function taskIsNotQueuedOn(date: string) {
+  const weekStart = resolvePeriodStart('week', date) ?? date
+  const weekEnd = addDays(weekStart, 6)
   const periodMatch = (unit: 'day' | 'week' | 'month') =>
     and(
       eq(taskQueues.periodUnit, unit),
       eq(taskQueueItems.periodStart, resolvePeriodStart(unit, date) ?? date),
     )
+  const dayQueueInCandidateWeek = and(
+    eq(taskQueues.periodUnit, 'day'),
+    gte(taskQueueItems.periodStart, date),
+    lte(taskQueueItems.periodStart, weekEnd),
+  )
 
   return notExists(
     db
@@ -53,7 +66,7 @@ function taskIsNotQueuedOn(date: string) {
         and(
           eq(taskQueueItems.taskId, tasks.id),
           or(
-            periodMatch('day'),
+            dayQueueInCandidateWeek,
             periodMatch('week'),
             periodMatch('month'),
             and(

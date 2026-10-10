@@ -1813,7 +1813,7 @@ describe('tasks CRUD API', () => {
       ).toEqual([beforeBoundary.id, onBoundary.id].toSorted())
     })
 
-    it('filters candidates by date and queue membership across queue periods', async () => {
+    it('filters candidates across queue periods and later days in the week', async () => {
       const dueCandidate = await createTask('Due candidate', {
         dueDate: '2026-03-17',
       })
@@ -1832,6 +1832,9 @@ describe('tasks CRUD API', () => {
       await setStatus(completedCandidate.id, 'completed')
 
       const dayQueued = await createTask('Day queued', {
+        dueDate: '2026-03-17',
+      })
+      const laterDayQueued = await createTask('Later day queued', {
         dueDate: '2026-03-17',
       })
       const weekQueued = await createTask('Week queued', {
@@ -1872,6 +1875,11 @@ describe('tasks CRUD API', () => {
           queueId: dayQueue.id,
           periodStart: '2026-03-18',
           taskId: dayQueued.id,
+        },
+        {
+          queueId: dayQueue.id,
+          periodStart: '2026-03-19',
+          taskId: laterDayQueued.id,
         },
         {
           queueId: weekQueue.id,
