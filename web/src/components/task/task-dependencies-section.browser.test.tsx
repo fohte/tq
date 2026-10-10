@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   makeGithubBlocker,
@@ -75,6 +75,10 @@ const resetCreateWait = vi.fn(() => {
 const updateWait = vi.fn<ReturnType<typeof useUpdateTaskWait>['mutate']>()
 const resolveWait = vi.fn<ReturnType<typeof useResolveTaskWait>['mutate']>()
 const deleteWait = vi.fn<ReturnType<typeof useDeleteTaskWait>['mutate']>()
+
+beforeAll(async () => {
+  await import('#components/ui/markdown-editor-crepe')
+}, 20_000)
 
 beforeEach(() => {
   updateBlockedBy.mockReset()
