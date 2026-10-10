@@ -10,7 +10,6 @@ import {
   taskGithubLinks,
   taskLabels,
   tasks,
-  taskWaits,
   timeBlocks,
 } from '#db/schema'
 import { setChangeEventTaskIds } from '#lib/change-events'
@@ -24,6 +23,7 @@ import {
   EMPTY_CHECKLIST_COMPLETION_COUNT,
   getChecklistCompletionCountsByTaskId,
 } from '#routes/tasks/checklist-data'
+import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
 import type { TaskSortBy } from '#schemas/task'
 import {
   getOpenGithubBlockerRefsByTaskId,
@@ -45,12 +45,7 @@ function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
     case 'due':
       return tasks.dueDate
     case 'follow-up':
-      return sql`(
-        SELECT min(${taskWaits.followUpDate})
-        FROM ${taskWaits}
-        WHERE ${taskWaits.taskId} = ${tasks.id}
-          AND ${taskWaits.resolvedAt} IS NULL
-      )`
+      return sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()})`
     case 'created':
     default:
       return tasks.createdAt

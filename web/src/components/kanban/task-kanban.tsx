@@ -45,6 +45,7 @@ export interface TaskKanbanColumn {
   title: string
   tasks: Task[]
   isLoading?: boolean
+  hasError?: boolean
   /** Set false when `tasks` is a truncated subset, so the header doesn't show a count that reads as the true total. */
   showCount?: boolean
   /** Set false when this column is derived from task state instead of accepting manual moves. */
@@ -84,11 +85,12 @@ function isCardDragData(
 function TaskKanbanCard({
   task,
   sourceColumnId,
+  draggable,
   droppable,
 }: {
   task: Task
   sourceColumnId: string
-  /** Cards always stay draggable (to move to another column); this only controls whether other cards can be dropped onto this one to reorder within the column. */
+  draggable: boolean
   droppable: boolean
 }) {
   const {
@@ -101,7 +103,7 @@ function TaskKanbanCard({
   } = useSortable({
     id: task.id,
     data: { task, sourceColumnId } satisfies CardDragData,
-    disabled: { droppable: !droppable },
+    disabled: { draggable: !draggable, droppable: !droppable },
   })
 
   return (
@@ -185,6 +187,7 @@ function TaskKanbanColumnView({
     title,
     tasks,
     isLoading = false,
+    hasError = false,
     showCount = true,
     acceptsDrops = true,
     dateRangeLabel,
@@ -217,6 +220,8 @@ function TaskKanbanColumnView({
 
       <div
         ref={setNodeRef}
+        role="region"
+        aria-label={`${title} tasks`}
         className={cn(
           'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2',
           isOver && 'bg-secondary/30',
@@ -224,6 +229,8 @@ function TaskKanbanColumnView({
       >
         {isLoading ? (
           <ListAreaMessage>Loading...</ListAreaMessage>
+        ) : hasError ? (
+          <ListAreaMessage>Failed to load tasks.</ListAreaMessage>
         ) : tasks.length === 0 ? (
           <ListAreaMessage>No tasks</ListAreaMessage>
         ) : (
@@ -236,6 +243,7 @@ function TaskKanbanColumnView({
                 key={task.id}
                 task={task}
                 sourceColumnId={id}
+                draggable={acceptsDrops}
                 droppable={reorderEnabled && acceptsDrops}
               />
             ))}

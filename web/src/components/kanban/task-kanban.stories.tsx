@@ -140,6 +140,22 @@ export const Waiting: Story = {
   },
 }
 
+export const WaitingError: Story = {
+  name: 'the waiting column shows a message when tasks fail to load',
+  args: {
+    columns: [
+      ...baseColumns,
+      {
+        id: 'waiting',
+        title: 'Waiting',
+        tasks: [],
+        hasError: true,
+        acceptsDrops: false,
+      },
+    ],
+  },
+}
+
 export const WithDateRangeLabel: Story = {
   name: 'day and week columns show their date ranges above tasks',
   args: {

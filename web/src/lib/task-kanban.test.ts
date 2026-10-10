@@ -56,6 +56,17 @@ describe('resolveKanbanCardDrop', () => {
       resolveKanbanCardDrop(dropDisabledColumns, 'inbox', 'a', 'waiting'),
     ).toBeNull()
   })
+
+  it('returns null when the source column rejects task moves', () => {
+    const waitingColumns = [
+      ...columns,
+      { id: 'waiting', taskIds: ['blocked'], acceptsDrops: false },
+    ]
+
+    expect(
+      resolveKanbanCardDrop(waitingColumns, 'waiting', 'blocked', 'active'),
+    ).toBeNull()
+  })
 })
 
 describe('resolveKanbanCandidateDrop', () => {

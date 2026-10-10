@@ -43,10 +43,6 @@ export function useDayViewTaskData({
       ].sort(),
     [nowPanelTimeBlocks, queueItems, visibleDayQueueItems, visibleTimeBlocks],
   )
-  const queuedTaskIds = useMemo(
-    () => new Set(queueItems.map((item) => item.taskId)),
-    [queueItems],
-  )
   const candidateTasksQuery = useTaskList({
     view: 'full',
     context,
@@ -157,13 +153,8 @@ export function useDayViewTaskData({
   )
   const taskMap = useTaskMap(tasksForTaskMap)
   const queueCandidates = useMemo(
-    () =>
-      getQueueCandidates(
-        candidateTasksQuery.data ?? [],
-        queuedTaskIds,
-        selectedDate,
-      ),
-    [candidateTasksQuery.data, queuedTaskIds, selectedDate],
+    () => getQueueCandidates(candidateTasksQuery.data ?? []),
+    [candidateTasksQuery.data],
   )
   const taskDateTasks = useMemo(
     () =>

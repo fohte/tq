@@ -31,6 +31,7 @@ const baseTask: Task = makeTask({
   id: '00000000-0000-0000-0000-000000000001',
   title: '#506 fohte.net を astro で作る',
   startDate: dateStr,
+  candidateReason: { kind: 'starts', days: 0 },
 })
 
 const sampleTasks: Task[] = [
@@ -59,6 +60,7 @@ const sampleTasks: Task[] = [
     title: 'sccache ログ確認',
     context: 'personal',
     dueDate: overdueDateStr,
+    candidateReason: { kind: 'overdue', days: 3 },
   },
   {
     ...baseTask,
@@ -88,6 +90,7 @@ const noDateTasks: Task[] = [
     status: 'todo',
     startDate: null,
     context: 'personal',
+    candidateReason: { kind: 'active' },
   },
   {
     ...baseTask,
@@ -96,6 +99,7 @@ const noDateTasks: Task[] = [
     status: 'todo',
     startDate: null,
     context: 'personal',
+    candidateReason: { kind: 'active' },
   },
 ]
 
@@ -260,12 +264,9 @@ const compactQueueSections = [
 const compactCandidate = makeTask({
   id: 'compact-candidate',
   title: 'Add a follow-up check',
+  candidateReason: { kind: 'active' },
 })
-const compactQueueCandidates = getQueueCandidates(
-  [...compactTasks, compactWeekTask, compactCandidate],
-  new Set([...compactTasks, compactWeekTask].map((task) => task.id)),
-  today,
-)
+const compactQueueCandidates = getQueueCandidates([compactCandidate])
 const compactTaskBlock = makeTimeBlock({
   id: 'compact-task-block',
   taskId: compactCurrentTaskId,
@@ -419,14 +420,7 @@ const scheduledWeekdayTask = makeTask({
   id: 'scheduled-weekday-task',
   title: 'Review the release checklist',
 })
-const queuedTaskIds = new Set(
-  [...queuedTasks, ...weekQueuedTasks, scheduledWeekdayTask].map((t) => t.id),
-)
-const queueCandidates = getQueueCandidates(
-  sampleCategorized.all,
-  queuedTaskIds,
-  today,
-)
+const queueCandidates = getQueueCandidates(sampleTasks.slice(6))
 
 const sampleQueueSections = [
   makeQueueSectionData({
@@ -612,11 +606,7 @@ export const EmptyQueueWithCandidates: Story = {
     schedules: [],
     queueSections: emptyQueueSections,
     dayQueueTasks: [],
-    queueCandidates: getQueueCandidates(
-      sampleCategorized.all,
-      new Set(),
-      today,
-    ),
+    queueCandidates: getQueueCandidates(sampleCategorized.all),
     onMoveTask: fn(),
     onInsertCandidate: fn(),
     onAddCandidate: fn(),

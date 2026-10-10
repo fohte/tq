@@ -32,6 +32,8 @@ export function resolveKanbanCardDrop(
   overId: string | null,
 ): KanbanCardDropResult | null {
   if (overId == null || activeId === overId) return null
+  const sourceColumn = columns.find((column) => column.id === sourceColumnId)
+  if (sourceColumn == null || sourceColumn.acceptsDrops === false) return null
   const targetColumn = findColumn(columns, overId)
   if (targetColumn == null || targetColumn.acceptsDrops === false) return null
 

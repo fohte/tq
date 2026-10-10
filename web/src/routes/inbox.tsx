@@ -92,6 +92,7 @@ function InboxKanban() {
       title: 'Waiting',
       tasks: waiting.categorized.all,
       isLoading: waiting.isLoading,
+      hasError: waiting.isError,
       acceptsDrops: false,
     },
   ]
