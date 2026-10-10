@@ -276,7 +276,7 @@ comments:
       target_task_id: 'Task at the target end of the directed relationship.'
       type: 'Relation read as source type target: duplicate_of or blocked_by.'
   - table: task_waits
-    tableComment: 'Response waits attached to tasks or GitHub blockers, including their resolution history.'
+    tableComment: 'Response waits attached to tasks with optional GitHub blocker links.'
     columnComments:
       task_id: 'Task waiting for a response.'
       body: 'Optional Markdown describing the response or action the task is waiting for.'

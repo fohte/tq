@@ -2,7 +2,7 @@
 
 ## Description
 
-Response waits attached to tasks or GitHub blockers, including their resolution history.
+Response waits attached to tasks with optional GitHub blocker links.
 
 ## Columns
 
@@ -33,11 +33,11 @@ Response waits attached to tasks or GitHub blockers, including their resolution 
 
 ## Indexes
 
-| Name                         | Definition                                                                                         |
-| ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| task_waits_pkey              | CREATE UNIQUE INDEX task_waits_pkey ON public.task_waits USING btree (id)                          |
-| idx_task_waits_task_id       | CREATE INDEX idx_task_waits_task_id ON public.task_waits USING btree (task_id)                     |
-| uq_task_waits_github_link_id | CREATE UNIQUE INDEX uq_task_waits_github_link_id ON public.task_waits USING btree (github_link_id) |
+| Name                         | Definition                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| task_waits_pkey              | CREATE UNIQUE INDEX task_waits_pkey ON public.task_waits USING btree (id)                                                      |
+| idx_task_waits_task_id       | CREATE INDEX idx_task_waits_task_id ON public.task_waits USING btree (task_id)                                                 |
+| uq_task_waits_github_link_id | CREATE UNIQUE INDEX uq_task_waits_github_link_id ON public.task_waits USING btree (github_link_id) WHERE (resolved_at IS NULL) |
 
 ## Relations
 

@@ -127,6 +127,13 @@ function normalizeSummary(wait: TaskWaitSummaryResponse) {
   }
 }
 
+function waitStateSnapshot(wait: typeof taskWaits.$inferSelect) {
+  return {
+    resolvedAt: wait.resolvedAt?.toISOString() ?? null,
+    acknowledgedAt: wait.acknowledgedAt?.toISOString() ?? null,
+  }
+}
+
 function waitResponseSnapshot<T>(status: number, wait: T) {
   return { status, wait }
 }
@@ -201,22 +208,14 @@ describe('task waits API', () => {
     })
   })
 
-  it('attaches a bodyless wait to an open GitHub blocker and removes the wait independently', async () => {
+  it('attaches a bodyless wait to an open GitHub blocker', async () => {
     const task = await createTask('Waiting for a pull request')
     const link = await createGithubBlocker(task.id)
     const created = await addGithubWait(task.id, link.url, '2036-04-05')
     const wait = await jsonBody<TaskWaitResponse>(created)
-    const duplicate = await addGithubWait(task.id, link.url, '2036-04-05')
-    const removed = await app.request(
-      `/api/tasks/${task.id}/waits/${wait.id}`,
-      { method: 'DELETE' },
-    )
-    const [remainingWaits, remainingLinks] = await Promise.all([
-      db.select().from(taskWaits),
-      db.select().from(taskGithubLinks),
-    ])
 
-    expect(waitResponseSnapshot(created.status, normalizeWait(wait))).toEqual({
+    const actual = waitResponseSnapshot(created.status, normalizeWait(wait))
+    expect(actual).toEqual({
       status: 201,
       wait: {
         id: 'WAIT_ID',
@@ -230,10 +229,113 @@ describe('task waits API', () => {
         createdAt: 'CREATED_AT',
       },
     })
-    expect(duplicate.status).toEqual(409)
-    expect(removed.status).toEqual(204)
-    expect(remainingWaits).toEqual([])
-    expect(remainingLinks.map((row) => row.id)).toEqual([link.id])
+  })
+
+  it('rejects a second unresolved wait for the same GitHub blocker', async () => {
+    const task = await createTask('Waiting for a pull request')
+    const link = await createGithubBlocker(task.id)
+    await addGithubWait(task.id, link.url, '2036-04-05')
+
+    const duplicate = await addGithubWait(task.id, link.url, '2036-04-05')
+    const actual = bodyResponseSnapshot(
+      duplicate.status,
+      await jsonBody<{ error: string }>(duplicate),
+    )
+
+    expect(actual).toEqual({
+      status: 409,
+      body: { error: 'Wait already exists for this GitHub blocker' },
+    })
+  })
+
+  it('removes a GitHub wait without removing its blocker', async () => {
+    const task = await createTask('Waiting for a pull request')
+    const link = await createGithubBlocker(task.id)
+    const wait = await jsonBody<TaskWaitResponse>(
+      await addGithubWait(task.id, link.url, '2036-04-05'),
+    )
+
+    const removed = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}`,
+      { method: 'DELETE' },
+    )
+    const [remainingWaits, remainingLinks] = await Promise.all([
+      db.select().from(taskWaits),
+      db.select().from(taskGithubLinks),
+    ])
+    expect(
+      waitResponseSnapshot(removed.status, {
+        waits: remainingWaits,
+        githubLinkIds: remainingLinks.map((row) => row.id),
+      }),
+    ).toEqual({
+      status: 204,
+      wait: {
+        waits: [],
+        githubLinkIds: [link.id],
+      },
+    })
+  })
+
+  it('allows a new wait after the previous GitHub wait is resolved', async () => {
+    const task = await createTask('Waiting for a pull request')
+    const link = await createGithubBlocker(task.id)
+    const previousWait = await jsonBody<TaskWaitResponse>(
+      await addGithubWait(task.id, link.url, '2036-04-05'),
+    )
+    await db
+      .update(taskWaits)
+      .set({ createdAt: new Date('2020-01-01T00:00:00.000Z') })
+      .where(eq(taskWaits.id, previousWait.id))
+    const resolved = await app.request(
+      `/api/tasks/${task.id}/waits/${previousWait.id}/resolve`,
+      { method: 'POST' },
+    )
+
+    const created = await addGithubWait(task.id, link.url, '2036-04-06')
+    const detail = await app.request(`/api/tasks/${task.id}`)
+    const detailBody = await jsonBody<TaskResponse>(detail)
+    expect(
+      waitResponseSnapshot(resolved.status, {
+        createdStatus: created.status,
+        waits: detailBody.waits?.map((wait) => ({
+          ...normalizeWait(wait),
+          id:
+            wait.id === previousWait.id
+              ? 'PREVIOUS_WAIT_ID'
+              : 'CURRENT_WAIT_ID',
+        })),
+      }),
+    ).toEqual({
+      status: 200,
+      wait: {
+        createdStatus: 201,
+        waits: [
+          {
+            id: 'PREVIOUS_WAIT_ID',
+            taskId: task.id,
+            body: null,
+            label: 'Waiting for GitHub activity',
+            followUpDate: '2036-04-05',
+            githubLinkId: link.id,
+            resolvedAt: 'RESOLVED_AT',
+            acknowledgedAt: 'RESOLVED_AT',
+            createdAt: 'CREATED_AT',
+          },
+          {
+            id: 'CURRENT_WAIT_ID',
+            taskId: task.id,
+            body: null,
+            label: 'Waiting for GitHub activity',
+            followUpDate: '2036-04-06',
+            githubLinkId: link.id,
+            resolvedAt: null,
+            acknowledgedAt: null,
+            createdAt: 'CREATED_AT',
+          },
+        ],
+      },
+    })
   })
 
   it('only attaches waits to an open GitHub blocker on the same task', async () => {
@@ -433,35 +535,39 @@ describe('task waits API', () => {
     })
   })
 
-  it('acknowledges an automatically resolved wait and keeps the action idempotent', async () => {
+  it('rejects acknowledging an unresolved wait', async () => {
     const task = await createTask('Acknowledge a reply')
     const wait = await jsonBody<TaskWaitResponse>(
       await addWait(task.id, 'Waiting for a reply', '2036-04-05'),
     )
-    const unresolvedAcknowledge = await app.request(
+    const response = await app.request(
       `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
       { method: 'POST' },
+    )
+
+    expect(response.status).toEqual(409)
+  })
+
+  it('acknowledges an automatically resolved wait', async () => {
+    const task = await createTask('Acknowledge a reply')
+    const wait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'Waiting for a reply', '2036-04-05'),
     )
     await db
       .update(taskWaits)
       .set({ resolvedAt: new Date('2036-04-04T12:00:00.000Z') })
       .where(eq(taskWaits.id, wait.id))
-    const acknowledged = await app.request(
-      `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
-      { method: 'POST' },
-    )
-    const repeated = await app.request(
+    const response = await app.request(
       `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
       { method: 'POST' },
     )
 
-    expect(unresolvedAcknowledge.status).toEqual(409)
-    expect(
-      waitResponseSnapshot(
-        acknowledged.status,
-        normalizeWait(await jsonBody<TaskWaitResponse>(acknowledged)),
-      ),
-    ).toEqual({
+    const responseWait = await jsonBody<TaskWaitResponse>(response)
+    const actual = waitResponseSnapshot(
+      response.status,
+      normalizeWait(responseWait),
+    )
+    expect(actual).toEqual({
       status: 200,
       wait: {
         id: 'WAIT_ID',
@@ -475,12 +581,38 @@ describe('task waits API', () => {
         createdAt: 'CREATED_AT',
       },
     })
-    expect(
-      waitResponseSnapshot(
-        repeated.status,
-        normalizeWait(await jsonBody<TaskWaitResponse>(repeated)),
-      ),
-    ).toEqual({
+  })
+
+  it('keeps the original acknowledgement timestamp when acknowledge is repeated', async () => {
+    const task = await createTask('Acknowledge a reply')
+    const wait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'Waiting for a reply', '2036-04-05'),
+    )
+    await db
+      .update(taskWaits)
+      .set({ resolvedAt: new Date('2036-04-04T12:00:00.000Z') })
+      .where(eq(taskWaits.id, wait.id))
+    await app.request(`/api/tasks/${task.id}/waits/${wait.id}/acknowledge`, {
+      method: 'POST',
+    })
+    const fixedAcknowledgedAt = new Date('2020-02-03T04:05:06.000Z')
+    await db
+      .update(taskWaits)
+      .set({ acknowledgedAt: fixedAcknowledgedAt })
+      .where(eq(taskWaits.id, wait.id))
+
+    const response = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
+      { method: 'POST' },
+    )
+    const responseWait = await jsonBody<TaskWaitResponse>(response)
+    const actual = waitResponseSnapshot(response.status, {
+      ...normalizeWait(responseWait),
+      resolvedAt: responseWait.resolvedAt,
+      acknowledgedAt: responseWait.acknowledgedAt,
+    })
+
+    expect(actual).toEqual({
       status: 200,
       wait: {
         id: 'WAIT_ID',
@@ -489,9 +621,52 @@ describe('task waits API', () => {
         label: 'Waiting for a reply',
         followUpDate: '2036-04-05',
         githubLinkId: null,
-        resolvedAt: 'RESOLVED_AT',
-        acknowledgedAt: 'ACKNOWLEDGED_AT',
+        resolvedAt: '2036-04-04T12:00:00.000Z',
+        acknowledgedAt: fixedAcknowledgedAt.toISOString(),
         createdAt: 'CREATED_AT',
+      },
+    })
+  })
+
+  it('does not acknowledge a wait through another task', async () => {
+    const owner = await createTask('Wait owner')
+    const other = await createTask('Other task')
+    const wait = await jsonBody<TaskWaitResponse>(
+      await addWait(owner.id, 'Waiting for a reply', '2036-04-05'),
+    )
+    const resolvedAt = new Date('2036-04-04T12:00:00.000Z')
+    await db
+      .update(taskWaits)
+      .set({ resolvedAt })
+      .where(eq(taskWaits.id, wait.id))
+    const [before] = await db
+      .select()
+      .from(taskWaits)
+      .where(eq(taskWaits.id, wait.id))
+    const response = await app.request(
+      `/api/tasks/${other.id}/waits/${wait.id}/acknowledge`,
+      { method: 'POST' },
+    )
+    const [after] = await db
+      .select()
+      .from(taskWaits)
+      .where(eq(taskWaits.id, wait.id))
+    expect(
+      waitResponseSnapshot(response.status, {
+        before: before == null ? null : waitStateSnapshot(before),
+        after: after == null ? null : waitStateSnapshot(after),
+      }),
+    ).toEqual({
+      status: 404,
+      wait: {
+        before: {
+          resolvedAt: resolvedAt.toISOString(),
+          acknowledgedAt: null,
+        },
+        after: {
+          resolvedAt: resolvedAt.toISOString(),
+          acknowledgedAt: null,
+        },
       },
     })
   })
@@ -690,14 +865,13 @@ describe('task waits API', () => {
     const detail = await app.request(`/api/tasks/${owner.id}`)
     const detailBody = await jsonBody<TaskResponse>(detail)
 
-    expect(
-      waitRemovalSnapshot(
-        wrongOwner.status,
-        removed.status,
-        repeated.status,
-        detailBody.waits ?? [],
-      ),
-    ).toEqual({
+    const actual = waitRemovalSnapshot(
+      wrongOwner.status,
+      removed.status,
+      repeated.status,
+      detailBody.waits ?? [],
+    )
+    expect(actual).toEqual({
       wrongOwnerStatus: 404,
       removeStatus: 204,
       repeatedStatus: 404,

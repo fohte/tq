@@ -33,7 +33,9 @@ export const taskWaits = pgTable(
   },
   (table) => [
     index('idx_task_waits_task_id').on(table.taskId),
-    uniqueIndex('uq_task_waits_github_link_id').on(table.githubLinkId),
+    uniqueIndex('uq_task_waits_github_link_id')
+      .on(table.githubLinkId)
+      .where(sql`${table.resolvedAt} IS NULL`),
     check(
       'task_waits_body_or_github_link_check',
       sql`${table.body} IS NOT NULL OR ${table.githubLinkId} IS NOT NULL`,

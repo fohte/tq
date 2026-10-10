@@ -77,7 +77,10 @@ export const taskWaitsApp = new Hono<TaskEnv>()
           input.followUpDate ??
           defaultFollowUpDate(new Date(), input.tzOffset ?? 0),
       })
-      .onConflictDoNothing({ target: taskWaits.githubLinkId })
+      .onConflictDoNothing({
+        target: taskWaits.githubLinkId,
+        where: isNull(taskWaits.resolvedAt),
+      })
       .returning()
 
     if (wait == null) {
