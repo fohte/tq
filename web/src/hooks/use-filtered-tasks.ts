@@ -10,11 +10,11 @@ export function useBaseFilter(
   showCompleted: boolean,
   projectId?: string,
   tag?: string,
-): InfiniteTaskListFilter<'full'> {
+): InfiniteTaskListFilter<'row'> {
   const context = useCurrentContext()
 
   return {
-    view: 'full',
+    view: 'row',
     context,
     status: showCompleted ? 'all' : 'todo',
     ...(tag != null ? { label: tag } : {}),
@@ -29,8 +29,8 @@ export function useFilteredTaskTree(options: {
   const context = useCurrentContext()
   const isSearching = parseSearchQuery(options.q).freeText !== ''
 
-  const baseFilter: InfiniteTaskListFilter<'full'> = {
-    view: 'full',
+  const baseFilter: InfiniteTaskListFilter<'row'> = {
+    view: 'row',
     q: options.q,
     context,
     status: 'all',

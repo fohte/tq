@@ -33,18 +33,35 @@ function makeHeaderOutput(
   return { exitCode, headers }
 }
 
+function makePageListOutput(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  stdout: unknown,
+  stderr: unknown,
+) {
+  return { exitCode, requests: calls.map(request), stdout, stderr }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
 })
 
 describe('page list', () => {
-  it('omits page content from the printed output by default', async () => {
-    const pages = [{ id: 'p1', title: 'Notes', content: '# Hello' }]
-    const { fetchStub } = captureFetch(
+  it('prints the page metadata and preview returned by the API', async () => {
+    const pages = [
+      {
+        id: 'p1',
+        title: 'Notes',
+        preview: '# Hello',
+        contentTruncated: false,
+      },
+    ]
+    const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(pages), { status: 200 }),
     )
     const write = spyStdout()
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'page', 'list', '42'],
@@ -52,18 +69,29 @@ describe('page list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify([{ id: 'p1', title: 'Notes' }], null, 2)}\n`],
-    ])
+    expect(
+      makePageListOutput(exitCode, calls, write.mock.calls, stderr.mock.calls),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/42/pages',
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(pages, null, 2)}\n`]],
+      stderr: [],
+    })
   })
 
-  it('includes page content when --full is given', async () => {
-    const pages = [{ id: 'p1', title: 'Notes', content: '# Hello' }]
-    const { fetchStub } = captureFetch(
-      () => new Response(JSON.stringify(pages), { status: 200 }),
+  it('rejects the removed --full option without making a request', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response('[]', { status: 200 }),
     )
     const write = spyStdout()
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'page', 'list', '42', '--full'],
@@ -71,8 +99,14 @@ describe('page list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(pages, null, 2)}\n`]])
+    expect(
+      makePageListOutput(exitCode, calls, write.mock.calls, stderr.mock.calls),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stdout: [],
+      stderr: [["error: unknown option '--full'\n"]],
+    })
   })
 })
 

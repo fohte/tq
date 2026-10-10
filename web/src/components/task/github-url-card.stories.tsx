@@ -7,7 +7,7 @@ import {
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
 import { GithubUrlCard } from '#components/task/github-url-card'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -127,7 +127,7 @@ export const LinkedToTask: Story = {
     raw: LINKED_ISSUE_URL,
     result: {
       linked: true,
-      task: makeTask({
+      task: makeTaskWithDescription({
         id: '00000000-0000-0000-0000-000000000001',
         number: 7,
         title: 'Fix flaky test',

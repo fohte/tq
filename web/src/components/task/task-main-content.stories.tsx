@@ -43,7 +43,7 @@ const samplePages: TaskPage[] = [
     id: 'page-002',
     taskId: '550e8400-e29b-41d4-a716-446655440000',
     title: 'Technical Spec',
-    content:
+    preview:
       '# API Design\n\nREST endpoints for the task management system.\n\n## Endpoints\n\n- GET /tasks\n- POST /tasks\n- PATCH /tasks/:id',
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',

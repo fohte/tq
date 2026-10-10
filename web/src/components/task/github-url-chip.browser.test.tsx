@@ -8,7 +8,7 @@ import {
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
 import { GithubUrlChip } from '#components/task/github-url-chip'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import type { ResolveGithubUrlResult } from '#hooks/use-github-link'
 import { githubUrlPreviewKeys } from '#lib/query-keys'
 
@@ -68,7 +68,7 @@ describe('GithubUrlChip', () => {
     const user = userEvent.setup()
     renderChip(LINKED_ISSUE_URL, {
       linked: true,
-      task: makeTask({
+      task: makeTaskWithDescription({
         githubLinks: [makeGithubLink({ url: LINKED_ISSUE_URL })],
       }),
     })

@@ -4,25 +4,12 @@ import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
 import {
   defineOperation,
-  omitKeyRecursively,
   requestJson,
   requestNoContent,
 } from '#operations/types'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 
 const pageContentKey = 'content'
-const pageSummaryKeys = ['preview', 'contentTruncated'] as const
-
-function omitPageSummaryFields(value: unknown, includeContent: boolean) {
-  const keys = includeContent
-    ? pageSummaryKeys
-    : [...pageSummaryKeys, pageContentKey]
-
-  return keys.reduce<unknown>(
-    (result, key) => omitKeyRecursively(result, key),
-    value,
-  )
-}
 
 const taskIdSchema = taskIdOrNumber.describe(
   'The id (UUID) or number of the task the page belongs to.',
@@ -47,10 +34,7 @@ const searchPagesSchema = z.object({
       'Maximum number of matching locations to return (1-50). Defaults to 20.',
     ),
 })
-const listPagesSchema = z.object({
-  taskId: taskIdSchema,
-  full: z.boolean().optional().describe('Include full page content.'),
-})
+const listPagesSchema = z.object({ taskId: taskIdSchema })
 const pageRefSchema = z.object({ taskId: taskIdSchema, pageId: pageIdSchema })
 const createPageInputSchema = createPageSchema.extend({ taskId: taskIdSchema })
 const updatePageInputSchema = updatePageSchema.extend({
@@ -83,30 +67,24 @@ export const pageOperations = [
   defineOperation(listPagesSchema, {
     path: ['page', 'list'],
     description:
-      'List pages for a task. Returns metadata by default; set full to true to include page content. Task details also include page metadata without content.',
+      'List pages for a task. Returns page metadata and a short preview without the full content. Use page_get to fetch a page body. Task details include the same page metadata.',
     positionalArgs: ['taskId'],
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/pages'],
     cli: {
-      output: {
-        kind: 'list',
-        omitKey: pageContentKey,
-        fullOption: '--full',
-        fullDescription: 'Include full page content in the output',
-        fullField: 'full',
-      },
+      output: { kind: 'json' },
     },
-    run: (client, { taskId, full }) =>
+    run: (client, { taskId }) =>
       requestJson(
         client.api.tasks[':taskId'].pages.$get({
           param: { taskId: String(taskId) },
         }),
-      ).map((result) => omitPageSummaryFields(result, full === true)),
+      ),
   }),
   defineOperation(pageRefSchema, {
     path: ['page', 'get'],
     description:
-      'Get the full content of a single page (a task note) by id. Resolve taskId and pageId from a page listing or task detail; task detail contains page metadata without content.',
+      'Get the full content of a single page (a task note) by id. Resolve taskId and pageId from a page listing or task detail.',
     positionalArgs: ['taskId', 'pageId'],
     kind: 'read',
     routes: ['GET /api/tasks/:taskId/pages/:pageId'],

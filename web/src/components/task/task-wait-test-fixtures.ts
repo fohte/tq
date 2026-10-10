@@ -6,6 +6,7 @@ const baseWait: TaskWait = {
   body: 'Review the proposal',
   label: 'Review the proposal',
   followUpDate: '2099-10-13',
+  githubLinkId: null,
   resolvedAt: null,
   acknowledgedAt: null,
   createdAt: '2099-10-10T00:00:00.000Z',
@@ -22,7 +23,9 @@ export function makeTaskWaitSummary(
     id: baseWait.id,
     label: baseWait.label,
     followUpDate: baseWait.followUpDate,
+    githubLinkId: baseWait.githubLinkId,
     resolvedAt: baseWait.resolvedAt,
+    acknowledgedAt: baseWait.acknowledgedAt,
     ...overrides,
   }
 }

@@ -19,6 +19,7 @@ import { page } from 'vitest/browser'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { useProjects } from '#hooks/use-projects'
 import { useCreateTask } from '#hooks/use-tasks'
 import {
   assertDefined,
@@ -66,7 +67,7 @@ const baseTask = {
 
 const mockUseProject = vi.fn()
 const mockUseProjectTaskIds = vi.fn()
-const mockUseProjects = vi.fn()
+const mockUseProjects = vi.fn<typeof useProjects>()
 const mockUpdateMutate = vi.fn()
 const mockUseFilteredTaskTree = vi.fn()
 const mockUseCreateTask = vi.fn()
@@ -89,8 +90,8 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
     useProjectTaskIds: (...args: unknown[]) => mockUseProjectTaskIds(...args),
     useUpdateProject: () => ({ mutate: mockUpdateMutate }),
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-    useProjects: (...args: unknown[]) => mockUseProjects(...args),
+    useProjects: (...args: Parameters<typeof useProjects>) =>
+      mockUseProjects(...args),
   }
 })
 
@@ -214,7 +215,9 @@ beforeEach(() => {
     error: null,
   })
   mockUseProjectTaskIds.mockReturnValue({ data: [] })
-  mockUseProjects.mockReturnValue({ data: [] })
+  mockUseProjects.mockReturnValue(
+    partialMutation<ReturnType<typeof useProjects>>({ data: [] }),
+  )
   mockUseFilteredTaskTree.mockReturnValue({
     isLoading: false,
     tree: [],
@@ -476,6 +479,16 @@ describe('ProjectDetailPage task list', () => {
     ])
   })
 
+  it('does not fetch the project list on the project detail page', async () => {
+    await renderProjectDetailPage()
+
+    expect(
+      mockUseProjects.mock.calls.filter(
+        ([, options]) => options?.enabled !== false,
+      ),
+    ).toEqual([])
+  })
+
   it('hides the Save view button', async () => {
     await renderProjectDetailPage()
 
@@ -485,20 +498,8 @@ describe('ProjectDetailPage task list', () => {
   })
 
   it('hides the project filter chip even when q embeds a conflicting project scope', async () => {
-    // Without disableProjectFilter, this project would resolve to a visible
-    // chip — proves the route's guard, not just an empty projects list,
-    // suppresses it.
-    mockUseProjects.mockReturnValue({
-      data: [
-        makeProject({
-          id: 'other-project',
-          title: 'Other Project',
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        }),
-      ],
-    })
-
+    // The useProject mock returns a project for every ID, so the route's
+    // disableProjectFilter guard is what keeps the conflicting token hidden.
     await renderProjectDetailPage(
       '/projects/p1?q=' +
         encodeURIComponent('project:other-project sort:updated'),

@@ -25,8 +25,10 @@ describe('wait commands', () => {
   it('maps add, update, resolve, and remove to their API routes', async () => {
     const responses = [
       { id: 'wait-id', body: 'Initial request' },
+      { id: 'github-wait-id', body: null, githubLinkId: 'github-link-id' },
       { id: 'wait-id', body: 'Updated request' },
       { id: 'wait-id', resolvedAt: '2036-04-05T00:00:00.000Z' },
+      { id: 'wait-id', acknowledgedAt: '2036-04-05T00:00:00.000Z' },
       null,
     ]
     let responseIndex = 0
@@ -56,6 +58,17 @@ describe('wait commands', () => {
         '--api-url',
         apiUrl,
         'wait',
+        'add',
+        '43',
+        '--github-url',
+        'https://github.com/example-org/example-repo/pull/42',
+        '--follow-up-date',
+        '2036-04-06',
+      ],
+      [
+        '--api-url',
+        apiUrl,
+        'wait',
         'update',
         '42',
         '550e8400-e29b-41d4-a716-446655440000',
@@ -67,6 +80,14 @@ describe('wait commands', () => {
         apiUrl,
         'wait',
         'resolve',
+        '42',
+        '550e8400-e29b-41d4-a716-446655440000',
+      ],
+      [
+        '--api-url',
+        apiUrl,
+        'wait',
+        'acknowledge',
         '42',
         '550e8400-e29b-41d4-a716-446655440000',
       ],
@@ -87,7 +108,7 @@ describe('wait commands', () => {
     expect(
       waitCommandSnapshot(exitCodes, calls.map(request), write.mock.calls),
     ).toEqual({
-      exitCodes: [0, 0, 0, 0],
+      exitCodes: [0, 0, 0, 0, 0, 0],
       requests: [
         {
           method: 'POST',
@@ -96,6 +117,16 @@ describe('wait commands', () => {
           body: {
             body: 'Initial request',
             followUpDate: '2036-04-05',
+            tzOffset: -540,
+          },
+        },
+        {
+          method: 'POST',
+          pathname: '/api/tasks/43/waits',
+          query: {},
+          body: {
+            githubUrl: 'https://github.com/example-org/example-repo/pull/42',
+            followUpDate: '2036-04-06',
             tzOffset: -540,
           },
         },
@@ -113,6 +144,13 @@ describe('wait commands', () => {
           body: undefined,
         },
         {
+          method: 'POST',
+          pathname:
+            '/api/tasks/42/waits/550e8400-e29b-41d4-a716-446655440000/acknowledge',
+          query: {},
+          body: undefined,
+        },
+        {
           method: 'DELETE',
           pathname: '/api/tasks/42/waits/550e8400-e29b-41d4-a716-446655440000',
           query: {},
@@ -123,6 +161,8 @@ describe('wait commands', () => {
         [`${JSON.stringify(responses[0], null, 2)}\n`],
         [`${JSON.stringify(responses[1], null, 2)}\n`],
         [`${JSON.stringify(responses[2], null, 2)}\n`],
+        [`${JSON.stringify(responses[3], null, 2)}\n`],
+        [`${JSON.stringify(responses[4], null, 2)}\n`],
       ],
     })
   })

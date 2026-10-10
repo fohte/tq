@@ -20,7 +20,10 @@ setupTestDb()
 let client: Client
 
 function pageListItem(page: Record<string, unknown>, preview: string | null) {
-  return { ...page, preview, contentTruncated: false }
+  const metadata = Object.fromEntries(
+    Object.entries(page).filter(([key]) => key !== 'content'),
+  )
+  return { ...metadata, preview, contentTruncated: false }
 }
 
 beforeEach(async () => {

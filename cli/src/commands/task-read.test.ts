@@ -487,7 +487,8 @@ describe('task get', () => {
           createdAt: '2031-01-02T03:04:05.000Z',
           updatedAt: '2031-01-02T03:04:05.000Z',
           author: { kind: 'human', agent: null },
-          content: 'page body',
+          preview: 'page preview',
+          contentTruncated: false,
         },
       ],
     }
@@ -524,6 +525,8 @@ describe('task get', () => {
           createdAt: '2031-01-02T03:04:05.000Z',
           updatedAt: '2031-01-02T03:04:05.000Z',
           author: { kind: 'human', agent: null },
+          preview: 'page preview',
+          contentTruncated: false,
         },
       ],
       subtasks: [{ ...child, children: [] }],
@@ -542,7 +545,7 @@ describe('task get', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             limit: 'unlimited',
@@ -652,7 +655,7 @@ describe('task search', () => {
     vi.stubEnv('TQ_CONTEXT', '')
 
     await expectTaskQuery(['task', 'search'], {
-      view: 'full',
+      view: 'row',
       context: 'all',
       status: 'all',
       limit: '20',
@@ -662,7 +665,7 @@ describe('task search', () => {
   it('uses TQ_CONTEXT when --context is omitted', async () => {
     vi.stubEnv('TQ_CONTEXT', 'work')
     await expectTaskQuery(['task', 'search'], {
-      view: 'full',
+      view: 'row',
       context: 'work',
       status: 'all',
       limit: '20',
@@ -673,7 +676,7 @@ describe('task search', () => {
     'sends --status %s to the API',
     async (status) => {
       await expectTaskQuery(['task', 'search', '--status', status], {
-        view: 'full',
+        view: 'row',
         context: 'all',
         status,
         limit: '20',
@@ -687,7 +690,7 @@ describe('task search', () => {
       vi.stubEnv('TQ_CONTEXT', 'work')
 
       await expectTaskQuery(['task', 'search', '--context', context], {
-        view: 'full',
+        view: 'row',
         context,
         status: 'all',
         limit: '20',
@@ -697,7 +700,7 @@ describe('task search', () => {
 
   it('sends an unlimited --limit to the API', async () => {
     await expectTaskQuery(['task', 'search', '--limit', 'unlimited'], {
-      view: 'full',
+      view: 'row',
       context: 'all',
       status: 'all',
       limit: 'unlimited',
@@ -724,7 +727,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             q: 'hello',
@@ -756,7 +759,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             q: 'parent:731',
@@ -797,7 +800,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             parentId: '731',
@@ -845,7 +848,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             q: 'Selected',
@@ -879,7 +882,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             hasDue: 'true',
@@ -919,7 +922,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             q: 'planning',
@@ -934,14 +937,7 @@ describe('task search', () => {
   })
 
   it('omits descriptions by default', async () => {
-    const results = [
-      {
-        id: 'task-example',
-        number: 1,
-        title: 'Match',
-        description: 'long body',
-      },
-    ]
+    const results = [{ id: 'task-example', number: 1, title: 'Match' }]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(results), { status: 200 }),
     )
@@ -960,7 +956,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             q: 'hello',

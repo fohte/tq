@@ -4,14 +4,14 @@ import type { ReactNode } from 'react'
 
 import { makeGithubBlocker } from '#components/task/github-link-test-fixtures'
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import { makeTaskWait } from '#components/task/task-wait-test-fixtures'
 import type { LinkedTaskSummary, TaskWait } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
-const baseTask: LinkedTaskSummary = makeTask({
+const baseTask: LinkedTaskSummary = makeTaskWithDescription({
   id: 'task-001',
   number: 12,
   title: 'Design the schema',

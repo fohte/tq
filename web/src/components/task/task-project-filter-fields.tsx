@@ -1,16 +1,16 @@
 import { List, ListItem } from '@fohte/ui/list'
 
-import type { Project } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, useProjects } from '#hooks/use-projects'
 
 export function TaskProjectFilterFields({
-  projects,
   selectedProjectId,
   onProjectIdChange,
 }: {
-  projects: Project[]
   selectedProjectId: string | undefined
   onProjectIdChange: (id: string) => void
 }) {
+  const { data: projects = [] } = useProjects(ALL_PROJECTS_FILTER)
+
   return (
     <List>
       <ListItem

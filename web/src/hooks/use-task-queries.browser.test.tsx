@@ -89,10 +89,12 @@ describe('useInfiniteTaskList', () => {
     const { result } = renderHook(
       () =>
         useInfiniteTaskList({
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
-          parentId: 'root',
+          templateId: 'template-1',
+          sortBy: 'due',
+          order: 'desc',
         }),
       {
         wrapper,
@@ -104,10 +106,12 @@ describe('useInfiniteTaskList', () => {
     })
     expect(mockGet).toHaveBeenCalledWith({
       query: {
-        view: 'full',
+        view: 'row',
         context: 'all',
-        parentId: 'root',
         status: 'all',
+        templateId: 'template-1',
+        sortBy: 'due',
+        order: 'desc',
         limit: String(TASK_LIST_PAGE_SIZE),
         offset: '0',
       },
@@ -278,7 +282,7 @@ describe('useTaskList', () => {
         [
           {
             query: {
-              view: 'full',
+              view: 'row',
               context: 'all',
               status: 'all',
               limit: 'unlimited',
@@ -493,6 +497,27 @@ describe('useTaskList', () => {
         },
       ],
     ])
+  })
+
+  it('requests task rows by default', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+
+    renderHook(() => useTaskList(allTasksFilter), { wrapper })
+
+    await waitFor(() => {
+      expect(mockGet.mock.calls).toEqual([
+        [
+          {
+            query: {
+              view: 'row',
+              context: 'all',
+              status: 'all',
+              limit: 'unlimited',
+            },
+          },
+        ],
+      ])
+    })
   })
 
   it('does not poll task lists', async () => {

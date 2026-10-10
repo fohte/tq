@@ -150,7 +150,7 @@ function observeTaskInvalidationQueries(queryClient: QueryClient) {
     taskList: observeQuery(queryClient, taskKeys.list(allTasksFilter)),
     taskInfiniteList: observeQuery(
       queryClient,
-      taskKeys.infiniteList({ view: 'full', context: 'all', status: 'all' }),
+      taskKeys.infiniteList({ view: 'row', context: 'all', status: 'all' }),
     ),
     taskCounts: observeQuery(
       queryClient,
@@ -369,7 +369,7 @@ describe('connectLiveQuerySync', () => {
     const candidateList = observeQuery(
       queryClient,
       taskKeys.list({
-        view: 'full',
+        view: 'row',
         context: 'work',
         status: 'todo',
         candidatesOn: '2026-08-01',
@@ -379,7 +379,7 @@ describe('connectLiveQuerySync', () => {
     const unfilteredTaskList = observeQuery(
       queryClient,
       taskKeys.list({
-        view: 'full',
+        view: 'row',
         context: 'work',
         status: 'todo',
         limit: 'unlimited',
@@ -570,7 +570,7 @@ describe('connectLiveQuerySync', () => {
         observeQuery(
           queryClient,
           taskKeys.infiniteList({
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
           }),

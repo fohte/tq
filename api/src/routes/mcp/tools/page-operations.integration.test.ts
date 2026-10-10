@@ -47,6 +47,19 @@ it('registers page read operations as read-only', async () => {
   ])
 })
 
+it('exposes only taskId in the page_list input schema', async () => {
+  const result = await client.listTools()
+
+  expect(
+    result.tools
+      .filter((tool) => tool.name === 'page_list')
+      .map((tool) => ({
+        name: tool.name,
+        inputFields: Object.keys(tool.inputSchema.properties ?? {}).sort(),
+      })),
+  ).toEqual([{ name: 'page_list', inputFields: ['taskId'] }])
+})
+
 describe('page_get', () => {
   it('rejects invalid input', async () => {
     const result = await callMcpTool(client, 'page_get', {
@@ -172,7 +185,7 @@ describe('page_search', () => {
 })
 
 describe('page_list', () => {
-  it('returns page metadata without content by default', async () => {
+  it('returns page metadata and a short preview without content', async () => {
     const task = await createTask('Sample task')
     await createPage(task.id, 'Sample page', 'Sample page content')
 
@@ -185,30 +198,8 @@ describe('page_list', () => {
         id: '<uuid>',
         taskId: '<uuid>',
         title: 'Sample page',
-        format: 'markdown',
-        sortOrder: 0,
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-        author: { kind: 'human', agent: null },
-      },
-    ])
-  })
-
-  it('returns full page content when requested', async () => {
-    const task = await createTask('Sample task')
-    await createPage(task.id, 'Sample page', 'Sample page content')
-
-    const toolResult = await callMcpTool(client, 'page_list', {
-      taskId: task.id,
-      full: true,
-    })
-
-    expect(normalizeDynamicValues(parseToolJson(toolResult))).toEqual([
-      {
-        id: '<uuid>',
-        taskId: '<uuid>',
-        title: 'Sample page',
-        content: 'Sample page content',
+        preview: 'Sample page content',
+        contentTruncated: false,
         format: 'markdown',
         sortOrder: 0,
         createdAt: '<timestamp>',

@@ -58,7 +58,6 @@ export function useCreateTask() {
         id: `optimistic-${String(Date.now())}`,
         number: -1,
         title: input.title,
-        description: input.description ?? null,
         status: 'todo',
         statusReason: null,
         duplicateOfNumber: null,
@@ -229,6 +228,7 @@ export function useUpdateTask() {
       })
 
       const optimisticTimestamp = new Date().toISOString()
+      const listInput = omitTaskDescription(input)
 
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
@@ -244,7 +244,7 @@ export function useUpdateTask() {
           if (!old) return old
           return old.map((task) =>
             task.id === id
-              ? { ...task, ...input, updatedAt: optimisticTimestamp }
+              ? { ...task, ...listInput, updatedAt: optimisticTimestamp }
               : task,
           )
         },
@@ -271,6 +271,14 @@ export function useUpdateTask() {
       }
     },
   })
+}
+
+function omitTaskDescription(
+  input: UpdateTaskInput,
+): Omit<UpdateTaskInput, 'description'> {
+  const listInput = { ...input }
+  delete listInput.description
+  return listInput
 }
 
 export function useUpdateTaskRecurrenceRule() {

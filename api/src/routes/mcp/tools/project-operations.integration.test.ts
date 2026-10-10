@@ -10,7 +10,11 @@ import {
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
-import { createTask } from '#routes/tasks/testing'
+import {
+  createTask,
+  toListItemResponse,
+  toListRowResponse,
+} from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -59,6 +63,17 @@ async function createProject(input: {
     body: JSON.stringify(input),
   })
   return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+function expectedProjectTask(
+  task: Awaited<ReturnType<typeof createTask>>,
+  projectId: string,
+  includeDescription: boolean,
+) {
+  const item = includeDescription
+    ? toListItemResponse({ ...task, projectId })
+    : toListRowResponse({ ...task, projectId })
+  return normalizeDynamicValues([item], { taskNumbers: true })
 }
 
 describe('project operation tools', () => {
@@ -294,7 +309,9 @@ describe('project operation tools', () => {
   it('returns only tasks assigned to project_tasks', async () => {
     const project = await createProject({ title: 'Task space' })
     await createTask('Unassigned item')
-    const task = await createTask('Assigned item')
+    const task = await createTask('Assigned item', {
+      description: 'Task body',
+    })
     await app.request(`/api/tasks/${task.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -305,37 +322,28 @@ describe('project operation tools', () => {
 
     expect(
       normalizeDynamicValues(parseToolJson(result), { taskNumbers: true }),
-    ).toEqual([
-      {
-        id: '<uuid>',
-        number: -1,
-        title: 'Assigned item',
-        description: null,
-        status: 'todo',
-        statusReason: null,
-        context: 'personal',
-        commitment: 'inbox',
-        labels: [],
-        startDate: null,
-        dueDate: null,
-        remindAt: null,
-        parentId: null,
-        projectId: '<uuid>',
-        recurrenceRuleId: null,
-        recurrenceRule: null,
-        templateId: null,
-        occurrenceDate: null,
-        githubLinks: [],
-        createdAt: '<timestamp>',
-        updatedAt: '<timestamp>',
-        parentNumber: null,
-        duplicateOfNumber: null,
-        blockedByNumbers: [],
-        blockedByGithubRefs: [],
-        childCompletionCount: { completed: 0, total: 0 },
-        checklistCompletionCount: { completed: 0, total: 0 },
-      },
-    ])
+    ).toEqual(expectedProjectTask(task, project.id, false))
+  })
+
+  it('includes task descriptions when full is true', async () => {
+    const project = await createProject({ title: 'Task space' })
+    const task = await createTask('Assigned item', {
+      description: 'Task body',
+    })
+    await app.request(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: project.id }),
+    })
+
+    const result = await callTool('project_tasks', {
+      id: project.id,
+      full: true,
+    })
+
+    expect(
+      normalizeDynamicValues(parseToolJson(result), { taskNumbers: true }),
+    ).toEqual(expectedProjectTask(task, project.id, true))
   })
 
   it('rejects invalid project path ids for every id-based operation', async () => {

@@ -70,13 +70,14 @@ export interface TaskWaitSummaryResponse {
   id: string
   label: string
   followUpDate: string
+  githubLinkId: string | null
   resolvedAt: string | null
+  acknowledgedAt: string | null
 }
 
 export interface TaskWaitResponse extends TaskWaitSummaryResponse {
   taskId: string
-  body: string
-  acknowledgedAt: string | null
+  body: string | null
   createdAt: string
 }
 
@@ -275,6 +276,15 @@ export function toListItemResponse(
   }
 }
 
+export function toListRowResponse(
+  task: Parameters<typeof toListItemResponse>[0],
+  opts?: Parameters<typeof toListItemResponse>[1],
+): Omit<TaskListItemResponse, 'description'> {
+  const { description, ...row } = toListItemResponse(task, opts)
+  void description
+  return row
+}
+
 const recurrenceRuleResponseSchema = z.object({
   id: z.string(),
   type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
@@ -332,13 +342,14 @@ const taskWaitSummaryResponseSchema = z.object({
   id: z.string(),
   label: z.string(),
   followUpDate: z.iso.date(),
+  githubLinkId: z.string().nullable(),
   resolvedAt: z.string().nullable(),
+  acknowledgedAt: z.string().nullable(),
 })
 
 const taskWaitResponseSchema = taskWaitSummaryResponseSchema.extend({
   taskId: z.string(),
-  body: z.string(),
-  acknowledgedAt: z.string().nullable(),
+  body: z.string().nullable(),
   createdAt: z.string(),
 })
 
