@@ -468,7 +468,7 @@ describe('task_get', () => {
     })
   })
 
-  it('returns page metadata without content', async () => {
+  it('returns page metadata and a short preview without the full content', async () => {
     const task = await createTask('Task with notes')
     await createPage(task.id, 'Investigation notes', 'note body')
 
@@ -490,6 +490,8 @@ describe('task_get', () => {
               id: '<uuid>',
               taskId: '<uuid>',
               title: 'Investigation notes',
+              preview: 'note body',
+              contentTruncated: false,
               format: 'markdown',
               sortOrder: 0,
               createdAt: '<timestamp>',

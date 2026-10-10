@@ -64,7 +64,10 @@ function pageToResponse(
   }
 }
 
-type TaskPageListRow = typeof taskPages.$inferSelect & {
+type TaskPageListRow = Pick<
+  typeof taskPages.$inferSelect,
+  'id' | 'taskId' | 'title' | 'format' | 'sortOrder' | 'createdAt' | 'updatedAt'
+> & {
   preview: string | null
   contentTruncated: boolean
 }
@@ -74,7 +77,6 @@ export function taskPageListSelection() {
     id: taskPages.id,
     taskId: taskPages.taskId,
     title: taskPages.title,
-    content: taskPages.content,
     format: taskPages.format,
     sortOrder: taskPages.sortOrder,
     createdAt: taskPages.createdAt,
@@ -97,7 +99,14 @@ export function pageToListResponse(
   author: EditAuthorInfo | null = null,
 ) {
   return {
-    ...pageToResponse(page, author),
+    id: page.id,
+    taskId: page.taskId,
+    title: page.title,
+    format: page.format,
+    sortOrder: page.sortOrder,
+    createdAt: page.createdAt.toISOString(),
+    updatedAt: page.updatedAt.toISOString(),
+    author,
     preview: page.preview,
     contentTruncated: page.contentTruncated,
   }

@@ -208,14 +208,6 @@ function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
   }
 }
 
-function toPageMetadata(page: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(page).filter(
-      ([key]) => !['content', 'preview', 'contentTruncated'].includes(key),
-    ),
-  )
-}
-
 function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
   return requestJson(
     client.api.tasks[':id'].$get({ param: { id: String(taskId) } }),
@@ -238,7 +230,6 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
       }
       return okAsync({
         ...taskResult,
-        pages: taskResult.pages.map(toPageMetadata),
         subtasks: nestTaskListRows(descendantResult),
       })
     })
@@ -286,7 +277,7 @@ export const taskReadOperations = [
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
     description:
-      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content.",
+      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata and short previews, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Page bodies are available through page_get.",
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id', 'GET /api/tasks'],
