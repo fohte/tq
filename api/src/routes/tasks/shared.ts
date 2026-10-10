@@ -24,7 +24,7 @@ import {
   getChecklistCompletionCountsByTaskId,
 } from '#routes/tasks/checklist-data'
 import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
-import type { TaskSortBy } from '#schemas/task'
+import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
 import {
   getOpenGithubBlockerRefsByTaskId,
   type GithubBlockerRef,
@@ -38,17 +38,24 @@ import {
   type TaskWaitSummary,
 } from '#services/task-waits'
 
-function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
+function resolvePrimaryTaskListOrderBy(
+  sortBy: TaskSortBy | undefined,
+  order: TaskSortOrder,
+) {
   switch (sortBy) {
     case 'updated':
-      return desc(tasks.updatedAt)
+      return order === 'desc' ? desc(tasks.updatedAt) : tasks.updatedAt
     case 'due':
-      return tasks.dueDate
+      return order === 'desc'
+        ? sql`${tasks.dueDate} DESC NULLS LAST`
+        : sql`${tasks.dueDate} ASC NULLS LAST`
     case 'follow-up':
-      return sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()})`
+      return order === 'desc'
+        ? sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) DESC NULLS LAST`
+        : sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) ASC NULLS LAST`
     case 'created':
     default:
-      return tasks.createdAt
+      return order === 'desc' ? desc(tasks.createdAt) : tasks.createdAt
   }
 }
 
@@ -57,8 +64,15 @@ function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
 // when the primary sort key ties (e.g. rows created in the same
 // transaction share one `now()`-derived `createdAt`), which limit/offset
 // paging requires to avoid duplicate or skipped rows across pages.
-export function resolveTaskListOrderBy(sortBy?: TaskSortBy) {
-  return [resolvePrimaryTaskListOrderBy(sortBy), tasks.number]
+export function resolveTaskListOrderBy(
+  sortBy?: TaskSortBy,
+  order?: TaskSortOrder,
+) {
+  const defaultOrder = sortBy === 'updated' ? 'desc' : 'asc'
+  return [
+    resolvePrimaryTaskListOrderBy(sortBy, order ?? defaultOrder),
+    tasks.number,
+  ]
 }
 
 export function recurrenceRuleToResponse(

@@ -32,6 +32,7 @@ type TaskListContext = TaskContext | 'all'
 
 export type TaskSortBy = 'created' | 'updated' | 'due'
 export type TaskListSortBy = TaskSortBy | 'follow-up'
+type TaskSortOrder = 'asc' | 'desc'
 
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 
@@ -53,6 +54,7 @@ type TaskListFilterOptions = {
   label?: string
   projectId?: string
   sortBy?: TaskListSortBy
+  order?: TaskSortOrder
   includeAncestors?: boolean
   limit: number | 'unlimited'
   offset?: number

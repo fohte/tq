@@ -98,11 +98,13 @@ export async function queryTaskList(
   const {
     conditions,
     sortBy,
+    order,
     freeTextWords: words,
   } = await buildTaskFilterConditions(query)
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
     sortBy == null &&
+    order == null &&
     words.length > 0
 
   const where = conditions.length > 0 ? and(...conditions) : undefined
@@ -115,7 +117,7 @@ export async function queryTaskList(
             desc(tasks.updatedAt),
             desc(tasks.number),
           ]
-        : resolveTaskListOrderBy(sortBy)
+        : resolveTaskListOrderBy(sortBy, order)
   const fullRowsQuery = selectTaskListRows()
     .where(where)
     .orderBy(...orderBy)

@@ -25,6 +25,8 @@ const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
 export const taskSortBy = z.enum(['created', 'updated', 'due', 'follow-up'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
+export const taskSortOrder = z.enum(['asc', 'desc'])
+export type TaskSortOrder = z.infer<typeof taskSortOrder>
 
 const hasFlagSchema = z
   .string()
@@ -162,6 +164,11 @@ export const listTasksQuerySchema = z.object({
   includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
   sortBy: taskSortBy.optional(),
+  order: taskSortOrder
+    .optional()
+    .describe(
+      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created or sortBy=due.',
+    ),
   limit: z.union([
     z.coerce.number().int().min(1).max(100),
     z.literal('unlimited'),
@@ -176,6 +183,7 @@ const taskFilterQuerySchema = listTasksQuerySchema.omit({
   limit: true,
   offset: true,
   sortBy: true,
+  order: true,
   view: true,
 })
 
