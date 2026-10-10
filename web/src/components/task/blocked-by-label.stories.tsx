@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { makeBlockedByGithubRef } from '#components/task/github-link-test-fixtures'
 import { BlockedByLabel } from '#components/task/task-row-shared'
+import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 
 const meta = {
   title: 'Task/BlockedByLabel',
@@ -17,6 +18,7 @@ export const SingleBlocker: Story = {
   args: {
     blockedByNumbers: [312],
     blockedByGithubRefs: [],
+    waits: [],
   },
 }
 
@@ -25,6 +27,7 @@ export const MultipleBlockers: Story = {
   args: {
     blockedByNumbers: [312],
     blockedByGithubRefs: [makeBlockedByGithubRef()],
+    waits: [],
   },
 }
 
@@ -33,5 +36,24 @@ export const SingleGithubBlocker: Story = {
   args: {
     blockedByNumbers: [],
     blockedByGithubRefs: [makeBlockedByGithubRef()],
+    waits: [],
+  },
+}
+
+export const SingleWait: Story = {
+  name: 'the badge shows one reply wait and its follow-up date',
+  args: {
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    waits: [makeTaskWaitSummary()],
+  },
+}
+
+export const OverdueWait: Story = {
+  name: 'the badge highlights an overdue follow-up date',
+  args: {
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    waits: [makeTaskWaitSummary({ followUpDate: '2000-01-01' })],
   },
 }

@@ -1,12 +1,16 @@
 import { Button } from '@fohte/ui/button'
 import { useNavigate } from '@tanstack/react-router'
-import { Bell, CalendarRange, Repeat } from 'lucide-react'
+import { Bell, CalendarRange, Hourglass, Repeat } from 'lucide-react'
 import { useState } from 'react'
 
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { useProject } from '#hooks/use-projects'
 import type { SearchResult } from '#hooks/use-search'
-import type { BlockedByGithubRef, Task } from '#hooks/use-tasks'
+import type {
+  BlockedByGithubRef,
+  Task,
+  TaskWaitSummary,
+} from '#hooks/use-tasks'
 import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatReminderTime } from '#lib/format'
 import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
@@ -265,21 +269,50 @@ export function CloseReasonLabel({
 export function BlockedByLabel({
   blockedByNumbers,
   blockedByGithubRefs,
+  waits = [],
 }: {
   blockedByNumbers: number[]
   blockedByGithubRefs: BlockedByGithubRef[]
+  waits?: TaskWaitSummary[]
 }) {
-  const blockerCount = blockedByNumbers.length + blockedByGithubRefs.length
+  const unresolvedWaits = waits.filter((wait) => wait.resolvedAt == null)
+  const blockerCount =
+    blockedByNumbers.length +
+    blockedByGithubRefs.length +
+    unresolvedWaits.length
   const soleGithubBlocker =
     blockerCount === 1 ? blockedByGithubRefs[0] : undefined
+  const soleWait = blockerCount === 1 ? unresolvedWaits[0] : undefined
+
+  if (blockerCount === 0) return null
+
   const text =
-    blockerCount === 1 && soleGithubBlocker == null
-      ? `blocked by #${String(blockedByNumbers[0])}`
-      : `blocked by ${String(blockerCount)}`
+    soleWait != null
+      ? null
+      : blockerCount === 1 && soleGithubBlocker == null
+        ? `blocked by #${String(blockedByNumbers[0])}`
+        : `blocked by ${String(blockerCount)}`
 
   return (
-    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-      {soleGithubBlocker == null ? (
+    <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+      <Hourglass className="size-3" aria-hidden="true" />
+      {soleWait != null ? (
+        <>
+          <span className="max-w-52 truncate">{soleWait.label}</span>
+          <span aria-hidden="true">·</span>
+          <span>follow up</span>
+          <span
+            className={cn(
+              isTaskOverdue({
+                status: 'todo',
+                dueDate: soleWait.followUpDate,
+              }) && 'text-primary',
+            )}
+          >
+            {formatShortDate(soleWait.followUpDate)}
+          </span>
+        </>
+      ) : soleGithubBlocker == null ? (
         text
       ) : (
         <>

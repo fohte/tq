@@ -169,6 +169,40 @@ describe('TaskSearchCandidateDialog', () => {
     expect(screen.getByText('no results for "Deploy"')).toBeInTheDocument()
   })
 
+  it('offers the entered text as a reply wait after task matches', async () => {
+    mockSearchResults([orphanCandidate])
+    const onSelectWait = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <TaskSearchCandidateDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Add blocker"
+        excludedTaskIds={new Set()}
+        onSelectCandidate={vi.fn()}
+        onSelectWait={onSelectWait}
+      />,
+    )
+
+    await user.type(
+      screen.getByPlaceholderText('Search tasks...'),
+      'Review feedback',
+    )
+    await user.click(screen.getByText('Wait for “Review feedback”'))
+
+    const readActual = () => ({
+      candidate: screen.getByText('Deploy to production').textContent,
+      waitAction: screen.getByText('Wait for “Review feedback”').textContent,
+      selectedWaits: onSelectWait.mock.calls,
+    })
+
+    expect(readActual()).toEqual({
+      candidate: 'Deploy to production',
+      waitAction: 'Wait for “Review feedback”',
+      selectedWaits: [['Review feedback']],
+    })
+  })
+
   it('resolves a pasted GitHub URL and selects it as a blocker', async () => {
     const githubUrl = 'https://github.com/example-team/sample-project/pull/2048'
     const pastedUrl = `${githubUrl}#issuecomment-77`

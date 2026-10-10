@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { makeBlockedByGithubRef } from '#components/task/github-link-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 
 const task: Task = makeTask()
@@ -135,5 +136,43 @@ describe('TaskRowAppearance', () => {
       openCalls: [[blockerRef.url, '_blank', 'noopener,noreferrer']],
       location: '/',
     })
+  })
+
+  it('highlights an overdue reply wait in the task row', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        waits: [
+          makeTaskWaitSummary({
+            label: 'Review feedback',
+            followUpDate: '2000-01-01',
+          }),
+        ],
+      }),
+    )
+    const followUpDate = screen.getByText('Jan 1, 2000')
+
+    const readActual = () => ({
+      badgeText: followUpDate.parentElement?.parentElement?.textContent,
+      dateIsPrimary: followUpDate.classList.contains('text-primary'),
+      hourglassCount: container.querySelectorAll('svg.lucide-hourglass').length,
+    })
+
+    expect(readActual()).toEqual({
+      badgeText: 'personal·Review feedback·follow upJan 1, 2000',
+      dateIsPrimary: true,
+      hourglassCount: 1,
+    })
+  })
+
+  it('counts unresolved reply waits with task and GitHub blockers', async () => {
+    await renderTaskRow(
+      makeTask({
+        blockedByNumbers: [312],
+        blockedByGithubRefs: [makeBlockedByGithubRef()],
+        waits: [makeTaskWaitSummary()],
+      }),
+    )
+
+    expect(screen.getByText('blocked by 3').textContent).toEqual('blocked by 3')
   })
 })

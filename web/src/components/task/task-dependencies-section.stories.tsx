@@ -5,7 +5,8 @@ import type { ReactNode } from 'react'
 import { makeGithubBlocker } from '#components/task/github-link-test-fixtures'
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import type { LinkedTaskSummary } from '#hooks/use-tasks'
+import { makeTaskWait } from '#components/task/task-wait-test-fixtures'
+import type { LinkedTaskSummary, TaskWait } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const taskId = '00000000-0000-0000-0000-000000000001'
@@ -56,6 +57,21 @@ const githubBlockers = [
   }),
 ]
 
+const waits: TaskWait[] = [
+  makeTaskWait({
+    body: 'Review the proposal\n\nPlease confirm the updated timeline.',
+    label: 'Review the proposal',
+  }),
+  makeTaskWait({
+    id: 'wait-example-002',
+    body: 'Confirm the revised estimate',
+    label: 'Confirm the revised estimate',
+    followUpDate: '2099-10-15',
+    resolvedAt: '2099-10-11T00:00:00.000Z',
+    acknowledgedAt: '2099-10-11T00:00:00.000Z',
+  }),
+]
+
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -75,10 +91,12 @@ function SectionStory({
   blockedBy,
   blocking,
   githubBlockers: currentGithubBlockers,
+  waits: currentWaits,
 }: {
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
   githubBlockers: typeof githubBlockers
+  waits: TaskWait[]
 }) {
   return (
     <Providers>
@@ -88,6 +106,7 @@ function SectionStory({
           blockedBy={blockedBy}
           blocking={blocking}
           githubBlockers={currentGithubBlockers}
+          waits={currentWaits}
         />
       </div>
     </Providers>
@@ -111,6 +130,7 @@ export const WithBothGroups: Story = {
     blockedBy: blockedByTasks,
     blocking: blockingTasks,
     githubBlockers,
+    waits: [],
   },
 }
 
@@ -120,6 +140,7 @@ export const BlockedByOnly: Story = {
     blockedBy: blockedByTasks,
     blocking: [],
     githubBlockers,
+    waits: [],
   },
 }
 
@@ -129,10 +150,21 @@ export const WithGitHubBlockers: Story = {
     blockedBy: [],
     blocking: [],
     githubBlockers,
+    waits: [],
+  },
+}
+
+export const WithWaits: Story = {
+  name: 'the section keeps active and resolved reply waits visible',
+  args: {
+    blockedBy: blockedByTasks.slice(0, 1),
+    blocking: [],
+    githubBlockers: [],
+    waits,
   },
 }
 
 export const Empty: Story = {
   name: 'the task has no dependencies',
-  args: { blockedBy: [], blocking: [], githubBlockers: [] },
+  args: { blockedBy: [], blocking: [], githubBlockers: [], waits: [] },
 }

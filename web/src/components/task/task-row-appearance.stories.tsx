@@ -9,6 +9,7 @@ import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { getTaskRowTimeBlockExtras } from '#components/task/task-row-time-block'
 import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
+import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -113,6 +114,15 @@ export const Todo: Story = {
   name: 'the row shows a task that is not yet complete',
   args: {
     task: { ...baseTask },
+  },
+}
+
+export const WaitingForReply: Story = {
+  name: 'the row identifies the reply it is waiting for',
+  args: {
+    task: makeTask({
+      waits: [makeTaskWaitSummary({ label: 'Review the proposal' })],
+    }),
   },
 }
 

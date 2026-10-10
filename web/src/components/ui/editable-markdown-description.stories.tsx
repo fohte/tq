@@ -88,3 +88,20 @@ export const EditingProject: Story = {
     initiallyEditing: true,
   },
 }
+
+export const InlineWait: Story = {
+  name: 'the inline wait description has no surrounding editor chrome',
+  args: {
+    variant: 'inline',
+    defaultValue: 'Waiting for the team to confirm the schedule.',
+  },
+}
+
+export const InlineWaitEditing: Story = {
+  name: 'the inline wait description is open in Markdown edit mode',
+  args: {
+    variant: 'inline',
+    defaultValue: 'Waiting for the team to confirm the schedule.',
+    initiallyEditing: true,
+  },
+}
