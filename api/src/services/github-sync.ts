@@ -3,8 +3,7 @@ import { and, eq, isNull, lt } from 'drizzle-orm'
 import { okAsync, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
-import { taskGithubLinks, tasks } from '#db/schema'
-import { APP_DOMAIN } from '#env'
+import { taskGithubLinks } from '#db/schema'
 import {
   IntegrationConfigError,
   OAuthTokenMissingError,
@@ -23,8 +22,13 @@ import {
 import { getValidAccessToken } from '#integrations/oauth'
 import { isQuietProviderError } from '#integrations/quiet-errors'
 import { publishChangeEvent } from '#lib/change-events'
+import {
+  candidateEvents,
+  GithubLinkNotifyError,
+  isTaskTodo,
+  notifyLinkChange,
+} from '#services/github-sync-notifications'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
-import { sendPush } from '#services/push'
 import { checkChecklistItemsForGithubLink } from '#services/task-checklist-progress'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
@@ -36,33 +40,6 @@ type SyncLinkError =
   | IntegrationConfigError
   | TokenRefreshError
   | GithubLinkNotifyError
-
-class GithubLinkNotifyError extends Error {
-  constructor(error: unknown) {
-    super('Failed to notify about a GitHub link change', { cause: error })
-    this.name = 'GithubLinkNotifyError'
-  }
-}
-
-function candidateEvents(link: LinkRow, issue: GithubIssueData): NotifyEvent[] {
-  const candidates: NotifyEvent[] = []
-  if (link.state === 'open' && issue.state !== 'open') {
-    candidates.push('closed')
-  }
-  if (link.state !== 'open' && issue.state === 'open') {
-    candidates.push('reopened')
-  }
-  if (link.commentsCount !== null && issue.commentsCount > link.commentsCount) {
-    candidates.push('comments')
-  }
-  if (
-    link.githubUpdatedAt !== null &&
-    new Date(issue.githubUpdatedAt).getTime() !== link.githubUpdatedAt.getTime()
-  ) {
-    candidates.push('other')
-  }
-  return candidates
-}
 
 function changedEvent(
   link: LinkRow,
@@ -138,10 +115,6 @@ function changedEvent(
   return null
 }
 
-function toNotifyError(error: unknown): GithubLinkNotifyError {
-  return new GithubLinkNotifyError(error)
-}
-
 function matchesStoredGithubState(link: LinkRow) {
   return and(
     eq(taskGithubLinks.id, link.id),
@@ -152,60 +125,6 @@ function matchesStoredGithubState(link: LinkRow) {
     link.githubUpdatedAt === null
       ? isNull(taskGithubLinks.githubUpdatedAt)
       : eq(taskGithubLinks.githubUpdatedAt, link.githubUpdatedAt),
-  )
-}
-
-function notifyLinkChange(
-  link: LinkRow,
-  notification: NonNullable<ReturnType<typeof changedEvent>>,
-): ResultAsync<void, GithubLinkNotifyError> {
-  if (!link.notifyEvents.includes(notification.event)) {
-    return okAsync(undefined)
-  }
-
-  return ResultAsync.fromPromise(
-    db
-      .select({
-        id: tasks.id,
-        number: tasks.number,
-        title: tasks.title,
-        status: tasks.status,
-        context: tasks.context,
-      })
-      .from(tasks)
-      .where(eq(tasks.id, link.taskId))
-      .then((rows) => rows[0]),
-    toNotifyError,
-  ).andThen((task) => {
-    if (task == null || task.status !== 'todo') {
-      return okAsync(undefined)
-    }
-
-    return ResultAsync.fromPromise(
-      sendPush(
-        { context: task.context },
-        {
-          title: notification.title,
-          body: `#${String(task.number)} ${task.title}`,
-          taskId: task.id,
-          url: `https://${APP_DOMAIN}/tasks/${task.id}`,
-        },
-      ),
-      toNotifyError,
-    ).map(() => undefined)
-  })
-}
-
-function isTaskTodo(
-  link: LinkRow,
-): ResultAsync<boolean, GithubLinkNotifyError> {
-  return ResultAsync.fromPromise(
-    db
-      .select({ status: tasks.status })
-      .from(tasks)
-      .where(eq(tasks.id, link.taskId))
-      .then((rows) => rows[0]?.status === 'todo'),
-    toNotifyError,
   )
 }
 
