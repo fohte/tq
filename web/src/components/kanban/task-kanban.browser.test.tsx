@@ -102,7 +102,7 @@ describe('TaskKanban waiting column dragging', () => {
                 id: 'waiting',
                 title: 'Waiting',
                 tasks: [waitingTask],
-                acceptsDrops: false,
+                allowsManualMoves: false,
               },
             ]}
             onDrop={onDrop}

@@ -48,8 +48,8 @@ export interface TaskKanbanColumn {
   hasError?: boolean
   /** Set false when `tasks` is a truncated subset, so the header doesn't show a count that reads as the true total. */
   showCount?: boolean
-  /** Set false when this column is derived from task state instead of accepting manual moves. */
-  acceptsDrops?: boolean
+  /** Set false when this column is derived from task state and tasks cannot be moved manually. */
+  allowsManualMoves?: boolean
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; shown right-aligned in the column header. */
   dateRangeLabel?: string
   /** Rendered below the task list, e.g. a link to the full filtered list. */
@@ -189,11 +189,14 @@ function TaskKanbanColumnView({
     isLoading = false,
     hasError = false,
     showCount = true,
-    acceptsDrops = true,
+    allowsManualMoves = true,
     dateRangeLabel,
     footer,
   } = column
-  const { setNodeRef, isOver } = useDroppable({ id, disabled: !acceptsDrops })
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    disabled: !allowsManualMoves,
+  })
 
   return (
     <div className="flex w-1/2 shrink-0 snap-start flex-col border-r border-border last:border-r-0 md:w-0 md:flex-1 md:snap-align-none">
@@ -243,8 +246,8 @@ function TaskKanbanColumnView({
                 key={task.id}
                 task={task}
                 sourceColumnId={id}
-                draggable={acceptsDrops}
-                droppable={reorderEnabled && acceptsDrops}
+                draggable={allowsManualMoves}
+                droppable={reorderEnabled && allowsManualMoves}
               />
             ))}
           </SortableContext>
@@ -338,7 +341,7 @@ export function TaskKanban({
       const columnTaskIds = columns.map((c) => ({
         id: c.id,
         taskIds: c.tasks.map((t) => t.id),
-        acceptsDrops: c.acceptsDrops !== false,
+        allowsManualMoves: c.allowsManualMoves !== false,
       }))
 
       if (isCandidateDragData(data)) {

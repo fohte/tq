@@ -49,7 +49,7 @@ describe('resolveKanbanCardDrop', () => {
   it('returns null when dropped into a column that rejects drops', () => {
     const dropDisabledColumns = [
       ...columns,
-      { id: 'waiting', taskIds: [], acceptsDrops: false },
+      { id: 'waiting', taskIds: [], allowsManualMoves: false },
     ]
 
     expect(
@@ -60,7 +60,7 @@ describe('resolveKanbanCardDrop', () => {
   it('returns null when the source column rejects task moves', () => {
     const waitingColumns = [
       ...columns,
-      { id: 'waiting', taskIds: ['blocked'], acceptsDrops: false },
+      { id: 'waiting', taskIds: ['blocked'], allowsManualMoves: false },
     ]
 
     expect(
@@ -89,7 +89,7 @@ describe('resolveKanbanCandidateDrop', () => {
   it('returns null when dropped into a column that rejects drops', () => {
     const dropDisabledColumns = [
       ...columns,
-      { id: 'waiting', taskIds: [], acceptsDrops: false },
+      { id: 'waiting', taskIds: [], allowsManualMoves: false },
     ]
 
     expect(
