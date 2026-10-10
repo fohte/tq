@@ -12,7 +12,7 @@ const samplePages: TaskPage[] = [
   makeTaskPage({
     id: 'page-002',
     title: 'Technical Spec',
-    content:
+    preview:
       '# API Design\n\nREST endpoints for the task management system.\n\n## Endpoints\n\n- GET /tasks\n- POST /tasks\n- PATCH /tasks/:id',
     sortOrder: 1,
     createdAt: '2026-03-21T00:00:00.000Z',
@@ -21,7 +21,7 @@ const samplePages: TaskPage[] = [
   makeTaskPage({
     id: 'page-003',
     title: 'Empty Page',
-    content: '',
+    preview: '',
     sortOrder: 2,
     createdAt: '2026-03-22T00:00:00.000Z',
     updatedAt: '2026-03-22T00:00:00.000Z',
@@ -31,9 +31,8 @@ const samplePages: TaskPage[] = [
 const sampleHtmlPage: TaskPage = makeTaskPage({
   id: 'page-004',
   title: 'Dashboard Mockup',
-  content:
-    '<!doctype html><html><body style="font-family: sans-serif; margin: 0; padding: 16px;"><h1>Dashboard</h1></body></html>',
   format: 'html',
+  preview: null,
   sortOrder: 3,
   createdAt: '2026-03-23T00:00:00.000Z',
   updatedAt: '2026-03-23T00:00:00.000Z',

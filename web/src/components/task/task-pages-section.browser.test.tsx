@@ -5,12 +5,17 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PageCardPresentation } from '#components/task/page-card'
-import { makeTaskPage } from '#components/task/task-page-test-fixtures'
+import {
+  makeTaskPage,
+  makeTaskPageBody,
+} from '#components/task/task-page-test-fixtures'
 import { TaskPagesSection } from '#components/task/task-pages-section'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import type { TaskPage } from '#hooks/use-task-pages'
 import { assertDefined } from '#lib/test-utils'
 import { createStoryRouter } from '#storybook-config/story-router'
+
+const pageCardBody = makeTaskPageBody()
 
 const { getPages, getPage } = vi.hoisted(() => ({
   getPages: vi.fn(),
@@ -102,7 +107,7 @@ async function renderPageCard({
       <PageCardPresentation
         taskId={page.taskId}
         page={page}
-        expandedContent={page.content}
+        expandedContent={pageCardBody.content}
         onDelete={onDelete}
         isDeleting={isDeleting}
         {...(isExpanded === undefined ? {} : { isExpanded })}
@@ -205,7 +210,6 @@ describe('PageCardPresentation', () => {
 
   it('uses only the summary preview for a collapsed card', async () => {
     const page = makeTaskPage({
-      content: 'This body is not the preview.',
       preview: 'This is the preview.',
       contentTruncated: true,
     })
@@ -218,11 +222,10 @@ describe('PageCardPresentation', () => {
 
   it('loads the full body from the single-page endpoint when the card expands', async () => {
     const page = makeTaskPage({
-      content: 'The list body is not used for editing.',
       preview: '## Short list preview',
       contentTruncated: false,
     })
-    const fullPage = makeTaskPage({
+    const fullPage = makeTaskPageBody({
       content:
         '## Full body from the single-page endpoint\n\nLoaded in the editor.',
     })
@@ -272,11 +275,10 @@ describe('PageCardPresentation', () => {
 
   it('keeps edited input when the page list and body queries refetch', async () => {
     const page = makeTaskPage({
-      content: 'The list body is not used for editing.',
       preview: '## Short list preview',
       contentTruncated: false,
     })
-    const fullPage = makeTaskPage({
+    const fullPage = makeTaskPageBody({
       content: '## Original body from the endpoint',
     })
     getPages.mockImplementation(() => jsonResponse([page]))

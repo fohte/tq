@@ -487,7 +487,8 @@ describe('task get', () => {
           createdAt: '2031-01-02T03:04:05.000Z',
           updatedAt: '2031-01-02T03:04:05.000Z',
           author: { kind: 'human', agent: null },
-          content: 'page body',
+          preview: 'page preview',
+          contentTruncated: false,
         },
       ],
     }
@@ -524,6 +525,8 @@ describe('task get', () => {
           createdAt: '2031-01-02T03:04:05.000Z',
           updatedAt: '2031-01-02T03:04:05.000Z',
           author: { kind: 'human', agent: null },
+          preview: 'page preview',
+          contentTruncated: false,
         },
       ],
       subtasks: [{ ...child, children: [] }],
