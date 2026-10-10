@@ -11,7 +11,12 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { useProject, useProjects } from '#hooks/use-projects'
 import { useCreateTask } from '#hooks/use-tasks'
 import {
   assertDefined,
@@ -25,6 +30,8 @@ import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 const mockUseFilteredTaskTree = vi.fn()
 const mockUseCreateTask = vi.fn()
+const mockUseProject = vi.fn<typeof useProject>()
+const mockUseProjects = vi.fn<typeof useProjects>()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
@@ -42,14 +49,14 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 
 // The project filter select fetches the project list via useProjects. Stub
 // it so the route never issues a real fetch.
-const mockUseProjects = vi.fn()
-
 vi.mock('#hooks/use-projects', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-projects')>()
   return {
     ...actual,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-    useProjects: (...args: unknown[]) => mockUseProjects(...args),
+    useProject: (...args: Parameters<typeof useProject>) =>
+      mockUseProject(...args),
+    useProjects: (...args: Parameters<typeof useProjects>) =>
+      mockUseProjects(...args),
   }
 })
 
@@ -138,7 +145,19 @@ beforeEach(() => {
     tasks: [],
     lazyChildrenFilter: {},
   })
-  mockUseProjects.mockReturnValue({ data: [] })
+  mockUseProjects.mockReturnValue(
+    partialMutation<ReturnType<typeof useProjects>>({ data: [] }),
+  )
+  mockUseProject.mockImplementation((id) =>
+    partialMutation<ReturnType<typeof useProject>>({
+      data:
+        id === 'proj-1'
+          ? makeProjectDetail(
+              makeProject({ id: 'proj-1', title: 'Website Redesign' }),
+            )
+          : undefined,
+    }),
+  )
   mockUseLabels.mockReturnValue({ data: [] })
   mockUseSearchSuggestions.mockReturnValue({ data: [] })
 })
@@ -231,15 +250,17 @@ describe('TaskList status filter', () => {
 
 describe('TaskList project filter selector', () => {
   beforeEach(() => {
-    mockUseProjects.mockReturnValue({
-      data: [
-        { id: 'proj-1', title: 'Website Redesign' },
-        { id: 'proj-2', title: 'Mobile App' },
-      ],
-    })
+    mockUseProjects.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjects>>({
+        data: [
+          makeProject({ id: 'proj-1', title: 'Website Redesign' }),
+          makeProject({ id: 'proj-2', title: 'Mobile App' }),
+        ],
+      }),
+    )
   })
 
-  it('defaults to no project chip and requests unfiltered data on initial render', async () => {
+  it('defaults to no project chip without fetching project options', async () => {
     renderTaskList()
 
     await waitFor(() => {
@@ -250,6 +271,11 @@ describe('TaskList project filter selector', () => {
     expect(
       screen.queryByRole('button', { name: /^project / }),
     ).not.toBeInTheDocument()
+    expect(
+      mockUseProjects.mock.calls.filter(
+        ([, options]) => options?.enabled !== false,
+      ),
+    ).toEqual([])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { q: 'is:todo sort:updated' },
     ])
@@ -358,9 +384,11 @@ describe('TaskList URL query encoding', () => {
 
   it('encodes the selected project into the q param', async () => {
     const user = userEvent.setup()
-    mockUseProjects.mockReturnValue({
-      data: [{ id: 'proj-1', title: 'Website Redesign' }],
-    })
+    mockUseProjects.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjects>>({
+        data: [makeProject({ id: 'proj-1', title: 'Website Redesign' })],
+      }),
+    )
     const { router } = renderTaskList()
 
     const input = await screen.findByRole('textbox', { name: 'Filter query' })
@@ -373,9 +401,11 @@ describe('TaskList URL query encoding', () => {
   })
 
   it('migrates a pre-migration sortBy/showCompleted/projectId URL into q', async () => {
-    mockUseProjects.mockReturnValue({
-      data: [{ id: 'proj-1', title: 'Website Redesign' }],
-    })
+    mockUseProjects.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjects>>({
+        data: [makeProject({ id: 'proj-1', title: 'Website Redesign' })],
+      }),
+    )
     // Asserts against the rendered filter state (not router.state.location
     // .search): TanStack Router only re-derives `location.search` from
     // validateSearch's `q` on the next navigate, so on this initial load the

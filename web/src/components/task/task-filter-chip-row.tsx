@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { useQueryClient } from '@tanstack/react-query'
 import type { ParsedQuery } from 'api/search-query-parser'
 import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useId } from 'react'
@@ -15,6 +16,11 @@ import { TaskStatusFilterFields } from '#components/task/task-status-filter-fiel
 import { Checkbox } from '#components/ui/checkbox'
 import { shouldIgnoreShortcut } from '#hooks/use-global-keybindings'
 import type { Project } from '#hooks/use-projects'
+import {
+  ALL_PROJECTS_FILTER,
+  projectKeys,
+  useProject,
+} from '#hooks/use-projects'
 import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
 import {
@@ -36,7 +42,6 @@ type TaskFilterKind =
 interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
   parsed: ParsedQuery
-  projects: Project[]
   // Saved views aren't scoped to a project (see api/src/db/schema/core.ts),
   // so a screen whose scope already comes from elsewhere (e.g. the
   // /projects/$projectId route param) hides the button rather than saving a
@@ -57,7 +62,6 @@ interface TaskFilterChipRowProps {
 export function TaskFilterChipRow({
   onQueryChange,
   parsed,
-  projects,
   hideSaveView = false,
   disableProjectFilter = false,
   disableStatusFilter = false,
@@ -66,6 +70,7 @@ export function TaskFilterChipRow({
   autoFocus = false,
 }: TaskFilterChipRowProps) {
   const searchModalOpen = useSearchModalOpen()
+  const queryClient = useQueryClient()
   const rowId = useId()
   const freeTextInputId = `task-filter-free-text-${rowId}`
   const hasPagesCheckboxId = `${freeTextInputId}-has-pages`
@@ -103,9 +108,25 @@ export function TaskFilterChipRow({
   // Keep the picker selection valid if an older URL contains a removed sort.
   const pickerSortBy =
     sortOptionValues.find((value) => value === sortBy) ?? defaultTaskSort
-  const selectedProject = disableProjectFilter
-    ? undefined
-    : projects.find((project) => project.id === parsed.projectId)
+  const selectedProjectQuery = useProject(parsed.projectId ?? '', {
+    enabled:
+      !disableProjectFilter &&
+      parsed.projectId != null &&
+      parsed.projectId !== '',
+  })
+  const selectedProject =
+    disableProjectFilter || parsed.projectId == null || parsed.projectId === ''
+      ? undefined
+      : (selectedProjectQuery.data ??
+        queryClient
+          .getQueryData<Project[]>(projectKeys.list(ALL_PROJECTS_FILTER))
+          ?.find((project) => project.id === parsed.projectId) ??
+        (selectedProjectQuery.isError
+          ? {
+              id: parsed.projectId,
+              title: `Unavailable (${parsed.projectId})`,
+            }
+          : undefined))
 
   const parentTaskQuery = useTask(parsed.parentId ?? '', {
     enabled: parsed.parentId != null,
@@ -240,7 +261,6 @@ export function TaskFilterChipRow({
             }}
           >
             <TaskProjectFilterFields
-              projects={projects}
               selectedProjectId={parsed.projectId}
               onProjectIdChange={(id) => {
                 setParsed(withProjectId(parsed, id))

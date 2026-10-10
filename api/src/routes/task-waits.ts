@@ -1,12 +1,12 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
-import { taskWaits } from '#db/schema'
+import { taskGithubLinks, taskWaits } from '#db/schema'
+import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { setChangeEventTaskIds } from '#lib/change-events'
-import { firstOrThrow } from '#lib/drizzle-utils'
 import { formatDateAtOffset } from '#lib/timezone'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createTaskWaitSchema, updateTaskWaitSchema } from '#schemas/task-wait'
@@ -37,18 +37,58 @@ export const taskWaitsApp = new Hono<TaskEnv>()
   })
   .post('/', zValidator('json', createTaskWaitSchema), async (c) => {
     const input = c.req.valid('json')
-    const wait = firstOrThrow(
-      await db
-        .insert(taskWaits)
-        .values({
-          taskId: c.get('task').id,
-          body: input.body,
-          followUpDate:
-            input.followUpDate ??
-            defaultFollowUpDate(new Date(), input.tzOffset ?? 0),
-        })
-        .returning(),
-    )
+    const taskId = c.get('task').id
+    let githubLinkId: string | null = null
+
+    if (input.githubUrl != null) {
+      const parsedUrl = parseGithubIssueUrl(input.githubUrl)
+      if (parsedUrl.isErr()) {
+        return c.json(
+          { error: 'Invalid GitHub issue or pull request URL' },
+          400,
+        )
+      }
+
+      const githubLink = await db.query.taskGithubLinks.findFirst({
+        where: and(
+          eq(taskGithubLinks.taskId, taskId),
+          eq(taskGithubLinks.owner, parsedUrl.value.owner),
+          eq(taskGithubLinks.repo, parsedUrl.value.repo),
+          eq(taskGithubLinks.number, parsedUrl.value.number),
+          eq(taskGithubLinks.role, 'blocker'),
+        ),
+      })
+      if (githubLink == null) {
+        return c.json({ error: 'GitHub blocker not found' }, 404)
+      }
+      if (githubLink.state !== 'open') {
+        return c.json({ error: 'GitHub blocker is not open' }, 409)
+      }
+      githubLinkId = githubLink.id
+    }
+
+    const [wait] = await db
+      .insert(taskWaits)
+      .values({
+        taskId,
+        body: input.body ?? null,
+        githubLinkId,
+        followUpDate:
+          input.followUpDate ??
+          defaultFollowUpDate(new Date(), input.tzOffset ?? 0),
+      })
+      .onConflictDoNothing({
+        target: taskWaits.githubLinkId,
+        where: isNull(taskWaits.resolvedAt),
+      })
+      .returning()
+
+    if (wait == null) {
+      return c.json(
+        { error: 'Wait already exists for this GitHub blocker' },
+        409,
+      )
+    }
 
     return c.json(taskWaitToResponse(wait), 201)
   })
@@ -97,6 +137,39 @@ export const taskWaitsApp = new Hono<TaskEnv>()
         where: and(eq(taskWaits.id, waitId), eq(taskWaits.taskId, taskId)),
       })
       if (!existing) return c.json({ error: 'Wait not found' }, 404)
+
+      setChangeEventTaskIds(c, [])
+      return c.json(taskWaitToResponse(existing), 200)
+    },
+  )
+  .post(
+    '/:waitId/acknowledge',
+    zValidator('param', waitIdParamsSchema),
+    async (c) => {
+      const { waitId } = c.req.valid('param')
+      const taskId = c.get('task').id
+      const [wait] = await db
+        .update(taskWaits)
+        .set({ acknowledgedAt: new Date() })
+        .where(
+          and(
+            eq(taskWaits.id, waitId),
+            eq(taskWaits.taskId, taskId),
+            isNotNull(taskWaits.resolvedAt),
+            isNull(taskWaits.acknowledgedAt),
+          ),
+        )
+        .returning()
+
+      if (wait) return c.json(taskWaitToResponse(wait), 200)
+
+      const existing = await db.query.taskWaits.findFirst({
+        where: and(eq(taskWaits.id, waitId), eq(taskWaits.taskId, taskId)),
+      })
+      if (!existing) return c.json({ error: 'Wait not found' }, 404)
+      if (existing.resolvedAt == null) {
+        return c.json({ error: 'Wait is not resolved' }, 409)
+      }
 
       setChangeEventTaskIds(c, [])
       return c.json(taskWaitToResponse(existing), 200)

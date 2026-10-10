@@ -212,14 +212,6 @@ function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
   }
 }
 
-function toPageMetadata(page: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(page).filter(
-      ([key]) => !['content', 'preview', 'contentTruncated'].includes(key),
-    ),
-  )
-}
-
 function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
   return requestJson(
     client.api.tasks[':id'].$get({ param: { id: String(taskId) } }),
@@ -242,7 +234,6 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
       }
       return okAsync({
         ...taskResult,
-        pages: taskResult.pages.map(toPageMetadata),
         subtasks: nestTaskListRows(descendantResult),
       })
     })
@@ -290,7 +281,7 @@ export const taskReadOperations = [
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
     description:
-      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtask summaries. Subtask descriptions are omitted; use task_get (or CLI: task get) on a subtask to retrieve its description. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content.",
+      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata and short previews, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtask summaries. Subtask descriptions are omitted; use task_get (or CLI: task get) on a subtask to retrieve its description. Page bodies are available through page_get.",
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id', 'GET /api/tasks'],
@@ -300,7 +291,7 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters. Task descriptions are omitted from results by default; set full to include them.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. has:resolved-wait matches tasks with a resolved wait that has not been acknowledged and is available through q. Search filters with corresponding fields in the task search schema can also be sent as explicit parameters. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. Task descriptions are omitted from results by default; set full to include them.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],

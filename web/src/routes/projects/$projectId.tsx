@@ -11,11 +11,7 @@ import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
-import {
-  ALL_PROJECTS_FILTER,
-  useProject,
-  useProjects,
-} from '#hooks/use-projects'
+import { useProject } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import { recordRecentSearchItem } from '#lib/recent-search-items'
 import { tasksSearchDefaultQuery, withDefaultSort } from '#lib/tasks-query'
@@ -51,7 +47,6 @@ function ProjectDetailPage() {
     isLoading: isProjectLoading,
     error,
   } = useProject(projectId)
-  const projects = useProjects(ALL_PROJECTS_FILTER)
 
   useEffect(() => {
     if (isProjectLoading || error || project == null) return
@@ -104,7 +99,6 @@ function ProjectDetailPage() {
             project={project}
             parsedQuery={parsedQuery}
             onQueryChange={setQuery}
-            projects={projects.data ?? []}
             tree={tree}
             filteredTasks={filteredTasks}
             isTasksLoading={isFilteredTasksLoading}
@@ -130,7 +124,6 @@ function ProjectDetailPage() {
             project={project}
             parsedQuery={parsedQuery}
             onQueryChange={setQuery}
-            projects={projects.data ?? []}
             tree={tree}
             filteredTasks={filteredTasks}
             isTasksLoading={isFilteredTasksLoading}

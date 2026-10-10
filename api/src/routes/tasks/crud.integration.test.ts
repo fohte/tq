@@ -185,6 +185,28 @@ function relatedTaskQueryCountSnapshot(currentCount: number) {
   }
 }
 
+function dueOrderResponseSnapshot(
+  status: number,
+  body: TaskListItemResponse[],
+) {
+  return responseSnapshot(
+    status,
+    body.map((task) => task.id),
+  )
+}
+
+function dueOrderResponsesSnapshot(
+  defaultStatus: number,
+  defaultBody: TaskListItemResponse[],
+  ascendingStatus: number,
+  ascendingBody: TaskListItemResponse[],
+) {
+  return [
+    dueOrderResponseSnapshot(defaultStatus, defaultBody),
+    dueOrderResponseSnapshot(ascendingStatus, ascendingBody),
+  ]
+}
+
 async function createTaskWithAllRelations() {
   const task = await createTask('Task with relations')
   const duplicateTarget = await createTask('Related task')
@@ -2852,16 +2874,95 @@ describe('tasks CRUD API', () => {
       const res = await app.request(
         '/api/tasks?view=full&context=all&status=all&limit=unlimited&sortBy=due',
       )
+      const ascendingRes = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&sortBy=due&order=asc',
+      )
 
-      expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body.map((t) => t.id)).toEqual([
-        taskB.id,
-        taskC.id,
-        taskA.id,
-        taskWithoutDueFirst.id,
-        taskWithoutDueSecond.id,
+      const ascendingBody = await jsonBody<TaskListItemResponse[]>(ascendingRes)
+      expect(
+        dueOrderResponsesSnapshot(
+          res.status,
+          body,
+          ascendingRes.status,
+          ascendingBody,
+        ),
+      ).toEqual([
+        {
+          status: 200,
+          body: [
+            taskB.id,
+            taskC.id,
+            taskA.id,
+            taskWithoutDueFirst.id,
+            taskWithoutDueSecond.id,
+          ],
+        },
+        {
+          status: 200,
+          body: [
+            taskB.id,
+            taskC.id,
+            taskA.id,
+            taskWithoutDueFirst.id,
+            taskWithoutDueSecond.id,
+          ],
+        },
       ])
+    })
+
+    it('sorts by due date descending with tasks without a due date last', async () => {
+      const taskWithoutDueFirst = await createTask('No due date first')
+      const taskA = await createTask('Task A', { dueDate: '2026-03-25' })
+      const taskB = await createTask('Task B', { dueDate: '2026-03-20' })
+      const taskC = await createTask('Task C', { dueDate: '2026-03-22' })
+      const taskWithoutDueSecond = await createTask('No due date second')
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&sortBy=due&order=desc',
+      )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+
+      expect(dueOrderResponseSnapshot(res.status, body)).toEqual({
+        status: 200,
+        body: [
+          taskA.id,
+          taskC.id,
+          taskB.id,
+          taskWithoutDueFirst.id,
+          taskWithoutDueSecond.id,
+        ],
+      })
+    })
+
+    it('honors explicit order when includeMatch prioritizes title matches', async () => {
+      const titleOnlyMatch = await createTask('signal report')
+      const descriptionOnlyMatch = await createTask('newer report', {
+        description: 'signal in the description',
+      })
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2025-01-01T00:00:00.000Z') })
+        .where(eq(tasks.id, titleOnlyMatch.id))
+      await db
+        .update(tasks)
+        .set({ createdAt: new Date('2026-01-01T00:00:00.000Z') })
+        .where(eq(tasks.id, descriptionOnlyMatch.id))
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&includeMatch=true&order=desc&q=signal',
+      )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+
+      expect(
+        responseSnapshot(
+          res.status,
+          body.map((task) => task.id),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [descriptionOnlyMatch.id, titleOnlyMatch.id],
+      })
     })
   })
 

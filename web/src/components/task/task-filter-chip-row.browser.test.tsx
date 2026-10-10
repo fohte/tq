@@ -2,14 +2,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
-import { makeProject } from '#components/project/project-test-fixtures'
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
-import type { Project } from '#hooks/use-projects'
-import { waitForFocus } from '#lib/test-utils'
+import {
+  ALL_PROJECTS_FILTER,
+  projectKeys,
+  useProject,
+  useProjects,
+} from '#hooks/use-projects'
+import { partialMutation, waitForFocus } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -39,14 +47,40 @@ vi.mock('#hooks/use-task-queries', async (importOriginal) => {
   }
 })
 
-const projectA: Project = makeProject({
+const mockUseProject = vi.fn<typeof useProject>()
+const mockUseProjects = vi.fn<typeof useProjects>()
+
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    useProject: (...args: Parameters<typeof useProject>) =>
+      mockUseProject(...args),
+    useProjects: (...args: Parameters<typeof useProjects>) =>
+      mockUseProjects(...args),
+  }
+})
+
+const projectA = makeProject({
   id: 'proj-1',
   title: 'Website Redesign',
 })
-const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
+const projectB = makeProject({ id: 'proj-2', title: 'Mobile App' })
 const projects = [projectA, projectB]
 
 const defaultParsed = makeParsedQuery()
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockUseProject.mockImplementation((id) =>
+    partialMutation<ReturnType<typeof useProject>>({
+      data: id === projectA.id ? makeProjectDetail(projectA) : undefined,
+    }),
+  )
+  mockUseProjects.mockReturnValue(
+    partialMutation<ReturnType<typeof useProjects>>({ data: projects }),
+  )
+})
 
 function renderRow(
   props: Partial<ComponentProps<typeof TaskFilterChipRow>> = {},
@@ -55,17 +89,63 @@ function renderRow(
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  render(
+  queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
+  const rowProps = {
+    onQueryChange,
+    parsed: defaultParsed,
+    ...props,
+  }
+  const renderWithParsed = (
+    parsed: ComponentProps<typeof TaskFilterChipRow>['parsed'],
+  ) => (
     <QueryClientProvider client={queryClient}>
-      <TaskFilterChipRow
-        onQueryChange={onQueryChange}
-        parsed={defaultParsed}
-        projects={projects}
-        {...props}
-      />
-    </QueryClientProvider>,
+      <TaskFilterChipRow {...rowProps} parsed={parsed} />
+    </QueryClientProvider>
   )
-  return { onQueryChange }
+  const view = render(renderWithParsed(rowProps.parsed))
+  return {
+    onQueryChange,
+    rerenderWithParsed: (
+      parsed: ComponentProps<typeof TaskFilterChipRow>['parsed'],
+    ) => {
+      view.rerender(renderWithParsed(parsed))
+    },
+  }
+}
+
+function getProjectFilterSnapshot(
+  projectListCallsBeforeOpen: Parameters<typeof useProjects>[],
+) {
+  return {
+    selectedProjectQuery: mockUseProject.mock.calls[0],
+    projectListCallsBeforeOpen,
+    projectListCallsAfterOpen: mockUseProjects.mock.calls,
+    selectedProjectLabel: screen
+      .getByRole('button', { name: 'project Website Redesign' })
+      .getAttribute('aria-label'),
+  }
+}
+
+function getProjectSelectionSnapshot(queryChanges: unknown) {
+  return {
+    queryChanges,
+    selectedProjectLabel: screen
+      .getByRole('button', { name: 'project Mobile App' })
+      .getAttribute('aria-label'),
+    openMenuOption: screen.getByRole('button', { name: 'All projects' })
+      .textContent,
+  }
+}
+
+function getUnavailableProjectSnapshot() {
+  return {
+    projectChipLabel: screen
+      .getByRole('button', { name: 'project Unavailable (missing-project)' })
+      .getAttribute('aria-label'),
+    removeButtonLabel: screen
+      .getByRole('button', { name: 'Remove project filter' })
+      .getAttribute('aria-label'),
+  }
 }
 
 describe('TaskFilterChipRow', () => {
@@ -76,11 +156,7 @@ describe('TaskFilterChipRow', () => {
     })
     render(
       <QueryClientProvider client={queryClient}>
-        <KanbanFilterRow
-          query=""
-          onQueryChange={onQueryChange}
-          projects={projects}
-        />
+        <KanbanFilterRow query="" onQueryChange={onQueryChange} />
       </QueryClientProvider>,
     )
     const user = userEvent.setup()
@@ -127,7 +203,7 @@ describe('TaskFilterChipRow', () => {
   })
 
   it('changing the project in its menu reports the updated query', async () => {
-    const { onQueryChange } = renderRow({
+    const { onQueryChange, rerenderWithParsed } = renderRow({
       parsed: { ...defaultParsed, projectId: 'proj-1' },
     })
     const user = userEvent.setup()
@@ -139,10 +215,47 @@ describe('TaskFilterChipRow', () => {
       await screen.findByRole('button', { name: 'All projects' }),
     )
     await user.click(await screen.findByRole('button', { name: 'Mobile App' }))
+    rerenderWithParsed({ ...defaultParsed, projectId: 'proj-2' })
 
-    expect(onQueryChange).toHaveBeenCalledWith(
-      'is:todo project:proj-2 sort:updated',
+    expect(getProjectSelectionSnapshot(onQueryChange.mock.calls)).toEqual({
+      queryChanges: [['is:todo project:proj-2 sort:updated']],
+      selectedProjectLabel: 'project Mobile App',
+      openMenuOption: 'All projects',
+    })
+  })
+
+  it('loads the selected project label separately and lists projects only while the menu is open', async () => {
+    renderRow({ parsed: { ...defaultParsed, projectId: projectA.id } })
+    const user = userEvent.setup()
+    const projectListCallsBeforeOpen = [...mockUseProjects.mock.calls]
+
+    await user.click(
+      screen.getByRole('button', { name: 'project Website Redesign' }),
     )
+
+    expect(getProjectFilterSnapshot(projectListCallsBeforeOpen)).toEqual({
+      selectedProjectQuery: [projectA.id, { enabled: true }],
+      projectListCallsBeforeOpen: [],
+      projectListCallsAfterOpen: [[ALL_PROJECTS_FILTER]],
+      selectedProjectLabel: 'project Website Redesign',
+    })
+  })
+
+  it('keeps an unavailable project filter visible and removable', () => {
+    mockUseProject.mockReturnValue(
+      partialMutation<ReturnType<typeof useProject>>({
+        isError: true,
+        error: new Error('project not found'),
+      }),
+    )
+    renderRow({
+      parsed: { ...defaultParsed, projectId: 'missing-project' },
+    })
+
+    expect(getUnavailableProjectSnapshot()).toEqual({
+      projectChipLabel: 'project Unavailable (missing-project)',
+      removeButtonLabel: 'Remove project filter',
+    })
   })
 
   it('clearing the label in its menu reports the updated query', async () => {

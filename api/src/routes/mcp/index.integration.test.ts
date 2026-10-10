@@ -82,6 +82,7 @@ const REGISTERED_TOOL_NAMES = [
   'task_sessions',
   'task_status',
   'task_update',
+  'wait_acknowledge',
   'wait_add',
   'wait_remove',
   'wait_resolve',
@@ -119,7 +120,7 @@ describe('MCP endpoint', () => {
     } finally {
       await client.close()
     }
-  })
+  }, 10_000)
 })
 
 // A 2026-07-28 client (e.g. the Cloudflare MCP portal) carries no
