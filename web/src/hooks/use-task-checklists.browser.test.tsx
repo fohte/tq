@@ -311,7 +311,7 @@ describe('TaskChecklistSection', () => {
         [
           {
             query: {
-              view: 'full',
+              view: 'row',
               context: 'all',
               parentId: taskId,
               status: 'all',

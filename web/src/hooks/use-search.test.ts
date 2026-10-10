@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { makeSuggestion } from '#components/search/search-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import {
-  makeTask,
   makeTaskDetail,
+  makeTaskWithDescription,
 } from '#components/task/task-row-test-fixtures'
 import {
   applySuggestionToQuery,
@@ -39,7 +39,10 @@ describe('taskDetailToSearchResult', () => {
   it('maps detail relation fields to the list result shape', () => {
     const task = makeTaskDetail({
       duplicateOfNumber: null,
-      blockedBy: [makeTask({ number: 12 }), makeTask({ number: 18 })],
+      blockedBy: [
+        makeTaskWithDescription({ number: 12 }),
+        makeTaskWithDescription({ number: 18 }),
+      ],
       githubBlockers: [
         makeGithubLink({
           owner: 'example-owner',

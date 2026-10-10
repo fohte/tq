@@ -179,7 +179,7 @@ describe('queue ordering cache', () => {
     mockPut.mockResolvedValue(jsonResponse([]))
     const matchingCandidateList = observeCachedQuery(
       taskKeys.list({
-        view: 'full',
+        view: 'row',
         context: 'work',
         status: 'todo',
         candidatesOn: date,
@@ -188,7 +188,7 @@ describe('queue ordering cache', () => {
     )
     const otherCandidateList = observeCachedQuery(
       taskKeys.list({
-        view: 'full',
+        view: 'row',
         context: 'work',
         status: 'todo',
         candidatesOn: '2026-08-02',
@@ -197,7 +197,7 @@ describe('queue ordering cache', () => {
     )
     const unfilteredTaskList = observeCachedQuery(
       taskKeys.list({
-        view: 'full',
+        view: 'row',
         context: 'work',
         status: 'todo',
         limit: 'unlimited',

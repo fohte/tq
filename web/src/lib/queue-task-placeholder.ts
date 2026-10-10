@@ -3,7 +3,7 @@ import type { Task } from '#hooks/use-tasks'
 
 export function selectQueueTaskPlaceholderData(
   previousData: Task[] | undefined,
-  previousFilter: TaskListFilter<'full'> | undefined,
+  previousFilter: TaskListFilter<'row'> | undefined,
   currentIds: string[],
   context: Task['context'],
 ): Task[] | undefined {

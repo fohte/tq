@@ -3,14 +3,20 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
 
 import { useDebounce } from '#hooks/use-debounce'
-import { fetchTaskList, type Task } from '#hooks/use-task-queries'
+import {
+  fetchTaskList,
+  type Task,
+  type TaskWithDescription,
+} from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
 import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
 
-type SearchResult = Task
+type SearchResult = Task & {
+  description?: TaskWithDescription['description']
+}
 
 type Suggestion = InferResponseType<
   (typeof api.api.tasks.search)['suggest']['$get'],
@@ -47,7 +53,7 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
     queryKey: searchKeys.results(debouncedQuery, context),
     queryFn: () =>
       fetchTaskList({
-        view: 'full',
+        view: 'row',
         q: debouncedQuery,
         limit: 20,
         context: context ?? 'all',

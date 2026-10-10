@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { TaskMentionChip } from '#components/task/task-mention-chip'
 import { TaskPreviewChip } from '#components/task/task-preview-chip'
 import {
-  makeTask,
   makeTaskDetail,
+  makeTaskWithDescription,
 } from '#components/task/task-row-test-fixtures'
 import { TaskUrlChip } from '#components/task/task-url-chip'
 import { useTaskMentionPreview } from '#hooks/use-task-mentions'
@@ -49,7 +49,7 @@ async function hoverOverChip(title: string) {
 
 describe('TaskPreviewChip', () => {
   it('opens the popup and shows the description on hover', async () => {
-    const task = makeTask({
+    const task = makeTaskWithDescription({
       number: 42,
       title: 'Implement task URL live preview',
       description: 'Adds live preview chips for a resolved task reference.',

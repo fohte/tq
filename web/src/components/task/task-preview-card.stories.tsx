@@ -3,15 +3,16 @@ import type { ReactNode } from 'react'
 
 import { TaskPreviewCard } from '#components/task/task-preview-card'
 import type { TaskPreviewChipTask } from '#components/task/task-preview-chip'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const baseTask: TaskPreviewChipTask = {
+const baseTask: TaskPreviewChipTask = makeTaskWithDescription({
   id: '00000000-0000-0000-0000-000000000001',
   number: 42,
   title: 'Implement task URL live preview',
   description: 'Adds live preview cards for a resolved task reference.',
   status: 'todo',
-}
+})
 
 function Providers({ children }: { children: ReactNode }) {
   return (

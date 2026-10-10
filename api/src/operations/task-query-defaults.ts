@@ -1,5 +1,5 @@
-export const allTasksQuery = {
-  view: 'full',
+export const allTaskRowsQuery = {
+  view: 'row',
   context: 'all',
   status: 'all',
   limit: 'unlimited',
