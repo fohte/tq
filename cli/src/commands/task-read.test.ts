@@ -96,7 +96,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', limit: '20' },
+          query: { context: 'all', status: 'all', limit: '20', view: 'row' },
           body: undefined,
         },
       ],
@@ -649,7 +649,7 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', limit: '20' },
+          query: { context: 'all', status: 'all', limit: '20', view: 'full' },
           body: undefined,
         },
       ],

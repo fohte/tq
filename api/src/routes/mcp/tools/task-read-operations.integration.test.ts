@@ -170,8 +170,8 @@ describe('task_list', () => {
     })
 
     expect(parseToolJson(toolResult)).toEqual([
-      expectedTaskListItem(todo),
-      expectedTaskListItem(completed),
+      expectedTaskListRowItem(todo),
+      expectedTaskListRowItem(completed),
     ])
   })
 
