@@ -185,18 +185,18 @@ export const scheduleOperations = [
       ).map(() => ({ deleted: true, id })),
   }),
   defineOperation(scheduleDateRangeInputSchema, {
-    path: ['schedule', 'recurring', 'list'],
-    description: `List expanded recurring schedule instances for an inclusive date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Split longer ranges into multiple requests.`,
+    path: ['schedule', 'events', 'list'],
+    description: `List schedule events for an inclusive date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Split longer ranges into multiple requests.`,
     positionalArgs: ['startDate', 'endDate'],
     kind: 'read',
     mcpInputSchema: scheduleDateRangeSchema,
-    routes: ['GET /api/schedule/recurring'],
+    routes: ['GET /api/schedule/events'],
     cli: { output: { kind: 'json' } },
     run: (client, query) => {
       const dateRange = validateScheduleDateRange(query)
       if (dateRange.isErr()) return errAsync(dateRange.error)
       return requestJson(
-        client.api.schedule.recurring.$get({ query: dateRange.value }),
+        client.api.schedule.events.$get({ query: dateRange.value }),
       )
     },
   }),

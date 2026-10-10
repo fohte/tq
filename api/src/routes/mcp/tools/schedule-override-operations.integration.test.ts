@@ -23,7 +23,7 @@ afterEach(async () => {
 
 describe('schedule override operation tools', () => {
   it('sets a one-day time override', async () => {
-    const createResponse = await app.request('/api/schedule/recurring', {
+    const createResponse = await app.request('/api/schedule/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -50,7 +50,7 @@ describe('schedule override operation tools', () => {
   })
 
   it('clears a one-day time override', async () => {
-    const createResponse = await app.request('/api/schedule/recurring', {
+    const createResponse = await app.request('/api/schedule/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -80,7 +80,7 @@ describe('schedule override operation tools', () => {
   })
 
   it('sets a skipped occurrence without time values', async () => {
-    const createResponse = await app.request('/api/schedule/recurring', {
+    const createResponse = await app.request('/api/schedule/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
