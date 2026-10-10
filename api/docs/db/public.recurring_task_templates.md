@@ -11,7 +11,6 @@ Definitions used by the scheduler to create recurring task instances.
 | id                  | text                     |                  | false    | [public.tasks](public.tasks.md) [public.recurring_task_template_labels](public.recurring_task_template_labels.md) |                                                       |                                                                                                  |
 | title               | text                     |                  | false    |                                                                                                                   |                                                       | Title copied to each generated task.                                                             |
 | description         | text                     |                  | true     |                                                                                                                   |                                                       | Optional task details copied to generated tasks.                                                 |
-| estimated_minutes   | integer                  |                  | true     |                                                                                                                   |                                                       | Estimated effort for each generated task, in minutes.                                            |
 | project_id          | text                     |                  | true     |                                                                                                                   | [public.projects](public.projects.md)                 | Project associated with generated tasks.                                                         |
 | parent_id           | text                     |                  | true     |                                                                                                                   | [public.tasks](public.tasks.md)                       | Task under which each generated task is nested.                                                  |
 | context             | text                     | 'personal'::text | false    |                                                                                                                   |                                                       | Whether generated tasks belong to the work or personal context.                                  |
@@ -68,7 +67,6 @@ erDiagram
   text id
   text title
   text description
-  integer estimated_minutes
   text project_id FK
   text parent_id FK
   text context
@@ -87,7 +85,6 @@ erDiagram
   text status
   date start_date
   date due_date
-  integer estimated_minutes
   text parent_id FK
   text project_id FK
   text recurrence_rule_id FK
