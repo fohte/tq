@@ -175,6 +175,29 @@ describe('task_list', () => {
     ])
   })
 
+  it('returns completed tasks when ids are specified without a status', async () => {
+    const completed = await completeTask(await createTask('Completed task'))
+
+    const toolResult = await callTaskReadTool('task_list', {
+      ids: [completed.id],
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([
+      expectedTaskListRowItem(completed),
+    ])
+  })
+
+  it('uses an explicit status when ids are specified', async () => {
+    const completed = await completeTask(await createTask('Completed task'))
+
+    const toolResult = await callTaskReadTool('task_list', {
+      ids: [completed.id],
+      status: 'todo',
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([])
+  })
+
   it('includes descriptions when full is true', async () => {
     const task = await createTask('Task with a description', {
       description: 'Task body',

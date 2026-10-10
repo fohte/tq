@@ -182,9 +182,16 @@ describe('task list', () => {
     })
   })
 
-  it('sends mixed task identifiers and the strict ancestor flag', async () => {
+  it('defaults to all statuses when mixed task identifiers are specified', async () => {
     const ids = ['00000000-0000-4000-8000-000000000001', '42']
-    const tasks = [{ id: ids[0], number: 42, title: 'Selected task' }]
+    const tasks = [
+      {
+        id: ids[0],
+        number: 42,
+        title: 'Selected completed task',
+        status: 'completed',
+      },
+    ]
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )
@@ -214,9 +221,43 @@ describe('task list', () => {
           query: {
             view: 'row',
             context: 'all',
-            status: 'todo',
+            status: 'all',
             ids,
             includeAncestors: 'true',
+            limit: '20',
+          },
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
+    })
+  })
+
+  it('uses an explicit status when task identifiers are specified', async () => {
+    const id = '00000000-0000-4000-8000-000000000001'
+    const tasks = [{ id, number: 42, title: 'Selected task', status: 'todo' }]
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(tasks), { status: 200 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'list', '--ids', id, '--status', 'todo'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(cliOutcome(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks',
+          query: {
+            view: 'row',
+            context: 'all',
+            status: 'todo',
+            ids: id,
             limit: '20',
           },
           body: undefined,
