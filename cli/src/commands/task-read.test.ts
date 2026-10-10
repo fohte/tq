@@ -61,7 +61,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'todo', limit: '20' },
+          query: { view: 'row', context: 'all', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -134,6 +134,7 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'row',
             context: 'all',
             status: 'todo',
             dateFrom: '2026-03-16',
@@ -176,6 +177,7 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'row',
             context: 'all',
             status: 'todo',
             q: 'planning',
@@ -219,6 +221,7 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'row',
             context: 'all',
             status: 'todo',
             ids,
@@ -251,6 +254,7 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'row',
             context: 'all',
             status: 'todo',
             parentId: '731',
@@ -282,6 +286,7 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'row',
             context: 'all',
             status: 'todo',
             descendantOf: '731',
@@ -317,14 +322,13 @@ describe('task list', () => {
     })
   })
 
-  it('omits descriptions by default', async () => {
+  it('requests row responses by default', async () => {
     const tasks = [
       {
         id: 'task-example',
         number: 1,
         title: 'Example',
         status: 'todo',
-        description: 'long body',
       },
     ]
     const { fetchStub, calls } = captureFetch(
@@ -344,26 +348,11 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'todo', limit: '20' },
+          query: { view: 'row', context: 'all', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
-      stdout: [
-        [
-          `${JSON.stringify(
-            [
-              {
-                id: 'task-example',
-                number: 1,
-                title: 'Example',
-                status: 'todo',
-              },
-            ],
-            null,
-            2,
-          )}\n`,
-        ],
-      ],
+      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
     })
   })
 
@@ -393,7 +382,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'todo', limit: '20' },
+          query: { view: 'full', context: 'all', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -420,7 +409,7 @@ describe('task list', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'work', status: 'todo', limit: '20' },
+          query: { view: 'row', context: 'work', status: 'todo', limit: '20' },
           body: undefined,
         },
       ],
@@ -500,6 +489,7 @@ describe('task get', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'full',
             context: 'all',
             status: 'all',
             limit: 'unlimited',
@@ -624,7 +614,7 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'work', status: 'all', limit: '20' },
+          query: { view: 'full', context: 'work', status: 'all', limit: '20' },
           body: undefined,
         },
       ],
@@ -686,7 +676,13 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', q: 'hello', limit: '5' },
+          query: {
+            view: 'full',
+            context: 'all',
+            status: 'all',
+            q: 'hello',
+            limit: '5',
+          },
           body: undefined,
         },
       ],
@@ -713,6 +709,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'full',
             context: 'all',
             status: 'all',
             q: 'parent:731',
@@ -753,6 +750,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'full',
             context: 'all',
             status: 'all',
             parentId: '731',
@@ -800,6 +798,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'full',
             context: 'all',
             status: 'all',
             q: 'Selected',
@@ -833,6 +832,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'full',
             context: 'all',
             status: 'all',
             hasDue: 'true',
@@ -872,6 +872,7 @@ describe('task search', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: {
+            view: 'full',
             context: 'all',
             status: 'all',
             q: 'planning',
@@ -911,7 +912,13 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', q: 'hello', limit: '20' },
+          query: {
+            view: 'full',
+            context: 'all',
+            status: 'all',
+            q: 'hello',
+            limit: '20',
+          },
           body: undefined,
         },
       ],
@@ -953,7 +960,13 @@ describe('task search', () => {
         {
           method: 'GET',
           pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', q: 'hello', limit: '20' },
+          query: {
+            view: 'full',
+            context: 'all',
+            status: 'all',
+            q: 'hello',
+            limit: '20',
+          },
           body: undefined,
         },
       ],

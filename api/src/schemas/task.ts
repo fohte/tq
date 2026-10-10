@@ -114,6 +114,7 @@ export const updateTaskSchema = z.object({
 })
 
 export const listTasksQuerySchema = z.object({
+  view: z.enum(['row', 'full']),
   ids: taskIdsQuerySchema,
   status: z
     .union([taskListStatus, z.array(taskListStatus)])
@@ -175,6 +176,7 @@ const taskFilterQuerySchema = listTasksQuerySchema.omit({
   limit: true,
   offset: true,
   sortBy: true,
+  view: true,
 })
 
 export const countTasksQuerySchema = taskFilterQuerySchema

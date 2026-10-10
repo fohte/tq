@@ -7,6 +7,7 @@ import type {
   TaskContext,
   TaskCountFilter,
   TaskListFilter,
+  TaskListView,
 } from '#hooks/use-task-queries'
 import { isRecord } from '#lib/type-guards'
 
@@ -17,7 +18,8 @@ import { isRecord } from '#lib/type-guards'
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: ['tasks', 'list'] as const,
-  list: (filter: TaskListFilter) => [...taskKeys.lists, filter] as const,
+  list: <View extends TaskListView>(filter: TaskListFilter<View>) =>
+    [...taskKeys.lists, filter] as const,
   infiniteLists: ['tasks', 'infinite-list'] as const,
   infiniteList: (filter: InfiniteTaskListFilter) =>
     [...taskKeys.infiniteLists, filter] as const,

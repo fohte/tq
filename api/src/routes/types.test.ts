@@ -5,10 +5,17 @@ import type { AppType } from '#app'
 
 // Verify that AppType can be used with Hono RPC client
 type Client = ReturnType<typeof hc<AppType>>
+type TaskListRpcQuery = NonNullable<
+  NonNullable<Parameters<Client['api']['tasks']['$get']>[0]>['query']
+>
 
 describe('AppType for Hono RPC', () => {
   it('exports AppType that is usable with hc client', () => {
     expectTypeOf<Client>().toBeObject()
+  })
+
+  it('requires a view for task list RPC requests', () => {
+    expectTypeOf<TaskListRpcQuery['view']>().toEqualTypeOf<'row' | 'full'>()
   })
 
   it('has api.tasks route', () => {

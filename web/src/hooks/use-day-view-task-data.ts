@@ -48,12 +48,14 @@ export function useDayViewTaskData({
     [queueItems],
   )
   const candidateTasksQuery = useTaskList({
+    view: 'full',
     context,
     status: 'todo',
     candidatesOn: selectedDateStr,
     limit: 'unlimited',
   })
   const taskDateTasksQuery = useTaskList({
+    view: 'full',
     context,
     status: 'todo',
     dateFrom: visibleRange.startDate,
@@ -65,6 +67,7 @@ export function useDayViewTaskData({
   const shouldFetchDueTasks = isCompactLayout || todayIsVisible
   const dueTasksQuery = useTaskList(
     {
+      view: 'full',
       context,
       status: 'todo',
       dueTo: todayStr,
@@ -75,6 +78,7 @@ export function useDayViewTaskData({
   )
   const referencedTasksQuery = useTaskList(
     {
+      view: 'full',
       ids: taskIds,
       context,
       status: 'all',

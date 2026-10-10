@@ -89,6 +89,7 @@ describe('useInfiniteTaskList', () => {
     const { result } = renderHook(
       () =>
         useInfiniteTaskList({
+          view: 'full',
           context: 'all',
           status: 'all',
           parentId: 'root',
@@ -103,6 +104,7 @@ describe('useInfiniteTaskList', () => {
     })
     expect(mockGet).toHaveBeenCalledWith({
       query: {
+        view: 'full',
         context: 'all',
         parentId: 'root',
         status: 'all',
@@ -118,6 +120,7 @@ describe('useInfiniteTaskList', () => {
     const { result } = renderHook(
       () =>
         useInfiniteTaskList({
+          view: 'full',
           context: 'all',
           status: 'all',
           parentId: 'root',
@@ -142,6 +145,7 @@ describe('useInfiniteTaskList', () => {
     const { result } = renderHook(
       () =>
         useInfiniteTaskList({
+          view: 'full',
           context: 'all',
           status: 'all',
           parentId: 'root',
@@ -160,6 +164,7 @@ describe('useInfiniteTaskList', () => {
     await waitFor(() => {
       expect(mockGet).toHaveBeenLastCalledWith({
         query: {
+          view: 'full',
           context: 'all',
           parentId: 'root',
           status: 'all',
@@ -191,6 +196,7 @@ describe('useInfiniteTaskList', () => {
     const { result } = renderHook(
       () =>
         useInfiniteTaskList({
+          view: 'full',
           context: 'all',
           status: 'all',
           parentId: 'root',
@@ -224,7 +230,12 @@ describe('useInfiniteTaskList', () => {
     renderHook(
       () =>
         useInfiniteTaskList(
-          { context: 'all', status: 'all', parentId: 'root' },
+          {
+            view: 'full',
+            context: 'all',
+            status: 'all',
+            parentId: 'root',
+          },
           { enabled: false },
         ),
       { wrapper },
@@ -267,6 +278,7 @@ describe('useTaskList', () => {
         [
           {
             query: {
+              view: 'full',
               context: 'all',
               status: 'all',
               limit: 'unlimited',
@@ -284,6 +296,7 @@ describe('useTaskList', () => {
     const { result } = renderHook(
       () =>
         useTaskList({
+          view: 'full',
           ids: ['task-a', 'task-b'],
           context: 'work',
           status: ['todo', 'completed'],
@@ -301,6 +314,7 @@ describe('useTaskList', () => {
           [
             {
               query: {
+                view: 'full',
                 ids: ['task-a', 'task-b'],
                 context: 'work',
                 status: ['todo', 'completed'],
@@ -328,13 +342,14 @@ describe('useTaskList', () => {
         }
       })
     })
-    let previousFilter: TaskListFilter | undefined
+    let previousFilter: TaskListFilter<'full'> | undefined
 
     const { result, rerender } = renderHook(
       ({ ids }: { ids: string[] }) =>
         useTaskList(
           {
             ids,
+            view: 'full',
             context: 'work',
             status: 'all',
             limit: 'unlimited',
@@ -367,6 +382,7 @@ describe('useTaskList', () => {
         isPlaceholderData: true,
         previousFilter: {
           ids: ['previous'],
+          view: 'full',
           context: 'work',
           status: 'all',
           limit: 'unlimited',
@@ -386,6 +402,7 @@ describe('useTaskList', () => {
         useTaskList(
           {
             ids: [],
+            view: 'full',
             context: 'work',
             status: 'all',
             limit: 'unlimited',
@@ -404,6 +421,7 @@ describe('useTaskList', () => {
     const { result } = renderHook(
       () =>
         useTaskList({
+          view: 'full',
           ids: ['task-b', 'task-a'],
           context: 'work',
           includeAncestors: true,
@@ -425,6 +443,7 @@ describe('useTaskList', () => {
       [
         {
           query: {
+            view: 'full',
             ids: ['task-b', 'task-a'],
             context: 'work',
             includeAncestors: 'true',
@@ -446,6 +465,7 @@ describe('useTaskList', () => {
     const { result } = renderHook(
       () =>
         useTaskList({
+          view: 'full',
           context: 'all',
           status: 'todo',
           limit: 'unlimited',
@@ -463,6 +483,7 @@ describe('useTaskList', () => {
       [
         {
           query: {
+            view: 'full',
             context: 'all',
             status: 'todo',
             hasDue: 'true',

@@ -12,6 +12,7 @@ describe('selectQueueTaskPlaceholderData', () => {
       selectQueueTaskPlaceholderData(
         [taskA, taskB],
         {
+          view: 'full',
           ids: ['task-a', 'task-b'],
           context: 'work',
           status: 'all',
@@ -30,6 +31,7 @@ describe('selectQueueTaskPlaceholderData', () => {
       selectQueueTaskPlaceholderData(
         [task],
         {
+          view: 'full',
           ids: ['task-a'],
           context: 'work',
           status: 'all',
@@ -48,6 +50,7 @@ describe('selectQueueTaskPlaceholderData', () => {
       selectQueueTaskPlaceholderData(
         [task],
         {
+          view: 'full',
           context: 'work',
           status: 'all',
           limit: 'unlimited',

@@ -69,8 +69,13 @@ const taskListInputSchema = listTasksQuerySchema
     hasDue: true,
     includeMatch: true,
     candidatesOn: true,
+    view: true,
   })
   .extend({
+    full: z
+      .boolean()
+      .optional()
+      .describe('Include each task description in the results.'),
     includeMatch: booleanOption
       .optional()
       .describe('Include the matched text in results.'),
@@ -111,6 +116,7 @@ const taskSearchInputSchema = listTasksQuerySchema
     hasDue: true,
     includeMatch: true,
     candidatesOn: true,
+    view: true,
   })
   .extend({
     includeMatch: booleanOption
@@ -196,6 +202,7 @@ function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
   )
   return {
     ...query,
+    view: fields.view,
     context: fields.context,
     status: fields.status,
     limit: String(fields.limit),
@@ -243,7 +250,7 @@ export const taskReadOperations = [
   defineOperation(taskListInputSchema, {
     path: ['task', 'list'],
     description:
-      'List tasks by status, project, parent, context, or other supported filters, including an optional free-text query.',
+      'List tasks by status, project, parent, context, or other supported filters, including an optional free-text query. Descriptions are omitted by default; set full to include them.',
     positionalArgs: [],
     kind: 'read',
     routes: ['GET /api/tasks'],
@@ -255,22 +262,25 @@ export const taskReadOperations = [
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
-        omitKey: 'description',
         fullOption: '--full',
         fullDescription: 'Include full task description in the output',
+        fullField: 'full',
       },
     },
-    run: (client, input) =>
-      requestJson(
+    run: (client, input) => {
+      const { full, ...filters } = input
+      return requestJson(
         client.api.tasks.$get({
           query: toTaskQuery({
-            ...input,
+            ...filters,
+            view: full === true ? 'full' : 'row',
             context: input.context ?? taskListDefaults.context,
             status: input.status ?? taskListDefaults.status,
             limit: input.limit ?? taskListDefaults.limit,
           }),
         }),
-      ),
+      )
+    },
   }),
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
@@ -306,6 +316,7 @@ export const taskReadOperations = [
         client.api.tasks.$get({
           query: toTaskQuery({
             ...input,
+            view: 'full',
             context: input.context ?? taskSearchDefaults.context,
             status: input.status ?? taskSearchDefaults.status,
             limit: input.limit ?? taskSearchDefaults.limit,
