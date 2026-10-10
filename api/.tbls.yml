@@ -128,7 +128,6 @@ comments:
     columnComments:
       title: 'Title copied to each generated task.'
       description: 'Optional task details copied to generated tasks.'
-      estimated_minutes: 'Estimated effort for each generated task, in minutes.'
       project_id: 'Project associated with generated tasks.'
       parent_id: 'Task under which each generated task is nested.'
       context: 'Whether generated tasks belong to the work or personal context.'
@@ -186,13 +185,6 @@ comments:
       start_time: 'Replacement local start time in 24-hour HH:MM format; null when skipped.'
       end_time: 'Replacement local end time in 24-hour HH:MM format; null when skipped.'
       skipped: 'Whether the occurrence is omitted for this date.'
-  - table: scheduling_settings
-    tableComment: 'Singleton preferences for task scheduling.'
-    columnComments:
-      working_hours_start: 'Start of the working-hours window in local 24-hour HH:MM format.'
-      working_hours_end: 'End of the working-hours window in local 24-hour HH:MM format.'
-      minimum_block_minutes: 'Minimum scheduling block length, in minutes.'
-      auto_reschedule_on_gcal_change: 'Whether task blocks are automatically rescheduled when Google Calendar changes.'
   - table: task_agent_sessions
     tableComment: 'Associations between tasks and coding agent sessions.'
     columnComments:
@@ -295,7 +287,6 @@ comments:
       status_reason: 'Reason for the completed status: completed, not_planned, or duplicate.'
       start_date: 'Date when work on the task is planned to start.'
       due_date: 'Task deadline date.'
-      estimated_minutes: 'Estimated task effort, in minutes.'
       parent_id: 'Parent task in the task hierarchy.'
       project_id: 'Project associated with the task.'
       recurrence_rule_id: 'Recurrence rule associated with the task.'

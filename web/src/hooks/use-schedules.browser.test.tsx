@@ -11,7 +11,7 @@ vi.mock('#lib/api', () => {
   const mockGet = vi.fn()
 
   return {
-    api: { api: { schedule: { recurring: { $get: mockGet } } } },
+    api: { api: { schedule: { events: { $get: mockGet } } } },
     __mocks: { mockGet },
   }
 })

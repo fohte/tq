@@ -234,8 +234,7 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
-  // Recurring schedule (ScheduleBlock) CRUD
-  .post('/recurring', zValidator('json', createScheduleSchema), async (c) => {
+  .post('/events', zValidator('json', createScheduleSchema), async (c) => {
     const input = c.req.valid('json')
 
     let newRule: typeof recurrenceRules.$inferSelect | null = null
@@ -270,46 +269,42 @@ export const schedulesApp = new Hono()
 
     return c.json(scheduleToResponse(schedule, newRule), 201)
   })
-  .get(
-    '/recurring',
-    zValidator('query', scheduleDateRangeSchema),
-    async (c) => {
-      const { startDate, endDate } = c.req.valid('query')
+  .get('/events', zValidator('query', scheduleDateRangeSchema), async (c) => {
+    const { startDate, endDate } = c.req.valid('query')
 
-      const scheduleRules = await loadSchedulesWithRules()
+    const scheduleRules = await loadSchedulesWithRules()
 
-      const dates: string[] = []
-      const cursor = new Date(startDate + 'T00:00:00')
-      const endBound = new Date(endDate + 'T00:00:00')
-      while (cursor <= endBound) {
-        dates.push(formatDateStr(cursor))
-        cursor.setDate(cursor.getDate() + 1)
-      }
+    const dates: string[] = []
+    const cursor = new Date(startDate + 'T00:00:00')
+    const endBound = new Date(endDate + 'T00:00:00')
+    while (cursor <= endBound) {
+      dates.push(formatDateStr(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
 
-      const overridesBySchedule = await loadScheduleOverridesForExpansion(
-        startDate,
-        endDate,
-      )
+    const overridesBySchedule = await loadScheduleOverridesForExpansion(
+      startDate,
+      endDate,
+    )
 
-      const expanded = dates.flatMap((dateStr) =>
-        scheduleRules.flatMap(({ schedule, rule }) =>
-          expandScheduleForDate(
-            schedule,
-            rule,
-            dateStr,
-            overridesBySchedule.get(schedule.id),
-          ).map((block) => ({
-            ...block,
-            recurrence: recurrenceRuleToResponse(rule),
-          })),
-        ),
-      )
+    const expanded = dates.flatMap((dateStr) =>
+      scheduleRules.flatMap(({ schedule, rule }) =>
+        expandScheduleForDate(
+          schedule,
+          rule,
+          dateStr,
+          overridesBySchedule.get(schedule.id),
+        ).map((block) => ({
+          ...block,
+          recurrence: recurrenceRuleToResponse(rule),
+        })),
+      ),
+    )
 
-      return c.json(expanded, 200)
-    },
-  )
+    return c.json(expanded, 200)
+  })
   .patch(
-    '/recurring/:id',
+    '/events/:id',
     requireSchedule,
     zValidator('json', updateScheduleSchema),
     async (c) => {
@@ -389,7 +384,7 @@ export const schedulesApp = new Hono()
       return c.json(scheduleToResponse(updated, rule), 200)
     },
   )
-  .delete('/recurring/:id', requireSchedule, async (c) => {
+  .delete('/events/:id', requireSchedule, async (c) => {
     const id = c.req.param('id')
     const existingSchedule = c.get('schedule')
 

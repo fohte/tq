@@ -57,6 +57,27 @@ erDiagram
   timestamp_with_time_zone created_at
   text github_link_id FK
 }
+"public.tasks" {
+  text id
+  text title
+  text description
+  text status
+  date start_date
+  date due_date
+  text parent_id FK
+  text project_id FK
+  text recurrence_rule_id FK
+  text context
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+  integer number
+  text commitment
+  text status_reason
+  timestamp_with_time_zone remind_at
+  text template_id FK
+  date occurrence_date
+  uuid description_template_id FK
+}
 "public.task_github_links" {
   text id
   text task_id FK
@@ -77,28 +98,6 @@ erDiagram
   integer comments_count
   timestamp_with_time_zone github_updated_at
   text state_reason
-}
-"public.tasks" {
-  text id
-  text title
-  text description
-  text status
-  date start_date
-  date due_date
-  integer estimated_minutes
-  text parent_id FK
-  text project_id FK
-  text recurrence_rule_id FK
-  text context
-  timestamp_with_time_zone created_at
-  timestamp_with_time_zone updated_at
-  integer number
-  text commitment
-  text status_reason
-  timestamp_with_time_zone remind_at
-  text template_id FK
-  date occurrence_date
-  uuid description_template_id FK
 }
 ```
 

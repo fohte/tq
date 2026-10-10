@@ -107,7 +107,6 @@ erDiagram
   text status
   date start_date
   date due_date
-  integer estimated_minutes
   text parent_id FK
   text project_id FK
   text recurrence_rule_id FK

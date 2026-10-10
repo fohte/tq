@@ -13,7 +13,7 @@
 | [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
-| [public.tasks](public.tasks.md)                                                     | 20      | Tasks with optional parent, project, recurrence, and template relationships.         | BASE TABLE |
+| [public.tasks](public.tasks.md)                                                     | 19      | Tasks with optional parent, project, recurrence, and template relationships.         | BASE TABLE |
 | [public.time_blocks](public.time_blocks.md)                                         | 7       | Scheduled time intervals assigned to tasks.                                          | BASE TABLE |
 | [public.task_queue_items](public.task_queue_items.md)                               | 7       | Tasks placed in a queue, optionally for a specific period.                           | BASE TABLE |
 | [public.edits](public.edits.md)                                                     | 10      | Records for task, page, or comment creation and field updates.                       | BASE TABLE |
@@ -23,7 +23,6 @@
 | [public.github_sync_rules](public.github_sync_rules.md)                             | 11      | GitHub synchronization rules associated with a target project.                       | BASE TABLE |
 | [public.calendar_subscriptions](public.calendar_subscriptions.md)                   | 8       | Calendars selected for OAuth accounts.                                               | BASE TABLE |
 | [public.task_events](public.task_events.md)                                         | 13      | Task status changes and GitHub link or unlink events shown in the activity timeline. | BASE TABLE |
-| [public.scheduling_settings](public.scheduling_settings.md)                         | 7       | Singleton preferences for task scheduling.                                           | BASE TABLE |
 | [public.agent_sessions](public.agent_sessions.md)                                   | 13      | Sessions reported by coding agent providers.                                         | BASE TABLE |
 | [public.task_agent_sessions](public.task_agent_sessions.md)                         | 3       | Associations between tasks and coding agent sessions.                                | BASE TABLE |
 | [public.saved_views](public.saved_views.md)                                         | 7       | Saved task searches with a display name, query, context, and position.               | BASE TABLE |
@@ -31,7 +30,7 @@
 | [public.task_queues](public.task_queues.md)                                         | 7       | Named queues that organize tasks, with optional period-based rollover.               | BASE TABLE |
 | [public.push_subscriptions](public.push_subscriptions.md)                           | 8       | Browser push endpoints and encryption credentials registered for notifications.      | BASE TABLE |
 | [public.recurring_task_template_labels](public.recurring_task_template_labels.md)   | 2       | Join table associating recurring task templates with labels.                         | BASE TABLE |
-| [public.recurring_task_templates](public.recurring_task_templates.md)               | 14      | Definitions used by the scheduler to create recurring task instances.                | BASE TABLE |
+| [public.recurring_task_templates](public.recurring_task_templates.md)               | 13      | Definitions used by the scheduler to create recurring task instances.                | BASE TABLE |
 | [public.task_description_templates](public.task_description_templates.md)           | 8       | Templates for structuring task descriptions.                                         | BASE TABLE |
 | [public.memos](public.memos.md)                                                     | 4       | Markdown scratchpads stored once per work or personal context.                       | BASE TABLE |
 | [public.schedule_overrides](public.schedule_overrides.md)                           | 5       | One-day time changes and skipped schedule occurrences.                               | BASE TABLE |
@@ -207,7 +206,6 @@ erDiagram
   text status
   date start_date
   date due_date
-  integer estimated_minutes
   text parent_id FK
   text project_id FK
   text recurrence_rule_id FK
@@ -324,15 +322,6 @@ erDiagram
   timestamp_with_time_zone created_at
   text to_status_reason
 }
-"public.scheduling_settings" {
-  text id
-  text working_hours_start
-  text working_hours_end
-  integer minimum_block_minutes
-  boolean auto_reschedule_on_gcal_change
-  timestamp_with_time_zone created_at
-  timestamp_with_time_zone updated_at
-}
 "public.agent_sessions" {
   text id
   text provider
@@ -395,7 +384,6 @@ erDiagram
   text id
   text title
   text description
-  integer estimated_minutes
   text project_id FK
   text parent_id FK
   text context

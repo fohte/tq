@@ -105,6 +105,16 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }
+"public.task_waits" {
+  uuid id
+  text task_id FK
+  text body
+  date follow_up_date
+  timestamp_with_time_zone resolved_at
+  timestamp_with_time_zone acknowledged_at
+  timestamp_with_time_zone created_at
+  text github_link_id FK
+}
 "public.tasks" {
   text id
   text title
@@ -112,7 +122,6 @@ erDiagram
   text status
   date start_date
   date due_date
-  integer estimated_minutes
   text parent_id FK
   text project_id FK
   text recurrence_rule_id FK
@@ -126,16 +135,6 @@ erDiagram
   text template_id FK
   date occurrence_date
   uuid description_template_id FK
-}
-"public.task_waits" {
-  uuid id
-  text task_id FK
-  text body
-  date follow_up_date
-  timestamp_with_time_zone resolved_at
-  timestamp_with_time_zone acknowledged_at
-  timestamp_with_time_zone created_at
-  text github_link_id FK
 }
 ```
 

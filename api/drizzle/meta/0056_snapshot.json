@@ -1,5 +1,5 @@
 {
-  "id": "50f2521b-463e-416f-a28b-bbb4708f41ef",
+  "id": "684ef3bb-60c6-4025-85c4-277f03bd036a",
   "prevId": "5682fbc6-44db-431a-8123-9d2d82c8c352",
   "version": "7",
   "dialect": "postgresql",
@@ -3718,19 +3718,13 @@
           "name": "body",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "follow_up_date": {
           "name": "follow_up_date",
           "type": "date",
           "primaryKey": false,
           "notNull": true
-        },
-        "github_link_id": {
-          "name": "github_link_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "resolved_at": {
           "name": "resolved_at",
@@ -3767,21 +3761,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "uq_task_waits_github_link_id": {
-          "name": "uq_task_waits_github_link_id",
-          "columns": [
-            {
-              "expression": "github_link_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -3793,25 +3772,12 @@
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "task_waits_github_link_id_task_github_links_id_fk": {
-          "name": "task_waits_github_link_id_task_github_links_id_fk",
-          "tableFrom": "task_waits",
-          "tableTo": "task_github_links",
-          "columnsFrom": ["github_link_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "task_waits_body_or_github_link_check": {
-          "name": "task_waits_body_or_github_link_check",
-          "value": "\"task_waits\".\"body\" IS NOT NULL OR \"task_waits\".\"github_link_id\" IS NOT NULL"
-        },
         "task_waits_acknowledged_requires_resolved": {
           "name": "task_waits_acknowledged_requires_resolved",
           "value": "\"task_waits\".\"acknowledged_at\" IS NULL OR \"task_waits\".\"resolved_at\" IS NOT NULL"

@@ -93,7 +93,7 @@ async function createTimeBlock(
 }
 
 async function createSchedule(body: Record<string, unknown>) {
-  const res = await app.request('/api/schedule/recurring', {
+  const res = await app.request('/api/schedule/events', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -107,7 +107,7 @@ async function putScheduleOverride(
   body: unknown,
 ) {
   return app.request(
-    `/api/schedule/recurring/${scheduleId}/overrides/${occurrenceDate}`,
+    `/api/schedule/events/${scheduleId}/overrides/${occurrenceDate}`,
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -489,7 +489,7 @@ describe('schedule/time-blocks API', () => {
 })
 
 describe('schedules API', () => {
-  describe('POST /api/schedule/recurring', () => {
+  describe('POST /api/schedule/events', () => {
     it('creates a schedule without recurrence', async () => {
       const { res, body } = await createSchedule({
         title: 'Sleep',
@@ -528,7 +528,7 @@ describe('schedules API', () => {
     })
 
     it('returns 400 for missing title', async () => {
-      const res = await app.request('/api/schedule/recurring', {
+      const res = await app.request('/api/schedule/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -540,7 +540,7 @@ describe('schedules API', () => {
     })
 
     it('returns 400 for invalid time format', async () => {
-      const res = await app.request('/api/schedule/recurring', {
+      const res = await app.request('/api/schedule/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -553,11 +553,11 @@ describe('schedules API', () => {
     })
   })
 
-  describe('GET /api/schedule/recurring', () => {
+  describe('GET /api/schedule/events', () => {
     it.each(invalidScheduleDateRanges)(
       'returns 400 for a date range with %s',
       async (_, query) => {
-        const res = await app.request(`/api/schedule/recurring?${query}`)
+        const res = await app.request(`/api/schedule/events?${query}`)
 
         expect(res.status).toBe(400)
       },
@@ -565,7 +565,7 @@ describe('schedules API', () => {
 
     it('accepts an inclusive 42-day range', async () => {
       const res = await app.request(
-        '/api/schedule/recurring?startDate=2099-01-01&endDate=2099-02-11',
+        '/api/schedule/events?startDate=2099-01-01&endDate=2099-02-11',
       )
 
       expect(res.status).toBe(200)
@@ -579,7 +579,7 @@ describe('schedules API', () => {
       })
 
       const res = await app.request(
-        '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
       )
       expect(res.status).toBe(200)
 
@@ -599,7 +599,7 @@ describe('schedules API', () => {
       })
 
       const res = await app.request(
-        '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
       )
       expect(res.status).toBe(200)
 
@@ -629,14 +629,14 @@ describe('schedules API', () => {
 
       // 2026-03-23 is Monday
       const mondayRes = await app.request(
-        '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-23',
+        '/api/schedule/events?startDate=2026-03-23&endDate=2026-03-23',
       )
       const mondayBlocks = await jsonBody<ExpandedBlock[]>(mondayRes)
       expect(mondayBlocks).toHaveLength(1)
 
       // 2026-03-24 is Tuesday
       const tuesdayRes = await app.request(
-        '/api/schedule/recurring?startDate=2026-03-24&endDate=2026-03-24',
+        '/api/schedule/events?startDate=2026-03-24&endDate=2026-03-24',
       )
       const tuesdayBlocks = await jsonBody<ExpandedBlock[]>(tuesdayRes)
       expect(tuesdayBlocks).toHaveLength(0)
@@ -656,7 +656,7 @@ describe('schedules API', () => {
 
       // 2026-03-23 (Mon) through 2026-03-25 (Wed) — matches Mon and Wed only.
       const res = await app.request(
-        '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-25',
+        '/api/schedule/events?startDate=2026-03-23&endDate=2026-03-25',
       )
       expect(res.status).toBe(200)
 
@@ -668,7 +668,7 @@ describe('schedules API', () => {
     })
   })
 
-  describe('PATCH /api/schedule/recurring/:id', () => {
+  describe('PATCH /api/schedule/events/:id', () => {
     it('updates schedule title', async () => {
       const { body: created } = await createSchedule({
         title: 'Sleep',
@@ -676,7 +676,7 @@ describe('schedules API', () => {
         endTime: '07:00',
       })
 
-      const res = await app.request(`/api/schedule/recurring/${created.id}`, {
+      const res = await app.request(`/api/schedule/events/${created.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Deep Sleep' }),
@@ -694,7 +694,7 @@ describe('schedules API', () => {
         endTime: '19:00',
       })
 
-      const res = await app.request(`/api/schedule/recurring/${created.id}`, {
+      const res = await app.request(`/api/schedule/events/${created.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -720,7 +720,7 @@ describe('schedules API', () => {
         recurrence: { type: 'daily', interval: 1 },
       })
 
-      const res = await app.request(`/api/schedule/recurring/${created.id}`, {
+      const res = await app.request(`/api/schedule/events/${created.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recurrence: null }),
@@ -732,7 +732,7 @@ describe('schedules API', () => {
     })
 
     it('returns 404 for non-existent schedule', async () => {
-      const res = await app.request(`/api/schedule/recurring/${TEST_UUID}`, {
+      const res = await app.request(`/api/schedule/events/${TEST_UUID}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Nope' }),
@@ -741,7 +741,7 @@ describe('schedules API', () => {
     })
   })
 
-  describe('DELETE /api/schedule/recurring/:id', () => {
+  describe('DELETE /api/schedule/events/:id', () => {
     it('deletes a schedule', async () => {
       const { body: created } = await createSchedule({
         title: 'To Delete',
@@ -749,14 +749,14 @@ describe('schedules API', () => {
         endTime: '10:00',
       })
 
-      const res = await app.request(`/api/schedule/recurring/${created.id}`, {
+      const res = await app.request(`/api/schedule/events/${created.id}`, {
         method: 'DELETE',
       })
       expect(res.status).toBe(204)
 
       // Verify it's gone
       const getRes = await app.request(
-        '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
       )
       const blocks = await jsonBody<ExpandedBlock[]>(getRes)
       expect(blocks).toHaveLength(0)
@@ -770,14 +770,14 @@ describe('schedules API', () => {
         recurrence: { type: 'daily', interval: 1 },
       })
 
-      const res = await app.request(`/api/schedule/recurring/${created.id}`, {
+      const res = await app.request(`/api/schedule/events/${created.id}`, {
         method: 'DELETE',
       })
       expect(res.status).toBe(204)
     })
 
     it('returns 404 for non-existent schedule', async () => {
-      const res = await app.request(`/api/schedule/recurring/${TEST_UUID}`, {
+      const res = await app.request(`/api/schedule/events/${TEST_UUID}`, {
         method: 'DELETE',
       })
       expect(res.status).toBe(404)
@@ -798,7 +798,7 @@ describe('schedule overrides API', () => {
       endTime: '09:45',
     })
     const response = await app.request(
-      '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+      '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
     )
     expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
       {
@@ -819,7 +819,7 @@ describe('schedule overrides API', () => {
       startTime: '09:00',
       endTime: '10:00',
     })
-    const url = `/api/schedule/recurring/${schedule.id}/overrides/2026-03-22`
+    const url = `/api/schedule/events/${schedule.id}/overrides/2026-03-22`
     await putScheduleOverride(schedule.id, '2026-03-22', {
       startTime: '08:30',
       endTime: '09:45',
@@ -827,7 +827,7 @@ describe('schedule overrides API', () => {
     await app.request(url, { method: 'DELETE' })
 
     const response = await app.request(
-      '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-22',
+      '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
     )
     expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
       {
@@ -850,7 +850,7 @@ describe('schedule overrides API', () => {
     })
     await putScheduleOverride(schedule.id, '2026-03-22', { skipped: true })
     const response = await app.request(
-      '/api/schedule/recurring?startDate=2026-03-22&endDate=2026-03-23',
+      '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-23',
     )
 
     expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
@@ -877,7 +877,7 @@ describe('schedule overrides API', () => {
       endTime: '08:00',
     })
     const nextDateResponse = await app.request(
-      '/api/schedule/recurring?startDate=2026-03-23&endDate=2026-03-23',
+      '/api/schedule/events?startDate=2026-03-23&endDate=2026-03-23',
     )
 
     expect(await jsonBody<ExpandedBlock[]>(nextDateResponse)).toEqual([
