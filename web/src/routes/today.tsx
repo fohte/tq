@@ -43,7 +43,7 @@ export function TodayFocus() {
   )
   const queueTasksQuery = useTaskList(
     {
-      view: 'full',
+      view: 'row',
       ids: queueTaskIds,
       context,
       status: 'all',
@@ -87,7 +87,7 @@ export function TodayFocus() {
   )
   const subtasksQuery = useTaskList(
     {
-      view: 'full',
+      view: 'row',
       ...(focusTask == null ? {} : { parentId: focusTask.id }),
       context,
       status: 'all',

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import { TimeBlockPreviewCard } from '#components/task/time-block-preview-card'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 
@@ -31,7 +31,10 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
-const task = makeTask({ number: 12, title: 'Write onboarding doc' })
+const task = makeTaskWithDescription({
+  number: 12,
+  title: 'Write onboarding doc',
+})
 
 describe('TimeBlockPreviewCard', () => {
   it('calls onDelete once the confirmation dialog is confirmed', async () => {

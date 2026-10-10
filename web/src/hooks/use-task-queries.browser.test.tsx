@@ -278,7 +278,7 @@ describe('useTaskList', () => {
         [
           {
             query: {
-              view: 'full',
+              view: 'row',
               context: 'all',
               status: 'all',
               limit: 'unlimited',
@@ -512,6 +512,14 @@ describe('useTaskList', () => {
         await vi.advanceTimersByTimeAsync(0)
       })
       initialCallCount = mockGet.mock.calls.length
+      expect(mockGet).toHaveBeenCalledWith({
+        query: {
+          view: 'row',
+          context: 'all',
+          status: 'all',
+          limit: 'unlimited',
+        },
+      })
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60_000)

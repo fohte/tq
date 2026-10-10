@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 import {
   type OperationDefinition,
+  projectOperations,
   taskReadOperations,
   taskWriteOperations,
 } from 'api/operations'
@@ -59,6 +60,28 @@ function makeImageGetOperation(): OperationDefinition {
 
 async function parse(program: Command, args: string[]): Promise<void> {
   await program.parseAsync(['node', 'tq', ...args], { from: 'node' })
+}
+
+async function taskListRequests(args: string[]) {
+  const requests: URL[] = []
+  const fetchImpl = vi.fn<typeof fetch>((input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    requests.push(url)
+    return Promise.resolve(
+      Response.json(url.pathname.startsWith('/api/projects/') ? {} : []),
+    )
+  })
+  spyStdout()
+  spyStderr()
+
+  await parse(
+    createProgram([...taskReadOperations, ...projectOperations], fetchImpl),
+    ['--api-url', 'https://api.example', ...args],
+  )
+
+  return requests
+    .filter((url) => url.pathname === '/api/tasks')
+    .map((url) => ({ path: url.pathname, view: url.searchParams.get('view') }))
 }
 
 async function withTemporaryDirectory<T>(
@@ -166,6 +189,30 @@ describe('registerOperations', () => {
       },
     ])
   })
+
+  const taskListCommands = [
+    { label: 'task search', command: ['task', 'search'] },
+    {
+      label: 'project tasks',
+      command: ['project', 'tasks', 'example-project'],
+    },
+  ]
+
+  it.each(taskListCommands)(
+    'requests row data by default for $label',
+    async ({ command }) => {
+      const requests = await taskListRequests(command)
+      expect(requests).toEqual([{ path: '/api/tasks', view: 'row' }])
+    },
+  )
+
+  it.each(taskListCommands)(
+    'requests full data for $label when --full is set',
+    async ({ command }) => {
+      const requests = await taskListRequests([...command, '--full'])
+      expect(requests).toEqual([{ path: '/api/tasks', view: 'full' }])
+    },
+  )
 
   it('registers positional arguments on a root operation', async () => {
     const operation = makeOperation({
