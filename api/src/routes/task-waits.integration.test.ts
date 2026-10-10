@@ -461,6 +461,61 @@ describe('task waits API', () => {
     })
   })
 
+  it('returns no candidate reason for completed tasks', async () => {
+    const task = await createTask('Completed candidate', {
+      dueDate: '2036-04-09',
+    })
+    await app.request(`/api/tasks/${task.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+
+    const response = await app.request(
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited&candidatesOn=2036-04-10',
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map(({ id, candidateReason }) => ({ id, candidateReason })),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [{ id: task.id, candidateReason: null }],
+    })
+  })
+
+  it('classifies the earliest unresolved follow-up against the requested candidate date', async () => {
+    const task = await createTask('Multiple follow-ups')
+    const resolvedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'Resolved older follow-up', '2036-04-01'),
+    )
+    await app.request(
+      `/api/tasks/${task.id}/waits/${resolvedWait.id}/resolve`,
+      { method: 'POST' },
+    )
+    await addWait(task.id, 'Earlier unresolved follow-up', '2036-04-07')
+    await addWait(task.id, 'Later unresolved follow-up', '2036-04-09')
+    await addWait(task.id, 'Future follow-up', '2036-04-11')
+
+    const response = await app.request(
+      '/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=2036-04-10',
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map(({ id, candidateReason }) => ({ id, candidateReason })),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [{ id: task.id, candidateReason: { kind: 'follow-up', days: 3 } }],
+    })
+  })
+
   it('prefers a follow-up reason when the task also has an overdue due date', async () => {
     const now = new Date()
     const tzOffset = offsetWithDifferentUtcDate(now)

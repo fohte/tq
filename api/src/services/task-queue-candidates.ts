@@ -22,6 +22,8 @@ export function getTaskQueueCandidateReason(
   task: CandidateTask,
   candidateDate: string,
 ): TaskQueueCandidateReason | null {
+  // Keep this precedence aligned with resolveTaskCandidateOrderBy so each
+  // candidate's displayed reason matches the category that sorted it.
   if (task.status === 'completed') return null
 
   const followUpDate = task.waits
