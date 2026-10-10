@@ -72,6 +72,27 @@ const baseColumns: TaskKanbanColumn[] = [
   { id: 'someday', title: 'Someday', tasks: someTasks },
 ]
 
+const waitingColumn: TaskKanbanColumn = {
+  id: 'waiting',
+  title: 'Waiting',
+  tasks: [
+    makeTask({
+      id: '6',
+      number: 56,
+      title: 'Get a response from the vendor',
+    }),
+  ],
+  allowsManualMoves: false,
+}
+
+const waitingErrorColumn: TaskKanbanColumn = {
+  id: 'waiting',
+  title: 'Waiting',
+  tasks: [],
+  hasError: true,
+  allowsManualMoves: false,
+}
+
 const meta = {
   title: 'Kanban/TaskKanban',
   component: TaskKanbanWithProviders,
@@ -120,39 +141,16 @@ export const Empty: Story = {
 }
 
 export const Waiting: Story = {
-  name: 'the waiting column shows blocked tasks and rejects incoming moves',
+  name: 'the waiting column shows blocked tasks',
   args: {
-    columns: [
-      ...baseColumns,
-      {
-        id: 'waiting',
-        title: 'Waiting',
-        tasks: [
-          makeTask({
-            id: '6',
-            number: 56,
-            title: 'Get a response from the vendor',
-          }),
-        ],
-        allowsManualMoves: false,
-      },
-    ],
+    columns: [waitingColumn],
   },
 }
 
 export const WaitingError: Story = {
-  name: 'the waiting column shows a message when tasks fail to load',
+  name: 'the waiting column shows an error when loading fails',
   args: {
-    columns: [
-      ...baseColumns,
-      {
-        id: 'waiting',
-        title: 'Waiting',
-        tasks: [],
-        hasError: true,
-        allowsManualMoves: false,
-      },
-    ],
+    columns: [waitingErrorColumn],
   },
 }
 
