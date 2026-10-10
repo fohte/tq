@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { nestTaskListRows } from '#lib/task-tree'
 import {
-  allTasksQuery,
+  allTaskRowsQuery,
   taskListDefaults,
   taskSearchDefaults,
 } from '#operations/task-query-defaults'
@@ -119,6 +119,10 @@ const taskSearchInputSchema = listTasksQuerySchema
     view: true,
   })
   .extend({
+    full: z
+      .boolean()
+      .optional()
+      .describe('Include each task description in the results.'),
     includeMatch: booleanOption
       .optional()
       .describe('Include the matched text in results.'),
@@ -208,14 +212,6 @@ function toTaskQuery(fields: ListTasksQuery): TaskListQuery {
   }
 }
 
-function toPageMetadata(page: Record<string, unknown>) {
-  return Object.fromEntries(
-    Object.entries(page).filter(
-      ([key]) => !['content', 'preview', 'contentTruncated'].includes(key),
-    ),
-  )
-}
-
 function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
   return requestJson(
     client.api.tasks[':id'].$get({ param: { id: String(taskId) } }),
@@ -226,7 +222,7 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
     return requestJson(
       client.api.tasks.$get({
         query: {
-          ...allTasksQuery,
+          ...allTaskRowsQuery,
           descendantOf: taskResult.id,
         },
       }),
@@ -238,7 +234,6 @@ function getTaskWithSubtasks(client: OperationClient, taskId: string | number) {
       }
       return okAsync({
         ...taskResult,
-        pages: taskResult.pages.map(toPageMetadata),
         subtasks: nestTaskListRows(descendantResult),
       })
     })
@@ -286,7 +281,7 @@ export const taskReadOperations = [
   defineOperation(taskIdInputSchema, {
     path: ['task', 'get'],
     description:
-      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtree of subtasks. Each page is metadata only (id, taskId, title, sortOrder, timestamps, author) with no content.",
+      "Get a task's full detail: attributes, recurrence rule, time blocks, page metadata and short previews, checklist trees and leaf-item progress, linked tasks (mentions or pasted task URLs, as links.outgoing/links.incoming), labels, and nested subtask summaries. Subtask descriptions are omitted; use task_get (or CLI: task get) on a subtask to retrieve its description. Page bodies are available through page_get.",
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'read',
     routes: ['GET /api/tasks/:id', 'GET /api/tasks'],
@@ -296,7 +291,7 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, commitment:inbox|active|someday, has:pages|comments|no-children|blockers|no-blockers|follow-up-due, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. The same filters are available as explicit parameters. Task descriptions are omitted from results by default; set full to include them.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],
@@ -307,23 +302,25 @@ export const taskReadOperations = [
       envDefaults: { context: 'TQ_CONTEXT' },
       output: {
         kind: 'list',
-        omitKey: 'description',
         fullOption: '--full',
         fullDescription: 'Include full task description in the output',
+        fullField: 'full',
       },
     },
-    run: (client, input) =>
-      requestJson(
+    run: (client, input) => {
+      const { full, ...filters } = input
+      return requestJson(
         client.api.tasks.$get({
           query: toTaskQuery({
-            ...input,
-            view: 'full',
+            ...filters,
+            view: full === true ? 'full' : 'row',
             context: input.context ?? taskSearchDefaults.context,
             status: input.status ?? taskSearchDefaults.status,
             limit: input.limit ?? taskSearchDefaults.limit,
           }),
         }),
-      ),
+      )
+    },
   }),
   defineOperation(taskIdInputSchema, {
     path: ['task', 'activity'],

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
-import { withoutLinkSync } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -21,7 +20,7 @@ interface PageResponse {
   linkSync?: unknown
 }
 
-interface PageListResponse extends PageResponse {
+type PageListResponse = Omit<PageResponse, 'content'> & {
   preview: string | null
   contentTruncated: boolean
 }
@@ -32,7 +31,10 @@ function normalizePage(page: PageResponse) {
 
 function normalizePageList(page: PageListResponse) {
   return {
-    ...normalizePage(page),
+    ...page,
+    id: 'ID',
+    createdAt: 'DATE',
+    updatedAt: 'DATE',
     preview: page.preview,
     contentTruncated: page.contentTruncated,
   }
@@ -40,6 +42,10 @@ function normalizePageList(page: PageListResponse) {
 
 function pageListResponse<T>(status: number, pages: T[]) {
   return { status, pages }
+}
+
+function singlePageResponse<T>(status: number, page: T) {
+  return { status, page }
 }
 
 function sortPagesById<T extends { id: string }>(pages: T[]) {
@@ -90,7 +96,6 @@ describe('task pages API', () => {
               id: 'ID',
               taskId: task.id,
               title: 'Long markdown',
-              content: longMarkdown,
               format: 'markdown',
               sortOrder: 1,
               createdAt: 'DATE',
@@ -103,7 +108,6 @@ describe('task pages API', () => {
               id: 'ID',
               taskId: task.id,
               title: 'Markdown at the boundary',
-              content: boundaryMarkdown,
               format: 'markdown',
               sortOrder: 2,
               createdAt: 'DATE',
@@ -116,7 +120,6 @@ describe('task pages API', () => {
               id: 'ID',
               taskId: task.id,
               title: 'Long HTML',
-              content: longHtml,
               format: 'html',
               sortOrder: 3,
               createdAt: 'DATE',
@@ -138,7 +141,7 @@ describe('task pages API', () => {
 
     it('accepts the task number in place of the UUID', async () => {
       const task = await createTask('Task')
-      const page = await createPage(task.id, { title: 'Page' })
+      await createPage(task.id, { title: 'Page' })
 
       const res = await app.request(`/api/tasks/${String(task.number)}/pages`)
 
@@ -148,7 +151,14 @@ describe('task pages API', () => {
           status: 200,
           pages: [
             {
-              ...normalizePage(withoutLinkSync(page)),
+              id: 'ID',
+              taskId: task.id,
+              title: 'Page',
+              format: 'markdown',
+              sortOrder: 0,
+              createdAt: 'DATE',
+              updatedAt: 'DATE',
+              author: { kind: 'human', agent: null },
               preview: '',
               contentTruncated: false,
             },
@@ -169,22 +179,65 @@ describe('task pages API', () => {
       const res = await app.request(`/api/tasks/${task.id}/pages`)
 
       const body = await jsonBody<PageListResponse[]>(res)
-      expect(pageListResponse(res.status, sortPagesById(body))).toEqual({
+      expect(
+        pageListResponse(
+          res.status,
+          sortPagesById(body).map(normalizePageList),
+        ),
+      ).toEqual({
         status: 200,
         pages: sortPagesById([
           {
-            ...withoutLinkSync(humanPage),
-            author: { kind: 'human', agent: null },
+            id: humanPage.id,
+            taskId: task.id,
+            title: 'Page A',
+            format: 'markdown' as const,
+            sortOrder: 0,
+            createdAt: humanPage.createdAt,
+            updatedAt: humanPage.updatedAt,
+            author: { kind: 'human' as const, agent: null },
             preview: '',
             contentTruncated: false,
           },
           {
-            ...withoutLinkSync(llmPage),
-            author: { kind: 'llm', agent: 'claude-opus-5' },
+            id: llmPage.id,
+            taskId: task.id,
+            title: 'Page B',
+            format: 'markdown' as const,
+            sortOrder: 0,
+            createdAt: llmPage.createdAt,
+            updatedAt: llmPage.updatedAt,
+            author: { kind: 'llm' as const, agent: 'claude-opus-5' },
             preview: '',
             contentTruncated: false,
           },
-        ]),
+        ]).map(normalizePageList),
+      })
+    })
+  })
+
+  describe('GET /api/tasks/:taskId/pages/:pageId', () => {
+    it('returns the full page content', async () => {
+      const task = await createTask('Task')
+      const content = 'Full page content.\n'.repeat(30)
+      const page = await createPage(task.id, { title: 'Full page', content })
+
+      const res = await app.request(`/api/tasks/${task.id}/pages/${page.id}`)
+
+      const body = await jsonBody<PageResponse>(res)
+      expect(singlePageResponse(res.status, normalizePage(body))).toEqual({
+        status: 200,
+        page: {
+          id: 'ID',
+          taskId: task.id,
+          title: 'Full page',
+          content,
+          format: 'markdown',
+          sortOrder: 0,
+          createdAt: 'DATE',
+          updatedAt: 'DATE',
+          author: { kind: 'human', agent: null },
+        },
       })
     })
   })
@@ -511,7 +564,7 @@ describe('task pages API', () => {
 
       // Verify page is gone
       const listRes = await app.request(`/api/tasks/${task.id}/pages`)
-      const pages = await jsonBody<PageResponse[]>(listRes)
+      const pages = await jsonBody<PageListResponse[]>(listRes)
       expect(pages).toHaveLength(0)
     })
 
@@ -568,7 +621,6 @@ describe('task pages API', () => {
             id: 'ID',
             taskId: task.id,
             title: 'Markdown page',
-            content: markdown,
             format: 'markdown',
             sortOrder: 1,
             createdAt: 'DATE',
@@ -581,7 +633,6 @@ describe('task pages API', () => {
             id: 'ID',
             taskId: task.id,
             title: 'HTML page',
-            content: html,
             format: 'html',
             sortOrder: 2,
             createdAt: 'DATE',

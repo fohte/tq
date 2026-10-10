@@ -277,6 +277,15 @@ export function toListItemResponse(
   }
 }
 
+export function toListRowResponse(
+  task: Parameters<typeof toListItemResponse>[0],
+  opts?: Parameters<typeof toListItemResponse>[1],
+): Omit<TaskListItemResponse, 'description'> {
+  const { description, ...row } = toListItemResponse(task, opts)
+  void description
+  return row
+}
+
 const recurrenceRuleResponseSchema = z.object({
   id: z.string(),
   type: z.enum(['daily', 'weekly', 'monthly', 'custom']),

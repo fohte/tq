@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { encodePathSegment, pathSegmentSchema } from '#operations/path-segment'
-import { allTasksQuery } from '#operations/task-query-defaults'
+import { allTaskRowsQuery } from '#operations/task-query-defaults'
 import {
   defineOperation,
   requestJson,
@@ -20,6 +20,12 @@ const projectId = pathSegmentSchema('Project ID').refine(
   },
 )
 const projectIdSchema = z.object({ id: projectId })
+const projectTasksInputSchema = projectIdSchema.extend({
+  full: z
+    .boolean()
+    .optional()
+    .describe('Include each task description in the results.'),
+})
 const createProjectInputSchema = createProjectSchema
 const updateProjectInputSchema = updateProjectSchema.extend({ id: projectId })
 const listProjectsInputSchema = z.object({
@@ -115,23 +121,24 @@ export const projectOperations = [
         }),
       ).map(() => ({ deleted: true, id })),
   }),
-  defineOperation(projectIdSchema, {
+  defineOperation(projectTasksInputSchema, {
     path: ['project', 'tasks'],
-    description: 'List tasks in a project.',
+    description:
+      'List tasks in a project. Task descriptions are omitted from results by default; set full to include them.',
     positionalArgs: ['id'],
     kind: 'read',
     routes: ['GET /api/projects/:id', 'GET /api/tasks'],
     cli: {
       output: {
         kind: 'list',
-        omitKey: 'description',
         fullOption: '--full',
         fullDescription: 'Include full task description in the output',
+        fullField: 'full',
       },
     },
     // The tasks query does not check project existence, so retain the lookup
     // to preserve the CLI's 404 behavior for unknown project ids.
-    run: (client, { id }) =>
+    run: (client, { id, full }) =>
       requestJson(
         client.api.projects[':id'].$get({
           param: { id: encodePathSegment(id) },
@@ -140,8 +147,9 @@ export const projectOperations = [
         requestJson(
           client.api.tasks.$get({
             query: {
-              ...allTasksQuery,
+              ...allTaskRowsQuery,
               projectId: id,
+              view: full === true ? 'full' : 'row',
             },
           }),
         ),

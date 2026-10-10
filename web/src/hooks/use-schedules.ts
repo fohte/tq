@@ -6,7 +6,7 @@ import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
 import { scheduleKeys } from '#lib/query-keys'
 
 type Schedule = InferResponseType<
-  typeof api.api.schedule.recurring.$get,
+  typeof api.api.schedule.events.$get,
   200
 >[number]
 
@@ -21,7 +21,7 @@ export function useScheduleList(
     queryKey: scheduleKeys.list(startDate, endDate),
     enabled,
     queryFn: async () => {
-      const res = await api.api.schedule.recurring.$get({
+      const res = await api.api.schedule.events.$get({
         query: { startDate, endDate },
       })
       return unwrapOrThrow(assertOk(res)).json()
@@ -48,7 +48,7 @@ export function useCreateSchedule() {
 
   return useMutation({
     mutationFn: async (input: CreateScheduleInput) => {
-      const res = await api.api.schedule.recurring.$post({
+      const res = await api.api.schedule.events.$post({
         json: input,
       })
       return unwrapOrThrow(assertOk(res)).json()
@@ -84,7 +84,7 @@ export function useUpdateSchedule() {
       id: string
       input: UpdateScheduleInput
     }) => {
-      const res = await api.api.schedule.recurring[':id'].$patch({
+      const res = await api.api.schedule.events[':id'].$patch({
         param: { id },
         json: input,
       })
@@ -101,7 +101,7 @@ export function useDeleteSchedule() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.schedule.recurring[':id'].$delete({
+      const res = await api.api.schedule.events[':id'].$delete({
         param: { id },
       })
       assertOkOrThrow(res)

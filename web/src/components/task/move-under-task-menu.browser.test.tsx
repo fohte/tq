@@ -85,7 +85,7 @@ describe('MoveUnderTaskMenu', () => {
     mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
       const { categorized } = mockUseTaskList(
         {
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
           limit: 'unlimited',
@@ -205,7 +205,7 @@ describe('MoveUnderTaskMenu', () => {
     ).toEqual([
       {
         filter: {
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
           limit: 'unlimited',
@@ -215,7 +215,7 @@ describe('MoveUnderTaskMenu', () => {
       },
       {
         filter: {
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
           limit: 'unlimited',
@@ -269,7 +269,7 @@ describe('MoveUnderTaskMenu', () => {
       taskListCalls: [
         {
           filter: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             limit: 'unlimited',

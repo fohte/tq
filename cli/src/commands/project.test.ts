@@ -255,7 +255,7 @@ describe('project tasks', () => {
       method: 'GET',
       pathname: '/api/tasks',
       query: {
-        view: 'full',
+        view: 'row',
         context: 'all',
         status: 'all',
         limit: 'unlimited',
@@ -290,9 +290,7 @@ describe('project tasks', () => {
   })
 
   it('omits task description from the printed output by default', async () => {
-    const tasks = [
-      { id: 't1', title: 'Do the thing', description: 'long body' },
-    ]
+    const tasks = [{ id: 't1', title: 'Do the thing' }]
     const { fetchStub } = captureFetch(
       () => new Response(JSON.stringify(tasks), { status: 200 }),
     )

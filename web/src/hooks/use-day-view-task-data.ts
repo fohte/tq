@@ -44,14 +44,14 @@ export function useDayViewTaskData({
     [nowPanelTimeBlocks, queueItems, visibleDayQueueItems, visibleTimeBlocks],
   )
   const candidateTasksQuery = useTaskList({
-    view: 'full',
+    view: 'row',
     context,
     status: 'todo',
     candidatesOn: selectedDateStr,
     limit: 'unlimited',
   })
   const taskDateTasksQuery = useTaskList({
-    view: 'full',
+    view: 'row',
     context,
     status: 'todo',
     dateFrom: visibleRange.startDate,
@@ -63,7 +63,7 @@ export function useDayViewTaskData({
   const shouldFetchDueTasks = isCompactLayout || todayIsVisible
   const dueTasksQuery = useTaskList(
     {
-      view: 'full',
+      view: 'row',
       context,
       status: 'todo',
       dueTo: todayStr,
@@ -74,7 +74,7 @@ export function useDayViewTaskData({
   )
   const referencedTasksQuery = useTaskList(
     {
-      view: 'full',
+      view: 'row',
       ids: taskIds,
       context,
       status: 'all',

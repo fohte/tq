@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { PageBreadcrumb } from '#components/task/page-breadcrumb'
-import { makeTaskPage } from '#components/task/task-page-test-fixtures'
+import { makeTaskPageBody } from '#components/task/task-page-test-fixtures'
 
-const samplePage = makeTaskPage({
+const samplePage = makeTaskPageBody({
   content: '## Discussion Points\n\n- Architecture review\n- Sprint planning',
 })
 

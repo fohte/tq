@@ -412,7 +412,7 @@ describe('day-view route task queries', () => {
         .filter(([filter]) => isTaskListFilterWith(filter, 'ids'))
         .at(-1)
       expect(idQueryCall?.[0]).toEqual({
-        view: 'full',
+        view: 'row',
         ids: [taskId],
         context: 'work',
         status: 'all',
@@ -438,7 +438,7 @@ describe('day-view route task queries', () => {
           .at(-1),
       ).toEqual([
         {
-          view: 'full',
+          view: 'row',
           context: 'work',
           status: 'todo',
           dueTo: todayStr,
@@ -590,14 +590,14 @@ describe('day-view route task queries', () => {
         taskList: taskListQuerySnapshot(
           [
             {
-              view: 'full',
+              view: 'row',
               context: 'work',
               status: 'todo',
               candidatesOn: selectedDateStr,
               limit: 'unlimited',
             },
             {
-              view: 'full',
+              view: 'row',
               context: 'work',
               status: 'todo',
               dateFrom: calendarDate,
@@ -605,7 +605,7 @@ describe('day-view route task queries', () => {
               limit: 'unlimited',
             },
             {
-              view: 'full',
+              view: 'row',
               ids: [
                 'future-day-task',
                 'queued-task',
@@ -790,7 +790,7 @@ describe('day-view route compact layout', () => {
         appLayoutVisible: false,
         dueTaskCall: [
           {
-            view: 'full',
+            view: 'row',
             context: 'work',
             status: 'todo',
             dueTo: todayStr,
@@ -846,7 +846,7 @@ describe('day-view route compact layout', () => {
         appLayoutVisible: true,
         dueTaskCall: [
           {
-            view: 'full',
+            view: 'row',
             context: 'work',
             status: 'todo',
             dueTo: todayStr,

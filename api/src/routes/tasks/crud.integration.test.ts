@@ -31,6 +31,7 @@ import {
   TEST_UUID,
   TimeBlockResponse,
   toListItemResponse,
+  toListRowResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
 import {
@@ -1285,8 +1286,7 @@ describe('tasks CRUD API', () => {
       )
       const body =
         await jsonBody<Omit<TaskListItemResponse, 'description'>[]>(response)
-      const { description, ...expectedItem } = toListItemResponse(task)
-      void description
+      const expectedItem = toListRowResponse(task)
       const taskListQuery = queries.find(({ query }) =>
         query.includes('"parent_task"'),
       )

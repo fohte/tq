@@ -89,7 +89,7 @@ describe('LinkExistingTaskMenu', () => {
     mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
       const { categorized } = mockUseTaskList(
         {
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
           limit: 'unlimited',
@@ -227,7 +227,7 @@ describe('LinkExistingTaskMenu', () => {
     ).toEqual([
       {
         filter: {
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
           limit: 'unlimited',
@@ -237,7 +237,7 @@ describe('LinkExistingTaskMenu', () => {
       },
       {
         filter: {
-          view: 'full',
+          view: 'row',
           context: 'all',
           status: 'all',
           limit: 'unlimited',
@@ -293,7 +293,7 @@ describe('LinkExistingTaskMenu', () => {
       taskListCalls: [
         {
           filter: {
-            view: 'full',
+            view: 'row',
             context: 'all',
             status: 'all',
             limit: 'unlimited',

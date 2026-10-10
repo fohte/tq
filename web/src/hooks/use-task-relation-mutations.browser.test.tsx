@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   makeTask,
   makeTaskDetail,
+  makeTaskWithDescription,
 } from '#components/task/task-row-test-fixtures'
 import { projectKeys } from '#hooks/use-projects'
 import { type TaskDetail, taskKeys } from '#hooks/use-task-queries'
@@ -197,7 +198,7 @@ describe('useUpdateTaskBlockedBy', () => {
     await act(async () =>
       result.current.mutateAsync({
         id: 'blocked-task',
-        blockedBy: [makeTask({ id: 'task-blocker' })],
+        blockedBy: [makeTaskWithDescription({ id: 'task-blocker' })],
         githubBlockerUrls: [
           'https://github.com/example-owner/example-repo/issues/17',
         ],

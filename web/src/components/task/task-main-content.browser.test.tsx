@@ -43,7 +43,7 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
   queryClient.setQueryData(taskKeys.list(allTasksFilter), [])
   queryClient.setQueryData(
     taskKeys.list({
-      view: 'full',
+      view: 'row',
       context,
       status: 'all',
       limit: 'unlimited',
@@ -52,7 +52,7 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
   )
   queryClient.setQueryData(
     taskKeys.list({
-      view: 'full',
+      view: 'row',
       context,
       commitment: 'inbox',
       status: 'todo',

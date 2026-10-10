@@ -3,11 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskDuplicateOfSection } from '#components/task/task-duplicate-of-section'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import type { LinkedTaskSummary } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const duplicateOfTask: LinkedTaskSummary = makeTask({
+const duplicateOfTask: LinkedTaskSummary = makeTaskWithDescription({
   id: 'task-001',
   number: 12,
   title: 'Design the schema',

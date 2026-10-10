@@ -48,11 +48,10 @@ export const EXCLUDED_ROUTES = {
 
   // Recurring schedule defaults remain calendar actions; per-occurrence
   // changes have separate CLI operations.
-  'POST /api/schedule/recurring':
+  'POST /api/schedule/events': 'calendar UI is faster for direct manipulation',
+  'PATCH /api/schedule/events/:id':
     'calendar UI is faster for direct manipulation',
-  'PATCH /api/schedule/recurring/:id':
-    'calendar UI is faster for direct manipulation',
-  'DELETE /api/schedule/recurring/:id':
+  'DELETE /api/schedule/events/:id':
     'calendar UI is faster for direct manipulation',
   // Web Push subscriptions belong to a browser: only a browser can produce
   // one, and only a browser can display what gets delivered to it.
