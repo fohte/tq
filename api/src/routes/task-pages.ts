@@ -47,15 +47,24 @@ function validateContentLength(
     : null
 }
 
-function pageToResponse(
-  page: typeof taskPages.$inferSelect,
-  author: EditAuthorInfo | null = null,
+type TaskPageMetadataRow = Pick<
+  typeof taskPages.$inferSelect,
+  'id' | 'taskId' | 'title' | 'format' | 'sortOrder' | 'createdAt' | 'updatedAt'
+>
+
+type TaskPageListRow = TaskPageMetadataRow & {
+  preview: string | null
+  contentTruncated: boolean
+}
+
+function pageMetadataToResponse(
+  page: TaskPageMetadataRow,
+  author: EditAuthorInfo | null,
 ) {
   return {
     id: page.id,
     taskId: page.taskId,
     title: page.title,
-    content: page.content,
     format: page.format,
     sortOrder: page.sortOrder,
     createdAt: page.createdAt.toISOString(),
@@ -64,12 +73,14 @@ function pageToResponse(
   }
 }
 
-type TaskPageListRow = Pick<
-  typeof taskPages.$inferSelect,
-  'id' | 'taskId' | 'title' | 'format' | 'sortOrder' | 'createdAt' | 'updatedAt'
-> & {
-  preview: string | null
-  contentTruncated: boolean
+function pageToResponse(
+  page: typeof taskPages.$inferSelect,
+  author: EditAuthorInfo | null = null,
+) {
+  return {
+    ...pageMetadataToResponse(page, author),
+    content: page.content,
+  }
 }
 
 export function taskPageListSelection() {
@@ -99,14 +110,7 @@ export function pageToListResponse(
   author: EditAuthorInfo | null = null,
 ) {
   return {
-    id: page.id,
-    taskId: page.taskId,
-    title: page.title,
-    format: page.format,
-    sortOrder: page.sortOrder,
-    createdAt: page.createdAt.toISOString(),
-    updatedAt: page.updatedAt.toISOString(),
-    author,
+    ...pageMetadataToResponse(page, author),
     preview: page.preview,
     contentTruncated: page.contentTruncated,
   }

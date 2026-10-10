@@ -57,10 +57,11 @@ describe('page list', () => {
         contentTruncated: false,
       },
     ]
-    const { fetchStub } = captureFetch(
+    const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(pages), { status: 200 }),
     )
     const write = spyStdout()
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'page', 'list', '42'],
@@ -68,8 +69,21 @@ describe('page list', () => {
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(write.mock.calls).toEqual([[`${JSON.stringify(pages, null, 2)}\n`]])
+    expect(
+      makePageListOutput(exitCode, calls, write.mock.calls, stderr.mock.calls),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: '/api/tasks/42/pages',
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify(pages, null, 2)}\n`]],
+      stderr: [],
+    })
   })
 
   it('rejects the removed --full option without making a request', async () => {
