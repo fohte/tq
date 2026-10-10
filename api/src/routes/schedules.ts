@@ -21,9 +21,11 @@ import {
 } from '#routes/schedule-shared'
 import { findTaskByIdOrNumber, timeBlockToResponse } from '#routes/tasks/shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
-import { scheduleDateRangeSchema } from '#schemas/schedule'
-
-const timePattern = /^\d{2}:\d{2}$/
+import {
+  createScheduleSchema,
+  scheduleDateRangeSchema,
+  scheduleTimeSchema,
+} from '#schemas/schedule'
 
 const createTimeBlockSchema = z.object({
   taskId: taskIdOrNumber,
@@ -42,19 +44,10 @@ const timeBlockDateQuerySchema = scheduleDateRangeSchema.safeExtend({
   tzOffset: z.coerce.number().int().optional(),
 })
 
-const createScheduleSchema = z.object({
-  title: z.string().min(1),
-  startTime: z.string().regex(timePattern),
-  endTime: z.string().regex(timePattern),
-  recurrence: recurrenceRuleSchema.optional(),
-  context: z.enum(['work', 'personal']).optional(),
-  color: z.string().optional(),
-})
-
 const updateScheduleSchema = z.object({
   title: z.string().min(1).optional(),
-  startTime: z.string().regex(timePattern).optional(),
-  endTime: z.string().regex(timePattern).optional(),
+  startTime: scheduleTimeSchema.optional(),
+  endTime: scheduleTimeSchema.optional(),
   recurrence: recurrenceRuleSchema.nullable().optional(),
   context: z.enum(['work', 'personal']).nullable().optional(),
   color: z.string().nullable().optional(),

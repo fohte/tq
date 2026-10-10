@@ -221,6 +221,70 @@ describe('schedule time blocks create', () => {
   })
 })
 
+describe('schedule events create', () => {
+  it('creates an event with a JSON recurrence rule', async () => {
+    const responseBody = {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      title: 'Draft agenda',
+      startTime: '08:45',
+      endTime: '09:15',
+      recurrence: {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [1, 3, 5],
+        dayOfMonth: null,
+      },
+      context: 'personal',
+      color: null,
+      createdAt: '2026-12-18T08:00:00.000Z',
+      updatedAt: '2026-12-18T08:00:00.000Z',
+    }
+    const recurrence = JSON.stringify({
+      type: 'weekly',
+      interval: 1,
+      daysOfWeek: [1, 3, 5],
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '08:45',
+          '09:15',
+          '--recurrence',
+          recurrence,
+        ],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/events',
+          query: {},
+          body: {
+            title: 'Draft agenda',
+            startTime: '08:45',
+            endTime: '09:15',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1, 3, 5],
+            },
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+})
+
 describe('schedule time blocks update', () => {
   it('updates an end time and marks the block manual', async () => {
     const id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'

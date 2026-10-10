@@ -1,4 +1,4 @@
-import { err, errAsync, ok, type Result } from 'neverthrow'
+import { err, errAsync, fromThrowable, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
@@ -11,6 +11,7 @@ import {
   requestNoContent,
 } from '#operations/types'
 import {
+  createScheduleSchema,
   MAX_SCHEDULE_DATE_RANGE_DAYS,
   scheduleDateRangeInputSchema,
   scheduleDateRangeSchema,
@@ -96,6 +97,24 @@ function mapCliAutoScheduleFlags(
   if (!isAutoScheduled && !isManual) return ok(input)
 
   return ok({ ...input, isAutoScheduled })
+}
+
+const parseScheduleRecurrenceJson = fromThrowable(
+  (raw: string) => JSON.parse(raw) as unknown,
+  () => new Error('--recurrence must be valid JSON'),
+)
+
+function mapCliScheduleRecurrence(
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  const rawRecurrence = options['recurrence']
+  if (typeof rawRecurrence !== 'string') return ok(input)
+
+  return parseScheduleRecurrenceJson(rawRecurrence).map((recurrence) => ({
+    ...input,
+    recurrence,
+  }))
 }
 
 export const scheduleOperations = [
@@ -199,5 +218,27 @@ export const scheduleOperations = [
         client.api.schedule.events.$get({ query: dateRange.value }),
       )
     },
+  }),
+  defineOperation(createScheduleSchema, {
+    path: ['schedule', 'events', 'create'],
+    description:
+      'Create a schedule event. startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears every day. For recurrence, daily and custom rules appear every day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+    positionalArgs: ['title', 'startTime', 'endTime'],
+    kind: 'write',
+    routes: ['POST /api/schedule/events'],
+    cli: {
+      customOptions: [
+        {
+          flags: '--recurrence <json>',
+          description:
+            'Recurrence rule JSON with type, interval, daysOfWeek, and dayOfMonth fields',
+        },
+      ],
+      excludeFields: ['recurrence'],
+      mapInput: mapCliScheduleRecurrence,
+      output: { kind: 'json' },
+    },
+    run: (client, json) =>
+      requestJson(client.api.schedule.events.$post({ json })),
   }),
 ] as const

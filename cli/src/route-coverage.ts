@@ -46,9 +46,8 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/description-templates/:name':
     'template management is a web UI action',
 
-  // Recurring schedule defaults remain calendar actions; per-occurrence
-  // changes have separate CLI operations.
-  'POST /api/schedule/events': 'calendar UI is faster for direct manipulation',
+  // Updating or deleting schedule defaults remains a calendar action;
+  // per-occurrence changes have separate CLI operations.
   'PATCH /api/schedule/events/:id':
     'calendar UI is faster for direct manipulation',
   'DELETE /api/schedule/events/:id':
