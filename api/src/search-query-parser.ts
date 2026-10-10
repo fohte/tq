@@ -13,6 +13,7 @@ export interface ParsedQuery {
   hasBlockers?: boolean
   hasNoBlockers?: boolean
   hasFollowUpDue?: boolean
+  hasResolvedWait?: boolean
   parentId?: string
   projectId?: string
   sortBy?: 'due' | 'created' | 'updated'
@@ -120,8 +121,9 @@ const searchQueryTokenDefinitions = new Map(
         ['blockers', 'Has blockers'],
         ['no-blockers', 'Has no blockers'],
         ['follow-up-due', 'Has follow-up due'],
+        ['resolved-wait', 'Has a resolved wait to acknowledge'],
       ],
-      'Filter by pages, comments, children, blockers, or waits due for follow-up.',
+      'Filter by pages, comments, children, blockers, follow-up dates, or resolved waits.',
       (result, value) => {
         switch (value) {
           case 'pages':
@@ -143,6 +145,9 @@ const searchQueryTokenDefinitions = new Map(
             break
           case 'follow-up-due':
             result.hasFollowUpDue = true
+            break
+          case 'resolved-wait':
+            result.hasResolvedWait = true
             break
           default: {
             const unhandledValue: never = value
@@ -320,6 +325,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.hasFollowUpDue === true) {
     parts.push('has:follow-up-due')
+  }
+  if (query.hasResolvedWait === true) {
+    parts.push('has:resolved-wait')
   }
   if (query.parentId !== undefined) {
     parts.push(`parent:${quoteIfNeeded(query.parentId)}`)
