@@ -1,7 +1,11 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { taskGithubLinks, taskWaits } from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
+import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   createTask,
   type TaskListItemResponse,
@@ -48,6 +52,46 @@ function addWait(
   })
 }
 
+function addGithubWait(
+  taskId: string,
+  githubUrl: string,
+  followUpDate: string,
+) {
+  return app.request(`/api/tasks/${taskId}/waits`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ githubUrl, followUpDate }),
+  })
+}
+
+async function createGithubBlocker(
+  taskId: string,
+  role: 'subject' | 'blocker' = 'blocker',
+  state: 'open' | 'closed' = 'open',
+  number = 42,
+) {
+  return firstOrThrow(
+    await db
+      .insert(taskGithubLinks)
+      .values({
+        taskId,
+        owner: 'example-org',
+        repo: 'example-repo',
+        number,
+        role,
+        notifyEvents:
+          role === 'subject'
+            ? ['closed', 'reopened', 'comments', 'other']
+            : ['closed'],
+        kind: 'pull_request',
+        url: `https://github.com/example-org/example-repo/pull/${String(number)}`,
+        state,
+        title: 'Example pull request',
+      })
+      .returning(),
+  )
+}
+
 function normalizeWait(wait: TaskWaitResponse) {
   const resolvedTogether =
     wait.resolvedAt != null && wait.resolvedAt === wait.acknowledgedAt
@@ -69,10 +113,17 @@ function normalizeWait(wait: TaskWaitResponse) {
 }
 
 function normalizeSummary(wait: TaskWaitSummaryResponse) {
+  const resolvedTogether =
+    wait.resolvedAt != null && wait.resolvedAt === wait.acknowledgedAt
   return {
     ...wait,
     id: 'WAIT_ID',
     resolvedAt: wait.resolvedAt == null ? null : 'RESOLVED_AT',
+    acknowledgedAt: resolvedTogether
+      ? 'RESOLVED_AT'
+      : wait.acknowledgedAt == null
+        ? null
+        : 'ACKNOWLEDGED_AT',
   }
 }
 
@@ -104,8 +155,13 @@ function waitUpdatesSnapshot<T>(
   ]
 }
 
-function waitFilterSnapshot<T>(blockers: T, noBlockers: T, followUpDue: T) {
-  return { blockers, noBlockers, followUpDue }
+function waitFilterSnapshot<T>(
+  blockers: T,
+  noBlockers: T,
+  followUpDue: T,
+  resolvedWait: T,
+) {
+  return { blockers, noBlockers, followUpDue, resolvedWait }
 }
 
 function waitRemovalSnapshot<T>(
@@ -137,11 +193,92 @@ describe('task waits API', () => {
         body: '### Waiting for a reply\nMore detail',
         label: '### Waiting for a reply',
         followUpDate: addDaysAtOffset(new Date(wait.createdAt), tzOffset, 3),
+        githubLinkId: null,
         resolvedAt: null,
         acknowledgedAt: null,
         createdAt: 'CREATED_AT',
       },
     })
+  })
+
+  it('attaches a bodyless wait to an open GitHub blocker and removes the wait independently', async () => {
+    const task = await createTask('Waiting for a pull request')
+    const link = await createGithubBlocker(task.id)
+    const created = await addGithubWait(task.id, link.url, '2036-04-05')
+    const wait = await jsonBody<TaskWaitResponse>(created)
+    const duplicate = await addGithubWait(task.id, link.url, '2036-04-05')
+    const removed = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}`,
+      { method: 'DELETE' },
+    )
+    const [remainingWaits, remainingLinks] = await Promise.all([
+      db.select().from(taskWaits),
+      db.select().from(taskGithubLinks),
+    ])
+
+    expect(waitResponseSnapshot(created.status, normalizeWait(wait))).toEqual({
+      status: 201,
+      wait: {
+        id: 'WAIT_ID',
+        taskId: task.id,
+        body: null,
+        label: 'Waiting for GitHub activity',
+        followUpDate: '2036-04-05',
+        githubLinkId: link.id,
+        resolvedAt: null,
+        acknowledgedAt: null,
+        createdAt: 'CREATED_AT',
+      },
+    })
+    expect(duplicate.status).toEqual(409)
+    expect(removed.status).toEqual(204)
+    expect(remainingWaits).toEqual([])
+    expect(remainingLinks.map((row) => row.id)).toEqual([link.id])
+  })
+
+  it('only attaches waits to an open GitHub blocker on the same task', async () => {
+    const task = await createTask('Task with no matching blocker')
+    const otherTask = await createTask('Another task')
+    const otherLink = await createGithubBlocker(
+      otherTask.id,
+      'blocker',
+      'open',
+      43,
+    )
+    const closedLink = await createGithubBlocker(task.id, 'blocker', 'closed')
+    const subjectTask = await createTask('Task with a GitHub subject')
+    const subjectLink = await createGithubBlocker(subjectTask.id, 'subject')
+    const statuses = await Promise.all([
+      (async () =>
+        (await addGithubWait(task.id, otherLink.url, '2036-04-05')).status)(),
+      (async () =>
+        (await addGithubWait(task.id, closedLink.url, '2036-04-05')).status)(),
+      (async () =>
+        (await addGithubWait(subjectTask.id, subjectLink.url, '2036-04-05'))
+          .status)(),
+    ])
+
+    expect(statuses).toEqual([404, 409, 404])
+  })
+
+  it('deletes a linked wait when its GitHub blocker is deleted', async () => {
+    const task = await createTask('Delete a linked blocker')
+    const link = await createGithubBlocker(task.id)
+    await addGithubWait(task.id, link.url, '2036-04-05')
+    await db.delete(taskGithubLinks).where(eq(taskGithubLinks.id, link.id))
+
+    expect(await db.select().from(taskWaits)).toEqual([])
+  })
+
+  it('requires a body for a wait that is not attached to GitHub', async () => {
+    const task = await createTask('Wait without a description')
+    const response = await app.request(`/api/tasks/${task.id}/waits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ followUpDate: '2036-04-05' }),
+    })
+
+    expect(response.status).toBe(400)
   })
 
   it('preserves omitted fields when updating the body and follow-up date', async () => {
@@ -183,6 +320,7 @@ describe('task waits API', () => {
           body: 'Updated request',
           label: 'Updated request',
           followUpDate: '2036-04-05',
+          githubLinkId: null,
           resolvedAt: null,
           acknowledgedAt: null,
           createdAt: 'CREATED_AT',
@@ -196,6 +334,7 @@ describe('task waits API', () => {
           body: 'Updated request',
           label: 'Updated request',
           followUpDate: '2036-04-12',
+          githubLinkId: null,
           resolvedAt: null,
           acknowledgedAt: null,
           createdAt: 'CREATED_AT',
@@ -244,6 +383,7 @@ describe('task waits API', () => {
         body: 'A response was received',
         label: 'A response was received',
         followUpDate: '2036-04-05',
+        githubLinkId: null,
         resolvedAt: 'RESOLVED_AT',
         acknowledgedAt: 'RESOLVED_AT',
         createdAt: 'CREATED_AT',
@@ -255,6 +395,7 @@ describe('task waits API', () => {
           body: 'A response was received',
           label: 'A response was received',
           followUpDate: '2036-04-05',
+          githubLinkId: null,
           resolvedAt: 'RESOLVED_AT',
           acknowledgedAt: 'RESOLVED_AT',
           createdAt: 'CREATED_AT',
@@ -265,6 +406,7 @@ describe('task waits API', () => {
           body: 'B response is pending',
           label: 'B response is pending',
           followUpDate: '2036-04-06',
+          githubLinkId: null,
           resolvedAt: null,
           acknowledgedAt: null,
           createdAt: 'CREATED_AT',
@@ -275,15 +417,82 @@ describe('task waits API', () => {
           id: 'WAIT_ID',
           label: 'A response was received',
           followUpDate: '2036-04-05',
+          githubLinkId: null,
           resolvedAt: 'RESOLVED_AT',
+          acknowledgedAt: 'RESOLVED_AT',
         },
         {
           id: 'WAIT_ID',
           label: 'B response is pending',
           followUpDate: '2036-04-06',
+          githubLinkId: null,
           resolvedAt: null,
+          acknowledgedAt: null,
         },
       ],
+    })
+  })
+
+  it('acknowledges an automatically resolved wait and keeps the action idempotent', async () => {
+    const task = await createTask('Acknowledge a reply')
+    const wait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'Waiting for a reply', '2036-04-05'),
+    )
+    const unresolvedAcknowledge = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
+      { method: 'POST' },
+    )
+    await db
+      .update(taskWaits)
+      .set({ resolvedAt: new Date('2036-04-04T12:00:00.000Z') })
+      .where(eq(taskWaits.id, wait.id))
+    const acknowledged = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
+      { method: 'POST' },
+    )
+    const repeated = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
+      { method: 'POST' },
+    )
+
+    expect(unresolvedAcknowledge.status).toEqual(409)
+    expect(
+      waitResponseSnapshot(
+        acknowledged.status,
+        normalizeWait(await jsonBody<TaskWaitResponse>(acknowledged)),
+      ),
+    ).toEqual({
+      status: 200,
+      wait: {
+        id: 'WAIT_ID',
+        taskId: task.id,
+        body: 'Waiting for a reply',
+        label: 'Waiting for a reply',
+        followUpDate: '2036-04-05',
+        githubLinkId: null,
+        resolvedAt: 'RESOLVED_AT',
+        acknowledgedAt: 'ACKNOWLEDGED_AT',
+        createdAt: 'CREATED_AT',
+      },
+    })
+    expect(
+      waitResponseSnapshot(
+        repeated.status,
+        normalizeWait(await jsonBody<TaskWaitResponse>(repeated)),
+      ),
+    ).toEqual({
+      status: 200,
+      wait: {
+        id: 'WAIT_ID',
+        taskId: task.id,
+        body: 'Waiting for a reply',
+        label: 'Waiting for a reply',
+        followUpDate: '2036-04-05',
+        githubLinkId: null,
+        resolvedAt: 'RESOLVED_AT',
+        acknowledgedAt: 'ACKNOWLEDGED_AT',
+        createdAt: 'CREATED_AT',
+      },
     })
   })
 
@@ -291,6 +500,7 @@ describe('task waits API', () => {
     const dueTask = await createTask('Due wait')
     const futureTask = await createTask('Future wait')
     const resolvedTask = await createTask('Resolved wait')
+    const unacknowledgedTask = await createTask('Unacknowledged resolved wait')
     const clearTask = await createTask('No wait')
     const now = new Date()
     const tzOffset = offsetWithDifferentUtcDate(now)
@@ -307,6 +517,17 @@ describe('task waits API', () => {
       `/api/tasks/${resolvedTask.id}/waits/${resolved.id}/resolve`,
       { method: 'POST' },
     )
+    const unacknowledged = await jsonBody<TaskWaitResponse>(
+      await addWait(
+        unacknowledgedTask.id,
+        'New reply',
+        addDaysAtOffset(now, tzOffset, -1),
+      ),
+    )
+    await db
+      .update(taskWaits)
+      .set({ resolvedAt: new Date() })
+      .where(eq(taskWaits.id, unacknowledged.id))
 
     const taskIds = async (query: string) => {
       const response = await app.request(
@@ -337,14 +558,16 @@ describe('task waits API', () => {
         await taskIds('has:blockers'),
         await taskIds('has:no-blockers'),
         await taskIds('has:follow-up-due'),
+        await taskIds('has:resolved-wait'),
       ),
     ).toEqual({
       blockers: { status: 200, taskIds: [dueTask.id, futureTask.id].sort() },
       noBlockers: {
         status: 200,
-        taskIds: [resolvedTask.id, clearTask.id].sort(),
+        taskIds: [resolvedTask.id, unacknowledgedTask.id, clearTask.id].sort(),
       },
       followUpDue: { status: 200, taskIds: [dueTask.id] },
+      resolvedWait: { status: 200, taskIds: [unacknowledgedTask.id] },
     })
   })
 
@@ -380,7 +603,9 @@ describe('task waits API', () => {
             id: 'WAIT_ID',
             label: 'Waiting for a reply',
             followUpDate: '2036-04-05',
+            githubLinkId: null,
             resolvedAt: null,
+            acknowledgedAt: null,
           },
         ],
       },
@@ -414,6 +639,34 @@ describe('task waits API', () => {
         taskIds: [task.id],
       })),
     )
+  })
+
+  it('emits a task change event when acknowledging an automatic resolution', async () => {
+    const task = await createTask('Acknowledge a resolved wait')
+    const wait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'Waiting for a reply', '2036-04-05'),
+    )
+    await db
+      .update(taskWaits)
+      .set({ resolvedAt: new Date() })
+      .where(eq(taskWaits.id, wait.id))
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    const response = await app.request(
+      `/api/tasks/${task.id}/waits/${wait.id}/acknowledge`,
+      { method: 'POST' },
+    )
+
+    expect(response.status).toEqual(200)
+    expect(events).toEqual([
+      {
+        resource: 'task',
+        id: task.id,
+        origin: null,
+        taskIds: [task.id],
+      },
+    ])
   })
 
   it('removes waits only from their owning task and returns 404 after deletion', async () => {

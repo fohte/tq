@@ -750,6 +750,7 @@ describe('operation tool input schemas', () => {
       task_status: true,
       task_update: true,
       wait_add: true,
+      wait_acknowledge: true,
       wait_remove: false,
       wait_resolve: true,
       wait_update: true,

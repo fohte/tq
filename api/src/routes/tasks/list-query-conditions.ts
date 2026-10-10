@@ -29,6 +29,7 @@ import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import {
   followUpDueTaskWaitSubquery,
+  unacknowledgedResolvedTaskWaitSubquery,
   unresolvedTaskWaitSubquery,
 } from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
@@ -246,6 +247,10 @@ function buildConditions(
         ),
       ),
     )
+  }
+
+  if (parsed?.hasResolvedWait === true) {
+    conditions.push(exists(unacknowledgedResolvedTaskWaitSubquery()))
   }
 
   // Unlike the other filters above, an explicit `projectId` param wins over

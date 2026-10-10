@@ -9,6 +9,7 @@ import {
   taskChecklists,
   taskGithubLinks,
   tasks,
+  taskWaits,
 } from '#db/schema'
 import { APP_DOMAIN } from '#env'
 import {
@@ -228,6 +229,17 @@ function normalizeLink(link: typeof taskGithubLinks.$inferSelect) {
   }
 }
 
+function normalizeWaitState(
+  wait:
+    | Pick<typeof taskWaits.$inferSelect, 'resolvedAt' | 'acknowledgedAt'>
+    | undefined,
+) {
+  return {
+    resolvedAt: wait?.resolvedAt == null ? null : 'RESOLVED_AT',
+    acknowledgedAt: wait?.acknowledgedAt == null ? null : 'ACKNOWLEDGED_AT',
+  }
+}
+
 async function createLinkedTask(
   githubRef: typeof ref = ref,
   isPullRequest = false,
@@ -288,6 +300,7 @@ async function createScheduledLink(
   number: number,
   lastSyncedAt: Date,
   state: 'open' | 'closed' | 'merged' = 'open',
+  isPullRequest = false,
 ) {
   const task = await createTask(`Watch item ${String(number)}`)
   return firstOrThrow(
@@ -303,13 +316,28 @@ async function createScheduledLink(
           role === 'subject'
             ? ['closed', 'reopened', 'comments', 'other']
             : ['closed'],
-        kind: state === 'merged' ? 'pull_request' : 'issue',
+        kind: isPullRequest || state === 'merged' ? 'pull_request' : 'issue',
         url: `https://github.com/${ref.owner}/${ref.repo}/issues/${String(number)}`,
         state,
         title: `Watch item ${String(number)}`,
         commentsCount: 2,
         githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
         lastSyncedAt,
+      })
+      .returning(),
+  )
+}
+
+async function attachGithubWait(linkId: string, taskId: string) {
+  return firstOrThrow(
+    await db
+      .insert(taskWaits)
+      .values({
+        taskId,
+        githubLinkId: linkId,
+        body: null,
+        followUpDate: '2036-04-05',
+        createdAt: new Date('2024-08-15T00:00:00Z'),
       })
       .returning(),
   )
@@ -489,6 +517,147 @@ describe('syncLinkFromGithub', () => {
       writtenTaskIds: [],
     })
   })
+
+  it.each([
+    { event: 'reviewed', comments: 2, state: 'open', pullRequest: true },
+    { event: 'commented', comments: 3, state: 'open', pullRequest: false },
+    { event: 'closed', comments: 2, state: 'closed', pullRequest: false },
+    { event: 'merged', comments: 2, state: 'closed', pullRequest: true },
+  ] as const)(
+    'resolves a GitHub wait after an external $event event and sends a push',
+    async ({ event, comments, state, pullRequest }) => {
+      const { task, link } = await createLinkedTask(ref, pullRequest)
+      const blocker = firstOrThrow(
+        await db
+          .update(taskGithubLinks)
+          .set({
+            role: 'blocker',
+            notifyEvents: ['closed'],
+            commentsCount: 2,
+            githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
+          })
+          .where(eq(taskGithubLinks.id, link.id))
+          .returning(),
+      )
+      const wait = await attachGithubWait(blocker.id, task.id)
+      await registerPush('personal')
+
+      queueGithubIssueResponse({
+        state,
+        comments,
+        updated_at: '2024-08-16T13:40:00Z',
+        ...(pullRequest ? { pull_request: {} } : {}),
+      })
+      if (event === 'merged') queueGithubPullResponse(true)
+      queueGithubTimelineResponse([
+        timelineEvent(event, 'another-user', '2024-08-16T13:40:00Z'),
+      ])
+      ;(await syncLinkFromGithub(blocker))._unsafeUnwrap()
+
+      const [resolvedWait] = await db
+        .select({
+          resolvedAt: taskWaits.resolvedAt,
+          acknowledgedAt: taskWaits.acknowledgedAt,
+        })
+        .from(taskWaits)
+        .where(eq(taskWaits.id, wait.id))
+
+      expect(normalizeWaitState(resolvedWait)).toEqual({
+        resolvedAt: 'RESOLVED_AT',
+        acknowledgedAt: null,
+      })
+      expect(sentNotifications()).toEqual(
+        expectedNotification(
+          `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
+          task,
+        ),
+      )
+    },
+  )
+
+  it('does not resolve a GitHub wait for activity that predates the wait', async () => {
+    const { task, link } = await createLinkedTask(ref, true)
+    const blocker = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          commentsCount: 2,
+          githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
+        })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+    const wait = await attachGithubWait(blocker.id, task.id)
+
+    queueGithubIssueResponse({
+      comments: 3,
+      updated_at: '2024-08-16T13:40:00Z',
+      pull_request: {},
+    })
+    queueGithubTimelineResponse([
+      timelineEvent('commented', 'another-user', '2024-08-14T13:40:00Z'),
+    ])
+    ;(await syncLinkFromGithub(blocker))._unsafeUnwrap()
+
+    const [storedWait] = await db
+      .select({
+        resolvedAt: taskWaits.resolvedAt,
+        acknowledgedAt: taskWaits.acknowledgedAt,
+      })
+      .from(taskWaits)
+      .where(eq(taskWaits.id, wait.id))
+
+    expect(normalizeWaitState(storedWait)).toEqual({
+      resolvedAt: null,
+      acknowledgedAt: null,
+    })
+    expect(sentNotifications()).toEqual([])
+  })
+
+  it.each([
+    { login: AUTHENTICATED_GITHUB_LOGIN, actorType: undefined },
+    { login: 'automation-bot', actorType: 'Bot' },
+  ] as const)(
+    'does not resolve a GitHub wait after activity by $login',
+    async ({ login, actorType }) => {
+      const { task, link } = await createLinkedTask(ref, true)
+      const blocker = firstOrThrow(
+        await db
+          .update(taskGithubLinks)
+          .set({
+            role: 'blocker',
+            notifyEvents: ['closed'],
+            githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
+          })
+          .where(eq(taskGithubLinks.id, link.id))
+          .returning(),
+      )
+      const wait = await attachGithubWait(blocker.id, task.id)
+      await registerPush('personal')
+
+      queueGithubIssueResponse({ updated_at: '2024-08-16T13:40:00Z' })
+      queueGithubTimelineResponse([
+        timelineEvent('reviewed', login, '2024-08-16T13:40:00Z', actorType),
+      ])
+      ;(await syncLinkFromGithub(blocker))._unsafeUnwrap()
+
+      const [storedWait] = await db
+        .select({
+          resolvedAt: taskWaits.resolvedAt,
+          acknowledgedAt: taskWaits.acknowledgedAt,
+        })
+        .from(taskWaits)
+        .where(eq(taskWaits.id, wait.id))
+
+      expect(normalizeWaitState(storedWait)).toEqual({
+        resolvedAt: null,
+        acknowledgedAt: null,
+      })
+      expect(sentNotifications()).toEqual([])
+    },
+  )
 
   it('skips a merged link because its state is terminal', async () => {
     const { link } = await createLinkedTask(ref, true)
@@ -1237,6 +1406,61 @@ describe('syncAllGithubLinks', () => {
         taskIds: [task.id],
       },
     ])
+  })
+
+  it('publishes a task change when a GitHub reply resolves its wait', async () => {
+    const { task, link } = await createLinkedTask(ref, true)
+    const blocker = firstOrThrow(
+      await db
+        .update(taskGithubLinks)
+        .set({
+          role: 'blocker',
+          notifyEvents: ['closed'],
+          githubUpdatedAt: new Date('2024-08-12T09:30:00Z'),
+        })
+        .where(eq(taskGithubLinks.id, link.id))
+        .returning(),
+    )
+    const wait = await attachGithubWait(blocker.id, task.id)
+    await registerPush('personal')
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    queueGithubIssueResponse({
+      updated_at: '2024-08-16T13:40:00Z',
+      pull_request: {},
+    })
+    queueGithubTimelineResponse([
+      timelineEvent('reviewed', 'another-user', '2024-08-16T13:40:00Z'),
+    ])
+    await syncAllGithubLinks()
+
+    const [storedWait] = await db
+      .select({
+        resolvedAt: taskWaits.resolvedAt,
+        acknowledgedAt: taskWaits.acknowledgedAt,
+      })
+      .from(taskWaits)
+      .where(eq(taskWaits.id, wait.id))
+
+    expect(normalizeWaitState(storedWait)).toEqual({
+      resolvedAt: 'RESOLVED_AT',
+      acknowledgedAt: null,
+    })
+    expect(events).toEqual([
+      {
+        resource: 'task',
+        id: task.id,
+        origin: null,
+        taskIds: [task.id],
+      },
+    ])
+    expect(sentNotifications()).toEqual(
+      expectedNotification(
+        `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
+        task,
+      ),
+    )
   })
 
   it('does not publish task changes when GitHub confirms a link is unchanged', async () => {
