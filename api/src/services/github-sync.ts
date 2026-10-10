@@ -3,8 +3,7 @@ import { and, eq, inArray, isNull, lt } from 'drizzle-orm'
 import { okAsync, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
-import { taskGithubLinks, tasks, taskWaits } from '#db/schema'
-import { APP_DOMAIN } from '#env'
+import { taskGithubLinks, taskWaits } from '#db/schema'
 import {
   IntegrationConfigError,
   OAuthTokenMissingError,
@@ -28,13 +27,14 @@ import {
   GithubLinkNotifyError,
   isTaskTodo,
   notifyLinkChange,
+  pushTaskNotification,
 } from '#services/github-sync-notifications'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
-import { sendPush } from '#services/push'
 import { checkChecklistItemsForGithubLink } from '#services/task-checklist-progress'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
 type NotifyEvent = LinkRow['notifyEvents'][number]
+type UnresolvedWait = { id: string; createdAt: Date }
 
 type SyncLinkError =
   | GithubApiError
@@ -168,44 +168,158 @@ function matchesStoredGithubState(link: LinkRow) {
   )
 }
 
-function toNotifyError(error: unknown): GithubLinkNotifyError {
-  return new GithubLinkNotifyError(error)
+function findUnresolvedWait(
+  githubLinkId: string,
+): ResultAsync<UnresolvedWait | null, never> {
+  return ResultAsync.fromSafePromise(
+    db
+      .select({ id: taskWaits.id, createdAt: taskWaits.createdAt })
+      .from(taskWaits)
+      .where(
+        and(
+          eq(taskWaits.githubLinkId, githubLinkId),
+          isNull(taskWaits.resolvedAt),
+        ),
+      )
+      .then((rows) => rows[0] ?? null),
+  )
 }
 
-function notifyResolvedWait(
+function updateLinkAndNotify(
   link: LinkRow,
+  issue: GithubIssueData,
+  etag: string | null,
+  lastSyncedAt: Date,
+  activeWait: UnresolvedWait | null,
+  notification: NonNullable<ReturnType<typeof changedEvent>> | null,
+  shouldResolveWait: boolean,
+  onWrite?: (taskId: string) => void,
 ): ResultAsync<void, GithubLinkNotifyError> {
-  return ResultAsync.fromPromise(
-    db
-      .select({
-        id: tasks.id,
-        number: tasks.number,
-        title: tasks.title,
-        status: tasks.status,
-        context: tasks.context,
-      })
-      .from(tasks)
-      .where(eq(tasks.id, link.taskId))
-      .then((rows) => rows[0]),
-    toNotifyError,
-  ).andThen((task) => {
-    if (task == null || task.status !== 'todo') {
+  return ResultAsync.fromSafePromise(
+    db.transaction(async (tx) => {
+      const updatedLinks = await tx
+        .update(taskGithubLinks)
+        .set({
+          title: issue.title,
+          state: issue.state,
+          commentsCount: issue.commentsCount,
+          githubUpdatedAt: new Date(issue.githubUpdatedAt),
+          stateReason: issue.stateReason,
+          etag,
+          lastSyncedAt,
+        })
+        .where(matchesStoredGithubState(link))
+        .returning({ id: taskGithubLinks.id })
+
+      if (
+        updatedLinks.length > 0 &&
+        link.state !== 'merged' &&
+        issue.state === 'merged'
+      ) {
+        await checkChecklistItemsForGithubLink(tx, link.id)
+      }
+      const resolvedWaits =
+        updatedLinks.length > 0 && shouldResolveWait && activeWait != null
+          ? await tx
+              .update(taskWaits)
+              .set({ resolvedAt: new Date() })
+              .where(
+                and(
+                  eq(taskWaits.id, activeWait.id),
+                  isNull(taskWaits.resolvedAt),
+                ),
+              )
+              .returning({ id: taskWaits.id })
+          : []
+      return { updatedLinks, resolvedWait: resolvedWaits.length > 0 }
+    }),
+  ).andThen(({ updatedLinks, resolvedWait }) => {
+    if (updatedLinks.length === 0) {
+      return okAsync(undefined)
+    }
+    onWrite?.(link.taskId)
+    if (resolvedWait) {
+      return pushTaskNotification(link, replyNotificationTitle(link))
+    }
+    if (notification === null) {
       return okAsync(undefined)
     }
 
-    return ResultAsync.fromPromise(
-      sendPush(
-        { context: task.context },
-        {
-          title: replyNotificationTitle(link),
-          body: `#${String(task.number)} ${task.title}`,
-          taskId: task.id,
-          url: `https://${APP_DOMAIN}/tasks/${task.id}`,
-        },
-      ),
-      toNotifyError,
-    ).map(() => undefined)
+    return notifyLinkChange(link, notification)
   })
+}
+
+function syncChangedIssue(
+  link: LinkRow,
+  issue: GithubIssueData,
+  etag: string | null,
+  lastSyncedAt: Date,
+  activeWait: UnresolvedWait | null,
+  onWrite?: (taskId: string) => void,
+): ResultAsync<void, SyncLinkError> {
+  const candidates = candidateEvents(link, issue)
+  const selectedCandidates = candidates.filter((event) =>
+    link.notifyEvents.includes(event),
+  )
+  const shouldInspectWait = activeWait != null && candidates.length > 0
+  const inspectActivity = (isTodo: boolean) => {
+    if (!shouldInspectWait && !isTodo) {
+      return updateLinkAndNotify(
+        link,
+        issue,
+        etag,
+        lastSyncedAt,
+        activeWait,
+        null,
+        false,
+        onWrite,
+      )
+    }
+    return fetchGithubIssueActivity({
+      owner: link.owner,
+      repo: link.repo,
+      number: link.number,
+    }).andThen((activity) => {
+      const notification =
+        isTodo && selectedCandidates.length > 0
+          ? changedEvent(link, issue, selectedCandidates, activity)
+          : null
+      const shouldResolveWait =
+        shouldInspectWait &&
+        hasReplyActivity(link, activity, activeWait.createdAt)
+      return updateLinkAndNotify(
+        link,
+        issue,
+        etag,
+        lastSyncedAt,
+        activeWait,
+        notification,
+        shouldResolveWait,
+        onWrite,
+      )
+    })
+  }
+
+  return selectedCandidates.length > 0
+    ? isTaskTodo(link).andThen(inspectActivity)
+    : inspectActivity(false)
+}
+
+function updateUnchangedLink(
+  link: LinkRow,
+  lastSyncedAt: Date,
+): ResultAsync<void, never> {
+  return ResultAsync.fromSafePromise(
+    db
+      .update(taskGithubLinks)
+      .set({ lastSyncedAt })
+      .where(
+        and(
+          matchesStoredGithubState(link),
+          lt(taskGithubLinks.lastSyncedAt, lastSyncedAt),
+        ),
+      ),
+  ).map(() => undefined)
 }
 
 // Store the pass start so network latency does not shorten the next scheduler interval.
@@ -213,7 +327,7 @@ export function syncLinkFromGithub(
   link: LinkRow,
   syncStartedAt = new Date(),
   onWrite?: (taskId: string) => void,
-  unresolvedWait?: { id: string; createdAt: Date } | null,
+  unresolvedWait?: UnresolvedWait | null,
 ): ResultAsync<void, SyncLinkError> {
   if (link.state === 'merged') {
     return okAsync(undefined)
@@ -224,142 +338,31 @@ export function syncLinkFromGithub(
       ? link.lastSyncedAt
       : syncStartedAt
 
-  const waitResult =
-    unresolvedWait === undefined
-      ? ResultAsync.fromSafePromise(
-          db
-            .select({ id: taskWaits.id, createdAt: taskWaits.createdAt })
-            .from(taskWaits)
-            .where(
-              and(
-                eq(taskWaits.githubLinkId, link.id),
-                isNull(taskWaits.resolvedAt),
-              ),
-            )
-            .then((rows) => rows[0] ?? null),
-        )
-      : okAsync(unresolvedWait)
+  return fetchGithubIssueIfChanged(
+    { owner: link.owner, repo: link.repo, number: link.number },
+    link.etag,
+  ).andThen((result) => {
+    if (result.notModified) {
+      return updateUnchangedLink(link, lastSyncedAt)
+    }
 
-  return waitResult.andThen((knownWait) =>
-    fetchGithubIssueIfChanged(
-      { owner: link.owner, repo: link.repo, number: link.number },
-      link.etag,
-    ).andThen((result) => {
-      if (result.notModified) {
-        return ResultAsync.fromSafePromise(
-          db
-            .update(taskGithubLinks)
-            .set({ lastSyncedAt })
-            .where(
-              and(
-                matchesStoredGithubState(link),
-                lt(taskGithubLinks.lastSyncedAt, lastSyncedAt),
-              ),
-            ),
-        ).map(() => undefined)
-      }
+    // A wait can be created after the batch prefetch while this fetch runs.
+    const activeWaitResult =
+      unresolvedWait != null
+        ? okAsync(unresolvedWait)
+        : findUnresolvedWait(link.id)
 
-      const activeWaitResult =
-        knownWait == null
-          ? ResultAsync.fromSafePromise(
-              db
-                .select({ id: taskWaits.id, createdAt: taskWaits.createdAt })
-                .from(taskWaits)
-                .where(
-                  and(
-                    eq(taskWaits.githubLinkId, link.id),
-                    isNull(taskWaits.resolvedAt),
-                  ),
-                )
-                .then((rows) => rows[0] ?? null),
-            )
-          : okAsync(knownWait)
-
-      return activeWaitResult.andThen((activeWait) => {
-        const { issue, etag } = result
-        const updateLink = (
-          notification: NonNullable<ReturnType<typeof changedEvent>> | null,
-          shouldResolveWait: boolean,
-        ) =>
-          ResultAsync.fromSafePromise(
-            db.transaction(async (tx) => {
-              const updatedLinks = await tx
-                .update(taskGithubLinks)
-                .set({
-                  title: issue.title,
-                  state: issue.state,
-                  commentsCount: issue.commentsCount,
-                  githubUpdatedAt: new Date(issue.githubUpdatedAt),
-                  stateReason: issue.stateReason,
-                  etag,
-                  lastSyncedAt,
-                })
-                .where(matchesStoredGithubState(link))
-                .returning({ id: taskGithubLinks.id })
-
-              if (
-                updatedLinks.length > 0 &&
-                link.state !== 'merged' &&
-                issue.state === 'merged'
-              ) {
-                await checkChecklistItemsForGithubLink(tx, link.id)
-              }
-              const resolvedWaits =
-                updatedLinks.length > 0 &&
-                shouldResolveWait &&
-                activeWait != null
-                  ? await tx
-                      .update(taskWaits)
-                      .set({ resolvedAt: new Date() })
-                      .where(
-                        and(
-                          eq(taskWaits.id, activeWait.id),
-                          isNull(taskWaits.resolvedAt),
-                        ),
-                      )
-                      .returning({ id: taskWaits.id })
-                  : []
-              return { updatedLinks, resolvedWait: resolvedWaits.length > 0 }
-            }),
-          ).andThen(({ updatedLinks, resolvedWait }) => {
-            if (updatedLinks.length === 0) {
-              return okAsync(undefined)
-            }
-            onWrite?.(link.taskId)
-            if (resolvedWait) return notifyResolvedWait(link)
-            if (notification === null) return okAsync(undefined)
-
-            return notifyLinkChange(link, notification)
-          })
-        const candidates = candidateEvents(link, issue)
-        const selectedCandidates = candidates.filter((event) =>
-          link.notifyEvents.includes(event),
-        )
-        const shouldInspectWait = activeWait != null && candidates.length > 0
-        const inspectActivity = (isTodo: boolean) => {
-          if (!shouldInspectWait && !isTodo) return updateLink(null, false)
-          return fetchGithubIssueActivity({
-            owner: link.owner,
-            repo: link.repo,
-            number: link.number,
-          }).andThen((activity) => {
-            const notification =
-              isTodo && selectedCandidates.length > 0
-                ? changedEvent(link, issue, selectedCandidates, activity)
-                : null
-            return updateLink(
-              notification,
-              shouldInspectWait &&
-                hasReplyActivity(link, activity, activeWait.createdAt),
-            )
-          })
-        }
-        return selectedCandidates.length > 0
-          ? isTaskTodo(link).andThen(inspectActivity)
-          : inspectActivity(false)
-      })
-    }),
-  )
+    return activeWaitResult.andThen((activeWait) =>
+      syncChangedIssue(
+        link,
+        result.issue,
+        result.etag,
+        lastSyncedAt,
+        activeWait,
+        onWrite,
+      ),
+    )
+  })
 }
 
 async function hasGithubAccess(): Promise<boolean> {

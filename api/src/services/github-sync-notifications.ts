@@ -44,14 +44,10 @@ function toNotifyError(error: unknown): GithubLinkNotifyError {
   return new GithubLinkNotifyError(error)
 }
 
-export function notifyLinkChange(
+export function pushTaskNotification(
   link: LinkRow,
-  notification: { event: NotifyEvent; title: string },
+  title: string,
 ): ResultAsync<void, GithubLinkNotifyError> {
-  if (!link.notifyEvents.includes(notification.event)) {
-    return okAsync(undefined)
-  }
-
   return ResultAsync.fromPromise(
     db
       .select({
@@ -74,7 +70,7 @@ export function notifyLinkChange(
       sendPush(
         { context: task.context },
         {
-          title: notification.title,
+          title,
           body: `#${String(task.number)} ${task.title}`,
           taskId: task.id,
           url: `https://${APP_DOMAIN}/tasks/${task.id}`,
@@ -83,6 +79,17 @@ export function notifyLinkChange(
       toNotifyError,
     ).map(() => undefined)
   })
+}
+
+export function notifyLinkChange(
+  link: LinkRow,
+  notification: { event: NotifyEvent; title: string },
+): ResultAsync<void, GithubLinkNotifyError> {
+  if (!link.notifyEvents.includes(notification.event)) {
+    return okAsync(undefined)
+  }
+
+  return pushTaskNotification(link, notification.title)
 }
 
 export function isTaskTodo(
