@@ -196,6 +196,12 @@ describe('DayViewPresentation', () => {
         'no visible "Schedule title" input found',
       ),
     ).toBeVisible()
+    expect(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Start date')),
+        'no visible schedule start date input',
+      ),
+    ).toHaveValue('2026-07-20')
   })
 
   it('opens the CreateTaskModal when the "New task" button is clicked', async () => {

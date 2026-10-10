@@ -306,6 +306,7 @@ export function DayViewPresentation({
         open={isScheduleModalOpen}
         onOpenChange={setIsScheduleModalOpen}
         schedule={editingSchedule}
+        defaultStartDate={formatLocalDate(selectedDate)}
       />
 
       <CreateTaskModal

@@ -44,6 +44,7 @@ const timeBlockDateQuerySchema = scheduleDateRangeSchema.safeExtend({
 
 const createScheduleSchema = z.object({
   title: z.string().min(1),
+  startDate: z.iso.date(),
   startTime: z.string().regex(timePattern),
   endTime: z.string().regex(timePattern),
   recurrence: recurrenceRuleSchema.optional(),
@@ -53,6 +54,7 @@ const createScheduleSchema = z.object({
 
 const updateScheduleSchema = z.object({
   title: z.string().min(1).optional(),
+  startDate: z.iso.date().optional(),
   startTime: z.string().regex(timePattern).optional(),
   endTime: z.string().regex(timePattern).optional(),
   recurrence: recurrenceRuleSchema.nullable().optional(),
@@ -80,6 +82,7 @@ function scheduleToResponse(
   return {
     id: schedule.id,
     title: schedule.title,
+    startDate: schedule.startDate,
     startTime: schedule.startTime,
     endTime: schedule.endTime,
     recurrence: recurrenceRuleToResponse(rule),
@@ -258,6 +261,7 @@ export const schedulesApp = new Hono()
         .insert(schedules)
         .values({
           title: input.title,
+          startDate: input.startDate,
           startTime: input.startTime,
           endTime: input.endTime,
           recurrenceRuleId: newRule?.id ?? null,
@@ -359,6 +363,9 @@ export const schedulesApp = new Hono()
           .update(schedules)
           .set({
             ...(input.title !== undefined ? { title: input.title } : {}),
+            ...(input.startDate !== undefined
+              ? { startDate: input.startDate }
+              : {}),
             ...(input.startTime !== undefined
               ? { startTime: input.startTime }
               : {}),

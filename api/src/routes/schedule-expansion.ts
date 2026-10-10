@@ -6,8 +6,8 @@ export type ScheduleOverrideTimes = Pick<
 >
 
 /**
- * Check if a schedule matches a given date based on its recurrence rule.
- * - No recurrence rule: matches every day
+ * Check if a date matches the recurrence rule's pattern.
+ * A null rule adds no recurrence pattern; callers still enforce the start date.
  * - daily: matches every day (interval not yet implemented)
  * - weekly: matches if the date's day-of-week is in daysOfWeek
  * - monthly: matches if the date's day-of-month equals dayOfMonth
@@ -36,6 +36,17 @@ export function matchesDate(
   }
 }
 
+export function scheduleOccursOnDate(
+  schedule: typeof schedules.$inferSelect,
+  rule: typeof recurrenceRules.$inferSelect | null,
+  date: Date,
+): boolean {
+  const dateStr = formatDateStr(date)
+  if (dateStr < schedule.startDate) return false
+  if (!rule) return dateStr === schedule.startDate
+  return matchesDate(rule, date)
+}
+
 /**
  * Expand a schedule for a given date, handling cross-midnight schedules.
  *
@@ -51,6 +62,7 @@ export function expandScheduleForDate(
 ): Array<{
   scheduleId: string
   title: string
+  startDate: string
   start: string
   end: string
   context: string
@@ -65,6 +77,7 @@ export function expandScheduleForDate(
   const blocks: Array<{
     scheduleId: string
     title: string
+    startDate: string
     start: string
     end: string
     context: string
@@ -72,7 +85,10 @@ export function expandScheduleForDate(
   }> = []
 
   // Check if the schedule's "start day" is this date
-  if (matchesDate(rule, date) && currentOverride?.skipped !== true) {
+  if (
+    scheduleOccursOnDate(schedule, rule, date) &&
+    currentOverride?.skipped !== true
+  ) {
     if (isCrossMidnight) {
       // Start portion: startTime on this date -> midnight
       const nextDate = new Date(date)
@@ -80,6 +96,7 @@ export function expandScheduleForDate(
       blocks.push({
         scheduleId: schedule.id,
         title: schedule.title,
+        startDate: schedule.startDate,
         start: `${dateStr}T${currentStartTime}:00`,
         end: `${formatDateStr(nextDate)}T00:00:00`,
         context: schedule.context,
@@ -89,6 +106,7 @@ export function expandScheduleForDate(
       blocks.push({
         scheduleId: schedule.id,
         title: schedule.title,
+        startDate: schedule.startDate,
         start: `${dateStr}T${currentStartTime}:00`,
         end: `${dateStr}T${currentEndTime}:00`,
         context: schedule.context,
@@ -106,12 +124,13 @@ export function expandScheduleForDate(
   const previousEndTime = previousOverride?.endTime ?? schedule.endTime
   if (
     previousStartTime > previousEndTime &&
-    matchesDate(rule, prevDate) &&
+    scheduleOccursOnDate(schedule, rule, prevDate) &&
     previousOverride?.skipped !== true
   ) {
     blocks.push({
       scheduleId: schedule.id,
       title: schedule.title,
+      startDate: schedule.startDate,
       start: `${dateStr}T00:00:00`,
       end: `${dateStr}T${previousEndTime}:00`,
       context: schedule.context,

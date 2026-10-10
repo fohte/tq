@@ -31,6 +31,7 @@ export function useScheduleList(
 
 export interface CreateScheduleInput {
   title: string
+  startDate: string
   startTime: string
   endTime: string
   recurrence?: {
@@ -61,6 +62,7 @@ export function useCreateSchedule() {
 
 export interface UpdateScheduleInput {
   title?: string
+  startDate?: string
   startTime?: string
   endTime?: string
   recurrence?: {

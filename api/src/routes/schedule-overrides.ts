@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { matchesDate } from '#routes/schedule-expansion'
+import { scheduleOccursOnDate } from '#routes/schedule-expansion'
 import {
   scheduleOverrideDateSchema,
   setScheduleOverrideBodySchema,
@@ -50,7 +50,8 @@ export const scheduleOverridesApp = new Hono()
       }
 
       if (
-        !matchesDate(
+        !scheduleOccursOnDate(
+          scheduleWithRule.schedule,
           scheduleWithRule.rule,
           new Date(`${occurrenceDate}T00:00:00`),
         )

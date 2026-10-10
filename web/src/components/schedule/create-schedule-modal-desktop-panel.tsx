@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@fohte/ui/select'
-import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
+import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
@@ -28,6 +28,8 @@ export function ScheduleModalDesktopPanel({
   handleOpenChange,
   title,
   setTitle,
+  startDate,
+  setStartDate,
   startTime,
   setStartTime,
   endTime,
@@ -79,6 +81,22 @@ export function ScheduleModalDesktopPanel({
           placeholder="Schedule title"
           autoFocus
         />
+
+        <InlineFieldGroup
+          label="Start date"
+          icon={<CalendarDays className="size-3.5" />}
+        >
+          <Input
+            type="date"
+            variant="ghost"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value)
+            }}
+            aria-label="Start date"
+            className="w-36"
+          />
+        </InlineFieldGroup>
 
         {/* Time fields */}
         <div className="flex items-end gap-4">

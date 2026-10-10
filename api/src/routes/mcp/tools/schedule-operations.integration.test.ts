@@ -263,6 +263,7 @@ describe('schedule operation tools', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: 'Daily reset',
+        startDate: '2026-12-18',
         startTime: '08:45',
         endTime: '09:15',
         recurrence: { type: 'daily', interval: 1 },
@@ -285,6 +286,7 @@ describe('schedule operation tools', () => {
       {
         scheduleId: created.id,
         title: 'Daily reset',
+        startDate: '2026-12-18',
         start: '2026-12-18T08:45:00',
         end: '2026-12-18T09:15:00',
         context: 'personal',

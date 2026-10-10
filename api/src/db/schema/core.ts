@@ -257,6 +257,7 @@ export const schedules = pgTable(
     title: text('title').notNull(),
     startTime: text('start_time').notNull(),
     endTime: text('end_time').notNull(),
+    startDate: date('start_date').notNull(),
     recurrenceRuleId: text('recurrence_rule_id').references(
       () => recurrenceRules.id,
       { onDelete: 'set null' },

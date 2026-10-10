@@ -4,6 +4,7 @@ export function makeSchedule(overrides: Partial<Schedule> = {}): Schedule {
   return {
     scheduleId: 'schedule-1',
     title: 'Gym',
+    startDate: '2026-01-01',
     start: '2026-01-01T07:00:00',
     end: '2026-01-01T08:00:00',
     context: 'personal',
