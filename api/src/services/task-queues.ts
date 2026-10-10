@@ -5,6 +5,7 @@ import { err, ok, type Result, ResultAsync } from 'neverthrow'
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import { firstOrErr, RowNotFoundError } from '#lib/drizzle-utils'
+import { hasNoUnresolvedBlockersCondition } from '#services/task-blockers'
 
 export type TaskQueue = typeof taskQueues.$inferSelect
 
@@ -107,7 +108,13 @@ export function carryOverTaskQueueItems(
           .select({ item: taskQueueItems })
           .from(taskQueueItems)
           .innerJoin(tasks, eq(taskQueueItems.taskId, tasks.id))
-          .where(and(pastPeriodCondition, eq(tasks.status, 'todo')))
+          .where(
+            and(
+              pastPeriodCondition,
+              eq(tasks.status, 'todo'),
+              hasNoUnresolvedBlockersCondition(),
+            ),
+          )
           .orderBy(
             asc(taskQueueItems.periodStart),
             asc(taskQueueItems.sortOrder),
