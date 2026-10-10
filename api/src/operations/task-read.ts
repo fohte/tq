@@ -88,7 +88,7 @@ const taskListInputSchema = listTasksQuerySchema
     status: listTasksQuerySchema.shape.status
       .optional()
       .describe(
-        `Only return tasks in this status. Defaults to ${taskListDefaults.status.join(', ')}.`,
+        `Only return tasks in this status. Defaults to all when ids are specified, or ${taskListDefaults.status.join(', ')} otherwise.`,
       ),
     statusReason: listTasksQuerySchema.shape.statusReason.describe(
       'Only return tasks closed with this reason.',
@@ -163,7 +163,6 @@ const taskSearchInputSchema = listTasksQuerySchema
   })
 
 const taskListMcpInputSchema = taskListInputSchema.extend({
-  status: taskListInputSchema.shape.status.default(taskListDefaults.status),
   context: taskListInputSchema.shape.context.default(taskListDefaults.context),
   limit: taskListInputSchema.shape.limit.default(taskListDefaults.limit),
   tzOffset: timezoneOffsetMinutesSchema,
@@ -275,7 +274,9 @@ export const taskReadOperations = [
             ...filters,
             view: full === true ? 'full' : 'row',
             context: input.context ?? taskListDefaults.context,
-            status: input.status ?? taskListDefaults.status,
+            status:
+              input.status ??
+              (input.ids === undefined ? taskListDefaults.status : ['all']),
             limit: input.limit ?? taskListDefaults.limit,
           }),
         }),
