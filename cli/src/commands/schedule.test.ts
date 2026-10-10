@@ -1,4 +1,7 @@
-import { makeTimeBlock } from 'api/routes/schedule-test-fixtures'
+import {
+  makeScheduleEvent,
+  makeTimeBlock,
+} from 'api/routes/schedule-test-fixtures'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
@@ -222,12 +225,9 @@ describe('schedule time blocks create', () => {
 })
 
 describe('schedule events create', () => {
-  it('creates an event with a JSON recurrence rule', async () => {
-    const responseBody = {
-      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  it('creates an event with recurrence flags', async () => {
+    const responseBody = makeScheduleEvent({
       title: 'Draft agenda',
-      startTime: '08:45',
-      endTime: '09:15',
       recurrence: {
         id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
         type: 'weekly',
@@ -235,15 +235,6 @@ describe('schedule events create', () => {
         daysOfWeek: [1, 3, 5],
         dayOfMonth: null,
       },
-      context: 'personal',
-      color: null,
-      createdAt: '2026-12-18T08:00:00.000Z',
-      updatedAt: '2026-12-18T08:00:00.000Z',
-    }
-    const recurrence = JSON.stringify({
-      type: 'weekly',
-      interval: 1,
-      daysOfWeek: [1, 3, 5],
     })
 
     expect(
@@ -255,8 +246,12 @@ describe('schedule events create', () => {
           'Draft agenda',
           '08:45',
           '09:15',
-          '--recurrence',
-          recurrence,
+          '--recurrence-type',
+          'weekly',
+          '--recurrence-interval',
+          '1',
+          '--recurrence-days-of-week',
+          '1,3,5',
         ],
         new Response(JSON.stringify(responseBody), { status: 201 }),
       ),
@@ -281,6 +276,29 @@ describe('schedule events create', () => {
       ],
       stderr: [],
       stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects an incomplete recurrence rule before making a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '08:45',
+          '09:15',
+          '--recurrence-type',
+          'weekly',
+        ],
+        new Response('{}', { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [['Error: Invalid input: expected number, received NaN\n']],
+      stdout: [],
     })
   })
 })

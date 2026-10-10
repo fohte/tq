@@ -8,7 +8,10 @@ import {
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
-import { makeTimeBlock } from '#routes/schedule-test-fixtures'
+import {
+  makeScheduleEvent,
+  makeTimeBlock,
+} from '#routes/schedule-test-fixtures'
 import { createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -329,23 +332,22 @@ describe('schedule operation tools', () => {
       color: '#b9c0ca',
     })
 
-    expect(normalizeDynamicValues(parseToolJson(result))).toEqual({
-      id: '<uuid>',
-      title: 'Draft agenda',
-      startTime: '08:45',
-      endTime: '09:15',
-      recurrence: {
-        id: '<uuid>',
-        type: 'weekly',
-        interval: 1,
-        daysOfWeek: [1, 3, 5],
-        dayOfMonth: null,
-      },
-      context: 'work',
-      color: '#b9c0ca',
-      createdAt: '<timestamp>',
-      updatedAt: '<timestamp>',
-    })
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual(
+      normalizeDynamicValues(
+        makeScheduleEvent({
+          title: 'Draft agenda',
+          recurrence: {
+            id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            type: 'weekly',
+            interval: 1,
+            daysOfWeek: [1, 3, 5],
+            dayOfMonth: null,
+          },
+          context: 'work',
+          color: '#b9c0ca',
+        }),
+      ),
+    )
   })
 
   it('rejects invalid schedule event times', async () => {

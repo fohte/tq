@@ -1,8 +1,12 @@
-import { err, errAsync, fromThrowable, ok, type Result } from 'neverthrow'
+import { err, errAsync, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment } from '#operations/path-segment'
+import {
+  recurrenceCliOptions,
+  recurrenceRuleFromCli,
+} from '#operations/recurrence-cli'
 import {
   defineOperation,
   formatInputIssues,
@@ -97,24 +101,6 @@ function mapCliAutoScheduleFlags(
   if (!isAutoScheduled && !isManual) return ok(input)
 
   return ok({ ...input, isAutoScheduled })
-}
-
-const parseScheduleRecurrenceJson = fromThrowable(
-  (raw: string) => JSON.parse(raw) as unknown,
-  () => new Error('--recurrence must be valid JSON'),
-)
-
-function mapCliScheduleRecurrence(
-  input: Record<string, unknown>,
-  options: Record<string, unknown>,
-): Result<Record<string, unknown>, Error> {
-  const rawRecurrence = options['recurrence']
-  if (typeof rawRecurrence !== 'string') return ok(input)
-
-  return parseScheduleRecurrenceJson(rawRecurrence).map((recurrence) => ({
-    ...input,
-    recurrence,
-  }))
 }
 
 export const scheduleOperations = [
@@ -227,15 +213,12 @@ export const scheduleOperations = [
     kind: 'write',
     routes: ['POST /api/schedule/events'],
     cli: {
-      customOptions: [
-        {
-          flags: '--recurrence <json>',
-          description:
-            'Recurrence rule JSON with type, interval, daysOfWeek, and dayOfMonth fields',
-        },
-      ],
+      customOptions: [...recurrenceCliOptions],
       excludeFields: ['recurrence'],
-      mapInput: mapCliScheduleRecurrence,
+      mapInput: (input, options) =>
+        recurrenceRuleFromCli(options).map((recurrence) =>
+          recurrence === undefined ? input : { ...input, recurrence },
+        ),
       output: { kind: 'json' },
     },
     run: (client, json) =>
