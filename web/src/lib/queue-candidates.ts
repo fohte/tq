@@ -5,10 +5,12 @@ interface CandidateCheckable extends DueDateCheckable {
   id: string
   startDate: string | null
   commitment: string
+  waits?: { followUpDate: string; resolvedAt: string | null }[] | undefined
 }
 
 export type CandidateReason =
   | { kind: 'overdue'; days: number }
+  | { kind: 'follow-up'; days: number }
   | { kind: 'due-today' }
   | { kind: 'due-later'; days: number }
   | { kind: 'starts'; days: number }
@@ -21,10 +23,11 @@ export interface QueueCandidate<T> {
 
 const REASON_PRIORITY: Record<CandidateReason['kind'], number> = {
   overdue: 0,
-  'due-today': 1,
-  'due-later': 2,
-  starts: 3,
-  active: 4,
+  'follow-up': 1,
+  'due-today': 2,
+  'due-later': 3,
+  starts: 4,
+  active: 5,
 }
 
 function daysBetween(fromDateStr: string, toDateStr: string): number {
@@ -34,21 +37,30 @@ function daysBetween(fromDateStr: string, toDateStr: string): number {
 }
 
 function reasonDays(reason: CandidateReason): number {
-  return reason.kind === 'overdue' || reason.kind === 'starts' ? reason.days : 0
+  return reason.kind === 'overdue' ||
+    reason.kind === 'follow-up' ||
+    reason.kind === 'starts'
+    ? reason.days
+    : 0
 }
 
-/**
- * A task is a queue candidate when it's not completed and it's overdue, due
- * today, startable (start date today or earlier), or has commitment
- * "active". A future due date takes precedence over startability or active
- * commitment for tasks that would already be candidates for either reason.
- */
+/** Computes the display reason for a task already returned by `candidatesOn`. A due follow-up takes precedence over date and commitment reasons. */
 function getCandidateReason(
   task: CandidateCheckable,
   now: Date = new Date(),
 ): CandidateReason | null {
   if (task.status === 'completed') return null
   const today = formatLocalDate(now)
+  const followUpDate = task.waits
+    ?.filter((wait) => wait.resolvedAt == null && wait.followUpDate <= today)
+    .map((wait) => wait.followUpDate)
+    .toSorted()[0]
+  if (followUpDate != null) {
+    return {
+      kind: 'follow-up',
+      days: daysBetween(followUpDate, today),
+    }
+  }
 
   if (task.dueDate != null && isTaskOverdue(task, now)) {
     return { kind: 'overdue', days: daysBetween(task.dueDate, today) }
@@ -106,6 +118,10 @@ export function formatCandidateReason(reason: CandidateReason): string {
   switch (reason.kind) {
     case 'overdue':
       return `${String(reason.days)}d overdue`
+    case 'follow-up':
+      return reason.days === 0
+        ? 'follow up today'
+        : `follow up ${String(reason.days)}d ago`
     case 'due-today':
       return 'due today'
     case 'due-later':

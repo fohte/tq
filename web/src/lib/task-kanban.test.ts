@@ -45,6 +45,17 @@ describe('resolveKanbanCardDrop', () => {
   it('returns null when dropped outside any column', () => {
     expect(resolveKanbanCardDrop(columns, 'inbox', 'a', null)).toBeNull()
   })
+
+  it('returns null when dropped into a column that rejects drops', () => {
+    const dropDisabledColumns = [
+      ...columns,
+      { id: 'waiting', taskIds: [], acceptsDrops: false },
+    ]
+
+    expect(
+      resolveKanbanCardDrop(dropDisabledColumns, 'inbox', 'a', 'waiting'),
+    ).toBeNull()
+  })
 })
 
 describe('resolveKanbanCandidateDrop', () => {
@@ -62,5 +73,16 @@ describe('resolveKanbanCandidateDrop', () => {
 
   it('returns null when dropped outside any column', () => {
     expect(resolveKanbanCandidateDrop(columns, null)).toBeNull()
+  })
+
+  it('returns null when dropped into a column that rejects drops', () => {
+    const dropDisabledColumns = [
+      ...columns,
+      { id: 'waiting', taskIds: [], acceptsDrops: false },
+    ]
+
+    expect(
+      resolveKanbanCandidateDrop(dropDisabledColumns, 'waiting'),
+    ).toBeNull()
   })
 })

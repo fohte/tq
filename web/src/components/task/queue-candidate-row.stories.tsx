@@ -63,6 +63,22 @@ export const Overdue: Story = {
   },
 }
 
+export const FollowUpToday: Story = {
+  name: 'the row reminds the user to follow up today',
+  args: {
+    task: makeTask({ title: 'Ask the team for an update' }),
+    reason: { kind: 'follow-up', days: 0 },
+  },
+}
+
+export const FollowUpOverdue: Story = {
+  name: 'the row highlights a follow-up that is several days overdue',
+  args: {
+    task: makeTask({ title: 'Check in with the vendor' }),
+    reason: { kind: 'follow-up', days: 3 },
+  },
+}
+
 export const DueToday: Story = {
   name: 'the row highlights a task due today',
   args: {

@@ -10,6 +10,7 @@ import {
   taskGithubLinks,
   taskLabels,
   tasks,
+  taskWaits,
   timeBlocks,
 } from '#db/schema'
 import { setChangeEventTaskIds } from '#lib/change-events'
@@ -43,6 +44,13 @@ function resolvePrimaryTaskListOrderBy(sortBy?: TaskSortBy) {
       return desc(tasks.updatedAt)
     case 'due':
       return tasks.dueDate
+    case 'follow-up':
+      return sql`(
+        SELECT min(${taskWaits.followUpDate})
+        FROM ${taskWaits}
+        WHERE ${taskWaits.taskId} = ${tasks.id}
+          AND ${taskWaits.resolvedAt} IS NULL
+      )`
     case 'created':
     default:
       return tasks.createdAt

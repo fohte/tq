@@ -348,6 +348,133 @@ describe('task waits API', () => {
     })
   })
 
+  it('includes only due follow-ups among blocked tasks in queue candidates', async () => {
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    const today = dateAtOffset(now, tzOffset)
+    const regularCandidate = await createTask('Regular candidate', {
+      dueDate: today,
+    })
+    const blocker = await createTask('Incomplete blocker')
+    const blockedCandidate = await createTask('Blocked candidate', {
+      dueDate: today,
+    })
+    await app.request(`/api/tasks/${blockedCandidate.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedBy: [blocker.id] }),
+    })
+    const dueFollowUp = await createTask('Due follow-up candidate')
+    const futureFollowUp = await createTask('Future follow-up')
+    const resolvedFollowUp = await createTask('Resolved follow-up')
+    await addWait(dueFollowUp.id, 'Check in', today)
+    await addWait(
+      futureFollowUp.id,
+      'Check in later',
+      addDaysAtOffset(now, tzOffset, 1),
+    )
+    const resolvedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(
+        resolvedFollowUp.id,
+        'Already answered',
+        addDaysAtOffset(now, tzOffset, -1),
+      ),
+    )
+    await app.request(
+      `/api/tasks/${resolvedFollowUp.id}/waits/${resolvedWait.id}/resolve`,
+      { method: 'POST' },
+    )
+
+    const response = await app.request(
+      `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map((task) => task.id),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [regularCandidate.id, dueFollowUp.id],
+    })
+  })
+
+  it('sorts blockers by their earliest unresolved follow-up before undated blockers', async () => {
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    const earlier = await createTask('Earlier follow-up')
+    const later = await createTask('Later follow-up')
+    const blocker = await createTask('Task blocker')
+    const blockedTask = await createTask('Blocked by task')
+    await app.request(`/api/tasks/${blockedTask.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedBy: [blocker.id] }),
+    })
+    const resolved = await createTask('Resolved wait')
+    await addWait(
+      earlier.id,
+      'Earlier reminder',
+      addDaysAtOffset(now, tzOffset, -2),
+    )
+    await addWait(later.id, 'Later reminder', addDaysAtOffset(now, tzOffset, 2))
+    const resolvedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(
+        resolved.id,
+        'Resolved reminder',
+        addDaysAtOffset(now, tzOffset, -5),
+      ),
+    )
+    await app.request(
+      `/api/tasks/${resolved.id}/waits/${resolvedWait.id}/resolve`,
+      {
+        method: 'POST',
+      },
+    )
+
+    const response = await app.request(
+      '/api/tasks?view=full&context=all&status=todo&limit=unlimited' +
+        '&q=has%3Ablockers&sortBy=follow-up',
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map((task) => task.title),
+      ),
+    ).toEqual({
+      status: 200,
+      body: ['Earlier follow-up', 'Later follow-up', 'Blocked by task'],
+    })
+  })
+
+  it('counts inbox tasks without unresolved blockers', async () => {
+    await createTask('Clear inbox task', {
+      commitment: 'inbox',
+    })
+    const blockedTask = await createTask('Waiting inbox task', {
+      commitment: 'inbox',
+    })
+    await addWait(
+      blockedTask.id,
+      'Awaiting response',
+      dateAtOffset(new Date(), 0),
+    )
+
+    const response = await app.request(
+      '/api/tasks/count?context=all&status=todo&commitment=inbox&q=has%3Ano-blockers',
+    )
+    const body = await jsonBody<{ count: number }>(response)
+
+    expect(bodyResponseSnapshot(response.status, body.count)).toEqual({
+      status: 200,
+      body: 1,
+    })
+  })
+
   it('rejects completion while an unresolved wait remains', async () => {
     const task = await createTask('Waiting task')
     await addWait(task.id, 'Waiting for a reply', '2036-04-05')

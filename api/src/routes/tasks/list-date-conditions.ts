@@ -1,6 +1,7 @@
 import {
   and,
   eq,
+  exists,
   gte,
   isNotNull,
   isNull,
@@ -14,6 +15,8 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
+import { noUnresolvedBlockerCondition } from '#routes/tasks/list-query-blockers'
+import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import type { ListTasksQuery } from '#schemas/task'
 import { resolvePeriodStart } from '#services/task-queues'
 
@@ -86,13 +89,16 @@ export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
   }
 
   if (query.candidatesOn != null) {
+    const followUpDue = exists(followUpDueTaskWaitSubquery(query.candidatesOn))
     const candidateCondition = and(
       or(
         lte(tasks.dueDate, query.candidatesOn),
         lte(tasks.startDate, query.candidatesOn),
         eq(tasks.commitment, 'active'),
+        followUpDue,
       ),
       taskIsNotQueuedOn(query.candidatesOn),
+      or(noUnresolvedBlockerCondition(), followUpDue),
     )
     if (candidateCondition != null) conditions.push(candidateCondition)
   }

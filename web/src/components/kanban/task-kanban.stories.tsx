@@ -119,6 +119,27 @@ export const Empty: Story = {
   },
 }
 
+export const Waiting: Story = {
+  name: 'the waiting column shows blocked tasks and rejects incoming moves',
+  args: {
+    columns: [
+      ...baseColumns,
+      {
+        id: 'waiting',
+        title: 'Waiting',
+        tasks: [
+          makeTask({
+            id: '6',
+            number: 56,
+            title: 'Get a response from the vendor',
+          }),
+        ],
+        acceptsDrops: false,
+      },
+    ],
+  },
+}
+
 export const WithDateRangeLabel: Story = {
   name: 'day and week columns show their date ranges above tasks',
   args: {

@@ -13,6 +13,7 @@ function makeCandidateTask(overrides: {
   dueDate?: string | null
   startDate?: string | null
   commitment?: string
+  waits?: { followUpDate: string; resolvedAt: string | null }[]
 }) {
   return {
     id: '1',
@@ -105,6 +106,45 @@ describe('getCandidateReason', () => {
     expect(getCandidateReason(makeCandidateTask({}), now)).toBeNull()
   })
 
+  it('returns follow-up today for an unresolved wait due today', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({
+          waits: [{ followUpDate: '2026-03-20', resolvedAt: null }],
+        }),
+        now,
+      ),
+    ).toEqual({ kind: 'follow-up', days: 0 })
+  })
+
+  it('returns the oldest overdue follow-up for multiple unresolved waits', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({
+          waits: [
+            { followUpDate: '2026-03-17', resolvedAt: null },
+            { followUpDate: '2026-03-19', resolvedAt: null },
+          ],
+        }),
+        now,
+      ),
+    ).toEqual({ kind: 'follow-up', days: 3 })
+  })
+
+  it('ignores resolved waits when choosing a follow-up reason', () => {
+    expect(
+      getCandidateReason(
+        makeCandidateTask({
+          dueDate: '2026-03-17',
+          waits: [
+            { followUpDate: '2026-03-10', resolvedAt: '2026-03-15T00:00:00Z' },
+          ],
+        }),
+        now,
+      ),
+    ).toEqual({ kind: 'overdue', days: 3 })
+  })
+
   it('returns active for a dateless task with commitment active', () => {
     expect(
       getCandidateReason(makeCandidateTask({ commitment: 'active' }), now),
@@ -176,23 +216,35 @@ describe('getQueueCandidates', () => {
 
   it('sorts candidates by reason priority', () => {
     const overdueTask = makeCandidateTask({ id: '1', dueDate: '2026-03-17' })
-    const dueTodayTask = makeCandidateTask({ id: '2', dueDate: '2026-03-20' })
+    const followUpTask = makeCandidateTask({
+      id: '2',
+      waits: [{ followUpDate: '2026-03-19', resolvedAt: null }],
+    })
+    const dueTodayTask = makeCandidateTask({ id: '3', dueDate: '2026-03-20' })
     const dueLaterTask = makeCandidateTask({
-      id: '3',
+      id: '4',
       dueDate: '2026-03-22',
       commitment: 'active',
     })
-    const startsTask = makeCandidateTask({ id: '4', startDate: '2026-03-20' })
-    const activeTask = makeCandidateTask({ id: '5', commitment: 'active' })
+    const startsTask = makeCandidateTask({ id: '5', startDate: '2026-03-20' })
+    const activeTask = makeCandidateTask({ id: '6', commitment: 'active' })
 
     expect(
       getQueueCandidates(
-        [activeTask, startsTask, dueLaterTask, overdueTask, dueTodayTask],
+        [
+          activeTask,
+          startsTask,
+          dueLaterTask,
+          overdueTask,
+          dueTodayTask,
+          followUpTask,
+        ],
         new Set(),
         now,
       ),
     ).toEqual([
       { task: overdueTask, reason: { kind: 'overdue', days: 3 } },
+      { task: followUpTask, reason: { kind: 'follow-up', days: 1 } },
       { task: dueTodayTask, reason: { kind: 'due-today' } },
       { task: dueLaterTask, reason: { kind: 'due-later', days: 2 } },
       { task: startsTask, reason: { kind: 'starts', days: 0 } },
@@ -230,6 +282,24 @@ describe('getQueueCandidates', () => {
     )
   })
 
+  it('orders follow-up candidates after overdue tasks and by oldest date first', () => {
+    const newestWait = makeCandidateTask({
+      id: '1',
+      waits: [{ followUpDate: '2026-03-19', resolvedAt: null }],
+    })
+    const oldestWait = makeCandidateTask({
+      id: '2',
+      waits: [{ followUpDate: '2026-03-10', resolvedAt: null }],
+    })
+
+    expect(
+      getQueueCandidates([newestWait, oldestWait], new Set(), now),
+    ).toEqual([
+      { task: oldestWait, reason: { kind: 'follow-up', days: 10 } },
+      { task: newestWait, reason: { kind: 'follow-up', days: 1 } },
+    ])
+  })
+
   it('orders starts candidates by oldest start date first', () => {
     const recentTask = makeCandidateTask({ id: '1', startDate: '2026-03-17' })
     const olderTask = makeCandidateTask({ id: '2', startDate: '2026-02-18' })
@@ -247,6 +317,18 @@ describe('formatCandidateReason', () => {
   it('formats overdue', () => {
     expect(formatCandidateReason({ kind: 'overdue', days: 3 })).toBe(
       '3d overdue',
+    )
+  })
+
+  it('formats follow-up today', () => {
+    expect(formatCandidateReason({ kind: 'follow-up', days: 0 })).toBe(
+      'follow up today',
+    )
+  })
+
+  it('formats overdue follow-up', () => {
+    expect(formatCandidateReason({ kind: 'follow-up', days: 3 })).toBe(
+      'follow up 3d ago',
     )
   })
 

@@ -32,6 +32,7 @@ function InboxKanban() {
       status: 'todo',
       sortBy: 'due',
       limit: 'unlimited',
+      q: 'has:no-blockers',
     },
     active: {
       view: 'full',
@@ -40,6 +41,7 @@ function InboxKanban() {
       status: 'todo',
       sortBy: 'updated',
       limit: 'unlimited',
+      q: 'has:no-blockers',
     },
     someday: {
       view: 'full',
@@ -48,12 +50,23 @@ function InboxKanban() {
       status: 'todo',
       sortBy: 'updated',
       limit: 'unlimited',
+      q: 'has:no-blockers',
     },
+  }
+
+  const waitingFilter: TaskListFilter<'full'> = {
+    view: 'full',
+    context,
+    status: 'todo',
+    sortBy: 'follow-up',
+    limit: 'unlimited',
+    q: 'has:blockers',
   }
 
   const inbox = useTaskList(columnFilters.inbox)
   const active = useTaskList(columnFilters.active)
   const someday = useTaskList(columnFilters.someday)
+  const waiting = useTaskList(waitingFilter)
 
   const columns: TaskKanbanColumn[] = [
     {
@@ -73,6 +86,13 @@ function InboxKanban() {
       title: 'Someday',
       tasks: someday.categorized.all,
       isLoading: someday.isLoading,
+    },
+    {
+      id: 'waiting',
+      title: 'Waiting',
+      tasks: waiting.categorized.all,
+      isLoading: waiting.isLoading,
+      acceptsDrops: false,
     },
   ]
 

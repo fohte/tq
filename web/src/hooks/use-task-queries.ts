@@ -28,6 +28,7 @@ export type TaskContext = 'work' | 'personal'
 type TaskListContext = TaskContext | 'all'
 
 export type TaskSortBy = 'created' | 'updated' | 'due'
+export type TaskListSortBy = TaskSortBy | 'follow-up'
 
 export type TaskCommitment = 'inbox' | 'active' | 'someday'
 
@@ -48,7 +49,7 @@ type TaskListFilterOptions = {
   descendantOf?: string
   label?: string
   projectId?: string
-  sortBy?: TaskSortBy
+  sortBy?: TaskListSortBy
   includeAncestors?: boolean
   limit: number | 'unlimited'
   offset?: number
@@ -76,6 +77,7 @@ export interface TaskCountFilter {
   context: TaskListContext
   status: TaskStatus | 'all' | TaskStatus[]
   commitment?: TaskCommitment
+  q?: string
 }
 
 const TASK_LIST_PAGE_SIZE = 50

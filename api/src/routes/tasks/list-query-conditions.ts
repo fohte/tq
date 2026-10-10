@@ -18,19 +18,18 @@ import {
   labels,
   projects,
   taskComments,
-  taskGithubLinks,
   taskLabels,
   taskPages,
-  taskRelations,
   tasks,
 } from '#db/schema'
 import { classifyNumericOrId } from '#lib/numeric-id'
 import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import {
-  followUpDueTaskWaitSubquery,
-  unresolvedTaskWaitSubquery,
-} from '#routes/tasks/list-query-waits'
+  noUnresolvedBlockerCondition,
+  unresolvedBlockerCondition,
+} from '#routes/tasks/list-query-blockers'
+import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
@@ -40,8 +39,6 @@ import { parseSearchQuery } from '#search-query-parser'
 const MAX_FREE_TEXT_WORDS = 20
 
 const childTasks = alias(tasks, 'child_task')
-const blockerTasks = alias(tasks, 'blocker_task')
-
 function freeTextWords(freeText: string | undefined) {
   return (
     freeText
@@ -71,35 +68,6 @@ type ResolvedTaskFilters = {
 }
 
 type TaskConditionsQuery = Omit<ListTasksQuery, 'limit' | 'view'>
-
-// Extracted so `exists`/`notExists` can both wrap the same predicate for
-// hasBlockers/hasNoBlockers without duplicating the join and where clause.
-function unresolvedTaskBlockerSubquery() {
-  return db
-    .select({ _: sql`1` })
-    .from(taskRelations)
-    .innerJoin(blockerTasks, eq(blockerTasks.id, taskRelations.targetTaskId))
-    .where(
-      and(
-        eq(taskRelations.sourceTaskId, tasks.id),
-        eq(taskRelations.type, 'blocked_by'),
-        ne(blockerTasks.status, 'completed'),
-      ),
-    )
-}
-
-function unresolvedGithubBlockerSubquery() {
-  return db
-    .select({ _: sql`1` })
-    .from(taskGithubLinks)
-    .where(
-      and(
-        eq(taskGithubLinks.taskId, tasks.id),
-        eq(taskGithubLinks.role, 'blocker'),
-        eq(taskGithubLinks.state, 'open'),
-      ),
-    )
-}
 
 // NULL-safe "doesn't belong to this project", for a `projectId` column on
 // `tasks` or its `parentTasks` self-join alias. A plain
@@ -219,23 +187,11 @@ function buildConditions(
   }
 
   if (parsed?.hasBlockers === true) {
-    conditions.push(
-      or(
-        exists(unresolvedTaskBlockerSubquery()),
-        exists(unresolvedGithubBlockerSubquery()),
-        exists(unresolvedTaskWaitSubquery()),
-      ),
-    )
+    conditions.push(unresolvedBlockerCondition())
   }
 
   if (parsed?.hasNoBlockers === true) {
-    conditions.push(
-      and(
-        notExists(unresolvedTaskBlockerSubquery()),
-        notExists(unresolvedGithubBlockerSubquery()),
-        notExists(unresolvedTaskWaitSubquery()),
-      ),
-    )
+    conditions.push(noUnresolvedBlockerCondition())
   }
 
   if (parsed?.hasFollowUpDue === true) {
