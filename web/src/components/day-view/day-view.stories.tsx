@@ -388,9 +388,7 @@ const meta = {
   render: (args) => (
     <DayViewPresentation
       {...args}
-      kanbanFilterRow={
-        <KanbanFilterRow onQueryChange={fn()} query="" projects={[]} />
-      }
+      kanbanFilterRow={<KanbanFilterRow onQueryChange={fn()} query="" />}
     />
   ),
   decorators: [

@@ -10,7 +10,7 @@ import {
 } from '#components/project/project-detail-sidebar'
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
 import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -68,8 +68,6 @@ const sampleTasks: ProjectTask[] = [
   }),
 ]
 
-const sampleProjects: Project[] = [baseProject]
-
 const defaultParsedQuery: ParsedQuery = {
   freeText: '',
   status: ['todo'],
@@ -121,7 +119,6 @@ function MainContentStory({
           project={project}
           parsedQuery={defaultParsedQuery}
           onQueryChange={() => {}}
-          projects={sampleProjects}
           tree={buildTree(tasks)}
           filteredTasks={tasks}
           isTasksLoading={false}
@@ -212,7 +209,6 @@ export const FullPagePC: StoryObj<{
             project={project}
             parsedQuery={defaultParsedQuery}
             onQueryChange={() => {}}
-            projects={sampleProjects}
             tree={buildTree(tasks)}
             filteredTasks={tasks}
             isTasksLoading={false}
@@ -251,7 +247,6 @@ export const FullPageSP: StoryObj<{
             project={project}
             parsedQuery={defaultParsedQuery}
             onQueryChange={() => {}}
-            projects={sampleProjects}
             tree={buildTree(tasks)}
             filteredTasks={tasks}
             isTasksLoading={false}

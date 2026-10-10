@@ -2,14 +2,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
-import { makeProject } from '#components/project/project-test-fixtures'
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
-import type { Project } from '#hooks/use-projects'
-import { waitForFocus } from '#lib/test-utils'
+import { useProject, useProjects } from '#hooks/use-projects'
+import { partialMutation, waitForFocus } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -39,14 +42,40 @@ vi.mock('#hooks/use-task-queries', async (importOriginal) => {
   }
 })
 
-const projectA: Project = makeProject({
+const mockUseProject = vi.fn()
+const mockUseProjects = vi.fn<typeof useProjects>()
+
+vi.mock('#hooks/use-projects', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-projects')>()
+  return {
+    ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- test hook mock
+    useProject: (...args: unknown[]) => mockUseProject(...args),
+    useProjects: (...args: Parameters<typeof useProjects>) =>
+      mockUseProjects(...args),
+  }
+})
+
+const projectA = makeProject({
   id: 'proj-1',
   title: 'Website Redesign',
 })
-const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
+const projectB = makeProject({ id: 'proj-2', title: 'Mobile App' })
 const projects = [projectA, projectB]
 
 const defaultParsed = makeParsedQuery()
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockUseProject.mockImplementation((id: string) =>
+    partialMutation<ReturnType<typeof useProject>>({
+      data: id === projectA.id ? makeProjectDetail(projectA) : undefined,
+    }),
+  )
+  mockUseProjects.mockReturnValue(
+    partialMutation<ReturnType<typeof useProjects>>({ data: projects }),
+  )
+})
 
 function renderRow(
   props: Partial<ComponentProps<typeof TaskFilterChipRow>> = {},
@@ -60,12 +89,25 @@ function renderRow(
       <TaskFilterChipRow
         onQueryChange={onQueryChange}
         parsed={defaultParsed}
-        projects={projects}
         {...props}
       />
     </QueryClientProvider>,
   )
   return { onQueryChange }
+}
+
+function getProjectFilterSnapshot() {
+  return {
+    selectedProjectQuery: mockUseProject.mock.calls[0],
+    projectListEnabledStates: [
+      ...new Set(
+        mockUseProjects.mock.calls.map(([, options]) => options?.enabled),
+      ),
+    ],
+    selectedProjectLabel: screen
+      .getByRole('button', { name: 'project Website Redesign' })
+      .getAttribute('aria-label'),
+  }
 }
 
 describe('TaskFilterChipRow', () => {
@@ -76,11 +118,7 @@ describe('TaskFilterChipRow', () => {
     })
     render(
       <QueryClientProvider client={queryClient}>
-        <KanbanFilterRow
-          query=""
-          onQueryChange={onQueryChange}
-          projects={projects}
-        />
+        <KanbanFilterRow query="" onQueryChange={onQueryChange} />
       </QueryClientProvider>,
     )
     const user = userEvent.setup()
@@ -143,6 +181,21 @@ describe('TaskFilterChipRow', () => {
     expect(onQueryChange).toHaveBeenCalledWith(
       'is:todo project:proj-2 sort:updated',
     )
+  })
+
+  it('loads the selected project label separately and lists projects only while the menu is open', async () => {
+    renderRow({ parsed: { ...defaultParsed, projectId: projectA.id } })
+    const user = userEvent.setup()
+
+    await user.click(
+      screen.getByRole('button', { name: 'project Website Redesign' }),
+    )
+
+    expect(getProjectFilterSnapshot()).toEqual({
+      selectedProjectQuery: [projectA.id, { enabled: true }],
+      projectListEnabledStates: [false, true],
+      selectedProjectLabel: 'project Website Redesign',
+    })
   })
 
   it('clearing the label in its menu reports the updated query', async () => {

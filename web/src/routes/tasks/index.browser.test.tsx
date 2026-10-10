@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { ALL_PROJECTS_FILTER } from '#hooks/use-projects'
 import { useCreateTask } from '#hooks/use-tasks'
 import {
   assertDefined,
@@ -42,12 +43,15 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
 
 // The project filter select fetches the project list via useProjects. Stub
 // it so the route never issues a real fetch.
+const mockUseProject = vi.fn()
 const mockUseProjects = vi.fn()
 
 vi.mock('#hooks/use-projects', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-projects')>()
   return {
     ...actual,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
+    useProject: (...args: unknown[]) => mockUseProject(...args),
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
     useProjects: (...args: unknown[]) => mockUseProjects(...args),
   }
@@ -139,6 +143,10 @@ beforeEach(() => {
     lazyChildrenFilter: {},
   })
   mockUseProjects.mockReturnValue({ data: [] })
+  mockUseProject.mockImplementation((id: string) => ({
+    data:
+      id === 'proj-1' ? { id: 'proj-1', title: 'Website Redesign' } : undefined,
+  }))
   mockUseLabels.mockReturnValue({ data: [] })
   mockUseSearchSuggestions.mockReturnValue({ data: [] })
 })
@@ -239,7 +247,7 @@ describe('TaskList project filter selector', () => {
     })
   })
 
-  it('defaults to no project chip and requests unfiltered data on initial render', async () => {
+  it('defaults to no project chip without fetching project options', async () => {
     renderTaskList()
 
     await waitFor(() => {
@@ -250,6 +258,9 @@ describe('TaskList project filter selector', () => {
     expect(
       screen.queryByRole('button', { name: /^project / }),
     ).not.toBeInTheDocument()
+    expect(mockUseProjects.mock.calls).toEqual([
+      [ALL_PROJECTS_FILTER, { enabled: false }],
+    ])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
       { q: 'is:todo sort:updated' },
     ])

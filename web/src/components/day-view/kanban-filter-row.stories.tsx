@@ -4,8 +4,12 @@ import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
 import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
-import { makeProject } from '#components/project/project-test-fixtures'
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import type { Project } from '#hooks/use-projects'
+import { projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
 
 const queryClient = new QueryClient({
@@ -15,11 +19,14 @@ queryClient.setQueryData(taskKeys.detail('parent-example'), {
   id: 'parent-example',
   title: 'Plan the release',
 })
-
 const project: Project = makeProject({
   id: 'project-example',
   title: 'Sample project',
 })
+queryClient.setQueryData(
+  projectKeys.detail(project.id),
+  makeProjectDetail(project),
+)
 
 const meta = {
   title: 'DayView/KanbanFilterRow',
@@ -43,7 +50,6 @@ const meta = {
     onQueryChange: fn(),
     query:
       'project:project-example label:sample-label has:pages parent:parent-example',
-    projects: [project],
   },
 } satisfies Meta<typeof KanbanFilterRow>
 

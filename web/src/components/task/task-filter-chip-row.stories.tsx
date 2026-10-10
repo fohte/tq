@@ -3,10 +3,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
-import { makeProject } from '#components/project/project-test-fixtures'
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import type { Project } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
 
 const queryClient = new QueryClient({
@@ -34,6 +38,11 @@ const projectA: Project = makeProject({
 const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
 
 const projects = [projectA, projectB]
+queryClient.setQueryData(
+  projectKeys.detail(projectA.id),
+  makeProjectDetail(projectA),
+)
+queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
 
 const defaultParsed = makeParsedQuery()
 
@@ -53,7 +62,6 @@ const meta = {
   args: {
     onQueryChange: fn(),
     parsed: defaultParsed,
-    projects,
   },
 } satisfies Meta<typeof TaskFilterChipRow>
 

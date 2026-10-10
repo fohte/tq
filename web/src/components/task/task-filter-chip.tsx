@@ -12,6 +12,7 @@ interface TaskFilterChipProps {
   ariaLabel?: string
   children: React.ReactNode
   defaultOpen?: boolean
+  onOpenChange?: ((open: boolean) => void) | undefined
   onRemove?: (() => void) | undefined
   isDefault?: boolean
 }
@@ -26,6 +27,7 @@ export function TaskFilterChip({
   ariaLabel,
   children,
   defaultOpen,
+  onOpenChange,
   onRemove,
   isDefault = false,
 }: TaskFilterChipProps) {
@@ -53,6 +55,7 @@ export function TaskFilterChip({
         triggerAriaLabel={ariaLabel}
         title={menuTitle}
         defaultOpen={defaultOpen}
+        onOpenChange={onOpenChange}
       >
         {children}
       </FilterMenu>

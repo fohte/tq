@@ -18,7 +18,7 @@ import { TaskTreeList } from '#components/task/task-tree-list'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
-import type { Project, ProjectDetail, ProjectTask } from '#hooks/use-projects'
+import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { useUpdateProject } from '#hooks/use-projects'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TaskListFilter, TreeNode } from '#hooks/use-tasks'
@@ -29,7 +29,6 @@ export function ProjectMainContent({
   project,
   parsedQuery,
   onQueryChange,
-  projects,
   tree,
   filteredTasks,
   isTasksLoading,
@@ -43,7 +42,6 @@ export function ProjectMainContent({
   project: ProjectDetail
   parsedQuery: ParsedQuery
   onQueryChange: (query: string) => void
-  projects: Project[]
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isTasksLoading: boolean
@@ -96,7 +94,6 @@ export function ProjectMainContent({
         projectTitle={project.title}
         parsedQuery={parsedQuery}
         onQueryChange={onQueryChange}
-        projects={projects}
         tree={tree}
         filteredTasks={filteredTasks}
         isLoading={isTasksLoading}
@@ -247,7 +244,6 @@ function ProjectTaskList({
   projectTitle,
   parsedQuery,
   onQueryChange,
-  projects,
   tree,
   filteredTasks,
   isLoading,
@@ -262,7 +258,6 @@ function ProjectTaskList({
   projectTitle: string
   parsedQuery: ParsedQuery
   onQueryChange: (query: string) => void
-  projects: Project[]
   tree: TreeNode[]
   filteredTasks: ProjectTask[]
   isLoading: boolean
@@ -306,7 +301,6 @@ function ProjectTaskList({
         <TaskFilterChipRow
           onQueryChange={onQueryChange}
           parsed={parsedQuery}
-          projects={projects}
           hideSaveView
           disableProjectFilter
         />
