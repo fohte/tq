@@ -383,28 +383,11 @@ describe('task list', () => {
 
   it('uses TQ_CONTEXT when --context is omitted', async () => {
     vi.stubEnv('TQ_CONTEXT', 'work')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response('[]', { status: 200 }),
-    )
-    const write = spyStdout()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'list'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(cliOutcome(exitCode, calls, write)).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/tasks',
-          query: { view: 'row', context: 'work', status: 'todo', limit: '20' },
-          body: undefined,
-        },
-      ],
-      stdout: [['[]\n']],
+    await expectTaskQuery(['task', 'list'], {
+      view: 'row',
+      context: 'work',
+      status: 'todo',
+      limit: '20',
     })
   })
 
@@ -637,28 +620,11 @@ describe('task search', () => {
 
   it('uses TQ_CONTEXT when --context is omitted', async () => {
     vi.stubEnv('TQ_CONTEXT', 'work')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response('[]', { status: 200 }),
-    )
-    const write = spyStdout()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'search'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(cliOutcome(exitCode, calls, write)).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/tasks',
-          query: { view: 'full', context: 'work', status: 'all', limit: '20' },
-          body: undefined,
-        },
-      ],
-      stdout: [['[]\n']],
+    await expectTaskQuery(['task', 'search'], {
+      view: 'full',
+      context: 'work',
+      status: 'all',
+      limit: '20',
     })
   })
 
