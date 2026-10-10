@@ -88,8 +88,9 @@ function waitCollectionsSnapshot<TResolved, TDetail, TSummary>(
   resolved: TResolved,
   detail: TDetail,
   list: TSummary,
+  resolvedOnlyList: unknown,
 ) {
-  return { resolved, detail, list }
+  return { resolved, detail, list, resolvedOnlyList }
 }
 
 function waitUpdatesSnapshot<T>(
@@ -204,7 +205,7 @@ describe('task waits API', () => {
     ])
   })
 
-  it('returns every wait in detail and a compact summary in the task list after resolution', async () => {
+  it('returns wait history in detail and only unresolved summaries in the task list', async () => {
     const task = await createTask('Waiting task')
     const created = await addWait(
       task.id,
@@ -218,14 +219,30 @@ describe('task waits API', () => {
       { method: 'POST' },
     )
     const resolvedWait = await jsonBody<TaskWaitResponse>(resolved)
+    const resolvedOnlyTask = await createTask('Resolved only wait')
+    const resolvedOnlyCreated = await addWait(
+      resolvedOnlyTask.id,
+      'An answered request',
+      '2036-04-07',
+    )
+    const resolvedOnlyWait =
+      await jsonBody<TaskWaitResponse>(resolvedOnlyCreated)
+    await app.request(
+      `/api/tasks/${resolvedOnlyTask.id}/waits/${resolvedOnlyWait.id}/resolve`,
+      { method: 'POST' },
+    )
     const [detailRes, listRes] = await Promise.all([
       app.request(`/api/tasks/${task.id}`),
       app.request(
-        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id},${resolvedOnlyTask.id}`,
       ),
     ])
     const detail = await jsonBody<TaskResponse>(detailRes)
-    const [listItem] = await jsonBody<TaskListItemResponse[]>(listRes)
+    const listItems = await jsonBody<TaskListItemResponse[]>(listRes)
+    const listItem = listItems.find((item) => item.id === task.id)
+    const resolvedOnlyListItem = listItems.find(
+      (item) => item.id === resolvedOnlyTask.id,
+    )
 
     expect(
       waitCollectionsSnapshot(
@@ -236,6 +253,7 @@ describe('task waits API', () => {
         listItem?.waits
           ?.map(normalizeSummary)
           .sort((left, right) => left.label.localeCompare(right.label)),
+        resolvedOnlyListItem?.waits ?? null,
       ),
     ).toEqual({
       resolved: {
@@ -273,17 +291,12 @@ describe('task waits API', () => {
       list: [
         {
           id: 'WAIT_ID',
-          label: 'A response was received',
-          followUpDate: '2036-04-05',
-          resolvedAt: 'RESOLVED_AT',
-        },
-        {
-          id: 'WAIT_ID',
           label: 'B response is pending',
           followUpDate: '2036-04-06',
           resolvedAt: null,
         },
       ],
+      resolvedOnlyList: null,
     })
   })
 

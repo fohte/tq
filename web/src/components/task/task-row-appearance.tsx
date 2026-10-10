@@ -7,6 +7,7 @@ import { TaskStatusGlyph } from '#components/task/status-icon'
 import {
   BlockedByLabel,
   CloseReasonLabel,
+  countTaskBlockers,
   DateRangeBadge,
   ParentTaskLabel,
   RecurrenceLabel,
@@ -76,6 +77,12 @@ export function TaskRowAppearance({
       ? completedReason
       : null
   const checklistProgress = task.checklistCompletionCount
+  const waits = task.waits ?? []
+  const blockerCount = countTaskBlockers({
+    blockedByNumbers: task.blockedByNumbers,
+    blockedByGithubRefs: task.blockedByGithubRefs,
+    waits,
+  })
   const checklistCompletionCount =
     checklistProgress.total === 0 ? null : (
       <span
@@ -122,14 +129,11 @@ export function TaskRowAppearance({
         duplicateOfNumber={task.duplicateOfNumber}
       />
     ) : null,
-    task.blockedByNumbers.length +
-      task.blockedByGithubRefs.length +
-      (task.waits?.filter((wait) => wait.resolvedAt == null).length ?? 0) >
-    0 ? (
+    blockerCount > 0 ? (
       <BlockedByLabel
         blockedByNumbers={task.blockedByNumbers}
         blockedByGithubRefs={task.blockedByGithubRefs}
-        waits={task.waits ?? []}
+        waits={waits}
       />
     ) : null,
     ...secondLineExtras,

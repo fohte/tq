@@ -45,7 +45,7 @@ export async function listTaskWaits(
     .orderBy(asc(taskWaits.createdAt), asc(taskWaits.id))
 }
 
-export async function getTaskWaitSummariesByTaskId(
+export async function getUnresolvedTaskWaitSummariesByTaskId(
   taskIds: string[],
   executor: Executor = db,
 ): Promise<Map<string, TaskWaitSummary[]>> {
@@ -61,7 +61,9 @@ export async function getTaskWaitSummariesByTaskId(
       createdAt: taskWaits.createdAt,
     })
     .from(taskWaits)
-    .where(inArray(taskWaits.taskId, taskIds))
+    .where(
+      and(inArray(taskWaits.taskId, taskIds), isNull(taskWaits.resolvedAt)),
+    )
     .orderBy(asc(taskWaits.createdAt), asc(taskWaits.id))
 
   const summariesByTaskId = new Map<string, TaskWaitSummary[]>()

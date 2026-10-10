@@ -269,20 +269,20 @@ export function CloseReasonLabel({
 export function BlockedByLabel({
   blockedByNumbers,
   blockedByGithubRefs,
-  waits = [],
+  waits,
 }: {
   blockedByNumbers: number[]
   blockedByGithubRefs: BlockedByGithubRef[]
-  waits?: TaskWaitSummary[]
+  waits: TaskWaitSummary[]
 }) {
-  const unresolvedWaits = waits.filter((wait) => wait.resolvedAt == null)
-  const blockerCount =
-    blockedByNumbers.length +
-    blockedByGithubRefs.length +
-    unresolvedWaits.length
+  const blockerCount = countTaskBlockers({
+    blockedByNumbers,
+    blockedByGithubRefs,
+    waits,
+  })
   const soleGithubBlocker =
     blockerCount === 1 ? blockedByGithubRefs[0] : undefined
-  const soleWait = blockerCount === 1 ? unresolvedWaits[0] : undefined
+  const soleWait = blockerCount === 1 ? waits[0] : undefined
 
   if (blockerCount === 0) return null
 
@@ -338,6 +338,18 @@ export function BlockedByLabel({
       )}
     </span>
   )
+}
+
+export function countTaskBlockers({
+  blockedByNumbers,
+  blockedByGithubRefs,
+  waits,
+}: {
+  blockedByNumbers: number[]
+  blockedByGithubRefs: BlockedByGithubRef[]
+  waits: TaskWaitSummary[]
+}) {
+  return blockedByNumbers.length + blockedByGithubRefs.length + waits.length
 }
 
 // Row indent is a per-instance value (depth is unbounded), so it can't be a

@@ -175,4 +175,10 @@ describe('TaskRowAppearance', () => {
 
     expect(screen.getByText('blocked by 3').textContent).toEqual('blocked by 3')
   })
+
+  it('hides the blocker badge when there are no unresolved blockers', async () => {
+    const { container } = await renderTaskRow(makeTask({ waits: [] }))
+
+    expect(container.querySelector('svg.lucide-hourglass')).toEqual(null)
+  })
 })

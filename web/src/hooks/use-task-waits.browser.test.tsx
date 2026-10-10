@@ -64,7 +64,7 @@ beforeEach(() => {
 })
 
 describe('task wait mutations', () => {
-  it('calls each endpoint and invalidates task and project data', async () => {
+  function renderMutations() {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -83,33 +83,27 @@ describe('task wait mutations', () => {
       }),
       { wrapper: createWrapper(queryClient) },
     )
+    return { result, invalidateQueries }
+  }
 
-    await act(async () => {
-      await result.current.create.mutateAsync({
+  it('creates a wait and invalidates task and project data', async () => {
+    const { result, invalidateQueries } = renderMutations()
+    await act(async () =>
+      result.current.create.mutateAsync({
         taskId,
         body: 'Review the proposal',
         followUpDate: '2099-10-13',
-      })
-      await result.current.update.mutateAsync({
-        waitId,
-        body: 'Review the revised proposal',
-      })
-      await result.current.resolve.mutateAsync(waitId)
-      await result.current.delete.mutateAsync(waitId)
-    })
+      }),
+    )
 
     const readActual = () => ({
-      createCalls: postWait.mock.calls,
-      updateCalls: patchWait.mock.calls,
-      resolveCalls: resolveWait.mock.calls,
-      deleteCalls: deleteWait.mock.calls,
+      calls: postWait.mock.calls,
       invalidationKeys: invalidateQueries.mock.calls.map(
         ([filters]) => filters?.queryKey,
       ),
     })
-
     expect(readActual()).toEqual({
-      createCalls: [
+      calls: [
         [
           {
             param: { taskId },
@@ -117,7 +111,31 @@ describe('task wait mutations', () => {
           },
         ],
       ],
-      updateCalls: [
+      invalidationKeys: [
+        taskKeys.detail(taskId),
+        taskKeys.all,
+        projectKeys.all,
+      ],
+    })
+  })
+
+  it('updates a wait and invalidates task and project data', async () => {
+    const { result, invalidateQueries } = renderMutations()
+    await act(async () =>
+      result.current.update.mutateAsync({
+        waitId,
+        body: 'Review the revised proposal',
+      }),
+    )
+
+    const readActual = () => ({
+      calls: patchWait.mock.calls,
+      invalidationKeys: invalidateQueries.mock.calls.map(
+        ([filters]) => filters?.queryKey,
+      ),
+    })
+    expect(readActual()).toEqual({
+      calls: [
         [
           {
             param: { taskId, waitId },
@@ -125,18 +143,47 @@ describe('task wait mutations', () => {
           },
         ],
       ],
-      resolveCalls: [[{ param: { taskId, waitId } }]],
-      deleteCalls: [[{ param: { taskId, waitId } }]],
       invalidationKeys: [
         taskKeys.detail(taskId),
         taskKeys.all,
         projectKeys.all,
+      ],
+    })
+  })
+
+  it('resolves a wait and invalidates task and project data', async () => {
+    const { result, invalidateQueries } = renderMutations()
+    await act(async () => result.current.resolve.mutateAsync(waitId))
+
+    const readActual = () => ({
+      calls: resolveWait.mock.calls,
+      invalidationKeys: invalidateQueries.mock.calls.map(
+        ([filters]) => filters?.queryKey,
+      ),
+    })
+    expect(readActual()).toEqual({
+      calls: [[{ param: { taskId, waitId } }]],
+      invalidationKeys: [
         taskKeys.detail(taskId),
         taskKeys.all,
         projectKeys.all,
-        taskKeys.detail(taskId),
-        taskKeys.all,
-        projectKeys.all,
+      ],
+    })
+  })
+
+  it('deletes a wait and invalidates task and project data', async () => {
+    const { result, invalidateQueries } = renderMutations()
+    await act(async () => result.current.delete.mutateAsync(waitId))
+
+    const readActual = () => ({
+      calls: deleteWait.mock.calls,
+      invalidationKeys: invalidateQueries.mock.calls.map(
+        ([filters]) => filters?.queryKey,
+      ),
+    })
+    expect(readActual()).toEqual({
+      calls: [[{ param: { taskId, waitId } }]],
+      invalidationKeys: [
         taskKeys.detail(taskId),
         taskKeys.all,
         projectKeys.all,

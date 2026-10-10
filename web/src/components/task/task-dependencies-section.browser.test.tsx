@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -21,7 +21,11 @@ import {
 } from '#hooks/use-task-waits'
 import { useUpdateTaskBlockedBy } from '#hooks/use-tasks'
 import { addLocalDays, formatLocalDate } from '#lib/date-range'
-import { partialMutation } from '#lib/test-utils'
+import {
+  assertDefined,
+  partialMutation,
+  waitForEditorFocus,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-github-link', async (importOriginal) => {
   const original =
@@ -64,6 +68,10 @@ const mockUseUpdateTaskWait = vi.mocked(useUpdateTaskWait)
 const updateBlockedBy = vi.fn()
 const updateNotifyEvents = vi.fn()
 const createWait = vi.fn<ReturnType<typeof useCreateTaskWait>['mutate']>()
+let createWaitError: Error | null = null
+const resetCreateWait = vi.fn(() => {
+  createWaitError = null
+})
 const updateWait = vi.fn<ReturnType<typeof useUpdateTaskWait>['mutate']>()
 const resolveWait = vi.fn<ReturnType<typeof useResolveTaskWait>['mutate']>()
 const deleteWait = vi.fn<ReturnType<typeof useDeleteTaskWait>['mutate']>()
@@ -72,6 +80,8 @@ beforeEach(() => {
   updateBlockedBy.mockReset()
   updateNotifyEvents.mockReset()
   createWait.mockReset()
+  createWaitError = null
+  resetCreateWait.mockClear()
   updateWait.mockReset()
   resolveWait.mockReset()
   deleteWait.mockReset()
@@ -100,10 +110,12 @@ beforeEach(() => {
       isPending: false,
     }),
   )
-  mockUseCreateTaskWait.mockReturnValue(
+  mockUseCreateTaskWait.mockImplementation(() =>
     partialMutation<ReturnType<typeof useCreateTaskWait>>({
       mutate: createWait,
       isPending: false,
+      error: createWaitError,
+      reset: resetCreateWait,
     }),
   )
   mockUseUpdateTaskWait.mockReturnValue(
@@ -321,12 +333,43 @@ describe('TaskDependenciesSection', () => {
     })
   })
 
-  it('updates the follow-up date, resolves, and removes a reply wait', async () => {
+  it('saves a complete follow-up date after keyboard edits finish', () => {
     const wait = makeTaskWait({
       id: 'wait-example-007',
       body: 'Review feedback',
       label: 'Review feedback',
+      followUpDate: '2099-10-13',
     })
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[wait]}
+      />,
+    )
+
+    const input = screen.getByLabelText('Follow-up date for Review feedback')
+    fireEvent.change(input, { target: { value: '0002-10-13' } })
+    fireEvent.change(input, { target: { value: '0020-10-13' } })
+    fireEvent.change(input, { target: { value: '0202-10-13' } })
+    fireEvent.change(input, { target: { value: '2027-10-13' } })
+    fireEvent.blur(input)
+
+    const readActual = () => ({
+      updateCalls: updateWait.mock.calls.map(([input]) => input),
+      dateValue: input instanceof HTMLInputElement ? input.value : null,
+    })
+
+    expect(readActual()).toEqual({
+      updateCalls: [{ waitId: wait.id, followUpDate: '2027-10-13' }],
+      dateValue: '2027-10-13',
+    })
+  })
+
+  it('resolves the selected reply wait', async () => {
+    const wait = makeTaskWait({ label: 'Review feedback' })
     const user = userEvent.setup()
     render(
       <TaskDependenciesSection
@@ -338,27 +381,154 @@ describe('TaskDependenciesSection', () => {
       />,
     )
 
-    fireEvent.change(
-      screen.getByLabelText('Follow-up date for Review feedback'),
-      { target: { value: '2099-10-15' } },
-    )
     await user.click(
       screen.getByRole('button', { name: 'Resolve wait: Review feedback' }),
     )
+
+    expect(resolveWait.mock.calls).toEqual([[wait.id]])
+  })
+
+  it('removes the selected reply wait', async () => {
+    const wait = makeTaskWait({ label: 'Review feedback' })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[wait]}
+      />,
+    )
+
     await user.click(
       screen.getByRole('button', { name: 'Remove wait: Review feedback' }),
+    )
+
+    expect(deleteWait.mock.calls).toEqual([[wait.id]])
+  })
+
+  it('saves edited wait details when leaving the inline editor', async () => {
+    const wait = makeTaskWait({
+      body: 'Review feedback details',
+      label: 'Review feedback',
+    })
+    const user = userEvent.setup()
+    const { container } = render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[wait]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByText(
+        'Review feedback details',
+        {},
+        { timeout: 20_000 },
+      ),
+    )
+    const editor = assertDefined(
+      container.querySelector('.milkdown .ProseMirror'),
+      'the wait details render a Markdown editor',
+    )
+    await waitForEditorFocus(editor)
+    await user.keyboard('!')
+    await waitFor(() => {
+      expect(editor.textContent).toEqual('!Review feedback details')
+    })
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await user.click(
+      screen.getByRole('button', { name: 'Resolve wait: Review feedback' }),
     )
 
     const readActual = () => ({
       updateCalls: updateWait.mock.calls.map(([input]) => input),
       resolveCalls: resolveWait.mock.calls,
-      deleteCalls: deleteWait.mock.calls,
     })
-
     expect(readActual()).toEqual({
-      updateCalls: [{ waitId: wait.id, followUpDate: '2099-10-15' }],
+      updateCalls: [{ waitId: wait.id, body: '!Review feedback details\n' }],
       resolveCalls: [[wait.id]],
-      deleteCalls: [[wait.id]],
     })
+  }, 45_000)
+
+  it('clears the previous create error when opening another wait dialog', async () => {
+    createWaitError = new Error('Previous failure')
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[]}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'add blocker' }))
+    await user.type(
+      screen.getByPlaceholderText(
+        'Search tasks or paste a GitHub issue/PR URL...',
+      ),
+      'Another request',
+    )
+    await user.click(screen.getByText('Wait for “Another request”'))
+
+    const readActual = () => ({
+      resetCalls: resetCreateWait.mock.calls,
+      alerts: screen.queryAllByRole('alert').map((alert) => alert.textContent),
+    })
+    expect(readActual()).toEqual({ resetCalls: [[]], alerts: [] })
+  })
+
+  it('shows a resolve failure next to the reply wait', () => {
+    mockUseResolveTaskWait.mockReturnValue(
+      partialMutation<ReturnType<typeof useResolveTaskWait>>({
+        mutate: resolveWait,
+        isPending: false,
+        isError: true,
+        error: new Error('Resolve failed'),
+      }),
+    )
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[makeTaskWait()]}
+      />,
+    )
+
+    const readActual = () =>
+      screen.getAllByRole('alert').map((alert) => alert.textContent)
+    expect(readActual()).toEqual(['Resolve failed'])
+  })
+
+  it('shows a delete failure next to the reply wait', () => {
+    mockUseDeleteTaskWait.mockReturnValue(
+      partialMutation<ReturnType<typeof useDeleteTaskWait>>({
+        mutate: deleteWait,
+        isPending: false,
+        isError: true,
+        error: new Error('Delete failed'),
+      }),
+    )
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[makeTaskWait()]}
+      />,
+    )
+
+    const readActual = () =>
+      screen.getAllByRole('alert').map((alert) => alert.textContent)
+    expect(readActual()).toEqual(['Delete failed'])
   })
 })

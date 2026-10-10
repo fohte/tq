@@ -2,7 +2,7 @@ import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import { Panel } from '@fohte/ui/panel'
 import { Check, Hourglass, Plus, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { GithubBlockerUpdateError } from '#components/task/github-blocker-update-error'
 import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-picker'
@@ -10,6 +10,7 @@ import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { TaskWaitFormDialog } from '#components/task/task-wait-form-dialog'
+import { TaskWaitMutationError } from '#components/task/task-wait-mutation-error'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
@@ -105,7 +106,7 @@ function BlockedByGroup({
       <Panel padding="none">
         {waits.map((wait) => (
           <TaskWaitEntry
-            key={`${wait.id}:${wait.followUpDate}:${wait.resolvedAt ?? ''}`}
+            key={`${wait.id}:${wait.resolvedAt ?? ''}`}
             taskId={taskId}
             wait={wait}
           />
@@ -250,6 +251,7 @@ function BlockedByGroup({
           setDialogOpen(false)
         }}
         onSelectWait={(body) => {
+          createWait.reset()
           setDialogOpen(false)
           setNewWaitBody(body)
           setNewWaitFollowUpDate(addLocalDays(formatLocalDate(new Date()), 3))
@@ -291,6 +293,9 @@ function BlockedByGroup({
 
 function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
   const [followUpDate, setFollowUpDate] = useState(wait.followUpDate)
+  useEffect(() => {
+    setFollowUpDate(wait.followUpDate)
+  }, [wait.followUpDate])
   const updateWait = useUpdateTaskWait(taskId)
   const resolveWait = useResolveTaskWait(taskId)
   const deleteWait = useDeleteTaskWait(taskId)
@@ -301,6 +306,18 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
   const disabled =
     updateWait.isPending || resolveWait.isPending || deleteWait.isPending
   const resolvedAt = wait.resolvedAt
+
+  const saveFollowUpDate = () => {
+    if (followUpDate === wait.followUpDate) return
+    updateWait.mutate(
+      { waitId: wait.id, followUpDate },
+      {
+        onError: () => {
+          setFollowUpDate(wait.followUpDate)
+        },
+      },
+    )
+  }
 
   return (
     <div
@@ -325,19 +342,18 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
               required
               value={followUpDate}
               disabled={disabled}
+              onBlur={(event) => {
+                if (
+                  event.relatedTarget instanceof Element &&
+                  event.relatedTarget.closest('[data-wait-action]') != null
+                )
+                  return
+                saveFollowUpDate()
+              }}
               onChange={(event) => {
                 const nextFollowUpDate = event.target.value
                 if (nextFollowUpDate !== '') {
-                  flush()
                   setFollowUpDate(nextFollowUpDate)
-                  updateWait.mutate(
-                    { waitId: wait.id, followUpDate: nextFollowUpDate },
-                    {
-                      onError: () => {
-                        setFollowUpDate(wait.followUpDate)
-                      },
-                    },
-                  )
                 }
               }}
               className="h-7 w-32 border-0 bg-transparent p-0 font-mono text-xs text-muted-foreground underline decoration-border-strong underline-offset-2 focus-visible:ring-0"
@@ -349,8 +365,10 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
             type="button"
             variant="ghost"
             disabled={disabled}
+            data-wait-action="resolve"
             onClick={() => {
               flush()
+              saveFollowUpDate()
               resolveWait.mutate(wait.id)
             }}
             aria-label={`Resolve wait: ${wait.label}`}
@@ -365,6 +383,7 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
           variant="ghost"
           size="icon-xs"
           disabled={disabled}
+          data-wait-action="remove"
           onClick={() => {
             cancel()
             deleteWait.mutate(wait.id)
@@ -391,11 +410,31 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
         />
       </div>
       {updateWait.isError && (
-        <p role="alert" className="pl-5 text-xs text-destructive">
-          {updateWait.error instanceof Error
-            ? updateWait.error.message
-            : 'Unable to update wait.'}
-        </p>
+        <TaskWaitMutationError
+          message={
+            updateWait.error instanceof Error
+              ? updateWait.error.message
+              : 'Unable to update wait.'
+          }
+        />
+      )}
+      {resolveWait.isError && (
+        <TaskWaitMutationError
+          message={
+            resolveWait.error instanceof Error
+              ? resolveWait.error.message
+              : 'Unable to resolve wait.'
+          }
+        />
+      )}
+      {deleteWait.isError && (
+        <TaskWaitMutationError
+          message={
+            deleteWait.error instanceof Error
+              ? deleteWait.error.message
+              : 'Unable to remove wait.'
+          }
+        />
       )}
     </div>
   )
