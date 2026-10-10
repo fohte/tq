@@ -21,41 +21,35 @@ function summarizeProjectListRequest(exitCode: number, url: string) {
   }
 }
 
+async function expectProjectListQuery(
+  args: string[],
+  query: Record<string, string>,
+) {
+  const { fetchStub, calls } = captureFetch(
+    () => new Response(JSON.stringify([]), { status: 200 }),
+  )
+
+  const exitCode = await runCli(
+    ['--api-url', apiUrl, 'project', 'list', ...args],
+    fetchStub,
+    fakeStdin(true),
+  )
+
+  expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
+    exitCode: 0,
+    query,
+  })
+}
+
 describe('project list', () => {
   it('defaults to all contexts and active projects', async () => {
     vi.stubEnv('TQ_CONTEXT', '')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify([]), { status: 200 }),
-    )
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'project', 'list'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
-      exitCode: 0,
-      query: { context: 'all', status: 'active' },
-    })
+    await expectProjectListQuery([], { context: 'all', status: 'active' })
   })
 
   it('uses TQ_CONTEXT when the context flag is omitted', async () => {
     vi.stubEnv('TQ_CONTEXT', 'work')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify([]), { status: 200 }),
-    )
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'project', 'list'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
-      exitCode: 0,
-      query: { context: 'work', status: 'active' },
-    })
+    await expectProjectListQuery([], { context: 'work', status: 'active' })
   })
 
   it('omits description from the printed output by default', async () => {
@@ -97,32 +91,33 @@ describe('project list', () => {
   })
 
   it('sends the title, status, and context filters as query parameters', async () => {
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify([]), { status: 200 }),
+    await expectProjectListQuery(
+      ['--q', 'website', '--status', 'active', '--context', 'work'],
+      { q: 'website', status: 'active', context: 'work' },
     )
-
-    const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'project',
-        'list',
-        '--q',
-        'website',
-        '--status',
-        'active',
-        '--context',
-        'work',
-      ],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(summarizeProjectListRequest(exitCode, calls[0]?.url ?? '')).toEqual({
-      exitCode: 0,
-      query: { q: 'website', status: 'active', context: 'work' },
-    })
   })
+
+  it.each(['paused', 'completed', 'archived', 'all'])(
+    'sends --status %s to the API',
+    async (status) => {
+      await expectProjectListQuery(['--status', status], {
+        context: 'all',
+        status,
+      })
+    },
+  )
+
+  it.each(['personal', 'all'])(
+    'sends explicit --context %s to the API',
+    async (context) => {
+      vi.stubEnv('TQ_CONTEXT', 'work')
+
+      await expectProjectListQuery(['--context', context], {
+        context,
+        status: 'active',
+      })
+    },
+  )
 })
 
 describe('project get', () => {

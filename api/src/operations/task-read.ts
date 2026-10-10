@@ -107,7 +107,7 @@ const taskListInputSchema = listTasksQuerySchema
     limit: listTasksQuerySchema.shape.limit
       .optional()
       .describe(
-        `Maximum number of results to return (1-100). Defaults to ${String(taskListDefaults.limit)}.`,
+        `Maximum number of results to return (1-100 or unlimited). Defaults to ${String(taskListDefaults.limit)}.`,
       ),
   })
 
@@ -155,7 +155,7 @@ const taskSearchInputSchema = listTasksQuerySchema
     limit: listTasksQuerySchema.shape.limit
       .optional()
       .describe(
-        `Maximum number of results to return (1-100). Defaults to ${String(taskSearchDefaults.limit)}.`,
+        `Maximum number of results to return (1-100 or unlimited). Defaults to ${String(taskSearchDefaults.limit)}.`,
       ),
     offset: listTasksQuerySchema.shape.offset.describe(
       'Number of results to skip, for pagination.',

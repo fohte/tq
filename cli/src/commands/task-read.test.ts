@@ -39,6 +39,32 @@ function cliErrorOutcome(
   }
 }
 
+async function expectTaskQuery(args: string[], query: Record<string, string>) {
+  const { fetchStub, calls } = captureFetch(
+    () => new Response('[]', { status: 200 }),
+  )
+  const write = spyStdout()
+
+  const exitCode = await runCli(
+    ['--api-url', apiUrl, ...args],
+    fetchStub,
+    fakeStdin(true),
+  )
+
+  expect(cliOutcome(exitCode, calls, write)).toEqual({
+    exitCode: 0,
+    requests: [
+      {
+        method: 'GET',
+        pathname: '/api/tasks',
+        query,
+        body: undefined,
+      },
+    ],
+    stdout: [['[]\n']],
+  })
+}
+
 describe('task list', () => {
   it('sends schema-derived flags and prints the response', async () => {
     const tasks = [
@@ -62,41 +88,6 @@ describe('task list', () => {
           method: 'GET',
           pathname: '/api/tasks',
           query: { view: 'row', context: 'all', status: 'todo', limit: '20' },
-          body: undefined,
-        },
-      ],
-      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
-    })
-  })
-
-  it('accepts all statuses', async () => {
-    const tasks = [
-      { id: 'task-open', number: 1, title: 'Open task', status: 'todo' },
-      {
-        id: 'task-closed',
-        number: 2,
-        title: 'Completed task',
-        status: 'completed',
-      },
-    ]
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(tasks), { status: 200 }),
-    )
-    const write = spyStdout()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'list', '--status', 'all'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(cliOutcome(exitCode, calls, write)).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', limit: '20', view: 'row' },
           body: undefined,
         },
       ],
@@ -392,30 +383,51 @@ describe('task list', () => {
 
   it('uses TQ_CONTEXT when --context is omitted', async () => {
     vi.stubEnv('TQ_CONTEXT', 'work')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response('[]', { status: 200 }),
-    )
-    const write = spyStdout()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'list'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(cliOutcome(exitCode, calls, write)).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/tasks',
-          query: { view: 'row', context: 'work', status: 'todo', limit: '20' },
-          body: undefined,
-        },
-      ],
-      stdout: [['[]\n']],
+    await expectTaskQuery(['task', 'list'], {
+      view: 'row',
+      context: 'work',
+      status: 'todo',
+      limit: '20',
     })
   })
+
+  it.each(['completed', 'all'])(
+    'sends --status %s to the API',
+    async (status) => {
+      await expectTaskQuery(['task', 'list', '--status', status], {
+        view: 'row',
+        context: 'all',
+        status,
+        limit: '20',
+      })
+    },
+  )
+
+  it.each(['work', 'personal', 'all'])(
+    'sends explicit --context %s to the API',
+    async (context) => {
+      vi.stubEnv('TQ_CONTEXT', 'work')
+
+      await expectTaskQuery(['task', 'list', '--context', context], {
+        view: 'row',
+        context,
+        status: 'todo',
+        limit: '20',
+      })
+    },
+  )
+
+  it.each(['5', 'unlimited'])(
+    'sends explicit --limit %s to the API',
+    async (limit) => {
+      await expectTaskQuery(['task', 'list', '--limit', limit], {
+        view: 'row',
+        context: 'all',
+        status: 'todo',
+        limit,
+      })
+    },
+  )
 })
 
 describe('task get', () => {
@@ -595,65 +607,59 @@ describe('task activity', () => {
 })
 
 describe('task search', () => {
-  it('uses TQ_CONTEXT when --context is omitted', async () => {
-    vi.stubEnv('TQ_CONTEXT', 'work')
-    const { fetchStub, calls } = captureFetch(
-      () => new Response('[]', { status: 200 }),
-    )
-    const write = spyStdout()
+  it('uses the default context, status, and limit', async () => {
+    vi.stubEnv('TQ_CONTEXT', '')
 
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'search'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(cliOutcome(exitCode, calls, write)).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/tasks',
-          query: { view: 'full', context: 'work', status: 'all', limit: '20' },
-          body: undefined,
-        },
-      ],
-      stdout: [['[]\n']],
+    await expectTaskQuery(['task', 'search'], {
+      view: 'full',
+      context: 'all',
+      status: 'all',
+      limit: '20',
     })
   })
 
-  it('accepts all statuses', async () => {
-    const tasks = [
-      { id: 'task-open', number: 1, title: 'Open task', status: 'todo' },
-      {
-        id: 'task-closed',
-        number: 2,
-        title: 'Completed task',
-        status: 'completed',
-      },
-    ]
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(tasks), { status: 200 }),
-    )
-    const write = spyStdout()
+  it('uses TQ_CONTEXT when --context is omitted', async () => {
+    vi.stubEnv('TQ_CONTEXT', 'work')
+    await expectTaskQuery(['task', 'search'], {
+      view: 'full',
+      context: 'work',
+      status: 'all',
+      limit: '20',
+    })
+  })
 
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'search', '--status', 'all'],
-      fetchStub,
-      fakeStdin(true),
-    )
+  it.each(['todo', 'completed', 'all'])(
+    'sends --status %s to the API',
+    async (status) => {
+      await expectTaskQuery(['task', 'search', '--status', status], {
+        view: 'full',
+        context: 'all',
+        status,
+        limit: '20',
+      })
+    },
+  )
 
-    expect(cliOutcome(exitCode, calls, write)).toEqual({
-      exitCode: 0,
-      requests: [
-        {
-          method: 'GET',
-          pathname: '/api/tasks',
-          query: { context: 'all', status: 'all', limit: '20', view: 'full' },
-          body: undefined,
-        },
-      ],
-      stdout: [[`${JSON.stringify(tasks, null, 2)}\n`]],
+  it.each(['work', 'personal', 'all'])(
+    'sends explicit --context %s to the API',
+    async (context) => {
+      vi.stubEnv('TQ_CONTEXT', 'work')
+
+      await expectTaskQuery(['task', 'search', '--context', context], {
+        view: 'full',
+        context,
+        status: 'all',
+        limit: '20',
+      })
+    },
+  )
+
+  it('sends an unlimited --limit to the API', async () => {
+    await expectTaskQuery(['task', 'search', '--limit', 'unlimited'], {
+      view: 'full',
+      context: 'all',
+      status: 'all',
+      limit: 'unlimited',
     })
   })
 
