@@ -3,10 +3,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
-import { makeProject } from '#components/project/project-test-fixtures'
+import {
+  makeProject,
+  makeProjectDetail,
+} from '#components/project/project-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import type { Project } from '#hooks/use-projects'
+import { ALL_PROJECTS_FILTER, projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
 
 const queryClient = new QueryClient({
@@ -25,6 +29,10 @@ const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
   HttpResponse.json([]),
 )
 const emptyLabelsHandler = http.get('/api/labels', () => HttpResponse.json([]))
+const unavailableProjectHandler = http.get(
+  '/api/projects/missing-project',
+  () => HttpResponse.json({ message: 'Project not found' }, { status: 404 }),
+)
 
 const projectA: Project = makeProject({
   id: 'proj-1',
@@ -34,6 +42,11 @@ const projectA: Project = makeProject({
 const projectB: Project = makeProject({ id: 'proj-2', title: 'Mobile App' })
 
 const projects = [projectA, projectB]
+queryClient.setQueryData(
+  projectKeys.detail(projectA.id),
+  makeProjectDetail(projectA),
+)
+queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
 
 const defaultParsed = makeParsedQuery()
 
@@ -41,7 +54,13 @@ const meta = {
   title: 'Task/TaskFilterChipRow',
   component: TaskFilterChipRow,
   parameters: {
-    msw: { handlers: [emptySuggestHandler, emptyLabelsHandler] },
+    msw: {
+      handlers: [
+        emptySuggestHandler,
+        emptyLabelsHandler,
+        unavailableProjectHandler,
+      ],
+    },
   },
   decorators: [
     (Story) => (
@@ -53,7 +72,6 @@ const meta = {
   args: {
     onQueryChange: fn(),
     parsed: defaultParsed,
-    projects,
   },
 } satisfies Meta<typeof TaskFilterChipRow>
 
@@ -90,6 +108,13 @@ export const ProjectSelected: Story = {
   name: 'the row shows a selected project filter',
   args: {
     parsed: { ...defaultParsed, projectId: 'proj-1' },
+  },
+}
+
+export const ProjectUnavailable: Story = {
+  name: 'the row keeps an unavailable project filter clearable',
+  args: {
+    parsed: { ...defaultParsed, projectId: 'missing-project' },
   },
 }
 

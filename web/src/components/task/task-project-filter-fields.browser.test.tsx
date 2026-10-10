@@ -1,21 +1,31 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
+import { ALL_PROJECTS_FILTER, projectKeys } from '#hooks/use-projects'
 
 const projectA = makeProject({ id: 'proj-1', title: 'Website Redesign' })
 const projectB = makeProject({ id: 'proj-2', title: 'Mobile App' })
 
 function renderFields(selectedProjectId?: string) {
   const onProjectIdChange = vi.fn()
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  })
+  queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), [
+    projectA,
+    projectB,
+  ])
   render(
-    <TaskProjectFilterFields
-      projects={[projectA, projectB]}
-      selectedProjectId={selectedProjectId}
-      onProjectIdChange={onProjectIdChange}
-    />,
+    <QueryClientProvider client={queryClient}>
+      <TaskProjectFilterFields
+        selectedProjectId={selectedProjectId}
+        onProjectIdChange={onProjectIdChange}
+      />
+    </QueryClientProvider>,
   )
   return onProjectIdChange
 }
