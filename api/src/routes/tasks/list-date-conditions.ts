@@ -1,6 +1,7 @@
 import {
   and,
   eq,
+  exists,
   gte,
   isNotNull,
   isNull,
@@ -14,7 +15,9 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
+import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import type { ListTasksQuery } from '#schemas/task'
+import { hasNoUnresolvedBlockersCondition } from '#services/task-blockers'
 import { resolvePeriodStart } from '#services/task-queues'
 
 type TaskDateFilters = Pick<
@@ -34,12 +37,25 @@ function dateIsInRange(
   )
 }
 
+function addDays(date: string, days: number): string {
+  const result = new Date(`${date}T00:00:00.000Z`)
+  result.setUTCDate(result.getUTCDate() + days)
+  return result.toISOString().slice(0, 10)
+}
+
 function taskIsNotQueuedOn(date: string) {
+  const weekStart = resolvePeriodStart('week', date) ?? date
+  const weekEnd = addDays(weekStart, 6)
   const periodMatch = (unit: 'day' | 'week' | 'month') =>
     and(
       eq(taskQueues.periodUnit, unit),
       eq(taskQueueItems.periodStart, resolvePeriodStart(unit, date) ?? date),
     )
+  const dayQueueInCandidateWeek = and(
+    eq(taskQueues.periodUnit, 'day'),
+    gte(taskQueueItems.periodStart, date),
+    lte(taskQueueItems.periodStart, weekEnd),
+  )
 
   return notExists(
     db
@@ -50,7 +66,7 @@ function taskIsNotQueuedOn(date: string) {
         and(
           eq(taskQueueItems.taskId, tasks.id),
           or(
-            periodMatch('day'),
+            dayQueueInCandidateWeek,
             periodMatch('week'),
             periodMatch('month'),
             and(
@@ -86,13 +102,16 @@ export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
   }
 
   if (query.candidatesOn != null) {
+    const followUpDue = exists(followUpDueTaskWaitSubquery(query.candidatesOn))
     const candidateCondition = and(
       or(
         lte(tasks.dueDate, query.candidatesOn),
         lte(tasks.startDate, query.candidatesOn),
         eq(tasks.commitment, 'active'),
+        followUpDue,
       ),
       taskIsNotQueuedOn(query.candidatesOn),
+      or(hasNoUnresolvedBlockersCondition(), followUpDue),
     )
     if (candidateCondition != null) conditions.push(candidateCondition)
   }

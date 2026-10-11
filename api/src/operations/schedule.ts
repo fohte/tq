@@ -4,6 +4,10 @@ import { z } from 'zod'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { encodePathSegment } from '#operations/path-segment'
 import {
+  recurrenceCliOptions,
+  recurrenceRuleFromCli,
+} from '#operations/recurrence-cli'
+import {
   defineOperation,
   formatInputIssues,
   type OperationError,
@@ -11,6 +15,7 @@ import {
   requestNoContent,
 } from '#operations/types'
 import {
+  createScheduleSchema,
   MAX_SCHEDULE_DATE_RANGE_DAYS,
   scheduleDateRangeInputSchema,
   scheduleDateRangeSchema,
@@ -199,5 +204,26 @@ export const scheduleOperations = [
         client.api.schedule.events.$get({ query: dateRange.value }),
       )
     },
+  }),
+  defineOperation(createScheduleSchema, {
+    path: ['schedule', 'events', 'create'],
+    description:
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+    positionalArgs: ['title', 'startDate', 'startTime', 'endTime'],
+    kind: 'write',
+    routes: ['POST /api/schedule/events'],
+    cli: {
+      customOptions: recurrenceCliOptions(
+        'Recurrence interval (stored but currently ignored when expanding schedule event dates)',
+      ),
+      excludeFields: ['recurrence'],
+      mapInput: (input, options) =>
+        recurrenceRuleFromCli(options).map((recurrence) =>
+          recurrence === undefined ? input : { ...input, recurrence },
+        ),
+      output: { kind: 'json' },
+    },
+    run: (client, json) =>
+      requestJson(client.api.schedule.events.$post({ json })),
   }),
 ] as const

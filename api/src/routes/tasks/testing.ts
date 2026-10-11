@@ -13,6 +13,7 @@ import {
 import { firstOrThrow } from '#lib/drizzle-utils'
 import type { TaskStatusReason } from '#schemas/task'
 import { taskStatusReason } from '#schemas/task'
+import type { TaskQueueCandidateReason } from '#services/task-queue-candidates'
 import { jsonBody } from '#testing'
 
 export interface TimeBlockResponse {
@@ -159,6 +160,7 @@ export interface TaskListItemResponse {
     url: string
   }[]
   waits?: TaskWaitSummaryResponse[]
+  candidateReason?: TaskQueueCandidateReason | null
   childCompletionCount?: { completed: number; total: number }
   checklistCompletionCount: { completed: number; total: number }
   children?: TaskListItemResponse[]

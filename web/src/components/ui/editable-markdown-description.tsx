@@ -17,7 +17,7 @@ export function EditableMarkdownDescription({
   initiallyEditing = false,
 }: {
   header?: ReactNode
-  variant?: 'task' | 'project'
+  variant?: 'task' | 'project' | 'inline'
   defaultValue: string | null
   placeholder: string
   editButtonLabel: string
@@ -30,10 +30,10 @@ export function EditableMarkdownDescription({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {(header != null || !isEditing) && (
+      {(header != null || (!isEditing && variant !== 'inline')) && (
         <div className="flex items-center gap-2">
           {header}
-          {!isEditing && (
+          {!isEditing && variant !== 'inline' && (
             <Button
               type="button"
               variant="ghost"
@@ -51,20 +51,25 @@ export function EditableMarkdownDescription({
       )}
       <div
         className={cn(
-          'border border-border text-sm leading-relaxed',
-          variant === 'task' && 'p-4 focus-within:border-ring',
+          'text-sm leading-relaxed',
+          variant === 'task' &&
+            'border border-border p-4 focus-within:border-ring',
           variant === 'project' &&
-            'px-1 pb-1 pt-3 focus-within:border-primary/50',
+            'border border-border px-1 pb-1 pt-3 focus-within:border-primary/50',
+          variant === 'inline' &&
+            (isEditing
+              ? 'border border-border p-2 focus-within:border-ring'
+              : 'border-0 p-0'),
         )}
         onClick={(event) => {
-          if (
-            !isEditing &&
-            isEmpty &&
-            event.target instanceof Element &&
-            event.target.closest('.milkdown-wrapper') != null
-          ) {
-            setIsEditing(true)
-          }
+          if (isEditing) return
+          const target = event.target
+          if (!(target instanceof Element)) return
+          if (target.closest('a, button') != null) return
+
+          const clickedMarkdown = target.closest('.milkdown-wrapper') != null
+          if (variant === 'inline' && clickedMarkdown) setIsEditing(true)
+          if (isEmpty && clickedMarkdown) setIsEditing(true)
         }}
       >
         <MarkdownEditor

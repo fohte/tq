@@ -85,6 +85,7 @@ function SidebarStory({
       context: 'personal',
       commitment: 'inbox',
       status: 'todo',
+      q: 'has:no-blockers',
     }),
     inboxCount ?? 0,
   )

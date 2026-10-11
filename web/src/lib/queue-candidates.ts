@@ -1,14 +1,11 @@
-import { formatLocalDate } from '#lib/date-range'
-import { type DueDateCheckable, isTaskOverdue } from '#lib/task-due-date'
-
-interface CandidateCheckable extends DueDateCheckable {
+interface CandidateCheckable {
   id: string
-  startDate: string | null
-  commitment: string
+  candidateReason?: CandidateReason | null | undefined
 }
 
 export type CandidateReason =
   | { kind: 'overdue'; days: number }
+  | { kind: 'follow-up'; days: number }
   | { kind: 'due-today' }
   | { kind: 'due-later'; days: number }
   | { kind: 'starts'; days: number }
@@ -19,93 +16,25 @@ export interface QueueCandidate<T> {
   reason: CandidateReason
 }
 
-const REASON_PRIORITY: Record<CandidateReason['kind'], number> = {
-  overdue: 0,
-  'due-today': 1,
-  'due-later': 2,
-  starts: 3,
-  active: 4,
-}
-
-function daysBetween(fromDateStr: string, toDateStr: string): number {
-  const fromDate = new Date(`${fromDateStr}T00:00:00`)
-  const toDate = new Date(`${toDateStr}T00:00:00`)
-  return Math.round((toDate.getTime() - fromDate.getTime()) / 86_400_000)
-}
-
-function reasonDays(reason: CandidateReason): number {
-  return reason.kind === 'overdue' || reason.kind === 'starts' ? reason.days : 0
-}
-
-/**
- * A task is a queue candidate when it's not completed and it's overdue, due
- * today, startable (start date today or earlier), or has commitment
- * "active". A future due date takes precedence over startability or active
- * commitment for tasks that would already be candidates for either reason.
- */
-function getCandidateReason(
-  task: CandidateCheckable,
-  now: Date = new Date(),
-): CandidateReason | null {
-  if (task.status === 'completed') return null
-  const today = formatLocalDate(now)
-
-  if (task.dueDate != null && isTaskOverdue(task, now)) {
-    return { kind: 'overdue', days: daysBetween(task.dueDate, today) }
-  }
-  if (task.dueDate === today) {
-    return { kind: 'due-today' }
-  }
-  const startableDate =
-    task.startDate != null && task.startDate <= today ? task.startDate : null
-  if (
-    task.dueDate != null &&
-    task.dueDate > today &&
-    (startableDate != null || task.commitment === 'active')
-  ) {
-    return { kind: 'due-later', days: daysBetween(today, task.dueDate) }
-  }
-  if (startableDate != null) {
-    return { kind: 'starts', days: daysBetween(startableDate, today) }
-  }
-  if (task.commitment === 'active') {
-    return { kind: 'active' }
-  }
-  return null
-}
-
-/**
- * Candidate tasks for today's queue, excluding tasks already queued.
- * Sorted by reason priority (overdue, due-today, due-later, starts, active).
- * Due-later tasks are ordered by their due date; overdue and starts tasks are
- * ordered by how long their reason has been true (longest first).
- */
+/** Pairs the candidate reasons and ordering returned by `candidatesOn` with their tasks. */
 export function getQueueCandidates<T extends CandidateCheckable>(
   tasks: T[],
-  queueTaskIds: ReadonlySet<string>,
-  now: Date = new Date(),
 ): QueueCandidate<T>[] {
-  const candidates = tasks.flatMap((task) => {
-    if (queueTaskIds.has(task.id)) return []
-    const reason = getCandidateReason(task, now)
-    return reason == null ? [] : [{ task, reason }]
-  })
-
-  return candidates.sort((a, b) => {
-    const priorityDiff =
-      REASON_PRIORITY[a.reason.kind] - REASON_PRIORITY[b.reason.kind]
-    if (priorityDiff !== 0) return priorityDiff
-    if (a.reason.kind === 'due-later' && b.reason.kind === 'due-later') {
-      return a.reason.days - b.reason.days
-    }
-    return reasonDays(b.reason) - reasonDays(a.reason)
-  })
+  return tasks.flatMap<QueueCandidate<T>>((task) =>
+    task.candidateReason == null
+      ? []
+      : [{ task, reason: task.candidateReason }],
+  )
 }
 
 export function formatCandidateReason(reason: CandidateReason): string {
   switch (reason.kind) {
     case 'overdue':
       return `${String(reason.days)}d overdue`
+    case 'follow-up':
+      return reason.days === 0
+        ? 'follow up today'
+        : `follow up ${String(reason.days)}d ago`
     case 'due-today':
       return 'due today'
     case 'due-later':

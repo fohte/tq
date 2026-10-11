@@ -7,6 +7,7 @@ import {
 } from '@fohte/ui/dialog'
 import { Input } from '@fohte/ui/input'
 import { List, ListItem } from '@fohte/ui/list'
+import { Hourglass } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 
 import { GithubRefSummary } from '#components/task/github-ref-summary'
@@ -38,6 +39,7 @@ export function TaskSearchCandidateDialogAppearance({
   isResolvingGithubUrl = false,
   onSelectCandidate,
   onSelectGithubCandidate,
+  onSelectWait,
   skipAction,
 }: {
   open: boolean
@@ -54,12 +56,16 @@ export function TaskSearchCandidateDialogAppearance({
   onSelectCandidate: (candidate: SearchResult) => void
   onSelectGithubCandidate?:
     ((candidate: GithubUrlCandidate) => void) | undefined
+  onSelectWait?: ((body: string) => void) | undefined
   skipAction?: { label: string; onSkip: () => void } | undefined
 }) {
+  const waitLabel = query.trim()
   const isGithubUrl =
-    allowGithubUrls && GITHUB_ISSUE_OR_PR_URL_PATTERN.test(query.trim())
+    allowGithubUrls && GITHUB_ISSUE_OR_PR_URL_PATTERN.test(waitLabel)
+  const showWaitAction =
+    onSelectWait != null && waitLabel !== '' && !isGithubUrl
   const showNoResults =
-    query.trim() !== '' &&
+    waitLabel !== '' &&
     candidates.length === 0 &&
     !isFetching &&
     githubCandidate == null &&
@@ -94,7 +100,7 @@ export function TaskSearchCandidateDialogAppearance({
                 ? 'Search tasks or paste a GitHub issue/PR URL'
                 : 'Type to search tasks'}
             </div>
-          ) : showNoResults ? (
+          ) : showNoResults && !showWaitAction ? (
             <div className="px-4 py-8 text-center font-mono text-xs text-muted-foreground-faint">
               {`no results for "${query}"`}
             </div>
@@ -122,6 +128,21 @@ export function TaskSearchCandidateDialogAppearance({
                       )}
                   </ListItem>
                 ))}
+                {showWaitAction && (
+                  <ListItem
+                    onSelect={() => {
+                      onSelectWait(waitLabel)
+                    }}
+                  >
+                    <Hourglass
+                      className="size-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      Wait for “{waitLabel}”
+                    </span>
+                  </ListItem>
+                )}
               </List>
 
               {isGithubUrl && isResolvingGithubUrl && (
@@ -191,6 +212,7 @@ export function TaskSearchCandidateDialog({
   allowGithubUrls = false,
   onSelectCandidate,
   onSelectGithubCandidate,
+  onSelectWait,
   skipAction,
 }: {
   open: boolean
@@ -202,6 +224,7 @@ export function TaskSearchCandidateDialog({
   onSelectCandidate: (candidate: SearchResult) => void
   onSelectGithubCandidate?:
     ((candidate: GithubUrlCandidate) => void) | undefined
+  onSelectWait?: ((body: string) => void) | undefined
   skipAction?: { label: string; onSkip: () => void }
 }) {
   const [query, setQuery] = useState('')
@@ -237,6 +260,7 @@ export function TaskSearchCandidateDialog({
       isResolvingGithubUrl={githubCandidateState.isResolvingGithubUrl}
       onSelectCandidate={onSelectCandidate}
       onSelectGithubCandidate={onSelectGithubCandidate}
+      onSelectWait={onSelectWait}
       skipAction={skipAction}
     />
   )

@@ -23,7 +23,7 @@ export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 
 const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
-export const taskSortBy = z.enum(['created', 'updated', 'due'])
+export const taskSortBy = z.enum(['created', 'updated', 'due', 'follow-up'])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 export const taskSortOrder = z.enum(['asc', 'desc'])
 export type TaskSortOrder = z.infer<typeof taskSortOrder>

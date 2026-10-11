@@ -45,8 +45,11 @@ export interface TaskKanbanColumn {
   title: string
   tasks: Task[]
   isLoading?: boolean
+  hasError?: boolean
   /** Set false when `tasks` is a truncated subset, so the header doesn't show a count that reads as the true total. */
   showCount?: boolean
+  /** Set false when this column is derived from task state and tasks cannot be moved manually. */
+  allowsManualMoves?: boolean
   /** e.g. "09-01" for a day queue or "08-31 – 09-06" for a week queue; shown right-aligned in the column header. */
   dateRangeLabel?: string
   /** Rendered below the task list, e.g. a link to the full filtered list. */
@@ -82,11 +85,12 @@ function isCardDragData(
 function TaskKanbanCard({
   task,
   sourceColumnId,
+  draggable,
   droppable,
 }: {
   task: Task
   sourceColumnId: string
-  /** Cards always stay draggable (to move to another column); this only controls whether other cards can be dropped onto this one to reorder within the column. */
+  draggable: boolean
   droppable: boolean
 }) {
   const {
@@ -99,7 +103,7 @@ function TaskKanbanCard({
   } = useSortable({
     id: task.id,
     data: { task, sourceColumnId } satisfies CardDragData,
-    disabled: { droppable: !droppable },
+    disabled: { draggable: !draggable, droppable: !droppable },
   })
 
   return (
@@ -183,11 +187,16 @@ function TaskKanbanColumnView({
     title,
     tasks,
     isLoading = false,
+    hasError = false,
     showCount = true,
+    allowsManualMoves = true,
     dateRangeLabel,
     footer,
   } = column
-  const { setNodeRef, isOver } = useDroppable({ id })
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    disabled: !allowsManualMoves,
+  })
 
   return (
     <div className="flex w-1/2 shrink-0 snap-start flex-col border-r border-border last:border-r-0 md:w-0 md:flex-1 md:snap-align-none">
@@ -214,6 +223,8 @@ function TaskKanbanColumnView({
 
       <div
         ref={setNodeRef}
+        role="region"
+        aria-label={`${title} tasks`}
         className={cn(
           'flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2',
           isOver && 'bg-secondary/30',
@@ -221,6 +232,8 @@ function TaskKanbanColumnView({
       >
         {isLoading ? (
           <ListAreaMessage>Loading...</ListAreaMessage>
+        ) : hasError ? (
+          <ListAreaMessage>Failed to load tasks.</ListAreaMessage>
         ) : tasks.length === 0 ? (
           <ListAreaMessage>No tasks</ListAreaMessage>
         ) : (
@@ -233,7 +246,8 @@ function TaskKanbanColumnView({
                 key={task.id}
                 task={task}
                 sourceColumnId={id}
-                droppable={reorderEnabled}
+                draggable={allowsManualMoves}
+                droppable={reorderEnabled && allowsManualMoves}
               />
             ))}
           </SortableContext>
@@ -327,6 +341,7 @@ export function TaskKanban({
       const columnTaskIds = columns.map((c) => ({
         id: c.id,
         taskIds: c.tasks.map((t) => t.id),
+        allowsManualMoves: c.allowsManualMoves !== false,
       }))
 
       if (isCandidateDragData(data)) {
