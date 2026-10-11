@@ -5,6 +5,10 @@ export interface AuthorInfo {
   agent: string | null
 }
 
+export function formatServiceAuthor(agent: string | null): string {
+  return `service: ${agent ?? 'unknown'}`
+}
+
 // Human is the implicit default; only named non-human authors need a label.
 export function AuthorLabel({
   author,
@@ -22,7 +26,7 @@ export function AuthorLabel({
   }
 
   if (author?.kind === 'service') {
-    const label = `service: ${author.agent ?? 'unknown'}`
+    const label = formatServiceAuthor(author.agent)
 
     return (
       <span className="shrink-0">

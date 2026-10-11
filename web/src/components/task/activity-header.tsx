@@ -1,3 +1,4 @@
+import { formatServiceAuthor } from '#components/task/author-label'
 import type { Comment } from '#hooks/use-task-comments'
 import { cn } from '#lib/utils'
 
@@ -9,7 +10,7 @@ export function formatWho(author: ActivityAuthor | null): string {
   if (!author) return 'someone'
   if (author.kind === 'human') return 'you'
   if (author.kind === 'system') return 'system'
-  if (author.kind === 'service') return `service: ${author.agent ?? 'unknown'}`
+  if (author.kind === 'service') return formatServiceAuthor(author.agent)
   return author.agent ?? 'someone'
 }
 

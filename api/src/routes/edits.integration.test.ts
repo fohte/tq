@@ -61,6 +61,12 @@ async function assertStatus(res: Response, expected: number) {
   }
 }
 
+async function responseOutput(
+  res: Response,
+): Promise<{ status: number; body: unknown }> {
+  return { status: res.status, body: await res.json() }
+}
+
 async function createTask(
   title: string,
   opts: {
@@ -148,7 +154,10 @@ describe('edit log', () => {
         body: JSON.stringify({ title: 'Task' }),
       })
 
-      expect(res.status).toBe(400)
+      expect(await responseOutput(res)).toEqual({
+        status: 400,
+        body: { error: 'Invalid X-Author header' },
+      })
     })
   })
 
