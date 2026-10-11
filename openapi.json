@@ -73,7 +73,7 @@
               },
               {
                 "type": "integer",
-                "exclusiveMinimum": true,
+                "minimum": 1,
                 "maximum": 9007199254740991
               }
             ]
@@ -119,7 +119,7 @@
               },
               "interval": {
                 "type": "integer",
-                "exclusiveMinimum": true,
+                "minimum": 1,
                 "maximum": 9007199254740991
               },
               "daysOfWeek": {
@@ -159,7 +159,7 @@
                     },
                     {
                       "type": "integer",
-                      "exclusiveMinimum": true,
+                      "minimum": 1,
                       "maximum": 9007199254740991
                     }
                   ]
@@ -285,7 +285,7 @@
               },
               "interval": {
                 "type": "integer",
-                "minimum": -9007199254740991,
+                "minimum": 1,
                 "maximum": 9007199254740991
               },
               "daysOfWeek": {
@@ -293,15 +293,15 @@
                 "type": "array",
                 "items": {
                   "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
+                  "minimum": 0,
+                  "maximum": 6
                 }
               },
               "dayOfMonth": {
                 "nullable": true,
                 "type": "integer",
-                "minimum": -9007199254740991,
-                "maximum": 9007199254740991
+                "minimum": 1,
+                "maximum": 31
               }
             },
             "required": [
@@ -310,8 +310,7 @@
               "interval",
               "daysOfWeek",
               "dayOfMonth"
-            ],
-            "additionalProperties": false
+            ]
           },
           "templateId": {
             "nullable": true,
@@ -405,8 +404,7 @@
                 "state",
                 "title",
                 "lastSyncedAt"
-              ],
-              "additionalProperties": false
+              ]
             }
           },
           "createdAt": {
@@ -453,8 +451,7 @@
                     "number",
                     "title",
                     "status"
-                  ],
-                  "additionalProperties": false
+                  ]
                 }
               },
               "unresolvedRefs": {
@@ -491,8 +488,7 @@
                                 },
                                 "required": [
                                   "kind"
-                                ],
-                                "additionalProperties": false
+                                ]
                               },
                               {
                                 "type": "object",
@@ -516,8 +512,7 @@
                                   "kind",
                                   "id",
                                   "title"
-                                ],
-                                "additionalProperties": false
+                                ]
                               },
                               {
                                 "type": "object",
@@ -537,8 +532,7 @@
                                 "required": [
                                   "kind",
                                   "id"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             ]
                           }
@@ -548,8 +542,7 @@
                         "kind",
                         "value",
                         "sources"
-                      ],
-                      "additionalProperties": false
+                      ]
                     },
                     {
                       "type": "object",
@@ -579,8 +572,7 @@
                                 },
                                 "required": [
                                   "kind"
-                                ],
-                                "additionalProperties": false
+                                ]
                               },
                               {
                                 "type": "object",
@@ -604,8 +596,7 @@
                                   "kind",
                                   "id",
                                   "title"
-                                ],
-                                "additionalProperties": false
+                                ]
                               },
                               {
                                 "type": "object",
@@ -625,8 +616,7 @@
                                 "required": [
                                   "kind",
                                   "id"
-                                ],
-                                "additionalProperties": false
+                                ]
                               }
                             ]
                           }
@@ -636,8 +626,7 @@
                         "kind",
                         "value",
                         "sources"
-                      ],
-                      "additionalProperties": false
+                      ]
                     }
                   ]
                 }
@@ -646,8 +635,7 @@
             "required": [
               "outgoing",
               "unresolvedRefs"
-            ],
-            "additionalProperties": false
+            ]
           }
         },
         "required": [
@@ -673,8 +661,7 @@
           "createdAt",
           "updatedAt",
           "linkSync"
-        ],
-        "additionalProperties": false
+        ]
       }
     }
   }

@@ -34,6 +34,7 @@ import {
   toListRowResponse,
   withoutLinkSync,
 } from '#routes/tasks/testing'
+import { createTaskResponseSchema } from '#schemas/task-response'
 import {
   assertDefined,
   captureDbQueries,
@@ -114,6 +115,26 @@ function normalizeTask<
     number: -1,
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
+  }
+}
+
+function normalizeTaskResponsePair<
+  Raw extends {
+    id: string
+    number: number
+    createdAt: string
+    updatedAt: string
+  },
+  Parsed extends {
+    id: string
+    number: number
+    createdAt: string
+    updatedAt: string
+  },
+>(raw: Raw, parsed: Parsed) {
+  return {
+    raw: normalizeTask(raw),
+    parsed: normalizeTask(parsed),
   }
 }
 
@@ -653,11 +674,36 @@ describe('tasks CRUD API', () => {
       })
 
       expect(res.status).toBe(201)
-      const body = await jsonBody<TaskResponse>(res)
-      expect(body.title).toBe('Buy groceries')
-      expect(body.status).toBe('todo')
-      expect(body.context).toBe('personal')
-      expect(body.id).toBeDefined()
+      const rawBody = await jsonBody<TaskResponse>(res)
+      const body = createTaskResponseSchema.parse(rawBody)
+      const normalizedExpectedResponse = {
+        id: 'ID',
+        number: -1,
+        title: 'Buy groceries',
+        description: null,
+        status: 'todo',
+        statusReason: null,
+        context: 'personal',
+        commitment: 'inbox',
+        labels: [],
+        startDate: null,
+        dueDate: null,
+        remindAt: null,
+        parentId: null,
+        projectId: null,
+        recurrenceRuleId: null,
+        recurrenceRule: null,
+        templateId: null,
+        occurrenceDate: null,
+        githubLinks: [],
+        createdAt: 'TIMESTAMP',
+        updatedAt: 'TIMESTAMP',
+        linkSync: { outgoing: [], unresolvedRefs: [] },
+      }
+      expect(normalizeTaskResponsePair(rawBody, body)).toEqual({
+        raw: normalizedExpectedResponse,
+        parsed: normalizedExpectedResponse,
+      })
     })
 
     it('creates task and GitHub blockers from mixed ids and URLs', async () => {

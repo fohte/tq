@@ -10,6 +10,7 @@ const createTaskRequestSchema = z.toJSONSchema(createTaskSchema, {
 
 const createTaskResponseJsonSchema = z.toJSONSchema(createTaskResponseSchema, {
   target: 'openapi-3.0',
+  io: 'input',
 })
 
 export const openApiDocument = {

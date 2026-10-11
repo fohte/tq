@@ -29,6 +29,7 @@ import {
   taskToResponse,
 } from '#routes/tasks/shared'
 import { createTaskSchema, updateTaskSchema } from '#schemas/task'
+import type { CreateTaskResponse } from '#schemas/task-response'
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
 import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
 import {
@@ -196,13 +197,15 @@ export const tasksCrudApp = new Hono()
       ]),
     )
 
-    return c.json(
-      {
-        ...taskToResponse(task, createdRule, [], labelNames),
-        linkSync,
-      },
-      201,
-    )
+    const body = {
+      ...taskToResponse(task, createdRule, [], labelNames),
+      linkSync,
+    }
+    // Keep the published schema and the handler response shape in sync.
+    const schemaTypedBody: CreateTaskResponse = body
+    const responseBody: typeof body = schemaTypedBody
+
+    return c.json(responseBody, 201)
   })
   .route('/', tasksListApp)
   .patch(

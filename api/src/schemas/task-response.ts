@@ -11,9 +11,9 @@ import {
 const recurrenceRuleResponseSchema = z.object({
   id: z.uuid(),
   type: z.enum(['daily', 'weekly', 'monthly', 'custom']),
-  interval: z.number().int(),
-  daysOfWeek: z.array(z.number().int()).nullable(),
-  dayOfMonth: z.number().int().nullable(),
+  interval: z.number().int().min(1),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).nullable(),
+  dayOfMonth: z.number().int().min(1).max(31).nullable(),
 })
 
 const githubLinkResponseSchema = z.object({
@@ -85,3 +85,5 @@ export const createTaskResponseSchema = z.object({
   updatedAt: z.iso.datetime(),
   linkSync: linkSyncResponseSchema,
 })
+
+export type CreateTaskResponse = z.output<typeof createTaskResponseSchema>
