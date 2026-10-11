@@ -612,6 +612,21 @@ describe('schedules API', () => {
       expect(res.status).toBe(400)
     })
 
+    it('returns 400 for an impossible startDate', async () => {
+      const res = await app.request('/api/schedule/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Routine',
+          startDate: '2026-02-30',
+          startTime: '09:00',
+          endTime: '10:00',
+        }),
+      })
+
+      expect(res.status).toBe(400)
+    })
+
     it('returns 400 for invalid time format', async () => {
       const res = await app.request('/api/schedule/events', {
         method: 'POST',
