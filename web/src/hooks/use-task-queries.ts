@@ -21,6 +21,8 @@ type TaskForView<View extends TaskListView> = View extends 'full'
   : TaskRow
 
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
+type TaskWait = NonNullable<TaskDetail['waits']>[number]
+type TaskWaitSummary = NonNullable<Task['waits']>[number]
 
 type LinkedTaskSummary = TaskDetail['links']['outgoing'][number]
 export type BlockedByGithubRef = Task['blockedByGithubRefs'][number]
@@ -87,7 +89,7 @@ export interface TaskCountFilter {
 
 const TASK_LIST_PAGE_SIZE = 50
 
-export type { LinkedTaskSummary, Task, TaskDetail }
+export type { LinkedTaskSummary, Task, TaskDetail, TaskWait, TaskWaitSummary }
 
 export interface CategorizedTasks<
   TaskItem extends Task | TaskWithDescription = Task,

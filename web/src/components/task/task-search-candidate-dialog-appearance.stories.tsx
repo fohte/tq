@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fn } from 'storybook/test'
 
 import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -51,6 +52,16 @@ export const WithCandidates: Story = {
   args: {
     query: 'Deploy',
     candidates: [orphanCandidate, candidateWithParent],
+  },
+}
+
+export const WithWaitAction: Story = {
+  name: 'the dialog offers to wait for the entered text after task matches',
+  args: {
+    title: 'Add blocker',
+    query: 'Review the proposal',
+    candidates: [orphanCandidate],
+    onSelectWait: fn(),
   },
 }
 

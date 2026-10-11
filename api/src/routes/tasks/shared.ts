@@ -34,7 +34,7 @@ import {
   getDuplicateOfNumbersByTaskId,
 } from '#services/task-relations'
 import {
-  getTaskWaitSummariesByTaskId,
+  getUnresolvedTaskWaitSummariesByTaskId,
   type TaskWaitSummary,
 } from '#services/task-waits'
 
@@ -384,7 +384,7 @@ async function hydrateTaskListRowsWith<
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getOpenGithubBlockerRefsByTaskId(ids),
-    getTaskWaitSummariesByTaskId(ids),
+    getUnresolvedTaskWaitSummariesByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
   ])
