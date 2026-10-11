@@ -49,8 +49,8 @@ comments:
       comment_id: 'Edited comment, when the edit targets a comment.'
       action: 'Edit operation: create or update.'
       field: 'Updated field: title, description, or content; valid values depend on the edited record type. Null for create actions.'
-      author_kind: 'Author category: human, llm, or system.'
-      author_agent: 'Agent identifier for llm-authored edits; null for other author categories.'
+      author_kind: 'Author category: human, llm, service, or system.'
+      author_agent: 'Agent or service name for llm- or service-authored edits; null for human and system authors.'
   - table: github_sync_rule_ignored_issues
     tableComment: 'GitHub issues excluded by a synchronization rule.'
     columnComments:
@@ -209,8 +209,8 @@ comments:
       github_repo: 'Name of the linked GitHub repository.'
       github_number: 'Number of the linked GitHub issue or pull request.'
       github_kind: 'Linked GitHub item type: issue or pull_request.'
-      author_kind: 'Author category: human, llm, or system.'
-      author_agent: 'Agent identifier for llm-authored events; null for other author categories.'
+      author_kind: 'Author category: human, llm, service, or system.'
+      author_agent: 'Agent or service name for llm- or service-authored events; null for human and system authors.'
   - table: task_github_links
     tableComment: 'GitHub issues and pull requests linked to tasks.'
     columnComments:

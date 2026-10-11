@@ -4,7 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { TaskActivity } from '#components/task/task-activity'
-import { makeComment } from '#components/task/task-activity-test-fixtures'
+import {
+  makeComment,
+  makeCreatedEvent,
+  makeGithubLinkedEvent,
+  makeStatusChangedEvent,
+} from '#components/task/task-activity-test-fixtures'
+import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import { useTaskActivity } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
@@ -77,51 +83,6 @@ const mockUseCreateComment = vi.mocked(useCreateComment)
 const mockUseUpdateComment = vi.mocked(useUpdateComment)
 const mockUseDeleteComment = vi.mocked(useDeleteComment)
 const mockUseTaskActivity = vi.mocked(useTaskActivity)
-
-function makeCreatedEvent(
-  overrides: Partial<Extract<ActivityItem, { type: 'created' }>> = {},
-): ActivityItem {
-  return {
-    id: 'event-created',
-    type: 'created',
-    createdAt: '2026-03-20T08:00:00.000Z',
-    author: { kind: 'human', agent: null },
-    ...overrides,
-  }
-}
-
-function makeStatusChangedEvent(
-  overrides: Partial<Extract<ActivityItem, { type: 'status_changed' }>> = {},
-): ActivityItem {
-  return {
-    id: 'event-status',
-    type: 'status_changed',
-    createdAt: '2026-03-20T09:00:00.000Z',
-    author: { kind: 'human', agent: null },
-    fromStatus: 'todo',
-    toStatus: 'in_progress',
-    toStatusReason: null,
-    ...overrides,
-  }
-}
-
-function makeGithubLinkedEvent(
-  overrides: Partial<
-    Extract<ActivityItem, { type: 'github_linked' | 'github_unlinked' }>
-  > = {},
-): ActivityItem {
-  return {
-    id: 'event-linked',
-    type: 'github_linked',
-    createdAt: '2026-03-20T09:30:00.000Z',
-    author: { kind: 'human', agent: null },
-    owner: 'fohte',
-    repo: 'tq',
-    number: 42,
-    kind: 'issue',
-    ...overrides,
-  }
-}
 
 function setupMocks({
   comments = [],
@@ -260,6 +221,24 @@ describe('TaskActivity', () => {
     expect(screen.getByText('created this task')).toBeInTheDocument()
   })
 
+  it('shows the service name for service-authored comments and events', () => {
+    const author = makeAuthorInfo({ kind: 'service', agent: 'sample-service' })
+    setupMocks({
+      comments: [makeComment({ author })],
+      events: [makeCreatedEvent({ author })],
+    })
+    renderActivity()
+
+    const labels = screen
+      .getAllByText('service: sample-service')
+      .map((element) => element.textContent)
+
+    expect(labels).toEqual([
+      'service: sample-service',
+      'service: sample-service',
+    ])
+  })
+
   it('renders a status_changed event with statuses as-is', () => {
     setupMocks({
       events: [
@@ -277,7 +256,9 @@ describe('TaskActivity', () => {
     setupMocks({ events: [makeGithubLinkedEvent()] })
     renderActivity()
 
-    expect(screen.getByText('linked fohte/tq#42')).toBeInTheDocument()
+    expect(
+      screen.getByText('linked sample-owner/sample-repo#42'),
+    ).toBeInTheDocument()
   })
 
   it('renders a github_unlinked event', () => {
@@ -286,7 +267,9 @@ describe('TaskActivity', () => {
     })
     renderActivity()
 
-    expect(screen.getByText('unlinked fohte/tq#42')).toBeInTheDocument()
+    expect(
+      screen.getByText('unlinked sample-owner/sample-repo#42'),
+    ).toBeInTheDocument()
   })
 
   it('merges comments and events into a single chronological timeline', () => {

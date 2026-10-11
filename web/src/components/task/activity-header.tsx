@@ -3,13 +3,13 @@ import { cn } from '#lib/utils'
 
 type ActivityAuthor = Comment['author']
 
-// tq is a single-user tool, so authors carry a role (human/llm/system) rather
-// than a name. Missing data (e.g. comments created before authors were
-// tracked) falls back to a neutral placeholder instead of a blank.
+// A single-user tool can identify its human author as "you". Missing data
+// (e.g. comments created before authors were tracked) gets a neutral fallback.
 export function formatWho(author: ActivityAuthor | null): string {
   if (!author) return 'someone'
   if (author.kind === 'human') return 'you'
   if (author.kind === 'system') return 'system'
+  if (author.kind === 'service') return `service: ${author.agent ?? 'unknown'}`
   return author.agent ?? 'someone'
 }
 

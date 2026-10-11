@@ -543,7 +543,7 @@ export interface TaskEventFields {
   githubRepo: string | null
   githubNumber: number | null
   githubKind: 'issue' | 'pull_request' | null
-  authorKind: 'human' | 'llm' | 'system'
+  authorKind: 'human' | 'llm' | 'service' | 'system'
   authorAgent: string | null
 }
 

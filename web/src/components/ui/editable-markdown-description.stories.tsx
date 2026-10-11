@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
-import { LlmAuthorLabel } from '#components/task/llm-author-label'
+import { AuthorLabel } from '#components/task/author-label'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 
@@ -32,8 +32,13 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const llmHeader = (
-  <LlmAuthorLabel
+  <AuthorLabel
     author={makeAuthorInfo({ kind: 'llm', agent: 'sample-agent' })}
+  />
+)
+const serviceHeader = (
+  <AuthorLabel
+    author={makeAuthorInfo({ kind: 'service', agent: 'sample-service' })}
   />
 )
 const projectHeader = (
@@ -45,6 +50,11 @@ const projectDescription =
 export const TaskWithContent: Story = {
   name: 'the task description shows the LLM author chip and a pencil button above the box',
   args: { variant: 'task', header: llmHeader },
+}
+
+export const ServiceAuthoredTask: Story = {
+  name: 'the task description shows the service author and a pencil button above the box',
+  args: { variant: 'task', header: serviceHeader },
 }
 
 export const EmptyTask: Story = {

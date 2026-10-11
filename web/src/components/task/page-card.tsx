@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-import { LlmAuthorLabel } from '#components/task/llm-author-label'
+import { AuthorLabel } from '#components/task/author-label'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import type { TaskPage } from '#hooks/use-task-pages'
@@ -126,7 +126,7 @@ export function PageCardPresentation({
           <span className="truncate font-mono text-xs font-medium text-foreground">
             {page.title}
           </span>
-          <LlmAuthorLabel author={page.author} />
+          <AuthorLabel author={page.author} compact />
         </Button>
 
         <span className="shrink-0 font-mono text-2xs text-muted-foreground-ghost">

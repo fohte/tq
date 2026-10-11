@@ -216,6 +216,29 @@ describe('tasks actions API', () => {
       ])
     })
 
+    it('records a service author from the X-Author header', async () => {
+      const task = await createTask('Task')
+
+      await setStatus(task.id, 'completed', {
+        'X-Author': 'service:sample-worker',
+      })
+
+      expect(await fetchTaskEvents(task.id)).toEqual([
+        {
+          type: 'status_changed',
+          fromStatus: 'todo',
+          toStatus: 'completed',
+          toStatusReason: 'completed',
+          githubOwner: null,
+          githubRepo: null,
+          githubNumber: null,
+          githubKind: null,
+          authorKind: 'service',
+          authorAgent: 'sample-worker',
+        },
+      ])
+    })
+
     it('records a status_changed event via POST /:id/complete', async () => {
       const task = await createTask('Task')
 

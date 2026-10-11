@@ -29,7 +29,7 @@ interface EditFields {
   commentId: string | null
   action: 'create' | 'update'
   field: 'title' | 'description' | 'content' | null
-  authorKind: 'human' | 'llm' | 'system'
+  authorKind: 'human' | 'llm' | 'service' | 'system'
   authorAgent: string | null
 }
 
@@ -140,6 +140,16 @@ describe('edit log', () => {
 
       expect(res.status).toBe(400)
     })
+
+    it('returns 400 for service: with no name', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Author': 'service:' },
+        body: JSON.stringify({ title: 'Task' }),
+      })
+
+      expect(res.status).toBe(400)
+    })
   })
 
   describe('tasks', () => {
@@ -171,6 +181,23 @@ describe('edit log', () => {
           field: null,
           authorKind: 'llm',
           authorAgent: 'claude-opus-5',
+        },
+      ])
+    })
+
+    it('records a service-authored create with the name from X-Author', async () => {
+      const task = await createTask('Task', {
+        headers: { 'X-Author': 'service:sample-worker' },
+      })
+
+      expect(await fetchEdits(task.id)).toEqual([
+        {
+          pageId: null,
+          commentId: null,
+          action: 'create',
+          field: null,
+          authorKind: 'service',
+          authorAgent: 'sample-worker',
         },
       ])
     })

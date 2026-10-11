@@ -3,7 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { TaskActivity } from '#components/task/task-activity'
-import { makeComment } from '#components/task/task-activity-test-fixtures'
+import {
+  makeComment,
+  makeCreatedEvent,
+  makeGithubLinkedEvent,
+  makeStatusChangedEvent,
+} from '#components/task/task-activity-test-fixtures'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import type { ActivityItem } from '#hooks/use-task-activity'
 import type { Comment } from '#hooks/use-task-comments'
@@ -153,6 +158,28 @@ export const LlmAuthored: Story = {
   },
 }
 
+export const ServiceAuthored: Story = {
+  name: 'the timeline shows that a service created the task and wrote a comment',
+  args: {
+    comments: [
+      makeComment({
+        id: 'comment-service',
+        content: 'Added this task from an external workflow.',
+        createdAt: new Date(Date.now() - 300_000).toISOString(),
+        updatedAt: new Date(Date.now() - 300_000).toISOString(),
+        author: makeAuthorInfo({ kind: 'service', agent: 'sample-service' }),
+      }),
+    ],
+    events: [
+      makeCreatedEvent({
+        id: 'event-service',
+        createdAt: new Date(Date.now() - 3_600_000).toISOString(),
+        author: makeAuthorInfo({ kind: 'service', agent: 'sample-service' }),
+      }),
+    ],
+  },
+}
+
 export const MixedTimeline: Story = {
   name: 'the timeline combines comments with task events',
   args: {
@@ -173,31 +200,28 @@ export const MixedTimeline: Story = {
       }),
     ],
     events: [
-      {
+      makeCreatedEvent({
         id: 'event-1',
-        type: 'created',
         createdAt: new Date(Date.now() - 3_600_000 * 6).toISOString(),
         author: makeAuthorInfo(),
-      },
-      {
+      }),
+      makeGithubLinkedEvent({
         id: 'event-2',
-        type: 'github_linked',
         createdAt: new Date(Date.now() - 3_600_000 * 5).toISOString(),
         author: makeAuthorInfo(),
-        owner: 'fohte',
-        repo: 'tq',
+        owner: 'sample-owner',
+        repo: 'sample-repo',
         number: 212,
         kind: 'issue',
-      },
-      {
+      }),
+      makeStatusChangedEvent({
         id: 'event-3',
-        type: 'status_changed',
         createdAt: new Date(Date.now() - 3_600_000 * 2).toISOString(),
         author: makeAuthorInfo(),
         fromStatus: 'todo',
         toStatus: 'in_progress',
         toStatusReason: null,
-      },
+      }),
     ],
   },
 }

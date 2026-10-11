@@ -5,9 +5,9 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { AuthorLabel } from '#components/task/author-label'
 import { DeleteTaskDialog } from '#components/task/delete-task-dialog'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
-import { LlmAuthorLabel } from '#components/task/llm-author-label'
 import { ProjectChip } from '#components/task/project-chip'
 import { StatusIcon } from '#components/task/status-icon'
 import { TaskActivity } from '#components/task/task-activity'
@@ -334,7 +334,7 @@ function EditableTitle({
         </Button>
       )}
       <span className="mt-2 shrink-0">
-        <LlmAuthorLabel author={author} />
+        <AuthorLabel author={author} />
       </span>
     </>
   )
@@ -361,7 +361,7 @@ function TaskDescription({
     <EditableMarkdownDescription
       variant="task"
       defaultValue={defaultValue}
-      header={<LlmAuthorLabel author={author} />}
+      header={<AuthorLabel author={author} />}
       placeholder="Add description..."
       editButtonLabel="Edit task description"
       onChange={onChange}

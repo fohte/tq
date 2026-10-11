@@ -14,7 +14,10 @@ interface CommentResponse {
   content: string
   createdAt: string
   updatedAt: string
-  author: { kind: 'human' | 'llm' | 'system'; agent: string | null } | null
+  author: {
+    kind: 'human' | 'llm' | 'service' | 'system'
+    agent: string | null
+  } | null
   linkSync?: unknown
 }
 

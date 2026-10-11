@@ -108,6 +108,34 @@ describe('change events', () => {
     })
   })
 
+  it('keeps service author metadata and does not treat it as a screen origin', async () => {
+    expect(
+      await request('/api/tasks/task-id', {
+        method: 'PATCH',
+        headers: { 'X-Author': 'service:sample-worker' },
+      }),
+    ).toEqual({
+      status: 200,
+      body: { author: { kind: 'service', agent: 'sample-worker' } },
+      events: [
+        { resource: 'task', id: taskId, origin: null, taskIds: [taskId] },
+      ],
+    })
+  })
+
+  it('does not accept system author headers from clients', async () => {
+    expect(
+      await request('/api/tasks/task-id', {
+        method: 'PATCH',
+        headers: { 'X-Author': 'system' },
+      }),
+    ).toEqual({
+      status: 400,
+      body: { error: 'Invalid X-Author header' },
+      events: [],
+    })
+  })
+
   it('defaults task resource events to the resolved task ID', async () => {
     expect(
       await request('/api/tasks/default-task-ids/task-id', { method: 'PATCH' }),
