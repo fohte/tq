@@ -14,6 +14,9 @@ export const scheduleTimeSchema = z
 
 export const createScheduleSchema = z.object({
   title: z.string().min(1),
+  startDate: z.iso
+    .date()
+    .describe('First local date to include, as YYYY-MM-DD.'),
   startTime: scheduleTimeSchema,
   endTime: scheduleTimeSchema,
   recurrence: recurrenceRuleSchema.optional(),

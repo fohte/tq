@@ -236,16 +236,17 @@ describe('schedule time blocks create', () => {
 })
 
 describe('schedule events create', () => {
-  it('shows the schedule interval behavior in CLI help', async () => {
+  it('describes schedule dates and recurrence in CLI help', async () => {
     const expectedHelp = [
-      'Usage: tq schedule events create [options] <title> <startTime> <endTime>',
+      'Usage: tq schedule events create [options] <title> <startDate> <startTime> <endTime>',
       '',
-      'Create a schedule event. startTime and endTime are local HH:MM times; if endTime',
-      'is earlier than startTime, it ends the following day. Without recurrence, the',
-      'event appears every day. For recurrence, daily and custom rules appear every',
-      'day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly',
-      'rules use dayOfMonth. interval is stored but does not affect schedule event',
-      'dates yet.',
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD).',
+      'startTime and endTime are local HH:MM times; if endTime is earlier than',
+      'startTime, it ends the following day. Without recurrence, the event appears only',
+      'on startDate. For recurrence, daily and custom rules appear every day starting',
+      'on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and',
+      'monthly rules use dayOfMonth. interval is stored but does not affect schedule',
+      'event dates yet.',
       '',
       'Options:',
       '  --recurrence-type <type>          Recurrence rule type',
@@ -273,7 +274,15 @@ describe('schedule events create', () => {
 
     expect(
       await runScheduleCli(
-        ['schedule', 'events', 'create', 'Draft agenda', '08:45', '09:15'],
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '2026-12-18',
+          '08:45',
+          '09:15',
+        ],
         new Response(JSON.stringify(responseBody), { status: 201 }),
       ),
     ).toEqual({
@@ -285,6 +294,7 @@ describe('schedule events create', () => {
           query: {},
           body: {
             title: 'Draft agenda',
+            startDate: '2026-12-18',
             startTime: '08:45',
             endTime: '09:15',
           },
@@ -314,6 +324,7 @@ describe('schedule events create', () => {
           'events',
           'create',
           'Draft agenda',
+          '2026-12-18',
           '08:45',
           '09:15',
           '--recurrence-type',
@@ -334,6 +345,7 @@ describe('schedule events create', () => {
           query: {},
           body: {
             title: 'Draft agenda',
+            startDate: '2026-12-18',
             startTime: '08:45',
             endTime: '09:15',
             recurrence: {
@@ -357,6 +369,7 @@ describe('schedule events create', () => {
           'events',
           'create',
           'Draft agenda',
+          '2026-12-18',
           '08:45',
           '09:15',
           '--recurrence-type',

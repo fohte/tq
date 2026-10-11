@@ -5,7 +5,7 @@ import {
   DialogPopup,
   DialogPortal,
 } from '@fohte/ui/dialog'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
 import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
@@ -19,6 +19,7 @@ import {
   useDeleteSchedule,
   useUpdateSchedule,
 } from '#hooks/use-schedules'
+import { formatLocalDate } from '#lib/date-range'
 import { cn } from '#lib/utils'
 
 interface CreateScheduleModalProps {
@@ -26,6 +27,8 @@ interface CreateScheduleModalProps {
   onOpenChange: (open: boolean) => void
   /** Presence switches the modal into edit mode. */
   schedule?: Schedule | undefined
+  /** Date selected in the calendar when creating a schedule. */
+  defaultStartDate?: string
 }
 
 export type ContextValue = 'work' | 'personal'
@@ -106,6 +109,8 @@ export interface SchedulePanelProps {
   setTitle: (value: string) => void
   startTime: string
   setStartTime: (value: string) => void
+  startDate: string
+  setStartDate: (value: string) => void
   endTime: string
   setEndTime: (value: string) => void
   recurrenceType: RecurrenceType | ''
@@ -144,8 +149,12 @@ export function CreateScheduleModal({
   open,
   onOpenChange,
   schedule,
+  defaultStartDate = formatLocalDate(new Date()),
 }: CreateScheduleModalProps) {
   const [title, setTitle] = useState(schedule?.title ?? '')
+  const [startDate, setStartDate] = useState(
+    schedule?.startDate ?? defaultStartDate,
+  )
   const [startTime, setStartTime] = useState(
     schedule ? scheduleTimeOfDay(schedule.start) : '',
   )
@@ -167,6 +176,14 @@ export function CreateScheduleModal({
     scheduleContext(schedule),
   )
   const [color, setColor] = useState(schedule?.color ?? '')
+  const wasOpenRef = useRef(open)
+
+  useEffect(() => {
+    const didOpen = open && !wasOpenRef.current
+    wasOpenRef.current = open
+    if (didOpen && !schedule) setStartDate(defaultStartDate)
+  }, [defaultStartDate, open, schedule])
+
   const createSchedule = useCreateSchedule()
   const updateSchedule = useUpdateSchedule()
   const deleteSchedule = useDeleteSchedule()
@@ -177,6 +194,7 @@ export function CreateScheduleModal({
 
   const resetForm = useCallback(() => {
     setTitle(schedule?.title ?? '')
+    setStartDate(schedule?.startDate ?? defaultStartDate)
     setStartTime(schedule ? scheduleTimeOfDay(schedule.start) : '')
     setEndTime(schedule ? scheduleTimeOfDay(schedule.end) : '')
     setRecurrenceType(schedule?.recurrence?.type ?? '')
@@ -188,7 +206,7 @@ export function CreateScheduleModal({
     )
     setContext(scheduleContext(schedule))
     setColor(schedule?.color ?? '')
-  }, [schedule])
+  }, [defaultStartDate, schedule])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -201,7 +219,8 @@ export function CreateScheduleModal({
   )
 
   const handleSubmit = () => {
-    if (!title.trim() || !startTime || !endTime || isPending) return
+    if (!title.trim() || !startDate || !startTime || !endTime || isPending)
+      return
 
     const recurrence = recurrenceType
       ? {
@@ -219,6 +238,7 @@ export function CreateScheduleModal({
     if (schedule) {
       const input: UpdateScheduleInput = {
         title: title.trim(),
+        startDate,
         startTime,
         endTime,
         recurrence,
@@ -238,6 +258,7 @@ export function CreateScheduleModal({
 
     const input: CreateScheduleInput = {
       title: title.trim(),
+      startDate,
       startTime,
       endTime,
       ...(recurrence ? { recurrence } : {}),
@@ -272,13 +293,15 @@ export function CreateScheduleModal({
     setDaysOfWeek((prev) => toggleWeekday(prev, day))
   }
 
-  const canSubmit = Boolean(title.trim() && startTime && endTime)
+  const canSubmit = Boolean(title.trim() && startDate && startTime && endTime)
 
   const panelProps: SchedulePanelProps = {
     schedule,
     handleOpenChange,
     title,
     setTitle,
+    startDate,
+    setStartDate,
     startTime,
     setStartTime,
     endTime,

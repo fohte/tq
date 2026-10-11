@@ -6,6 +6,7 @@ function makeSchedule(
   overrides: Partial<{
     id: string
     title: string
+    startDate: string
     startTime: string
     endTime: string
     recurrenceRuleId: string | null
@@ -19,6 +20,7 @@ function makeSchedule(
   return {
     id: 'sched-1',
     title: 'Test Schedule',
+    startDate: '2026-03-22',
     startTime: '09:00',
     endTime: '10:00',
     recurrenceRuleId: null,
@@ -54,52 +56,70 @@ function makeRule(
   }
 }
 
+function expandOnDates(
+  schedule: ReturnType<typeof makeSchedule>,
+  rule: ReturnType<typeof makeRule> | null,
+  ...dates: string[]
+) {
+  return dates.map((date) => expandScheduleForDate(schedule, rule, date))
+}
+
 describe('expandScheduleForDate', () => {
   describe('same-day schedule', () => {
-    it('returns a single block for a normal schedule', () => {
-      const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
-      const blocks = expandScheduleForDate(schedule, null, '2026-03-22')
-
-      expect(blocks).toHaveLength(1)
-      expect(blocks[0]).toEqual({
-        scheduleId: 'sched-1',
-        title: 'Test Schedule',
-        start: '2026-03-22T09:00:00',
-        end: '2026-03-22T10:00:00',
-        context: 'personal',
-        color: null,
+    it('returns a block only on the start date when it has no recurrence', () => {
+      const schedule = makeSchedule({
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
       })
+      expect(expandOnDates(schedule, null, '2026-03-22', '2026-03-23')).toEqual(
+        [
+          [
+            {
+              scheduleId: 'sched-1',
+              title: 'Test Schedule',
+              startDate: '2026-03-22',
+              start: '2026-03-22T09:00:00',
+              end: '2026-03-22T10:00:00',
+              context: 'personal',
+              color: null,
+            },
+          ],
+          [],
+        ],
+      )
     })
   })
 
   describe('cross-midnight schedule', () => {
     it('returns start portion on the start date', () => {
       const schedule = makeSchedule({ startTime: '23:00', endTime: '07:00' })
-      const blocks = expandScheduleForDate(schedule, null, '2026-03-22')
-
-      // Should have start portion (23:00->midnight) and end portion (midnight->07:00)
-      // because the previous day (03-21) with no rule also matches
-      expect(blocks).toHaveLength(2)
-
-      const startBlock = blocks.find((b) => b.start.includes('T23:00'))
-      expect(startBlock).toEqual({
-        scheduleId: 'sched-1',
-        title: 'Test Schedule',
-        start: '2026-03-22T23:00:00',
-        end: '2026-03-23T00:00:00',
-        context: 'personal',
-        color: null,
-      })
-
-      const endBlock = blocks.find((b) => b.start.includes('T00:00'))
-      expect(endBlock).toEqual({
-        scheduleId: 'sched-1',
-        title: 'Test Schedule',
-        start: '2026-03-22T00:00:00',
-        end: '2026-03-22T07:00:00',
-        context: 'personal',
-        color: null,
-      })
+      expect(expandOnDates(schedule, null, '2026-03-22', '2026-03-23')).toEqual(
+        [
+          [
+            {
+              scheduleId: 'sched-1',
+              title: 'Test Schedule',
+              startDate: '2026-03-22',
+              start: '2026-03-22T23:00:00',
+              end: '2026-03-23T00:00:00',
+              context: 'personal',
+              color: null,
+            },
+          ],
+          [
+            {
+              scheduleId: 'sched-1',
+              title: 'Test Schedule',
+              startDate: '2026-03-22',
+              start: '2026-03-23T00:00:00',
+              end: '2026-03-23T07:00:00',
+              context: 'personal',
+              color: null,
+            },
+          ],
+        ],
+      )
     })
 
     it('uses the previous occurrence override for the next date continuation', () => {
@@ -117,14 +137,7 @@ describe('expandScheduleForDate', () => {
         {
           scheduleId: 'sched-1',
           title: 'Test Schedule',
-          start: '2026-03-23T23:00:00',
-          end: '2026-03-24T00:00:00',
-          context: 'personal',
-          color: null,
-        },
-        {
-          scheduleId: 'sched-1',
-          title: 'Test Schedule',
+          startDate: '2026-03-22',
           start: '2026-03-23T00:00:00',
           end: '2026-03-23T08:00:00',
           context: 'personal',
@@ -141,16 +154,7 @@ describe('expandScheduleForDate', () => {
 
       expect(
         expandScheduleForDate(schedule, null, '2026-03-23', overrides),
-      ).toEqual([
-        {
-          scheduleId: 'sched-1',
-          title: 'Test Schedule',
-          start: '2026-03-23T23:00:00',
-          end: '2026-03-24T00:00:00',
-          context: 'personal',
-          color: null,
-        },
-      ])
+      ).toEqual([])
     })
   })
 
@@ -170,6 +174,7 @@ describe('expandScheduleForDate', () => {
         {
           scheduleId: 'sched-1',
           title: 'Test Schedule',
+          startDate: '2026-03-22',
           start: '2026-03-22T08:30:00',
           end: '2026-03-22T09:45:00',
           context: 'personal',
@@ -252,6 +257,7 @@ describe('expandScheduleForDate', () => {
   describe('monthly recurrence', () => {
     it('returns blocks only on the matching day of month', () => {
       const schedule = makeSchedule({
+        startDate: '2026-03-01',
         startTime: '10:00',
         endTime: '11:00',
         recurrenceRuleId: 'rule-1',

@@ -27,6 +27,7 @@ const meta = {
   args: {
     open: true,
     onOpenChange: fn(),
+    defaultStartDate: '2026-01-01',
   },
 } satisfies Meta<typeof CreateScheduleModal>
 
@@ -34,11 +35,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the schedule form is ready to create a recurring time block',
+  name: 'the form includes a start date for a single schedule',
 }
 
 export const Edit: Story = {
-  name: 'the schedule form is populated with an existing time block',
+  name: 'the form shows the start date and details of an existing schedule',
   args: {
     schedule: makeSchedule(),
   },

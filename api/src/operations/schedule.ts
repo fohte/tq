@@ -208,8 +208,8 @@ export const scheduleOperations = [
   defineOperation(createScheduleSchema, {
     path: ['schedule', 'events', 'create'],
     description:
-      'Create a schedule event. startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears every day. For recurrence, daily and custom rules appear every day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
-    positionalArgs: ['title', 'startTime', 'endTime'],
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+    positionalArgs: ['title', 'startDate', 'startTime', 'endTime'],
     kind: 'write',
     routes: ['POST /api/schedule/events'],
     cli: {

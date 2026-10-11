@@ -101,14 +101,14 @@ describe('schedule operation tools', () => {
     ])
   })
 
-  it('describes local schedule times and recurrence behavior', async () => {
+  it('describes the required start date and recurrence behavior', async () => {
     const result = await client.listTools()
 
     expect(
       result.tools.find((tool) => tool.name === 'schedule_events_create')
         ?.description,
     ).toBe(
-      'Create a schedule event. startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears every day. For recurrence, daily and custom rules appear every day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
     )
   })
 
@@ -281,6 +281,7 @@ describe('schedule operation tools', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: 'Daily reset',
+        startDate: '2026-12-18',
         startTime: '08:45',
         endTime: '09:15',
         recurrence: { type: 'daily', interval: 1 },
@@ -303,6 +304,7 @@ describe('schedule operation tools', () => {
       {
         scheduleId: created.id,
         title: 'Daily reset',
+        startDate: '2026-12-18',
         start: '2026-12-18T08:45:00',
         end: '2026-12-18T09:15:00',
         context: 'personal',
@@ -321,6 +323,7 @@ describe('schedule operation tools', () => {
   it('creates a schedule event and returns the API response', async () => {
     const result = await callMcpTool(client, 'schedule_events_create', {
       title: 'Draft agenda',
+      startDate: '2026-12-18',
       startTime: '08:45',
       endTime: '09:15',
       recurrence: {
@@ -336,6 +339,7 @@ describe('schedule operation tools', () => {
       normalizeDynamicValues(
         makeScheduleEvent({
           title: 'Draft agenda',
+          startDate: '2026-12-18',
           recurrence: {
             id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
             type: 'weekly',
@@ -353,6 +357,7 @@ describe('schedule operation tools', () => {
   it('rejects invalid schedule event times', async () => {
     const result = await callMcpTool(client, 'schedule_events_create', {
       title: 'Draft agenda',
+      startDate: '2026-12-18',
       startTime: '8:45',
       endTime: '09:15',
     })
@@ -365,22 +370,39 @@ describe('schedule operation tools', () => {
     )
   })
 
-  it('lists a schedule event created through MCP', async () => {
+  it('requires a start date when creating schedule events', async () => {
+    const result = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Draft agenda',
+      startTime: '08:45',
+      endTime: '09:15',
+    })
+
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'schedule_events_create',
+        'startDate: Invalid input: expected string, received undefined',
+      ),
+    )
+  })
+
+  it('lists a one-off schedule event only on its start date', async () => {
     await callMcpTool(client, 'schedule_events_create', {
-      title: 'Daily focus',
+      title: 'One-off focus',
+      startDate: '2026-12-18',
       startTime: '08:45',
       endTime: '09:15',
     })
 
     const result = await callMcpTool(client, 'schedule_events_list', {
-      startDate: '2026-12-18',
-      endDate: '2026-12-18',
+      startDate: '2026-12-17',
+      endDate: '2026-12-19',
     })
 
     expect(normalizeDynamicValues(parseToolJson(result))).toEqual([
       {
         scheduleId: '<uuid>',
-        title: 'Daily focus',
+        title: 'One-off focus',
+        startDate: '2026-12-18',
         start: '2026-12-18T08:45:00',
         end: '2026-12-18T09:15:00',
         context: 'personal',

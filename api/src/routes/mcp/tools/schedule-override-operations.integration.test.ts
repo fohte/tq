@@ -28,6 +28,7 @@ describe('schedule override operation tools', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: 'Routine',
+        startDate: '2026-03-22',
         startTime: '09:00',
         endTime: '10:00',
       }),
@@ -55,6 +56,7 @@ describe('schedule override operation tools', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: 'Routine',
+        startDate: '2026-03-22',
         startTime: '09:00',
         endTime: '10:00',
       }),
@@ -85,6 +87,7 @@ describe('schedule override operation tools', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: 'Routine',
+        startDate: '2026-03-22',
         startTime: '09:00',
         endTime: '10:00',
       }),

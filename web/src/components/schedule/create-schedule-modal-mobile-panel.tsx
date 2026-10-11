@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@fohte/ui/select'
-import { Clock, Layers, Palette, Repeat, X } from 'lucide-react'
+import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
 import type { SchedulePanelProps } from '#components/schedule/create-schedule-modal'
@@ -32,6 +32,8 @@ export function ScheduleModalMobilePanel({
   handleOpenChange,
   title,
   setTitle,
+  startDate,
+  setStartDate,
   startTime,
   setStartTime,
   endTime,
@@ -87,6 +89,24 @@ export function ScheduleModalMobilePanel({
 
           {/* Chip row */}
           <div className="flex flex-wrap gap-2">
+            <ExpandableFieldChip
+              icon={<CalendarDays className="size-3.5" />}
+              label={startDate || 'Date'}
+              active={!!startDate}
+              expanded={() => (
+                <Input
+                  type="date"
+                  variant="ghost"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                  }}
+                  autoFocus
+                  aria-label="Start date"
+                  className="w-36"
+                />
+              )}
+            />
             <ExpandableFieldChip
               icon={<Clock className="size-3.5" />}
               label={startTime || 'Start'}
