@@ -1,4 +1,7 @@
-import { makeTimeBlock } from 'api/routes/schedule-test-fixtures'
+import {
+  makeScheduleEvent,
+  makeTimeBlock,
+} from 'api/routes/schedule-test-fixtures'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
@@ -27,6 +30,17 @@ async function runScheduleCli(args: string[], response: Response) {
     stderr: stderr.mock.calls,
     stdout: stdout.mock.calls,
   }
+}
+
+async function runScheduleEventsCreateHelp() {
+  const stdout = spyStdout()
+  const exitCode = await runCli(
+    ['schedule', 'events', 'create', '--help'],
+    fetch,
+    fakeStdin(true),
+  )
+
+  return { exitCode, stdout: stdout.mock.calls }
 }
 
 afterEach(() => {
@@ -216,6 +230,144 @@ describe('schedule time blocks create', () => {
       exitCode: 1,
       requests: [],
       stderr: [['Error: Use only one of --auto-scheduled or --manual\n']],
+      stdout: [],
+    })
+  })
+})
+
+describe('schedule events create', () => {
+  it('shows the schedule interval behavior in CLI help', async () => {
+    const expectedHelp = [
+      'Usage: tq schedule events create [options] <title> <startTime> <endTime>',
+      '',
+      'Create a schedule event. startTime and endTime are local HH:MM times; if endTime',
+      'is earlier than startTime, it ends the following day. Without recurrence, the',
+      'event appears every day. For recurrence, daily and custom rules appear every',
+      'day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly',
+      'rules use dayOfMonth. interval is stored but does not affect schedule event',
+      'dates yet.',
+      '',
+      'Options:',
+      '  --recurrence-type <type>          Recurrence rule type',
+      '                                    (daily/weekly/monthly/custom); requires',
+      '                                    --recurrence-interval',
+      '  --recurrence-interval <n>         Recurrence interval (stored but currently',
+      '                                    ignored when expanding schedule event dates)',
+      '  --recurrence-days-of-week <days>  Comma-separated days of week for a weekly',
+      '                                    rule (0=Sunday..6=Saturday)',
+      '  --recurrence-day-of-month <day>   Day of month (1-31) for a monthly rule',
+      '  --context <value>                 Context (choices: "work", "personal")',
+      '  --color <value>                   Color',
+      '  -h, --help                        display help for command',
+      '',
+    ].join('\n')
+
+    expect(await runScheduleEventsCreateHelp()).toEqual({
+      exitCode: 0,
+      stdout: [[expectedHelp]],
+    })
+  })
+
+  it('creates an event without recurrence flags', async () => {
+    const responseBody = makeScheduleEvent({ title: 'Draft agenda' })
+
+    expect(
+      await runScheduleCli(
+        ['schedule', 'events', 'create', 'Draft agenda', '08:45', '09:15'],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/events',
+          query: {},
+          body: {
+            title: 'Draft agenda',
+            startTime: '08:45',
+            endTime: '09:15',
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
+  it('creates an event with recurrence flags', async () => {
+    const responseBody = makeScheduleEvent({
+      title: 'Draft agenda',
+      recurrence: {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [1, 3, 5],
+        dayOfMonth: null,
+      },
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '08:45',
+          '09:15',
+          '--recurrence-type',
+          'weekly',
+          '--recurrence-interval',
+          '1',
+          '--recurrence-days-of-week',
+          '1,3,5',
+        ],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/events',
+          query: {},
+          body: {
+            title: 'Draft agenda',
+            startTime: '08:45',
+            endTime: '09:15',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1, 3, 5],
+            },
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects an incomplete recurrence rule before making a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '08:45',
+          '09:15',
+          '--recurrence-type',
+          'weekly',
+        ],
+        new Response('{}', { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [['Error: Invalid input: expected number, received NaN\n']],
       stdout: [],
     })
   })

@@ -8,7 +8,10 @@ import {
   normalizeDynamicValues,
   parseToolJson,
 } from '#routes/mcp/testing'
-import { makeTimeBlock } from '#routes/schedule-test-fixtures'
+import {
+  makeScheduleEvent,
+  makeTimeBlock,
+} from '#routes/schedule-test-fixtures'
 import { createTask } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -64,6 +67,10 @@ describe('schedule operation tools', () => {
         .sort((left, right) => left.name.localeCompare(right.name)),
     ).toEqual([
       {
+        name: 'schedule_events_create',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
         name: 'schedule_events_list',
         annotations: { readOnlyHint: true },
       },
@@ -92,6 +99,17 @@ describe('schedule operation tools', () => {
         annotations: { readOnlyHint: false, destructiveHint: false },
       },
     ])
+  })
+
+  it('describes local schedule times and recurrence behavior', async () => {
+    const result = await client.listTools()
+
+    expect(
+      result.tools.find((tool) => tool.name === 'schedule_events_create')
+        ?.description,
+    ).toBe(
+      'Create a schedule event. startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears every day. For recurrence, daily and custom rules appear every day, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+    )
   })
 
   it('lists blocks using the supplied local date range and timezone offset', async () => {
@@ -296,6 +314,78 @@ describe('schedule operation tools', () => {
           daysOfWeek: null,
           dayOfMonth: null,
         },
+      },
+    ])
+  })
+
+  it('creates a schedule event and returns the API response', async () => {
+    const result = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Draft agenda',
+      startTime: '08:45',
+      endTime: '09:15',
+      recurrence: {
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [1, 3, 5],
+      },
+      context: 'work',
+      color: '#b9c0ca',
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual(
+      normalizeDynamicValues(
+        makeScheduleEvent({
+          title: 'Draft agenda',
+          recurrence: {
+            id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            type: 'weekly',
+            interval: 1,
+            daysOfWeek: [1, 3, 5],
+            dayOfMonth: null,
+          },
+          context: 'work',
+          color: '#b9c0ca',
+        }),
+      ),
+    )
+  })
+
+  it('rejects invalid schedule event times', async () => {
+    const result = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Draft agenda',
+      startTime: '8:45',
+      endTime: '09:15',
+    })
+
+    expect(result).toEqual(
+      expectedToolValidationError(
+        'schedule_events_create',
+        'startTime: Invalid string: must match pattern /^\\d{2}:\\d{2}$/',
+      ),
+    )
+  })
+
+  it('lists a schedule event created through MCP', async () => {
+    await callMcpTool(client, 'schedule_events_create', {
+      title: 'Daily focus',
+      startTime: '08:45',
+      endTime: '09:15',
+    })
+
+    const result = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2026-12-18',
+      endDate: '2026-12-18',
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(result))).toEqual([
+      {
+        scheduleId: '<uuid>',
+        title: 'Daily focus',
+        start: '2026-12-18T08:45:00',
+        end: '2026-12-18T09:15:00',
+        context: 'personal',
+        color: null,
+        recurrence: null,
       },
     ])
   })

@@ -1,9 +1,25 @@
 import { z } from 'zod'
 
+import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+
 export const MAX_SCHEDULE_DATE_RANGE_DAYS = 42
 const SCHEDULE_DATE_RANGE_ERROR_MESSAGE = `Date range must be chronological and no longer than ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} days`
 
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000
+
+export const scheduleTimeSchema = z
+  .string()
+  .regex(/^\d{2}:\d{2}$/)
+  .describe('Local time in HH:MM format.')
+
+export const createScheduleSchema = z.object({
+  title: z.string().min(1),
+  startTime: scheduleTimeSchema,
+  endTime: scheduleTimeSchema,
+  recurrence: recurrenceRuleSchema.optional(),
+  context: z.enum(['work', 'personal']).optional(),
+  color: z.string().optional(),
+})
 
 export const scheduleDateRangeInputSchema = z.object({
   startDate: z.iso
