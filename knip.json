@@ -30,6 +30,7 @@
       ]
     },
     "api": {
+      "entry": ["src/dump-openapi.ts!"],
       "project": [
         "src/**!",
         "!src/**/*-test-fixtures.ts!",
