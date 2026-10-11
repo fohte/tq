@@ -746,6 +746,305 @@ describe('task waits API', () => {
     })
   })
 
+  it('includes only due follow-ups among blocked tasks in queue candidates', async () => {
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    const today = dateAtOffset(now, tzOffset)
+    const regularCandidate = await createTask('Regular candidate', {
+      dueDate: today,
+    })
+    const blocker = await createTask('Incomplete blocker')
+    const blockedCandidate = await createTask('Blocked candidate', {
+      dueDate: today,
+    })
+    await app.request(`/api/tasks/${blockedCandidate.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedBy: [blocker.id] }),
+    })
+    const dueFollowUp = await createTask('Due follow-up candidate')
+    const overdueFollowUp = await createTask('Overdue follow-up candidate')
+    const futureFollowUp = await createTask('Future follow-up')
+    const resolvedFollowUp = await createTask('Resolved follow-up')
+    await addWait(dueFollowUp.id, 'Check in', today)
+    await addWait(
+      overdueFollowUp.id,
+      'Check in again',
+      addDaysAtOffset(now, tzOffset, -1),
+    )
+    await addWait(
+      futureFollowUp.id,
+      'Check in later',
+      addDaysAtOffset(now, tzOffset, 1),
+    )
+    const resolvedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(
+        resolvedFollowUp.id,
+        'Already answered',
+        addDaysAtOffset(now, tzOffset, -1),
+      ),
+    )
+    await app.request(
+      `/api/tasks/${resolvedFollowUp.id}/waits/${resolvedWait.id}/resolve`,
+      { method: 'POST' },
+    )
+
+    const response = await app.request(
+      `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map((task) => task.id),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [overdueFollowUp.id, dueFollowUp.id, regularCandidate.id],
+    })
+  })
+
+  it('returns candidate reasons and reason priority from the API', async () => {
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    const today = dateAtOffset(now, tzOffset)
+    await createTask('Overdue task', {
+      dueDate: addDaysAtOffset(now, tzOffset, -2),
+      commitment: 'inbox',
+    })
+    const followUp = await createTask('Follow-up task', {
+      commitment: 'inbox',
+    })
+    await createTask('Due today task', {
+      dueDate: today,
+      commitment: 'inbox',
+    })
+    await createTask('Due later task', {
+      dueDate: addDaysAtOffset(now, tzOffset, 2),
+      commitment: 'active',
+    })
+    await createTask('Starting task', {
+      startDate: today,
+      commitment: 'inbox',
+    })
+    await createTask('Active task', {
+      commitment: 'active',
+    })
+    await addWait(followUp.id, 'Check in', today)
+
+    const response = await app.request(
+      `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map((task) => ({
+          title: task.title,
+          reason: task.candidateReason,
+        })),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [
+        { title: 'Overdue task', reason: { kind: 'overdue', days: 2 } },
+        { title: 'Follow-up task', reason: { kind: 'follow-up', days: 0 } },
+        { title: 'Due today task', reason: { kind: 'due-today' } },
+        { title: 'Due later task', reason: { kind: 'due-later', days: 2 } },
+        { title: 'Starting task', reason: { kind: 'starts', days: 0 } },
+        { title: 'Active task', reason: { kind: 'active' } },
+      ],
+    })
+  })
+
+  it('returns no candidate reason for completed tasks', async () => {
+    const task = await createTask('Completed candidate', {
+      dueDate: '2036-04-09',
+    })
+    await app.request(`/api/tasks/${task.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+
+    const response = await app.request(
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited&candidatesOn=2036-04-10',
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map(({ id, candidateReason }) => ({ id, candidateReason })),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [{ id: task.id, candidateReason: null }],
+    })
+  })
+
+  it('classifies the earliest unresolved follow-up against the requested candidate date', async () => {
+    const task = await createTask('Multiple follow-ups')
+    const resolvedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'Resolved older follow-up', '2036-04-01'),
+    )
+    await app.request(
+      `/api/tasks/${task.id}/waits/${resolvedWait.id}/resolve`,
+      { method: 'POST' },
+    )
+    await addWait(task.id, 'Earlier unresolved follow-up', '2036-04-07')
+    await addWait(task.id, 'Later unresolved follow-up', '2036-04-09')
+    await addWait(task.id, 'Future follow-up', '2036-04-11')
+
+    const response = await app.request(
+      '/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=2036-04-10',
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map(({ id, candidateReason }) => ({ id, candidateReason })),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [{ id: task.id, candidateReason: { kind: 'follow-up', days: 3 } }],
+    })
+  })
+
+  it('prefers a follow-up reason when the task also has an overdue due date', async () => {
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    const today = dateAtOffset(now, tzOffset)
+    const task = await createTask('Overdue task with follow-up', {
+      dueDate: addDaysAtOffset(now, tzOffset, -2),
+      commitment: 'inbox',
+    })
+    await addWait(task.id, 'Check in', addDaysAtOffset(now, tzOffset, -1))
+
+    const response = await app.request(
+      `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(response.status, body[0]?.candidateReason ?? null),
+    ).toEqual({
+      status: 200,
+      body: { kind: 'follow-up', days: 1 },
+    })
+  })
+
+  it('sorts blockers by their earliest unresolved follow-up before undated blockers', async () => {
+    const now = new Date()
+    const tzOffset = offsetWithDifferentUtcDate(now)
+    const earlier = await createTask('Earlier follow-up')
+    const multiple = await createTask('Multiple follow-ups')
+    const later = await createTask('Later follow-up')
+    const resolvedOld = await createTask('Resolved old follow-up')
+    const blocker = await createTask('Task blocker')
+    const blockedTask = await createTask('Blocked by task')
+    await app.request(`/api/tasks/${blockedTask.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedBy: [blocker.id] }),
+    })
+    const resolved = await createTask('Resolved wait')
+    await addWait(
+      earlier.id,
+      'Earlier reminder',
+      addDaysAtOffset(now, tzOffset, -2),
+    )
+    await addWait(
+      multiple.id,
+      'Later reminder',
+      addDaysAtOffset(now, tzOffset, 4),
+    )
+    await addWait(
+      multiple.id,
+      'Earlier reminder',
+      addDaysAtOffset(now, tzOffset, 1),
+    )
+    await addWait(later.id, 'Later reminder', addDaysAtOffset(now, tzOffset, 2))
+    const resolvedOldWait = await jsonBody<TaskWaitResponse>(
+      await addWait(
+        resolvedOld.id,
+        'Resolved early reminder',
+        addDaysAtOffset(now, tzOffset, -5),
+      ),
+    )
+    await app.request(
+      `/api/tasks/${resolvedOld.id}/waits/${resolvedOldWait.id}/resolve`,
+      { method: 'POST' },
+    )
+    await addWait(
+      resolvedOld.id,
+      'Unresolved reminder',
+      addDaysAtOffset(now, tzOffset, 3),
+    )
+    const resolvedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(
+        resolved.id,
+        'Resolved reminder',
+        addDaysAtOffset(now, tzOffset, -5),
+      ),
+    )
+    await app.request(
+      `/api/tasks/${resolved.id}/waits/${resolvedWait.id}/resolve`,
+      {
+        method: 'POST',
+      },
+    )
+
+    const response = await app.request(
+      '/api/tasks?view=full&context=all&status=todo&limit=unlimited' +
+        '&q=has%3Ablockers&sortBy=follow-up',
+    )
+    const body = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      bodyResponseSnapshot(
+        response.status,
+        body.map((task) => task.title),
+      ),
+    ).toEqual({
+      status: 200,
+      body: [
+        'Earlier follow-up',
+        'Multiple follow-ups',
+        'Later follow-up',
+        'Resolved old follow-up',
+        'Blocked by task',
+      ],
+    })
+  })
+
+  it('counts inbox tasks without unresolved blockers', async () => {
+    await createTask('Clear inbox task', {
+      commitment: 'inbox',
+    })
+    const blockedTask = await createTask('Waiting inbox task', {
+      commitment: 'inbox',
+    })
+    await addWait(
+      blockedTask.id,
+      'Awaiting response',
+      dateAtOffset(new Date(), 0),
+    )
+
+    const response = await app.request(
+      '/api/tasks/count?context=all&status=todo&commitment=inbox&q=has%3Ano-blockers',
+    )
+    const body = await jsonBody<{ count: number }>(response)
+
+    expect(bodyResponseSnapshot(response.status, body.count)).toEqual({
+      status: 200,
+      body: 1,
+    })
+  })
+
   it('rejects completion while an unresolved wait remains', async () => {
     const task = await createTask('Waiting task')
     await addWait(task.id, 'Waiting for a reply', '2036-04-05')

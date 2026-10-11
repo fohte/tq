@@ -102,13 +102,10 @@ const manyCandidateTasks: Task[] = Array.from({ length: 40 }, (_, i) =>
   makeTask({
     id: `candidate-${String(i)}`,
     title: `Candidate task ${String(i)}`,
+    candidateReason: { kind: 'active' },
   }),
 )
-const manyQueueCandidates = getQueueCandidates(
-  manyCandidateTasks,
-  new Set(),
-  today,
-)
+const manyQueueCandidates = getQueueCandidates(manyCandidateTasks)
 
 function newQueryClient() {
   return new QueryClient({

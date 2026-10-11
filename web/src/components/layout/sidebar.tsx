@@ -117,6 +117,7 @@ function InboxNavLink() {
     context,
     commitment: 'inbox',
     status: 'todo',
+    q: 'has:no-blockers',
   })
 
   return (
