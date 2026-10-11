@@ -28,7 +28,7 @@ export function classifyNumericOrId(value: string): NumericOrId {
 export const taskIdOrNumber = z.union([
   z.uuid(),
   z.string().regex(numericIdPattern),
-  z.number().int().positive(),
+  z.number().int().min(1),
 ])
 
 export const taskPreviewIdSchema = z

@@ -130,7 +130,7 @@ describe('task_create tool', () => {
             { type: 'string', pattern: '^\\d+$' },
             {
               type: 'integer',
-              exclusiveMinimum: 0,
+              minimum: 1,
               maximum: 9007199254740991,
             },
           ],
@@ -159,7 +159,7 @@ describe('task_create tool', () => {
             },
             interval: {
               type: 'integer',
-              exclusiveMinimum: 0,
+              minimum: 1,
               maximum: 9007199254740991,
             },
             daysOfWeek: {
@@ -190,7 +190,7 @@ describe('task_create tool', () => {
                   { type: 'string', pattern: '^\\d+$' },
                   {
                     type: 'integer',
-                    exclusiveMinimum: 0,
+                    minimum: 1,
                     maximum: 9007199254740991,
                   },
                 ],

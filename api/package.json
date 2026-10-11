@@ -41,7 +41,8 @@
     "test:unit": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:migrate:prod": "node dist/db/migrate.js"
+    "db:migrate:prod": "node dist/db/migrate.js",
+    "openapi:dump": "tsx src/dump-openapi.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1075.0",
