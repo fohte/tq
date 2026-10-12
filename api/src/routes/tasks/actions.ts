@@ -27,6 +27,7 @@ import {
   type GithubBlockerRef,
 } from '#services/task-github-blockers'
 import { getIncompleteBlockerNumbers } from '#services/task-relations'
+import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
 import {
   getIncompleteTaskWaits,
   type TaskWaitSummary,
@@ -48,7 +49,8 @@ async function resolveDuplicateTargetId(
   id: string,
   duplicateOfTaskId: string | number,
 ): Promise<
-  { id: string } | { error: { body: { error: string }; status: 400 | 404 } }
+  | { target: { id: string; number: number; title: string } }
+  | { error: { body: { error: string }; status: 400 | 404 } }
 > {
   const duplicateTarget = await findTaskByIdOrNumber(String(duplicateOfTaskId))
   if (!duplicateTarget) {
@@ -69,7 +71,13 @@ async function resolveDuplicateTargetId(
     }
   }
 
-  return { id: duplicateTarget.id }
+  return {
+    target: {
+      id: duplicateTarget.id,
+      number: duplicateTarget.number,
+      title: duplicateTarget.title,
+    },
+  }
 }
 
 // Must run against the same `tx` as the status update it gates.
@@ -144,20 +152,24 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       const nextStatusReason =
         status === 'completed' ? (statusReason ?? 'completed') : null
-      let duplicateTargetTaskId: string | null = null
+      let duplicateTarget: {
+        id: string
+        number: number
+        title: string
+      } | null = null
 
       if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-        const duplicateTarget = await resolveDuplicateTargetId(
+        const resolvedDuplicateTarget = await resolveDuplicateTargetId(
           id,
           duplicateOfTaskId,
         )
-        if ('error' in duplicateTarget) {
+        if ('error' in resolvedDuplicateTarget) {
           return c.json(
-            duplicateTarget.error.body,
-            duplicateTarget.error.status,
+            resolvedDuplicateTarget.error.body,
+            resolvedDuplicateTarget.error.status,
           )
         }
-        duplicateTargetTaskId = duplicateTarget.id
+        duplicateTarget = resolvedDuplicateTarget.target
       }
 
       // `existing.status` was read by requireTask outside this transaction,
@@ -230,17 +242,38 @@ export const tasksActionsApp = new Hono()
           await syncChecklistItemWithSubtaskStatus(tx, id, status)
         }
 
-        if (duplicateTargetTaskId != null) {
-          await insertDuplicateOfRelation(tx, id, duplicateTargetTaskId)
+        if (duplicateTarget != null) {
+          await insertDuplicateOfRelation(tx, id, duplicateTarget.id)
         }
 
-        return { kind: 'ok' as const, task: updated }
+        return {
+          kind: 'ok' as const,
+          task: updated,
+          statusChanged:
+            current.status !== status ||
+            current.statusReason !== nextStatusReason,
+        }
       })
 
       if (result.kind === 'error') {
         return c.json(result.body, result.status)
       }
       const updated = result.task
+
+      if (result.statusChanged) {
+        await dispatchTaskStatusChangedWebhook({
+          event: 'task.status_changed',
+          task: {
+            id: updated.id,
+            number: updated.number,
+            status: updated.status,
+            statusReason: updated.statusReason,
+            ...(duplicateTarget == null
+              ? {}
+              : { duplicateOfTask: duplicateTarget }),
+          },
+        })
+      }
 
       const labelsByTaskId = await getLabelNamesByTaskId([id])
 
@@ -333,20 +366,24 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       const { statusReason, duplicateOfTaskId } = c.req.valid('json')
       const reason = statusReason ?? 'completed'
-      let duplicateTargetTaskId: string | null = null
+      let duplicateTarget: {
+        id: string
+        number: number
+        title: string
+      } | null = null
 
       if (reason === 'duplicate' && duplicateOfTaskId != null) {
-        const duplicateTarget = await resolveDuplicateTargetId(
+        const resolvedDuplicateTarget = await resolveDuplicateTargetId(
           id,
           duplicateOfTaskId,
         )
-        if ('error' in duplicateTarget) {
+        if ('error' in resolvedDuplicateTarget) {
           return c.json(
-            duplicateTarget.error.body,
-            duplicateTarget.error.status,
+            resolvedDuplicateTarget.error.body,
+            resolvedDuplicateTarget.error.status,
           )
         }
-        duplicateTargetTaskId = duplicateTarget.id
+        duplicateTarget = resolvedDuplicateTarget.target
       }
 
       // `existing.status` was read by requireTask outside this transaction,
@@ -417,17 +454,36 @@ export const tasksActionsApp = new Hono()
         )
         await syncChecklistItemWithSubtaskStatus(tx, id, 'completed')
 
-        if (duplicateTargetTaskId != null) {
-          await insertDuplicateOfRelation(tx, id, duplicateTargetTaskId)
+        if (duplicateTarget != null) {
+          await insertDuplicateOfRelation(tx, id, duplicateTarget.id)
         }
 
-        return { kind: 'ok' as const, task: updatedTask }
+        return {
+          kind: 'ok' as const,
+          task: updatedTask,
+          statusChanged: true,
+        }
       })
 
       if (result.kind === 'error') {
         return c.json(result.body, result.status)
       }
       const updatedTask = result.task
+
+      if (result.statusChanged) {
+        await dispatchTaskStatusChangedWebhook({
+          event: 'task.status_changed',
+          task: {
+            id: updatedTask.id,
+            number: updatedTask.number,
+            status: updatedTask.status,
+            statusReason: updatedTask.statusReason,
+            ...(duplicateTarget == null
+              ? {}
+              : { duplicateOfTask: duplicateTarget }),
+          },
+        })
+      }
 
       let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
       if (updatedTask.templateId != null) {

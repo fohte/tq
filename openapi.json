@@ -662,6 +662,77 @@
           "updatedAt",
           "linkSync"
         ]
+      },
+      "TaskStatusChangedWebhookEvent": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "task.status_changed"
+            ]
+          },
+          "task": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "number": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "todo",
+                  "completed"
+                ]
+              },
+              "statusReason": {
+                "nullable": true,
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "not_planned",
+                  "duplicate"
+                ]
+              },
+              "duplicateOfTask": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "number": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "number",
+                  "title"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "number",
+              "status",
+              "statusReason"
+            ]
+          }
+        },
+        "required": [
+          "event",
+          "task"
+        ]
       }
     }
   }

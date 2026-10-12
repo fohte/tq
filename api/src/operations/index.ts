@@ -19,6 +19,7 @@ import { sessionOperations } from '#operations/session'
 import { taskReadOperations } from '#operations/task-read'
 import { taskWriteOperations } from '#operations/task-write'
 import { waitOperations } from '#operations/wait'
+import { webhookOperations } from '#operations/webhook'
 
 export {
   assetOperations,
@@ -42,6 +43,7 @@ export {
   taskReadOperations,
   taskWriteOperations,
   waitOperations,
+  webhookOperations,
 }
 export const operations = [
   ...assetOperations,
@@ -65,6 +67,7 @@ export const operations = [
   ...taskReadOperations,
   ...taskWriteOperations,
   ...waitOperations,
+  ...webhookOperations,
 ] as const
 
 type CliOperation<Operation> = Operation extends {
