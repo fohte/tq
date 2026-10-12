@@ -13,7 +13,7 @@ export const createWebhookSubscriptionSchema = z.object({
 
 export const webhookSubscriptionIdSchema = z.object({ id: z.uuid() })
 
-export const duplicateTaskSummarySchema = z.object({
+const duplicateTaskSummarySchema = z.object({
   id: z.string(),
   number: z.number().int(),
   title: z.string(),
