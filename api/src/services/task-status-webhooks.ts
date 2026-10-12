@@ -4,15 +4,22 @@ import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { errAsync, okAsync, ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
-import { webhookSubscriptions } from '#db/schema'
-import type { TaskStatusChangedWebhookEvent } from '#schemas/webhook'
+import { tasks, webhookSubscriptions } from '#db/schema'
+import type {
+  DuplicateTaskSummary,
+  TaskStatusChangedWebhookEvent,
+} from '#schemas/webhook'
 
 function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error(String(cause))
 }
 
 export async function dispatchTaskStatusChangedWebhook(
-  event: TaskStatusChangedWebhookEvent,
+  task: Pick<
+    typeof tasks.$inferSelect,
+    'id' | 'number' | 'status' | 'statusReason' | 'updatedAt'
+  >,
+  duplicateOfTask: DuplicateTaskSummary | null,
 ): Promise<void> {
   const subscriptionsResult = await ResultAsync.fromPromise(
     db.select().from(webhookSubscriptions),
@@ -26,6 +33,17 @@ export async function dispatchTaskStatusChangedWebhook(
     return
   }
 
+  const event: TaskStatusChangedWebhookEvent = {
+    event: 'task.status_changed',
+    occurredAt: task.updatedAt.toISOString(),
+    task: {
+      id: task.id,
+      number: task.number,
+      status: task.status,
+      statusReason: task.statusReason,
+      ...(duplicateOfTask == null ? {} : { duplicateOfTask }),
+    },
+  }
   const body = JSON.stringify(event)
   const deliveries = await Promise.all(
     subscriptionsResult.value.map(async (subscription) => {

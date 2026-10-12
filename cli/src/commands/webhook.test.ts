@@ -50,6 +50,50 @@ describe('webhook create', () => {
       output: [[`${JSON.stringify(created, null, 2)}\n`]],
     })
   })
+
+  it('prefers the --secret option over TQ_WEBHOOK_SECRET', async () => {
+    vi.stubEnv('TQ_WEBHOOK_SECRET', 'environment-secret')
+    const created = {
+      id: '00000000-0000-4000-8000-000000000001',
+      url: 'https://hooks.example.invalid/tq',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'webhook',
+        'create',
+        created.url,
+        '--secret',
+        'command-line-secret',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const createSnapshot = () => ({
+      exitCode,
+      request: request(calls[0]),
+      output: write.mock.calls,
+    })
+
+    expect(createSnapshot()).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/webhooks',
+        query: {},
+        body: { url: created.url, secret: 'command-line-secret' },
+      },
+      output: [[`${JSON.stringify(created, null, 2)}\n`]],
+    })
+  })
 })
 
 describe('webhook list', () => {

@@ -25,6 +25,10 @@ export const webhooksApp = new Hono()
     const [created] = await db
       .insert(webhookSubscriptions)
       .values(input)
+      .onConflictDoUpdate({
+        target: webhookSubscriptions.url,
+        set: { secret: input.secret },
+      })
       .returning()
 
     if (!created) {

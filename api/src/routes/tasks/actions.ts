@@ -17,6 +17,7 @@ import {
   taskToResponse,
 } from '#routes/tasks/shared'
 import { taskStatus, taskStatusReason } from '#schemas/task'
+import type { DuplicateTaskSummary } from '#schemas/webhook'
 import { syncChecklistItemWithSubtaskStatus } from '#services/task-checklist-subtasks'
 import {
   checkTaskComplete,
@@ -45,11 +46,11 @@ const updateParentSchema = z.object({
 
 // Both close-as-duplicate routes need the target UUID for self-reference
 // checks and relation writes.
-async function resolveDuplicateTargetId(
+async function resolveDuplicateTarget(
   id: string,
   duplicateOfTaskId: string | number,
 ): Promise<
-  | { target: { id: string; number: number; title: string } }
+  | { target: DuplicateTaskSummary }
   | { error: { body: { error: string }; status: 400 | 404 } }
 > {
   const duplicateTarget = await findTaskByIdOrNumber(String(duplicateOfTaskId))
@@ -152,14 +153,10 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       const nextStatusReason =
         status === 'completed' ? (statusReason ?? 'completed') : null
-      let duplicateTarget: {
-        id: string
-        number: number
-        title: string
-      } | null = null
+      let duplicateTarget: DuplicateTaskSummary | null = null
 
       if (nextStatusReason === 'duplicate' && duplicateOfTaskId != null) {
-        const resolvedDuplicateTarget = await resolveDuplicateTargetId(
+        const resolvedDuplicateTarget = await resolveDuplicateTarget(
           id,
           duplicateOfTaskId,
         )
@@ -261,18 +258,7 @@ export const tasksActionsApp = new Hono()
       const updated = result.task
 
       if (result.statusChanged) {
-        await dispatchTaskStatusChangedWebhook({
-          event: 'task.status_changed',
-          task: {
-            id: updated.id,
-            number: updated.number,
-            status: updated.status,
-            statusReason: updated.statusReason,
-            ...(duplicateTarget == null
-              ? {}
-              : { duplicateOfTask: duplicateTarget }),
-          },
-        })
+        await dispatchTaskStatusChangedWebhook(updated, duplicateTarget)
       }
 
       const labelsByTaskId = await getLabelNamesByTaskId([id])
@@ -366,14 +352,10 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       const { statusReason, duplicateOfTaskId } = c.req.valid('json')
       const reason = statusReason ?? 'completed'
-      let duplicateTarget: {
-        id: string
-        number: number
-        title: string
-      } | null = null
+      let duplicateTarget: DuplicateTaskSummary | null = null
 
       if (reason === 'duplicate' && duplicateOfTaskId != null) {
-        const resolvedDuplicateTarget = await resolveDuplicateTargetId(
+        const resolvedDuplicateTarget = await resolveDuplicateTarget(
           id,
           duplicateOfTaskId,
         )
@@ -461,7 +443,6 @@ export const tasksActionsApp = new Hono()
         return {
           kind: 'ok' as const,
           task: updatedTask,
-          statusChanged: true,
         }
       })
 
@@ -470,20 +451,7 @@ export const tasksActionsApp = new Hono()
       }
       const updatedTask = result.task
 
-      if (result.statusChanged) {
-        await dispatchTaskStatusChangedWebhook({
-          event: 'task.status_changed',
-          task: {
-            id: updatedTask.id,
-            number: updatedTask.number,
-            status: updatedTask.status,
-            statusReason: updatedTask.statusReason,
-            ...(duplicateTarget == null
-              ? {}
-              : { duplicateOfTask: duplicateTarget }),
-          },
-        })
-      }
+      await dispatchTaskStatusChangedWebhook(updatedTask, duplicateTarget)
 
       let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
       if (updatedTask.templateId != null) {

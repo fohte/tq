@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { tasks } from '#db/schema'
+import { tasks, webhookSubscriptions } from '#db/schema'
 import { createTask } from '#routes/tasks/testing'
 import { taskStatusChangedWebhookEventSchema } from '#schemas/webhook'
 import { jsonBody, setupTestDb } from '#testing'
@@ -32,10 +32,96 @@ function normalizeSubscription(value: {
   return { id: 'ID', url: value.url, createdAt: 'CREATED_AT' }
 }
 
-function signature(secret: string, event: unknown) {
-  return `sha256=${createHmac('sha256', secret)
-    .update(JSON.stringify(event))
-    .digest('hex')}`
+function signature(secret: string, body: string) {
+  return `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`
+}
+
+function captureDeliveries(
+  calls: ReadonlyArray<Parameters<typeof fetch>>,
+  subscriptions: { url: string; secret: string }[],
+) {
+  return calls
+    .map(([input, init]) => {
+      const headers = new Headers(init?.headers)
+      const url =
+        input instanceof URL
+          ? input.toString()
+          : input instanceof Request
+            ? input.url
+            : input
+      const body = typeof init?.body === 'string' ? init.body : ''
+      const parsedBody: unknown = body === '' ? null : JSON.parse(body)
+      const validatedBody =
+        parsedBody == null
+          ? null
+          : taskStatusChangedWebhookEventSchema.parse(parsedBody)
+      const subscription = subscriptions.find(
+        (candidate) => candidate.url === url,
+      )
+      const signatureHeader = headers.get('X-Tq-Signature-256')
+
+      return {
+        url,
+        method: init?.method,
+        contentType: headers.get('Content-Type'),
+        signatureValid:
+          subscription != null &&
+          signatureHeader === signature(subscription.secret, body),
+        body: normalizeEvent(parsedBody),
+        taskId: validatedBody?.task.id ?? '',
+      }
+    })
+    .sort((a, b) => a.url.localeCompare(b.url))
+    .map((delivery) => ({
+      url: delivery.url,
+      method: delivery.method,
+      contentType: delivery.contentType,
+      signatureValid: delivery.signatureValid,
+      body: delivery.body,
+    }))
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value != null && !Array.isArray(value)
+}
+
+function normalizeEvent(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value['task'])) {
+    return value
+  }
+
+  const task = value['task']
+  const duplicateOfTask = task['duplicateOfTask']
+  return {
+    ...value,
+    occurredAt: 'OCCURRED_AT',
+    task: {
+      ...task,
+      id: 'TASK_ID',
+      number: 123,
+      ...(typeof duplicateOfTask === 'object' &&
+      duplicateOfTask != null &&
+      !Array.isArray(duplicateOfTask)
+        ? {
+            duplicateOfTask: {
+              ...duplicateOfTask,
+              id: 'DUPLICATE_TASK_ID',
+              number: 456,
+            },
+          }
+        : {}),
+    },
+  }
+}
+
+function expectedDelivery(url: string, body: unknown) {
+  return {
+    url,
+    method: 'POST',
+    contentType: 'application/json',
+    signatureValid: true,
+    body,
+  }
 }
 
 describe('webhook subscriptions API', () => {
@@ -91,6 +177,45 @@ describe('webhook subscriptions API', () => {
     })
   })
 
+  it('reuses a subscription URL and updates its signing secret', async () => {
+    const url = 'https://hooks.example.invalid/tq'
+    const firstResponse = await createSubscription(url, 'old-secret')
+    const first = await jsonBody<{ id: string }>(firstResponse)
+    const secondResponse = await createSubscription(url, 'new-secret')
+    const second = await jsonBody<{ id: string }>(secondResponse)
+    const [saved] = await db
+      .select({
+        id: webhookSubscriptions.id,
+        url: webhookSubscriptions.url,
+        secret: webhookSubscriptions.secret,
+      })
+      .from(webhookSubscriptions)
+      .where(eq(webhookSubscriptions.url, url))
+    const listResponse = await app.request('/api/webhooks')
+    const listed =
+      await jsonBody<
+        { id: string; url: string; createdAt: string; secret?: string }[]
+      >(listResponse)
+
+    const subscriptionSnapshot = () => ({
+      statuses: [firstResponse.status, secondResponse.status],
+      idsMatch: first.id === second.id,
+      saved: saved == null ? null : { ...saved, id: 'ID' },
+      listed: listed.map(normalizeSubscription),
+      listedIncludesSecret: listed.some((subscription) =>
+        Object.hasOwn(subscription, 'secret'),
+      ),
+    })
+
+    expect(subscriptionSnapshot()).toEqual({
+      statuses: [201, 201],
+      idsMatch: true,
+      saved: { id: 'ID', url, secret: 'new-secret' },
+      listed: [{ id: 'ID', url, createdAt: 'CREATED_AT' }],
+      listedIncludesSecret: false,
+    })
+  })
+
   it('rejects subscription URLs that do not use HTTP or HTTPS', async () => {
     const response = await createSubscription(
       'ftp://hooks.example.invalid/tq',
@@ -124,7 +249,7 @@ describe('webhook subscriptions API', () => {
 })
 
 describe('task status webhooks', () => {
-  it('signs status changes, includes duplicate targets, and skips unchanged status', async () => {
+  it('sends signed duplicate events to every subscription', async () => {
     const subscriptions = [
       {
         url: 'https://hooks.example.invalid/first',
@@ -141,151 +266,158 @@ describe('task status webhooks', () => {
 
     const target = await createTask('Target task')
     const duplicate = await createTask('Duplicate task')
-    const completed = await createTask('Completed task')
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(null, { status: 202 }))
 
-    const duplicateResponse = await app.request(
-      `/api/tasks/${duplicate.id}/status`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'completed',
-          statusReason: 'duplicate',
-          duplicateOfTaskId: target.id,
-        }),
-      },
-    )
-    const completeResponse = await app.request(
-      `/api/tasks/${completed.id}/complete`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      },
-    )
-    const replayResponse = await app.request(
-      `/api/tasks/${duplicate.id}/status`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'completed',
-          statusReason: 'duplicate',
-          duplicateOfTaskId: target.id,
-        }),
-      },
-    )
-    const reasonChangeResponse = await app.request(
-      `/api/tasks/${duplicate.id}/status`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'completed',
-          statusReason: 'completed',
-        }),
-      },
-    )
-
+    const response = await app.request(`/api/tasks/${duplicate.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'completed',
+        statusReason: 'duplicate',
+        duplicateOfTaskId: target.id,
+      }),
+    })
     const duplicateEvent = {
       event: 'task.status_changed',
+      occurredAt: 'OCCURRED_AT',
       task: {
-        id: duplicate.id,
-        number: duplicate.number,
+        id: 'TASK_ID',
+        number: 123,
         status: 'completed',
         statusReason: 'duplicate',
         duplicateOfTask: {
-          id: target.id,
-          number: target.number,
+          id: 'DUPLICATE_TASK_ID',
+          number: 456,
           title: target.title,
         },
       },
     }
-    const completeEvent = {
-      event: 'task.status_changed',
-      task: {
-        id: completed.id,
-        number: completed.number,
-        status: 'completed',
-        statusReason: 'completed',
-      },
-    }
-    const reasonChangeEvent = {
-      event: 'task.status_changed',
-      task: {
-        id: duplicate.id,
-        number: duplicate.number,
-        status: 'completed',
-        statusReason: 'completed',
-      },
-    }
-    const deliveries = fetchSpy.mock.calls
-      .map(([input, init]) => {
-        const headers = new Headers(init?.headers)
-        const parsedBody = taskStatusChangedWebhookEventSchema.safeParse(
-          typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
-        )
-        return {
-          url:
-            input instanceof URL
-              ? input.toString()
-              : input instanceof Request
-                ? input.url
-                : input,
-          method: init?.method,
-          contentType: headers.get('Content-Type'),
-          signature: headers.get('X-Tq-Signature-256'),
-          body: parsedBody.success ? parsedBody.data : null,
-        }
-      })
-      .sort((a, b) => {
-        const aTaskId = a.body?.task.id ?? ''
-        const bTaskId = b.body?.task.id ?? ''
-        return `${aTaskId}:${a.url}`.localeCompare(`${bTaskId}:${b.url}`)
-      })
-    const expectedDeliveries = [
-      ...subscriptions.map((subscription) => ({
-        url: subscription.url,
-        method: 'POST',
-        contentType: 'application/json',
-        signature: signature(subscription.secret, duplicateEvent),
-        body: duplicateEvent,
-      })),
-      ...subscriptions.map((subscription) => ({
-        url: subscription.url,
-        method: 'POST',
-        contentType: 'application/json',
-        signature: signature(subscription.secret, completeEvent),
-        body: completeEvent,
-      })),
-      ...subscriptions.map((subscription) => ({
-        url: subscription.url,
-        method: 'POST',
-        contentType: 'application/json',
-        signature: signature(subscription.secret, reasonChangeEvent),
-        body: reasonChangeEvent,
-      })),
-    ].sort((a, b) =>
-      `${a.body.task.id}:${a.url}`.localeCompare(`${b.body.task.id}:${b.url}`),
-    )
-
-    const deliverySnapshot = () => ({
-      duplicateStatus: duplicateResponse.status,
-      completeStatus: completeResponse.status,
-      replayStatus: replayResponse.status,
-      reasonChangeStatus: reasonChangeResponse.status,
-      deliveries,
+    const webhookSnapshot = () => ({
+      responseStatus: response.status,
+      deliveries: captureDeliveries(fetchSpy.mock.calls, subscriptions),
     })
 
-    expect(deliverySnapshot()).toEqual({
-      duplicateStatus: 200,
-      completeStatus: 200,
-      replayStatus: 200,
-      reasonChangeStatus: 200,
-      deliveries: expectedDeliveries,
+    expect(webhookSnapshot()).toEqual({
+      responseStatus: 200,
+      deliveries: subscriptions.map((subscription) =>
+        expectedDelivery(subscription.url, duplicateEvent),
+      ),
+    })
+  })
+
+  it('sends a webhook when a task is completed through the complete route', async () => {
+    const subscription = {
+      url: 'https://hooks.example.invalid/complete',
+      secret: 'test-complete-secret',
+    }
+    await createSubscription(subscription.url, subscription.secret)
+    const task = await createTask('Task completed through the complete route')
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 202 }))
+    const response = await app.request(`/api/tasks/${task.id}/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const event = {
+      event: 'task.status_changed',
+      occurredAt: 'OCCURRED_AT',
+      task: {
+        id: 'TASK_ID',
+        number: 123,
+        status: 'completed',
+        statusReason: 'completed',
+      },
+    }
+    const webhookSnapshot = () => ({
+      responseStatus: response.status,
+      deliveries: captureDeliveries(fetchSpy.mock.calls, [subscription]),
+    })
+
+    expect(webhookSnapshot()).toEqual({
+      responseStatus: 200,
+      deliveries: [expectedDelivery(subscription.url, event)],
+    })
+  })
+
+  it('does not send a webhook for an unchanged status and reason', async () => {
+    const subscription = {
+      url: 'https://hooks.example.invalid/unchanged',
+      secret: 'test-unchanged-secret',
+    }
+    await createSubscription(subscription.url, subscription.secret)
+    const task = await createTask('Task with an unchanged status')
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 202 }))
+    await app.request(`/api/tasks/${task.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+    fetchSpy.mockClear()
+    const response = await app.request(`/api/tasks/${task.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+
+    const webhookSnapshot = () => ({
+      responseStatus: response.status,
+      deliveries: captureDeliveries(fetchSpy.mock.calls, [subscription]),
+    })
+
+    expect(webhookSnapshot()).toEqual({
+      responseStatus: 200,
+      deliveries: [],
+    })
+  })
+
+  it('sends a webhook when statusReason changes without changing status', async () => {
+    const subscription = {
+      url: 'https://hooks.example.invalid/reason-change',
+      secret: 'test-reason-change-secret',
+    }
+    await createSubscription(subscription.url, subscription.secret)
+    const task = await createTask('Task with a changed status reason')
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 202 }))
+    await app.request(`/api/tasks/${task.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed', statusReason: 'completed' }),
+    })
+    fetchSpy.mockClear()
+    const response = await app.request(`/api/tasks/${task.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'completed',
+        statusReason: 'not_planned',
+      }),
+    })
+    const event = {
+      event: 'task.status_changed',
+      occurredAt: 'OCCURRED_AT',
+      task: {
+        id: 'TASK_ID',
+        number: 123,
+        status: 'completed',
+        statusReason: 'not_planned',
+      },
+    }
+    const webhookSnapshot = () => ({
+      responseStatus: response.status,
+      deliveries: captureDeliveries(fetchSpy.mock.calls, [subscription]),
+    })
+
+    expect(webhookSnapshot()).toEqual({
+      responseStatus: 200,
+      deliveries: [expectedDelivery(subscription.url, event)],
     })
   })
 

@@ -22,12 +22,14 @@ Endpoints subscribed to task status events.
 | webhook_subscriptions_secret_not_null     | n           | NOT NULL secret     |
 | webhook_subscriptions_url_not_null        | n           | NOT NULL url        |
 | webhook_subscriptions_pkey                | PRIMARY KEY | PRIMARY KEY (id)    |
+| webhook_subscriptions_url_unique          | UNIQUE      | UNIQUE (url)        |
 
 ## Indexes
 
-| Name                       | Definition                                                                                      |
-| -------------------------- | ----------------------------------------------------------------------------------------------- |
-| webhook_subscriptions_pkey | CREATE UNIQUE INDEX webhook_subscriptions_pkey ON public.webhook_subscriptions USING btree (id) |
+| Name                             | Definition                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| webhook_subscriptions_pkey       | CREATE UNIQUE INDEX webhook_subscriptions_pkey ON public.webhook_subscriptions USING btree (id)        |
+| webhook_subscriptions_url_unique | CREATE UNIQUE INDEX webhook_subscriptions_url_unique ON public.webhook_subscriptions USING btree (url) |
 
 ## Relations
 
