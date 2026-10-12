@@ -235,6 +235,18 @@ export const LlmAuthored: CardStory = {
   },
 }
 
+export const ServiceAuthored: CardStory = {
+  name: 'the collapsed card marks the page author as a service',
+  args: {
+    page: makeTaskPage({
+      author: makeAuthorInfo({ kind: 'service', agent: 'sample-service' }),
+    }),
+    isExpanded: false,
+    defaultEditing: false,
+    deleteDialogOpen: false,
+  },
+}
+
 export const HtmlCollapsed: CardStory = {
   name: 'the card shows an HTML page with its content collapsed',
   args: {

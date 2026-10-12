@@ -2,7 +2,9 @@ import type { MiddlewareHandler } from 'hono'
 import { z } from 'zod'
 
 export type Author =
-  { kind: 'human'; agent: null } | { kind: 'llm'; agent: string }
+  | { kind: 'human'; agent: null }
+  | { kind: 'llm'; agent: string }
+  | { kind: 'service'; agent: string }
 
 export const AUTHOR_HEADER = 'X-Author'
 
@@ -30,6 +32,16 @@ const authorHeaderSchema = z.union([
       author: {
         kind: 'llm',
         agent: value.slice('llm:'.length),
+      },
+      origin: null,
+    })),
+  z
+    .string()
+    .regex(/^service:.+$/)
+    .transform((value): ParsedAuthorHeader => ({
+      author: {
+        kind: 'service',
+        agent: value.slice('service:'.length),
       },
       origin: null,
     })),

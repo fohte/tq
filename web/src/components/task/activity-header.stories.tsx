@@ -18,3 +18,12 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   name: 'the header shows who acted, what they did, and when',
 }
+
+export const ServiceAuthor: Story = {
+  name: 'the header identifies the service that authored the event',
+  args: {
+    who: 'service: sample-service',
+    what: 'created this task',
+    when: 'just now',
+  },
+}

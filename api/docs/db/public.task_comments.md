@@ -6,13 +6,13 @@ Text comments attached to tasks.
 
 ## Columns
 
-| Name       | Type                     | Default | Nullable | Children                        | Parents                         | Comment                                 |
-| ---------- | ------------------------ | ------- | -------- | ------------------------------- | ------------------------------- | --------------------------------------- |
-| id         | text                     |         | false    | [public.edits](public.edits.md) |                                 |                                         |
-| task_id    | text                     |         | false    |                                 | [public.tasks](public.tasks.md) | Task that owns this comment.            |
-| content    | text                     |         | false    |                                 |                                 | User-authored body of the task comment. |
-| created_at | timestamp with time zone | now()   | false    |                                 |                                 |                                         |
-| updated_at | timestamp with time zone | now()   | false    |                                 |                                 |                                         |
+| Name       | Type                     | Default | Nullable | Children                        | Parents                         | Comment                      |
+| ---------- | ------------------------ | ------- | -------- | ------------------------------- | ------------------------------- | ---------------------------- |
+| id         | text                     |         | false    | [public.edits](public.edits.md) |                                 |                              |
+| task_id    | text                     |         | false    |                                 | [public.tasks](public.tasks.md) | Task that owns this comment. |
+| content    | text                     |         | false    |                                 |                                 | Body of the task comment.    |
+| created_at | timestamp with time zone | now()   | false    |                                 |                                 |                              |
+| updated_at | timestamp with time zone | now()   | false    |                                 |                                 |                              |
 
 ## Constraints
 

@@ -1,4 +1,4 @@
-import type { AuthorInfo } from '#components/task/llm-author-label'
+import type { AuthorInfo } from '#components/task/author-label'
 
 export function makeAuthorInfo(
   overrides: Partial<AuthorInfo> = {},

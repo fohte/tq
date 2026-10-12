@@ -29,7 +29,7 @@ interface EditFields {
   commentId: string | null
   action: 'create' | 'update'
   field: 'title' | 'description' | 'content' | null
-  authorKind: 'human' | 'llm' | 'system'
+  authorKind: 'human' | 'llm' | 'service' | 'system'
   authorAgent: string | null
 }
 
@@ -59,6 +59,12 @@ async function assertStatus(res: Response, expected: number) {
       `Expected status ${String(expected)}, got ${String(res.status)}: ${await res.text()}`,
     )
   }
+}
+
+async function responseOutput(
+  res: Response,
+): Promise<{ status: number; body: unknown }> {
+  return { status: res.status, body: await res.json() }
 }
 
 async function createTask(
@@ -140,6 +146,19 @@ describe('edit log', () => {
 
       expect(res.status).toBe(400)
     })
+
+    it('returns 400 for service: with no name', async () => {
+      const res = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Author': 'service:' },
+        body: JSON.stringify({ title: 'Task' }),
+      })
+
+      expect(await responseOutput(res)).toEqual({
+        status: 400,
+        body: { error: 'Invalid X-Author header' },
+      })
+    })
   })
 
   describe('tasks', () => {
@@ -171,6 +190,23 @@ describe('edit log', () => {
           field: null,
           authorKind: 'llm',
           authorAgent: 'claude-opus-5',
+        },
+      ])
+    })
+
+    it('records a service-authored create with the name from X-Author', async () => {
+      const task = await createTask('Task', {
+        headers: { 'X-Author': 'service:sample-worker' },
+      })
+
+      expect(await fetchEdits(task.id)).toEqual([
+        {
+          pageId: null,
+          commentId: null,
+          action: 'create',
+          field: null,
+          authorKind: 'service',
+          authorAgent: 'sample-worker',
         },
       ])
     })

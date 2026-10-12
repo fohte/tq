@@ -154,7 +154,7 @@ export const edits = pgTable(
       enum: ['title', 'description', 'content'],
     }),
     authorKind: text('author_kind', {
-      enum: ['human', 'llm', 'system'],
+      enum: ['human', 'llm', 'service', 'system'],
     }).notNull(),
     authorAgent: text('author_agent'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -187,11 +187,11 @@ export const edits = pgTable(
     ),
     check(
       'edits_author_kind_check',
-      sql`${table.authorKind} IN ('human', 'llm', 'system')`,
+      sql`${table.authorKind} IN ('human', 'llm', 'service', 'system')`,
     ),
     check(
-      'edits_author_agent_required_for_llm',
-      sql`(${table.authorKind} = 'llm') = (${table.authorAgent} IS NOT NULL)`,
+      'edits_author_agent_required_for_llm_or_service',
+      sql`(${table.authorKind} IN ('llm', 'service')) = (${table.authorAgent} IS NOT NULL)`,
     ),
     index('idx_edits_task_id_created_at').on(table.taskId, table.createdAt),
     index('idx_edits_page_id')
@@ -235,7 +235,7 @@ export const taskEvents = pgTable(
     githubNumber: integer('github_number'),
     githubKind: text('github_kind', { enum: ['issue', 'pull_request'] }),
     authorKind: text('author_kind', {
-      enum: ['human', 'llm', 'system'],
+      enum: ['human', 'llm', 'service', 'system'],
     }).notNull(),
     authorAgent: text('author_agent'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -265,11 +265,11 @@ export const taskEvents = pgTable(
     ),
     check(
       'task_events_author_kind_check',
-      sql`${table.authorKind} IN ('human', 'llm', 'system')`,
+      sql`${table.authorKind} IN ('human', 'llm', 'service', 'system')`,
     ),
     check(
-      'task_events_author_agent_required_for_llm',
-      sql`(${table.authorKind} = 'llm') = (${table.authorAgent} IS NOT NULL)`,
+      'task_events_author_agent_required_for_llm_or_service',
+      sql`(${table.authorKind} IN ('llm', 'service')) = (${table.authorAgent} IS NOT NULL)`,
     ),
     // Mirrors `idx_edits_task_id_created_at` for consistency and to serve
     // future range queries by createdAt; the current activity.ts query only

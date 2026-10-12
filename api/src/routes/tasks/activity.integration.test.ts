@@ -15,7 +15,7 @@ interface ActivityItem {
   id: string
   type: 'created' | 'status_changed' | 'github_linked' | 'github_unlinked'
   createdAt: string
-  author: { kind: 'human' | 'llm' | 'system'; agent: string | null }
+  author: { kind: 'human' | 'llm' | 'service' | 'system'; agent: string | null }
   fromStatus?: 'todo' | 'in_progress' | 'completed'
   toStatus?: 'todo' | 'in_progress' | 'completed'
   toStatusReason?: TaskStatusReason | null

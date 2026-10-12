@@ -339,6 +339,23 @@ export const LlmAuthored: Story = {
   },
 }
 
+export const ServiceAuthored: Story = {
+  name: 'shows a task whose title and description were written by a service',
+  args: {
+    task: {
+      ...baseTask,
+      title: 'Task created by a service',
+      titleAuthor: makeAuthorInfo({ kind: 'service', agent: 'sample-service' }),
+      descriptionAuthor: makeAuthorInfo({
+        kind: 'service',
+        agent: 'sample-service',
+      }),
+    },
+    pages: [],
+    subtasks: [],
+  },
+}
+
 const sampleProject: ProjectDetail = makeProjectDetail({
   id: 'aaaa0000-0000-0000-0000-000000000000',
   completionRate: 0.4,
