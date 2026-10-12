@@ -421,6 +421,20 @@
       "when": 1791699583652,
       "tag": "0059_nappy_alice",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1791764175016,
+      "tag": "0060_add_webhook_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1791790601483,
+      "tag": "0061_unique_webhook_subscription_url",
+      "breakpoints": true
     }
   ]
 }

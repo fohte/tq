@@ -31,6 +31,7 @@ import { taskGithubLinkApp } from '#routes/task-github-link'
 import { taskPagesApp } from '#routes/task-pages'
 import { taskWaitsApp } from '#routes/task-waits'
 import { tasksApp } from '#routes/tasks/index'
+import { webhooksApp } from '#routes/webhooks'
 
 // Final safety net: any error that escapes a route handler without being
 // reported at its own point of failure lands here, so it's never silently
@@ -91,6 +92,7 @@ const app = new Hono()
   .route('/api/assets', assetsApp)
   .route('/api/integrations', integrationsApp)
   .route('/api/labels', labelsApp)
+  .route('/api/webhooks', webhooksApp)
   .route('/api/mcp', mcpApp)
   .onError(onError)
 

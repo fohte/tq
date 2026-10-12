@@ -303,3 +303,8 @@ comments:
       start_time: 'Start instant of the scheduled time interval.'
       end_time: 'End instant of the scheduled time interval.'
       is_auto_scheduled: 'Whether the time block was created by automatic scheduling.'
+  - table: webhook_subscriptions
+    tableComment: 'Endpoints subscribed to task status events.'
+    columnComments:
+      url: 'HTTP or HTTPS endpoint that receives subscribed events.'
+      secret: 'Secret used to sign event payloads with HMAC-SHA256.'

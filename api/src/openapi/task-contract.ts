@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { createTaskSchema } from '#schemas/task'
 import { createTaskResponseSchema } from '#schemas/task-response'
+import { taskStatusChangedWebhookEventSchema } from '#schemas/webhook'
 
 const createTaskRequestSchema = z.toJSONSchema(createTaskSchema, {
   target: 'openapi-3.0',
@@ -12,6 +13,10 @@ const createTaskResponseJsonSchema = z.toJSONSchema(createTaskResponseSchema, {
   target: 'openapi-3.0',
   io: 'input',
 })
+const taskStatusChangedWebhookEventJsonSchema = z.toJSONSchema(
+  taskStatusChangedWebhookEventSchema,
+  { target: 'openapi-3.0', io: 'input' },
+)
 
 export const openApiDocument = {
   openapi: '3.0.0',
@@ -50,6 +55,7 @@ export const openApiDocument = {
     schemas: {
       CreateTaskRequest: createTaskRequestSchema,
       CreateTaskResponse: createTaskResponseJsonSchema,
+      TaskStatusChangedWebhookEvent: taskStatusChangedWebhookEventJsonSchema,
     },
   },
 } as const

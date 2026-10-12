@@ -37,6 +37,7 @@
 | [public.task_checklist_items](public.task_checklist_items.md)                       | 11      | Nested checklist items with completion state and optional Markdown detail.                  | BASE TABLE |
 | [public.task_checklists](public.task_checklists.md)                                 | 6       | Named or unnamed checklists associated with tasks.                                          | BASE TABLE |
 | [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker links.                        | BASE TABLE |
+| [public.webhook_subscriptions](public.webhook_subscriptions.md)                     | 4       | Endpoints subscribed to task status events.                                                 | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -449,6 +450,12 @@ erDiagram
   timestamp_with_time_zone acknowledged_at
   timestamp_with_time_zone created_at
   text github_link_id FK
+}
+"public.webhook_subscriptions" {
+  text id
+  text url
+  text secret
+  timestamp_with_time_zone created_at
 }
 ```
 
