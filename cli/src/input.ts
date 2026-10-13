@@ -13,13 +13,11 @@ export function readContentInput(
   filePath: string | undefined,
   stdin: ReadableStdin = process.stdin,
 ): ResultAsync<string | undefined, FileIoError> {
-  if (filePath != null) {
-    return readFileContent(filePath)
+  if (filePath == null) return okAsync(undefined)
+  if (filePath === '-') {
+    return ResultAsync.fromSafePromise(readStreamText(stdin))
   }
-  if (stdin.isTTY === true) {
-    return okAsync(undefined)
-  }
-  return ResultAsync.fromSafePromise(readStreamText(stdin))
+  return readFileContent(filePath)
 }
 
 function readFileContent(filePath: string): ResultAsync<string, FileIoError> {

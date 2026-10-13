@@ -346,7 +346,7 @@ describe('page create', () => {
     ])
   })
 
-  it('omits content from the request body when neither --file nor stdin provide any', async () => {
+  it('omits content from the request body when --file is not given', async () => {
     const created = { id: 'p1', title: 'Notes', content: '' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -355,7 +355,7 @@ describe('page create', () => {
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'page', 'create', '42', 'Notes'],
       fetchStub,
-      fakeStdin(true),
+      fakeStdin(false),
     )
 
     expect(exitCode).toBe(0)

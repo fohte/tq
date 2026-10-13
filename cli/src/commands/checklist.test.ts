@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -186,6 +187,46 @@ describe('checklist item add', () => {
           body: {
             content: 'Prepare materials',
             parentItemId: 'parent-id',
+            note: 'A short detail',
+          },
+        },
+      ],
+      output: [[`${JSON.stringify(response, null, 2)}\n`]],
+    })
+  })
+
+  it('reads piped Markdown detail when --note-file - is given', async () => {
+    const response = { id: 'item-id', content: 'Prepare materials' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(response), { status: 201 }),
+    )
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'checklist',
+        'item',
+        'add',
+        'checklist-id',
+        'Prepare materials',
+        '--note-file',
+        '-',
+      ],
+      fetchStub,
+      Object.assign(Readable.from(['A short detail']), { isTTY: false }),
+    )
+
+    expect(summarizeCliRun(exitCode, calls, write)).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/checklists/checklist-id/items',
+          query: {},
+          body: {
+            content: 'Prepare materials',
             note: 'A short detail',
           },
         },

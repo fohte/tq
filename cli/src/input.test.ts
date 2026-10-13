@@ -44,23 +44,28 @@ describe('readContentInput', () => {
     expect(result._unsafeUnwrapErr().message).toBe(`Failed to read ${filePath}`)
   })
 
-  it('returns undefined when stdin is a TTY', async () => {
-    const result = await readContentInput(undefined, fakeStdin([], true))
+  it('does not read stdin when filePath is not given', async () => {
+    const stdin: ReadableStdin = {
+      [Symbol.asyncIterator]() {
+        throw new Error('stdin must not be read')
+      },
+    }
+    const result = await readContentInput(undefined, stdin)
 
-    expect(result._unsafeUnwrap()).toBeUndefined()
+    expect(result._unsafeUnwrap()).toEqual(undefined)
   })
 
-  it('returns the piped text when stdin is not a TTY and has data', async () => {
+  it('returns the piped text when filePath is -', async () => {
     const result = await readContentInput(
-      undefined,
-      fakeStdin(['# From stdin'], false),
+      '-',
+      fakeStdin(['# From stdin'], true),
     )
 
     expect(result._unsafeUnwrap()).toBe('# From stdin')
   })
 
-  it('returns undefined when stdin is not a TTY but is empty', async () => {
-    const result = await readContentInput(undefined, fakeStdin([], false))
+  it('returns undefined when explicitly selected stdin is empty', async () => {
+    const result = await readContentInput('-', fakeStdin([], false))
 
     expect(result._unsafeUnwrap()).toBeUndefined()
   })

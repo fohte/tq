@@ -204,7 +204,7 @@ async function executeCommandOperation(
       reportError(
         actionCommand,
         new Error(
-          `Content is required. Provide --${toKebabCase(contentInput.fileOption?.name ?? 'file')} <path> or pipe content via stdin.`,
+          `Content is required. Provide --${toKebabCase(contentInput.fileOption?.name ?? 'file')} <path> or --${toKebabCase(contentInput.fileOption?.name ?? 'file')} - to read from stdin.`,
         ),
         ignoreErrors,
       )
@@ -334,7 +334,7 @@ function registerOperationsInGroup(
       command = command.option(
         `--${toKebabCase(optionName)} <path>`,
         contentInput.fileOption?.description ??
-          'Read content from a file instead of stdin',
+          'Read content from a file, or use - to read from stdin',
       )
     }
 

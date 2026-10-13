@@ -252,7 +252,7 @@ describe('comment create', () => {
     const stdout = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'comment', 'create', '123456789'],
+      ['--api-url', apiUrl, 'comment', 'create', '123456789', '--file', '-'],
       fetchStub,
       Object.assign(Readable.from(['example content']), { isTTY: false }),
     )
@@ -270,7 +270,7 @@ describe('comment create', () => {
     expect(cliOutcome(exitCode, stderr, stdout)).toEqual(expected)
   })
 
-  it('sends piped stdin content as the request body content when --file is not given', async () => {
+  it('reads piped stdin content when --file - is given', async () => {
     const created = { id: 'c1', content: 'some piped content' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -278,7 +278,7 @@ describe('comment create', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'comment', 'create', '42'],
+      ['--api-url', apiUrl, 'comment', 'create', '42', '--file', '-'],
       fetchStub,
       Object.assign(Readable.from(['some piped content']), { isTTY: false }),
     )
@@ -290,19 +290,39 @@ describe('comment create', () => {
     ])
   })
 
-  it('exits non-zero and never calls fetch when neither --file nor stdin provide any content', async () => {
+  it('does not read stdin when required content is missing', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(null, { status: 500 }),
     )
+    const stdin = Object.assign(Readable.from(['unused input']), {
+      isTTY: false,
+    })
+    const readStdin = vi.spyOn(stdin, Symbol.asyncIterator)
+    const stderr = spyStderr()
+    const stdout = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'comment', 'create', '42'],
       fetchStub,
-      fakeStdin(true),
+      stdin,
     )
 
-    expect(exitCode).toBe(1)
-    expect(calls).toEqual([])
+    expect(
+      cliOutcome(exitCode, stderr, stdout, {
+        requests: calls.map(request),
+        stdinReads: readStdin.mock.calls,
+      }),
+    ).toEqual({
+      exitCode: 1,
+      stderr: [
+        [
+          'Error: Content is required. Provide --file <path> or --file - to read from stdin.\n',
+        ],
+      ],
+      stdout: [],
+      requests: [],
+      stdinReads: [],
+    })
   })
 })
 
@@ -400,7 +420,7 @@ describe('comment update', () => {
     ])
   })
 
-  it('sends piped stdin content as the request body content when --file is not given', async () => {
+  it('reads piped stdin content when --file - is given', async () => {
     const updated = { id: 'c1', content: 'some piped content' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
@@ -408,7 +428,7 @@ describe('comment update', () => {
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'comment', 'update', '42', 'c1'],
+      ['--api-url', apiUrl, 'comment', 'update', '42', 'c1', '--file', '-'],
       fetchStub,
       Object.assign(Readable.from(['some piped content']), { isTTY: false }),
     )
@@ -420,19 +440,39 @@ describe('comment update', () => {
     ])
   })
 
-  it('exits non-zero and never calls fetch when neither --file nor stdin provide any content', async () => {
+  it('does not read stdin when required content is missing', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(null, { status: 500 }),
     )
+    const stdin = Object.assign(Readable.from(['unused input']), {
+      isTTY: false,
+    })
+    const readStdin = vi.spyOn(stdin, Symbol.asyncIterator)
+    const stderr = spyStderr()
+    const stdout = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'comment', 'update', '42', 'c1'],
       fetchStub,
-      fakeStdin(true),
+      stdin,
     )
 
-    expect(exitCode).toBe(1)
-    expect(calls).toEqual([])
+    expect(
+      cliOutcome(exitCode, stderr, stdout, {
+        requests: calls.map(request),
+        stdinReads: readStdin.mock.calls,
+      }),
+    ).toEqual({
+      exitCode: 1,
+      stderr: [
+        [
+          'Error: Content is required. Provide --file <path> or --file - to read from stdin.\n',
+        ],
+      ],
+      stdout: [],
+      requests: [],
+      stdinReads: [],
+    })
   })
 })
 

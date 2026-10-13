@@ -127,7 +127,7 @@ export const checklistOperations = [
   defineOperation(addChecklistItemInputSchema, {
     path: ['checklist', 'item', 'add'],
     description:
-      'Add a one-line checklist item, optionally nesting it under a parent. Provide a pull request URL in `github` (CLI option: `--github`) and use `--note-file` or stdin for Markdown detail.',
+      'Add a one-line checklist item, optionally nesting it under a parent. Provide a pull request URL in `github` (CLI option: `--github`) and use `--note-file <path>` or `--note-file -` for Markdown detail.',
     positionalArgs: ['checklistId', 'content'],
     kind: 'write',
     attribution: 'agent',
@@ -138,7 +138,8 @@ export const checklistOperations = [
         required: false,
         fileOption: {
           name: 'noteFile',
-          description: 'Read Markdown detail from a file instead of stdin',
+          description:
+            'Read Markdown detail from a file, or use - to read from stdin',
         },
       },
       optionNames: { parentItemId: 'parent' },
@@ -166,7 +167,8 @@ export const checklistOperations = [
         required: false,
         fileOption: {
           name: 'noteFile',
-          description: 'Read Markdown detail from a file instead of stdin',
+          description:
+            'Read Markdown detail from a file, or use - to read from stdin',
         },
       },
       customOptions: [

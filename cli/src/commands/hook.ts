@@ -69,7 +69,7 @@ async function reportHookEvent(
   stdin: ReadableStdin,
   execute: HookCommandContext['execute'],
 ): Promise<void> {
-  const raw = await readContentInput(undefined, stdin).match(
+  const raw = await readContentInput('-', stdin).match(
     (value) => value,
     () => undefined,
   )
