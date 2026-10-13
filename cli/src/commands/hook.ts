@@ -69,10 +69,13 @@ async function reportHookEvent(
   stdin: ReadableStdin,
   execute: HookCommandContext['execute'],
 ): Promise<void> {
-  const raw = await readContentInput('-', stdin).match(
-    (value) => value,
-    () => undefined,
-  )
+  const raw =
+    stdin.isTTY === true
+      ? undefined
+      : await readContentInput('-', stdin).match(
+          (value) => value,
+          () => undefined,
+        )
   if (raw == null) return
 
   const parsed = tryParseJson(raw)

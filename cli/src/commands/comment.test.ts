@@ -275,7 +275,8 @@ describe('comment create', () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
     )
-    const write = spyStdout()
+    const stderr = spyStderr()
+    const stdout = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'comment', 'create', '42', '--file', '-'],
@@ -283,11 +284,23 @@ describe('comment create', () => {
       Object.assign(Readable.from(['some piped content']), { isTTY: false }),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({ content: 'some piped content' })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(created, null, 2)}\n`],
-    ])
+    expect(
+      cliOutcome(exitCode, stderr, stdout, {
+        requests: calls.map(request),
+      }),
+    ).toEqual({
+      exitCode: 0,
+      stderr: [],
+      stdout: [[`${JSON.stringify(created, null, 2)}\n`]],
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/tasks/42/comments',
+          query: {},
+          body: { content: 'some piped content' },
+        },
+      ],
+    })
   })
 
   it('does not read stdin when required content is missing', async () => {
@@ -425,7 +438,8 @@ describe('comment update', () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
     )
-    const write = spyStdout()
+    const stderr = spyStderr()
+    const stdout = spyStdout()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'comment', 'update', '42', 'c1', '--file', '-'],
@@ -433,11 +447,23 @@ describe('comment update', () => {
       Object.assign(Readable.from(['some piped content']), { isTTY: false }),
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({ content: 'some piped content' })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(updated, null, 2)}\n`],
-    ])
+    expect(
+      cliOutcome(exitCode, stderr, stdout, {
+        requests: calls.map(request),
+      }),
+    ).toEqual({
+      exitCode: 0,
+      stderr: [],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: '/api/tasks/42/comments/c1',
+          query: {},
+          body: { content: 'some piped content' },
+        },
+      ],
+    })
   })
 
   it('does not read stdin when required content is missing', async () => {

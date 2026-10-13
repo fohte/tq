@@ -6,7 +6,7 @@ import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
-import { apiUrl, captureFetch, fakeStdin } from '#commands/test-support'
+import { apiUrl, captureFetch } from '#commands/test-support'
 import type { ReadableStdin } from '#input'
 
 afterEach(() => {
@@ -14,8 +14,8 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-function stdinWith(content: string): ReadableStdin {
-  return Object.assign(Readable.from([content]), { isTTY: false })
+function stdinWith(content: string, isTTY = false): ReadableStdin {
+  return Object.assign(Readable.from([content]), { isTTY })
 }
 
 describe('hook', () => {
@@ -241,19 +241,22 @@ describe('hook', () => {
     })
   })
 
-  it('exits 0 and never calls fetch when stdin has no content', async () => {
+  it('does not read terminal stdin', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(null, { status: 500 }),
     )
+    const stdin = stdinWith('terminal input', true)
+    const readStdin = vi.spyOn(stdin, Symbol.asyncIterator)
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'hook', 'SessionStart'],
       fetchStub,
-      fakeStdin(true),
+      stdin,
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls.length).toBe(0)
+    expect(
+      exitCode === 0 && calls.length === 0 && readStdin.mock.calls.length === 0,
+    ).toEqual(true)
   })
 
   it('exits 0 and never calls fetch when stdin is not valid JSON', async () => {

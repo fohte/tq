@@ -191,6 +191,7 @@ async function executeCommandOperation(
   const contentInput = operation.cli.contentInput
   if (contentInput != null) {
     const fileOptionName = contentInput.fileOption?.name ?? 'file'
+    const fileOptionFlag = `--${toKebabCase(fileOptionName)}`
     const filePath =
       fileOptionName in options && typeof options[fileOptionName] === 'string'
         ? options[fileOptionName]
@@ -204,7 +205,7 @@ async function executeCommandOperation(
       reportError(
         actionCommand,
         new Error(
-          `Content is required. Provide --${toKebabCase(contentInput.fileOption?.name ?? 'file')} <path> or --${toKebabCase(contentInput.fileOption?.name ?? 'file')} - to read from stdin.`,
+          `Content is required. Provide ${fileOptionFlag} <path> or ${fileOptionFlag} - to read from stdin.`,
         ),
         ignoreErrors,
       )
