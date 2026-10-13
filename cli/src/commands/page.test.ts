@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -40,6 +41,22 @@ function makePageListOutput(
   stderr: unknown,
 ) {
   return { exitCode, requests: calls.map(request), stdout, stderr }
+}
+
+function makePageCreateOutput(
+  exitCode: number,
+  calls: ReturnType<typeof captureFetch>['calls'],
+  stdout: unknown,
+  stderr: unknown,
+  stdinReads: unknown,
+) {
+  return {
+    exitCode,
+    requests: calls.map(request),
+    stdout,
+    stderr,
+    stdinReads,
+  }
 }
 
 afterEach(() => {
@@ -346,20 +363,46 @@ describe('page create', () => {
     ])
   })
 
-  it('omits content from the request body when neither --file nor stdin provide any', async () => {
+  it('ignores piped stdin when --file is not given', async () => {
     const created = { id: 'p1', title: 'Notes', content: '' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
     )
+    const stdin = Object.assign(Readable.from(['unused content']), {
+      isTTY: false,
+    })
+    const readStdin = vi.spyOn(stdin, Symbol.asyncIterator)
+    const stdout = spyStdout()
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
       ['--api-url', apiUrl, 'page', 'create', '42', 'Notes'],
       fetchStub,
-      fakeStdin(true),
+      stdin,
     )
 
-    expect(exitCode).toBe(0)
-    expect(calls[0]?.body).toEqual({ title: 'Notes' })
+    expect(
+      makePageCreateOutput(
+        exitCode,
+        calls,
+        stdout.mock.calls,
+        stderr.mock.calls,
+        readStdin.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/tasks/42/pages',
+          query: {},
+          body: { title: 'Notes' },
+        },
+      ],
+      stdout: [[`${JSON.stringify(created, null, 2)}\n`]],
+      stderr: [],
+      stdinReads: [],
+    })
   })
 })
 
