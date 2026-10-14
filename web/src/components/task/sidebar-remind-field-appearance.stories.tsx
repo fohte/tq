@@ -62,7 +62,7 @@ export const TomorrowReminder: Story = {
 }
 
 export const Editing: Story = {
-  name: 'the reminder field is open for date entry',
+  name: 'the open field shows English and Japanese date examples',
   args: {
     isEditing: true,
     query: '',
