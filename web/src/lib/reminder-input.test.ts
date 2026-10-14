@@ -7,9 +7,9 @@ import {
 } from '#lib/reminder-input'
 
 describe('formatAbsoluteReminder', () => {
-  it('formats a date with the Japanese weekday', () => {
+  it('formats a date with the English weekday', () => {
     expect(formatAbsoluteReminder(new Date(2026, 8, 9, 9, 0))).toBe(
-      '2026/09/09 (水) 09:00',
+      '2026/09/09 (Wed) 09:00',
     )
   })
 })
@@ -17,21 +17,21 @@ describe('formatAbsoluteReminder', () => {
 describe('formatReminderSummary', () => {
   const now = new Date(2026, 8, 8, 10, 0)
 
-  it('labels a same-day reminder as "今日"', () => {
+  it('labels a same-day reminder as "today"', () => {
     expect(formatReminderSummary(new Date(2026, 8, 8, 18, 0), now)).toBe(
-      '今日 18:00',
+      'today 18:00',
     )
   })
 
-  it('labels a next-day reminder as "明日"', () => {
+  it('labels a next-day reminder as "tomorrow"', () => {
     expect(formatReminderSummary(new Date(2026, 8, 9, 9, 0), now)).toBe(
-      '明日 09:00',
+      'tomorrow 09:00',
     )
   })
 
   it('falls back to the full absolute format further out', () => {
     expect(formatReminderSummary(new Date(2026, 8, 14, 9, 0), now)).toBe(
-      '2026/09/14 (月) 09:00',
+      '2026/09/14 (Mon) 09:00',
     )
   })
 })
@@ -66,6 +66,30 @@ describe('parseReminderInput', () => {
   it('parses a Japanese natural-language date via chrono-node', async () => {
     expect(await parseReminderInput('明日9時', now)).toEqual(
       new Date(2026, 8, 9, 9, 0),
+    )
+  })
+
+  it('parses an English relative date via chrono-node', async () => {
+    expect(await parseReminderInput('in 7 days', now)).toEqual(
+      new Date(2026, 8, 15, 10, 0),
+    )
+  })
+
+  it('uses the longer English match for a weekday and time', async () => {
+    expect(await parseReminderInput('next monday 09:00', now)).toEqual(
+      new Date(2026, 8, 14, 9, 0),
+    )
+  })
+
+  it('uses the longer Japanese match instead of the English time-only match', async () => {
+    expect(await parseReminderInput('今日18:00', now)).toEqual(
+      new Date(2026, 8, 8, 18, 0),
+    )
+  })
+
+  it('uses the longer Japanese weekday match instead of the English time-only match', async () => {
+    expect(await parseReminderInput('来週月曜09:00', now)).toEqual(
+      new Date(2026, 8, 14, 9, 0),
     )
   })
 

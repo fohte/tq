@@ -61,7 +61,7 @@ export function SidebarRemindFieldAppearance({
                 onOpenChange(false)
               }
             }}
-            placeholder="明日9時 など"
+            placeholder="e.g. in 7 days"
             autoFocus
             className="w-full"
           />
@@ -81,7 +81,7 @@ export function SidebarRemindFieldAppearance({
       <Popover open={isEditing} onOpenChange={onOpenChange} anchor={inputRef}>
         <PopoverContent
           // Base UI's popover moves focus to the popup's first focusable
-          // element (the "なし" button below) as soon as it opens. That races
+          // element (the "None" button below) as soon as it opens. That races
           // the anchor `Input`'s own `autoFocus` and steals keystrokes away
           // from it, so keep focus on the input instead.
           initialFocus={false}
@@ -97,7 +97,7 @@ export function SidebarRemindFieldAppearance({
               onClear()
             }}
           >
-            なし
+            None
           </Button>
           <div className="mt-1 border-t border-border pt-1">
             {query.trim() === '' ? (
@@ -129,7 +129,7 @@ export function SidebarRemindFieldAppearance({
               </Button>
             ) : (
               <div className="px-3 py-1.5 text-sm text-muted-foreground">
-                解釈できません
+                Unrecognized date
               </div>
             )}
           </div>

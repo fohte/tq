@@ -24,7 +24,7 @@ const mockUseUpdateTask = vi.mocked(useUpdateTask)
 type UpdateTaskResult = ReturnType<typeof useUpdateTask>
 
 const taskId = '00000000-0000-0000-0000-000000000001'
-const inputPlaceholder = '明日9時 など'
+const inputPlaceholder = 'e.g. in 7 days'
 
 function mockMutate() {
   const mutate = vi.fn()
@@ -40,10 +40,10 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
+    await user.click(screen.getByText('—'))
 
     await Promise.all(
-      ['1時間後', '今日18:00', '明日09:00', '来週月曜09:00'].map(
+      ['in 1 hour', 'today 18:00', 'tomorrow 09:00', 'next monday 09:00'].map(
         async (preset) => {
           expect(await screen.findByText(preset)).toBeInTheDocument()
         },
@@ -56,18 +56,20 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
+    await user.click(screen.getByText('—'))
     await user.type(
       screen.getByPlaceholderText(inputPlaceholder),
-      '来週月曜10時',
+      'next monday 10:00',
     )
 
-    const expectedDate = assertDefined(await parseReminderInput('来週月曜10時'))
+    const expectedDate = assertDefined(
+      await parseReminderInput('next monday 10:00'),
+    )
     expect(
       await screen.findByText(formatAbsoluteReminder(expectedDate)),
     ).toBeInTheDocument()
     // The typed text itself is never shown as the result.
-    expect(screen.queryByText('来週月曜10時')).toBeNull()
+    expect(screen.queryByText('next monday 10:00')).toBeNull()
   })
 
   it('shows an unrecognized message for unparseable text and ignores Enter', async () => {
@@ -75,14 +77,17 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
-    await user.type(screen.getByPlaceholderText(inputPlaceholder), 'あいうえお')
+    await user.click(screen.getByText('—'))
+    await user.type(
+      screen.getByPlaceholderText(inputPlaceholder),
+      'foo bar baz',
+    )
 
-    expect(await screen.findByText('解釈できません')).toBeInTheDocument()
+    expect(await screen.findByText('Unrecognized date')).toBeInTheDocument()
 
     await user.keyboard('{Enter}')
 
-    expect(screen.getByText('解釈できません')).toBeInTheDocument()
+    expect(screen.getByText('Unrecognized date')).toBeInTheDocument()
     expect(mutate).not.toHaveBeenCalled()
   })
 
@@ -91,10 +96,10 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
-    await user.click(await screen.findByText('今日18:00'))
+    await user.click(screen.getByText('—'))
+    await user.click(await screen.findByText('today 18:00'))
 
-    const expectedDate = assertDefined(await parseReminderInput('今日18:00'))
+    const expectedDate = assertDefined(await parseReminderInput('today 18:00'))
     await waitFor(() => {
       expect(mutate).toHaveBeenCalledWith({
         id: taskId,
@@ -108,8 +113,8 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
-    await user.click(await screen.findByText('今日18:00'))
+    await user.click(screen.getByText('—'))
+    await user.click(await screen.findByText('today 18:00'))
 
     await waitFor(() => {
       expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
@@ -121,7 +126,7 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
+    await user.click(screen.getByText('—'))
     await user.type(screen.getByPlaceholderText(inputPlaceholder), '明日9時')
 
     const expectedDate = assertDefined(await parseReminderInput('明日9時'))
@@ -140,7 +145,7 @@ describe('SidebarRemindField', () => {
     const user = userEvent.setup()
     render(<SidebarRemindField taskId={taskId} remindAt={null} />)
 
-    await user.click(screen.getByText('なし'))
+    await user.click(screen.getByText('—'))
     await user.type(screen.getByPlaceholderText(inputPlaceholder), '明日9時')
 
     const expectedDate = assertDefined(await parseReminderInput('明日9時'))
@@ -151,7 +156,7 @@ describe('SidebarRemindField', () => {
     expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
   })
 
-  it('clears the reminder when "なし" is clicked from the popup', async () => {
+  it('clears the reminder when "None" is clicked from the popup', async () => {
     const mutate = mockMutate()
     const remindAt = '2026-03-25T09:00:00.000Z'
     const user = userEvent.setup()
@@ -160,7 +165,7 @@ describe('SidebarRemindField', () => {
     await user.click(
       screen.getByText(formatReminderSummary(new Date(remindAt))),
     )
-    await user.click(await screen.findByText('なし'))
+    await user.click(await screen.findByText('None'))
 
     expect(mutate).toHaveBeenCalledWith({
       id: taskId,
@@ -177,7 +182,7 @@ describe('SidebarRemindField', () => {
     await user.click(
       screen.getByText(formatReminderSummary(new Date(remindAt))),
     )
-    await user.click(await screen.findByText('なし'))
+    await user.click(await screen.findByText('None'))
 
     expect(screen.queryByPlaceholderText(inputPlaceholder)).toBeNull()
   })

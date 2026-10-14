@@ -27,7 +27,7 @@ const meta = {
     ),
   ],
   args: {
-    remindAtLabel: 'なし',
+    remindAtLabel: '—',
     isEditing: false,
     onOpenChange: () => {},
     query: '',
@@ -74,10 +74,10 @@ export const TypeAndInterpret: Story = {
   name: 'the field shows typed reminder text with its interpreted date',
   args: {
     isEditing: true,
-    query: '来週月曜10時',
+    query: 'next monday 10:00',
     // Fixed, not derived from `Date.now()` — chrono resolving the query
     // above happens once in production, not on every render of this story.
-    parsedDate: new Date(2026, 8, 21, 10, 0, 0),
+    parsedDate: new Date(2026, 8, 14, 10, 0, 0),
   },
 }
 
@@ -85,7 +85,7 @@ export const UnrecognizedInput: Story = {
   name: 'the field shows reminder text that cannot be interpreted',
   args: {
     isEditing: true,
-    query: 'あいうえお',
+    query: 'foo bar baz',
     parsedDate: null,
   },
 }
