@@ -18,12 +18,14 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import type { SearchResult } from '#hooks/use-search'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const keyboardQuery = 'keyboard'
 const workbenchQuery = 'workbench'
 const scrollableQuery = 'scrollable'
+const matchQuery = 'palette'
 const pendingQuery = 'pending'
 
 const searchTask = makeTask({
@@ -31,6 +33,23 @@ const searchTask = makeTask({
   number: 42,
   title: 'Keyboard shortcuts',
   context: 'work',
+})
+const titleMatchTask: SearchResult = makeTask({
+  id: '00000000-0000-0000-0000-000000000147',
+  number: 147,
+  title: 'Search the task palette',
+  context: 'work',
+  match: { field: 'title', snippet: 'Search the task palette' },
+})
+const bodyMatchTask: SearchResult = makeTask({
+  id: '00000000-0000-0000-0000-000000000148',
+  number: 148,
+  title: 'Document the search behavior',
+  context: 'work',
+  match: {
+    field: 'description',
+    snippet: 'Use the palette to search task descriptions.',
+  },
 })
 const scrollableTasks = Array.from({ length: 16 }, (_, index) => {
   const resultNumber = index + 1
@@ -244,6 +263,7 @@ const meta = {
           jsonByQuery(
             {
               [keyboardQuery]: [searchTask],
+              [matchQuery]: [titleMatchTask, bodyMatchTask],
               [scrollableQuery]: scrollableTasks,
               [projectScopeQuery]: [projectScopedTask],
               [taskScopeQuery]: [taskScopedTask],
@@ -377,6 +397,11 @@ export const RecentlyViewed: Story = {
 export const CrossSearch: Story = {
   name: 'the search dialog shows matching tasks, projects, and pages together',
   args: { defaultContext: 'work', defaultQuery: keyboardQuery },
+}
+
+export const TaskMatches: Story = {
+  name: 'the search dialog separates title matches from body matches',
+  args: { defaultContext: 'work', defaultQuery: matchQuery },
 }
 
 export const ProjectScope: Story = {
