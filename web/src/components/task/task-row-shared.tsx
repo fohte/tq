@@ -15,6 +15,7 @@ import { useCompleteTask, useUpdateTaskStatus } from '#hooks/use-tasks'
 import { formatReminderTime } from '#lib/format'
 import { formatRecurrenceSummary, type RecurrenceRule } from '#lib/recurrence'
 import { formatShortDate, isTaskOverdue } from '#lib/task-due-date'
+import { needsWaitAcknowledgement } from '#lib/task-waits'
 import { tagFilterSearch } from '#lib/tasks-query'
 import { cn } from '#lib/utils'
 
@@ -280,9 +281,7 @@ export function BlockedByLabel({
     blockedByGithubRefs,
     waits,
   })
-  const resolvedWait = waits.find(
-    (wait) => wait.resolvedAt != null && wait.acknowledgedAt == null,
-  )
+  const resolvedWait = waits.find(needsWaitAcknowledgement)
   const soleGithubBlocker =
     blockerCount === 1 ? blockedByGithubRefs[0] : undefined
   const soleWait = blockerCount === 1 ? waits[0] : undefined

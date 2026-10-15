@@ -27,6 +27,7 @@ import type { LinkedTaskSummary, TaskWait } from '#hooks/use-tasks'
 import { useUpdateTaskBlockedBy } from '#hooks/use-tasks'
 import { addLocalDays, formatLocalDate } from '#lib/date-range'
 import { formatShortDate } from '#lib/task-due-date'
+import { isTaskWaitBlocking, needsWaitAcknowledgement } from '#lib/task-waits'
 import { cn } from '#lib/utils'
 
 export function TaskDependenciesSection({
@@ -144,8 +145,7 @@ function BlockedByGroup({
         {githubBlockers.map((blocker) => {
           const replyWaits = waits.filter(
             (wait) =>
-              wait.githubLinkId === blocker.id &&
-              (wait.resolvedAt == null || wait.acknowledgedAt == null),
+              wait.githubLinkId === blocker.id && isTaskWaitBlocking(wait),
           )
           const waitMode =
             replyWaits.length > 0 ? 'until-reply' : 'until-closed'
@@ -322,7 +322,7 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
     updateWait.mutate({ waitId: wait.id, body })
   })
   const isResolved = wait.resolvedAt != null
-  const needsAcknowledgement = isResolved && wait.acknowledgedAt == null
+  const needsAcknowledgement = needsWaitAcknowledgement(wait)
   const disabled =
     updateWait.isPending ||
     resolveWait.isPending ||

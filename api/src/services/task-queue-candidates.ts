@@ -1,3 +1,5 @@
+import { isTaskWaitResolvedAndUnacknowledged } from '#services/task-waits'
+
 export type TaskQueueCandidateReason =
   | { kind: 'wait-resolved' }
   | { kind: 'overdue'; days: number }
@@ -33,11 +35,7 @@ export function getTaskQueueCandidateReason(
   // candidate's displayed reason matches the category that sorted it.
   if (task.status === 'completed') return null
 
-  if (
-    task.waits?.some(
-      (wait) => wait.resolvedAt != null && wait.acknowledgedAt == null,
-    ) === true
-  ) {
+  if (task.waits?.some(isTaskWaitResolvedAndUnacknowledged) === true) {
     return { kind: 'wait-resolved' }
   }
 

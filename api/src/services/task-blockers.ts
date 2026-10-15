@@ -1,4 +1,4 @@
-import { and, eq, exists, isNull, ne, not, sql } from 'drizzle-orm'
+import { and, eq, exists, isNotNull, isNull, ne, not, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 
 import { db } from '#db/connection'
@@ -40,10 +40,35 @@ function unresolvedTaskWaitSubquery() {
     .where(and(eq(taskWaits.taskId, tasks.id), isNull(taskWaits.resolvedAt)))
 }
 
+function unacknowledgedResolvedTaskWaitSubquery() {
+  return db
+    .select({ _: sql`1` })
+    .from(taskWaits)
+    .where(
+      and(
+        eq(taskWaits.taskId, tasks.id),
+        isNotNull(taskWaits.resolvedAt),
+        isNull(taskWaits.acknowledgedAt),
+      ),
+    )
+}
+
 export function hasUnresolvedBlockersCondition() {
   return sql`(${exists(unresolvedTaskBlockerSubquery())} OR ${exists(unresolvedGithubBlockerSubquery())} OR ${exists(unresolvedTaskWaitSubquery())})`
 }
 
 export function hasNoUnresolvedBlockersCondition() {
   return not(hasUnresolvedBlockersCondition())
+}
+
+export function hasUnacknowledgedResolvedTaskWaitCondition() {
+  return exists(unacknowledgedResolvedTaskWaitSubquery())
+}
+
+export function hasBlockingStateCondition() {
+  return sql`(${hasUnresolvedBlockersCondition()} OR ${hasUnacknowledgedResolvedTaskWaitCondition()})`
+}
+
+export function hasNoBlockingStateCondition() {
+  return sql`(${hasNoUnresolvedBlockersCondition()} AND NOT ${hasUnacknowledgedResolvedTaskWaitCondition()})`
 }

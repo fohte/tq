@@ -15,6 +15,12 @@ export interface TaskWaitSummary {
   acknowledgedAt: string | null
 }
 
+export function isTaskWaitResolvedAndUnacknowledged(
+  wait: Pick<TaskWaitSummary, 'resolvedAt' | 'acknowledgedAt'>,
+) {
+  return wait.resolvedAt != null && wait.acknowledgedAt == null
+}
+
 function taskWaitSummary(
   wait: Pick<
     TaskWaitRow,

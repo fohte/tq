@@ -25,16 +25,14 @@ import {
 import { classifyNumericOrId } from '#lib/numeric-id'
 import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
-import {
-  followUpDueTaskWaitSubquery,
-  unacknowledgedResolvedTaskWaitSubquery,
-} from '#routes/tasks/list-query-waits'
+import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
 import {
-  hasNoUnresolvedBlockersCondition,
-  hasUnresolvedBlockersCondition,
+  hasBlockingStateCondition,
+  hasNoBlockingStateCondition,
+  hasUnacknowledgedResolvedTaskWaitCondition,
 } from '#services/task-blockers'
 
 // Each word adds an EXISTS subquery for task_pages, so cap the word count
@@ -190,21 +188,11 @@ function buildConditions(
   }
 
   if (parsed?.hasBlockers === true) {
-    conditions.push(
-      or(
-        hasUnresolvedBlockersCondition(),
-        exists(unacknowledgedResolvedTaskWaitSubquery()),
-      ),
-    )
+    conditions.push(hasBlockingStateCondition())
   }
 
   if (parsed?.hasNoBlockers === true) {
-    conditions.push(
-      and(
-        hasNoUnresolvedBlockersCondition(),
-        notExists(unacknowledgedResolvedTaskWaitSubquery()),
-      ),
-    )
+    conditions.push(hasNoBlockingStateCondition())
   }
 
   if (parsed?.hasFollowUpDue === true) {
@@ -218,7 +206,7 @@ function buildConditions(
   }
 
   if (parsed?.hasResolvedWait === true) {
-    conditions.push(exists(unacknowledgedResolvedTaskWaitSubquery()))
+    conditions.push(hasUnacknowledgedResolvedTaskWaitCondition())
   }
 
   // Unlike the other filters above, an explicit `projectId` param wins over

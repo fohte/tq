@@ -1,4 +1,4 @@
-import { and, count, desc, eq, exists, inArray, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 
@@ -23,11 +23,9 @@ import {
   EMPTY_CHECKLIST_COMPLETION_COUNT,
   getChecklistCompletionCountsByTaskId,
 } from '#routes/tasks/checklist-data'
-import {
-  earliestUnresolvedTaskWaitFollowUpSubquery,
-  unacknowledgedResolvedTaskWaitSubquery,
-} from '#routes/tasks/list-query-waits'
+import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
 import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
+import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 import {
   getOpenGithubBlockerRefsByTaskId,
   type GithubBlockerRef,
@@ -53,10 +51,9 @@ function resolvePrimaryTaskListOrderBy(
         ? sql`${tasks.dueDate} DESC NULLS LAST`
         : sql`${tasks.dueDate} ASC NULLS LAST`
     case 'follow-up': {
-      const waitResolved = exists(unacknowledgedResolvedTaskWaitSubquery())
-      return order === 'desc'
-        ? sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) DESC NULLS LAST`
-        : sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) ASC NULLS LAST`
+      const waitResolved = hasUnacknowledgedResolvedTaskWaitCondition()
+      const direction = order === 'desc' ? sql`DESC` : sql`ASC`
+      return sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) ${direction} NULLS LAST`
     }
     case 'created':
     default:

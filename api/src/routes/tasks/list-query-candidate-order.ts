@@ -4,14 +4,13 @@ import { tasks } from '#db/schema'
 import {
   earliestUnresolvedTaskWaitFollowUpSubquery,
   followUpDueTaskWaitSubquery,
-  unacknowledgedResolvedTaskWaitSubquery,
 } from '#routes/tasks/list-query-waits'
+import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 
 export function resolveTaskCandidateOrderBy(candidateDate: string): SQL[] {
   const hasDueFollowUp = exists(followUpDueTaskWaitSubquery(candidateDate))
-  const hasUnacknowledgedResolvedWait = exists(
-    unacknowledgedResolvedTaskWaitSubquery(),
-  )
+  const hasUnacknowledgedResolvedWait =
+    hasUnacknowledgedResolvedTaskWaitCondition()
   const isOverdue = sql`
     NOT (${hasDueFollowUp})
     AND ${tasks.status} <> 'completed'

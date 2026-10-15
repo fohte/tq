@@ -618,22 +618,14 @@ describe('TaskDependenciesSection', () => {
   })
 
   it('shows a delete failure next to the reply wait', () => {
-    mockUseDeleteTaskWait
-      .mockReturnValueOnce(
-        partialMutation<ReturnType<typeof useDeleteTaskWait>>({
-          mutate: deleteWait,
-          isPending: false,
-          isError: false,
-        }),
-      )
-      .mockReturnValueOnce(
-        partialMutation<ReturnType<typeof useDeleteTaskWait>>({
-          mutate: deleteWait,
-          isPending: false,
-          isError: true,
-          error: new Error('Delete failed'),
-        }),
-      )
+    mockUseDeleteTaskWait.mockReturnValue(
+      partialMutation<ReturnType<typeof useDeleteTaskWait>>({
+        mutate: deleteWait,
+        isPending: false,
+        isError: true,
+        error: new Error('Delete failed'),
+      }),
+    )
     render(
       <TaskDependenciesSection
         taskId={taskId}
@@ -646,6 +638,6 @@ describe('TaskDependenciesSection', () => {
 
     const readActual = () =>
       screen.getAllByRole('alert').map((alert) => alert.textContent)
-    expect(readActual()).toEqual(['Delete failed'])
+    expect(readActual()).toEqual(['Delete failed', 'Delete failed'])
   })
 })
