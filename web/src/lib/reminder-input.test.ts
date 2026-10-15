@@ -75,6 +75,12 @@ describe('parseReminderInput', () => {
     )
   })
 
+  it('parses the short English duration example from the placeholder', async () => {
+    expect(await parseReminderInput('in 1h', now)).toEqual(
+      new Date(2026, 8, 8, 11, 0),
+    )
+  })
+
   it('uses the longer English match for a weekday and time', async () => {
     expect(await parseReminderInput('next monday 09:00', now)).toEqual(
       new Date(2026, 8, 14, 9, 0),
