@@ -24,7 +24,7 @@ const mockUseUpdateTask = vi.mocked(useUpdateTask)
 type UpdateTaskResult = ReturnType<typeof useUpdateTask>
 
 const taskId = '00000000-0000-0000-0000-000000000001'
-const inputPlaceholder = 'tomorrow 9am, 明日9時 ...'
+const inputPlaceholder = 'in 1h, 明日9時'
 
 function mockMutate() {
   const mutate = vi.fn()

@@ -61,7 +61,7 @@ export function SidebarRemindFieldAppearance({
                 onOpenChange(false)
               }
             }}
-            placeholder="tomorrow 9am, 明日9時 ..."
+            placeholder="in 1h, 明日9時"
             autoFocus
             className="w-full"
           />
