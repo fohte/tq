@@ -420,23 +420,18 @@ units](#overlay-viewport-units) below).
 
 ### Overlay viewport units
 
-A handful of overlays clamp their size or position relative to the viewport
-(`vh`), not to the spacing grid — grid rounding doesn't apply here, since
-these aren't spacing values. `vh` has no `@theme` namespace of its own, but
-each of `max-h`/`padding-top` does resolve against a per-utility theme
-namespace (`--max-height-*`, confirmed by compiling with this repo's
-tailwindcss 4.2.2), so each value gets a name instead of a bracket:
+A few overlays cap their height relative to the viewport (`vh`) rather than
+the spacing grid, so those caps are documented here:
 
-| Token                                            | Utility                | Value                                               | Role                                                                                       |
-| ------------------------------------------------ | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `--max-height-sheet`                             | `max-h-sheet`          | `calc(var(--visual-viewport-height, 100vh) * 0.85)` | Mobile bottom sheet's overall height cap (`BottomSheetPanel`)                              |
-| `--max-height-modal-composer`                    | `max-h-modal-composer` | `max-height: 40vh`                                  | PC create-task modal's description composer height cap                                     |
-| `--max-height-sheet-composer`                    | `max-h-sheet-composer` | `max-height: 30vh`                                  | Mobile create-task bottom sheet's description composer height cap                          |
-| n/a (`@utility`, no `--padding-top-*` namespace) | `modal-top-offset`     | `padding-top: 15vh`                                 | Drops the search modal down from the top of the viewport at `md` and above (`SearchModal`) |
+| Token                         | Utility                | Value                                               | Role                                                              |
+| ----------------------------- | ---------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| `--max-height-sheet`          | `max-h-sheet`          | `calc(var(--visual-viewport-height, 100vh) * 0.85)` | Mobile bottom sheet's overall height cap (`BottomSheetPanel`)     |
+| `--max-height-modal-composer` | `max-h-modal-composer` | `max-height: 40vh`                                  | PC create-task modal's description composer height cap            |
+| `--max-height-sheet-composer` | `max-h-sheet-composer` | `max-height: 30vh`                                  | Mobile create-task bottom sheet's description composer height cap |
 
-These four values don't collapse into one token — each clamps a different
-role — but the role each one plays is now named and documented here instead
-of scattered as four unnamed `vh` brackets.
+`vh` has no `@theme` namespace of its own, but each `max-h` utility resolves
+against the `--max-height-*` namespace. These three values clamp different
+roles, so they remain separate tokens.
 
 `--max-height-sheet` reads `--visual-viewport-height` instead of a plain
 `vh` unit: iOS Safari doesn't shrink the layout viewport when the software

@@ -80,15 +80,6 @@
 }
 
 /*
- * Drops the search modal down from the top of the viewport — padding-top has
- * no @theme namespace to hang a named scale step off of, see
- * docs/design-system.md.
- */
-@utility modal-top-offset {
-  padding-top: 15vh;
-}
-
-/*
  * Three 14 pt AppKit button frames, two 9 pt gaps, and a 9 pt inset occupy
  * 69 pt; the 80 px heading inset leaves 11 px. Keep these dimensions aligned
  * with `trafficLightPosition` in desktop/src/index.ts to prevent overlap.

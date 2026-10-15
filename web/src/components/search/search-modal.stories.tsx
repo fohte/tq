@@ -1,7 +1,7 @@
 import { Button } from '@fohte/ui/button'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
@@ -18,18 +18,38 @@ import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
+import type { SearchResult } from '#hooks/use-search'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 
 const keyboardQuery = 'keyboard'
 const workbenchQuery = 'workbench'
 const scrollableQuery = 'scrollable'
+const matchQuery = 'palette'
+const pendingQuery = 'pending'
 
 const searchTask = makeTask({
   id: '00000000-0000-0000-0000-000000000042',
   number: 42,
   title: 'Keyboard shortcuts',
   context: 'work',
+})
+const titleMatchTask: SearchResult = makeTask({
+  id: '00000000-0000-0000-0000-000000000147',
+  number: 147,
+  title: 'Search the task palette',
+  context: 'work',
+  match: { field: 'title', snippet: 'Search the task palette' },
+})
+const bodyMatchTask: SearchResult = makeTask({
+  id: '00000000-0000-0000-0000-000000000148',
+  number: 148,
+  title: 'Document the search behavior',
+  context: 'work',
+  match: {
+    field: 'description',
+    snippet: 'Use the palette to search task descriptions.',
+  },
 })
 const scrollableTasks = Array.from({ length: 16 }, (_, index) => {
   const resultNumber = index + 1
@@ -222,9 +242,13 @@ function queryResults<T>(request: Request, fixtures: Record<string, T[]>) {
   return fixtures[query] ?? []
 }
 
-function jsonByQuery<T>(fixtures: Record<string, T[]>) {
-  return ({ request }: { request: Request }) =>
-    HttpResponse.json(queryResults(request, fixtures))
+function jsonByQuery<T>(fixtures: Record<string, T[]>, pendingQuery?: string) {
+  return async ({ request }: { request: Request }) => {
+    if (new URL(request.url).searchParams.get('q') === pendingQuery) {
+      await delay('infinite')
+    }
+    return HttpResponse.json(queryResults(request, fixtures))
+  }
 }
 
 const meta = {
@@ -236,12 +260,16 @@ const meta = {
       handlers: [
         http.get(
           '/api/tasks',
-          jsonByQuery({
-            [keyboardQuery]: [searchTask],
-            [scrollableQuery]: scrollableTasks,
-            [projectScopeQuery]: [projectScopedTask],
-            [taskScopeQuery]: [taskScopedTask],
-          }),
+          jsonByQuery(
+            {
+              [keyboardQuery]: [searchTask],
+              [matchQuery]: [titleMatchTask, bodyMatchTask],
+              [scrollableQuery]: scrollableTasks,
+              [projectScopeQuery]: [projectScopedTask],
+              [taskScopeQuery]: [taskScopedTask],
+            },
+            pendingQuery,
+          ),
         ),
         http.get(`/api/tasks/${searchTask.id}`, () =>
           HttpResponse.json(searchTaskDetail),
@@ -371,6 +399,11 @@ export const CrossSearch: Story = {
   args: { defaultContext: 'work', defaultQuery: keyboardQuery },
 }
 
+export const TaskMatches: Story = {
+  name: 'the search dialog separates title matches from body matches',
+  args: { defaultContext: 'work', defaultQuery: matchQuery },
+}
+
 export const ProjectScope: Story = {
   name: 'a project scope token narrows task results to one project',
   args: { defaultContext: 'work', defaultQuery: projectScopeQuery },
@@ -394,6 +427,11 @@ export const TaskNumber: Story = {
 export const Suggestions: Story = {
   name: 'the search dialog suggests filter values after the is prefix',
   args: { defaultContext: 'work', defaultQuery: 'is:' },
+}
+
+export const Loading: Story = {
+  name: 'the search dialog shows a loading indicator while results are pending',
+  args: { defaultContext: 'work', defaultQuery: pendingQuery },
 }
 
 export const HelpOpen: Story = {

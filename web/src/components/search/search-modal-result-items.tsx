@@ -1,6 +1,7 @@
+import type { CommandPaletteItem } from '@fohte/ui/command-palette'
 import { ListItem as UiListItem } from '@fohte/ui/list'
 import { Link } from '@tanstack/react-router'
-import type { MouseEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import {
   isProjectStatus,
@@ -13,12 +14,7 @@ import type { SavedView } from '#hooks/use-saved-views'
 import type { PageSearchResult, SearchResult } from '#hooks/use-search'
 import { cn } from '#lib/utils'
 
-export interface ListItem {
-  key: string
-  select: () => void
-  selectOnTab?: () => void
-  render: (props: ListItemRenderProps) => ReactNode
-}
+export type ListItem = CommandPaletteItem
 
 type BodySearchMatch = Extract<
   NonNullable<SearchResult['match']>,
@@ -35,11 +31,6 @@ export function getBodySearchMatch(
   return task.match?.field === 'description' || task.match?.field === 'page'
     ? task.match
     : undefined
-}
-
-interface ListItemRenderProps {
-  isSelected: boolean
-  onMouseMove: (event: MouseEvent<HTMLElement>) => void
 }
 
 export function createOptionItem(

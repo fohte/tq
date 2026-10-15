@@ -1,3 +1,4 @@
+import type { CommandPaletteGroup } from '@fohte/ui/command-palette'
 import { useMemo } from 'react'
 
 import {
@@ -17,10 +18,6 @@ import {
   type ListItem,
   renderTaskOption,
 } from '#components/search/search-modal-result-items'
-import {
-  type ResultGroup,
-  resultGroupItemCount,
-} from '#components/search/search-modal-result-list'
 import type { Project } from '#hooks/use-projects'
 import type { SavedView } from '#hooks/use-saved-views'
 import type {
@@ -31,6 +28,19 @@ import type {
 import type { TaskDetail } from '#hooks/use-tasks'
 import type { NavKeybinding } from '#lib/keybindings'
 import type { RecentSearchItem } from '#lib/recent-search-items'
+
+export type ResultGroup = CommandPaletteGroup & {
+  isVisible: (query: string, itemCount: number) => boolean
+}
+
+export function resultGroupItemCount(group: {
+  items?: readonly unknown[]
+  sections?: { items: readonly unknown[] }[]
+}): number {
+  return group.sections == null
+    ? (group.items?.length ?? 0)
+    : group.sections.reduce((count, section) => count + section.items.length, 0)
+}
 
 interface SearchModalResultGroupsOptions {
   query: string

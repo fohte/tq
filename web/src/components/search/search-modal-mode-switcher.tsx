@@ -20,11 +20,7 @@ export function SearchModalModeSwitcher({
   onModeChange,
 }: SearchModalModeSwitcherProps) {
   return (
-    <div
-      className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-border px-3 py-1.5 md:hidden"
-      role="group"
-      aria-label="Search mode"
-    >
+    <>
       {searchModes.map(({ label, prefix }) => (
         <span key={label} className="flex h-8 shrink-0 whitespace-nowrap">
           <Chip
@@ -40,6 +36,6 @@ export function SearchModalModeSwitcher({
           </Chip>
         </span>
       ))}
-    </div>
+    </>
   )
 }

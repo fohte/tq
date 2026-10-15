@@ -11,6 +11,13 @@ const meta = {
     onModeChange: () => undefined,
   },
   parameters: { layout: 'padded' },
+  decorators: [
+    (Story) => (
+      <div className="flex gap-2">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof SearchModalModeSwitcher>
 
 export default meta
