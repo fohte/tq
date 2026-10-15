@@ -280,6 +280,9 @@ export function BlockedByLabel({
     blockedByGithubRefs,
     waits,
   })
+  const resolvedWait = waits.find(
+    (wait) => wait.resolvedAt != null && wait.acknowledgedAt == null,
+  )
   const soleGithubBlocker =
     blockerCount === 1 ? blockedByGithubRefs[0] : undefined
   const soleWait = blockerCount === 1 ? waits[0] : undefined
@@ -287,16 +290,26 @@ export function BlockedByLabel({
   if (blockerCount === 0) return null
 
   const text =
-    soleWait != null
+    soleWait != null || (resolvedWait != null && blockerCount === 1)
       ? null
       : blockerCount === 1 && soleGithubBlocker == null
         ? `blocked by #${String(blockedByNumbers[0])}`
         : `blocked by ${String(blockerCount)}`
 
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground">
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground',
+        resolvedWait != null && 'text-primary',
+      )}
+    >
       <Hourglass className="size-3" aria-hidden="true" />
-      {soleWait != null ? (
+      {resolvedWait != null && blockerCount === 1 ? (
+        <>
+          <span>wait resolved:</span>
+          <span className="max-w-52 truncate">{resolvedWait.label}</span>
+        </>
+      ) : soleWait != null ? (
         <>
           <span className="max-w-52 truncate">{soleWait.label}</span>
           <span aria-hidden="true">·</span>

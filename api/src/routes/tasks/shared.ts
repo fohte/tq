@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, exists, inArray, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
 import { createFactory } from 'hono/factory'
 
@@ -23,7 +23,10 @@ import {
   EMPTY_CHECKLIST_COMPLETION_COUNT,
   getChecklistCompletionCountsByTaskId,
 } from '#routes/tasks/checklist-data'
-import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
+import {
+  earliestUnresolvedTaskWaitFollowUpSubquery,
+  unacknowledgedResolvedTaskWaitSubquery,
+} from '#routes/tasks/list-query-waits'
 import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
 import {
   getOpenGithubBlockerRefsByTaskId,
@@ -34,7 +37,7 @@ import {
   getDuplicateOfNumbersByTaskId,
 } from '#services/task-relations'
 import {
-  getUnresolvedTaskWaitSummariesByTaskId,
+  getVisibleTaskWaitSummariesByTaskId,
   type TaskWaitSummary,
 } from '#services/task-waits'
 
@@ -49,10 +52,12 @@ function resolvePrimaryTaskListOrderBy(
       return order === 'desc'
         ? sql`${tasks.dueDate} DESC NULLS LAST`
         : sql`${tasks.dueDate} ASC NULLS LAST`
-    case 'follow-up':
+    case 'follow-up': {
+      const waitResolved = exists(unacknowledgedResolvedTaskWaitSubquery())
       return order === 'desc'
-        ? sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) DESC NULLS LAST`
-        : sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) ASC NULLS LAST`
+        ? sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) DESC NULLS LAST`
+        : sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) ASC NULLS LAST`
+    }
     case 'created':
     default:
       return order === 'desc' ? desc(tasks.createdAt) : tasks.createdAt
@@ -384,7 +389,7 @@ async function hydrateTaskListRowsWith<
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getOpenGithubBlockerRefsByTaskId(ids),
-    getUnresolvedTaskWaitSummariesByTaskId(ids),
+    getVisibleTaskWaitSummariesByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
   ])

@@ -23,16 +23,16 @@ export function useCreateTaskWait() {
   return useMutation({
     mutationFn: async ({
       taskId,
-      body,
-      followUpDate,
+      ...input
     }: {
       taskId: string
-      body: string
-      followUpDate: string
+      body?: string
+      followUpDate?: string
+      githubUrl?: string
     }) => {
       const res = await api.api.tasks[':taskId'].waits.$post({
         param: { taskId },
-        json: { body, followUpDate },
+        json: input,
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
@@ -71,6 +71,20 @@ export function useResolveTaskWait(taskId: string) {
       const res = await api.api.tasks[':taskId'].waits[':waitId'].resolve.$post(
         { param: { taskId, waitId } },
       )
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onSettled: () => invalidateTaskWaitQueries(queryClient, taskId),
+  })
+}
+
+export function useAcknowledgeTaskWait(taskId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (waitId: string): Promise<TaskWait> => {
+      const res = await api.api.tasks[':taskId'].waits[
+        ':waitId'
+      ].acknowledge.$post({ param: { taskId, waitId } })
       return unwrapOrThrow(assertOk(res)).json()
     },
     onSettled: () => invalidateTaskWaitQueries(queryClient, taskId),

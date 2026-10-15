@@ -164,6 +164,33 @@ describe('TaskRowAppearance', () => {
     })
   })
 
+  it('keeps other blockers visible while emphasizing an unacknowledged reply', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        blockedByNumbers: [312],
+        waits: [
+          makeTaskWaitSummary({
+            label: 'Review feedback',
+            resolvedAt: '2099-10-12T00:00:00.000Z',
+            acknowledgedAt: null,
+          }),
+        ],
+      }),
+    )
+    const label = container.querySelector('.text-primary')
+
+    const readActual = () => ({
+      text: label?.textContent,
+      className: label?.className,
+    })
+
+    expect(readActual()).toEqual({
+      text: 'blocked by 2',
+      className:
+        'inline-flex shrink-0 items-center gap-1 font-mono text-xs text-primary',
+    })
+  })
+
   it('counts unresolved reply waits with task and GitHub blockers', async () => {
     await renderTaskRow(
       makeTask({

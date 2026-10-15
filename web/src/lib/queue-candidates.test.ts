@@ -7,6 +7,10 @@ import {
 
 describe('getQueueCandidates', () => {
   it('keeps the API order and pairs each task with its reason', () => {
+    const waitResolvedTask = {
+      id: 'task-wait-resolved',
+      candidateReason: { kind: 'wait-resolved' } as const,
+    }
     const followUpTask = {
       id: 'task-follow-up',
       candidateReason: { kind: 'follow-up', days: 2 } as const,
@@ -18,8 +22,14 @@ describe('getQueueCandidates', () => {
     const completedTask = { id: 'task-without-reason', candidateReason: null }
 
     expect(
-      getQueueCandidates([followUpTask, overdueTask, completedTask]),
+      getQueueCandidates([
+        waitResolvedTask,
+        followUpTask,
+        overdueTask,
+        completedTask,
+      ]),
     ).toEqual([
+      { task: waitResolvedTask, reason: { kind: 'wait-resolved' } },
       { task: followUpTask, reason: { kind: 'follow-up', days: 2 } },
       { task: overdueTask, reason: { kind: 'overdue', days: 5 } },
     ])
@@ -27,6 +37,12 @@ describe('getQueueCandidates', () => {
 })
 
 describe('formatCandidateReason', () => {
+  it('formats a resolved reply wait', () => {
+    expect(formatCandidateReason({ kind: 'wait-resolved' })).toEqual(
+      'wait resolved',
+    )
+  })
+
   it('formats overdue', () => {
     expect(formatCandidateReason({ kind: 'overdue', days: 3 })).toBe(
       '3d overdue',

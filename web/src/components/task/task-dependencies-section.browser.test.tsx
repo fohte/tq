@@ -14,6 +14,7 @@ import {
 } from '#hooks/use-github-link'
 import { useSearchTasks } from '#hooks/use-search'
 import {
+  useAcknowledgeTaskWait,
   useCreateTaskWait,
   useDeleteTaskWait,
   useResolveTaskWait,
@@ -48,6 +49,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 })
 
 vi.mock('#hooks/use-task-waits', () => ({
+  useAcknowledgeTaskWait: vi.fn(),
   useCreateTaskWait: vi.fn(),
   useDeleteTaskWait: vi.fn(),
   useResolveTaskWait: vi.fn(),
@@ -62,12 +64,15 @@ const mockUseUpdateGithubLinkNotifyEvents = vi.mocked(
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
 const mockUseUpdateTaskBlockedBy = vi.mocked(useUpdateTaskBlockedBy)
 const mockUseCreateTaskWait = vi.mocked(useCreateTaskWait)
+const mockUseAcknowledgeTaskWait = vi.mocked(useAcknowledgeTaskWait)
 const mockUseDeleteTaskWait = vi.mocked(useDeleteTaskWait)
 const mockUseResolveTaskWait = vi.mocked(useResolveTaskWait)
 const mockUseUpdateTaskWait = vi.mocked(useUpdateTaskWait)
 const updateBlockedBy = vi.fn()
 const updateNotifyEvents = vi.fn()
 const createWait = vi.fn<ReturnType<typeof useCreateTaskWait>['mutate']>()
+const acknowledgeWait =
+  vi.fn<ReturnType<typeof useAcknowledgeTaskWait>['mutate']>()
 let createWaitError: Error | null = null
 const resetCreateWait = vi.fn(() => {
   createWaitError = null
@@ -84,6 +89,7 @@ beforeEach(() => {
   updateBlockedBy.mockReset()
   updateNotifyEvents.mockReset()
   createWait.mockReset()
+  acknowledgeWait.mockReset()
   createWaitError = null
   resetCreateWait.mockClear()
   updateWait.mockReset()
@@ -120,6 +126,12 @@ beforeEach(() => {
       isPending: false,
       error: createWaitError,
       reset: resetCreateWait,
+    }),
+  )
+  mockUseAcknowledgeTaskWait.mockReturnValue(
+    partialMutation<ReturnType<typeof useAcknowledgeTaskWait>>({
+      mutate: acknowledgeWait,
+      isPending: false,
     }),
   )
   mockUseUpdateTaskWait.mockReturnValue(
@@ -337,6 +349,99 @@ describe('TaskDependenciesSection', () => {
     })
   })
 
+  it('enables a GitHub reply wait with an optional body and a default follow-up date', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const user = userEvent.setup()
+    const followUpDate = addLocalDays(formatLocalDate(new Date()), 3)
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[]}
+      />,
+    )
+
+    await user.selectOptions(
+      screen.getByRole('combobox', {
+        name: 'Wait mode for example-team/sample-project#2048',
+      }),
+      'until-reply',
+    )
+    const bodyInput = screen.getByRole('textbox', { name: 'Wait description' })
+    const followUpInput = screen.getByLabelText('Follow-up date')
+    await user.click(screen.getByRole('button', { name: 'Enable' }))
+
+    const readActual = () => ({
+      title: screen.getByRole('heading', { name: 'Wait for GitHub reply' })
+        .textContent,
+      body: bodyInput instanceof HTMLTextAreaElement ? bodyInput.value : null,
+      followUpDate:
+        followUpInput instanceof HTMLInputElement ? followUpInput.value : null,
+      createCalls: createWait.mock.calls.map(([input]) => input),
+    })
+
+    expect(readActual()).toEqual({
+      title: 'Wait for GitHub reply',
+      body: '',
+      followUpDate,
+      createCalls: [{ taskId, followUpDate, githubUrl: blocker.url }],
+    })
+  })
+
+  it('returns a GitHub blocker to until closed by removing its reply wait', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const wait = makeTaskWait({
+      githubLinkId: blocker.id,
+      body: null,
+      label: 'Waiting for GitHub activity',
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[wait]}
+      />,
+    )
+
+    await user.selectOptions(
+      screen.getByRole('combobox', {
+        name: 'Wait mode for example-team/sample-project#2048',
+      }),
+      'until-closed',
+    )
+
+    expect(deleteWait.mock.calls).toEqual([[wait.id]])
+  })
+
+  it('acknowledges a resolved reply wait from the dependencies section', async () => {
+    const wait = makeTaskWait({
+      label: 'Review feedback',
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: null,
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[wait]}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Acknowledge wait: Review feedback' }),
+    )
+
+    expect(acknowledgeWait.mock.calls).toEqual([[wait.id]])
+  })
+
   it('saves a complete follow-up date after keyboard edits finish', () => {
     const wait = makeTaskWait({
       id: 'wait-example-007',
@@ -513,14 +618,22 @@ describe('TaskDependenciesSection', () => {
   })
 
   it('shows a delete failure next to the reply wait', () => {
-    mockUseDeleteTaskWait.mockReturnValue(
-      partialMutation<ReturnType<typeof useDeleteTaskWait>>({
-        mutate: deleteWait,
-        isPending: false,
-        isError: true,
-        error: new Error('Delete failed'),
-      }),
-    )
+    mockUseDeleteTaskWait
+      .mockReturnValueOnce(
+        partialMutation<ReturnType<typeof useDeleteTaskWait>>({
+          mutate: deleteWait,
+          isPending: false,
+          isError: false,
+        }),
+      )
+      .mockReturnValueOnce(
+        partialMutation<ReturnType<typeof useDeleteTaskWait>>({
+          mutate: deleteWait,
+          isPending: false,
+          isError: true,
+          error: new Error('Delete failed'),
+        }),
+      )
     render(
       <TaskDependenciesSection
         taskId={taskId}

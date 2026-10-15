@@ -20,3 +20,8 @@ export const FollowUpOverdue: Story = {
   name: 'an overdue follow-up uses the primary text color',
   args: { reason: { kind: 'follow-up', days: 3 } },
 }
+
+export const WaitResolved: Story = {
+  name: 'a resolved reply uses the emphasized text color',
+  args: { reason: { kind: 'wait-resolved' } },
+}

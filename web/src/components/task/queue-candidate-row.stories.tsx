@@ -5,6 +5,7 @@ import { type ReactNode, useState } from 'react'
 
 import { QueueCandidateRow } from '#components/task/queue-candidate-row'
 import { makeTask as makeBaseTask } from '#components/task/task-row-test-fixtures'
+import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { MemoizedStoryRouter } from '#storybook-config/story-router'
 
@@ -76,6 +77,23 @@ export const FollowUpOverdue: Story = {
   args: {
     task: makeTask({ title: 'Check in with the vendor' }),
     reason: { kind: 'follow-up', days: 3 },
+  },
+}
+
+export const WaitResolved: Story = {
+  name: 'the row surfaces a reply that needs acknowledgement',
+  args: {
+    task: makeTask({
+      title: 'Review the response',
+      waits: [
+        makeTaskWaitSummary({
+          label: 'Review feedback',
+          resolvedAt: '2099-10-12T00:00:00.000Z',
+          acknowledgedAt: null,
+        }),
+      ],
+    }),
+    reason: { kind: 'wait-resolved' },
   },
 }
 

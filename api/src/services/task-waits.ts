@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm'
 
 import { db, type DbTransaction } from '#db/connection'
 import { taskWaits } from '#db/schema'
@@ -57,7 +57,7 @@ export async function listTaskWaits(
     .orderBy(asc(taskWaits.createdAt), asc(taskWaits.id))
 }
 
-export async function getUnresolvedTaskWaitSummariesByTaskId(
+export async function getVisibleTaskWaitSummariesByTaskId(
   taskIds: string[],
   executor: Executor = db,
 ): Promise<Map<string, TaskWaitSummary[]>> {
@@ -76,7 +76,10 @@ export async function getUnresolvedTaskWaitSummariesByTaskId(
     })
     .from(taskWaits)
     .where(
-      and(inArray(taskWaits.taskId, taskIds), isNull(taskWaits.resolvedAt)),
+      and(
+        inArray(taskWaits.taskId, taskIds),
+        or(isNull(taskWaits.resolvedAt), isNull(taskWaits.acknowledgedAt)),
+      ),
     )
     .orderBy(asc(taskWaits.createdAt), asc(taskWaits.id))
 

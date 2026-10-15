@@ -190,11 +190,21 @@ function buildConditions(
   }
 
   if (parsed?.hasBlockers === true) {
-    conditions.push(hasUnresolvedBlockersCondition())
+    conditions.push(
+      or(
+        hasUnresolvedBlockersCondition(),
+        exists(unacknowledgedResolvedTaskWaitSubquery()),
+      ),
+    )
   }
 
   if (parsed?.hasNoBlockers === true) {
-    conditions.push(hasNoUnresolvedBlockersCondition())
+    conditions.push(
+      and(
+        hasNoUnresolvedBlockersCondition(),
+        notExists(unacknowledgedResolvedTaskWaitSubquery()),
+      ),
+    )
   }
 
   if (parsed?.hasFollowUpDue === true) {

@@ -4,6 +4,7 @@ interface CandidateCheckable {
 }
 
 export type CandidateReason =
+  | { kind: 'wait-resolved' }
   | { kind: 'overdue'; days: number }
   | { kind: 'follow-up'; days: number }
   | { kind: 'due-today' }
@@ -29,6 +30,8 @@ export function getQueueCandidates<T extends CandidateCheckable>(
 
 export function formatCandidateReason(reason: CandidateReason): string {
   switch (reason.kind) {
+    case 'wait-resolved':
+      return 'wait resolved'
     case 'overdue':
       return `${String(reason.days)}d overdue`
     case 'follow-up':
