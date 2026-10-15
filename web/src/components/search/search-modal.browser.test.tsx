@@ -1795,12 +1795,16 @@ describe('SearchModal', () => {
     const onOpenChange = vi.fn()
     renderSearchModal({ onOpenChange })
 
-    const overlay =
-      document.querySelector<HTMLElement>(
+    const clickOverlay = async () => {
+      const overlay = document.querySelector<HTMLElement>(
         '[data-slot="command-palette-overlay"]',
-      ) ?? document.body
-    await user.click(overlay)
-    expect(onOpenChange).toHaveBeenCalledWith(false)
+      )
+      if (overlay == null) return null
+
+      await user.click(overlay)
+      return onOpenChange.mock.calls
+    }
+    expect(await clickOverlay()).toEqual([[false]])
   })
 
   it('switches search mode from a mobile filter button', async () => {
