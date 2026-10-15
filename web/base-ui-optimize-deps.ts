@@ -1,4 +1,4 @@
-// Vite does not scan Base UI imports reached through @fohte/ui source exports.
+// Vite does not scan dependencies imported through @fohte/ui source exports.
 export const BASE_UI_OPTIMIZE_DEPS = [
   '@base-ui/react/button',
   '@base-ui/react/dialog',
@@ -9,4 +9,5 @@ export const BASE_UI_OPTIMIZE_DEPS = [
   '@base-ui/react/select',
   '@base-ui/react/tabs',
   '@base-ui/react/tooltip',
+  'react-dom',
 ]

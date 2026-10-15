@@ -1,7 +1,7 @@
 import { Button } from '@fohte/ui/button'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 
@@ -24,6 +24,7 @@ import { StoryRouter } from '#storybook-config/story-router'
 const keyboardQuery = 'keyboard'
 const workbenchQuery = 'workbench'
 const scrollableQuery = 'scrollable'
+const pendingQuery = 'pending'
 
 const searchTask = makeTask({
   id: '00000000-0000-0000-0000-000000000042',
@@ -222,9 +223,13 @@ function queryResults<T>(request: Request, fixtures: Record<string, T[]>) {
   return fixtures[query] ?? []
 }
 
-function jsonByQuery<T>(fixtures: Record<string, T[]>) {
-  return ({ request }: { request: Request }) =>
-    HttpResponse.json(queryResults(request, fixtures))
+function jsonByQuery<T>(fixtures: Record<string, T[]>, pendingQuery?: string) {
+  return async ({ request }: { request: Request }) => {
+    if (new URL(request.url).searchParams.get('q') === pendingQuery) {
+      await delay('infinite')
+    }
+    return HttpResponse.json(queryResults(request, fixtures))
+  }
 }
 
 const meta = {
@@ -236,12 +241,15 @@ const meta = {
       handlers: [
         http.get(
           '/api/tasks',
-          jsonByQuery({
-            [keyboardQuery]: [searchTask],
-            [scrollableQuery]: scrollableTasks,
-            [projectScopeQuery]: [projectScopedTask],
-            [taskScopeQuery]: [taskScopedTask],
-          }),
+          jsonByQuery(
+            {
+              [keyboardQuery]: [searchTask],
+              [scrollableQuery]: scrollableTasks,
+              [projectScopeQuery]: [projectScopedTask],
+              [taskScopeQuery]: [taskScopedTask],
+            },
+            pendingQuery,
+          ),
         ),
         http.get(`/api/tasks/${searchTask.id}`, () =>
           HttpResponse.json(searchTaskDetail),
@@ -394,6 +402,11 @@ export const TaskNumber: Story = {
 export const Suggestions: Story = {
   name: 'the search dialog suggests filter values after the is prefix',
   args: { defaultContext: 'work', defaultQuery: 'is:' },
+}
+
+export const Loading: Story = {
+  name: 'the search dialog shows a loading indicator while results are pending',
+  args: { defaultContext: 'work', defaultQuery: pendingQuery },
 }
 
 export const HelpOpen: Story = {

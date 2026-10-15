@@ -383,6 +383,17 @@ describe('SearchModal', () => {
     expect(screen.getByLabelText('Search tasks')).toBeInTheDocument()
   })
 
+  it('shows the shared loading indicator while task results are fetching', () => {
+    mockIsFetchingTasks = true
+    renderSearchModal()
+
+    const getOutput = () => ({
+      loadingSlot:
+        screen.queryByLabelText('Loading')?.getAttribute('data-slot') ?? null,
+    })
+    expect(getOutput()).toEqual({ loadingSlot: 'command-palette-loading' })
+  })
+
   it('shows the current context as the search scope', () => {
     resetSessionOpenSettings({ localContext: 'work' })
 
@@ -540,6 +551,31 @@ describe('SearchModal', () => {
 
     await user.keyboard('{Escape}')
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('returns from the help panel without closing the search modal', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    renderSearchModal({ onOpenChange })
+
+    await user.type(screen.getByLabelText('Search tasks'), '?')
+    await user.keyboard('{Tab}{Escape}')
+
+    const getOutput = () => ({
+      helpButton:
+        screen.queryByRole('button', { name: 'Back to search' })?.textContent ??
+        null,
+      dialogOpen: screen.queryByRole('dialog') !== null,
+      focusedInput:
+        document.activeElement === screen.getByLabelText('Search tasks'),
+      openChanges: onOpenChange.mock.calls,
+    })
+    expect(getOutput()).toEqual({
+      helpButton: null,
+      dialogOpen: true,
+      focusedInput: true,
+      openChanges: [],
+    })
   })
 
   it('shows search results when data is available', async () => {
@@ -1330,7 +1366,9 @@ describe('SearchModal', () => {
         .queryAllByTestId('search-scope-token')
         .map((element) => element.textContent),
       inputValue: input.value,
-      mode: screen.getByTestId('search-mode-indicator').textContent,
+      mode:
+        document.querySelector('[data-slot="command-palette-prefix"]')
+          ?.textContent ?? null,
     })
     expect(getOutput()).toEqual({
       scopes: [`parent:${firstMockTask.id}`],
@@ -1581,7 +1619,9 @@ describe('SearchModal', () => {
 
     const getOutput = () => ({
       ...getSearchEverywhereOutput('projects'),
-      mode: screen.getByTestId('search-mode-indicator').textContent,
+      mode:
+        document.querySelector('[data-slot="command-palette-prefix"]')
+          ?.textContent ?? null,
       lastProjectSearch: mockProjectCalls.at(-1),
     })
     await waitFor(() => {
@@ -1755,7 +1795,10 @@ describe('SearchModal', () => {
     const onOpenChange = vi.fn()
     renderSearchModal({ onOpenChange })
 
-    const overlay = screen.getByTestId('search-overlay')
+    const overlay =
+      document.querySelector<HTMLElement>(
+        '[data-slot="command-palette-overlay"]',
+      ) ?? document.body
     await user.click(overlay)
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
@@ -1768,7 +1811,9 @@ describe('SearchModal', () => {
     await user.click(screen.getByRole('button', { name: '# tasks' }))
 
     const getOutput = () => ({
-      mode: screen.getByTestId('search-mode-indicator').textContent,
+      mode:
+        document.querySelector('[data-slot="command-palette-prefix"]')
+          ?.textContent ?? null,
       inputValue: screen.getByLabelText<HTMLInputElement>('Search tasks').value,
     })
     expect(getOutput()).toEqual({ mode: '#', inputValue: 'planning' })

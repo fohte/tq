@@ -1,10 +1,19 @@
+import {
+  CommandPalette,
+  type CommandPaletteGroup,
+} from '@fohte/ui/command-palette'
 import { parseSearchQuery } from 'api/search-query-parser'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 import { SearchModalFooter } from '#components/search/search-modal-footer'
 import { useSearchModalHelp } from '#components/search/search-modal-help'
-import { SearchModalInput } from '#components/search/search-modal-input'
+import { SearchModalInputAdornment } from '#components/search/search-modal-input-adornment'
 import { SearchModalModeSwitcher } from '#components/search/search-modal-mode-switcher'
 import { useSearchModalNavigation } from '#components/search/search-modal-navigation'
 import {
@@ -13,12 +22,10 @@ import {
   removeSearchScopeToken,
   useSearchModalQuery,
 } from '#components/search/search-modal-query'
-import { useSearchModalResultGroups } from '#components/search/search-modal-result-groups'
 import {
-  indexResultGroups,
   resultGroupItemCount,
-  SearchModalResultList,
-} from '#components/search/search-modal-result-list'
+  useSearchModalResultGroups,
+} from '#components/search/search-modal-result-groups'
 import { useSearchModalTaskActions } from '#components/search/search-modal-task-actions'
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
@@ -42,14 +49,9 @@ import {
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
 import { useTask } from '#hooks/use-tasks'
 import {
-  useVisualViewportInsets,
-  type VisualViewportStyle,
-} from '#hooks/use-visual-viewport-insets'
-import {
   getRecentSearchItems,
   type RecentSearchItem,
 } from '#lib/recent-search-items'
-import { cn } from '#lib/utils'
 
 interface SearchModalProps {
   open: boolean
@@ -73,19 +75,10 @@ export function SearchModal({
   const [query, setQuery] = useState(defaultQuery)
   const defaultQueryRef = useRef(defaultQuery)
   defaultQueryRef.current = defaultQuery
-  const [selectedIndex, setSelectedIndex] = useState(0)
   const [isContextCleared, setIsContextCleared] = useState(false)
   const [recentItems, setRecentItems] = useState<RecentSearchItem[]>(
     defaultRecentItems ?? [],
   )
-  const visualViewportInsets = useVisualViewportInsets()
-  const visualViewportStyle: VisualViewportStyle | undefined =
-    visualViewportInsets === null
-      ? undefined
-      : {
-          '--visual-viewport-top': `${String(visualViewportInsets.top)}px`,
-          '--visual-viewport-height': `${String(visualViewportInsets.height)}px`,
-        }
   const inputRef = useRef<HTMLInputElement>(null)
   const helpBackButtonRef = useRef<HTMLButtonElement>(null)
   const {
@@ -93,7 +86,6 @@ export function SearchModal({
     closeHelp,
     handleKeyDown: handleHelpKeyDown,
   } = useSearchModalHelp(open, inputRef, helpBackButtonRef, defaultHelpOpen)
-  const listRef = useRef<HTMLDivElement>(null)
   const onOpenChangeRef = useRef(onOpenChange)
   onOpenChangeRef.current = onOpenChange
   const {
@@ -252,20 +244,10 @@ export function SearchModal({
   useEffect(() => {
     if (open) {
       setQuery(defaultQueryRef.current)
-      setSelectedIndex(0)
       setIsContextCleared(false)
       setRecentItems(defaultRecentItems ?? getRecentSearchItems())
     }
   }, [open, defaultRecentItems])
-
-  // Scroll the active result into view.
-  useEffect(() => {
-    if (listRef.current == null) return
-    const selected = listRef.current.querySelector('[data-highlighted]')
-    if (typeof selected?.scrollIntoView === 'function') {
-      selected.scrollIntoView({ block: 'nearest' })
-    }
-  }, [selectedIndex])
 
   const { resultGroups, hasVisibleResults } = useSearchModalResultGroups({
     query,
@@ -308,73 +290,47 @@ export function SearchModal({
     onOpenChangeRef,
   })
 
-  const { items, indexedGroups } = useMemo(
-    () => indexResultGroups(resultGroups),
-    [resultGroups],
-  )
-
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [items])
-
-  const handleSelect = useCallback(
-    (index: number) => {
-      const item = items[index]
-      if (item == null) return
-      item.select()
-    },
-    [items],
-  )
-
   const handleModeChange = (prefix: string | undefined) => {
     setQuery(`${prefix ?? ''}${searchQuery}`)
     inputRef.current?.focus()
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing) return
-    if (handleHelpKeyDown(e, searchInputValue)) return
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (handleHelpKeyDown(event, searchInputValue)) return
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev < items.length - 1 ? prev + 1 : 0))
-        break
-      case 'ArrowUp':
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : items.length - 1))
-        break
-      case 'Enter':
-        e.preventDefault()
-        handleSelect(selectedIndex)
-        break
-      case 'Tab':
-        e.preventDefault()
-        items[selectedIndex]?.selectOnTab?.()
-        break
-      case 'Escape':
-        e.preventDefault()
-        onOpenChange(false)
-        break
-      case 'Backspace':
-        if (searchMode != null && !hasSearchQuery) {
-          e.preventDefault()
-          setQuery('')
-        } else if (canPopScope) {
-          e.preventDefault()
-          setQuery(
-            `${modePrefix ?? ''}${removeLastSearchScopeToken(searchQuery)}`,
-          )
-        } else if (canClearContext) {
-          e.preventDefault()
-          setIsContextCleared(true)
-        }
-        break
+    if (event.key === 'Backspace') {
+      if (searchMode != null && !hasSearchQuery) {
+        event.preventDefault()
+        setQuery('')
+      } else if (canPopScope) {
+        event.preventDefault()
+        setQuery(
+          `${modePrefix ?? ''}${removeLastSearchScopeToken(searchQuery)}`,
+        )
+      } else if (canClearContext) {
+        event.preventDefault()
+        setIsContextCleared(true)
+      }
     }
   }
 
-  const visibleGroups = indexedGroups.filter((group) =>
-    group.isVisible(searchQuery, resultGroupItemCount(group)),
+  const handleHelpPanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    handleHelpKeyDown(event, searchInputValue)
+    if (event.key === 'Escape') event.stopPropagation()
+  }
+
+  const visibleGroups: CommandPaletteGroup[] = resultGroups
+    .filter((group) =>
+      group.isVisible(searchQuery, resultGroupItemCount(group)),
+    )
+    .map((group) =>
+      group.sections == null
+        ? { id: group.id, title: group.title, items: group.items }
+        : { id: group.id, title: group.title, sections: group.sections },
+    )
+  const visibleItemCount = visibleGroups.reduce(
+    (count, group) => count + resultGroupItemCount(group),
+    0,
   )
 
   const emptyMessage =
@@ -384,92 +340,65 @@ export function SearchModal({
         : `no results for "${searchInputValue}"`
       : undefined
   const initialMessage =
-    searchQuery.length === 0 && items.length === 0
+    searchQuery.length === 0 && visibleItemCount === 0
       ? `Type to search ${searchMode ?? 'tasks'}`
       : undefined
 
-  if (!open) return null
-
   const searchTarget = searchMode ?? 'tasks'
 
-  return createPortal(
-    <>
-      {/* Backdrop + Modal wrapper (single layer to avoid z-index stacking issues) */}
-      <div
-        className={cn(
-          'fixed inset-x-0 z-50 flex items-start justify-center bg-black/50 md:inset-0 md:modal-top-offset md:h-auto',
-          visualViewportInsets === null
-            ? 'inset-y-0'
-            : 'top-(--visual-viewport-top) h-(--visual-viewport-height)',
-        )}
-        style={visualViewportStyle}
-        data-testid="search-overlay"
-        onKeyDown={handleKeyDown}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            onOpenChange(false)
-          }
-        }}
-      >
-        <div
-          className="flex h-full max-h-full w-full max-w-none flex-col overflow-hidden border-0 bg-popover text-popover-foreground md:h-auto md:max-h-120 md:max-w-160 md:border"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Search"
-        >
-          <SearchModalInput
-            modePrefix={modePrefix}
-            context={context}
-            searchScopes={searchScopeLabels}
-            searchInputValue={searchInputValue}
-            searchTarget={searchTarget}
-            isFetching={isFetching}
-            inputRef={inputRef}
-            onClose={() => {
-              onOpenChange(false)
-            }}
-            onRemoveContext={handleRemoveContext}
-            onRemoveScopeToken={handleRemoveScopeToken}
-            onInputValueChange={(value) => {
-              closeHelp()
-              updateInputValue(value)
-            }}
+  return (
+    <CommandPalette
+      open={open}
+      onOpenChange={onOpenChange}
+      value={searchInputValue}
+      onValueChange={(value) => {
+        closeHelp()
+        updateInputValue(value)
+      }}
+      groups={visibleGroups}
+      loading={isFetching}
+      {...(emptyMessage == null ? {} : { emptyMessage })}
+      {...(initialMessage == null ? {} : { initialMessage })}
+      inputLabel={`Search ${searchTarget}`}
+      dialogLabel="Search"
+      placeholder={`Search ${searchTarget}...`}
+      prefix={modePrefix ?? '›'}
+      inputAdornment={
+        <SearchModalInputAdornment
+          context={context}
+          searchScopes={searchScopeLabels}
+          onRemoveContext={handleRemoveContext}
+          onRemoveScopeToken={handleRemoveScopeToken}
+        />
+      }
+      mobileToolbar={
+        <SearchModalModeSwitcher
+          modePrefix={modePrefix}
+          onModeChange={handleModeChange}
+        />
+      }
+      mobileToolbarLabel="Search mode"
+      body={
+        isHelpOpen ? (
+          <SearchSyntaxHelpPanel
+            sections={getSearchSyntaxHelpSections()}
+            onBack={closeHelp}
+            onKeyDown={handleHelpPanelKeyDown}
+            className="flex-1"
+            backButtonRef={helpBackButtonRef}
           />
-
-          <SearchModalModeSwitcher
-            modePrefix={modePrefix}
-            onModeChange={handleModeChange}
-          />
-
-          {isHelpOpen ? (
-            <SearchSyntaxHelpPanel
-              sections={getSearchSyntaxHelpSections()}
-              onBack={closeHelp}
-              className="flex-1"
-              backButtonRef={helpBackButtonRef}
-            />
-          ) : (
-            <SearchModalResultList
-              groups={visibleGroups}
-              listRef={listRef}
-              selectedIndex={selectedIndex}
-              onSelectedIndexChange={setSelectedIndex}
-              {...(emptyMessage == null ? {} : { emptyMessage })}
-              {...(initialMessage == null ? {} : { initialMessage })}
-            />
-          )}
-
-          <div className="hidden md:block">
-            <SearchModalFooter
-              canClearContext={canClearContext}
-              canPopScope={canPopScope}
-              canOpenHelp={searchInputValue.length === 0}
-              isHelpOpen={isHelpOpen}
-            />
-          </div>
-        </div>
-      </div>
-    </>,
-    document.body,
+        ) : undefined
+      }
+      footer={
+        <SearchModalFooter
+          canClearContext={canClearContext}
+          canPopScope={canPopScope}
+          canOpenHelp={searchInputValue.length === 0}
+          isHelpOpen={isHelpOpen}
+        />
+      }
+      onKeyDown={handleInputKeyDown}
+      inputRef={inputRef}
+    />
   )
 }

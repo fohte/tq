@@ -8,6 +8,7 @@ import { cn } from '#lib/utils'
 interface SearchSyntaxHelpPanelProps {
   sections: SearchSyntaxHelpSection[]
   onBack?: () => void
+  onKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void
   className?: string
   backButtonRef?: RefObject<HTMLButtonElement | null>
   showFilterIcons?: boolean
@@ -16,6 +17,7 @@ interface SearchSyntaxHelpPanelProps {
 export function SearchSyntaxHelpPanel({
   sections,
   onBack,
+  onKeyDown,
   className,
   backButtonRef,
   showFilterIcons = false,
@@ -26,6 +28,7 @@ export function SearchSyntaxHelpPanel({
         'max-h-96 overflow-y-auto px-4 py-3 font-mono text-xs',
         className,
       )}
+      onKeyDown={onKeyDown}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-2xs font-medium uppercase tracking-widest text-muted-foreground-faint">
