@@ -13,11 +13,7 @@ const meta = {
   parameters: { layout: 'padded' },
   decorators: [
     (Story) => (
-      <div
-        className="flex shrink-0 gap-0.5 overflow-x-auto border-b border-border px-3 py-1.5 md:hidden"
-        role="group"
-        aria-label="Search mode"
-      >
+      <div className="flex gap-2">
         <Story />
       </div>
     ),

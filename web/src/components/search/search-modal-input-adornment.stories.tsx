@@ -13,14 +13,9 @@ const meta = {
   parameters: { layout: 'centered' },
   decorators: [
     (Story) => (
-      <div className="flex h-12 w-full max-w-160 items-center gap-2 border border-border bg-popover px-3 text-popover-foreground">
-        <span className="shrink-0 font-mono text-sm font-bold text-primary">
-          ›
-        </span>
+      <div className="flex items-center gap-2">
         <Story />
-        <span className="min-w-0 flex-1 font-mono text-sm text-muted-foreground">
-          search terms
-        </span>
+        <span>search terms</span>
       </div>
     ),
   ],

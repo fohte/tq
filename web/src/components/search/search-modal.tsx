@@ -1,7 +1,4 @@
-import {
-  CommandPalette,
-  type CommandPaletteGroup,
-} from '@fohte/ui/command-palette'
+import { CommandPalette } from '@fohte/ui/command-palette'
 import { parseSearchQuery } from 'api/search-query-parser'
 import {
   type KeyboardEvent,
@@ -319,15 +316,9 @@ export function SearchModal({
     if (event.key === 'Escape') event.stopPropagation()
   }
 
-  const visibleGroups: CommandPaletteGroup[] = resultGroups
-    .filter((group) =>
-      group.isVisible(searchQuery, resultGroupItemCount(group)),
-    )
-    .map((group) =>
-      group.sections == null
-        ? { id: group.id, title: group.title, items: group.items }
-        : { id: group.id, title: group.title, sections: group.sections },
-    )
+  const visibleGroups = resultGroups.filter((group) =>
+    group.isVisible(searchQuery, resultGroupItemCount(group)),
+  )
   const visibleItemCount = visibleGroups.reduce(
     (count, group) => count + resultGroupItemCount(group),
     0,
