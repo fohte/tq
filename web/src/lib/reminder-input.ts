@@ -1,12 +1,10 @@
-const WEEKDAY_JA = ['日', '月', '火', '水', '木', '金', '土'] as const
-
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** "2026/09/09 (水) 09:00" */
+/** "2026/09/09 (Wed) 09:00" */
 export function formatAbsoluteReminder(date: Date): string {
-  const weekday = WEEKDAY_JA[date.getDay()] ?? ''
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'short' })
   return `${String(date.getFullYear())}/${pad2(date.getMonth() + 1)}/${pad2(date.getDate())} (${weekday}) ${pad2(date.getHours())}:${pad2(date.getMinutes())}`
 }
 
@@ -18,30 +16,29 @@ function isSameLocalDay(a: Date, b: Date): boolean {
   )
 }
 
-/** Sidebar row summary: "今日 09:00" / "明日 09:00", falling back to the full absolute format for anything further out. */
+/** Sidebar row summary: "today 09:00" / "tomorrow 09:00", falling back to the full absolute format for anything further out. */
 export function formatReminderSummary(
   remindAt: Date,
   now: Date = new Date(),
 ): string {
   const time = `${pad2(remindAt.getHours())}:${pad2(remindAt.getMinutes())}`
-  if (isSameLocalDay(remindAt, now)) return `今日 ${time}`
+  if (isSameLocalDay(remindAt, now)) return `today ${time}`
 
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
-  if (isSameLocalDay(remindAt, tomorrow)) return `明日 ${time}`
+  if (isSameLocalDay(remindAt, tomorrow)) return `tomorrow ${time}`
 
   return formatAbsoluteReminder(remindAt)
 }
 
 export const REMINDER_PRESETS: readonly string[] = [
-  '1時間後',
-  '今日18:00',
-  '明日09:00',
-  '来週月曜09:00',
+  'in 1 hour',
+  'today 18:00',
+  'tomorrow 09:00',
+  'next monday 09:00',
 ]
 
-// chrono-node's ja locale has no parser for this idiom (unlike its en locale,
-// which handles "in 30 minutes") — https://github.com/wanasit/chrono.
+// chrono-node's ja locale has no parser for this idiom — https://github.com/wanasit/chrono.
 const RELATIVE_DURATION_PATTERN = /^(\d+)(分|時間)後$/
 
 function parseRelativeDuration(text: string, now: Date): Date | null {
@@ -58,7 +55,7 @@ function parseRelativeDuration(text: string, now: Date): Date | null {
 }
 
 /**
- * Parse Japanese natural-language reminder text into an absolute Date.
+ * Parse English or Japanese natural-language reminder text into an absolute Date.
  * Returns null when the text can't be interpreted — callers must not fall
  * back to "now" or silently drop the input in that case.
  */
@@ -82,5 +79,16 @@ export async function parseReminderInput(
   })
   if (chronoModule == null) return null
 
-  return chronoModule.ja.parseDate(trimmed, now, { forwardDate: true })
+  const matches = [chronoModule.en, chronoModule.ja].flatMap((locale) =>
+    locale.parse(trimmed, now, { forwardDate: true }),
+  )
+  const longestMatch = matches.reduce<(typeof matches)[number] | null>(
+    (longest, match) =>
+      longest == null || match.text.length > longest.text.length
+        ? match
+        : longest,
+    null,
+  )
+
+  return longestMatch?.start.date() ?? null
 }

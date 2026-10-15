@@ -66,7 +66,7 @@ export function SidebarRemindField({
   return (
     <SidebarRemindFieldAppearance
       remindAtLabel={
-        remindAt != null ? formatReminderSummary(new Date(remindAt)) : 'なし'
+        remindAt != null ? formatReminderSummary(new Date(remindAt)) : '—'
       }
       isEditing={isEditing}
       onOpenChange={(open) => {

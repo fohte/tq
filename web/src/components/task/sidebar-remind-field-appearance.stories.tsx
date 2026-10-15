@@ -3,8 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { SidebarRemindFieldAppearance } from '#components/task/sidebar-remind-field-appearance'
 import { formatReminderSummary } from '#lib/reminder-input'
 
-// Kept relative to `Date.now()` (not a fixed ISO literal) so the "今日"/"明日"
-// label this renders stays correct no matter which day this story runs
+// Kept relative to `Date.now()` (not a fixed ISO literal) so this story's
+// "today"/"tomorrow" label stays correct no matter which day it runs
 // (see SessionRow's `baseSession` for the same pattern).
 function atOffsetDays(days: number, hours: number, minutes: number): string {
   const date = new Date()
@@ -27,7 +27,7 @@ const meta = {
     ),
   ],
   args: {
-    remindAtLabel: 'なし',
+    remindAtLabel: '—',
     isEditing: false,
     onOpenChange: () => {},
     query: '',
@@ -49,7 +49,7 @@ export const NoReminder: Story = {
 export const WithReminder: Story = {
   name: 'the reminder field shows an existing reminder date',
   args: {
-    // Far enough in the past to never collide with "今日"/"明日".
+    // Far enough in the past to never collide with "today"/"tomorrow".
     remindAtLabel: formatReminderSummary(new Date('2026-03-25T09:00:00.000Z')),
   },
 }
@@ -62,7 +62,7 @@ export const TomorrowReminder: Story = {
 }
 
 export const Editing: Story = {
-  name: 'the reminder field is open for date entry',
+  name: 'the open field shows English and Japanese date examples',
   args: {
     isEditing: true,
     query: '',
@@ -74,10 +74,9 @@ export const TypeAndInterpret: Story = {
   name: 'the field shows typed reminder text with its interpreted date',
   args: {
     isEditing: true,
-    query: '来週月曜10時',
-    // Fixed, not derived from `Date.now()` — chrono resolving the query
-    // above happens once in production, not on every render of this story.
-    parsedDate: new Date(2026, 8, 21, 10, 0, 0),
+    query: 'next monday 10:00',
+    // The story shows this parsed result without running the parser.
+    parsedDate: new Date(2026, 8, 14, 10, 0, 0),
   },
 }
 
@@ -85,7 +84,7 @@ export const UnrecognizedInput: Story = {
   name: 'the field shows reminder text that cannot be interpreted',
   args: {
     isEditing: true,
-    query: 'あいうえお',
+    query: 'foo bar baz',
     parsedDate: null,
   },
 }
