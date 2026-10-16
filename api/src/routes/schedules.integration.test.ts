@@ -1421,6 +1421,21 @@ describe('schedule overrides API', () => {
     expect(response.status).toBe(400)
   })
 
+  it('rejects a destination date when skipping an occurrence', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startTime: '09:00',
+      endTime: '10:00',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
+      skipped: true,
+      date: '2026-03-23',
+    })
+
+    expect(response.status).toBe(400)
+  })
+
   it('rejects a time outside the 24-hour clock', async () => {
     const { body: schedule } = await createSchedule({
       title: 'Routine',

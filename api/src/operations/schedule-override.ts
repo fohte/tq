@@ -15,7 +15,7 @@ export const scheduleOverrideOperations = [
   defineOperation(scheduleOverrideOperationInputSchema, {
     path: ['schedule', 'override', 'set'],
     description:
-      'Move, change, or skip one occurrence of a recurring event. Provide date to move the occurrence, both startTime and endTime to change its time, or set mode to skip and omit the date and both times.',
+      'Move, change, or skip one occurrence of a recurring event. Provide date, startTime, and endTime to move it to another date; provide both times to change its time; set mode to skip and omit date and both times.',
     positionalArgs: ['scheduleId', 'occurrenceDate'],
     kind: 'write',
     routes: ['PUT /api/schedule/events/:scheduleId/overrides/:occurrenceDate'],
