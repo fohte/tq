@@ -86,6 +86,10 @@ const scheduleUpdateCliOptions = [
     flags: '--clear-end-date',
     description: 'Remove the schedule end date',
   },
+  {
+    flags: '--clear-reminder',
+    description: 'Disable reminders for the schedule',
+  },
 ] as const
 
 function mapCliTimezoneOffset(
@@ -137,6 +141,7 @@ function mapCliScheduleUpdate(
   const noRecurrence =
     options['recurrence'] === false || options['noRecurrence'] === true
   const clearEndDate = options['clearEndDate'] === true
+  const clearReminder = options['clearReminder'] === true
   const recurrence = recurrenceRuleFromCli(options)
   if (recurrence.isErr()) return err(recurrence.error)
 
@@ -148,6 +153,11 @@ function mapCliScheduleUpdate(
   if (clearEndDate && input['endDate'] !== undefined) {
     return err(new Error('Use only one of --clear-end-date or --end-date'))
   }
+  if (clearReminder && input['remindBeforeMinutes'] !== undefined) {
+    return err(
+      new Error('Use only one of --clear-reminder or --remind-before-minutes'),
+    )
+  }
 
   return ok({
     ...input,
@@ -157,6 +167,7 @@ function mapCliScheduleUpdate(
         ? {}
         : { recurrence: recurrence.value }),
     ...(clearEndDate ? { endDate: null } : {}),
+    ...(clearReminder ? { remindBeforeMinutes: null } : {}),
   })
 }
 
@@ -265,7 +276,7 @@ export const scheduleOperations = [
   defineOperation(createScheduleSchema, {
     path: ['schedule', 'events', 'create'],
     description:
-      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. remindBeforeMinutes optionally sends a push notification that many minutes before each occurrence starts. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
     positionalArgs: ['title', 'startDate', 'startTime', 'endTime'],
     kind: 'write',
     routes: ['POST /api/schedule/events'],
@@ -286,7 +297,7 @@ export const scheduleOperations = [
   defineOperation(scheduleUpdateOperationSchema, {
     path: ['schedule', 'events', 'update'],
     description:
-      'Update a schedule event. Set effectiveFrom to apply time and recurrence changes from that local date onward; omit it to update the whole series. endDate is the last local date on which the schedule can occur. Title, context, and color always apply to the whole schedule.',
+      'Update a schedule event. Set effectiveFrom to apply time and recurrence changes from that local date onward; omit it to update the whole series. endDate is the last local date on which the schedule can occur. remindBeforeMinutes applies to the whole schedule; set it to null to disable reminders. Title, context, and color always apply to the whole schedule.',
     positionalArgs: ['id'],
     kind: 'write',
     mcpInputSchema: scheduleUpdateMcpInputSchema,

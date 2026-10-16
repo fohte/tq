@@ -32,6 +32,7 @@ function makeSchedule(
     id: 'sched-1',
     title: 'Test Schedule',
     endDate: null,
+    remindBeforeMinutes: null,
     context: 'personal' as const,
     color: null,
     createdAt: now,

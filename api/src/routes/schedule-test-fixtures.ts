@@ -30,6 +30,7 @@ const defaultScheduleEvent: ScheduleEventResponse = {
   title: 'Sample schedule',
   startDate: '2026-12-18',
   endDate: null,
+  remindBeforeMinutes: null,
   startTime: '08:45',
   endTime: '09:15',
   recurrence: null,

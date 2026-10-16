@@ -117,7 +117,7 @@ describe('schedule operation tools', () => {
       result.tools.find((tool) => tool.name === 'schedule_events_create')
         ?.description,
     ).toBe(
-      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. remindBeforeMinutes optionally sends a push notification that many minutes before each occurrence starts. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
     )
   })
 
@@ -344,6 +344,7 @@ describe('schedule operation tools', () => {
       },
       context: 'work',
       color: '#b9c0ca',
+      remindBeforeMinutes: 45,
     })
 
     expect(normalizeDynamicValues(parseToolJson(result))).toEqual(
@@ -360,6 +361,7 @@ describe('schedule operation tools', () => {
           },
           context: 'work',
           color: '#b9c0ca',
+          remindBeforeMinutes: 45,
         }),
       ),
     )
@@ -382,6 +384,7 @@ describe('schedule operation tools', () => {
       endTime: '10:00',
       endDate: '2026-12-20',
       recurrence: { type: 'weekly', interval: 1, daysOfWeek: [0] },
+      remindBeforeMinutes: 90,
     })
     const events = await callMcpTool(client, 'schedule_events_list', {
       startDate: '2026-12-18',
@@ -410,6 +413,7 @@ describe('schedule operation tools', () => {
         },
         context: 'personal',
         color: null,
+        remindBeforeMinutes: 90,
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
       },
@@ -470,6 +474,34 @@ describe('schedule operation tools', () => {
         },
       ],
     })
+  })
+
+  it('clears a schedule reminder', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Planning session',
+      startDate: '2026-12-18',
+      startTime: '08:45',
+      endTime: '09:15',
+      remindBeforeMinutes: 45,
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+
+    const updated = await callMcpTool(client, 'schedule_events_update', {
+      id: schedule.id,
+      remindBeforeMinutes: null,
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(updated))).toEqual(
+      normalizeDynamicValues(
+        makeScheduleEvent({
+          title: 'Planning session',
+          startDate: '2026-12-18',
+          startTime: '08:45',
+          endTime: '09:15',
+          remindBeforeMinutes: null,
+        }),
+      ),
+    )
   })
 
   it('deletes a schedule event', async () => {
