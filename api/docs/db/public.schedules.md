@@ -68,6 +68,7 @@ erDiagram
   text start_time
   text end_time
   boolean skipped
+  date moved_to_date
 }
 "public.recurrence_rules" {
   text id

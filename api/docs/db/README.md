@@ -33,7 +33,7 @@
 | [public.recurring_task_templates](public.recurring_task_templates.md)               | 13      | Definitions used by the scheduler to create recurring task instances.                       | BASE TABLE |
 | [public.task_description_templates](public.task_description_templates.md)           | 8       | Templates for structuring task descriptions.                                                | BASE TABLE |
 | [public.memos](public.memos.md)                                                     | 4       | Markdown scratchpads stored once per work or personal context.                              | BASE TABLE |
-| [public.schedule_overrides](public.schedule_overrides.md)                           | 5       | One-day time changes and skipped schedule occurrences.                                      | BASE TABLE |
+| [public.schedule_overrides](public.schedule_overrides.md)                           | 6       | One-day moves, time changes, and skipped schedule occurrences.                              | BASE TABLE |
 | [public.task_checklist_items](public.task_checklist_items.md)                       | 11      | Nested checklist items with completion state and optional Markdown detail.                  | BASE TABLE |
 | [public.task_checklists](public.task_checklists.md)                                 | 6       | Named or unnamed checklists associated with tasks.                                          | BASE TABLE |
 | [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker links.                        | BASE TABLE |
@@ -419,6 +419,7 @@ erDiagram
   text start_time
   text end_time
   boolean skipped
+  date moved_to_date
 }
 "public.task_checklist_items" {
   text id
