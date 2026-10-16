@@ -148,6 +148,13 @@ export function scheduleOccursOnDate(
   return matchesDate(activeRevision.rule, date)
 }
 
+/**
+ * Expand a schedule for a given date, handling cross-midnight schedules.
+ *
+ * Cross-midnight example: startTime=23:00, endTime=07:00
+ * - On the start date: 23:00 -> 00:00 (next day)
+ * - On the next date: 00:00 -> 07:00
+ */
 export function expandScheduleForDate(
   series: ScheduleSeries,
   dateStr: string,
@@ -167,7 +174,7 @@ export function expandScheduleForDate(
   const firstRevision = revisions[0]
   if (!firstRevision) return []
 
-  const date = new Date(dateStr + 'T00:00:00')
+  const date = new Date(`${dateStr}T00:00:00`)
   const blocks: Array<{
     scheduleId: string
     title: string
@@ -192,10 +199,10 @@ export function expandScheduleForDate(
       scheduleId: schedule.id,
       title: schedule.title,
       startDate: firstRevision.revision.effectiveFrom,
-      start: dateStr + 'T' + occurrence.startTime + ':00',
+      start: `${dateStr}T${occurrence.startTime}:00`,
       end: isCrossMidnight
-        ? formatDateStr(nextDate) + 'T00:00:00'
-        : dateStr + 'T' + occurrence.endTime + ':00',
+        ? `${formatDateStr(nextDate)}T00:00:00`
+        : `${dateStr}T${occurrence.endTime}:00`,
       context: schedule.context,
       color: schedule.color,
       occurrenceDate: occurrence.occurrenceDate,
@@ -203,6 +210,7 @@ export function expandScheduleForDate(
     })
   }
 
+  // Check whether the previous occurrence continues into this date.
   const prevDate = new Date(date)
   prevDate.setDate(prevDate.getDate() - 1)
   const prevDateStr = formatDateStr(prevDate)
@@ -217,8 +225,8 @@ export function expandScheduleForDate(
       scheduleId: schedule.id,
       title: schedule.title,
       startDate: firstRevision.revision.effectiveFrom,
-      start: dateStr + 'T00:00:00',
-      end: dateStr + 'T' + occurrence.endTime + ':00',
+      start: `${dateStr}T00:00:00`,
+      end: `${dateStr}T${occurrence.endTime}:00`,
       context: schedule.context,
       color: schedule.color,
       occurrenceDate: occurrence.occurrenceDate,
@@ -234,7 +242,7 @@ function getOccurrencesStartingOnDate(
   dateStr: string,
   overrides: ScheduleOverrideIndex,
 ): ScheduleOccurrence[] {
-  const date = new Date(dateStr + 'T00:00:00')
+  const date = new Date(`${dateStr}T00:00:00`)
   const candidates: Array<{
     occurrenceDate: string
     revision: ScheduleRevisionWithRule
@@ -255,7 +263,7 @@ function getOccurrencesStartingOnDate(
     occurrenceDate,
     override: movedOverride,
   } of overrides.byMovedToDate.get(dateStr) ?? []) {
-    if (!scheduleOccursOnDate(series, new Date(occurrenceDate + 'T00:00:00'))) {
+    if (!scheduleOccursOnDate(series, new Date(`${occurrenceDate}T00:00:00`))) {
       continue
     }
 
@@ -295,5 +303,5 @@ export function formatDateStr(date: Date): string {
   const y = String(date.getFullYear())
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
-  return y + '-' + m + '-' + d
+  return `${y}-${m}-${d}`
 }
