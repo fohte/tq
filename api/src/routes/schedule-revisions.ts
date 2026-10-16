@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, inArray } from 'drizzle-orm'
+import { and, eq, gt, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db, type DbTransaction } from '#db/connection'
@@ -13,10 +13,16 @@ import {
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   getScheduleRevisionForDate,
-  scheduleOccursOnDate,
+  type ScheduleDraft,
   type ScheduleRevisionWithRule,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
+import {
+  buildScheduleChangePreview,
+  buildSchedulePreviewRange,
+  getDeletedScheduleOverrides,
+  type ScheduleChangePreview,
+} from '#routes/schedule-preview'
 import {
   buildScheduleSeries,
   loadScheduleWithRevisions,
@@ -32,6 +38,7 @@ type UpdateScheduleInput = z.infer<typeof updateScheduleSchema>
 export type UpdateScheduleSeriesResult =
   | { kind: 'missing' }
   | { kind: 'invalid'; message: string }
+  | { kind: 'dryRun'; preview: ScheduleChangePreview }
   | {
       kind: 'updated'
       series: ScheduleSeries
@@ -296,32 +303,90 @@ export async function updateScheduleSeries(
       (input.startDate !== undefined &&
         input.startDate !== firstRevision.revision.effectiveFrom) ||
       input.recurrence === null
+    const activeRevision =
+      input.effectiveFrom === undefined
+        ? undefined
+        : getScheduleRevisionForDate(series.revisions, input.effectiveFrom)
+    if (input.effectiveFrom !== undefined && !activeRevision) {
+      return {
+        kind: 'invalid',
+        message: 'effectiveFrom must be on or after the schedule start date',
+      }
+    }
+    if (
+      input.effectiveFrom !== undefined &&
+      hasRevisionChanges &&
+      input.recurrence === undefined &&
+      activeRevision != null &&
+      activeRevision.revision.recurrenceRuleId == null &&
+      input.effectiveFrom !== activeRevision.revision.effectiveFrom
+    ) {
+      return {
+        kind: 'invalid',
+        message: 'effectiveFrom must match the date of a one-off schedule',
+      }
+    }
+
+    const draft: ScheduleDraft = {
+      ...(hasRevisionChanges
+        ? {
+            revisionChange: {
+              effectiveFrom: input.effectiveFrom ?? firstDate,
+              ...(input.startTime !== undefined
+                ? { startTime: input.startTime }
+                : {}),
+              ...(input.endTime !== undefined
+                ? { endTime: input.endTime }
+                : {}),
+              ...(input.recurrence !== undefined
+                ? { recurrence: input.recurrence }
+                : {}),
+              mode:
+                input.effectiveFrom !== undefined
+                  ? 'from'
+                  : shouldReplaceAllRevisions
+                    ? 'replace'
+                    : 'all',
+            },
+          }
+        : {}),
+      ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
+    }
+    const shouldLoadOverrides =
+      input.dryRun === true ||
+      input.endDate != null ||
+      (input.effectiveFrom !== undefined && hasRevisionChanges)
+    const existingOverrides = shouldLoadOverrides
+      ? await tx
+          .select()
+          .from(scheduleOverrides)
+          .where(eq(scheduleOverrides.scheduleId, scheduleId))
+      : []
+    const deletedOverrides = getDeletedScheduleOverrides(
+      series,
+      existingOverrides,
+      draft,
+    )
+
+    if (input.dryRun === true) {
+      const range = buildSchedulePreviewRange(
+        series,
+        input.effectiveFrom ?? input.startDate,
+      )
+      return {
+        kind: 'dryRun',
+        preview: buildScheduleChangePreview(
+          series,
+          existingOverrides,
+          range,
+          draft,
+          deletedOverrides,
+        ),
+      }
+    }
 
     if (input.effectiveFrom !== undefined) {
-      const activeRevision = getScheduleRevisionForDate(
-        series.revisions,
-        input.effectiveFrom,
-      )
-      if (!activeRevision) {
-        return {
-          kind: 'invalid',
-          message: 'effectiveFrom must be on or after the schedule start date',
-        }
-      }
-
-      if (
-        hasRevisionChanges &&
-        input.recurrence === undefined &&
-        activeRevision.revision.recurrenceRuleId == null &&
-        input.effectiveFrom !== activeRevision.revision.effectiveFrom
-      ) {
-        return {
-          kind: 'invalid',
-          message: 'effectiveFrom must match the date of a one-off schedule',
-        }
-      }
-
-      if (hasRevisionChanges) {
+      if (hasRevisionChanges && activeRevision != null) {
         await updateRevisionFromEffectiveDate(
           tx,
           scheduleId,
@@ -373,50 +438,18 @@ export async function updateScheduleSeries(
     )
     if (!updatedSeries) return { kind: 'missing' }
 
-    if (input.endDate != null) {
+    const deletedOccurrenceDates = deletedOverrides.map(
+      ({ occurrenceDate }) => occurrenceDate,
+    )
+    if (deletedOccurrenceDates.length > 0) {
       await tx
         .delete(scheduleOverrides)
         .where(
           and(
             eq(scheduleOverrides.scheduleId, scheduleId),
-            gt(scheduleOverrides.occurrenceDate, input.endDate),
+            inArray(scheduleOverrides.occurrenceDate, deletedOccurrenceDates),
           ),
         )
-    }
-
-    if (input.effectiveFrom !== undefined && hasRevisionChanges) {
-      const overrides = await tx
-        .select()
-        .from(scheduleOverrides)
-        .where(
-          and(
-            eq(scheduleOverrides.scheduleId, scheduleId),
-            gte(scheduleOverrides.occurrenceDate, input.effectiveFrom),
-          ),
-        )
-      const obsoleteOccurrenceDates = overrides
-        .filter(
-          (override) =>
-            !scheduleOccursOnDate(
-              updatedSeries,
-              new Date(override.occurrenceDate + 'T00:00:00'),
-            ),
-        )
-        .map((override) => override.occurrenceDate)
-
-      if (obsoleteOccurrenceDates.length > 0) {
-        await tx
-          .delete(scheduleOverrides)
-          .where(
-            and(
-              eq(scheduleOverrides.scheduleId, scheduleId),
-              inArray(
-                scheduleOverrides.occurrenceDate,
-                obsoleteOccurrenceDates,
-              ),
-            ),
-          )
-      }
     }
 
     const responseRevision =

@@ -79,6 +79,10 @@ const autoScheduleCliOptions = [
 const scheduleUpdateCliOptions = [
   ...recurrenceCliOptions(),
   {
+    flags: '--dry-run',
+    description: 'Preview changes without saving them',
+  },
+  {
     flags: '--no-recurrence',
     description: 'Make the schedule a one-time event from its effective date',
   },
@@ -151,6 +155,7 @@ function mapCliScheduleUpdate(
 
   return ok({
     ...input,
+    ...(options['dryRun'] === true ? { dryRun: true } : {}),
     ...(noRecurrence
       ? { recurrence: null }
       : recurrence.value === undefined
@@ -286,14 +291,14 @@ export const scheduleOperations = [
   defineOperation(scheduleUpdateOperationSchema, {
     path: ['schedule', 'events', 'update'],
     description:
-      'Update a schedule event. Set effectiveFrom to apply time and recurrence changes from that local date onward; omit it to update the whole series. endDate is the last local date on which the schedule can occur. Title, context, and color always apply to the whole schedule.',
+      'Update a schedule event. Set effectiveFrom to apply time and recurrence changes from that local date onward; omit it to update the whole series. endDate is the last local date on which the schedule can occur. Title, context, and color always apply to the whole schedule. Set dryRun to preview occurrence changes and removed overrides without saving.',
     positionalArgs: ['id'],
     kind: 'write',
     mcpInputSchema: scheduleUpdateMcpInputSchema,
     routes: ['PATCH /api/schedule/events/:id'],
     cli: {
       customOptions: scheduleUpdateCliOptions,
-      excludeFields: ['recurrence'],
+      excludeFields: ['recurrence', 'dryRun'],
       mapInput: mapCliScheduleUpdate,
       output: { kind: 'json' },
     },

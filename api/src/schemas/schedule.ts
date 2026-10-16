@@ -25,6 +25,7 @@ export const createScheduleSchema = z.object({
 })
 
 export const updateScheduleInputSchema = z.object({
+  dryRun: z.boolean().optional().describe('Preview changes without saving.'),
   title: z.string().min(1).optional(),
   startDate: z.iso.date().optional(),
   effectiveFrom: z.iso.date().optional(),

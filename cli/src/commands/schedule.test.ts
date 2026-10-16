@@ -387,6 +387,68 @@ describe('schedule events create', () => {
 })
 
 describe('schedule events update', () => {
+  it('sends dryRun when previewing a schedule update', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const preview = {
+      range: { startDate: '2037-04-11', endDate: '2037-05-22' },
+      changes: [
+        {
+          before: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '08:30',
+            endTime: '09:30',
+            skipped: false,
+          },
+          after: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '10:00',
+            endTime: '11:00',
+            skipped: false,
+          },
+        },
+      ],
+      deletedOverrides: [],
+    }
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--effective-from',
+          '2037-04-11',
+          '--start-time',
+          '10:00',
+          '--end-time',
+          '11:00',
+          '--dry-run',
+        ],
+        new Response(JSON.stringify(preview), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: {
+            effectiveFrom: '2037-04-11',
+            startTime: '10:00',
+            endTime: '11:00',
+            dryRun: true,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(preview, null, 2)}\n`]],
+    })
+  })
+
   it('applies recurrence and end date changes from an effective date', async () => {
     const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     const updated = makeScheduleEvent({

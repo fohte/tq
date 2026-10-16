@@ -6,7 +6,11 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { scheduleOccursOnDate } from '#routes/schedule-expansion'
+import {
+  expandScheduleWithDraft,
+  scheduleOccursOnDate,
+} from '#routes/schedule-expansion'
+import { buildScheduleChangePreviewFromOccurrences } from '#routes/schedule-preview'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
 import {
   scheduleOverrideDateSchema,
@@ -46,6 +50,59 @@ export const scheduleOverridesApp = new Hono()
       }
 
       const input = c.req.valid('json')
+      if (input.dryRun === true) {
+        const overrides = await db
+          .select()
+          .from(scheduleOverrides)
+          .where(eq(scheduleOverrides.scheduleId, scheduleId))
+        const existingOverride = overrides.find(
+          (override) => override.occurrenceDate === occurrenceDate,
+        )
+        const draft = {
+          occurrenceChange:
+            input.skipped === true
+              ? { originalDate: occurrenceDate, skipped: true }
+              : {
+                  originalDate: occurrenceDate,
+                  date: input.date ?? occurrenceDate,
+                  startTime: input.startTime,
+                  endTime: input.endTime,
+                  skipped: false,
+                },
+        }
+        const beforeDate = existingOverride?.movedToDate ?? occurrenceDate
+        const afterDate =
+          input.skipped === true
+            ? occurrenceDate
+            : (input.date ?? occurrenceDate)
+        const before = expandScheduleWithDraft({
+          series: schedule,
+          overrides,
+          startDate: beforeDate,
+          endDate: beforeDate,
+          draft: {},
+        }).filter((occurrence) => occurrence.originalDate === occurrenceDate)
+        const after = expandScheduleWithDraft({
+          series: schedule,
+          overrides,
+          startDate: afterDate,
+          endDate: afterDate,
+          draft,
+        }).filter((occurrence) => occurrence.originalDate === occurrenceDate)
+        const startDate = beforeDate < afterDate ? beforeDate : afterDate
+        const endDate = beforeDate > afterDate ? beforeDate : afterDate
+
+        return c.json(
+          buildScheduleChangePreviewFromOccurrences(
+            { startDate, endDate },
+            before,
+            after,
+            [],
+          ),
+          200,
+        )
+      }
+
       const values =
         input.skipped === true
           ? {
