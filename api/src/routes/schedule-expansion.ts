@@ -39,7 +39,7 @@ export type ScheduleRecurrenceResponse = {
   dayOfMonth: number | null
 } | null
 
-export type ScheduleOccurrence = {
+type ScheduleOccurrence = {
   occurrenceDate: string
   startTime: string
   endTime: string

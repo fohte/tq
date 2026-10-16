@@ -42,6 +42,7 @@ afterEach(() => {
 const WORK_ENDPOINT = 'https://push.example.com/work-device'
 const PERSONAL_ENDPOINT = 'https://push.example.com/personal-device'
 const REMINDER_TIME = new Date('2026-12-17T04:45:00.000Z')
+const MIDNIGHT_REMINDER_TIME = new Date('2026-12-17T14:45:00.000Z')
 
 async function register(endpoint: string, context: 'work' | 'personal') {
   await db.insert(pushSubscriptions).values({
@@ -135,6 +136,41 @@ describe('deliverDueScheduleReminders', () => {
           scheduleId: 'SCHEDULE_ID',
           occurrenceDate: '2026-12-17',
           remindAt: REMINDER_TIME.toISOString(),
+        },
+      ],
+    })
+  })
+
+  it('sends a reminder due the previous day once across consecutive ticks', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const series = await createSchedule({
+      startDate: '2026-12-18',
+      startTime: '00:25',
+      endTime: '01:05',
+      remindBeforeMinutes: 40,
+    })
+
+    await deliverDueScheduleReminders(MIDNIGHT_REMINDER_TIME)
+    await deliverDueScheduleReminders(
+      new Date(MIDNIGHT_REMINDER_TIME.getTime() + 30_000),
+    )
+
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [
+        {
+          endpoint: PERSONAL_ENDPOINT,
+          payload: {
+            title: 'Planning session',
+            body: 'Starts in 40 minutes',
+            url: 'https://localhost:5173/',
+          },
+        },
+      ],
+      claims: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: '2026-12-18',
+          remindAt: MIDNIGHT_REMINDER_TIME.toISOString(),
         },
       ],
     })

@@ -19,13 +19,16 @@ function toError(error: unknown): Error {
  */
 export function startReminderScheduler(): NodeJS.Timeout {
   return setInterval(() => {
-    void ResultAsync.fromPromise(
-      Promise.all([deliverDueReminders(), deliverDueScheduleReminders()]),
-      toError,
-    ).match(
+    void ResultAsync.fromPromise(deliverDueReminders(), toError).match(
       () => undefined,
       (error) => {
         captureWithFingerprint(error, 'api.reminders.tick-failed')
+      },
+    )
+    void ResultAsync.fromPromise(deliverDueScheduleReminders(), toError).match(
+      () => undefined,
+      (error) => {
+        captureWithFingerprint(error, 'api.schedule-reminders.tick-failed')
       },
     )
   }, POLL_INTERVAL_MS)
