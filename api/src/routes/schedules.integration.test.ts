@@ -181,6 +181,23 @@ function normalizeCrossDateExpandedHttpResponse(
   }
 }
 
+async function normalizeValidationResponse(response: Response) {
+  const body = await jsonBody<{
+    success: false
+    error: { name: string; message: string }
+  }>(response)
+  return {
+    status: response.status,
+    body: {
+      success: body.success,
+      error: {
+        name: body.error.name,
+        issues: JSON.parse(body.error.message) as unknown,
+      },
+    },
+  }
+}
+
 async function putScheduleOverride(
   scheduleId: string,
   occurrenceDate: string,
@@ -1408,46 +1425,114 @@ describe('schedule overrides API', () => {
     ])
   })
 
-  it('rejects an incomplete time range', async () => {
-    const { body: schedule } = await createSchedule({
-      title: 'Routine',
-      startTime: '09:00',
-      endTime: '10:00',
-    })
-    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
-      startTime: '08:30',
-    })
-
-    expect(response.status).toBe(400)
-  })
-
-  it('rejects a destination date when skipping an occurrence', async () => {
+  it.each([
+    {
+      name: 'an incomplete time range',
+      body: { startTime: '08:30' },
+      issues: [
+        {
+          code: 'invalid_union',
+          errors: [
+            [
+              {
+                code: 'invalid_value',
+                values: [true],
+                path: ['skipped'],
+                message: 'Invalid input: expected true',
+              },
+              {
+                code: 'unrecognized_keys',
+                keys: ['startTime'],
+                path: [],
+                message: 'Unrecognized key: "startTime"',
+              },
+            ],
+            [
+              {
+                expected: 'string',
+                code: 'invalid_type',
+                path: ['endTime'],
+                message: 'Invalid input: expected string, received undefined',
+              },
+            ],
+          ],
+          path: [],
+          message: 'Invalid input',
+        },
+      ],
+    },
+    {
+      name: 'a destination date when skipping an occurrence',
+      body: { skipped: true, date: '2026-03-23' },
+      issues: [
+        {
+          code: 'invalid_union',
+          errors: [
+            [
+              {
+                code: 'unrecognized_keys',
+                keys: ['date'],
+                path: [],
+                message: 'Unrecognized key: "date"',
+              },
+            ],
+            [
+              {
+                expected: 'string',
+                code: 'invalid_type',
+                path: ['startTime'],
+                message: 'Invalid input: expected string, received undefined',
+              },
+              {
+                expected: 'string',
+                code: 'invalid_type',
+                path: ['endTime'],
+                message: 'Invalid input: expected string, received undefined',
+              },
+              {
+                code: 'invalid_value',
+                values: [false],
+                path: ['skipped'],
+                message: 'Invalid input: expected false',
+              },
+            ],
+          ],
+          path: [],
+          message: 'Invalid input',
+        },
+      ],
+    },
+    {
+      name: 'a time outside the 24-hour clock',
+      body: { startTime: '24:00', endTime: '09:45' },
+      issues: [
+        {
+          origin: 'string',
+          code: 'invalid_format',
+          format: 'regex',
+          pattern: '/^(?:[01]\\d|2[0-3]):[0-5]\\d$/',
+          path: ['startTime'],
+          message:
+            'Invalid string: must match pattern /^(?:[01]\\d|2[0-3]):[0-5]\\d$/',
+        },
+      ],
+    },
+  ])('rejects $name', async ({ body, issues }) => {
     const { body: schedule } = await createSchedule({
       title: 'Routine',
       startTime: '09:00',
       endTime: '10:00',
       recurrence: { type: 'daily', interval: 1 },
     })
-    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
-      skipped: true,
-      date: '2026-03-23',
-    })
+    const response = await putScheduleOverride(schedule.id, '2026-03-22', body)
 
-    expect(response.status).toBe(400)
-  })
-
-  it('rejects a time outside the 24-hour clock', async () => {
-    const { body: schedule } = await createSchedule({
-      title: 'Routine',
-      startTime: '09:00',
-      endTime: '10:00',
+    expect(await normalizeValidationResponse(response)).toEqual({
+      status: 400,
+      body: {
+        success: false,
+        error: { name: 'ZodError', issues },
+      },
     })
-    const response = await putScheduleOverride(schedule.id, '2026-03-22', {
-      startTime: '24:00',
-      endTime: '09:45',
-    })
-
-    expect(response.status).toBe(400)
   })
 
   it('rejects a date that does not match the recurrence rule', async () => {
