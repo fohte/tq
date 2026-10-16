@@ -2,8 +2,55 @@ import type { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
 
 export type ScheduleOverrideTimes = Pick<
   typeof scheduleOverrides.$inferSelect,
-  'startTime' | 'endTime' | 'skipped'
+  'startTime' | 'endTime' | 'movedToDate' | 'skipped'
 >
+
+export type ScheduleOverrideIndex = {
+  byOccurrenceDate: ReadonlyMap<string, ScheduleOverrideTimes>
+  byMovedToDate: ReadonlyMap<
+    string,
+    ReadonlyArray<{
+      occurrenceDate: string
+      override: ScheduleOverrideTimes
+    }>
+  >
+}
+
+type ScheduleOccurrence = {
+  occurrenceDate: string
+  startTime: string
+  endTime: string
+  overridden: 'moved' | 'time' | null
+}
+
+const emptyScheduleOverrideIndex: ScheduleOverrideIndex = {
+  byOccurrenceDate: new Map(),
+  byMovedToDate: new Map(),
+}
+
+export function buildScheduleOverrideIndex(
+  entries: Iterable<{ occurrenceDate: string } & ScheduleOverrideTimes>,
+): ScheduleOverrideIndex {
+  const byOccurrenceDate = new Map<string, ScheduleOverrideTimes>()
+  const byMovedToDate = new Map<
+    string,
+    Array<{ occurrenceDate: string; override: ScheduleOverrideTimes }>
+  >()
+
+  for (const entry of entries) {
+    byOccurrenceDate.set(entry.occurrenceDate, entry)
+    if (entry.movedToDate == null) continue
+
+    const movedOverrides = byMovedToDate.get(entry.movedToDate) ?? []
+    movedOverrides.push({
+      occurrenceDate: entry.occurrenceDate,
+      override: entry,
+    })
+    byMovedToDate.set(entry.movedToDate, movedOverrides)
+  }
+
+  return { byOccurrenceDate, byMovedToDate }
+}
 
 /** Check if a date matches the recurrence rule's pattern.
  * - daily: matches every day (interval not yet implemented)
@@ -51,7 +98,7 @@ export function expandScheduleForDate(
   schedule: typeof schedules.$inferSelect,
   rule: typeof recurrenceRules.$inferSelect | null,
   dateStr: string,
-  overrides: ReadonlyMap<string, ScheduleOverrideTimes> = new Map(),
+  overrides: ScheduleOverrideIndex = emptyScheduleOverrideIndex,
 ): Array<{
   scheduleId: string
   title: string
@@ -60,12 +107,10 @@ export function expandScheduleForDate(
   end: string
   context: string
   color: string | null
+  occurrenceDate: string
+  overridden: 'moved' | 'time' | null
 }> {
   const date = new Date(dateStr + 'T00:00:00')
-  const currentOverride = overrides.get(dateStr)
-  const currentStartTime = currentOverride?.startTime ?? schedule.startTime
-  const currentEndTime = currentOverride?.endTime ?? schedule.endTime
-  const isCrossMidnight = currentStartTime > currentEndTime
 
   const blocks: Array<{
     scheduleId: string
@@ -75,63 +120,116 @@ export function expandScheduleForDate(
     end: string
     context: string
     color: string | null
+    occurrenceDate: string
+    overridden: 'moved' | 'time' | null
   }> = []
 
-  // Check if the schedule's "start day" is this date
-  if (
-    scheduleOccursOnDate(schedule, rule, date) &&
-    currentOverride?.skipped !== true
-  ) {
-    if (isCrossMidnight) {
-      // Start portion: startTime on this date -> midnight
-      const nextDate = new Date(date)
-      nextDate.setDate(nextDate.getDate() + 1)
-      blocks.push({
-        scheduleId: schedule.id,
-        title: schedule.title,
-        startDate: schedule.startDate,
-        start: `${dateStr}T${currentStartTime}:00`,
-        end: `${formatDateStr(nextDate)}T00:00:00`,
-        context: schedule.context,
-        color: schedule.color,
-      })
-    } else {
-      blocks.push({
-        scheduleId: schedule.id,
-        title: schedule.title,
-        startDate: schedule.startDate,
-        start: `${dateStr}T${currentStartTime}:00`,
-        end: `${dateStr}T${currentEndTime}:00`,
-        context: schedule.context,
-        color: schedule.color,
-      })
-    }
+  for (const occurrence of getOccurrencesStartingOnDate(
+    schedule,
+    rule,
+    dateStr,
+    overrides,
+  )) {
+    const isCrossMidnight = occurrence.startTime > occurrence.endTime
+    const nextDate = new Date(date)
+    nextDate.setDate(nextDate.getDate() + 1)
+    blocks.push({
+      scheduleId: schedule.id,
+      title: schedule.title,
+      startDate: schedule.startDate,
+      start: `${dateStr}T${occurrence.startTime}:00`,
+      end: isCrossMidnight
+        ? `${formatDateStr(nextDate)}T00:00:00`
+        : `${dateStr}T${occurrence.endTime}:00`,
+      context: schedule.context,
+      color: schedule.color,
+      occurrenceDate: occurrence.occurrenceDate,
+      overridden: occurrence.overridden,
+    })
   }
 
   // Check whether the previous occurrence continues into this date.
   const prevDate = new Date(date)
   prevDate.setDate(prevDate.getDate() - 1)
   const prevDateStr = formatDateStr(prevDate)
-  const previousOverride = overrides.get(prevDateStr)
-  const previousStartTime = previousOverride?.startTime ?? schedule.startTime
-  const previousEndTime = previousOverride?.endTime ?? schedule.endTime
-  if (
-    previousStartTime > previousEndTime &&
-    scheduleOccursOnDate(schedule, rule, prevDate) &&
-    previousOverride?.skipped !== true
-  ) {
+  for (const occurrence of getOccurrencesStartingOnDate(
+    schedule,
+    rule,
+    prevDateStr,
+    overrides,
+  )) {
+    if (occurrence.startTime <= occurrence.endTime) continue
+
     blocks.push({
       scheduleId: schedule.id,
       title: schedule.title,
       startDate: schedule.startDate,
       start: `${dateStr}T00:00:00`,
-      end: `${dateStr}T${previousEndTime}:00`,
+      end: `${dateStr}T${occurrence.endTime}:00`,
       context: schedule.context,
       color: schedule.color,
+      occurrenceDate: occurrence.occurrenceDate,
+      overridden: occurrence.overridden,
     })
   }
 
   return blocks
+}
+
+function getOccurrencesStartingOnDate(
+  schedule: typeof schedules.$inferSelect,
+  rule: typeof recurrenceRules.$inferSelect | null,
+  dateStr: string,
+  overrides: ScheduleOverrideIndex,
+): ScheduleOccurrence[] {
+  const date = new Date(`${dateStr}T00:00:00`)
+  const candidates: Array<{
+    occurrenceDate: string
+    override: ScheduleOverrideTimes | undefined
+  }> = []
+  const override = overrides.byOccurrenceDate.get(dateStr)
+
+  if (
+    scheduleOccursOnDate(schedule, rule, date) &&
+    override?.movedToDate == null
+  ) {
+    candidates.push({ occurrenceDate: dateStr, override })
+  }
+
+  for (const {
+    occurrenceDate,
+    override: movedOverride,
+  } of overrides.byMovedToDate.get(dateStr) ?? []) {
+    if (
+      !scheduleOccursOnDate(
+        schedule,
+        rule,
+        new Date(`${occurrenceDate}T00:00:00`),
+      )
+    ) {
+      continue
+    }
+
+    candidates.push({ occurrenceDate, override: movedOverride })
+  }
+
+  return candidates.flatMap(({ occurrenceDate, override }) => {
+    if (override?.skipped === true) return []
+
+    return [
+      {
+        occurrenceDate,
+        startTime: override?.startTime ?? schedule.startTime,
+        endTime: override?.endTime ?? schedule.endTime,
+        overridden:
+          override == null
+            ? null
+            : override.movedToDate == null
+              ? 'time'
+              : 'moved',
+      },
+    ]
+  })
 }
 
 export function formatDateStr(date: Date): string {

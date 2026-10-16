@@ -1,10 +1,10 @@
-import { and, gte, inArray, lte } from 'drizzle-orm'
+import { and, gte, inArray, lte, or } from 'drizzle-orm'
 
 import { db } from '#db/connection'
 import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
 import {
+  buildScheduleOverrideIndex,
   formatDateStr,
-  type ScheduleOverrideTimes,
 } from '#routes/schedule-expansion'
 
 export async function loadSchedulesWithRules() {
@@ -34,35 +34,27 @@ export async function loadSchedulesWithRules() {
   }))
 }
 
-export async function loadScheduleOverridesForDateRange(
-  startDate: string,
-  endDate: string,
-) {
-  return db
-    .select()
-    .from(scheduleOverrides)
-    .where(
-      and(
-        gte(scheduleOverrides.occurrenceDate, startDate),
-        lte(scheduleOverrides.occurrenceDate, endDate),
-      ),
-    )
-}
-
 function indexScheduleOverridesBySchedule(
-  overrides: Awaited<ReturnType<typeof loadScheduleOverridesForDateRange>>,
+  overrides: Array<typeof scheduleOverrides.$inferSelect>,
 ) {
-  const result = new Map<string, Map<string, ScheduleOverrideTimes>>()
+  const overridesBySchedule = new Map<
+    string,
+    Array<typeof scheduleOverrides.$inferSelect>
+  >()
 
   for (const override of overrides) {
-    const dateOverrides =
-      result.get(override.scheduleId) ??
-      new Map<string, ScheduleOverrideTimes>()
-    dateOverrides.set(override.occurrenceDate, override)
-    result.set(override.scheduleId, dateOverrides)
+    const scheduleOverridesForExpansion =
+      overridesBySchedule.get(override.scheduleId) ?? []
+    scheduleOverridesForExpansion.push(override)
+    overridesBySchedule.set(override.scheduleId, scheduleOverridesForExpansion)
   }
 
-  return result
+  return new Map(
+    [...overridesBySchedule].map(([scheduleId, entries]) => [
+      scheduleId,
+      buildScheduleOverrideIndex(entries),
+    ]),
+  )
 }
 
 export async function loadScheduleOverridesForExpansion(
@@ -71,11 +63,24 @@ export async function loadScheduleOverridesForExpansion(
 ) {
   const previousDate = new Date(`${startDate}T00:00:00`)
   previousDate.setDate(previousDate.getDate() - 1)
+  const startDateWithPrevious = formatDateStr(previousDate)
 
   return indexScheduleOverridesBySchedule(
-    await loadScheduleOverridesForDateRange(
-      formatDateStr(previousDate),
-      endDate,
-    ),
+    await db
+      .select()
+      .from(scheduleOverrides)
+      .where(
+        or(
+          and(
+            gte(scheduleOverrides.occurrenceDate, startDateWithPrevious),
+            lte(scheduleOverrides.occurrenceDate, endDate),
+          ),
+          and(
+            gte(scheduleOverrides.movedToDate, startDateWithPrevious),
+            lte(scheduleOverrides.movedToDate, endDate),
+          ),
+        ),
+      )
+      .orderBy(scheduleOverrides.occurrenceDate),
   )
 }

@@ -7,6 +7,8 @@ export function makeSchedule(overrides: Partial<Schedule> = {}): Schedule {
     startDate: '2026-01-01',
     start: '2026-01-01T07:00:00',
     end: '2026-01-01T08:00:00',
+    occurrenceDate: '2026-01-01',
+    overridden: null,
     context: 'personal',
     color: '#6C63FF',
     recurrence: {

@@ -26,6 +26,7 @@ export interface CalendarEventProps {
   /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto'. */
   isAutoScheduled?: boolean
   scheduleId?: string
+  scheduleOccurrenceDate?: string
   /** Raw start ISO string, used to disambiguate cross-midnight blocks sharing a scheduleId */
   scheduleStart?: string
   queuePosition?: number

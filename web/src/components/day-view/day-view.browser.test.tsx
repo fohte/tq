@@ -28,7 +28,8 @@ let capturedOnSelectRange:
   ((info: { start: Date; end: Date }) => void) | undefined
 let capturedOnTaskClick: ((taskId: string) => void) | undefined
 let capturedOnScheduleClick:
-  ((scheduleId: string, start: string) => void) | undefined
+  | ((scheduleId: string, occurrenceDate: string, start: string) => void)
+  | undefined
 let capturedShowViewSwitcher: boolean | undefined
 let capturedModalProps: {
   open: boolean
@@ -40,7 +41,11 @@ vi.mock('#components/calendar/calendar-view', () => ({
   CalendarView: (props: {
     onSelectRange?: (info: { start: Date; end: Date }) => void
     onTaskClick?: (taskId: string) => void
-    onScheduleClick?: (scheduleId: string, start: string) => void
+    onScheduleClick?: (
+      scheduleId: string,
+      occurrenceDate: string,
+      start: string,
+    ) => void
     showViewSwitcher?: boolean
   }) => {
     capturedOnSelectRange = props.onSelectRange
@@ -223,7 +228,11 @@ describe('DayViewPresentation', () => {
     await renderDayView({ schedules: [schedule] })
 
     act(() => {
-      capturedOnScheduleClick?.('sched-sleep', schedule.start)
+      capturedOnScheduleClick?.(
+        'sched-sleep',
+        schedule.occurrenceDate,
+        schedule.start,
+      )
     })
 
     const titleInputs = await screen.findAllByPlaceholderText('Schedule title')
