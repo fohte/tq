@@ -123,24 +123,14 @@ async function updateRevisionFromEffectiveDate(
   }
 
   const laterRevisions = await tx
-    .select()
-    .from(scheduleRevisions)
+    .delete(scheduleRevisions)
     .where(
       and(
         eq(scheduleRevisions.scheduleId, scheduleId),
         gt(scheduleRevisions.effectiveFrom, effectiveFrom),
       ),
     )
-  if (laterRevisions.length > 0) {
-    await tx
-      .delete(scheduleRevisions)
-      .where(
-        and(
-          eq(scheduleRevisions.scheduleId, scheduleId),
-          gt(scheduleRevisions.effectiveFrom, effectiveFrom),
-        ),
-      )
-  }
+    .returning()
 
   await tx
     .insert(scheduleRevisions)
