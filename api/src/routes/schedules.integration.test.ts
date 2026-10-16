@@ -1,6 +1,9 @@
+import { eq, inArray } from 'drizzle-orm'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { recurrenceRules, scheduleOverrides } from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -1073,6 +1076,171 @@ describe('schedules API', () => {
       })
     })
 
+    it('replaces all later revisions when updating from an earlier effectiveFrom', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      const firstRevisionPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-24',
+            startTime: '18:00',
+            endTime: '19:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2, 4],
+            },
+          }),
+        },
+      )
+      const obsoleteRevisionPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-28',
+            startTime: '21:00',
+            endTime: '22:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [6],
+            },
+          }),
+        },
+      )
+      const obsoleteRuleId = (
+        await jsonBody<ScheduleResponse>(obsoleteRevisionPatch)
+      ).recurrence?.id
+      assertDefined(obsoleteRuleId, 'no recurrence rule on obsolete revision')
+      const replacementPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-26',
+            startTime: '20:00',
+            endTime: '21:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [4],
+            },
+          }),
+        },
+      )
+      const listResponse = await app.request(
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-29',
+      )
+      const obsoleteRuleRows = await db
+        .select({ id: recurrenceRules.id })
+        .from(recurrenceRules)
+        .where(eq(recurrenceRules.id, obsoleteRuleId))
+
+      const snapshot = async () => ({
+        patchStatuses: [
+          firstRevisionPatch.status,
+          obsoleteRevisionPatch.status,
+          replacementPatch.status,
+        ],
+        obsoleteRuleIds: obsoleteRuleRows.map(({ id }) => id),
+        listStatus: listResponse.status,
+        blocks: normalizeExpandedBlocks(
+          await jsonBody<ExpandedBlock[]>(listResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        patchStatuses: [200, 200, 200],
+        obsoleteRuleIds: [],
+        listStatus: 200,
+        blocks: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-22T09:00:00',
+            end: '2026-03-22T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-22',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-23T09:00:00',
+            end: '2026-03-23T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-23',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-24T18:00:00',
+            end: '2026-03-24T19:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-24',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2, 4],
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-26T20:00:00',
+            end: '2026-03-26T21:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-26',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [4],
+              dayOfMonth: null,
+            },
+          },
+        ],
+      })
+    })
+
     it('applies schedule changes to all dates when effectiveFrom is omitted', async () => {
       const { body: created } = await createSchedule({
         title: 'Routine',
@@ -1132,6 +1300,54 @@ describe('schedules API', () => {
             },
           },
         ],
+      })
+    })
+
+    it('deletes recurrence rules when replacing all schedule revisions', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      const firstRuleId = created.recurrence?.id
+      assertDefined(firstRuleId, 'no recurrence rule on created schedule')
+      const laterRevisionPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-24',
+            recurrence: { type: 'weekly', interval: 1, daysOfWeek: [2] },
+          }),
+        },
+      )
+      const laterRuleId = (await jsonBody<ScheduleResponse>(laterRevisionPatch))
+        .recurrence?.id
+      assertDefined(laterRuleId, 'no recurrence rule on later revision')
+      const replacementPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recurrence: null }),
+        },
+      )
+      const recurrenceRuleRows = await db
+        .select({ id: recurrenceRules.id })
+        .from(recurrenceRules)
+        .where(inArray(recurrenceRules.id, [firstRuleId, laterRuleId]))
+
+      const snapshot = () => ({
+        patchStatuses: [laterRevisionPatch.status, replacementPatch.status],
+        remainingRuleIds: recurrenceRuleRows.map(({ id }) => id),
+      })
+
+      expect(snapshot()).toEqual({
+        patchStatuses: [200, 200],
+        remainingRuleIds: [],
       })
     })
 
@@ -1766,6 +1982,88 @@ describe('schedules API', () => {
       })
     })
 
+    it('deletes overrides after endDate so they do not return when extended', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      const overrideResponse = await putScheduleOverride(
+        created.id,
+        '2026-03-24',
+        { startTime: '08:30', endTime: '09:30' },
+      )
+      const shortenResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endDate: '2026-03-23' }),
+        },
+      )
+      const extendResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endDate: null }),
+        },
+      )
+      const listResponse = await app.request(
+        '/api/schedule/events?startDate=2026-03-24&endDate=2026-03-24',
+      )
+      const remainingOverrides = await db
+        .select({ occurrenceDate: scheduleOverrides.occurrenceDate })
+        .from(scheduleOverrides)
+        .where(eq(scheduleOverrides.scheduleId, created.id))
+
+      const snapshot = async () => ({
+        statuses: [
+          overrideResponse.status,
+          shortenResponse.status,
+          extendResponse.status,
+        ],
+        endDates: [
+          (await jsonBody<ScheduleResponse>(shortenResponse)).endDate,
+          (await jsonBody<ScheduleResponse>(extendResponse)).endDate,
+        ],
+        remainingOverrides,
+        listStatus: listResponse.status,
+        blocks: normalizeExpandedBlocks(
+          await jsonBody<ExpandedBlock[]>(listResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        statuses: [200, 200, 200],
+        endDates: ['2026-03-23', null],
+        remainingOverrides: [],
+        listStatus: 200,
+        blocks: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-24T09:00:00',
+            end: '2026-03-24T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-24',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+        ],
+      })
+    })
+
     it('ends a schedule inclusively on endDate', async () => {
       const { body: created } = await createSchedule({
         title: 'Routine',
@@ -1966,11 +2264,23 @@ describe('schedules API', () => {
         endTime: '19:00',
         recurrence: { type: 'daily', interval: 1 },
       })
+      const recurrenceRuleId = created.recurrence?.id
+      assertDefined(recurrenceRuleId, 'no recurrence rule on created schedule')
 
       const res = await app.request(`/api/schedule/events/${created.id}`, {
         method: 'DELETE',
       })
-      expect(res.status).toBe(204)
+      const recurrenceRuleRows = await db
+        .select({ id: recurrenceRules.id })
+        .from(recurrenceRules)
+        .where(eq(recurrenceRules.id, recurrenceRuleId))
+
+      const snapshot = () => ({
+        status: res.status,
+        recurrenceRuleIds: recurrenceRuleRows.map(({ id }) => id),
+      })
+
+      expect(snapshot()).toEqual({ status: 204, recurrenceRuleIds: [] })
     })
 
     it('returns 404 for non-existent schedule', async () => {

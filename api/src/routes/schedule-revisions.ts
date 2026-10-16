@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray } from 'drizzle-orm'
+import { and, eq, gt, gte, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { db, type DbTransaction } from '#db/connection'
@@ -122,6 +122,26 @@ async function updateRevisionFromEffectiveDate(
     recurrenceRuleId,
   }
 
+  const laterRevisions = await tx
+    .select()
+    .from(scheduleRevisions)
+    .where(
+      and(
+        eq(scheduleRevisions.scheduleId, scheduleId),
+        gt(scheduleRevisions.effectiveFrom, effectiveFrom),
+      ),
+    )
+  if (laterRevisions.length > 0) {
+    await tx
+      .delete(scheduleRevisions)
+      .where(
+        and(
+          eq(scheduleRevisions.scheduleId, scheduleId),
+          gt(scheduleRevisions.effectiveFrom, effectiveFrom),
+        ),
+      )
+  }
+
   await tx
     .insert(scheduleRevisions)
     .values({ scheduleId, effectiveFrom, ...revisionValues })
@@ -130,14 +150,13 @@ async function updateRevisionFromEffectiveDate(
       set: { ...revisionValues, updatedAt: now },
     })
 
-  if (
-    activeRevision.revision.recurrenceRuleId != null &&
+  await deleteUnreferencedRecurrenceRules(tx, [
+    ...uniqueRecurrenceRuleIds(laterRevisions),
+    ...(activeRevision.revision.recurrenceRuleId != null &&
     activeRevision.revision.recurrenceRuleId !== recurrenceRuleId
-  ) {
-    await deleteUnreferencedRecurrenceRules(tx, [
-      activeRevision.revision.recurrenceRuleId,
-    ])
-  }
+      ? [activeRevision.revision.recurrenceRuleId]
+      : []),
+  ])
 }
 
 async function replaceAllScheduleRevisions(
@@ -363,6 +382,17 @@ export async function updateScheduleSeries(
       tx,
     )
     if (!updatedSeries) return { kind: 'missing' }
+
+    if (input.endDate != null) {
+      await tx
+        .delete(scheduleOverrides)
+        .where(
+          and(
+            eq(scheduleOverrides.scheduleId, scheduleId),
+            gt(scheduleOverrides.occurrenceDate, input.endDate),
+          ),
+        )
+    }
 
     if (input.effectiveFrom !== undefined && hasRevisionChanges) {
       const overrides = await tx
