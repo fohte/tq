@@ -275,7 +275,8 @@ export async function updateScheduleSeries(
       return { kind: 'invalid', message: 'Schedule has no revisions' }
     }
 
-    const firstDate = input.startDate ?? firstRevision.revision.effectiveFrom
+    const originalFirstDate = firstRevision.revision.effectiveFrom
+    const firstDate = input.startDate ?? originalFirstDate
     const endDate =
       input.endDate === undefined ? schedule.endDate : input.endDate
     if (endDate != null && endDate < firstDate) {
@@ -327,8 +328,11 @@ export async function updateScheduleSeries(
       }
     }
 
+    const needsRevisionDraft =
+      hasRevisionChanges ||
+      (input.effectiveFrom === undefined && shouldReplaceAllRevisions)
     const draft: ScheduleDraft = {
-      ...(hasRevisionChanges
+      ...(needsRevisionDraft
         ? {
             revisionChange: {
               effectiveFrom: input.effectiveFrom ?? firstDate,
@@ -369,10 +373,13 @@ export async function updateScheduleSeries(
     )
 
     if (input.dryRun === true) {
-      const range = buildSchedulePreviewRange(
-        series,
-        input.effectiveFrom ?? input.startDate,
-      )
+      const previewStartDate =
+        shouldReplaceAllRevisions && input.startDate !== undefined
+          ? input.startDate < originalFirstDate
+            ? input.startDate
+            : originalFirstDate
+          : (input.effectiveFrom ?? input.startDate)
+      const range = buildSchedulePreviewRange(series, previewStartDate)
       return {
         kind: 'dryRun',
         preview: buildScheduleChangePreview(

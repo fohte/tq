@@ -114,6 +114,10 @@ function applyScheduleDraftToSeries(
     baseRevision,
     revisionChange.effectiveFrom,
   )
+  if (revisionChange.mode === 'replace') {
+    return { schedule, revisions: [updatedRevision] }
+  }
+
   return {
     schedule,
     revisions: [

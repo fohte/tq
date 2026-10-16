@@ -4,6 +4,7 @@ import {
   type ScheduleDraft,
   type ScheduleDraftOccurrence,
   scheduleOccursOnDateWithDraft,
+  type ScheduleOverrideTimes,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
 import { MAX_SCHEDULE_DATE_RANGE_DAYS } from '#schemas/schedule'
@@ -38,11 +39,58 @@ export function buildSchedulePreviewRange(
   const firstDate = series.revisions[0]?.revision.effectiveFrom
   const requestedStart = startDate ?? formatDateStr(new Date())
   const resolvedStart =
-    firstDate != null && requestedStart < firstDate ? firstDate : requestedStart
+    startDate !== undefined
+      ? requestedStart
+      : firstDate != null && requestedStart < firstDate
+        ? firstDate
+        : requestedStart
   const end = new Date(`${resolvedStart}T00:00:00`)
   end.setDate(end.getDate() + MAX_SCHEDULE_DATE_RANGE_DAYS - 1)
 
   return { startDate: resolvedStart, endDate: formatDateStr(end) }
+}
+
+export function buildScheduleOverridePreview(
+  series: ScheduleSeries,
+  overrides: SchedulePreviewOverride[],
+  occurrenceDate: string,
+  values: ScheduleOverrideTimes,
+): ScheduleChangePreview {
+  const existingOverride = overrides.find(
+    (override) => override.occurrenceDate === occurrenceDate,
+  )
+  const beforeDate = existingOverride?.movedToDate ?? occurrenceDate
+  const afterDate = values.movedToDate ?? occurrenceDate
+  const afterOverrides = [
+    ...overrides.filter(
+      (override) => override.occurrenceDate !== occurrenceDate,
+    ),
+    {
+      scheduleId: series.schedule.id,
+      occurrenceDate,
+      ...values,
+    },
+  ]
+  const before = expandScheduleWithDraft({
+    series,
+    overrides,
+    startDate: beforeDate,
+    endDate: beforeDate,
+    draft: {},
+  }).filter((occurrence) => occurrence.originalDate === occurrenceDate)
+  const after = expandScheduleWithDraft({
+    series,
+    overrides: afterOverrides,
+    startDate: afterDate,
+    endDate: afterDate,
+    draft: {},
+  }).filter((occurrence) => occurrence.originalDate === occurrenceDate)
+  const range = {
+    startDate: beforeDate < afterDate ? beforeDate : afterDate,
+    endDate: beforeDate > afterDate ? beforeDate : afterDate,
+  }
+
+  return buildScheduleChangePreviewFromOccurrences(range, before, after, [])
 }
 
 export function getDeletedScheduleOverrides(

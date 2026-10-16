@@ -1016,6 +1016,234 @@ describe('schedules API', () => {
   })
 
   describe('PATCH /api/schedule/events/:id', () => {
+    it('previews a start date change that replaces existing revisions', async () => {
+      const startDate = dateAtOffset(0)
+      const newStartDate = dateOffsetFrom(startDate, 1)
+      const secondRevisionDate = dateOffsetFrom(startDate, 2)
+      const endDate = dateOffsetFrom(startDate, 4)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate })
+      await patchSchedule(created.id, {
+        effectiveFrom: secondRevisionDate,
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+
+      const beforeSave = await listScheduleEvents(startDate, endDate)
+      const dryRunResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+        dryRun: true,
+      })
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const duringDryRun = await listScheduleEvents(startDate, endDate)
+      const saveResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+      })
+      const afterSave = await listScheduleEvents(startDate, endDate)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate,
+            endDate: dateOffsetFrom(startDate, 41),
+          },
+          changes: [
+            {
+              before: previewOccurrence(startDate, startDate, '08:00', '09:00'),
+              after: null,
+            },
+            {
+              before: previewOccurrence(
+                secondRevisionDate,
+                secondRevisionDate,
+                '09:00',
+                '10:00',
+              ),
+              after: previewOccurrence(
+                secondRevisionDate,
+                secondRevisionDate,
+                '08:00',
+                '09:00',
+              ),
+            },
+            {
+              before: previewOccurrence(
+                dateOffsetFrom(startDate, 3),
+                dateOffsetFrom(startDate, 3),
+                '09:00',
+                '10:00',
+              ),
+              after: previewOccurrence(
+                dateOffsetFrom(startDate, 3),
+                dateOffsetFrom(startDate, 3),
+                '08:00',
+                '09:00',
+              ),
+            },
+            {
+              before: previewOccurrence(endDate, endDate, '09:00', '10:00'),
+              after: previewOccurrence(endDate, endDate, '08:00', '09:00'),
+            },
+          ],
+          deletedOverrides: [],
+        },
+        beforeSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(
+            secondRevisionDate,
+            secondRevisionDate,
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 3),
+            dateOffsetFrom(startDate, 3),
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(endDate, endDate, '09:00', '10:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(
+            secondRevisionDate,
+            secondRevisionDate,
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 3),
+            dateOffsetFrom(startDate, 3),
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(endDate, endDate, '09:00', '10:00'),
+        ],
+        saveStatus: 200,
+        afterSave: [
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(
+            secondRevisionDate,
+            secondRevisionDate,
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 3),
+            dateOffsetFrom(startDate, 3),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+      })
+    })
+
+    it('includes new occurrences when a start date moves earlier', async () => {
+      const newStartDate = dateAtOffset(0)
+      const startDate = dateOffsetFrom(newStartDate, 1)
+      const endDate = dateOffsetFrom(startDate, 2)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate })
+
+      const beforeSave = await listScheduleEvents(newStartDate, endDate)
+      const dryRunResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+        dryRun: true,
+      })
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const duringDryRun = await listScheduleEvents(newStartDate, endDate)
+      const saveResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+      })
+      const afterSave = await listScheduleEvents(newStartDate, endDate)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate: newStartDate,
+            endDate: dateOffsetFrom(newStartDate, 41),
+          },
+          changes: [
+            {
+              before: null,
+              after: previewOccurrence(
+                newStartDate,
+                newStartDate,
+                '08:00',
+                '09:00',
+              ),
+            },
+          ],
+          deletedOverrides: [],
+        },
+        beforeSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+        saveStatus: 200,
+        afterSave: [
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+      })
+    })
+
     it('previews revision changes from effectiveFrom and removes obsolete overrides only when saved', async () => {
       const startDate = dateAtOffset(0)
       const firstChangedDate = dateOffsetFrom(startDate, 1)
