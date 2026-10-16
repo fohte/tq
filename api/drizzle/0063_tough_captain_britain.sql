@@ -1,3 +1,26 @@
+DO $migration$
+DECLARE
+	invalid_schedule record;
+BEGIN
+	SELECT "id", "start_time", "end_time"
+	INTO invalid_schedule
+	FROM "schedules"
+	WHERE "start_time" !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+		OR "end_time" !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+	ORDER BY "id"
+	LIMIT 1;
+
+	IF FOUND THEN
+		RAISE EXCEPTION
+			'Cannot migrate schedule %: start_time % and end_time % must be between 00:00 and 23:59',
+			invalid_schedule."id",
+			invalid_schedule."start_time",
+			invalid_schedule."end_time"
+			USING ERRCODE = 'check_violation';
+	END IF;
+END
+$migration$;
+--> statement-breakpoint
 CREATE TABLE "schedule_revisions" (
 	"schedule_id" text NOT NULL,
 	"effective_from" date NOT NULL,

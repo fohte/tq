@@ -129,3 +129,57 @@ it('preserves existing schedule dates, times, and recurrence during migration', 
     },
   ])
 })
+
+it('reports the first legacy schedule with an unsupported time before migration', async () => {
+  const schemaName =
+    'schedule_revisions_migration_' + crypto.randomUUID().replaceAll('-', '')
+  const migrationSql = await readFile(
+    new URL('../../drizzle/0063_tough_captain_britain.sql', import.meta.url),
+    'utf8',
+  )
+  const statements = migrationSql
+    .replaceAll('"public".', '"' + schemaName + '".')
+    .split('--> statement-breakpoint')
+    .map((statement) => statement.trim())
+    .filter((statement) => statement.length > 0)
+
+  const result = await client
+    .begin(async (tx) => {
+      await tx.unsafe('CREATE SCHEMA "' + schemaName + '"')
+      await tx.unsafe('SET LOCAL search_path TO "' + schemaName + '"')
+      await tx.unsafe(`
+        CREATE TABLE schedules (
+          id text PRIMARY KEY,
+          start_time text NOT NULL,
+          end_time text NOT NULL
+        )
+      `)
+      await tx.unsafe(`
+        INSERT INTO schedules (id, start_time, end_time)
+        VALUES ('legacy-boundary-times', '24:00', '10:60')
+      `)
+
+      for (const statement of statements) {
+        await tx.unsafe(statement)
+      }
+
+      return { code: null, message: null }
+    })
+    .then(
+      (success) => success,
+      (error: unknown) => {
+        const code =
+          error instanceof Error && 'code' in error ? error.code : null
+        return {
+          code: typeof code === 'string' ? code : null,
+          message: error instanceof Error ? error.message : String(error),
+        }
+      },
+    )
+
+  expect(result).toEqual({
+    code: '23514',
+    message:
+      'Cannot migrate schedule legacy-boundary-times: start_time 24:00 and end_time 10:60 must be between 00:00 and 23:59',
+  })
+})
