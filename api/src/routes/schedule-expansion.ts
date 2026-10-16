@@ -28,6 +28,30 @@ const emptyScheduleOverrideIndex: ScheduleOverrideIndex = {
   byMovedToDate: new Map(),
 }
 
+export function buildScheduleOverrideIndex(
+  entries: Iterable<{ occurrenceDate: string } & ScheduleOverrideTimes>,
+): ScheduleOverrideIndex {
+  const byOccurrenceDate = new Map<string, ScheduleOverrideTimes>()
+  const byMovedToDate = new Map<
+    string,
+    Array<{ occurrenceDate: string; override: ScheduleOverrideTimes }>
+  >()
+
+  for (const entry of entries) {
+    byOccurrenceDate.set(entry.occurrenceDate, entry)
+    if (entry.movedToDate == null) continue
+
+    const movedOverrides = byMovedToDate.get(entry.movedToDate) ?? []
+    movedOverrides.push({
+      occurrenceDate: entry.occurrenceDate,
+      override: entry,
+    })
+    byMovedToDate.set(entry.movedToDate, movedOverrides)
+  }
+
+  return { byOccurrenceDate, byMovedToDate }
+}
+
 /** Check if a date matches the recurrence rule's pattern.
  * - daily: matches every day (interval not yet implemented)
  * - weekly: matches if the date's day-of-week is in daysOfWeek

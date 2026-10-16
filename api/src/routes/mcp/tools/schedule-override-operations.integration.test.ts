@@ -142,4 +142,23 @@ describe('schedule override operation tools', () => {
       skipped: true,
     })
   })
+
+  it('rejects a destination date when skipping an occurrence', async () => {
+    const result = await callMcpTool(client, 'schedule_override_set', {
+      scheduleId: 'test-schedule',
+      occurrenceDate: '2034-08-17',
+      date: '2034-08-19',
+      mode: 'skip',
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [
+        {
+          type: 'text',
+          text: 'Invalid request: Omit date, startTime, and endTime when mode is skip.',
+        },
+      ],
+    })
+  })
 })

@@ -148,7 +148,11 @@ function renderAndGetEventClick({
   onScheduleClick,
   onTaskClick,
 }: {
-  onScheduleClick?: (scheduleId: string, start: string) => void
+  onScheduleClick?: (
+    scheduleId: string,
+    occurrenceDate: string,
+    start: string,
+  ) => void
   onTaskClick?: (taskId: string) => void
 }) {
   render(
@@ -753,6 +757,7 @@ describe('CalendarGrid', () => {
         extendedProps: {
           type: 'schedule',
           scheduleId: 'sched-1',
+          scheduleOccurrenceDate: '2026-07-20',
           scheduleStart: '2026-07-20T09:00:00',
         },
       },
@@ -762,6 +767,7 @@ describe('CalendarGrid', () => {
 
     expect(onScheduleClick).toHaveBeenCalledExactlyOnceWith(
       'sched-1',
+      '2026-07-20',
       '2026-07-20T09:00:00',
     )
     expect(onTaskClick).not.toHaveBeenCalled()

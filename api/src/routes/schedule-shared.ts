@@ -3,8 +3,8 @@ import { and, gte, inArray, lte, or } from 'drizzle-orm'
 import { db } from '#db/connection'
 import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
 import {
+  buildScheduleOverrideIndex,
   formatDateStr,
-  type ScheduleOverrideTimes,
 } from '#routes/schedule-expansion'
 
 export async function loadSchedulesWithRules() {
@@ -37,48 +37,24 @@ export async function loadSchedulesWithRules() {
 function indexScheduleOverridesBySchedule(
   overrides: Array<typeof scheduleOverrides.$inferSelect>,
 ) {
-  const result = new Map<
+  const overridesBySchedule = new Map<
     string,
-    {
-      byOccurrenceDate: Map<string, ScheduleOverrideTimes>
-      byMovedToDate: Map<
-        string,
-        Array<{ occurrenceDate: string; override: ScheduleOverrideTimes }>
-      >
-    }
+    Array<typeof scheduleOverrides.$inferSelect>
   >()
 
   for (const override of overrides) {
-    const scheduleOverridesForExpansion = result.get(override.scheduleId) ?? {
-      byOccurrenceDate: new Map<string, ScheduleOverrideTimes>(),
-      byMovedToDate: new Map<
-        string,
-        Array<{ occurrenceDate: string; override: ScheduleOverrideTimes }>
-      >(),
-    }
-    scheduleOverridesForExpansion.byOccurrenceDate.set(
-      override.occurrenceDate,
-      override,
-    )
-
-    if (override.movedToDate != null) {
-      const movedOverrides =
-        scheduleOverridesForExpansion.byMovedToDate.get(override.movedToDate) ??
-        []
-      movedOverrides.push({
-        occurrenceDate: override.occurrenceDate,
-        override,
-      })
-      scheduleOverridesForExpansion.byMovedToDate.set(
-        override.movedToDate,
-        movedOverrides,
-      )
-    }
-
-    result.set(override.scheduleId, scheduleOverridesForExpansion)
+    const scheduleOverridesForExpansion =
+      overridesBySchedule.get(override.scheduleId) ?? []
+    scheduleOverridesForExpansion.push(override)
+    overridesBySchedule.set(override.scheduleId, scheduleOverridesForExpansion)
   }
 
-  return result
+  return new Map(
+    [...overridesBySchedule].map(([scheduleId, entries]) => [
+      scheduleId,
+      buildScheduleOverrideIndex(entries),
+    ]),
+  )
 }
 
 export async function loadScheduleOverridesForExpansion(

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildScheduleOverrideIndex,
   expandScheduleForDate,
-  type ScheduleOverrideIndex,
-  type ScheduleOverrideTimes,
 } from '#routes/schedule-expansion'
 
 function makeSchedule(
@@ -66,25 +65,6 @@ function expandOnDates(
   ...dates: string[]
 ) {
   return dates.map((date) => expandScheduleForDate(schedule, rule, date))
-}
-
-function makeOverrides(
-  entries: Array<[string, ScheduleOverrideTimes]>,
-): ScheduleOverrideIndex {
-  const byOccurrenceDate = new Map(entries)
-  const byMovedToDate = new Map<
-    string,
-    Array<{ occurrenceDate: string; override: ScheduleOverrideTimes }>
-  >()
-
-  for (const [occurrenceDate, override] of entries) {
-    if (override.movedToDate == null) continue
-    const movedOverrides = byMovedToDate.get(override.movedToDate) ?? []
-    movedOverrides.push({ occurrenceDate, override })
-    byMovedToDate.set(override.movedToDate, movedOverrides)
-  }
-
-  return { byOccurrenceDate, byMovedToDate }
 }
 
 describe('expandScheduleForDate', () => {
@@ -153,16 +133,14 @@ describe('expandScheduleForDate', () => {
 
     it('uses the previous occurrence override for the next date continuation', () => {
       const schedule = makeSchedule({ startTime: '23:00', endTime: '07:00' })
-      const overrides = makeOverrides([
-        [
-          '2026-03-22',
-          {
-            startTime: '22:30',
-            endTime: '08:00',
-            movedToDate: null,
-            skipped: false,
-          },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: '22:30',
+          endTime: '08:00',
+          movedToDate: null,
+          skipped: false,
+        },
       ])
 
       expect(
@@ -184,16 +162,14 @@ describe('expandScheduleForDate', () => {
 
     it('omits a skipped occurrence continuation on the next date', () => {
       const schedule = makeSchedule({ startTime: '23:00', endTime: '07:00' })
-      const overrides = makeOverrides([
-        [
-          '2026-03-22',
-          {
-            startTime: null,
-            endTime: null,
-            movedToDate: null,
-            skipped: true,
-          },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
       ])
 
       expect(
@@ -205,16 +181,14 @@ describe('expandScheduleForDate', () => {
   describe('schedule overrides', () => {
     it('moves an occurrence to its destination date', () => {
       const schedule = makeSchedule({ startDate: '2034-08-17' })
-      const overrides = makeOverrides([
-        [
-          '2034-08-17',
-          {
-            startTime: '09:00',
-            endTime: '10:00',
-            movedToDate: '2034-08-19',
-            skipped: false,
-          },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2034-08-17',
+          startTime: '09:00',
+          endTime: '10:00',
+          movedToDate: '2034-08-19',
+          skipped: false,
+        },
       ])
 
       const expandedDates = () => [
@@ -241,16 +215,14 @@ describe('expandScheduleForDate', () => {
 
     it('replaces the start and end times for one occurrence', () => {
       const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
-      const overrides = makeOverrides([
-        [
-          '2026-03-22',
-          {
-            startTime: '08:30',
-            endTime: '09:45',
-            movedToDate: null,
-            skipped: false,
-          },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: '08:30',
+          endTime: '09:45',
+          movedToDate: null,
+          skipped: false,
+        },
       ])
 
       expect(
@@ -272,16 +244,14 @@ describe('expandScheduleForDate', () => {
 
     it('omits a skipped occurrence', () => {
       const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
-      const overrides = makeOverrides([
-        [
-          '2026-03-22',
-          {
-            startTime: null,
-            endTime: null,
-            movedToDate: null,
-            skipped: true,
-          },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
       ])
 
       expect(
