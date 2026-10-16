@@ -243,7 +243,7 @@ export function expandScheduleForDate(
 export function getOccurrencesStartingOnDate(
   series: ScheduleSeries,
   dateStr: string,
-  overrides: ScheduleOverrideIndex,
+  overrides: ScheduleOverrideIndex = emptyScheduleOverrideIndex,
   includeSkipped = false,
 ): ScheduleOccurrence[] {
   const date = new Date(`${dateStr}T00:00:00`)

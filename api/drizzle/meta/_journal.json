@@ -449,6 +449,13 @@
       "when": 1792115494704,
       "tag": "0063_tough_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1792121898430,
+      "tag": "0064_big_giant_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -242,11 +242,12 @@ describe('schedule events create', () => {
       '',
       'Create a schedule event starting on the required local startDate (YYYY-MM-DD).',
       'startTime and endTime are local HH:MM times; if endTime is earlier than',
-      'startTime, it ends the following day. Without recurrence, the event appears only',
-      'on startDate. For recurrence, daily and custom rules appear every day starting',
-      'on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and',
-      'monthly rules use dayOfMonth. interval is stored but does not affect schedule',
-      'event dates yet.',
+      'startTime, it ends the following day. remindBeforeMinutes optionally sends a',
+      'push notification that many minutes before each occurrence starts. Without',
+      'recurrence, the event appears only on startDate. For recurrence, daily and',
+      'custom rules appear every day starting on startDate, weekly rules use daysOfWeek',
+      '(0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is',
+      'stored but does not affect schedule event dates yet.',
       '',
       'Options:',
       '  --recurrence-type <type>          Recurrence rule type',
@@ -257,6 +258,8 @@ describe('schedule events create', () => {
       '  --recurrence-days-of-week <days>  Comma-separated days of week for a weekly',
       '                                    rule (0=Sunday..6=Saturday)',
       '  --recurrence-day-of-month <day>   Day of month (1-31) for a monthly rule',
+      '  --remind-before-minutes <value>   Minutes before an occurrence starts to send',
+      '                                    a push reminder.',
       '  --context <value>                 Context (choices: "work", "personal")',
       '  --color <value>                   Color',
       '  -h, --help                        display help for command',
@@ -361,6 +364,48 @@ describe('schedule events create', () => {
     })
   })
 
+  it('sets a reminder lead time', async () => {
+    const responseBody = makeScheduleEvent({
+      title: 'Draft agenda',
+      remindBeforeMinutes: 45,
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '2026-12-18',
+          '08:45',
+          '09:15',
+          '--remind-before-minutes',
+          '45',
+        ],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/events',
+          query: {},
+          body: {
+            title: 'Draft agenda',
+            startDate: '2026-12-18',
+            startTime: '08:45',
+            endTime: '09:15',
+            remindBeforeMinutes: 45,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
   it('rejects an incomplete recurrence rule before making a request', async () => {
     expect(
       await runScheduleCli(
@@ -456,6 +501,7 @@ describe('schedule events update', () => {
       startTime: '09:30',
       endTime: '10:00',
       endDate: '2026-12-20',
+      remindBeforeMinutes: 90,
       recurrence: {
         id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
         type: 'weekly',
@@ -486,6 +532,8 @@ describe('schedule events update', () => {
           '0',
           '--end-date',
           '2026-12-20',
+          '--remind-before-minutes',
+          '90',
         ],
         new Response(JSON.stringify(updated), { status: 200 }),
       ),
@@ -501,6 +549,7 @@ describe('schedule events update', () => {
             startTime: '09:30',
             endTime: '10:00',
             endDate: '2026-12-20',
+            remindBeforeMinutes: 90,
             recurrence: {
               type: 'weekly',
               interval: 1,
@@ -514,7 +563,7 @@ describe('schedule events update', () => {
     })
   })
 
-  it('clears recurrence and end date from an effective date', async () => {
+  it('clears recurrence, end date, and reminder from an effective date', async () => {
     const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     const updated = makeScheduleEvent({ id })
 
@@ -529,6 +578,7 @@ describe('schedule events update', () => {
           '2026-12-20',
           '--no-recurrence',
           '--clear-end-date',
+          '--clear-reminder',
         ],
         new Response(JSON.stringify(updated), { status: 200 }),
       ),
@@ -543,11 +593,40 @@ describe('schedule events update', () => {
             effectiveFrom: '2026-12-20',
             recurrence: null,
             endDate: null,
+            remindBeforeMinutes: null,
           },
         },
       ],
       stderr: [],
       stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects conflicting reminder flags before sending a request', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--clear-reminder',
+          '--remind-before-minutes',
+          '45',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: Use only one of --clear-reminder or --remind-before-minutes\n',
+        ],
+      ],
+      stdout: [],
     })
   })
 })

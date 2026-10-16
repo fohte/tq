@@ -2,6 +2,7 @@ import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { ResultAsync } from 'neverthrow'
 
 import { deliverDueReminders } from '#services/reminder-delivery'
+import { deliverDueScheduleReminders } from '#services/schedule-reminder-delivery'
 
 // `remind_at` is entered per minute (`<input type="datetime-local">`), so a
 // 60s tick would land a 9:00 reminder as late as 9:00:59. Halve this to halve
@@ -22,6 +23,12 @@ export function startReminderScheduler(): NodeJS.Timeout {
       () => undefined,
       (error) => {
         captureWithFingerprint(error, 'api.reminders.tick-failed')
+      },
+    )
+    void ResultAsync.fromPromise(deliverDueScheduleReminders(), toError).match(
+      () => undefined,
+      (error) => {
+        captureWithFingerprint(error, 'api.schedule-reminders.tick-failed')
       },
     )
   }, POLL_INTERVAL_MS)
