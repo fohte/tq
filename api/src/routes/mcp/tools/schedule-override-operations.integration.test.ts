@@ -46,6 +46,39 @@ describe('schedule override operation tools', () => {
       occurrenceDate: '2026-03-22',
       startTime: '08:30',
       endTime: '09:45',
+      movedToDate: null,
+      skipped: false,
+    })
+  })
+
+  it('moves one occurrence to a destination date', async () => {
+    const createResponse = await app.request('/api/schedule/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Routine',
+        startDate: '2034-08-17',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      }),
+    })
+    const schedule = await jsonBody<{ id: string }>(createResponse)
+
+    const result = await callMcpTool(client, 'schedule_override_set', {
+      scheduleId: schedule.id,
+      occurrenceDate: '2034-08-17',
+      date: '2034-08-19',
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+
+    expect(parseToolJson(result)).toEqual({
+      scheduleId: schedule.id,
+      occurrenceDate: '2034-08-17',
+      startTime: '09:00',
+      endTime: '10:00',
+      movedToDate: '2034-08-19',
       skipped: false,
     })
   })
@@ -105,6 +138,7 @@ describe('schedule override operation tools', () => {
       occurrenceDate: '2026-03-22',
       startTime: null,
       endTime: null,
+      movedToDate: null,
       skipped: true,
     })
   })

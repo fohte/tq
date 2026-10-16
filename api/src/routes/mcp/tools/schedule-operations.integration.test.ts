@@ -309,6 +309,8 @@ describe('schedule operation tools', () => {
         end: '2026-12-18T09:15:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-12-18',
+        overridden: null,
         recurrence: {
           id: created.recurrence.id,
           type: 'daily',
@@ -407,6 +409,8 @@ describe('schedule operation tools', () => {
         end: '2026-12-18T09:15:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-12-18',
+        overridden: null,
         recurrence: null,
       },
     ])

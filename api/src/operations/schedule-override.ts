@@ -15,7 +15,7 @@ export const scheduleOverrideOperations = [
   defineOperation(scheduleOverrideOperationInputSchema, {
     path: ['schedule', 'override', 'set'],
     description:
-      'Change or skip one occurrence of a recurring event. Provide both startTime and endTime to change its time, or set mode to skip and omit both times.',
+      'Move, change, or skip one occurrence of a recurring event. Provide date to move the occurrence, both startTime and endTime to change its time, or set mode to skip and omit the date and both times.',
     positionalArgs: ['scheduleId', 'occurrenceDate'],
     kind: 'write',
     routes: ['PUT /api/schedule/events/:scheduleId/overrides/:occurrenceDate'],
@@ -24,17 +24,22 @@ export const scheduleOverrideOperations = [
       output: { kind: 'json' },
     },
     run: (client, input) => {
-      const { scheduleId, occurrenceDate, startTime, endTime, mode } = input
+      const { scheduleId, occurrenceDate, date, startTime, endTime, mode } =
+        input
       const param = {
         scheduleId: encodePathSegment(scheduleId),
         occurrenceDate: encodePathSegment(occurrenceDate),
       }
 
       if (mode === 'skip') {
-        if (startTime !== undefined || endTime !== undefined) {
+        if (
+          date !== undefined ||
+          startTime !== undefined ||
+          endTime !== undefined
+        ) {
           return errAsync({
             kind: 'input',
-            message: 'Omit startTime and endTime when mode is skip.',
+            message: 'Omit date, startTime, and endTime when mode is skip.',
           })
         }
 
@@ -55,7 +60,7 @@ export const scheduleOverrideOperations = [
       return requestJson(
         client.api.schedule.events[':scheduleId'].overrides[
           ':occurrenceDate'
-        ].$put({ param, json: { startTime, endTime } }),
+        ].$put({ param, json: { date, startTime, endTime } }),
       )
     },
   }),

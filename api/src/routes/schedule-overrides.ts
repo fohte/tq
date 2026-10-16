@@ -65,10 +65,17 @@ export const scheduleOverridesApp = new Hono()
       const input = c.req.valid('json')
       const values =
         input.skipped === true
-          ? { startTime: null, endTime: null, skipped: true }
+          ? {
+              startTime: null,
+              endTime: null,
+              movedToDate: null,
+              skipped: true,
+            }
           : {
               startTime: input.startTime,
               endTime: input.endTime,
+              movedToDate:
+                input.date === occurrenceDate ? null : (input.date ?? null),
               skipped: false,
             }
 
@@ -92,6 +99,7 @@ export const scheduleOverridesApp = new Hono()
           occurrenceDate: override.occurrenceDate,
           startTime: override.startTime,
           endTime: override.endTime,
+          movedToDate: override.movedToDate,
           skipped: override.skipped,
         },
         200,

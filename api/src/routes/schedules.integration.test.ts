@@ -58,6 +58,8 @@ interface ExpandedBlock {
   end: string
   context: string
   color: string | null
+  occurrenceDate: string
+  overridden: 'moved' | 'time' | null
   recurrence: ScheduleResponse['recurrence']
 }
 
@@ -707,6 +709,8 @@ describe('schedules API', () => {
             end: '2026-03-23T10:00:00',
             context: 'personal',
             color: null,
+            occurrenceDate: '2026-03-23',
+            overridden: null,
             recurrence: null,
           },
         ],
@@ -747,6 +751,8 @@ describe('schedules API', () => {
             end: '2026-03-23T00:00:00',
             context: 'personal',
             color: null,
+            occurrenceDate: '2026-03-22',
+            overridden: null,
             recurrence: null,
           },
         ],
@@ -760,6 +766,8 @@ describe('schedules API', () => {
             end: '2026-03-23T07:00:00',
             context: 'personal',
             color: null,
+            occurrenceDate: '2026-03-22',
+            overridden: null,
             recurrence: null,
           },
         ],
@@ -851,6 +859,8 @@ describe('schedules API', () => {
             end: '2026-03-30T19:00:00',
             context: 'personal',
             color: null,
+            occurrenceDate: '2026-03-30',
+            overridden: null,
             recurrence: {
               id: 'RECURRENCE_ID',
               type: 'weekly',
@@ -1013,6 +1023,279 @@ describe('schedules API', () => {
 })
 
 describe('schedule overrides API', () => {
+  it('moves one occurrence and restores only that occurrence when cleared', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Routine',
+      startDate: '2034-08-17',
+      startTime: '09:00',
+      endTime: '10:00',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    const sourceDate = '2034-08-17'
+    const destinationDate = '2034-08-18'
+    const setResponse = await putScheduleOverride(schedule.id, sourceDate, {
+      date: destinationDate,
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    const setBody = await jsonBody<{
+      scheduleId: string
+      occurrenceDate: string
+      startTime: string | null
+      endTime: string | null
+      movedToDate: string | null
+      skipped: boolean
+    }>(setResponse)
+
+    const setSnapshot = () => ({ status: setResponse.status, body: setBody })
+    expect(setSnapshot()).toEqual({
+      status: 200,
+      body: {
+        scheduleId: schedule.id,
+        occurrenceDate: sourceDate,
+        startTime: '09:00',
+        endTime: '10:00',
+        movedToDate: destinationDate,
+        skipped: false,
+      },
+    })
+
+    const response = await app.request(
+      `/api/schedule/events?startDate=${sourceDate}&endDate=2034-08-19`,
+    )
+    const blocks = await jsonBody<ExpandedBlock[]>(response)
+
+    expect(normalizeExpandedBlocks(blocks)).toEqual([
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: `${destinationDate}T09:00:00`,
+        end: `${destinationDate}T10:00:00`,
+        context: 'personal',
+        color: null,
+        occurrenceDate: destinationDate,
+        overridden: null,
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: `${destinationDate}T09:00:00`,
+        end: `${destinationDate}T10:00:00`,
+        context: 'personal',
+        color: null,
+        occurrenceDate: sourceDate,
+        overridden: 'moved',
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: '2034-08-19T09:00:00',
+        end: '2034-08-19T10:00:00',
+        context: 'personal',
+        color: null,
+        occurrenceDate: '2034-08-19',
+        overridden: null,
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+    ])
+
+    const destinationOnlyResponse = await app.request(
+      `/api/schedule/events?startDate=${destinationDate}&endDate=${destinationDate}`,
+    )
+    expect(
+      normalizeExpandedBlocks(
+        await jsonBody<ExpandedBlock[]>(destinationOnlyResponse),
+      ),
+    ).toEqual([
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: `${destinationDate}T09:00:00`,
+        end: `${destinationDate}T10:00:00`,
+        context: 'personal',
+        color: null,
+        occurrenceDate: destinationDate,
+        overridden: null,
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: `${destinationDate}T09:00:00`,
+        end: `${destinationDate}T10:00:00`,
+        context: 'personal',
+        color: null,
+        occurrenceDate: sourceDate,
+        overridden: 'moved',
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+    ])
+
+    await app.request(
+      `/api/schedule/events/${schedule.id}/overrides/${sourceDate}`,
+      { method: 'DELETE' },
+    )
+    const restoredResponse = await app.request(
+      `/api/schedule/events?startDate=${sourceDate}&endDate=2034-08-19`,
+    )
+
+    expect(
+      normalizeExpandedBlocks(
+        await jsonBody<ExpandedBlock[]>(restoredResponse),
+      ),
+    ).toEqual([
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: `${sourceDate}T09:00:00`,
+        end: `${sourceDate}T10:00:00`,
+        context: 'personal',
+        color: null,
+        occurrenceDate: sourceDate,
+        overridden: null,
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: `${destinationDate}T09:00:00`,
+        end: `${destinationDate}T10:00:00`,
+        context: 'personal',
+        color: null,
+        occurrenceDate: destinationDate,
+        overridden: null,
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+      {
+        scheduleId: 'SCHEDULE_ID',
+        title: 'Routine',
+        startDate: sourceDate,
+        start: '2034-08-19T09:00:00',
+        end: '2034-08-19T10:00:00',
+        context: 'personal',
+        color: null,
+        occurrenceDate: '2034-08-19',
+        overridden: null,
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'daily',
+          interval: 1,
+          daysOfWeek: null,
+          dayOfMonth: null,
+        },
+      },
+    ])
+  })
+
+  it('keeps a moved cross-midnight occurrence on its destination dates', async () => {
+    const { body: schedule } = await createSchedule({
+      title: 'Overnight Routine',
+      startDate: '2034-08-17',
+      startTime: '23:00',
+      endTime: '07:00',
+    })
+    await putScheduleOverride(schedule.id, '2034-08-17', {
+      date: '2034-08-20',
+      startTime: '23:00',
+      endTime: '07:00',
+    })
+    const destinationResponse = await app.request(
+      '/api/schedule/events?startDate=2034-08-20&endDate=2034-08-20',
+    )
+    const continuationResponse = await app.request(
+      '/api/schedule/events?startDate=2034-08-21&endDate=2034-08-21',
+    )
+
+    const destinationBlocks = normalizeExpandedBlocks(
+      await jsonBody<ExpandedBlock[]>(destinationResponse),
+    )
+    const continuationBlocks = normalizeExpandedBlocks(
+      await jsonBody<ExpandedBlock[]>(continuationResponse),
+    )
+    const expandedBlocks = () => [destinationBlocks, continuationBlocks]
+    expect(expandedBlocks()).toEqual([
+      [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          title: 'Overnight Routine',
+          startDate: '2034-08-17',
+          start: '2034-08-20T23:00:00',
+          end: '2034-08-21T00:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2034-08-17',
+          overridden: 'moved',
+          recurrence: null,
+        },
+      ],
+      [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          title: 'Overnight Routine',
+          startDate: '2034-08-17',
+          start: '2034-08-21T00:00:00',
+          end: '2034-08-21T07:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2034-08-17',
+          overridden: 'moved',
+          recurrence: null,
+        },
+      ],
+    ])
+  })
+
   it('changes one occurrence in the expanded schedule', async () => {
     const { body: schedule } = await createSchedule({
       title: 'Routine',
@@ -1036,6 +1319,8 @@ describe('schedule overrides API', () => {
         end: '2026-03-22T09:45:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-03-22',
+        overridden: 'time',
         recurrence: null,
       },
     ])
@@ -1066,6 +1351,8 @@ describe('schedule overrides API', () => {
         end: '2026-03-22T10:00:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-03-22',
+        overridden: null,
         recurrence: null,
       },
     ])
@@ -1094,6 +1381,8 @@ describe('schedule overrides API', () => {
         end: '2026-03-23T10:00:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-03-23',
+        overridden: null,
         recurrence: {
           id: 'RECURRENCE_ID',
           type: 'daily',
@@ -1132,6 +1421,8 @@ describe('schedule overrides API', () => {
         end: '2026-03-23T08:00:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-03-22',
+        overridden: 'time',
         recurrence: null,
       },
     ])
