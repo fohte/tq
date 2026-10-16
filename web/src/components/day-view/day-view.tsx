@@ -241,6 +241,8 @@ export function DayViewPresentation({
     occurrenceDate: string,
     start: string,
   ) => {
+    // Cross-midnight blocks share scheduleId and occurrenceDate;
+    // start distinguishes the clicked segment.
     const schedule = schedules.find(
       (s) =>
         s.scheduleId === scheduleId &&
