@@ -7,8 +7,8 @@ CREATE TABLE "schedule_revisions" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "schedule_revisions_schedule_id_effective_from_pk" PRIMARY KEY("schedule_id","effective_from"),
-	CONSTRAINT "schedule_revisions_start_time_format_check" CHECK ("schedule_revisions"."start_time" ~ '^[0-9]{2}:[0-9]{2}$'),
-	CONSTRAINT "schedule_revisions_end_time_format_check" CHECK ("schedule_revisions"."end_time" ~ '^[0-9]{2}:[0-9]{2}$')
+	CONSTRAINT "schedule_revisions_start_time_format_check" CHECK ("schedule_revisions"."start_time" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+	CONSTRAINT "schedule_revisions_end_time_format_check" CHECK ("schedule_revisions"."end_time" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
 );
 --> statement-breakpoint
 ALTER TABLE "schedules" DROP CONSTRAINT "schedules_recurrence_rule_id_recurrence_rules_id_fk";

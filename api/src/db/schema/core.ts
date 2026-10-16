@@ -296,11 +296,11 @@ export const scheduleRevisions = pgTable(
     primaryKey({ columns: [table.scheduleId, table.effectiveFrom] }),
     check(
       'schedule_revisions_start_time_format_check',
-      sql`${table.startTime} ~ '^[0-9]{2}:[0-9]{2}$'`,
+      sql`${table.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
     ),
     check(
       'schedule_revisions_end_time_format_check',
-      sql`${table.endTime} ~ '^[0-9]{2}:[0-9]{2}$'`,
+      sql`${table.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
     ),
     index('idx_schedule_revisions_recurrence_rule_id').on(
       table.recurrenceRuleId,
