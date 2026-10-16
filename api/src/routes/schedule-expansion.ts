@@ -174,7 +174,7 @@ export function expandScheduleForDate(
   const firstRevision = revisions[0]
   if (!firstRevision) return []
 
-  const date = new Date(`${dateStr}T00:00:00`)
+  const date = new Date(dateStr + 'T00:00:00')
   const blocks: Array<{
     scheduleId: string
     title: string
