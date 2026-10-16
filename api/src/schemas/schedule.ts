@@ -36,13 +36,27 @@ export const updateScheduleInputSchema = z.object({
   color: z.string().nullable().optional(),
 })
 
-export const updateScheduleSchema = updateScheduleInputSchema.refine(
-  ({ startDate, effectiveFrom }) =>
-    startDate === undefined || effectiveFrom === undefined,
-  {
-    message: 'Specify either startDate or effectiveFrom, not both.',
+export const SCHEDULE_DATE_SELECTION_ERROR_MESSAGE =
+  'Specify either startDate or effectiveFrom, not both.'
+
+export function isScheduleDateSelectionValid(input: {
+  startDate?: unknown
+  effectiveFrom?: unknown
+}): boolean {
+  return input.startDate === undefined || input.effectiveFrom === undefined
+}
+
+export function withScheduleDateSelection<
+  Schema extends z.ZodObject<z.ZodRawShape>,
+>(schema: Schema) {
+  return schema.refine(isScheduleDateSelectionValid, {
+    message: SCHEDULE_DATE_SELECTION_ERROR_MESSAGE,
     path: ['effectiveFrom'],
-  },
+  })
+}
+
+export const updateScheduleSchema = withScheduleDateSelection(
+  updateScheduleInputSchema,
 )
 
 export const scheduleDateRangeInputSchema = z.object({

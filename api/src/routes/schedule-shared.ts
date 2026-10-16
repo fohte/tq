@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, lte, or } from 'drizzle-orm'
 
-import { db } from '#db/connection'
+import { db, type DbContextValue } from '#db/connection'
 import {
   recurrenceRules,
   scheduleOverrides,
@@ -33,21 +33,28 @@ export function buildScheduleSeries(
 }
 
 async function loadRecurrenceRulesForRevisions(
+  executor: DbContextValue,
   revisions: Array<typeof scheduleRevisions.$inferSelect>,
 ) {
-  const ruleIds = [
+  const ruleIds = uniqueRecurrenceRuleIds(revisions)
+  return ruleIds.length > 0
+    ? executor
+        .select()
+        .from(recurrenceRules)
+        .where(inArray(recurrenceRules.id, ruleIds))
+    : []
+}
+
+export function uniqueRecurrenceRuleIds(
+  revisions: Array<typeof scheduleRevisions.$inferSelect>,
+): string[] {
+  return [
     ...new Set(
       revisions
         .map((revision) => revision.recurrenceRuleId)
         .filter((id): id is string => id != null),
     ),
   ]
-  return ruleIds.length > 0
-    ? db
-        .select()
-        .from(recurrenceRules)
-        .where(inArray(recurrenceRules.id, ruleIds))
-    : []
 }
 
 export async function loadSchedulesWithRules(): Promise<ScheduleSeries[]> {
@@ -64,7 +71,7 @@ export async function loadSchedulesWithRules(): Promise<ScheduleSeries[]> {
       ),
     )
     .orderBy(scheduleRevisions.scheduleId, scheduleRevisions.effectiveFrom)
-  const rules = await loadRecurrenceRulesForRevisions(allRevisions)
+  const rules = await loadRecurrenceRulesForRevisions(db, allRevisions)
   const revisionsBySchedule = new Map<
     string,
     Array<typeof scheduleRevisions.$inferSelect>
@@ -88,18 +95,19 @@ export async function loadSchedulesWithRules(): Promise<ScheduleSeries[]> {
 
 export async function loadScheduleWithRevisions(
   scheduleId: string,
+  executor: DbContextValue = db,
 ): Promise<ScheduleSeries | null> {
-  const schedule = await db.query.schedules.findFirst({
+  const schedule = await executor.query.schedules.findFirst({
     where: eq(schedules.id, scheduleId),
   })
   if (!schedule) return null
 
-  const revisions = await db
+  const revisions = await executor
     .select()
     .from(scheduleRevisions)
     .where(eq(scheduleRevisions.scheduleId, scheduleId))
     .orderBy(scheduleRevisions.effectiveFrom)
-  const rules = await loadRecurrenceRulesForRevisions(revisions)
+  const rules = await loadRecurrenceRulesForRevisions(executor, revisions)
 
   return buildScheduleSeries(schedule, revisions, rules)
 }

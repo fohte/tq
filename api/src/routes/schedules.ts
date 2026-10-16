@@ -1,10 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
-import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { createFactory } from 'hono/factory'
 
-import { db } from '#db/connection'
-import { schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   expandScheduleForDate,
@@ -52,27 +48,6 @@ function scheduleToResponse(
   }
 }
 
-type ScheduleEnv = {
-  Variables: {
-    schedule: typeof schedules.$inferSelect
-  }
-}
-
-const factory = createFactory<ScheduleEnv, '/:id'>()
-
-const requireSchedule = factory.createMiddleware(async (c, next) => {
-  const id = c.req.param('id')
-  const schedule = await db.query.schedules.findFirst({
-    where: eq(schedules.id, id),
-  })
-  if (!schedule) {
-    return c.json({ error: 'Schedule not found' }, 404)
-  }
-
-  c.set('schedule', schedule)
-  return next()
-})
-
 export const schedulesApp = new Hono()
   .route('/', scheduleTimeBlocksApp)
   .post('/events', zValidator('json', createScheduleSchema), async (c) => {
@@ -117,29 +92,24 @@ export const schedulesApp = new Hono()
 
     return c.json(expanded, 200)
   })
-  .patch(
-    '/events/:id',
-    requireSchedule,
-    zValidator('json', updateScheduleSchema),
-    async (c) => {
-      const result = await updateScheduleSeries(
-        c.req.param('id'),
-        c.req.valid('json'),
-      )
-      if (result.kind === 'missing') {
-        return c.json({ error: 'Schedule not found' }, 404)
-      }
-      if (result.kind === 'invalid') {
-        return c.json({ error: result.message }, 422)
-      }
+  .patch('/events/:id', zValidator('json', updateScheduleSchema), async (c) => {
+    const result = await updateScheduleSeries(
+      c.req.param('id'),
+      c.req.valid('json'),
+    )
+    if (result.kind === 'missing') {
+      return c.json({ error: 'Schedule not found' }, 404)
+    }
+    if (result.kind === 'invalid') {
+      return c.json({ error: result.message }, 422)
+    }
 
-      return c.json(
-        scheduleToResponse(result.series, result.responseRevision),
-        200,
-      )
-    },
-  )
-  .delete('/events/:id', requireSchedule, async (c) => {
+    return c.json(
+      scheduleToResponse(result.series, result.responseRevision),
+      200,
+    )
+  })
+  .delete('/events/:id', async (c) => {
     const deleted = await deleteScheduleSeries(c.req.param('id'))
     if (!deleted) {
       return c.json({ error: 'Schedule not found' }, 404)

@@ -16,24 +16,22 @@ import {
 } from '#operations/types'
 import {
   createScheduleSchema,
+  isScheduleDateSelectionValid,
   MAX_SCHEDULE_DATE_RANGE_DAYS,
+  SCHEDULE_DATE_SELECTION_ERROR_MESSAGE,
   scheduleDateRangeInputSchema,
   scheduleDateRangeSchema,
   updateScheduleInputSchema,
   withScheduleDateRange,
+  withScheduleDateSelection,
 } from '#schemas/schedule'
 
 const scheduleEventIdSchema = z.object({ id: z.uuid() })
 const scheduleUpdateOperationSchema = updateScheduleInputSchema.extend({
   id: z.uuid(),
 })
-const scheduleUpdateMcpInputSchema = scheduleUpdateOperationSchema.refine(
-  ({ startDate, effectiveFrom }) =>
-    startDate === undefined || effectiveFrom === undefined,
-  {
-    message: 'Specify either startDate or effectiveFrom, not both.',
-    path: ['effectiveFrom'],
-  },
+const scheduleUpdateMcpInputSchema = withScheduleDateSelection(
+  scheduleUpdateOperationSchema,
 )
 const timeBlockIdSchema = z.object({ id: z.uuid() })
 
@@ -132,13 +130,8 @@ function mapCliScheduleUpdate(
   input: Record<string, unknown>,
   options: Record<string, unknown>,
 ): Result<Record<string, unknown>, Error> {
-  if (
-    input['startDate'] !== undefined &&
-    input['effectiveFrom'] !== undefined
-  ) {
-    return err(
-      new Error('Specify either startDate or effectiveFrom, not both.'),
-    )
+  if (!isScheduleDateSelectionValid(input)) {
+    return err(new Error(SCHEDULE_DATE_SELECTION_ERROR_MESSAGE))
   }
 
   const noRecurrence =

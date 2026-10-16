@@ -17,7 +17,11 @@ import {
   type ScheduleRevisionWithRule,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
-import { buildScheduleSeries } from '#routes/schedule-shared'
+import {
+  buildScheduleSeries,
+  loadScheduleWithRevisions,
+  uniqueRecurrenceRuleIds,
+} from '#routes/schedule-shared'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 import { createScheduleSchema, updateScheduleSchema } from '#schemas/schedule'
 
@@ -49,33 +53,6 @@ async function createRecurrenceRule(
       })
       .returning(),
   )
-}
-
-async function loadScheduleSeries(
-  tx: DbTransaction,
-  schedule: typeof schedules.$inferSelect,
-) {
-  const revisions = await tx
-    .select()
-    .from(scheduleRevisions)
-    .where(eq(scheduleRevisions.scheduleId, schedule.id))
-    .orderBy(scheduleRevisions.effectiveFrom)
-  const ruleIds = [
-    ...new Set(
-      revisions
-        .map((revision) => revision.recurrenceRuleId)
-        .filter((id): id is string => id != null),
-    ),
-  ]
-  const rules =
-    ruleIds.length > 0
-      ? await tx
-          .select()
-          .from(recurrenceRules)
-          .where(inArray(recurrenceRules.id, ruleIds))
-      : []
-
-  return buildScheduleSeries(schedule, revisions, rules)
 }
 
 async function deleteUnreferencedRecurrenceRules(
@@ -116,16 +93,122 @@ async function deleteUnreferencedRecurrenceRules(
     .where(inArray(recurrenceRules.id, unreferencedIds))
 }
 
-function uniqueRecurrenceRuleIds(
-  revisions: ScheduleSeries['revisions'],
-): string[] {
-  return [
-    ...new Set(
-      revisions
-        .map(({ revision }) => revision.recurrenceRuleId)
-        .filter((id): id is string => id != null),
-    ),
-  ]
+async function resolveRecurrenceRuleId(
+  tx: DbTransaction,
+  recurrence: RecurrenceInput | null | undefined,
+  currentRecurrenceRuleId: string | null,
+): Promise<string | null> {
+  if (recurrence === undefined) return currentRecurrenceRuleId
+  if (recurrence === null) return null
+  return (await createRecurrenceRule(tx, recurrence)).id
+}
+
+async function updateRevisionFromEffectiveDate(
+  tx: DbTransaction,
+  scheduleId: string,
+  effectiveFrom: string,
+  activeRevision: ScheduleRevisionWithRule,
+  input: UpdateScheduleInput,
+  now: Date,
+) {
+  const recurrenceRuleId = await resolveRecurrenceRuleId(
+    tx,
+    input.recurrence,
+    activeRevision.revision.recurrenceRuleId,
+  )
+  const revisionValues = {
+    startTime: input.startTime ?? activeRevision.revision.startTime,
+    endTime: input.endTime ?? activeRevision.revision.endTime,
+    recurrenceRuleId,
+  }
+
+  await tx
+    .insert(scheduleRevisions)
+    .values({ scheduleId, effectiveFrom, ...revisionValues })
+    .onConflictDoUpdate({
+      target: [scheduleRevisions.scheduleId, scheduleRevisions.effectiveFrom],
+      set: { ...revisionValues, updatedAt: now },
+    })
+
+  if (
+    activeRevision.revision.recurrenceRuleId != null &&
+    activeRevision.revision.recurrenceRuleId !== recurrenceRuleId
+  ) {
+    await deleteUnreferencedRecurrenceRules(tx, [
+      activeRevision.revision.recurrenceRuleId,
+    ])
+  }
+}
+
+async function replaceAllScheduleRevisions(
+  tx: DbTransaction,
+  scheduleId: string,
+  series: ScheduleSeries,
+  firstRevision: ScheduleRevisionWithRule,
+  firstDate: string,
+  input: UpdateScheduleInput,
+  now: Date,
+) {
+  const recurrenceRuleId = await resolveRecurrenceRuleId(
+    tx,
+    input.recurrence,
+    firstRevision.revision.recurrenceRuleId,
+  )
+
+  await tx
+    .delete(scheduleRevisions)
+    .where(eq(scheduleRevisions.scheduleId, scheduleId))
+  await tx.insert(scheduleRevisions).values({
+    scheduleId,
+    effectiveFrom: firstDate,
+    startTime: input.startTime ?? firstRevision.revision.startTime,
+    endTime: input.endTime ?? firstRevision.revision.endTime,
+    recurrenceRuleId,
+    updatedAt: now,
+  })
+  await deleteUnreferencedRecurrenceRules(
+    tx,
+    uniqueRecurrenceRuleIds(
+      series.revisions.map(({ revision }) => revision),
+    ).filter((id) => id !== recurrenceRuleId),
+  )
+}
+
+async function updateAllScheduleRevisions(
+  tx: DbTransaction,
+  scheduleId: string,
+  series: ScheduleSeries,
+  firstRevision: ScheduleRevisionWithRule,
+  input: UpdateScheduleInput,
+  now: Date,
+) {
+  const revisionUpdates: Partial<typeof scheduleRevisions.$inferInsert> = {
+    updatedAt: now,
+  }
+  if (input.startTime !== undefined) {
+    revisionUpdates.startTime = input.startTime
+  }
+  if (input.endTime !== undefined) {
+    revisionUpdates.endTime = input.endTime
+  }
+  if (input.recurrence !== undefined) {
+    revisionUpdates.recurrenceRuleId = await resolveRecurrenceRuleId(
+      tx,
+      input.recurrence,
+      firstRevision.revision.recurrenceRuleId,
+    )
+  }
+
+  await tx
+    .update(scheduleRevisions)
+    .set(revisionUpdates)
+    .where(eq(scheduleRevisions.scheduleId, scheduleId))
+  if (input.recurrence !== undefined) {
+    await deleteUnreferencedRecurrenceRules(
+      tx,
+      uniqueRecurrenceRuleIds(series.revisions.map(({ revision }) => revision)),
+    )
+  }
 }
 
 export async function createScheduleSeries(
@@ -168,12 +251,9 @@ export async function updateScheduleSeries(
   input: UpdateScheduleInput,
 ): Promise<UpdateScheduleSeriesResult> {
   return db.transaction(async (tx) => {
-    const schedule = await tx.query.schedules.findFirst({
-      where: eq(schedules.id, scheduleId),
-    })
-    if (!schedule) return { kind: 'missing' }
-
-    const series = await loadScheduleSeries(tx, schedule)
+    const series = await loadScheduleWithRevisions(scheduleId, tx)
+    if (!series) return { kind: 'missing' }
+    const schedule = series.schedule
     const firstRevision = series.revisions[0]
     if (!firstRevision) {
       return { kind: 'invalid', message: 'Schedule has no revisions' }
@@ -204,8 +284,9 @@ export async function updateScheduleSeries(
       input.endTime !== undefined ||
       input.recurrence !== undefined
     const shouldReplaceAllRevisions =
-      input.startDate !== undefined || input.recurrence === null
-    const oldRecurrenceRuleIds = uniqueRecurrenceRuleIds(series.revisions)
+      (input.startDate !== undefined &&
+        input.startDate !== firstRevision.revision.effectiveFrom) ||
+      input.recurrence === null
 
     if (input.effectiveFrom !== undefined) {
       const activeRevision = getScheduleRevisionForDate(
@@ -219,89 +300,47 @@ export async function updateScheduleSeries(
         }
       }
 
-      if (hasRevisionChanges) {
-        const recurrenceRuleId =
-          input.recurrence === undefined
-            ? activeRevision.revision.recurrenceRuleId
-            : input.recurrence === null
-              ? null
-              : (await createRecurrenceRule(tx, input.recurrence)).id
-        const revisionValues = {
-          startTime: input.startTime ?? activeRevision.revision.startTime,
-          endTime: input.endTime ?? activeRevision.revision.endTime,
-          recurrenceRuleId,
+      if (
+        hasRevisionChanges &&
+        input.recurrence === undefined &&
+        activeRevision.revision.recurrenceRuleId == null &&
+        input.effectiveFrom !== activeRevision.revision.effectiveFrom
+      ) {
+        return {
+          kind: 'invalid',
+          message: 'effectiveFrom must match the date of a one-off schedule',
         }
+      }
 
-        await tx
-          .insert(scheduleRevisions)
-          .values({
-            scheduleId,
-            effectiveFrom: input.effectiveFrom,
-            ...revisionValues,
-          })
-          .onConflictDoUpdate({
-            target: [
-              scheduleRevisions.scheduleId,
-              scheduleRevisions.effectiveFrom,
-            ],
-            set: { ...revisionValues, updatedAt: now },
-          })
-        if (
-          activeRevision.revision.recurrenceRuleId != null &&
-          activeRevision.revision.recurrenceRuleId !== recurrenceRuleId
-        ) {
-          await deleteUnreferencedRecurrenceRules(tx, [
-            activeRevision.revision.recurrenceRuleId,
-          ])
-        }
+      if (hasRevisionChanges) {
+        await updateRevisionFromEffectiveDate(
+          tx,
+          scheduleId,
+          input.effectiveFrom,
+          activeRevision,
+          input,
+          now,
+        )
       }
     } else if (shouldReplaceAllRevisions) {
-      const recurrenceRuleId =
-        input.recurrence === undefined
-          ? firstRevision.revision.recurrenceRuleId
-          : input.recurrence === null
-            ? null
-            : (await createRecurrenceRule(tx, input.recurrence)).id
-
-      await tx
-        .delete(scheduleRevisions)
-        .where(eq(scheduleRevisions.scheduleId, scheduleId))
-      await tx.insert(scheduleRevisions).values({
-        scheduleId,
-        effectiveFrom: firstDate,
-        startTime: input.startTime ?? firstRevision.revision.startTime,
-        endTime: input.endTime ?? firstRevision.revision.endTime,
-        recurrenceRuleId,
-        updatedAt: now,
-      })
-      await deleteUnreferencedRecurrenceRules(
+      await replaceAllScheduleRevisions(
         tx,
-        oldRecurrenceRuleIds.filter((id) => id !== recurrenceRuleId),
+        scheduleId,
+        series,
+        firstRevision,
+        firstDate,
+        input,
+        now,
       )
     } else if (hasRevisionChanges) {
-      const revisionUpdates: Partial<typeof scheduleRevisions.$inferInsert> = {
-        updatedAt: now,
-      }
-      if (input.startTime !== undefined) {
-        revisionUpdates.startTime = input.startTime
-      }
-      if (input.endTime !== undefined) {
-        revisionUpdates.endTime = input.endTime
-      }
-      if (input.recurrence !== undefined) {
-        revisionUpdates.recurrenceRuleId =
-          input.recurrence === null
-            ? null
-            : (await createRecurrenceRule(tx, input.recurrence)).id
-      }
-
-      await tx
-        .update(scheduleRevisions)
-        .set(revisionUpdates)
-        .where(eq(scheduleRevisions.scheduleId, scheduleId))
-      if (input.recurrence !== undefined) {
-        await deleteUnreferencedRecurrenceRules(tx, oldRecurrenceRuleIds)
-      }
+      await updateAllScheduleRevisions(
+        tx,
+        scheduleId,
+        series,
+        firstRevision,
+        input,
+        now,
+      )
     }
 
     const updatedSchedule = firstOrThrow(
@@ -319,7 +358,11 @@ export async function updateScheduleSeries(
         .where(eq(schedules.id, scheduleId))
         .returning(),
     )
-    const updatedSeries = await loadScheduleSeries(tx, updatedSchedule)
+    const updatedSeries = await loadScheduleWithRevisions(
+      updatedSchedule.id,
+      tx,
+    )
+    if (!updatedSeries) return { kind: 'missing' }
 
     if (input.effectiveFrom !== undefined && hasRevisionChanges) {
       const overrides = await tx
@@ -382,13 +425,7 @@ export async function deleteScheduleSeries(scheduleId: string) {
       .select()
       .from(scheduleRevisions)
       .where(eq(scheduleRevisions.scheduleId, scheduleId))
-    const recurrenceRuleIds = [
-      ...new Set(
-        revisions
-          .map((revision) => revision.recurrenceRuleId)
-          .filter((id): id is string => id != null),
-      ),
-    ]
+    const recurrenceRuleIds = uniqueRecurrenceRuleIds(revisions)
 
     await tx.delete(schedules).where(eq(schedules.id, scheduleId))
     await deleteUnreferencedRecurrenceRules(tx, recurrenceRuleIds)

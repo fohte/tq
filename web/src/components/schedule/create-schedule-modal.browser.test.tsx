@@ -324,19 +324,34 @@ describe('CreateScheduleModal', () => {
       [
         {
           id: 'schedule-1',
-          input: {
-            title: 'Morning run',
-            startDate: '2026-01-01',
-            startTime: '07:00',
-            endTime: '08:00',
-            recurrence: {
-              type: 'weekly',
-              interval: 1,
-              daysOfWeek: [1, 3, 5],
-            },
-            context: 'personal',
-            color: '#6C63FF',
-          },
+          input: { title: 'Morning run' },
+        },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('sends only the schedule settings changed in the edit form', async () => {
+    const { updateMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Start time')),
+        'no visible schedule start time input',
+      ),
+      { target: { value: '07:30' } },
+    )
+
+    const saveButtons = screen.getAllByRole('button', { name: 'Save' })
+    await user.click(atIndex(saveButtons, 0))
+
+    expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
+      [
+        {
+          id: 'schedule-1',
+          input: { startTime: '07:30' },
         },
         { onSuccess: 'callback' },
       ],

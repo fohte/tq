@@ -11,7 +11,7 @@ afterAll(async () => {
   await client.end()
 })
 
-it('preserves existing schedule dates, times, and recurrence during migration', async () => {
+it('preserves existing schedule dates, times, and recurrence during migration, including legacy out-of-range times', async () => {
   const schemaName =
     'schedule_revisions_migration_' + crypto.randomUUID().replaceAll('-', '')
   const migrationSql = await readFile(
@@ -62,6 +62,11 @@ it('preserves existing schedule dates, times, and recurrence during migration', 
         context, color, created_at, updated_at
       ) VALUES
         (
+          'legacy-boundary-times', 'Legacy boundary times', '24:00', '10:60',
+          '2041-06-03', NULL, 'personal', NULL,
+          '2041-01-03T00:00:00Z', '2041-01-03T00:00:00Z'
+        ),
+        (
           'legacy-once', 'One-off', '10:00', '11:00', '2041-06-02', NULL,
           'personal', NULL, '2041-01-01T00:00:00Z', '2041-01-01T00:00:00Z'
         ),
@@ -76,7 +81,7 @@ it('preserves existing schedule dates, times, and recurrence during migration', 
       await tx.unsafe(statement)
     }
 
-    return tx.unsafe<
+    const rows = await tx.unsafe<
       {
         schedule_id: string
         end_date: string | null
@@ -102,9 +107,22 @@ it('preserves existing schedule dates, times, and recurrence during migration', 
         ON recurrence_rules.id = schedule_revisions.recurrence_rule_id
       ORDER BY schedules.id
     `)
+
+    await tx.unsafe('DROP SCHEMA "' + schemaName + '" CASCADE')
+
+    return rows
   })
 
   expect(migratedRows).toEqual([
+    {
+      schedule_id: 'legacy-boundary-times',
+      end_date: null,
+      effective_from: '2041-06-03',
+      start_time: '24:00',
+      end_time: '10:60',
+      recurrence_rule_id: null,
+      recurrence_type: null,
+    },
     {
       schedule_id: 'legacy-once',
       end_date: null,
