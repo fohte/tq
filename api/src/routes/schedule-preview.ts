@@ -7,6 +7,7 @@ import {
   type ScheduleOverrideTimes,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
+import { expandScheduleWithDraftWithMode } from '#routes/schedule-expansion-draft'
 import { MAX_SCHEDULE_DATE_RANGE_DAYS } from '#schemas/schedule'
 
 export type SchedulePreviewRange = {
@@ -97,12 +98,12 @@ export function getDeletedScheduleOverrides(
   series: ScheduleSeries,
   overrides: readonly SchedulePreviewOverride[],
   draft: ScheduleDraft,
+  revisionMode: 'from' | 'all' | 'replace' = 'from',
 ): SchedulePreviewOverride[] {
   const revisionChange = draft.revisionChange
   const shouldPruneObsoleteOccurrences =
     revisionChange != null &&
-    revisionChange.mode !== 'all' &&
-    revisionChange.mode !== 'replace' &&
+    revisionMode === 'from' &&
     (revisionChange.startTime !== undefined ||
       revisionChange.endTime !== undefined ||
       revisionChange.recurrence !== undefined)
@@ -132,6 +133,7 @@ export function buildScheduleChangePreview(
   range: SchedulePreviewRange,
   draft: ScheduleDraft,
   deletedOverrides: SchedulePreviewOverride[],
+  revisionMode: 'from' | 'all' | 'replace' = 'from',
 ): ScheduleChangePreview {
   const before = expandScheduleWithDraft({
     series,
@@ -139,11 +141,12 @@ export function buildScheduleChangePreview(
     ...range,
     draft: {},
   })
-  const after = expandScheduleWithDraft({
+  const after = expandScheduleWithDraftWithMode({
     series,
     overrides,
     ...range,
     draft,
+    revisionMode,
   })
   return buildScheduleChangePreviewFromOccurrences(
     range,

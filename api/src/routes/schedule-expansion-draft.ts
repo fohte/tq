@@ -31,7 +31,6 @@ export type ScheduleDraft = {
       daysOfWeek?: number[] | undefined
       dayOfMonth?: number | undefined
     } | null
-    mode?: 'from' | 'all' | 'replace'
   }
   endDate?: string | null
 }
@@ -44,9 +43,12 @@ export type ScheduleDraftOccurrence = {
   skipped: boolean
 }
 
+type ScheduleRevisionMode = 'from' | 'all' | 'replace'
+
 function applyScheduleDraftToSeries(
   series: ScheduleSeries,
   draft: ScheduleDraft,
+  revisionMode: ScheduleRevisionMode = 'from',
 ): ScheduleSeries {
   const schedule =
     draft.endDate === undefined
@@ -92,7 +94,7 @@ function applyScheduleDraftToSeries(
     }
   }
 
-  if (revisionChange.mode === 'all') {
+  if (revisionMode === 'all') {
     return {
       schedule,
       revisions: series.revisions.map((revision) =>
@@ -102,7 +104,7 @@ function applyScheduleDraftToSeries(
   }
 
   const baseRevision =
-    revisionChange.mode === 'replace'
+    revisionMode === 'replace'
       ? series.revisions[0]
       : getScheduleRevisionForDate(
           series.revisions,
@@ -114,7 +116,7 @@ function applyScheduleDraftToSeries(
     baseRevision,
     revisionChange.effectiveFrom,
   )
-  if (revisionChange.mode === 'replace') {
+  if (revisionMode === 'replace') {
     return { schedule, revisions: [updatedRevision] }
   }
 
@@ -150,7 +152,31 @@ export function expandScheduleWithDraft({
   endDate: string
   draft: ScheduleDraft
 }): ScheduleDraftOccurrence[] {
-  const draftedSeries = applyScheduleDraftToSeries(series, draft)
+  return expandScheduleWithDraftWithMode({
+    series,
+    overrides,
+    startDate,
+    endDate,
+    draft,
+  })
+}
+
+export function expandScheduleWithDraftWithMode({
+  series,
+  overrides,
+  startDate,
+  endDate,
+  draft,
+  revisionMode = 'from',
+}: {
+  series: ScheduleSeries
+  overrides: Array<{ occurrenceDate: string } & ScheduleOverrideTimes>
+  startDate: string
+  endDate: string
+  draft: ScheduleDraft
+  revisionMode?: ScheduleRevisionMode
+}): ScheduleDraftOccurrence[] {
+  const draftedSeries = applyScheduleDraftToSeries(series, draft, revisionMode)
   const overridesByDate = new Map(
     overrides.map((override) => [override.occurrenceDate, override]),
   )

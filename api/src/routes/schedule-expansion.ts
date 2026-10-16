@@ -1,2 +1,7 @@
 export * from '#routes/schedule-expansion-core'
-export * from '#routes/schedule-expansion-draft'
+export {
+  expandScheduleWithDraft,
+  type ScheduleDraft,
+  type ScheduleDraftOccurrence,
+  scheduleOccursOnDateWithDraft,
+} from '#routes/schedule-expansion-draft'

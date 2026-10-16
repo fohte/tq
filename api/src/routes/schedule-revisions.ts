@@ -304,6 +304,12 @@ export async function updateScheduleSeries(
       (input.startDate !== undefined &&
         input.startDate !== firstRevision.revision.effectiveFrom) ||
       input.recurrence === null
+    const revisionMode =
+      input.effectiveFrom !== undefined
+        ? 'from'
+        : shouldReplaceAllRevisions
+          ? 'replace'
+          : 'all'
     const activeRevision =
       input.effectiveFrom === undefined
         ? undefined
@@ -345,12 +351,6 @@ export async function updateScheduleSeries(
               ...(input.recurrence !== undefined
                 ? { recurrence: input.recurrence }
                 : {}),
-              mode:
-                input.effectiveFrom !== undefined
-                  ? 'from'
-                  : shouldReplaceAllRevisions
-                    ? 'replace'
-                    : 'all',
             },
           }
         : {}),
@@ -370,6 +370,7 @@ export async function updateScheduleSeries(
       series,
       existingOverrides,
       draft,
+      revisionMode,
     )
 
     if (input.dryRun === true) {
@@ -388,6 +389,7 @@ export async function updateScheduleSeries(
           range,
           draft,
           deletedOverrides,
+          revisionMode,
         ),
       }
     }

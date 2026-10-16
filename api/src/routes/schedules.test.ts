@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildScheduleOverrideIndex,
   expandScheduleForDate as expandSchedule,
+  expandScheduleWithDraft,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
 
@@ -105,6 +106,68 @@ function expandScheduleForDate(
     overrides,
   )
 }
+
+describe('expandScheduleWithDraft', () => {
+  it('applies occurrence and revision changes over a date range', () => {
+    const schedule = makeSchedule({
+      startDate: '2037-04-11',
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrenceRuleId: 'rule-1',
+    })
+    const series = {
+      ...schedule,
+      revisions: schedule.revisions.map((revision) => ({
+        ...revision,
+        rule: makeRule(),
+      })),
+    }
+
+    expect(
+      expandScheduleWithDraft({
+        series,
+        overrides: [],
+        startDate: '2037-04-11',
+        endDate: '2037-04-13',
+        draft: {
+          occurrenceChange: {
+            originalDate: '2037-04-11',
+            date: '2037-04-13',
+            startTime: '12:00',
+            endTime: '13:00',
+          },
+          revisionChange: {
+            effectiveFrom: '2037-04-12',
+            startTime: '10:00',
+            endTime: '11:00',
+          },
+        },
+      }),
+    ).toEqual([
+      {
+        date: '2037-04-12',
+        originalDate: '2037-04-12',
+        startTime: '10:00',
+        endTime: '11:00',
+        skipped: false,
+      },
+      {
+        date: '2037-04-13',
+        originalDate: '2037-04-13',
+        startTime: '10:00',
+        endTime: '11:00',
+        skipped: false,
+      },
+      {
+        date: '2037-04-13',
+        originalDate: '2037-04-11',
+        startTime: '12:00',
+        endTime: '13:00',
+        skipped: false,
+      },
+    ])
+  })
+})
 
 describe('expandScheduleForDate', () => {
   describe('same-day schedule', () => {
