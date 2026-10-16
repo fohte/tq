@@ -5,8 +5,12 @@ import { app } from '#app'
 import { db } from '#db/connection'
 import { recurrenceRules, scheduleOverrides } from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
-import { formatDateStr } from '#routes/schedule-expansion'
+import {
+  expandScheduleWithDraft,
+  formatDateStr,
+} from '#routes/schedule-expansion'
 import type { ScheduleChangePreview } from '#routes/schedule-preview'
+import { loadScheduleWithRevisions } from '#routes/schedule-shared'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -1420,6 +1424,25 @@ describe('schedules API', () => {
       }
       const dryRunResponse = await patchSchedule(created.id, dryRunInput)
       const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const series = await loadScheduleWithRevisions(created.id)
+      assertDefined(series)
+      const publicExpansion = expandScheduleWithDraft({
+        series,
+        overrides: await listScheduleOverrides(created.id),
+        startDate: preview.range.startDate,
+        endDate: preview.range.endDate,
+        draft: {
+          revisionChange: {
+            effectiveFrom: startDate,
+            startTime: '12:00',
+            endTime: '13:00',
+          },
+        },
+        revisionMode: 'all',
+      })
+      const previewAfter = preview.changes.flatMap((change) =>
+        change.after == null ? [] : [change.after],
+      )
       const duringDryRun = await listScheduleEvents(startDate, lastDate)
       const saveResponse = await patchSchedule(created.id, {
         ...dryRunInput,
@@ -1430,6 +1453,8 @@ describe('schedules API', () => {
       const snapshot = () => ({
         dryRunStatus: dryRunResponse.status,
         preview: normalizePreview(preview),
+        publicExpansion,
+        previewAfter,
         beforeSave: beforeSave.occurrences,
         duringDryRun: duringDryRun.occurrences,
         saveStatus: saveResponse.status,
@@ -1468,6 +1493,26 @@ describe('schedules API', () => {
           ],
           deletedOverrides: [],
         },
+        publicExpansion: [
+          previewOccurrence(startDate, startDate, '12:00', '13:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '12:00',
+            '13:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '12:00', '13:00'),
+        ],
+        previewAfter: [
+          previewOccurrence(startDate, startDate, '12:00', '13:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '12:00',
+            '13:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '12:00', '13:00'),
+        ],
         beforeSave: [
           previewOccurrence(startDate, startDate, '08:00', '09:00'),
           previewOccurrence(

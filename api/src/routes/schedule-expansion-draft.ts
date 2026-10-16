@@ -145,28 +145,6 @@ export function expandScheduleWithDraft({
   startDate,
   endDate,
   draft,
-}: {
-  series: ScheduleSeries
-  overrides: Array<{ occurrenceDate: string } & ScheduleOverrideTimes>
-  startDate: string
-  endDate: string
-  draft: ScheduleDraft
-}): ScheduleDraftOccurrence[] {
-  return expandScheduleWithDraftWithMode({
-    series,
-    overrides,
-    startDate,
-    endDate,
-    draft,
-  })
-}
-
-export function expandScheduleWithDraftWithMode({
-  series,
-  overrides,
-  startDate,
-  endDate,
-  draft,
   revisionMode = 'from',
 }: {
   series: ScheduleSeries

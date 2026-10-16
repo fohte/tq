@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import {
   expandScheduleWithDraft,
   formatDateStr,
@@ -7,31 +9,50 @@ import {
   type ScheduleOverrideTimes,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
-import { expandScheduleWithDraftWithMode } from '#routes/schedule-expansion-draft'
 import { MAX_SCHEDULE_DATE_RANGE_DAYS } from '#schemas/schedule'
 
-export type SchedulePreviewRange = {
-  startDate: string
-  endDate: string
-}
+const scheduleDraftOccurrenceSchema = z.object({
+  date: z.iso.date(),
+  originalDate: z.iso.date(),
+  startTime: z.string(),
+  endTime: z.string(),
+  skipped: z.boolean(),
+})
 
-export type SchedulePreviewOverride = {
-  scheduleId: string
-  occurrenceDate: string
-  startTime: string | null
-  endTime: string | null
-  movedToDate: string | null
-  skipped: boolean
-}
+const schedulePreviewRangeSchema = z
+  .object({
+    startDate: z.iso.date(),
+    endDate: z.iso.date(),
+  })
+  .describe(
+    'The inclusive date range covered by changes. deletedOverrides may include occurrences outside this range.',
+  )
 
-export type ScheduleChangePreview = {
-  range: SchedulePreviewRange
-  changes: Array<{
-    before: ScheduleDraftOccurrence | null
-    after: ScheduleDraftOccurrence | null
-  }>
-  deletedOverrides: SchedulePreviewOverride[]
-}
+const schedulePreviewOverrideSchema = z.object({
+  scheduleId: z.uuid(),
+  occurrenceDate: z.iso.date(),
+  startTime: z.string().nullable(),
+  endTime: z.string().nullable(),
+  movedToDate: z.iso.date().nullable(),
+  skipped: z.boolean(),
+})
+
+export const scheduleChangePreviewSchema = z.object({
+  range: schedulePreviewRangeSchema,
+  changes: z.array(
+    z.object({
+      before: scheduleDraftOccurrenceSchema.nullable(),
+      after: scheduleDraftOccurrenceSchema.nullable(),
+    }),
+  ),
+  deletedOverrides: z.array(schedulePreviewOverrideSchema),
+})
+
+export type SchedulePreviewRange = z.infer<typeof schedulePreviewRangeSchema>
+export type SchedulePreviewOverride = z.infer<
+  typeof schedulePreviewOverrideSchema
+>
+export type ScheduleChangePreview = z.infer<typeof scheduleChangePreviewSchema>
 
 export function buildSchedulePreviewRange(
   series: ScheduleSeries,
@@ -141,7 +162,7 @@ export function buildScheduleChangePreview(
     ...range,
     draft: {},
   })
-  const after = expandScheduleWithDraftWithMode({
+  const after = expandScheduleWithDraft({
     series,
     overrides,
     ...range,
@@ -172,7 +193,7 @@ export function buildScheduleChangePreviewFromOccurrences(
     ...new Set([...beforeByDate.keys(), ...afterByDate.keys()]),
   ].sort((a, b) => a.localeCompare(b))
 
-  return {
+  return scheduleChangePreviewSchema.parse({
     range,
     changes: originalDates.flatMap((originalDate) => {
       const beforeOccurrence = beforeByDate.get(originalDate) ?? null
@@ -191,5 +212,5 @@ export function buildScheduleChangePreviewFromOccurrences(
       return [{ before: beforeOccurrence, after: afterOccurrence }]
     }),
     deletedOverrides,
-  }
+  })
 }
