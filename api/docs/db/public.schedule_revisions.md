@@ -64,6 +64,7 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   date end_date
+  integer remind_before_minutes
 }
 "public.recurrence_rules" {
   text id
