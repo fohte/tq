@@ -5,19 +5,14 @@ import { ResultAsync } from 'neverthrow'
 import { db } from '#db/connection'
 import { scheduleReminderDeliveries } from '#db/schema'
 import { APP_DOMAIN, SCHEDULE_REMINDER_TIME_ZONE } from '#env'
-import {
-  addCalendarDays,
-  formatDateInTimeZone,
-  localDateTimeToUtc,
-} from '#lib/timezone'
-import { getScheduleOccurrencesStartingOnDate } from '#routes/schedule-expansion'
+import { addCalendarDays, formatDateInTimeZone } from '#lib/timezone'
 import {
   loadScheduleOverridesForExpansion,
   loadSchedulesWithRules,
 } from '#routes/schedule-shared'
 import { sendPush } from '#services/push'
+import { collectDueScheduleReminders } from '#services/schedule-reminder-candidates'
 
-const MAX_LATENESS_MS = 60 * 60 * 1000
 const DELIVERY_RETENTION_MS = 90 * 24 * 60 * 60 * 1000
 
 function toError(error: unknown): Error {
@@ -49,52 +44,18 @@ export async function deliverDueScheduleReminders(
   const today = formatDateInTimeZone(now, timeZone)
   const tomorrow = addCalendarDays(today, 1)
   const dates = [today, tomorrow]
-  const series = (await loadSchedulesWithRules()).filter(
-    ({ schedule }) => schedule.remindBeforeMinutes !== null,
-  )
+  const series = await loadSchedulesWithRules()
   const overridesBySchedule = await loadScheduleOverridesForExpansion(
     today,
     tomorrow,
   )
-
-  const candidates = series.flatMap(({ schedule, ...scheduleSeries }) => {
-    const remindBeforeMinutes = schedule.remindBeforeMinutes
-    if (remindBeforeMinutes === null) return []
-
-    return dates.flatMap((date) =>
-      getScheduleOccurrencesStartingOnDate(
-        { schedule, ...scheduleSeries },
-        date,
-        overridesBySchedule.get(schedule.id),
-      ).flatMap((occurrence) => {
-        const startsAt = localDateTimeToUtc(
-          date,
-          occurrence.startTime,
-          timeZone,
-        )
-        const remindAt = new Date(
-          startsAt.getTime() - remindBeforeMinutes * 60_000,
-        )
-        if (
-          remindAt > now ||
-          remindAt <= new Date(now.getTime() - MAX_LATENESS_MS)
-        ) {
-          return []
-        }
-
-        return [
-          {
-            scheduleId: schedule.id,
-            occurrenceDate: occurrence.occurrenceDate,
-            remindAt,
-            title: schedule.title,
-            context: schedule.context,
-            remindBeforeMinutes,
-          },
-        ]
-      }),
-    )
-  })
+  const candidates = collectDueScheduleReminders(
+    series,
+    overridesBySchedule,
+    dates,
+    now,
+    timeZone,
+  )
 
   if (candidates.length === 0) return
 
@@ -120,6 +81,9 @@ export async function deliverDueScheduleReminders(
   for (const claim of claimed) {
     const reminder = candidateByKey.get(reminderKey(claim))
     if (!reminder) continue
+    const minutesUntilStart = Math.ceil(
+      (reminder.startsAt.getTime() - now.getTime()) / 60_000,
+    )
 
     const sent = await ResultAsync.fromPromise(
       sendPush(
@@ -127,9 +91,9 @@ export async function deliverDueScheduleReminders(
         {
           title: reminder.title,
           body:
-            reminder.remindBeforeMinutes === 0
+            minutesUntilStart <= 0
               ? 'Starts now'
-              : `Starts in ${String(reminder.remindBeforeMinutes)} minutes`,
+              : `Starts in ${String(minutesUntilStart)} minutes`,
           url: `https://${APP_DOMAIN}/`,
         },
       ),

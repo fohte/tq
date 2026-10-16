@@ -539,6 +539,34 @@ describe('schedule events update', () => {
       stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
     })
   })
+
+  it('rejects conflicting reminder flags before sending a request', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--clear-reminder',
+          '--remind-before-minutes',
+          '45',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: Use only one of --clear-reminder or --remind-before-minutes\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
 })
 
 describe('schedule events delete', () => {

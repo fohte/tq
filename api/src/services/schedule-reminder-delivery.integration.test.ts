@@ -86,26 +86,27 @@ function sentNotifications() {
     }))
 }
 
-async function deliveryClaims() {
+async function deliveryClaims(expectedScheduleId: string) {
   const rows = await db
     .select({
+      scheduleId: scheduleReminderDeliveries.scheduleId,
       occurrenceDate: scheduleReminderDeliveries.occurrenceDate,
       remindAt: scheduleReminderDeliveries.remindAt,
     })
     .from(scheduleReminderDeliveries)
     .orderBy(asc(scheduleReminderDeliveries.remindAt))
 
-  return rows.map(({ occurrenceDate, remindAt }) => ({
-    scheduleId: 'SCHEDULE_ID',
+  return rows.map(({ scheduleId, occurrenceDate, remindAt }) => ({
+    scheduleId: scheduleId === expectedScheduleId ? 'SCHEDULE_ID' : scheduleId,
     occurrenceDate,
     remindAt: remindAt.toISOString(),
   }))
 }
 
-async function reminderSnapshot() {
+async function reminderSnapshot(scheduleId: string) {
   return {
     notifications: sentNotifications(),
-    claims: await deliveryClaims(),
+    claims: await deliveryClaims(scheduleId),
   }
 }
 
@@ -113,12 +114,12 @@ describe('deliverDueScheduleReminders', () => {
   it('sends a due reminder once to the schedule context', async () => {
     await register(WORK_ENDPOINT, 'work')
     await register(PERSONAL_ENDPOINT, 'personal')
-    await createSchedule({ context: 'work' })
+    const series = await createSchedule({ context: 'work' })
 
     await deliverDueScheduleReminders(REMINDER_TIME)
     await deliverDueScheduleReminders(REMINDER_TIME)
 
-    expect(await reminderSnapshot()).toEqual({
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
       notifications: [
         {
           endpoint: WORK_ENDPOINT,
@@ -153,7 +154,7 @@ describe('deliverDueScheduleReminders', () => {
     await deliverDueScheduleReminders(REMINDER_TIME)
     await deliverDueScheduleReminders(new Date('2026-12-18T04:45:00.000Z'))
 
-    expect(await reminderSnapshot()).toEqual({
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
       notifications: [
         {
           endpoint: PERSONAL_ENDPOINT,
@@ -187,7 +188,10 @@ describe('deliverDueScheduleReminders', () => {
 
     await deliverDueScheduleReminders(REMINDER_TIME)
 
-    expect(await reminderSnapshot()).toEqual({ notifications: [], claims: [] })
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [],
+      claims: [],
+    })
   })
 
   it('uses the active revision time for a changed occurrence', async () => {
@@ -204,7 +208,7 @@ describe('deliverDueScheduleReminders', () => {
     await deliverDueScheduleReminders(new Date('2026-12-17T05:15:00.000Z'))
     await deliverDueScheduleReminders(new Date('2026-12-17T05:16:00.000Z'))
 
-    expect(await reminderSnapshot()).toEqual({
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
       notifications: [
         {
           endpoint: PERSONAL_ENDPOINT,
@@ -220,6 +224,99 @@ describe('deliverDueScheduleReminders', () => {
           scheduleId: 'SCHEDULE_ID',
           occurrenceDate: '2026-12-17',
           remindAt: '2026-12-17T05:15:00.000Z',
+        },
+      ],
+    })
+  })
+
+  it('sends a delayed reminder with the actual time remaining', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const series = await createSchedule()
+
+    await deliverDueScheduleReminders(new Date('2026-12-17T05:10:00.000Z'))
+
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [
+        {
+          endpoint: PERSONAL_ENDPOINT,
+          payload: {
+            title: 'Planning session',
+            body: 'Starts in 20 minutes',
+            url: 'https://localhost:5173/',
+          },
+        },
+      ],
+      claims: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: '2026-12-17',
+          remindAt: REMINDER_TIME.toISOString(),
+        },
+      ],
+    })
+  })
+
+  it('does not claim or send a reminder for an occurrence that has started', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const series = await createSchedule()
+
+    await deliverDueScheduleReminders(new Date('2026-12-17T05:31:00.000Z'))
+
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [],
+      claims: [],
+    })
+  })
+
+  it('does not claim or send a reminder before its due time', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const series = await createSchedule()
+
+    await deliverDueScheduleReminders(new Date('2026-12-17T04:44:59.999Z'))
+
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [],
+      claims: [],
+    })
+  })
+
+  it('does not claim or send a reminder more than one hour late', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const series = await createSchedule({
+      startDate: '2026-12-18',
+      remindBeforeMinutes: 1440,
+    })
+
+    await deliverDueScheduleReminders(new Date('2026-12-17T06:31:00.000Z'))
+
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [],
+      claims: [],
+    })
+  })
+
+  it('sends a zero-minute reminder as the occurrence starts', async () => {
+    await register(PERSONAL_ENDPOINT, 'personal')
+    const series = await createSchedule({ remindBeforeMinutes: 0 })
+
+    await deliverDueScheduleReminders(new Date('2026-12-17T05:30:30.000Z'))
+
+    expect(await reminderSnapshot(series.schedule.id)).toEqual({
+      notifications: [
+        {
+          endpoint: PERSONAL_ENDPOINT,
+          payload: {
+            title: 'Planning session',
+            body: 'Starts now',
+            url: 'https://localhost:5173/',
+          },
+        },
+      ],
+      claims: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: '2026-12-17',
+          remindAt: '2026-12-17T05:30:00.000Z',
         },
       ],
     })
