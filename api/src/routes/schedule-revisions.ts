@@ -229,6 +229,7 @@ export async function createScheduleSeries(
         .insert(schedules)
         .values({
           title: input.title,
+          remindBeforeMinutes: input.remindBeforeMinutes ?? null,
           context: input.context ?? 'personal',
           color: input.color ?? null,
         })
@@ -358,6 +359,9 @@ export async function updateScheduleSeries(
         .set({
           ...(input.title !== undefined ? { title: input.title } : {}),
           ...(input.endDate !== undefined ? { endDate: input.endDate } : {}),
+          ...(input.remindBeforeMinutes !== undefined
+            ? { remindBeforeMinutes: input.remindBeforeMinutes }
+            : {}),
           ...(input.context !== undefined
             ? { context: input.context ?? 'personal' }
             : {}),

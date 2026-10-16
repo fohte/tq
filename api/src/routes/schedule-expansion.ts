@@ -187,7 +187,7 @@ export function expandScheduleForDate(
     overridden: 'moved' | 'time' | null
   }> = []
 
-  for (const occurrence of getOccurrencesStartingOnDate(
+  for (const occurrence of getScheduleOccurrencesStartingOnDate(
     series,
     dateStr,
     overrides,
@@ -214,7 +214,7 @@ export function expandScheduleForDate(
   const prevDate = new Date(date)
   prevDate.setDate(prevDate.getDate() - 1)
   const prevDateStr = formatDateStr(prevDate)
-  for (const occurrence of getOccurrencesStartingOnDate(
+  for (const occurrence of getScheduleOccurrencesStartingOnDate(
     series,
     prevDateStr,
     overrides,
@@ -237,10 +237,10 @@ export function expandScheduleForDate(
   return blocks
 }
 
-function getOccurrencesStartingOnDate(
+export function getScheduleOccurrencesStartingOnDate(
   series: ScheduleSeries,
   dateStr: string,
-  overrides: ScheduleOverrideIndex,
+  overrides: ScheduleOverrideIndex = emptyScheduleOverrideIndex,
 ): ScheduleOccurrence[] {
   const date = new Date(`${dateStr}T00:00:00`)
   const candidates: Array<{

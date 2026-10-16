@@ -39,6 +39,7 @@ interface ScheduleResponse {
   title: string
   startDate: string
   endDate: string | null
+  remindBeforeMinutes: number | null
   startTime: string
   endTime: string
   recurrence: {
@@ -606,6 +607,7 @@ describe('schedules API', () => {
           title: 'Sleep',
           startDate: '2026-03-23',
           endDate: null,
+          remindBeforeMinutes: null,
           startTime: '23:00',
           endTime: '07:00',
           recurrence: null,
@@ -616,6 +618,92 @@ describe('schedules API', () => {
         },
       })
     })
+
+    it('creates a schedule with a reminder at the inclusive lower bound', async () => {
+      const { res, body } = await createSchedule({
+        title: 'Morning review',
+        startDate: '2026-03-23',
+        startTime: '09:00',
+        endTime: '10:00',
+        remindBeforeMinutes: 0,
+      })
+
+      expect(normalizeScheduleHttpResponse(res.status, body)).toEqual({
+        status: 201,
+        body: {
+          id: 'SCHEDULE_ID',
+          title: 'Morning review',
+          startDate: '2026-03-23',
+          endDate: null,
+          remindBeforeMinutes: 0,
+          startTime: '09:00',
+          endTime: '10:00',
+          recurrence: null,
+          context: 'personal',
+          color: null,
+          createdAt: 'TIMESTAMP',
+          updatedAt: 'TIMESTAMP',
+        },
+      })
+    })
+
+    it.each([
+      {
+        value: -1,
+        issue: {
+          origin: 'number',
+          code: 'too_small',
+          minimum: 0,
+          inclusive: true,
+          path: ['remindBeforeMinutes'],
+          message: 'Too small: expected number to be >=0',
+        },
+      },
+      {
+        value: 1441,
+        issue: {
+          origin: 'number',
+          code: 'too_big',
+          maximum: 1440,
+          inclusive: true,
+          path: ['remindBeforeMinutes'],
+          message: 'Too big: expected number to be <=1440',
+        },
+      },
+      {
+        value: 1.5,
+        issue: {
+          expected: 'int',
+          format: 'safeint',
+          code: 'invalid_type',
+          path: ['remindBeforeMinutes'],
+          message: 'Invalid input: expected int, received number',
+        },
+      },
+    ])(
+      'rejects an invalid reminder lead time ($value)',
+      async ({ value, issue }) => {
+        const response = await app.request('/api/schedule/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Morning review',
+            startDate: '2026-03-23',
+            startTime: '09:00',
+            endTime: '10:00',
+            remindBeforeMinutes: value,
+          }),
+        })
+
+        expect(await normalizeValidationResponse(response)).toEqual({
+          status: 400,
+          body: {
+            success: false,
+            error: { name: 'ZodError', issues: [issue] },
+          },
+        })
+      },
+    )
 
     it('creates a schedule with weekly recurrence', async () => {
       const { res, body } = await createSchedule({
@@ -947,6 +1035,7 @@ describe('schedules API', () => {
           title: 'Routine',
           startDate: '2026-03-25',
           endDate: null,
+          remindBeforeMinutes: null,
           startTime: '09:00',
           endTime: '10:00',
           recurrence: null,
@@ -954,6 +1043,78 @@ describe('schedules API', () => {
           color: null,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
+        },
+      })
+    })
+
+    it('updates and clears the series reminder', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Morning review',
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+      const enabledResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ remindBeforeMinutes: 1440 }),
+        },
+      )
+      const clearedResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ remindBeforeMinutes: null }),
+        },
+      )
+
+      const snapshot = async () => ({
+        enabled: normalizeScheduleHttpResponse(
+          enabledResponse.status,
+          await jsonBody<ScheduleResponse>(enabledResponse),
+        ),
+        cleared: normalizeScheduleHttpResponse(
+          clearedResponse.status,
+          await jsonBody<ScheduleResponse>(clearedResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        enabled: {
+          status: 200,
+          body: {
+            id: 'SCHEDULE_ID',
+            title: 'Morning review',
+            startDate: '2026-03-22',
+            endDate: null,
+            remindBeforeMinutes: 1440,
+            startTime: '09:00',
+            endTime: '10:00',
+            recurrence: null,
+            context: 'personal',
+            color: null,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+        },
+        cleared: {
+          status: 200,
+          body: {
+            id: 'SCHEDULE_ID',
+            title: 'Morning review',
+            startDate: '2026-03-22',
+            endDate: null,
+            remindBeforeMinutes: null,
+            startTime: '09:00',
+            endTime: '10:00',
+            recurrence: null,
+            context: 'personal',
+            color: null,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
         },
       })
     })
@@ -1577,6 +1738,7 @@ describe('schedules API', () => {
           title: 'Updated Event',
           startDate: '2026-03-22',
           endDate: null,
+          remindBeforeMinutes: null,
           startTime: '09:00',
           endTime: '10:00',
           recurrence: null,

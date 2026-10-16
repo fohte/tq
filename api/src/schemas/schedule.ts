@@ -12,6 +12,13 @@ const scheduleTimeSchema = z
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
   .describe('Local time in HH:MM format.')
 
+const scheduleReminderMinutesSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(1440)
+  .describe('Minutes before an occurrence starts to send a push reminder.')
+
 export const createScheduleSchema = z.object({
   title: z.string().min(1),
   startDate: z.iso
@@ -20,6 +27,7 @@ export const createScheduleSchema = z.object({
   startTime: scheduleTimeSchema,
   endTime: scheduleTimeSchema,
   recurrence: recurrenceRuleSchema.optional(),
+  remindBeforeMinutes: scheduleReminderMinutesSchema.nullable().optional(),
   context: z.enum(['work', 'personal']).optional(),
   color: z.string().optional(),
 })
@@ -31,6 +39,7 @@ export const updateScheduleInputSchema = z.object({
   startTime: scheduleTimeSchema.optional(),
   endTime: scheduleTimeSchema.optional(),
   endDate: z.iso.date().nullable().optional(),
+  remindBeforeMinutes: scheduleReminderMinutesSchema.nullable().optional(),
   recurrence: recurrenceRuleSchema.nullable().optional(),
   context: z.enum(['work', 'personal']).nullable().optional(),
   color: z.string().nullable().optional(),

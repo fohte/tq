@@ -256,6 +256,7 @@ export const schedules = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     title: text('title').notNull(),
     endDate: date('end_date'),
+    remindBeforeMinutes: integer('remind_before_minutes'),
     context: text('context', {
       enum: ['work', 'personal'],
     })
@@ -269,7 +270,13 @@ export const schedules = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index('idx_schedules_context').on(table.context)],
+  (table) => [
+    index('idx_schedules_context').on(table.context),
+    check(
+      'schedules_remind_before_minutes_check',
+      sql`${table.remindBeforeMinutes} BETWEEN 0 AND 1440`,
+    ),
+  ],
 )
 
 export const scheduleRevisions = pgTable(
@@ -338,6 +345,28 @@ export const scheduleOverrides = pgTable(
     index('idx_schedule_overrides_moved_to_date')
       .on(table.movedToDate)
       .where(sql`${table.movedToDate} IS NOT NULL`),
+  ],
+)
+
+export const scheduleReminderDeliveries = pgTable(
+  'schedule_reminder_deliveries',
+  {
+    scheduleId: text('schedule_id')
+      .notNull()
+      .references(() => schedules.id, { onDelete: 'cascade' }),
+    occurrenceDate: date('occurrence_date').notNull(),
+    remindAt: timestamp('remind_at', { withTimezone: true }).notNull(),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.scheduleId, table.occurrenceDate, table.remindAt],
+    }),
+    index('idx_schedule_reminder_deliveries_delivered_at').on(
+      table.deliveredAt,
+    ),
   ],
 )
 

@@ -9,7 +9,8 @@
 | [public.oauth_tokens](public.oauth_tokens.md)                                       | 9       | OAuth credentials identified by provider and account.                                | BASE TABLE |
 | [public.projects](public.projects.md)                                               | 11      | Projects group related tasks and track planning status and dates.                    | BASE TABLE |
 | [public.recurrence_rules](public.recurrence_rules.md)                               | 7       | Recurrence definitions referenced by tasks, schedules, and recurring task templates. | BASE TABLE |
-| [public.schedules](public.schedules.md)                                             | 7       | Calendar schedule series with optional local end date.                               | BASE TABLE |
+| [public.schedules](public.schedules.md)                                             | 8       | Calendar schedule series with optional local end date and push reminders.            | BASE TABLE |
+| [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md)       | 4       | Claimed push reminders for individual schedule occurrences.                          | BASE TABLE |
 | [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
@@ -113,6 +114,7 @@ erDiagram
 "public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
+"public.schedule_reminder_deliveries" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.task_checklist_items" }o--o| "public.tasks" : "FOREIGN KEY (subtask_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.task_checklist_items" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE SET NULL"
 "public.task_checklist_items" }o--|| "public.task_checklist_items" : "FOREIGN KEY (parent_item_id, checklist_id) REFERENCES task_checklist_items(id, checklist_id) ON DELETE CASCADE"
@@ -178,6 +180,7 @@ erDiagram
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
   date end_date
+  integer remind_before_minutes
 }
 "public.task_comments" {
   text id
@@ -465,6 +468,12 @@ erDiagram
   text recurrence_rule_id FK
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
+}
+"public.schedule_reminder_deliveries" {
+  text schedule_id FK
+  date occurrence_date
+  timestamp_with_time_zone remind_at
+  timestamp_with_time_zone delivered_at
 }
 ```
 

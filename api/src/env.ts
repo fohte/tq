@@ -4,7 +4,7 @@ import {
   parseEnv,
   requireString,
 } from '@fohte/service-kit/env'
-import { err, ok, type Result } from 'neverthrow'
+import { err, fromThrowable, ok, type Result } from 'neverthrow'
 
 import { resolveDatabaseUrl } from '#resolve-database-url'
 
@@ -19,6 +19,21 @@ const appEnvResult = optionalEnum(
   APP_ENVS,
   'development',
 )
+
+const configuredScheduleReminderTimeZone =
+  process.env['SCHEDULE_REMINDER_TIME_ZONE']?.trim()
+const scheduleReminderTimeZone =
+  configuredScheduleReminderTimeZone != null &&
+  configuredScheduleReminderTimeZone !== ''
+    ? configuredScheduleReminderTimeZone
+    : 'Asia/Tokyo'
+const parseTimeZone = fromThrowable(
+  (timeZone: string) =>
+    new Intl.DateTimeFormat('en-US', { timeZone }).resolvedOptions().timeZone,
+  (error) =>
+    `SCHEDULE_REMINDER_TIME_ZONE must be a valid IANA time zone: ${String(error)}`,
+)
+const scheduleReminderTimeZoneResult = parseTimeZone(scheduleReminderTimeZone)
 
 // Shared shape for env vars required in production but given a dev/test
 // fallback elsewhere: prefer the explicit value, then either fail (in
@@ -71,6 +86,7 @@ const parsed = parseEnv({
   ),
   DATABASE_URL: resolveDatabaseUrl(process.env, appEnv),
   APP_DOMAIN: resolveAppDomain(appEnv),
+  SCHEDULE_REMINDER_TIME_ZONE: scheduleReminderTimeZoneResult,
   VAPID_PUBLIC_KEY: resolveVapid('VAPID_PUBLIC_KEY', appEnv),
   VAPID_PRIVATE_KEY: resolveVapid('VAPID_PRIVATE_KEY', appEnv),
 })
@@ -83,5 +99,7 @@ if (parsed.isErr()) {
 export const DATABASE_URL: string = parsed.value.DATABASE_URL
 export const ASSET_MAX_SIZE_BYTES: number = parsed.value.ASSET_MAX_SIZE_BYTES
 export const APP_DOMAIN: string = parsed.value.APP_DOMAIN
+export const SCHEDULE_REMINDER_TIME_ZONE: string =
+  parsed.value.SCHEDULE_REMINDER_TIME_ZONE
 export const VAPID_PUBLIC_KEY: string = parsed.value.VAPID_PUBLIC_KEY
 export const VAPID_PRIVATE_KEY: string = parsed.value.VAPID_PRIVATE_KEY

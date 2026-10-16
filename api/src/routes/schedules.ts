@@ -40,6 +40,7 @@ function scheduleToResponse(
     endDate: series.schedule.endDate,
     startTime: revision.revision.startTime,
     endTime: revision.revision.endTime,
+    remindBeforeMinutes: series.schedule.remindBeforeMinutes,
     recurrence: recurrenceRuleToResponse(revision.rule),
     context: series.schedule.context,
     color: series.schedule.color,
