@@ -22,10 +22,10 @@ Date-effective local time and recurrence settings for a calendar schedule.
 | ------------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
 | schedule_revisions_created_at_not_null                       | n           | NOT NULL created_at                                                                 |
 | schedule_revisions_effective_from_not_null                   | n           | NOT NULL effective_from                                                             |
-| schedule_revisions_end_time_format_check                     | CHECK       | CHECK ((end_time ~ '^([01][0-9]                                                     | 2[0-3]):[0-5][0-9]$'::text)) |
+| schedule_revisions_end_time_format_check                     | CHECK       | CHECK ((end_time ~ '^[0-9]{2}:[0-9]{2}$'::text))                                    |
 | schedule_revisions_end_time_not_null                         | n           | NOT NULL end_time                                                                   |
 | schedule_revisions_schedule_id_not_null                      | n           | NOT NULL schedule_id                                                                |
-| schedule_revisions_start_time_format_check                   | CHECK       | CHECK ((start_time ~ '^([01][0-9]                                                   | 2[0-3]):[0-5][0-9]$'::text)) |
+| schedule_revisions_start_time_format_check                   | CHECK       | CHECK ((start_time ~ '^[0-9]{2}:[0-9]{2}$'::text))                                  |
 | schedule_revisions_start_time_not_null                       | n           | NOT NULL start_time                                                                 |
 | schedule_revisions_updated_at_not_null                       | n           | NOT NULL updated_at                                                                 |
 | schedule_revisions_recurrence_rule_id_recurrence_rules_id_fk | FOREIGN KEY | FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL |

@@ -10,7 +10,6 @@
 | [public.projects](public.projects.md)                                               | 11      | Projects group related tasks and track planning status and dates.                    | BASE TABLE |
 | [public.recurrence_rules](public.recurrence_rules.md)                               | 7       | Recurrence definitions referenced by tasks, schedules, and recurring task templates. | BASE TABLE |
 | [public.schedules](public.schedules.md)                                             | 7       | Calendar schedule series with optional local end date.                               | BASE TABLE |
-| [public.schedule_revisions](public.schedule_revisions.md)                           | 7       | Date-effective local time and recurrence settings for a calendar schedule.           | BASE TABLE |
 | [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
@@ -39,6 +38,7 @@
 | [public.task_checklists](public.task_checklists.md)                                 | 6       | Named or unnamed checklists associated with tasks.                                   | BASE TABLE |
 | [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker links.                 | BASE TABLE |
 | [public.webhook_subscriptions](public.webhook_subscriptions.md)                     | 4       | Endpoints subscribed to task status events.                                          | BASE TABLE |
+| [public.schedule_revisions](public.schedule_revisions.md)                           | 7       | Date-effective local time and recurrence settings for a calendar schedule.           | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -81,7 +81,6 @@
 ```mermaid
 erDiagram
 
-"public.schedules" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.task_comments" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_labels" }o--|| "public.labels" : "FOREIGN KEY (label_id) REFERENCES labels(id) ON DELETE CASCADE"
 "public.task_labels" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
@@ -121,6 +120,8 @@ erDiagram
 "public.task_checklists" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_waits" }o--|| "public.tasks" : "FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE"
 "public.task_waits" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE CASCADE"
+"public.schedule_revisions" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
+"public.schedule_revisions" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
@@ -172,14 +173,11 @@ erDiagram
 "public.schedules" {
   text id
   text title
-  text start_time
-  text end_time
-  text recurrence_rule_id FK
   text context
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
-  date start_date
+  date end_date
 }
 "public.task_comments" {
   text id
@@ -458,6 +456,15 @@ erDiagram
   text url
   text secret
   timestamp_with_time_zone created_at
+}
+"public.schedule_revisions" {
+  text schedule_id FK
+  date effective_from
+  text start_time
+  text end_time
+  text recurrence_rule_id FK
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 
