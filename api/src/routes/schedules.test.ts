@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildScheduleOverrideIndex,
-  expandScheduleForDate,
+  expandScheduleForDate as expandSchedule,
+  type ScheduleSeries,
 } from '#routes/schedule-expansion'
 
 function makeSchedule(
@@ -20,18 +21,40 @@ function makeSchedule(
   }> = {},
 ) {
   const now = new Date()
-  return {
+  const {
+    startDate = '2026-03-22',
+    startTime = '09:00',
+    endTime = '10:00',
+    recurrenceRuleId = null,
+    ...scheduleOverrides
+  } = overrides
+  const schedule = {
     id: 'sched-1',
     title: 'Test Schedule',
-    startDate: '2026-03-22',
-    startTime: '09:00',
-    endTime: '10:00',
-    recurrenceRuleId: null,
+    endDate: null,
     context: 'personal' as const,
     color: null,
     createdAt: now,
     updatedAt: now,
-    ...overrides,
+    ...scheduleOverrides,
+  }
+
+  return {
+    schedule,
+    revisions: [
+      {
+        revision: {
+          scheduleId: schedule.id,
+          effectiveFrom: startDate,
+          startTime,
+          endTime,
+          recurrenceRuleId,
+          createdAt: now,
+          updatedAt: now,
+        },
+        rule: null,
+      },
+    ],
   }
 }
 
@@ -60,11 +83,27 @@ function makeRule(
 }
 
 function expandOnDates(
-  schedule: ReturnType<typeof makeSchedule>,
+  schedule: ScheduleSeries,
   rule: ReturnType<typeof makeRule> | null,
   ...dates: string[]
 ) {
   return dates.map((date) => expandScheduleForDate(schedule, rule, date))
+}
+
+function expandScheduleForDate(
+  schedule: ScheduleSeries,
+  rule: ReturnType<typeof makeRule> | null,
+  date: string,
+  overrides?: Parameters<typeof expandSchedule>[2],
+) {
+  return expandSchedule(
+    {
+      ...schedule,
+      revisions: schedule.revisions.map((revision) => ({ ...revision, rule })),
+    },
+    date,
+    overrides,
+  )
 }
 
 describe('expandScheduleForDate', () => {

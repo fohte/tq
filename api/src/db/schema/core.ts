@@ -255,13 +255,7 @@ export const schedules = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     title: text('title').notNull(),
-    startTime: text('start_time').notNull(),
-    endTime: text('end_time').notNull(),
-    startDate: date('start_date').notNull(),
-    recurrenceRuleId: text('recurrence_rule_id').references(
-      () => recurrenceRules.id,
-      { onDelete: 'set null' },
-    ),
+    endDate: date('end_date'),
     context: text('context', {
       enum: ['work', 'personal'],
     })
@@ -275,9 +269,42 @@ export const schedules = pgTable(
       .notNull()
       .defaultNow(),
   },
+  (table) => [index('idx_schedules_context').on(table.context)],
+)
+
+export const scheduleRevisions = pgTable(
+  'schedule_revisions',
+  {
+    scheduleId: text('schedule_id')
+      .notNull()
+      .references(() => schedules.id, { onDelete: 'cascade' }),
+    effectiveFrom: date('effective_from').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    recurrenceRuleId: text('recurrence_rule_id').references(
+      () => recurrenceRules.id,
+      { onDelete: 'set null' },
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
   (table) => [
-    index('idx_schedules_recurrence_rule_id').on(table.recurrenceRuleId),
-    index('idx_schedules_context').on(table.context),
+    primaryKey({ columns: [table.scheduleId, table.effectiveFrom] }),
+    check(
+      'schedule_revisions_start_time_format_check',
+      sql`${table.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
+    ),
+    check(
+      'schedule_revisions_end_time_format_check',
+      sql`${table.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
+    ),
+    index('idx_schedule_revisions_recurrence_rule_id').on(
+      table.recurrenceRuleId,
+    ),
   ],
 )
 

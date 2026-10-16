@@ -35,6 +35,7 @@ interface ScheduleResponse {
   id: string
   title: string
   startDate: string
+  endDate: string | null
   startTime: string
   endTime: string
   recurrence: {
@@ -601,6 +602,7 @@ describe('schedules API', () => {
           id: 'SCHEDULE_ID',
           title: 'Sleep',
           startDate: '2026-03-23',
+          endDate: null,
           startTime: '23:00',
           endTime: '07:00',
           recurrence: null,
@@ -941,6 +943,7 @@ describe('schedules API', () => {
           id: 'SCHEDULE_ID',
           title: 'Routine',
           startDate: '2026-03-25',
+          endDate: null,
           startTime: '09:00',
           endTime: '10:00',
           recurrence: null,
@@ -948,6 +951,408 @@ describe('schedules API', () => {
           color: null,
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
+        },
+      })
+    })
+
+    it('changes times and recurrence only from effectiveFrom onward', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+
+      const patchResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-24',
+            startTime: '18:00',
+            endTime: '19:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2, 4],
+            },
+          }),
+        },
+      )
+      const listResponse = await app.request(
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-26',
+      )
+
+      const snapshot = async () => ({
+        patchStatus: patchResponse.status,
+        listStatus: listResponse.status,
+        blocks: normalizeExpandedBlocks(
+          await jsonBody<ExpandedBlock[]>(listResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        patchStatus: 200,
+        listStatus: 200,
+        blocks: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-22T09:00:00',
+            end: '2026-03-22T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-22',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-23T09:00:00',
+            end: '2026-03-23T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-23',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-24T18:00:00',
+            end: '2026-03-24T19:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-24',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2, 4],
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-26T18:00:00',
+            end: '2026-03-26T19:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-26',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2, 4],
+              dayOfMonth: null,
+            },
+          },
+        ],
+      })
+    })
+
+    it('applies schedule changes to all dates when effectiveFrom is omitted', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      const patchResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startTime: '11:00',
+            endTime: '12:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1],
+            },
+          }),
+        },
+      )
+      const listResponse = await app.request(
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-24',
+      )
+
+      const snapshot = async () => ({
+        patchStatus: patchResponse.status,
+        listStatus: listResponse.status,
+        blocks: normalizeExpandedBlocks(
+          await jsonBody<ExpandedBlock[]>(listResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        patchStatus: 200,
+        listStatus: 200,
+        blocks: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-23T11:00:00',
+            end: '2026-03-23T12:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-23',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1],
+              dayOfMonth: null,
+            },
+          },
+        ],
+      })
+    })
+
+    it('removes only exceptions whose original dates stop recurring', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      const retainedOverride = await putScheduleOverride(
+        created.id,
+        '2026-03-24',
+        { startTime: '08:30', endTime: '09:30' },
+      )
+      const removedOverride = await putScheduleOverride(
+        created.id,
+        '2026-03-25',
+        { date: '2026-03-26', startTime: '08:30', endTime: '09:30' },
+      )
+      const firstPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-24',
+            startTime: '18:00',
+            endTime: '19:00',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2],
+            },
+          }),
+        },
+      )
+      const secondPatch = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            effectiveFrom: '2026-03-25',
+            recurrence: { type: 'daily', interval: 1 },
+          }),
+        },
+      )
+      const listResponse = await app.request(
+        '/api/schedule/events?startDate=2026-03-24&endDate=2026-03-26',
+      )
+
+      const snapshot = async () => ({
+        overrideStatuses: [retainedOverride.status, removedOverride.status],
+        patchStatuses: [firstPatch.status, secondPatch.status],
+        listStatus: listResponse.status,
+        blocks: normalizeExpandedBlocks(
+          await jsonBody<ExpandedBlock[]>(listResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        overrideStatuses: [200, 200],
+        patchStatuses: [200, 200],
+        listStatus: 200,
+        blocks: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-24T08:30:00',
+            end: '2026-03-24T09:30:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-24',
+            overridden: 'time',
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [2],
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-25T18:00:00',
+            end: '2026-03-25T19:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-25',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-26T18:00:00',
+            end: '2026-03-26T19:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-26',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+        ],
+      })
+    })
+
+    it('ends a schedule inclusively on endDate', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      const patchResponse = await app.request(
+        `/api/schedule/events/${created.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endDate: '2026-03-23' }),
+        },
+      )
+      const listResponse = await app.request(
+        '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-24',
+      )
+
+      const snapshot = async () => ({
+        patchStatus: patchResponse.status,
+        endDate: (await jsonBody<ScheduleResponse>(patchResponse)).endDate,
+        listStatus: listResponse.status,
+        blocks: normalizeExpandedBlocks(
+          await jsonBody<ExpandedBlock[]>(listResponse),
+        ),
+      })
+
+      expect(await snapshot()).toEqual({
+        patchStatus: 200,
+        endDate: '2026-03-23',
+        listStatus: 200,
+        blocks: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-22T09:00:00',
+            end: '2026-03-22T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-22',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            title: 'Routine',
+            startDate: '2026-03-22',
+            start: '2026-03-23T09:00:00',
+            end: '2026-03-23T10:00:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2026-03-23',
+            overridden: null,
+            recurrence: {
+              id: 'RECURRENCE_ID',
+              type: 'daily',
+              interval: 1,
+              daysOfWeek: null,
+              dayOfMonth: null,
+            },
+          },
+        ],
+      })
+    })
+
+    it('rejects endDate before the first revision date', async () => {
+      const { body: created } = await createSchedule({
+        title: 'Routine',
+        startDate: '2026-03-22',
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+      const response = await app.request(`/api/schedule/events/${created.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endDate: '2026-03-21' }),
+      })
+
+      const snapshot = async () => ({
+        status: response.status,
+        body: await response.json(),
+      })
+
+      expect(await snapshot()).toEqual({
+        status: 422,
+        body: {
+          error: 'endDate must be on or after the schedule start date',
         },
       })
     })

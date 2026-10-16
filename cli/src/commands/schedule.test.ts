@@ -386,6 +386,135 @@ describe('schedule events create', () => {
   })
 })
 
+describe('schedule events update', () => {
+  it('applies recurrence and end date changes from an effective date', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const updated = makeScheduleEvent({
+      id,
+      startTime: '09:30',
+      endTime: '10:00',
+      endDate: '2026-12-20',
+      recurrence: {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [0],
+        dayOfMonth: null,
+      },
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--effective-from',
+          '2026-12-20',
+          '--start-time',
+          '09:30',
+          '--end-time',
+          '10:00',
+          '--recurrence-type',
+          'weekly',
+          '--recurrence-interval',
+          '1',
+          '--recurrence-days-of-week',
+          '0',
+          '--end-date',
+          '2026-12-20',
+        ],
+        new Response(JSON.stringify(updated), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: {
+            effectiveFrom: '2026-12-20',
+            startTime: '09:30',
+            endTime: '10:00',
+            endDate: '2026-12-20',
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [0],
+            },
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+    })
+  })
+
+  it('clears recurrence and end date from an effective date', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const updated = makeScheduleEvent({ id })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--effective-from',
+          '2026-12-20',
+          '--no-recurrence',
+          '--clear-end-date',
+        ],
+        new Response(JSON.stringify(updated), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: {
+            effectiveFrom: '2026-12-20',
+            recurrence: null,
+            endDate: null,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+    })
+  })
+})
+
+describe('schedule events delete', () => {
+  it('deletes the selected schedule', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    expect(
+      await runScheduleCli(
+        ['schedule', 'events', 'delete', id],
+        new Response(null, { status: 204 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'DELETE',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify({ deleted: true, id }, null, 2)}\n`]],
+    })
+  })
+})
+
 describe('schedule time blocks update', () => {
   it('updates an end time and marks the block manual', async () => {
     const id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'

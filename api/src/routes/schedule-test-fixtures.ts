@@ -29,6 +29,7 @@ const defaultScheduleEvent: ScheduleEventResponse = {
   id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   title: 'Sample schedule',
   startDate: '2026-12-18',
+  endDate: null,
   startTime: '08:45',
   endTime: '09:15',
   recurrence: null,
