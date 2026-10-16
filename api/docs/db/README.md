@@ -10,7 +10,6 @@
 | [public.projects](public.projects.md)                                               | 11      | Projects group related tasks and track planning status and dates.                    | BASE TABLE |
 | [public.recurrence_rules](public.recurrence_rules.md)                               | 7       | Recurrence definitions referenced by tasks, schedules, and recurring task templates. | BASE TABLE |
 | [public.schedules](public.schedules.md)                                             | 8       | Calendar schedule series with optional local end date and push reminders.            | BASE TABLE |
-| [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md)       | 4       | Claimed push reminders for individual schedule occurrences.                          | BASE TABLE |
 | [public.task_comments](public.task_comments.md)                                     | 5       | Text comments attached to tasks.                                                     | BASE TABLE |
 | [public.task_labels](public.task_labels.md)                                         | 2       | Join table associating tasks with labels.                                            | BASE TABLE |
 | [public.task_pages](public.task_pages.md)                                           | 8       | Formatted content pages attached to tasks.                                           | BASE TABLE |
@@ -40,6 +39,7 @@
 | [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker links.                 | BASE TABLE |
 | [public.webhook_subscriptions](public.webhook_subscriptions.md)                     | 4       | Endpoints subscribed to task status events.                                          | BASE TABLE |
 | [public.schedule_revisions](public.schedule_revisions.md)                           | 7       | Date-effective local time and recurrence settings for a calendar schedule.           | BASE TABLE |
+| [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md)       | 4       | Claimed push reminders for individual schedule occurrences.                          | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -114,7 +114,6 @@ erDiagram
 "public.recurring_task_templates" |o--|| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id)"
 "public.recurring_task_templates" }o--o| "public.tasks" : "FOREIGN KEY (parent_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
-"public.schedule_reminder_deliveries" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.task_checklist_items" }o--o| "public.tasks" : "FOREIGN KEY (subtask_id) REFERENCES tasks(id) ON DELETE SET NULL"
 "public.task_checklist_items" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE SET NULL"
 "public.task_checklist_items" }o--|| "public.task_checklist_items" : "FOREIGN KEY (parent_item_id, checklist_id) REFERENCES task_checklist_items(id, checklist_id) ON DELETE CASCADE"
@@ -124,6 +123,7 @@ erDiagram
 "public.task_waits" }o--o| "public.task_github_links" : "FOREIGN KEY (github_link_id) REFERENCES task_github_links(id) ON DELETE CASCADE"
 "public.schedule_revisions" }o--o| "public.recurrence_rules" : "FOREIGN KEY (recurrence_rule_id) REFERENCES recurrence_rules(id) ON DELETE SET NULL"
 "public.schedule_revisions" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
+"public.schedule_reminder_deliveries" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
