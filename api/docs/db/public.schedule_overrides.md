@@ -54,14 +54,11 @@ erDiagram
 "public.schedules" {
   text id
   text title
-  text start_time
-  text end_time
-  text recurrence_rule_id FK
   text context
   text color
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
-  date start_date
+  date end_date
 }
 ```
 

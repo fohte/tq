@@ -734,7 +734,9 @@ describe('operation tool input schemas', () => {
       schedule_override_clear: false,
       schedule_override_set: false,
       schedule_events_create: false,
+      schedule_events_delete: false,
       schedule_events_list: false,
+      schedule_events_update: false,
       schedule_time_blocks_create: false,
       schedule_time_blocks_delete: false,
       schedule_time_blocks_list: false,
@@ -825,6 +827,14 @@ describe('operation tool annotations', () => {
       schedule_override_set: {
         readOnlyHint: false,
         destructiveHint: false,
+      },
+      schedule_events_update: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
+      schedule_events_delete: {
+        readOnlyHint: false,
+        destructiveHint: true,
       },
       memo_get: { readOnlyHint: true },
       memo_update: { readOnlyHint: false, destructiveHint: false },

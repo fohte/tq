@@ -46,12 +46,6 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/description-templates/:name':
     'template management is a web UI action',
 
-  // Updating or deleting schedule defaults remains a calendar action;
-  // per-occurrence changes have separate CLI operations.
-  'PATCH /api/schedule/events/:id':
-    'calendar UI is faster for direct manipulation',
-  'DELETE /api/schedule/events/:id':
-    'calendar UI is faster for direct manipulation',
   // Web Push subscriptions belong to a browser: only a browser can produce
   // one, and only a browser can display what gets delivered to it.
   'GET /api/push/vapid-public-key': 'web push is a browser-only capability',

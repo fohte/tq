@@ -7,9 +7,9 @@ const SCHEDULE_DATE_RANGE_ERROR_MESSAGE = `Date range must be chronological and 
 
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000
 
-export const scheduleTimeSchema = z
+const scheduleTimeSchema = z
   .string()
-  .regex(/^\d{2}:\d{2}$/)
+  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
   .describe('Local time in HH:MM format.')
 
 export const createScheduleSchema = z.object({
@@ -23,6 +23,41 @@ export const createScheduleSchema = z.object({
   context: z.enum(['work', 'personal']).optional(),
   color: z.string().optional(),
 })
+
+export const updateScheduleInputSchema = z.object({
+  title: z.string().min(1).optional(),
+  startDate: z.iso.date().optional(),
+  effectiveFrom: z.iso.date().optional(),
+  startTime: scheduleTimeSchema.optional(),
+  endTime: scheduleTimeSchema.optional(),
+  endDate: z.iso.date().nullable().optional(),
+  recurrence: recurrenceRuleSchema.nullable().optional(),
+  context: z.enum(['work', 'personal']).nullable().optional(),
+  color: z.string().nullable().optional(),
+})
+
+export const SCHEDULE_DATE_SELECTION_ERROR_MESSAGE =
+  'Specify either startDate or effectiveFrom, not both.'
+
+export function isScheduleDateSelectionValid(input: {
+  startDate?: unknown
+  effectiveFrom?: unknown
+}): boolean {
+  return input.startDate === undefined || input.effectiveFrom === undefined
+}
+
+export function withScheduleDateSelection<
+  Schema extends z.ZodObject<z.ZodRawShape>,
+>(schema: Schema) {
+  return schema.refine(isScheduleDateSelectionValid, {
+    message: SCHEDULE_DATE_SELECTION_ERROR_MESSAGE,
+    path: ['effectiveFrom'],
+  })
+}
+
+export const updateScheduleSchema = withScheduleDateSelection(
+  updateScheduleInputSchema,
+)
 
 export const scheduleDateRangeInputSchema = z.object({
   startDate: z.iso

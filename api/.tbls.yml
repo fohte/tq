@@ -169,15 +169,20 @@ comments:
       github_link_id: 'Optional GitHub issue or pull request linked to this item.'
       subtask_id: 'Optional task linked to this item as a subtask.'
   - table: schedules
-    tableComment: 'Calendar schedules with a local start date, local time range, and optional recurrence rule.'
+    tableComment: 'Calendar schedule series with optional local end date.'
     columnComments:
       title: 'Human-readable schedule title.'
-      start_date: 'Local calendar date when the schedule starts; recurring schedules do not occur before this date.'
-      start_time: 'Local start time of the schedule in 24-hour HH:MM format.'
-      end_time: 'Local end time of the schedule in 24-hour HH:MM format.'
-      recurrence_rule_id: 'Recurrence rule associated with the schedule; null for a one-time schedule.'
+      end_date: 'Last local calendar date on which the schedule can occur; null for no end date.'
       context: 'Whether the schedule belongs to the work or personal context.'
       color: 'Optional color value associated with the schedule.'
+  - table: schedule_revisions
+    tableComment: 'Date-effective local time and recurrence settings for a calendar schedule.'
+    columnComments:
+      schedule_id: 'Schedule series whose settings are revised.'
+      effective_from: 'First local calendar date on which this revision applies.'
+      start_time: 'Local start time in 24-hour HH:MM format.'
+      end_time: 'Local end time in 24-hour HH:MM format.'
+      recurrence_rule_id: 'Recurrence rule associated with this revision; null for a one-time occurrence.'
   - table: schedule_overrides
     tableComment: 'One-day moves, time changes, and skipped schedule occurrences.'
     columnComments:

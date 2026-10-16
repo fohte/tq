@@ -1,274 +1,65 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, gte, lte } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { createFactory } from 'hono/factory'
-import { z } from 'zod'
 
-import { db } from '#db/connection'
-import { recurrenceRules, schedules, timeBlocks } from '#db/schema'
-import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { taskIdOrNumber } from '#lib/numeric-id'
-import { localDateBoundsToUtc } from '#lib/timezone'
 import {
   expandScheduleForDate,
   formatDateStr,
+  getScheduleRevisionForDate,
+  recurrenceRuleToResponse,
+  type ScheduleRevisionWithRule,
+  type ScheduleSeries,
 } from '#routes/schedule-expansion'
 import { scheduleOverridesApp } from '#routes/schedule-overrides'
+import {
+  createScheduleSeries,
+  deleteScheduleSeries,
+  updateScheduleSeries,
+} from '#routes/schedule-revisions'
 import {
   loadScheduleOverridesForExpansion,
   loadSchedulesWithRules,
 } from '#routes/schedule-shared'
-import { findTaskByIdOrNumber, timeBlockToResponse } from '#routes/tasks/shared'
-import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { scheduleTimeBlocksApp } from '#routes/schedule-time-blocks'
 import {
   createScheduleSchema,
   scheduleDateRangeSchema,
-  scheduleTimeSchema,
+  updateScheduleSchema,
 } from '#schemas/schedule'
 
-const createTimeBlockSchema = z.object({
-  taskId: taskIdOrNumber,
-  startTime: z.iso.datetime(),
-  endTime: z.iso.datetime(),
-  isAutoScheduled: z.boolean().optional(),
-})
-
-const updateTimeBlockSchema = z.object({
-  startTime: z.iso.datetime().optional(),
-  endTime: z.iso.datetime().optional(),
-  isAutoScheduled: z.boolean().optional(),
-})
-
-const timeBlockDateQuerySchema = scheduleDateRangeSchema.safeExtend({
-  tzOffset: z.coerce.number().int().optional(),
-})
-
-const updateScheduleSchema = z.object({
-  title: z.string().min(1).optional(),
-  startDate: z.iso.date().optional(),
-  startTime: scheduleTimeSchema.optional(),
-  endTime: scheduleTimeSchema.optional(),
-  recurrence: recurrenceRuleSchema.nullable().optional(),
-  context: z.enum(['work', 'personal']).nullable().optional(),
-  color: z.string().nullable().optional(),
-})
-
-function recurrenceRuleToResponse(
-  rule: typeof recurrenceRules.$inferSelect | null,
-) {
-  if (!rule) return null
-  return {
-    id: rule.id,
-    type: rule.type,
-    interval: rule.interval,
-    daysOfWeek: rule.daysOfWeek,
-    dayOfMonth: rule.dayOfMonth,
-  }
-}
-
 function scheduleToResponse(
-  schedule: typeof schedules.$inferSelect,
-  rule: typeof recurrenceRules.$inferSelect | null,
+  series: ScheduleSeries,
+  revision: ScheduleRevisionWithRule,
 ) {
+  const firstRevision = firstOrThrow(series.revisions)
+
   return {
-    id: schedule.id,
-    title: schedule.title,
-    startDate: schedule.startDate,
-    startTime: schedule.startTime,
-    endTime: schedule.endTime,
-    recurrence: recurrenceRuleToResponse(rule),
-    context: schedule.context,
-    color: schedule.color,
-    createdAt: schedule.createdAt.toISOString(),
-    updatedAt: schedule.updatedAt.toISOString(),
+    id: series.schedule.id,
+    title: series.schedule.title,
+    startDate: firstRevision.revision.effectiveFrom,
+    endDate: series.schedule.endDate,
+    startTime: revision.revision.startTime,
+    endTime: revision.revision.endTime,
+    recurrence: recurrenceRuleToResponse(revision.rule),
+    context: series.schedule.context,
+    color: series.schedule.color,
+    createdAt: series.schedule.createdAt.toISOString(),
+    updatedAt: series.schedule.updatedAt.toISOString(),
   }
 }
-
-type ScheduleEnv = {
-  Variables: {
-    schedule: typeof schedules.$inferSelect
-    recurrenceRule: typeof recurrenceRules.$inferSelect | null
-  }
-}
-
-const factory = createFactory<ScheduleEnv, '/:id'>()
-
-const requireSchedule = factory.createMiddleware(async (c, next) => {
-  const id = c.req.param('id')
-
-  const schedule = await db.query.schedules.findFirst({
-    where: eq(schedules.id, id),
-  })
-  if (!schedule) {
-    return c.json({ error: 'Schedule not found' }, 404)
-  }
-
-  const rule =
-    schedule.recurrenceRuleId != null
-      ? ((await db.query.recurrenceRules.findFirst({
-          where: eq(recurrenceRules.id, schedule.recurrenceRuleId),
-        })) ?? null)
-      : null
-
-  c.set('schedule', schedule)
-  c.set('recurrenceRule', rule)
-  return next()
-})
 
 export const schedulesApp = new Hono()
-  // TimeBlock endpoints
-  .post(
-    '/time-blocks',
-    zValidator('json', createTimeBlockSchema),
-    async (c) => {
-      const input = c.req.valid('json')
-
-      // Verify task exists
-      const task = await findTaskByIdOrNumber(String(input.taskId))
-      if (!task) {
-        return c.json({ error: 'Task not found' }, 404)
-      }
-
-      const block = firstOrThrow(
-        await db
-          .insert(timeBlocks)
-          .values({
-            taskId: task.id,
-            startTime: new Date(input.startTime),
-            endTime: new Date(input.endTime),
-            isAutoScheduled: input.isAutoScheduled ?? false,
-          })
-          .returning(),
-      )
-
-      setChangeEventTaskIds(c, [task.id])
-
-      return c.json(timeBlockToResponse(block), 201)
-    },
-  )
-  .get(
-    '/time-blocks',
-    zValidator('query', timeBlockDateQuerySchema),
-    async (c) => {
-      const { startDate, endDate, tzOffset } = c.req.valid('query')
-      const { dayStart } = localDateBoundsToUtc(startDate, tzOffset ?? 0)
-      const { dayEnd } = localDateBoundsToUtc(endDate, tzOffset ?? 0)
-
-      const blocks = await db
-        .select()
-        .from(timeBlocks)
-        .where(
-          and(
-            lte(timeBlocks.startTime, dayEnd),
-            gte(timeBlocks.endTime, dayStart),
-          ),
-        )
-        .orderBy(timeBlocks.startTime)
-
-      return c.json(blocks.map(timeBlockToResponse), 200)
-    },
-  )
-  .patch(
-    '/time-blocks/:id',
-    zValidator('json', updateTimeBlockSchema),
-    async (c) => {
-      const id = c.req.param('id')
-
-      const existing = await db.query.timeBlocks.findFirst({
-        where: eq(timeBlocks.id, id),
-      })
-      if (!existing) {
-        return c.json({ error: 'Time block not found' }, 404)
-      }
-
-      const input = c.req.valid('json')
-      const updates: Partial<typeof timeBlocks.$inferInsert> = {}
-
-      if (input.startTime !== undefined) {
-        updates.startTime = new Date(input.startTime)
-      }
-      if (input.endTime !== undefined) {
-        updates.endTime = new Date(input.endTime)
-      }
-      if (input.isAutoScheduled !== undefined) {
-        updates.isAutoScheduled = input.isAutoScheduled
-      }
-
-      if (Object.keys(updates).length === 0) {
-        setChangeEventTaskIds(c, [])
-        return c.json(timeBlockToResponse(existing), 200)
-      }
-
-      const updated = firstOrThrow(
-        await db
-          .update(timeBlocks)
-          .set({ ...updates, updatedAt: new Date() })
-          .where(eq(timeBlocks.id, id))
-          .returning(),
-      )
-
-      setChangeEventTaskIds(c, [existing.taskId])
-
-      return c.json(timeBlockToResponse(updated), 200)
-    },
-  )
-  .delete('/time-blocks/:id', async (c) => {
-    const id = c.req.param('id')
-
-    const existing = await db.query.timeBlocks.findFirst({
-      where: eq(timeBlocks.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Time block not found' }, 404)
-    }
-
-    await db.delete(timeBlocks).where(eq(timeBlocks.id, id))
-
-    setChangeEventTaskIds(c, [existing.taskId])
-
-    return c.body(null, 204)
-  })
+  .route('/', scheduleTimeBlocksApp)
   .post('/events', zValidator('json', createScheduleSchema), async (c) => {
     const input = c.req.valid('json')
+    const series = await createScheduleSeries(input)
+    const initialRevision = firstOrThrow(series.revisions)
 
-    let newRule: typeof recurrenceRules.$inferSelect | null = null
-
-    if (input.recurrence != null) {
-      newRule = firstOrThrow(
-        await db
-          .insert(recurrenceRules)
-          .values({
-            type: input.recurrence.type,
-            interval: input.recurrence.interval,
-            daysOfWeek: input.recurrence.daysOfWeek ?? null,
-            dayOfMonth: input.recurrence.dayOfMonth ?? null,
-          })
-          .returning(),
-      )
-    }
-
-    const schedule = firstOrThrow(
-      await db
-        .insert(schedules)
-        .values({
-          title: input.title,
-          startDate: input.startDate,
-          startTime: input.startTime,
-          endTime: input.endTime,
-          recurrenceRuleId: newRule?.id ?? null,
-          context: input.context ?? 'personal',
-          color: input.color ?? null,
-        })
-        .returning(),
-    )
-
-    return c.json(scheduleToResponse(schedule, newRule), 201)
+    return c.json(scheduleToResponse(series, initialRevision), 201)
   })
   .get('/events', zValidator('query', scheduleDateRangeSchema), async (c) => {
     const { startDate, endDate } = c.req.valid('query')
-
-    const scheduleRules = await loadSchedulesWithRules()
+    const scheduleSeries = await loadSchedulesWithRules()
 
     const dates: string[] = []
     const cursor = new Date(startDate + 'T00:00:00')
@@ -284,117 +75,44 @@ export const schedulesApp = new Hono()
     )
 
     const expanded = dates.flatMap((dateStr) =>
-      scheduleRules.flatMap(({ schedule, rule }) =>
+      scheduleSeries.flatMap((series) =>
         expandScheduleForDate(
-          schedule,
-          rule,
+          series,
           dateStr,
-          overridesBySchedule.get(schedule.id),
+          overridesBySchedule.get(series.schedule.id),
         ).map((block) => ({
           ...block,
-          recurrence: recurrenceRuleToResponse(rule),
+          recurrence: recurrenceRuleToResponse(
+            getScheduleRevisionForDate(series.revisions, block.occurrenceDate)
+              ?.rule ?? null,
+          ),
         })),
       ),
     )
 
     return c.json(expanded, 200)
   })
-  .patch(
-    '/events/:id',
-    requireSchedule,
-    zValidator('json', updateScheduleSchema),
-    async (c) => {
-      const id = c.req.param('id')
-      const input = c.req.valid('json')
-      const existingSchedule = c.get('schedule')
+  .patch('/events/:id', zValidator('json', updateScheduleSchema), async (c) => {
+    const result = await updateScheduleSeries(
+      c.req.param('id'),
+      c.req.valid('json'),
+    )
+    if (result.kind === 'missing') {
+      return c.json({ error: 'Schedule not found' }, 404)
+    }
+    if (result.kind === 'invalid') {
+      return c.json({ error: result.message }, 422)
+    }
 
-      const now = new Date()
-      let recurrenceRuleId = existingSchedule.recurrenceRuleId
-
-      // Handle recurrence update
-      if (input.recurrence !== undefined) {
-        if (input.recurrence === null) {
-          // Remove recurrence: delete old rule if exists
-          if (recurrenceRuleId != null) {
-            await db
-              .delete(recurrenceRules)
-              .where(eq(recurrenceRules.id, recurrenceRuleId))
-          }
-          recurrenceRuleId = null
-        } else if (recurrenceRuleId != null) {
-          // Update existing rule
-          await db
-            .update(recurrenceRules)
-            .set({
-              type: input.recurrence.type,
-              interval: input.recurrence.interval,
-              daysOfWeek: input.recurrence.daysOfWeek ?? null,
-              dayOfMonth: input.recurrence.dayOfMonth ?? null,
-              updatedAt: now,
-            })
-            .where(eq(recurrenceRules.id, recurrenceRuleId))
-        } else {
-          // Create new rule
-          const rule = firstOrThrow(
-            await db
-              .insert(recurrenceRules)
-              .values({
-                type: input.recurrence.type,
-                interval: input.recurrence.interval,
-                daysOfWeek: input.recurrence.daysOfWeek ?? null,
-                dayOfMonth: input.recurrence.dayOfMonth ?? null,
-              })
-              .returning(),
-          )
-          recurrenceRuleId = rule.id
-        }
-      }
-
-      const updated = firstOrThrow(
-        await db
-          .update(schedules)
-          .set({
-            ...(input.title !== undefined ? { title: input.title } : {}),
-            ...(input.startDate !== undefined
-              ? { startDate: input.startDate }
-              : {}),
-            ...(input.startTime !== undefined
-              ? { startTime: input.startTime }
-              : {}),
-            ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
-            ...(input.context !== undefined
-              ? { context: input.context ?? 'personal' }
-              : {}),
-            ...(input.color !== undefined ? { color: input.color } : {}),
-            recurrenceRuleId,
-            updatedAt: now,
-          })
-          .where(eq(schedules.id, id))
-          .returning(),
-      )
-
-      const rule =
-        recurrenceRuleId != null
-          ? ((await db.query.recurrenceRules.findFirst({
-              where: eq(recurrenceRules.id, recurrenceRuleId),
-            })) ?? null)
-          : null
-
-      return c.json(scheduleToResponse(updated, rule), 200)
-    },
-  )
-  .delete('/events/:id', requireSchedule, async (c) => {
-    const id = c.req.param('id')
-    const existingSchedule = c.get('schedule')
-
-    // Delete the schedule first
-    await db.delete(schedules).where(eq(schedules.id, id))
-
-    // Clean up orphaned recurrence rule
-    if (existingSchedule.recurrenceRuleId != null) {
-      await db
-        .delete(recurrenceRules)
-        .where(eq(recurrenceRules.id, existingSchedule.recurrenceRuleId))
+    return c.json(
+      scheduleToResponse(result.series, result.responseRevision),
+      200,
+    )
+  })
+  .delete('/events/:id', async (c) => {
+    const deleted = await deleteScheduleSeries(c.req.param('id'))
+    if (!deleted) {
+      return c.json({ error: 'Schedule not found' }, 404)
     }
 
     return c.body(null, 204)

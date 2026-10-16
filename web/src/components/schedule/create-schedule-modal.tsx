@@ -145,6 +145,35 @@ function scheduleContext(schedule: Schedule | undefined): ContextValue | '' {
   return ''
 }
 
+function scheduleRecurrenceType(
+  schedule: Schedule | undefined,
+): RecurrenceType | '' {
+  const type = schedule?.recurrence?.type
+  return type === 'daily' ||
+    type === 'weekly' ||
+    type === 'monthly' ||
+    type === 'custom'
+    ? type
+    : ''
+}
+
+function sameRecurrence(
+  current: Schedule['recurrence'],
+  next: NonNullable<UpdateScheduleInput['recurrence']> | null,
+) {
+  if (current == null || next == null) return current == null && next == null
+
+  const currentDays = [...(current.daysOfWeek ?? [])].sort()
+  const nextDays = [...(next.daysOfWeek ?? [])].sort()
+  return (
+    current.type === next.type &&
+    current.interval === next.interval &&
+    current.dayOfMonth === (next.dayOfMonth ?? null) &&
+    currentDays.length === nextDays.length &&
+    currentDays.every((day, index) => day === nextDays[index])
+  )
+}
+
 export function CreateScheduleModal({
   open,
   onOpenChange,
@@ -162,7 +191,7 @@ export function CreateScheduleModal({
     schedule ? scheduleTimeOfDay(schedule.end) : '',
   )
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType | ''>(
-    schedule?.recurrence?.type ?? '',
+    scheduleRecurrenceType(schedule),
   )
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
     schedule?.recurrence?.daysOfWeek ?? [],
@@ -197,7 +226,7 @@ export function CreateScheduleModal({
     setStartDate(schedule?.startDate ?? defaultStartDate)
     setStartTime(schedule ? scheduleTimeOfDay(schedule.start) : '')
     setEndTime(schedule ? scheduleTimeOfDay(schedule.end) : '')
-    setRecurrenceType(schedule?.recurrence?.type ?? '')
+    setRecurrenceType(scheduleRecurrenceType(schedule))
     setDaysOfWeek(schedule?.recurrence?.daysOfWeek ?? [])
     setDayOfMonth(
       schedule?.recurrence?.dayOfMonth != null
@@ -237,13 +266,19 @@ export function CreateScheduleModal({
 
     if (schedule) {
       const input: UpdateScheduleInput = {
-        title: title.trim(),
-        startDate,
-        startTime,
-        endTime,
-        recurrence,
-        context: context || null,
-        color: color || null,
+        ...(title.trim() !== schedule.title ? { title: title.trim() } : {}),
+        ...(startDate !== schedule.startDate ? { startDate } : {}),
+        ...(startTime !== scheduleTimeOfDay(schedule.start)
+          ? { startTime }
+          : {}),
+        ...(endTime !== scheduleTimeOfDay(schedule.end) ? { endTime } : {}),
+        ...(!sameRecurrence(schedule.recurrence, recurrence)
+          ? { recurrence }
+          : {}),
+        ...(context !== scheduleContext(schedule)
+          ? { context: context || null }
+          : {}),
+        ...(color !== (schedule.color ?? '') ? { color: color || null } : {}),
       }
       updateSchedule.mutate(
         { id: schedule.scheduleId, input },

@@ -16,12 +16,23 @@ import {
 } from '#operations/types'
 import {
   createScheduleSchema,
+  isScheduleDateSelectionValid,
   MAX_SCHEDULE_DATE_RANGE_DAYS,
+  SCHEDULE_DATE_SELECTION_ERROR_MESSAGE,
   scheduleDateRangeInputSchema,
   scheduleDateRangeSchema,
+  updateScheduleInputSchema,
   withScheduleDateRange,
+  withScheduleDateSelection,
 } from '#schemas/schedule'
 
+const scheduleEventIdSchema = z.object({ id: z.uuid() })
+const scheduleUpdateOperationSchema = updateScheduleInputSchema.extend({
+  id: z.uuid(),
+})
+const scheduleUpdateMcpInputSchema = withScheduleDateSelection(
+  scheduleUpdateOperationSchema,
+)
 const timeBlockIdSchema = z.object({ id: z.uuid() })
 
 const timeBlockListInputSchema = scheduleDateRangeInputSchema.extend({
@@ -65,6 +76,18 @@ const autoScheduleCliOptions = [
   { flags: '--manual', description: 'Mark the time block as manual' },
 ] as const
 
+const scheduleUpdateCliOptions = [
+  ...recurrenceCliOptions(),
+  {
+    flags: '--no-recurrence',
+    description: 'Make the schedule a one-time event from its effective date',
+  },
+  {
+    flags: '--clear-end-date',
+    description: 'Remove the schedule end date',
+  },
+] as const
+
 function mapCliTimezoneOffset(
   input: Record<string, unknown>,
   options: Record<string, unknown>,
@@ -101,6 +124,40 @@ function mapCliAutoScheduleFlags(
   if (!isAutoScheduled && !isManual) return ok(input)
 
   return ok({ ...input, isAutoScheduled })
+}
+
+function mapCliScheduleUpdate(
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  if (!isScheduleDateSelectionValid(input)) {
+    return err(new Error(SCHEDULE_DATE_SELECTION_ERROR_MESSAGE))
+  }
+
+  const noRecurrence =
+    options['recurrence'] === false || options['noRecurrence'] === true
+  const clearEndDate = options['clearEndDate'] === true
+  const recurrence = recurrenceRuleFromCli(options)
+  if (recurrence.isErr()) return err(recurrence.error)
+
+  if (noRecurrence && recurrence.value !== undefined) {
+    return err(
+      new Error('Use only one of --no-recurrence or recurrence options'),
+    )
+  }
+  if (clearEndDate && input['endDate'] !== undefined) {
+    return err(new Error('Use only one of --clear-end-date or --end-date'))
+  }
+
+  return ok({
+    ...input,
+    ...(noRecurrence
+      ? { recurrence: null }
+      : recurrence.value === undefined
+        ? {}
+        : { recurrence: recurrence.value }),
+    ...(clearEndDate ? { endDate: null } : {}),
+  })
 }
 
 export const scheduleOperations = [
@@ -225,5 +282,42 @@ export const scheduleOperations = [
     },
     run: (client, json) =>
       requestJson(client.api.schedule.events.$post({ json })),
+  }),
+  defineOperation(scheduleUpdateOperationSchema, {
+    path: ['schedule', 'events', 'update'],
+    description:
+      'Update a schedule event. Set effectiveFrom to apply time and recurrence changes from that local date onward; omit it to update the whole series. endDate is the last local date on which the schedule can occur. Title, context, and color always apply to the whole schedule.',
+    positionalArgs: ['id'],
+    kind: 'write',
+    mcpInputSchema: scheduleUpdateMcpInputSchema,
+    routes: ['PATCH /api/schedule/events/:id'],
+    cli: {
+      customOptions: scheduleUpdateCliOptions,
+      excludeFields: ['recurrence'],
+      mapInput: mapCliScheduleUpdate,
+      output: { kind: 'json' },
+    },
+    run: (client, { id, ...json }) =>
+      requestJson(
+        client.api.schedule.events[':id'].$patch({
+          param: { id: encodePathSegment(id) },
+          json,
+        }),
+      ),
+  }),
+  defineOperation(scheduleEventIdSchema, {
+    path: ['schedule', 'events', 'delete'],
+    description:
+      'Delete a schedule event and all of its revisions and overrides.',
+    positionalArgs: ['id'],
+    kind: 'delete',
+    routes: ['DELETE /api/schedule/events/:id'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { id }) =>
+      requestNoContent(
+        client.api.schedule.events[':id'].$delete({
+          param: { id: encodePathSegment(id) },
+        }),
+      ).map(() => ({ deleted: true, id })),
   }),
 ] as const

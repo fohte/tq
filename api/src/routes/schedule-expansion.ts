@@ -1,9 +1,24 @@
-import type { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
+import type {
+  recurrenceRules,
+  scheduleOverrides,
+  scheduleRevisions,
+  schedules,
+} from '#db/schema'
 
 export type ScheduleOverrideTimes = Pick<
   typeof scheduleOverrides.$inferSelect,
   'startTime' | 'endTime' | 'movedToDate' | 'skipped'
 >
+
+export type ScheduleRevisionWithRule = {
+  revision: typeof scheduleRevisions.$inferSelect
+  rule: typeof recurrenceRules.$inferSelect | null
+}
+
+export type ScheduleSeries = {
+  schedule: typeof schedules.$inferSelect
+  revisions: ScheduleRevisionWithRule[]
+}
 
 export type ScheduleOverrideIndex = {
   byOccurrenceDate: ReadonlyMap<string, ScheduleOverrideTimes>
@@ -15,6 +30,14 @@ export type ScheduleOverrideIndex = {
     }>
   >
 }
+
+export type ScheduleRecurrenceResponse = {
+  id: string
+  type: string
+  interval: number
+  daysOfWeek: number[] | null
+  dayOfMonth: number | null
+} | null
 
 type ScheduleOccurrence = {
   occurrenceDate: string
@@ -52,6 +75,33 @@ export function buildScheduleOverrideIndex(
   return { byOccurrenceDate, byMovedToDate }
 }
 
+export function recurrenceRuleToResponse(
+  rule: typeof recurrenceRules.$inferSelect | null,
+): ScheduleRecurrenceResponse {
+  if (!rule) return null
+  return {
+    id: rule.id,
+    type: rule.type,
+    interval: rule.interval,
+    daysOfWeek: rule.daysOfWeek,
+    dayOfMonth: rule.dayOfMonth,
+  }
+}
+
+export function getScheduleRevisionForDate(
+  revisions: readonly ScheduleRevisionWithRule[],
+  dateStr: string,
+): ScheduleRevisionWithRule | undefined {
+  let activeRevision: ScheduleRevisionWithRule | undefined
+
+  for (const revision of revisions) {
+    if (revision.revision.effectiveFrom > dateStr) break
+    activeRevision = revision
+  }
+
+  return activeRevision
+}
+
 /** Check if a date matches the recurrence rule's pattern.
  * - daily: matches every day (interval not yet implemented)
  * - weekly: matches if the date's day-of-week is in daysOfWeek
@@ -77,14 +127,25 @@ function matchesDate(rule: typeof recurrenceRules.$inferSelect, date: Date) {
 }
 
 export function scheduleOccursOnDate(
-  schedule: typeof schedules.$inferSelect,
-  rule: typeof recurrenceRules.$inferSelect | null,
+  series: ScheduleSeries,
   date: Date,
 ): boolean {
   const dateStr = formatDateStr(date)
-  if (dateStr < schedule.startDate) return false
-  if (!rule) return dateStr === schedule.startDate
-  return matchesDate(rule, date)
+  const { schedule, revisions } = series
+  const firstRevision = revisions[0]
+
+  if (!firstRevision || dateStr < firstRevision.revision.effectiveFrom) {
+    return false
+  }
+  if (schedule.endDate != null && dateStr > schedule.endDate) return false
+
+  const activeRevision = getScheduleRevisionForDate(revisions, dateStr)
+  if (!activeRevision) return false
+  if (!activeRevision.rule) {
+    return dateStr === activeRevision.revision.effectiveFrom
+  }
+
+  return matchesDate(activeRevision.rule, date)
 }
 
 /**
@@ -95,8 +156,7 @@ export function scheduleOccursOnDate(
  * - On the next date: 00:00 -> 07:00
  */
 export function expandScheduleForDate(
-  schedule: typeof schedules.$inferSelect,
-  rule: typeof recurrenceRules.$inferSelect | null,
+  series: ScheduleSeries,
   dateStr: string,
   overrides: ScheduleOverrideIndex = emptyScheduleOverrideIndex,
 ): Array<{
@@ -110,8 +170,11 @@ export function expandScheduleForDate(
   occurrenceDate: string
   overridden: 'moved' | 'time' | null
 }> {
-  const date = new Date(dateStr + 'T00:00:00')
+  const { schedule, revisions } = series
+  const firstRevision = revisions[0]
+  if (!firstRevision) return []
 
+  const date = new Date(dateStr + 'T00:00:00')
   const blocks: Array<{
     scheduleId: string
     title: string
@@ -125,8 +188,7 @@ export function expandScheduleForDate(
   }> = []
 
   for (const occurrence of getOccurrencesStartingOnDate(
-    schedule,
-    rule,
+    series,
     dateStr,
     overrides,
   )) {
@@ -136,7 +198,7 @@ export function expandScheduleForDate(
     blocks.push({
       scheduleId: schedule.id,
       title: schedule.title,
-      startDate: schedule.startDate,
+      startDate: firstRevision.revision.effectiveFrom,
       start: `${dateStr}T${occurrence.startTime}:00`,
       end: isCrossMidnight
         ? `${formatDateStr(nextDate)}T00:00:00`
@@ -153,8 +215,7 @@ export function expandScheduleForDate(
   prevDate.setDate(prevDate.getDate() - 1)
   const prevDateStr = formatDateStr(prevDate)
   for (const occurrence of getOccurrencesStartingOnDate(
-    schedule,
-    rule,
+    series,
     prevDateStr,
     overrides,
   )) {
@@ -163,7 +224,7 @@ export function expandScheduleForDate(
     blocks.push({
       scheduleId: schedule.id,
       title: schedule.title,
-      startDate: schedule.startDate,
+      startDate: firstRevision.revision.effectiveFrom,
       start: `${dateStr}T00:00:00`,
       end: `${dateStr}T${occurrence.endTime}:00`,
       context: schedule.context,
@@ -177,50 +238,56 @@ export function expandScheduleForDate(
 }
 
 function getOccurrencesStartingOnDate(
-  schedule: typeof schedules.$inferSelect,
-  rule: typeof recurrenceRules.$inferSelect | null,
+  series: ScheduleSeries,
   dateStr: string,
   overrides: ScheduleOverrideIndex,
 ): ScheduleOccurrence[] {
   const date = new Date(`${dateStr}T00:00:00`)
   const candidates: Array<{
     occurrenceDate: string
+    revision: ScheduleRevisionWithRule
     override: ScheduleOverrideTimes | undefined
   }> = []
   const override = overrides.byOccurrenceDate.get(dateStr)
+  const revision = getScheduleRevisionForDate(series.revisions, dateStr)
 
   if (
-    scheduleOccursOnDate(schedule, rule, date) &&
+    revision &&
+    scheduleOccursOnDate(series, date) &&
     override?.movedToDate == null
   ) {
-    candidates.push({ occurrenceDate: dateStr, override })
+    candidates.push({ occurrenceDate: dateStr, revision, override })
   }
 
   for (const {
     occurrenceDate,
     override: movedOverride,
   } of overrides.byMovedToDate.get(dateStr) ?? []) {
-    if (
-      !scheduleOccursOnDate(
-        schedule,
-        rule,
-        new Date(`${occurrenceDate}T00:00:00`),
-      )
-    ) {
+    if (!scheduleOccursOnDate(series, new Date(`${occurrenceDate}T00:00:00`))) {
       continue
     }
 
-    candidates.push({ occurrenceDate, override: movedOverride })
+    const movedRevision = getScheduleRevisionForDate(
+      series.revisions,
+      occurrenceDate,
+    )
+    if (!movedRevision) continue
+
+    candidates.push({
+      occurrenceDate,
+      revision: movedRevision,
+      override: movedOverride,
+    })
   }
 
-  return candidates.flatMap(({ occurrenceDate, override }) => {
+  return candidates.flatMap(({ occurrenceDate, revision, override }) => {
     if (override?.skipped === true) return []
 
     return [
       {
         occurrenceDate,
-        startTime: override?.startTime ?? schedule.startTime,
-        endTime: override?.endTime ?? schedule.endTime,
+        startTime: override?.startTime ?? revision.revision.startTime,
+        endTime: override?.endTime ?? revision.revision.endTime,
         overridden:
           override == null
             ? null

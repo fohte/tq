@@ -1,5 +1,6 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { z } from 'zod'
 
 import { app } from '#app'
 import {
@@ -71,8 +72,16 @@ describe('schedule operation tools', () => {
         annotations: { readOnlyHint: false, destructiveHint: false },
       },
       {
+        name: 'schedule_events_delete',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      {
         name: 'schedule_events_list',
         annotations: { readOnlyHint: true },
+      },
+      {
+        name: 'schedule_events_update',
+        annotations: { readOnlyHint: false, destructiveHint: false },
       },
       {
         name: 'schedule_override_clear',
@@ -356,6 +365,141 @@ describe('schedule operation tools', () => {
     )
   })
 
+  it('updates a schedule from an effective date and lists the new occurrences', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Focus block',
+      startDate: '2026-12-18',
+      startTime: '08:00',
+      endTime: '09:00',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+
+    const updated = await callMcpTool(client, 'schedule_events_update', {
+      id: schedule.id,
+      effectiveFrom: '2026-12-20',
+      startTime: '09:30',
+      endTime: '10:00',
+      endDate: '2026-12-20',
+      recurrence: { type: 'weekly', interval: 1, daysOfWeek: [0] },
+    })
+    const events = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2026-12-18',
+      endDate: '2026-12-21',
+    })
+
+    const snapshot = () => ({
+      updated: normalizeDynamicValues(parseToolJson(updated)),
+      events: normalizeDynamicValues(parseToolJson(events)),
+    })
+
+    expect(snapshot()).toEqual({
+      updated: {
+        id: '<uuid>',
+        title: 'Focus block',
+        startDate: '2026-12-18',
+        endDate: '2026-12-20',
+        startTime: '09:30',
+        endTime: '10:00',
+        recurrence: {
+          id: '<uuid>',
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [0],
+          dayOfMonth: null,
+        },
+        context: 'personal',
+        color: null,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+      events: [
+        {
+          scheduleId: '<uuid>',
+          title: 'Focus block',
+          startDate: '2026-12-18',
+          start: '2026-12-18T08:00:00',
+          end: '2026-12-18T09:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2026-12-18',
+          overridden: null,
+          recurrence: {
+            id: '<uuid>',
+            type: 'daily',
+            interval: 1,
+            daysOfWeek: null,
+            dayOfMonth: null,
+          },
+        },
+        {
+          scheduleId: '<uuid>',
+          title: 'Focus block',
+          startDate: '2026-12-18',
+          start: '2026-12-19T08:00:00',
+          end: '2026-12-19T09:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2026-12-19',
+          overridden: null,
+          recurrence: {
+            id: '<uuid>',
+            type: 'daily',
+            interval: 1,
+            daysOfWeek: null,
+            dayOfMonth: null,
+          },
+        },
+        {
+          scheduleId: '<uuid>',
+          title: 'Focus block',
+          startDate: '2026-12-18',
+          start: '2026-12-20T09:30:00',
+          end: '2026-12-20T10:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2026-12-20',
+          overridden: null,
+          recurrence: {
+            id: '<uuid>',
+            type: 'weekly',
+            interval: 1,
+            daysOfWeek: [0],
+            dayOfMonth: null,
+          },
+        },
+      ],
+    })
+  })
+
+  it('deletes a schedule event', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Temporary event',
+      startDate: '2026-12-18',
+      startTime: '08:00',
+      endTime: '09:00',
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+
+    const deleted = await callMcpTool(client, 'schedule_events_delete', {
+      id: schedule.id,
+    })
+    const events = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2026-12-18',
+      endDate: '2026-12-18',
+    })
+
+    const snapshot = () => ({
+      deleted: parseToolJson(deleted),
+      events: parseToolJson(events),
+    })
+
+    expect(snapshot()).toEqual({
+      deleted: { deleted: true, id: schedule.id },
+      events: [],
+    })
+  })
+
   it('rejects invalid schedule event times', async () => {
     const result = await callMcpTool(client, 'schedule_events_create', {
       title: 'Draft agenda',
@@ -367,7 +511,7 @@ describe('schedule operation tools', () => {
     expect(result).toEqual(
       expectedToolValidationError(
         'schedule_events_create',
-        'startTime: Invalid string: must match pattern /^\\d{2}:\\d{2}$/',
+        'startTime: Invalid string: must match pattern /^(?:[01]\\d|2[0-3]):[0-5]\\d$/',
       ),
     )
   })
