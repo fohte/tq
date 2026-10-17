@@ -236,6 +236,14 @@ function constraintScopeOutcome(
   return { constraintsButtonVisibility, constraintCalls }
 }
 
+function weekdayCellLabelOutcome(
+  ariaLabel: string | null,
+  cellLabels: Array<string | null>,
+  constraintCalls: ReturnType<typeof normalizeMutationCalls>,
+) {
+  return { ariaLabel, cellLabels, constraintCalls }
+}
+
 function normalizeOpenChangeCalls(calls: readonly unknown[][]) {
   return calls.map(([open]) => [open])
 }
@@ -654,25 +662,41 @@ describe('CreateScheduleModal', () => {
       { target: { value: '3' } },
     )
     await user.click(await screen.findByRole('button', { name: 'Monday: OK' }))
+    const mondayCell = await screen.findByRole('button', {
+      name: 'Monday: If free',
+    })
+    const weekdayCellLabels = Array.from(mondayCell.children).map(
+      (child) => child.textContent,
+    )
     await clickVisibleSave(user)
 
-    expect(normalizeMutationCalls(setConstraintsMutate.mock.calls)).toEqual([
-      [
-        {
-          id: sampleSchedule.scheduleId,
-          input: {
-            weeklyMin: 3,
-            weeklyMax: null,
-            weeklyTarget: null,
-            maxConsecutiveDays: null,
-            windowStart: null,
-            windowEnd: null,
-            weekdays: [{ dayOfWeek: 1, preference: 'if_free' }],
+    expect(
+      weekdayCellLabelOutcome(
+        mondayCell.getAttribute('aria-label'),
+        weekdayCellLabels,
+        normalizeMutationCalls(setConstraintsMutate.mock.calls),
+      ),
+    ).toEqual({
+      ariaLabel: 'Monday: If free',
+      cellLabels: ['M', 'IF FREE'],
+      constraintCalls: [
+        [
+          {
+            id: sampleSchedule.scheduleId,
+            input: {
+              weeklyMin: 3,
+              weeklyMax: null,
+              weeklyTarget: null,
+              maxConsecutiveDays: null,
+              windowStart: null,
+              windowEnd: null,
+              weekdays: [{ dayOfWeek: 1, preference: 'if_free' }],
+            },
           },
-        },
-        { onSuccess: 'callback', onError: 'callback' },
+          { onSuccess: 'callback', onError: 'callback' },
+        ],
       ],
-    ])
+    })
   })
 
   it('hides constraints outside all events and does not save their draft', async () => {

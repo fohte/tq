@@ -31,9 +31,9 @@ const preferenceLabels = {
 
 const preferenceCellLabels = {
   preferred: 'OK',
-  if_free: 'If free',
-  reserve: 'Backup',
-  excluded: 'Never',
+  if_free: 'IF FREE',
+  reserve: 'BACKUP',
+  excluded: 'NEVER',
 } as const
 
 const preferenceClasses = {
