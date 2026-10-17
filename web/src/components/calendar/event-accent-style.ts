@@ -12,6 +12,18 @@ export interface EventAccent {
   fillPercent?: number | undefined
 }
 
+export function getEventAccentStyle(
+  eventAccent: EventAccent | undefined,
+): EventAccentStyle {
+  return {
+    '--event-accent': eventAccent?.accent,
+    '--event-fill':
+      eventAccent?.fillPercent == null
+        ? undefined
+        : `${String(eventAccent.fillPercent)}%`,
+  }
+}
+
 export function getEventAccent(
   props: CalendarEventProps,
 ): EventAccent | undefined {

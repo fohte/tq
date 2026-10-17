@@ -4,6 +4,7 @@ import { Headphones, LogOut, MapPin } from 'lucide-react'
 import {
   type EventAccentStyle,
   getEventAccent,
+  getEventAccentStyle,
 } from '#components/calendar/event-accent-style'
 import {
   getTaskDateEventProps,
@@ -130,13 +131,7 @@ export function EventBlock(arg: EventContentArg) {
   const eventAccent = getEventAccent(props)
   const accentColor = eventAccent?.accent
   const isColoredAppointment = eventAccent?.fillPercent != null
-  const accentStyle: EventAccentStyle = {
-    '--event-accent': eventAccent?.accent,
-    '--event-fill':
-      eventAccent?.fillPercent == null
-        ? undefined
-        : `${String(eventAccent.fillPercent)}%`,
-  }
+  const accentStyle: EventAccentStyle = getEventAccentStyle(eventAccent)
 
   return (
     <EventBlockShell

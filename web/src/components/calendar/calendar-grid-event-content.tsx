@@ -3,6 +3,7 @@ import type { EventContentArg } from '@fullcalendar/core'
 import {
   type EventAccentStyle,
   getEventAccent,
+  getEventAccentStyle,
 } from '#components/calendar/event-accent-style'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import {
@@ -31,13 +32,7 @@ export function renderCalendarGridEventContent(
       )
     }
     const eventAccent = getEventAccent(eventProps)
-    const eventAccentStyle: EventAccentStyle = {
-      '--event-accent': eventAccent?.accent,
-      '--event-fill':
-        eventAccent?.fillPercent == null
-          ? undefined
-          : `${String(eventAccent.fillPercent)}%`,
-    }
+    const eventAccentStyle: EventAccentStyle = getEventAccentStyle(eventAccent)
 
     return (
       <div
