@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { GithubBlockerUpdateError } from '#components/task/github-blocker-update-error'
 import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-picker'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
+import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { TaskWaitFormDialog } from '#components/task/task-wait-form-dialog'
@@ -201,22 +202,14 @@ function BlockedByGroup({
             </Button>
           </div>
         ))}
-        <div className="flex items-center border-t border-dashed border-border px-3 font-mono text-xs">
-          <Button
-            type="button"
-            variant="plain"
-            disabled={updateBlockedBy.isPending}
-            onClick={() => {
-              setDialogOpen(true)
-            }}
-            className="min-h-11 flex-1 self-stretch justify-start whitespace-normal"
-          >
-            <span className="flex items-center gap-1.5">
-              <Plus className="size-3" />
-              add blocker
-            </span>
-          </Button>
-        </div>
+        <PanelAddRow
+          icon={Plus}
+          label="add blocker"
+          disabled={updateBlockedBy.isPending}
+          onClick={() => {
+            setDialogOpen(true)
+          }}
+        />
       </Panel>
 
       {updateBlockedBy.isError && (

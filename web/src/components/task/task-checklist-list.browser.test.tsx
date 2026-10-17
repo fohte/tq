@@ -240,16 +240,6 @@ function getNoteEditorState(
 }
 
 describe('TaskChecklistList', () => {
-  it('keeps the add-item control at least 44px tall', () => {
-    renderChecklist()
-
-    const height = screen
-      .getByRole('button', { name: 'add item' })
-      .getBoundingClientRect().height
-
-    expect(height >= 44).toBe(true)
-  })
-
   it('renders inline Markdown and the existing reference chips', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },

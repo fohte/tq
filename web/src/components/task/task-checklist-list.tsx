@@ -4,6 +4,7 @@ import { Panel } from '@fohte/ui/panel'
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
+import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskChecklistItemTree } from '#components/task/task-checklist-item-tree'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
@@ -297,30 +298,22 @@ function ChecklistPanel({
             setAddingItemParentId(itemId)
           }}
         />
-        <div className="flex border-t border-dashed border-border">
-          <div className="flex flex-1 px-3 font-mono text-xs">
-            <Button
-              type="button"
-              variant="plain"
-              onClick={() => {
-                setAddingItemParentId(null)
-              }}
-              className="min-h-11 flex-1 self-stretch justify-start text-left"
-            >
-              <span className="flex items-center gap-1.5">
-                <Plus className="size-3" />
-                add item
-              </span>
-            </Button>
-          </div>
-          {checklist.name == null && (
-            <ActionsMenu
-              aria-label="Checklist actions"
-              items={checklistActions}
-              mobileTriggerClassName="mr-1 h-9 w-9"
-            />
-          )}
-        </div>
+        <PanelAddRow
+          icon={Plus}
+          label="add item"
+          onClick={() => {
+            setAddingItemParentId(null)
+          }}
+          trailing={
+            checklist.name == null && (
+              <ActionsMenu
+                aria-label="Checklist actions"
+                items={checklistActions}
+                mobileTriggerClassName="mr-1 h-9 w-9"
+              />
+            )
+          }
+        />
       </div>
 
       <DeleteConfirmDialog

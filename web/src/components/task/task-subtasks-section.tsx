@@ -1,4 +1,3 @@
-import { Button } from '@fohte/ui/button'
 import { Panel } from '@fohte/ui/panel'
 import { Link2, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -6,6 +5,7 @@ import { useState } from 'react'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { ContextValue } from '#components/task/create-task-modal-fields'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
+import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
@@ -119,21 +119,13 @@ function LinkExistingTaskRow({
 
   return (
     <>
-      <div className="flex items-center border-t border-dashed border-border px-3 font-mono text-xs">
-        <Button
-          type="button"
-          variant="plain"
-          onClick={() => {
-            setIsMenuOpen(true)
-          }}
-          className="min-h-11 flex-1 self-stretch justify-start whitespace-normal"
-        >
-          <span className="flex items-center gap-1.5">
-            <Link2 className="size-3" />
-            link existing task
-          </span>
-        </Button>
-      </div>
+      <PanelAddRow
+        icon={Link2}
+        label="link existing task"
+        onClick={() => {
+          setIsMenuOpen(true)
+        }}
+      />
       <LinkExistingTaskMenu
         open={isMenuOpen}
         onOpenChange={setIsMenuOpen}
@@ -162,21 +154,13 @@ function AddSubtaskRow({
 
   return (
     <>
-      <div className="flex items-center border-t border-dashed border-border px-3 font-mono text-xs">
-        <Button
-          type="button"
-          variant="plain"
-          onClick={() => {
-            setIsModalOpen(true)
-          }}
-          className="min-h-11 flex-1 self-stretch justify-start whitespace-normal"
-        >
-          <span className="flex items-center gap-1.5">
-            <Plus className="size-3" />
-            add subtask
-          </span>
-        </Button>
-      </div>
+      <PanelAddRow
+        icon={Plus}
+        label="add subtask"
+        onClick={() => {
+          setIsModalOpen(true)
+        }}
+      />
       <CreateTaskModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
