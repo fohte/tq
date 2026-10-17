@@ -1,3 +1,4 @@
+import type { ScheduleConstraintFormState } from '#components/schedule/schedule-constraints-form-state'
 import type {
   ScheduleEditAction,
   ScheduleEditScope,
@@ -45,6 +46,15 @@ export interface SchedulePanelProps {
   remindBeforeMinutes: number | ''
   setRemindBeforeMinutes: (value: number | '') => void
   reminderReady: boolean
+  constraints: ScheduleConstraintFormState | null
+  constraintsLoading: boolean
+  constraintsError: boolean
+  constraintsSaveError: boolean
+  scheduleAfterConstraintsSaveError: boolean
+  constraintsDefaultOpen: boolean
+  onAddConstraints: () => void
+  onChangeConstraints: (value: ScheduleConstraintFormState) => void
+  onRemoveConstraints: () => void
   previewText: string | null
   isPreviewLoading: boolean
   previewError: boolean

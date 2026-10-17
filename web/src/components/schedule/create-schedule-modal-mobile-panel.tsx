@@ -10,6 +10,7 @@ import {
 import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
+import { ScheduleConstraintsField } from '#components/schedule/schedule-constraints-field'
 import { ScheduleEditScopeSelector } from '#components/schedule/schedule-edit-scope-selector'
 import { ScheduleExceptionList } from '#components/schedule/schedule-exception-list'
 import {
@@ -68,6 +69,15 @@ export function ScheduleModalMobilePanel({
   remindBeforeMinutes,
   setRemindBeforeMinutes,
   reminderReady,
+  constraints,
+  constraintsLoading,
+  constraintsError,
+  constraintsSaveError,
+  scheduleAfterConstraintsSaveError,
+  constraintsDefaultOpen,
+  onAddConstraints,
+  onChangeConstraints,
+  onRemoveConstraints,
   previewText,
   isPreviewLoading,
   previewError,
@@ -284,6 +294,24 @@ export function ScheduleModalMobilePanel({
                   className="w-16"
                 />
               )}
+            />
+          )}
+
+          {(!schedule || scope === 'all') && (
+            <ScheduleConstraintsField
+              variant="mobile"
+              value={constraints}
+              isLoading={constraintsLoading}
+              isError={constraintsError}
+              saveError={constraintsSaveError}
+              scheduleAfterConstraintsSaveError={
+                scheduleAfterConstraintsSaveError
+              }
+              isPending={isPending}
+              defaultOpen={constraintsDefaultOpen}
+              onAdd={onAddConstraints}
+              onChange={onChangeConstraints}
+              onRemove={onRemoveConstraints}
             />
           )}
 
