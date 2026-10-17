@@ -1,4 +1,4 @@
-import { err, errAsync, ok, type Result } from 'neverthrow'
+import { err, errAsync, fromThrowable, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
@@ -25,6 +25,7 @@ import {
   withScheduleDateRange,
   withScheduleDateSelection,
 } from '#schemas/schedule'
+import { scheduleConstraintDraftSchema } from '#schemas/schedule-constraint-check'
 
 const scheduleEventIdSchema = z.object({ id: z.uuid() })
 const scheduleUpdateOperationSchema = updateScheduleInputSchema.extend({
@@ -33,6 +34,11 @@ const scheduleUpdateOperationSchema = updateScheduleInputSchema.extend({
 const scheduleUpdateMcpInputSchema = withScheduleDateSelection(
   scheduleUpdateOperationSchema,
 )
+const scheduleConstraintCheckOperationSchema =
+  scheduleDateRangeInputSchema.extend({
+    id: z.uuid(),
+    draft: scheduleConstraintDraftSchema.optional(),
+  })
 const timeBlockIdSchema = z.object({ id: z.uuid() })
 
 const timeBlockListInputSchema = scheduleDateRangeInputSchema.extend({
@@ -95,6 +101,14 @@ const scheduleUpdateCliOptions = [
     description: 'Disable reminders for the schedule',
   },
 ] as const
+
+const parseScheduleConstraintDraftJson = fromThrowable(
+  (value: string): unknown => JSON.parse(value) as unknown,
+  (cause) =>
+    new Error(
+      `Invalid --draft JSON: ${cause instanceof Error ? cause.message : String(cause)}`,
+    ),
+)
 
 function mapCliTimezoneOffset(
   input: Record<string, unknown>,
@@ -173,6 +187,24 @@ function mapCliScheduleUpdate(
         : { recurrence: recurrence.value }),
     ...(clearEndDate ? { endDate: null } : {}),
     ...(clearReminder ? { remindBeforeMinutes: null } : {}),
+  })
+}
+
+function mapCliScheduleConstraintDraft(
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  const rawDraft = options['draft']
+  if (rawDraft === undefined) return ok(input)
+  if (typeof rawDraft !== 'string') {
+    return err(new Error('--draft must be a JSON object'))
+  }
+
+  return parseScheduleConstraintDraftJson(rawDraft).andThen((value) => {
+    const draft = scheduleConstraintDraftSchema.safeParse(value)
+    return draft.success
+      ? ok({ ...input, draft: draft.data })
+      : err(new Error(formatInputIssues(draft.error)))
   })
 }
 
@@ -275,6 +307,39 @@ export const scheduleOperations = [
       if (dateRange.isErr()) return errAsync(dateRange.error)
       return requestJson(
         client.api.schedule.events.$get({ query: dateRange.value }),
+      )
+    },
+  }),
+  defineOperation(scheduleConstraintCheckOperationSchema, {
+    path: ['schedule', 'constraints', 'check'],
+    description: `Check schedule constraint violations for an inclusive local date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Provide a draft object to preview constraint, occurrence, revision, or end-date changes without saving them. The response includes calendarDataIncomplete when connected calendars could not be read.`,
+    positionalArgs: ['id', 'startDate', 'endDate'],
+    kind: 'read',
+    routes: ['POST /api/schedule/events/:id/constraint-check'],
+    cli: {
+      customOptions: [
+        {
+          flags: '--draft <json>',
+          description:
+            'Preview changes using a JSON object with constraints, occurrenceChange, revisionChange, endDate, or revisionMode',
+        },
+      ],
+      excludeFields: ['draft'],
+      mapInput: mapCliScheduleConstraintDraft,
+      output: { kind: 'json' },
+    },
+    run: (client, { id, startDate, endDate, draft }) => {
+      const dateRange = validateScheduleDateRange({ startDate, endDate })
+      if (dateRange.isErr()) return errAsync(dateRange.error)
+
+      return requestJson(
+        client.api.schedule.events[':id']['constraint-check'].$post({
+          param: { id: encodePathSegment(id) },
+          json: {
+            ...dateRange.value,
+            ...(draft === undefined ? {} : { draft }),
+          },
+        }),
       )
     },
   }),

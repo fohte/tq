@@ -6,16 +6,16 @@ Calendar schedule series with optional local end date and push reminders.
 
 ## Columns
 
-| Name                  | Type                     | Default          | Nullable | Children                                                                                                                                                                                          | Parents | Comment                                                                                 |
-| --------------------- | ------------------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------- |
-| id                    | text                     |                  | false    | [public.schedule_overrides](public.schedule_overrides.md) [public.schedule_revisions](public.schedule_revisions.md) [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md) |         |                                                                                         |
-| title                 | text                     |                  | false    |                                                                                                                                                                                                   |         | Human-readable schedule title.                                                          |
-| context               | text                     | 'personal'::text | false    |                                                                                                                                                                                                   |         | Whether the schedule belongs to the work or personal context.                           |
-| color                 | text                     |                  | true     |                                                                                                                                                                                                   |         | Optional color value associated with the schedule.                                      |
-| created_at            | timestamp with time zone | now()            | false    |                                                                                                                                                                                                   |         |                                                                                         |
-| updated_at            | timestamp with time zone | now()            | false    |                                                                                                                                                                                                   |         |                                                                                         |
-| end_date              | date                     |                  | true     |                                                                                                                                                                                                   |         | Last local calendar date on which the schedule can occur; null for no end date.         |
-| remind_before_minutes | integer                  |                  | true     |                                                                                                                                                                                                   |         | Minutes before each occurrence starts to send a push reminder; null disables reminders. |
+| Name                  | Type                     | Default          | Nullable | Children                                                                                                                                                                                                                                                        | Parents | Comment                                                                                 |
+| --------------------- | ------------------------ | ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------- |
+| id                    | text                     |                  | false    | [public.schedule_overrides](public.schedule_overrides.md) [public.schedule_revisions](public.schedule_revisions.md) [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md) [public.schedule_constraints](public.schedule_constraints.md) |         |                                                                                         |
+| title                 | text                     |                  | false    |                                                                                                                                                                                                                                                                 |         | Human-readable schedule title.                                                          |
+| context               | text                     | 'personal'::text | false    |                                                                                                                                                                                                                                                                 |         | Whether the schedule belongs to the work or personal context.                           |
+| color                 | text                     |                  | true     |                                                                                                                                                                                                                                                                 |         | Optional color value associated with the schedule.                                      |
+| created_at            | timestamp with time zone | now()            | false    |                                                                                                                                                                                                                                                                 |         |                                                                                         |
+| updated_at            | timestamp with time zone | now()            | false    |                                                                                                                                                                                                                                                                 |         |                                                                                         |
+| end_date              | date                     |                  | true     |                                                                                                                                                                                                                                                                 |         | Last local calendar date on which the schedule can occur; null for no end date.         |
+| remind_before_minutes | integer                  |                  | true     |                                                                                                                                                                                                                                                                 |         | Minutes before each occurrence starts to send a push reminder; null disables reminders. |
 
 ## Constraints
 
@@ -44,6 +44,7 @@ erDiagram
 "public.schedule_overrides" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.schedule_revisions" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.schedule_reminder_deliveries" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
+"public.schedule_constraints" |o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 
 "public.schedules" {
   text id
@@ -77,6 +78,17 @@ erDiagram
   date occurrence_date
   timestamp_with_time_zone remind_at
   timestamp_with_time_zone delivered_at
+}
+"public.schedule_constraints" {
+  text schedule_id FK
+  integer weekly_min
+  integer weekly_max
+  integer weekly_target
+  integer max_consecutive_days
+  text window_start
+  text window_end
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 

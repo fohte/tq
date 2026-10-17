@@ -6,6 +6,10 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import { scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import {
+  evaluateScheduleConstraintViolationsSafely,
+  scheduleConstraintWeekRange,
+} from '#routes/schedule-constraint-evaluation'
 import { scheduleOccursOnDate } from '#routes/schedule-expansion'
 import {
   buildScheduleOverrideClearPreview,
@@ -126,6 +130,17 @@ export const scheduleOverridesApp = new Hono()
         )
       }
 
+      const [previousOverride] = await db
+        .select({ movedToDate: scheduleOverrides.movedToDate })
+        .from(scheduleOverrides)
+        .where(
+          and(
+            eq(scheduleOverrides.scheduleId, scheduleId),
+            eq(scheduleOverrides.occurrenceDate, occurrenceDate),
+          ),
+        )
+        .limit(1)
+
       const override = firstOrThrow(
         await db
           .insert(scheduleOverrides)
@@ -140,6 +155,37 @@ export const scheduleOverridesApp = new Hono()
           .returning(),
       )
 
+      const affectedDates = [
+        occurrenceDate,
+        previousOverride?.movedToDate,
+        override.movedToDate,
+      ].filter((date): date is string => date != null)
+      const affectedRanges = [
+        ...new Map(
+          affectedDates.map((date) => {
+            const range = scheduleConstraintWeekRange(date)
+            return [range.startDate, range] as const
+          }),
+        ).values(),
+      ]
+      const evaluations = await Promise.all(
+        affectedRanges.map((range) =>
+          evaluateScheduleConstraintViolationsSafely({
+            series: schedule,
+            range,
+          }),
+        ),
+      )
+      const constraintViolations = evaluations.flatMap(
+        ({ constraintViolations }) => constraintViolations,
+      )
+      const calendarDataIncomplete = evaluations.some(
+        ({ calendarDataIncomplete }) => calendarDataIncomplete,
+      )
+      const constraintEvaluationIncomplete = evaluations.some(
+        ({ constraintEvaluationIncomplete }) => constraintEvaluationIncomplete,
+      )
+
       return c.json(
         {
           scheduleId: override.scheduleId,
@@ -148,6 +194,11 @@ export const scheduleOverridesApp = new Hono()
           endTime: override.endTime,
           movedToDate: override.movedToDate,
           skipped: override.skipped,
+          constraintViolations,
+          ...(calendarDataIncomplete ? { calendarDataIncomplete: true } : {}),
+          ...(constraintEvaluationIncomplete
+            ? { constraintEvaluationIncomplete: true }
+            : {}),
         },
         200,
       )

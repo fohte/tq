@@ -145,6 +145,7 @@ describe('schedule operation tools', () => {
         remindBeforeMinutes: null,
         context: 'personal',
         color: null,
+        constraintViolations: [],
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
       },
@@ -174,6 +175,10 @@ describe('schedule operation tools', () => {
         .map((tool) => ({ name: tool.name, annotations: tool.annotations }))
         .sort((left, right) => left.name.localeCompare(right.name)),
     ).toEqual([
+      {
+        name: 'schedule_constraints_check',
+        annotations: { readOnlyHint: true },
+      },
       {
         name: 'schedule_events_create',
         annotations: { readOnlyHint: false, destructiveHint: false },
@@ -520,6 +525,7 @@ describe('schedule operation tools', () => {
         },
         context: 'personal',
         color: null,
+        constraintViolations: [],
         remindBeforeMinutes: 90,
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
