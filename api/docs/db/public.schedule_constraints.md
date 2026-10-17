@@ -30,9 +30,9 @@ Optional weekly frequency, consecutive-day, and time-window constraints for a ca
 | schedule_constraints_weekly_min_check            | CHECK       | CHECK (((weekly_min >= 0) AND (weekly_min <= 7)))                                                   |
 | schedule_constraints_weekly_range_check          | CHECK       | CHECK ((weekly_min <= weekly_max))                                                                  |
 | schedule_constraints_weekly_target_check         | CHECK       | CHECK (((weekly_target >= COALESCE(weekly_min, 0)) AND (weekly_target <= COALESCE(weekly_max, 7)))) |
-| schedule_constraints_window_end_format_check     | CHECK       | CHECK (((window_end IS NULL) OR (window_end ~ '^([01][0-9]\|2[0-3]):[0-5][0-9]$'::text)))           |
+| schedule_constraints_window_end_format_check     | CHECK       | CHECK (((window_end IS NULL) OR (window_end ~ '^([01][0-9]                                          | 2[0-3]):[0-5][0-9]$'::text))) |
 | schedule_constraints_window_pair_check           | CHECK       | CHECK (((window_start IS NULL) = (window_end IS NULL)))                                             |
-| schedule_constraints_window_start_format_check   | CHECK       | CHECK (((window_start IS NULL) OR (window_start ~ '^([01][0-9]\|2[0-3]):[0-5][0-9]$'::text)))       |
+| schedule_constraints_window_start_format_check   | CHECK       | CHECK (((window_start IS NULL) OR (window_start ~ '^([01][0-9]                                      | 2[0-3]):[0-5][0-9]$'::text))) |
 | schedule_constraints_schedule_id_schedules_id_fk | FOREIGN KEY | FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE                                |
 | schedule_constraints_pkey                        | PRIMARY KEY | PRIMARY KEY (schedule_id)                                                                           |
 
