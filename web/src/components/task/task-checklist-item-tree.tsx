@@ -304,7 +304,6 @@ function ChecklistItemRow({
           onCheckedChange={(checked) => {
             onSetItemChecked(item.id, checked)
           }}
-          className={isLocked ? 'border-dashed' : undefined}
         />
         <div className="min-w-0 flex-1">
           {editingContent ? (
