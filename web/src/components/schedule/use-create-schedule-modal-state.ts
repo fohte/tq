@@ -6,6 +6,7 @@ import {
   scheduleConstraintFormStateFromSaved,
   scheduleConstraintInputFromFormState,
 } from '#components/schedule/schedule-constraints-form-state'
+import { buildScheduleEditConstraintCheckDraft } from '#components/schedule/schedule-edit-dialog-constraint-check-draft'
 import {
   type RecurrenceFormDraft,
   scheduleEditDialogFormState,
@@ -187,15 +188,26 @@ export function useCreateScheduleModalState({
   const startDate = scheduleEditStartDate(rangeDraft)
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
+  const preview = useScheduleModalPreview({
+    schedule,
+    editState,
+    details: scheduleDetails.data,
+    open,
+  })
   const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
   const hasActiveConstraintDraft =
     scope === 'all' && constraintTouchedRef.current && constraintDraft !== null
   const constraintCheckDraftInvalid =
     hasActiveConstraintDraft && constraintInput === null
-  const constraintCheckDraft =
-    hasActiveConstraintDraft && constraintInput !== null
+  const constraintCheckDraft = buildScheduleEditConstraintCheckDraft({
+    schedule,
+    rangeDraft,
+    rangeAction: preview.rangeAction,
+    previewRequest: preview.previewRequest,
+    ...(hasActiveConstraintDraft && constraintInput !== null
       ? { constraints: constraintInput }
-      : undefined
+      : {}),
+  })
   const constraintCheckRange = getLocalWeekDateRange(
     new Date(`${occurrenceDate}T00:00:00`),
   )
@@ -207,12 +219,6 @@ export function useCreateScheduleModalState({
     constraintDraft !== null &&
     !scheduleConstraints.isPending &&
     !constraintsQueryUnavailable
-  const preview = useScheduleModalPreview({
-    schedule,
-    editState,
-    details: scheduleDetails.data,
-    open,
-  })
   const save = useScheduleModalSave({
     schedule,
     editState,
