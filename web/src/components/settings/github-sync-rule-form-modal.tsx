@@ -184,7 +184,7 @@ export function GithubSyncRuleFormModal({
                       setOrg(e.target.value)
                     }}
                     placeholder="octocat"
-                    className="h-auto w-full"
+                    className="w-full"
                   />
                 </FieldRow>
               )}
@@ -197,7 +197,7 @@ export function GithubSyncRuleFormModal({
                       setRepo(e.target.value)
                     }}
                     placeholder="hello-world"
-                    className="h-auto w-full"
+                    className="w-full"
                   />
                 </FieldRow>
               )}

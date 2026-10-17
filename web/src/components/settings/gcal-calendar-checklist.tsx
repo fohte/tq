@@ -89,7 +89,7 @@ export function GcalCalendarChecklist({
               <SelectTrigger
                 variant="ghost"
                 size="sm"
-                className="h-6 min-w-0 mx-0"
+                className="h-6 shrink-0 mx-0"
               >
                 <SelectValue placeholder="—" />
               </SelectTrigger>

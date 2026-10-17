@@ -27,7 +27,7 @@ export function ChecklistNameInput({
       onChange={onChange}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
-      className="h-6 min-w-0 max-w-sm"
+      className="h-6 min-w-0 max-w-sm mx-0"
     />
   )
 }

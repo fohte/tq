@@ -96,7 +96,7 @@ export function DescriptionTemplateFormModal({
                 setName(event.target.value)
               }}
               placeholder="Template name"
-              className="h-auto w-full"
+              className="w-full"
             />
           </FieldRow>
 
@@ -108,7 +108,7 @@ export function DescriptionTemplateFormModal({
               onChange={(event) => {
                 setWhenToUse(event.target.value)
               }}
-              className="h-auto w-full"
+              className="w-full"
             />
           </FieldRow>
 
