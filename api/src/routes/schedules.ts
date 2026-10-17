@@ -57,23 +57,25 @@ async function scheduleToResponseWithConstraints(
   revision: ScheduleRevisionWithRule,
 ) {
   const response = scheduleToResponse(series, revision)
-  const range = buildSchedulePreviewRange(
-    series,
-    revision.revision.effectiveFrom,
-  )
+  const today = formatDateStr(new Date())
+  const requestedStart =
+    revision.revision.effectiveFrom > today
+      ? revision.revision.effectiveFrom
+      : undefined
+  const range = buildSchedulePreviewRange(series, requestedStart)
   const endDate =
     series.schedule.endDate == null || series.schedule.endDate > range.endDate
       ? range.endDate
       : series.schedule.endDate
-  const constraintViolations =
+  const evaluation =
     endDate < range.startDate
-      ? []
+      ? { constraintViolations: [] }
       : await evaluateScheduleConstraintViolations({
           series,
           range: { startDate: range.startDate, endDate },
         })
 
-  return { ...response, constraintViolations }
+  return { ...response, ...evaluation }
 }
 
 export const schedulesApp = new Hono()

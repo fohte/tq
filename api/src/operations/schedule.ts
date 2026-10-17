@@ -312,8 +312,7 @@ export const scheduleOperations = [
   }),
   defineOperation(scheduleConstraintCheckOperationSchema, {
     path: ['schedule', 'constraints', 'check'],
-    description:
-      'Check schedule constraint violations for an inclusive local date range. Provide a draft object to preview constraint, occurrence, revision, or end-date changes without saving them.',
+    description: `Check schedule constraint violations for an inclusive local date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Provide a draft object to preview constraint, occurrence, revision, or end-date changes without saving them. The response includes calendarDataIncomplete when connected calendars could not be read.`,
     positionalArgs: ['id', 'startDate', 'endDate'],
     kind: 'read',
     routes: ['POST /api/schedule/events/:id/constraint-check'],

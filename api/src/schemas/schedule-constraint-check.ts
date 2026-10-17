@@ -3,13 +3,10 @@ import { z } from 'zod'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
 import {
   scheduleDateRangeInputSchema,
+  scheduleTimeSchema,
   withScheduleDateRange,
 } from '#schemas/schedule'
 import { scheduleConstraintSchema } from '#services/schedule-constraints'
-
-const scheduleConstraintCheckTimeSchema = z
-  .string()
-  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
 export const scheduleConstraintDraftSchema = z.object({
   constraints: scheduleConstraintSchema.nullable().optional(),
@@ -17,16 +14,16 @@ export const scheduleConstraintDraftSchema = z.object({
     .object({
       originalDate: z.iso.date(),
       date: z.iso.date().optional(),
-      startTime: scheduleConstraintCheckTimeSchema.optional(),
-      endTime: scheduleConstraintCheckTimeSchema.optional(),
+      startTime: scheduleTimeSchema.optional(),
+      endTime: scheduleTimeSchema.optional(),
       skipped: z.boolean().optional(),
     })
     .optional(),
   revisionChange: z
     .object({
       effectiveFrom: z.iso.date(),
-      startTime: scheduleConstraintCheckTimeSchema.optional(),
-      endTime: scheduleConstraintCheckTimeSchema.optional(),
+      startTime: scheduleTimeSchema.optional(),
+      endTime: scheduleTimeSchema.optional(),
       recurrence: recurrenceRuleSchema.nullable().optional(),
     })
     .optional(),

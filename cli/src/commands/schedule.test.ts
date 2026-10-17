@@ -278,6 +278,60 @@ describe('schedule constraints check', () => {
       stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
     })
   })
+
+  it('rejects malformed draft JSON before sending a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'constraints',
+          'check',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          '2030-05-06',
+          '2030-05-12',
+          '--draft',
+          '{',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          `Error: Invalid --draft JSON: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n`,
+        ],
+      ],
+      stdout: [],
+    })
+  })
+
+  it('rejects schema-invalid draft values before sending a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'constraints',
+          'check',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          '2030-05-06',
+          '2030-05-12',
+          '--draft',
+          '{"constraints":{"weeklyMin":8}}',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: constraints.weeklyMin: Too big: expected number to be <=7; constraints.weeklyMax: Invalid input: expected number, received undefined; constraints.weeklyTarget: Invalid input: expected number, received undefined; constraints.maxConsecutiveDays: Invalid input: expected number, received undefined; constraints.windowStart: Invalid input: expected string, received undefined; constraints.windowEnd: Invalid input: expected string, received undefined; constraints.weekdays: Invalid input: expected array, received undefined\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
 })
 
 describe('schedule events create', () => {

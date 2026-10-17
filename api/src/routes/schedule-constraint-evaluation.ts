@@ -7,14 +7,20 @@ import {
   scheduleConstraintWeekdays,
   scheduleOverrides,
 } from '#db/schema'
+import { SCHEDULE_REMINDER_TIME_ZONE } from '#env'
 import {
   getEvents,
   partitionAccountEvents,
 } from '#integrations/google-calendar/index'
 import {
+  addCalendarDays,
+  enumerateCalendarDates,
+  formatDateTimeInTimeZone,
+  mondayWeekStart,
+} from '#lib/timezone'
+import {
   expandScheduleForDate,
   expandScheduleWithDraft,
-  formatDateStr,
   type ScheduleDraft,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
@@ -32,36 +38,11 @@ import {
   type ScheduleConstraintViolation,
 } from '#services/schedule-constraints'
 
-const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000
-
-function addDays(date: string, days: number): string {
-  const value = new Date(`${date}T00:00:00`)
-  value.setDate(value.getDate() + days)
-  return formatDateStr(value)
-}
-
-function mondayOnOrBefore(date: string): string {
-  const value = new Date(`${date}T00:00:00`)
-  value.setDate(value.getDate() - ((value.getDay() + 6) % 7))
-  return formatDateStr(value)
-}
-
 export function scheduleConstraintWeekRange(
   date: string,
 ): ScheduleConstraintEvaluationRange {
-  const startDate = mondayOnOrBefore(date)
-  return { startDate, endDate: addDays(startDate, 6) }
-}
-
-function enumerateDates(startDate: string, endDate: string): string[] {
-  const dates: string[] = []
-  const start = Date.parse(`${startDate}T00:00:00.000Z`)
-  const end = Date.parse(`${endDate}T00:00:00.000Z`)
-
-  for (let day = start; day <= end; day += DAY_IN_MILLISECONDS) {
-    dates.push(new Date(day).toISOString().slice(0, 10))
-  }
-  return dates
+  const startDate = mondayWeekStart(date)
+  return { startDate, endDate: addCalendarDays(startDate, 6) }
 }
 
 async function loadScheduleConstraint(scheduleId: string) {
@@ -113,7 +94,7 @@ async function loadOtherScheduleTimeBlocks(
     ({ schedule }) => schedule.id !== scheduleId,
   )
 
-  return enumerateDates(startDate, endDate).flatMap((date) =>
+  return enumerateCalendarDates(startDate, endDate).flatMap((date) =>
     otherSeries.flatMap((other) =>
       expandScheduleForDate(
         other,
@@ -138,26 +119,42 @@ function googleEventTimeBlocks(event: {
     return []
   }
 
-  const startDate = event.startTime.slice(0, 10)
-  const endDate = event.endTime.slice(0, 10)
-  const startTime = event.isAllDay ? '00:00' : event.startTime.slice(11, 16)
-  const endTime = event.isAllDay ? '24:00' : event.endTime.slice(11, 16)
+  const formatTimedDateTime = (value: string) => {
+    const instant = new Date(value)
+    return Number.isNaN(instant.getTime())
+      ? null
+      : formatDateTimeInTimeZone(instant, SCHEDULE_REMINDER_TIME_ZONE)
+  }
+  const start = event.isAllDay
+    ? { date: event.startTime.slice(0, 10), time: '00:00' }
+    : formatTimedDateTime(event.startTime)
+  const end = event.isAllDay
+    ? { date: event.endTime.slice(0, 10), time: '24:00' }
+    : formatTimedDateTime(event.endTime)
+  if (start === null || end === null) return []
+  const { date: startDate, time: startTime } = start
+  const { date: endDate, time: endTime } = end
   if (startTime.length !== 5 || endTime.length !== 5 || endDate < startDate) {
     return []
   }
 
   if (event.isAllDay) {
-    return enumerateDates(startDate, addDays(endDate, -1)).map((date) => ({
-      date,
-      startTime: '00:00',
-      endTime: '24:00',
-    }))
+    return enumerateCalendarDates(startDate, addCalendarDays(endDate, -1)).map(
+      (date) => ({
+        date,
+        startTime: '00:00',
+        endTime: '24:00',
+      }),
+    )
   }
 
   if (startDate === endDate) return [{ date: startDate, startTime, endTime }]
 
   const blocks: ScheduleConstraintTimeBlock[] = []
-  for (const date of enumerateDates(startDate, addDays(endDate, -1))) {
+  for (const date of enumerateCalendarDates(
+    startDate,
+    addCalendarDays(endDate, -1),
+  )) {
     blocks.push({
       date,
       startTime: date === startDate ? startTime : '00:00',
@@ -173,29 +170,40 @@ function googleEventTimeBlocks(event: {
 async function loadGoogleCalendarTimeBlocks(
   startDate: string,
   endDate: string,
-): Promise<ScheduleConstraintTimeBlock[]> {
-  const timeMin = `${addDays(startDate, -2)}T00:00:00.000Z`
-  const timeMax = `${addDays(endDate, 3)}T00:00:00.000Z`
+): Promise<{
+  timeBlocks: ScheduleConstraintTimeBlock[]
+  incomplete: boolean
+}> {
+  const timeMin = `${addCalendarDays(startDate, -2)}T00:00:00.000Z`
+  const timeMax = `${addCalendarDays(endDate, 3)}T00:00:00.000Z`
   const accounts = await getEvents(timeMin, timeMax)
-  const { events } = partitionAccountEvents(accounts, (accountId, error) => {
-    captureWithFingerprint(error, 'api.schedule.constraints.calendar-failed', {
-      extras: { accountId },
-    })
-  })
+  const { events, successCount } = partitionAccountEvents(
+    accounts,
+    (accountId, error) => {
+      captureWithFingerprint(
+        error,
+        'api.schedule.constraints.calendar-failed',
+        { extras: { accountId } },
+      )
+    },
+  )
 
-  return events.flatMap(googleEventTimeBlocks)
+  return {
+    timeBlocks: events.flatMap(googleEventTimeBlocks),
+    incomplete: accounts.length > 0 && successCount !== accounts.length,
+  }
 }
 
 function expansionRange(
   range: ScheduleConstraintEvaluationRange,
   maximumConsecutiveDays: number | null,
 ): ScheduleConstraintEvaluationRange {
-  const firstWeek = mondayOnOrBefore(range.startDate)
-  const lastWeek = addDays(mondayOnOrBefore(range.endDate), 6)
+  const firstWeek = mondayWeekStart(range.startDate)
+  const lastWeek = addCalendarDays(mondayWeekStart(range.endDate), 6)
   const padding = maximumConsecutiveDays ?? 0
   return {
-    startDate: addDays(firstWeek, -padding),
-    endDate: addDays(lastWeek, padding),
+    startDate: addCalendarDays(firstWeek, -padding),
+    endDate: addCalendarDays(lastWeek, padding),
   }
 }
 
@@ -252,32 +260,42 @@ export async function evaluateScheduleConstraintViolations({
   series: ScheduleSeries
   range: ScheduleConstraintEvaluationRange
   draft?: ScheduleConstraintDraft
-}): Promise<ScheduleConstraintViolation[]> {
+}): Promise<{
+  constraintViolations: ScheduleConstraintViolation[]
+  calendarDataIncomplete?: true
+}> {
   const constraint =
     draft?.constraints === undefined
       ? await loadScheduleConstraint(series.schedule.id)
       : draft.constraints
-  if (!constraint) return []
+  if (!constraint) return { constraintViolations: [] }
 
   const occurrenceRange = expansionRange(range, constraint.maxConsecutiveDays)
+  const needsTimeBlocks = constraint.weekdays.some(
+    ({ preference }) => preference === 'if_free',
+  )
   const timeBlockRange = {
-    startDate: addDays(occurrenceRange.startDate, -1),
-    endDate: addDays(occurrenceRange.endDate, 1),
+    startDate: addCalendarDays(occurrenceRange.startDate, -1),
+    endDate: addCalendarDays(occurrenceRange.endDate, 1),
   }
-  const [overrides, scheduleTimeBlocks, googleTimeBlocks] = await Promise.all([
+  const [overrides, scheduleTimeBlocks, googleCalendar] = await Promise.all([
     db
       .select()
       .from(scheduleOverrides)
       .where(eq(scheduleOverrides.scheduleId, series.schedule.id)),
-    loadOtherScheduleTimeBlocks(
-      series.schedule.id,
-      timeBlockRange.startDate,
-      timeBlockRange.endDate,
-    ),
-    loadGoogleCalendarTimeBlocks(
-      timeBlockRange.startDate,
-      timeBlockRange.endDate,
-    ),
+    needsTimeBlocks
+      ? loadOtherScheduleTimeBlocks(
+          series.schedule.id,
+          timeBlockRange.startDate,
+          timeBlockRange.endDate,
+        )
+      : Promise.resolve([]),
+    needsTimeBlocks
+      ? loadGoogleCalendarTimeBlocks(
+          timeBlockRange.startDate,
+          timeBlockRange.endDate,
+        )
+      : Promise.resolve({ timeBlocks: [], incomplete: false }),
   ])
 
   const scheduleDraft = toScheduleDraft(draft)
@@ -292,8 +310,13 @@ export async function evaluateScheduleConstraintViolations({
       : { revisionMode: draft.revisionMode }),
   }) satisfies ScheduleConstraintOccurrence[]
 
-  return checkScheduleConstraints(constraint, range, occurrences, [
-    ...scheduleTimeBlocks,
-    ...googleTimeBlocks,
-  ])
+  return {
+    constraintViolations: checkScheduleConstraints(
+      constraint,
+      range,
+      occurrences,
+      [...scheduleTimeBlocks, ...googleCalendar.timeBlocks],
+    ),
+    ...(googleCalendar.incomplete ? { calendarDataIncomplete: true } : {}),
+  }
 }

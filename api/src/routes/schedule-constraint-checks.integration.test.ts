@@ -4,6 +4,11 @@ import { app } from '#app'
 import { db } from '#db/connection'
 import { scheduleConstraints, scheduleConstraintWeekdays } from '#db/schema'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
+import { addCalendarDays, mondayWeekStart } from '#lib/timezone'
+import { formatDateStr } from '#routes/schedule-expansion'
+import { MAX_SCHEDULE_DATE_RANGE_DAYS } from '#schemas/schedule'
+import { makeScheduleConstraint } from '#services/schedule-constraint-test-fixtures'
+import type { ScheduleConstraint } from '#services/schedule-constraints'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -32,6 +37,7 @@ type ScheduleResponse = {
   context: string
   color: string | null
   constraintViolations: unknown[]
+  calendarDataIncomplete?: true
   createdAt: string
   updatedAt: string
 }
@@ -74,6 +80,7 @@ async function overrideResponseSnapshot(response: Response) {
     movedToDate: string | null
     skipped: boolean
     constraintViolations: unknown[]
+    calendarDataIncomplete?: true
   }>(response)
   return {
     status: response.status,
@@ -83,30 +90,34 @@ async function overrideResponseSnapshot(response: Response) {
 
 async function addScheduleConstraint(
   scheduleId: string,
-  weekdays: Array<{ dayOfWeek: number; preference: string }>,
+  weekdays: ScheduleConstraint['weekdays'],
+  values: Pick<ScheduleConstraint, 'weeklyMin'> = { weeklyMin: null },
 ) {
-  await db.insert(scheduleConstraints).values({ scheduleId })
+  await db.insert(scheduleConstraints).values({ scheduleId, ...values })
   if (weekdays.length === 0) return
   await db
     .insert(scheduleConstraintWeekdays)
     .values(weekdays.map((weekday) => ({ scheduleId, ...weekday })))
 }
 
-function emptyConstraint(
-  weekdays: Array<{
-    dayOfWeek: number
-    preference: 'preferred' | 'if_free' | 'reserve' | 'excluded'
-  }>,
-) {
-  return {
-    weeklyMin: null,
-    weeklyMax: null,
-    weeklyTarget: null,
-    maxConsecutiveDays: null,
-    windowStart: null,
-    windowEnd: null,
-    weekdays,
+function weeklyMinimumViolations(startDate: string, endDate: string) {
+  const violations = []
+  const lastWeekStart = mondayWeekStart(endDate)
+  for (
+    let weekStart = mondayWeekStart(startDate);
+    weekStart <= lastWeekStart;
+    weekStart = addCalendarDays(weekStart, 7)
+  ) {
+    violations.push({
+      type: 'weekly-count-below-minimum',
+      severity: 'required',
+      date: weekStart,
+      weekStart,
+      count: 0,
+      minimum: 1,
+    })
   }
+  return violations
 }
 
 function setGoogleEnv() {
@@ -140,9 +151,9 @@ describe('POST /api/schedule/events/:id/constraint-check', () => {
           startDate: '2030-05-06',
           endDate: '2030-05-12',
           draft: {
-            constraints: emptyConstraint([
-              { dayOfWeek: 5, preference: 'excluded' },
-            ]),
+            constraints: makeScheduleConstraint({
+              weekdays: [{ dayOfWeek: 5, preference: 'excluded' }],
+            }),
             occurrenceChange: {
               originalDate: '2030-05-09',
               date: '2030-05-10',
@@ -189,9 +200,9 @@ describe('POST /api/schedule/events/:id/constraint-check', () => {
           startDate: '2030-05-06',
           endDate: '2030-05-12',
           draft: {
-            constraints: emptyConstraint([
-              { dayOfWeek: 2, preference: 'if_free' },
-            ]),
+            constraints: makeScheduleConstraint({
+              weekdays: [{ dayOfWeek: 2, preference: 'if_free' }],
+            }),
           },
         }),
       },
@@ -234,7 +245,7 @@ describe('POST /api/schedule/events/:id/constraint-check', () => {
           endDate: '2030-05-12',
           draft: {
             constraints: {
-              ...emptyConstraint([]),
+              ...makeScheduleConstraint(),
               weeklyMin: 4,
               windowStart: '18:00',
               windowEnd: '20:00',
@@ -308,8 +319,8 @@ describe('POST /api/schedule/events/:id/constraint-check', () => {
             items: [
               {
                 id: 'event-test',
-                start: { dateTime: '2030-05-07T18:30:00Z' },
-                end: { dateTime: '2030-05-07T19:30:00Z' },
+                start: { dateTime: '2030-05-07T09:30:00Z' },
+                end: { dateTime: '2030-05-07T10:30:00Z' },
               },
             ],
           }),
@@ -327,9 +338,9 @@ describe('POST /api/schedule/events/:id/constraint-check', () => {
           startDate: '2030-05-06',
           endDate: '2030-05-12',
           draft: {
-            constraints: emptyConstraint([
-              { dayOfWeek: 2, preference: 'if_free' },
-            ]),
+            constraints: makeScheduleConstraint({
+              weekdays: [{ dayOfWeek: 2, preference: 'if_free' }],
+            }),
           },
         }),
       },
@@ -353,9 +364,91 @@ describe('POST /api/schedule/events/:id/constraint-check', () => {
       },
     })
   })
+
+  it('marks calendar checks incomplete when a connected calendar is unavailable', async () => {
+    setGoogleEnv()
+    const target = await createSchedule({
+      title: 'Routine',
+      startDate: '2030-05-07',
+      startTime: '18:00',
+      endTime: '19:00',
+    })
+    await upsertGoogleCalendarToken({
+      accountId: 'google-sub-test',
+      accountLabel: 'test@example.com',
+      accessToken: 'valid-token',
+      refreshToken: 'refresh-token',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    })
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response('Unavailable', { status: 503 })),
+    )
+
+    const response = await app.request(
+      `/api/schedule/events/${target.id}/constraint-check`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: '2030-05-06',
+          endDate: '2030-05-12',
+          draft: {
+            constraints: makeScheduleConstraint({
+              weekdays: [{ dayOfWeek: 2, preference: 'if_free' }],
+            }),
+          },
+        }),
+      },
+    )
+
+    expect(await constraintCheckSnapshot(response)).toEqual({
+      status: 200,
+      body: {
+        constraintViolations: [],
+        calendarDataIncomplete: true,
+      },
+    })
+  })
 })
 
 describe('schedule save responses', () => {
+  it('checks the upcoming range when a schedule started in the past', async () => {
+    const today = formatDateStr(new Date())
+    const endDate = addCalendarDays(today, MAX_SCHEDULE_DATE_RANGE_DAYS - 1)
+    const schedule = await createSchedule({
+      title: 'Routine',
+      startDate: '2020-01-01',
+      startTime: '18:00',
+      endTime: '19:00',
+    })
+    await addScheduleConstraint(schedule.id, [], { weeklyMin: 1 })
+
+    const response = await app.request(`/api/schedule/events/${schedule.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated routine' }),
+    })
+
+    expect(await scheduleResponseSnapshot(response)).toEqual({
+      status: 200,
+      body: {
+        id: 'SCHEDULE_ID',
+        title: 'Updated routine',
+        startDate: '2020-01-01',
+        endDate: null,
+        remindBeforeMinutes: null,
+        startTime: '18:00',
+        endTime: '19:00',
+        recurrence: null,
+        context: 'personal',
+        color: null,
+        constraintViolations: weeklyMinimumViolations(today, endDate),
+        createdAt: 'TIMESTAMP',
+        updatedAt: 'TIMESTAMP',
+      },
+    })
+  })
+
   it('returns violations with a schedule update without blocking the update', async () => {
     const schedule = await createSchedule({
       title: 'Routine',

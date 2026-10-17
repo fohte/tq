@@ -121,13 +121,17 @@ export const scheduleOverridesApp = new Hono()
           }),
         ).values(),
       ]
-      const constraintViolations = (
-        await Promise.all(
-          affectedRanges.map((range) =>
-            evaluateScheduleConstraintViolations({ series: schedule, range }),
-          ),
-        )
-      ).flat()
+      const evaluations = await Promise.all(
+        affectedRanges.map((range) =>
+          evaluateScheduleConstraintViolations({ series: schedule, range }),
+        ),
+      )
+      const constraintViolations = evaluations.flatMap(
+        ({ constraintViolations }) => constraintViolations,
+      )
+      const calendarDataIncomplete = evaluations.some(
+        ({ calendarDataIncomplete }) => calendarDataIncomplete,
+      )
 
       return c.json(
         {
@@ -138,6 +142,7 @@ export const scheduleOverridesApp = new Hono()
           movedToDate: override.movedToDate,
           skipped: override.skipped,
           constraintViolations,
+          ...(calendarDataIncomplete ? { calendarDataIncomplete: true } : {}),
         },
         200,
       )

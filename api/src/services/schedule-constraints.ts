@@ -1,8 +1,7 @@
 import { z } from 'zod'
 
-const scheduleConstraintTimeSchema = z
-  .string()
-  .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
+import { calendarDayOfWeek, mondayWeekStart } from '#lib/timezone'
+import { scheduleTimeSchema } from '#schemas/schedule'
 
 const scheduleConstraintWeekdayPreferenceSchema = z.enum([
   'preferred',
@@ -22,8 +21,8 @@ export const scheduleConstraintSchema = z
     weeklyMax: z.number().int().min(0).max(7).nullable(),
     weeklyTarget: z.number().int().min(0).max(7).nullable(),
     maxConsecutiveDays: z.number().int().min(1).nullable(),
-    windowStart: scheduleConstraintTimeSchema.nullable(),
-    windowEnd: scheduleConstraintTimeSchema.nullable(),
+    windowStart: scheduleTimeSchema.nullable(),
+    windowEnd: scheduleTimeSchema.nullable(),
     weekdays: z.array(scheduleConstraintWeekdaySchema),
   })
   .superRefine((constraint, context) => {
@@ -160,16 +159,6 @@ function dateFromOrdinal(ordinal: number): string {
   return new Date(ordinal * DAY_IN_MILLISECONDS).toISOString().slice(0, 10)
 }
 
-function dayOfWeek(date: string): number {
-  return new Date(dateOrdinal(date) * DAY_IN_MILLISECONDS).getUTCDay()
-}
-
-function weekStart(date: string): string {
-  const ordinal = dateOrdinal(date)
-  const daysSinceMonday = (dayOfWeek(date) + 6) % 7
-  return dateFromOrdinal(ordinal - daysSinceMonday)
-}
-
 function timeInMinutes(time: string): number {
   const [hours = '0', minutes = '0'] = time.split(':')
   return Number(hours) * 60 + Number(minutes)
@@ -279,15 +268,15 @@ function addWeeklyViolations(
   const occurrencesByWeek = new Map<string, ScheduleConstraintOccurrence[]>()
 
   for (const occurrence of occurrences) {
-    const start = weekStart(occurrence.date)
+    const start = mondayWeekStart(occurrence.date)
     const weekOccurrences = occurrencesByWeek.get(start) ?? []
     weekOccurrences.push(occurrence)
     occurrencesByWeek.set(start, weekOccurrences)
   }
 
-  const lastWeekStartOrdinal = dateOrdinal(weekStart(range.endDate))
+  const lastWeekStartOrdinal = dateOrdinal(mondayWeekStart(range.endDate))
   for (
-    let weekStartOrdinal = dateOrdinal(weekStart(range.startDate));
+    let weekStartOrdinal = dateOrdinal(mondayWeekStart(range.startDate));
     weekStartOrdinal <= lastWeekStartOrdinal;
     weekStartOrdinal += 7
   ) {
@@ -356,13 +345,10 @@ function addConsecutiveDayViolations(
   const flushStreak = () => {
     if (streak.length <= maximum) return
 
-    const firstExcessDate = streak[maximum]
-    if (
-      firstExcessDate === undefined ||
-      !isWithinEvaluationRange(firstExcessDate, range)
-    ) {
-      return
-    }
+    const firstExcessDate = streak
+      .slice(maximum)
+      .find((date) => isWithinEvaluationRange(date, range))
+    if (firstExcessDate === undefined) return
     const triggeringOccurrence = occurrencesByDate
       .get(firstExcessDate)
       ?.sort(compareOccurrences)[0]
@@ -422,7 +408,9 @@ export function checkScheduleConstraints(
   for (const occurrence of activeOccurrences) {
     if (!isWithinEvaluationRange(occurrence.date, range)) continue
 
-    const preference = weekdayPreferences.get(dayOfWeek(occurrence.date))
+    const preference = weekdayPreferences.get(
+      calendarDayOfWeek(occurrence.date),
+    )
     const movement = movementDetails(occurrence)
 
     if (preference === 'excluded') {

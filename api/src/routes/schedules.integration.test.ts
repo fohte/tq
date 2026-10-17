@@ -58,6 +58,7 @@ interface ScheduleResponse {
   context: string
   color: string | null
   constraintViolations: unknown[]
+  calendarDataIncomplete?: true
   createdAt: string
   updatedAt: string
 }

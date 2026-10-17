@@ -1,26 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
+import { makeScheduleConstraint as makeConstraint } from '#services/schedule-constraint-test-fixtures'
 import {
   checkScheduleConstraints as checkScheduleConstraintsInRange,
   type ScheduleConstraint,
   type ScheduleConstraintOccurrence,
   scheduleConstraintSchema,
 } from '#services/schedule-constraints'
-
-function makeConstraint(
-  overrides: Partial<ScheduleConstraint> = {},
-): ScheduleConstraint {
-  return {
-    weeklyMin: null,
-    weeklyMax: null,
-    weeklyTarget: null,
-    maxConsecutiveDays: null,
-    windowStart: null,
-    windowEnd: null,
-    weekdays: [],
-    ...overrides,
-  }
-}
 
 function makeOccurrence(
   date: string,
@@ -257,6 +243,29 @@ describe('checkScheduleConstraints', () => {
         severity: 'required',
         date: '2030-05-13',
         originalDate: '2030-05-09',
+        consecutiveDays: 3,
+        maximum: 2,
+        dates: ['2030-05-11', '2030-05-12', '2030-05-13'],
+      },
+    ])
+  })
+
+  it('reports a consecutive-day streak that enters the evaluation range', () => {
+    expect(
+      checkScheduleConstraintsInRange(
+        makeConstraint({ maxConsecutiveDays: 2 }),
+        { startDate: '2030-05-13', endDate: '2030-05-13' },
+        [
+          makeOccurrence('2030-05-11'),
+          makeOccurrence('2030-05-12'),
+          makeOccurrence('2030-05-13'),
+        ],
+      ),
+    ).toEqual([
+      {
+        type: 'consecutive-days-exceeded',
+        severity: 'required',
+        date: '2030-05-13',
         consecutiveDays: 3,
         maximum: 2,
         dates: ['2030-05-11', '2030-05-12', '2030-05-13'],

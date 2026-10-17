@@ -13,12 +13,12 @@ export const scheduleConstraintChecksApp = new Hono().post(
     if (!series) return c.json({ error: 'Schedule not found' }, 404)
 
     const { draft, ...range } = c.req.valid('json')
-    const constraintViolations = await evaluateScheduleConstraintViolations({
+    const evaluation = await evaluateScheduleConstraintViolations({
       series,
       range,
       ...(draft === undefined ? {} : { draft }),
     })
 
-    return c.json({ constraintViolations }, 200)
+    return c.json(evaluation, 200)
   },
 )
