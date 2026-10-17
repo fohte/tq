@@ -326,6 +326,56 @@ describe('TaskChecklistList', () => {
     })
   })
 
+  it('keeps strikethrough on checked plain text in nested items', async () => {
+    const content = 'Pack socks'
+    const rootItemId = '30000000-0000-4000-8000-000000000745'
+    const childItemId = '30000000-0000-4000-8000-000000000746'
+
+    const rendered = renderChecklist({
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: rootItemId,
+              content: 'Pack a backpack',
+              children: [
+                makeTaskChecklistItem({
+                  id: childItemId,
+                  parentItemId: rootItemId,
+                  content: 'Pack clothes',
+                  children: [
+                    makeTaskChecklistItem({
+                      id: '30000000-0000-4000-8000-000000000747',
+                      parentItemId: childItemId,
+                      content,
+                      checkedAt: '2026-01-02T00:00:00.000Z',
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Uncheck ${content}` })
+    const fieldTrigger = assertDefined(
+      [
+        ...rendered.container.querySelectorAll('[data-slot="field-trigger"]'),
+      ].find((element) => element.textContent === content),
+      'the nested checklist item has an editable plain-text field',
+    )
+    const inlineContent = assertDefined(
+      fieldTrigger.querySelector(':scope > span'),
+      'the field trigger has a text wrapper',
+    )
+
+    expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
+      text: content,
+      textDecoration: 'line-through',
+    })
+  })
+
   it('keeps a click-to-edit target when an item contains only a reference chip', async () => {
     const user = userEvent.setup()
     const queryClient = new QueryClient({
