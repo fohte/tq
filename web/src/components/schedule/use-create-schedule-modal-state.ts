@@ -4,6 +4,7 @@ import type { ScheduleConstraintFormState } from '#components/schedule/schedule-
 import {
   emptyScheduleConstraintFormState,
   scheduleConstraintFormStateFromSaved,
+  scheduleConstraintInputFromFormState,
 } from '#components/schedule/schedule-constraints-form-state'
 import {
   type RecurrenceFormDraft,
@@ -32,13 +33,14 @@ import {
   type ScheduleModalSaveState,
   useScheduleModalSave,
 } from '#components/schedule/use-schedule-modal-save'
-import type { Schedule } from '#hooks/use-schedules'
 import {
+  type Schedule,
+  useScheduleConstraintCheck,
   useScheduleConstraints,
   useScheduleDetails,
   useScheduleOverrides,
 } from '#hooks/use-schedules'
-import { formatLocalDate } from '#lib/date-range'
+import { formatLocalDate, getLocalWeekDateRange } from '#lib/date-range'
 
 interface CreateScheduleModalStateOptions {
   open: boolean
@@ -186,6 +188,29 @@ export function useCreateScheduleModalState({
   const startDate = scheduleEditStartDate(rangeDraft)
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
+  const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
+  const constraintCheckDraft =
+    scope !== 'all' || !constraintTouchedRef.current || constraintDraft === null
+      ? undefined
+      : constraintInput === null
+        ? null
+        : { constraints: constraintInput }
+  const constraintCheckRange = getLocalWeekDateRange(
+    new Date(`${occurrenceDate}T00:00:00`),
+  )
+  const constraintCheck = useScheduleConstraintCheck(
+    schedule?.scheduleId,
+    {
+      ...constraintCheckRange,
+      ...(constraintCheckDraft == null ? {} : { draft: constraintCheckDraft }),
+    },
+    open &&
+      schedule != null &&
+      constraintDraft !== null &&
+      !scheduleConstraints.isPending &&
+      !scheduleConstraints.isError &&
+      constraintCheckDraft !== null,
+  )
   const preview = useScheduleModalPreview({
     schedule,
     editState,
@@ -391,6 +416,14 @@ export function useCreateScheduleModalState({
     onAddConstraints: addConstraints,
     onChangeConstraints: updateConstraints,
     onRemoveConstraints: removeConstraints,
+    constraintCheckDraft,
+    constraintCheckViolations: constraintCheck.data?.constraintViolations ?? [],
+    isConstraintCheckLoading: constraintCheck.isPending,
+    isConstraintCheckError: constraintCheck.isError,
+    constraintCheckIncomplete: Boolean(
+      constraintCheck.data?.calendarDataIncomplete ||
+      constraintCheck.data?.constraintEvaluationIncomplete,
+    ),
     previewText: preview.previewText,
     isPreviewLoading: preview.isPreviewLoading,
     previewError: preview.previewError,

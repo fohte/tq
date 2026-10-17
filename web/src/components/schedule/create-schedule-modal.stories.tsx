@@ -82,6 +82,9 @@ export const Edit: Story = {
         http.get('/api/schedule/events/:id/constraints', () =>
           HttpResponse.json({ constraint: makeScheduleConstraint() }),
         ),
+        http.post('/api/schedule/events/:id/constraint-check', () =>
+          HttpResponse.json({ constraintViolations: [] }),
+        ),
       ],
     },
   },

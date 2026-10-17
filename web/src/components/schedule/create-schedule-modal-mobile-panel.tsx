@@ -10,6 +10,7 @@ import {
 import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
+import { ScheduleConstraintCheckResult } from '#components/schedule/schedule-constraint-check-result'
 import { ScheduleConstraintsField } from '#components/schedule/schedule-constraints-field'
 import { ScheduleEditScopeSelector } from '#components/schedule/schedule-edit-scope-selector'
 import { ScheduleExceptionList } from '#components/schedule/schedule-exception-list'
@@ -78,6 +79,11 @@ export function ScheduleModalMobilePanel({
   onAddConstraints,
   onChangeConstraints,
   onRemoveConstraints,
+  constraintCheckDraft,
+  constraintCheckViolations,
+  isConstraintCheckLoading,
+  isConstraintCheckError,
+  constraintCheckIncomplete,
   previewText,
   isPreviewLoading,
   previewError,
@@ -314,6 +320,20 @@ export function ScheduleModalMobilePanel({
               onRemove={onRemoveConstraints}
             />
           )}
+
+          {schedule &&
+            constraints !== null &&
+            !constraintsLoading &&
+            !constraintsError && (
+              <ScheduleConstraintCheckResult
+                occurrenceDate={occurrenceDate}
+                constraintViolations={constraintCheckViolations}
+                isLoading={isConstraintCheckLoading}
+                isError={isConstraintCheckError}
+                isIncomplete={constraintCheckIncomplete}
+                draftInvalid={constraintCheckDraft === null}
+              />
+            )}
 
           {startTime && endTime && startTime > endTime && (
             <p className="text-xs text-muted-foreground">

@@ -17,6 +17,7 @@ import {
   useDeleteSchedule,
   useDeleteScheduleConstraints,
   useScheduleChangePreview,
+  useScheduleConstraintCheck,
   useScheduleConstraints,
   useScheduleDetails,
   useScheduleOverrides,
@@ -47,6 +48,7 @@ vi.mock('#hooks/use-schedules', async (importOriginal) => {
     useScheduleDetails: vi.fn(),
     useScheduleOverrides: vi.fn(),
     useScheduleChangePreview: vi.fn(),
+    useScheduleConstraintCheck: vi.fn(),
     useScheduleConstraints: vi.fn(),
     useSetScheduleOverride: vi.fn(),
     useSetScheduleConstraints: vi.fn(),
@@ -61,6 +63,7 @@ const mockUseDeleteSchedule = vi.mocked(useDeleteSchedule)
 const mockUseScheduleDetails = vi.mocked(useScheduleDetails)
 const mockUseScheduleOverrides = vi.mocked(useScheduleOverrides)
 const mockUseScheduleChangePreview = vi.mocked(useScheduleChangePreview)
+const mockUseScheduleConstraintCheck = vi.mocked(useScheduleConstraintCheck)
 const mockUseScheduleConstraints = vi.mocked(useScheduleConstraints)
 const mockUseSetScheduleOverride = vi.mocked(useSetScheduleOverride)
 const mockUseClearScheduleOverride = vi.mocked(useClearScheduleOverride)
@@ -144,6 +147,14 @@ function setupMocks() {
       },
       isSuccess: true,
       isFetching: false,
+    }),
+  )
+  mockUseScheduleConstraintCheck.mockReturnValue(
+    partialMutation<ReturnType<typeof useScheduleConstraintCheck>>({
+      data: { constraintViolations: [] },
+      isLoading: false,
+      isPending: false,
+      isError: false,
     }),
   )
   mockUseScheduleConstraints.mockReturnValue(
@@ -413,6 +424,10 @@ function visibleText(text: string) {
   return findVisible(screen.queryAllByText(text))?.textContent ?? null
 }
 
+function weeklyCheckHeadingOutcome(heading: string | null) {
+  return { heading }
+}
+
 async function waitForVisibleText(text: string) {
   await waitFor(() => {
     if (visibleText(text) == null) throw new Error(`Text not visible: ${text}`)
@@ -539,6 +554,18 @@ describe('CreateScheduleModal', () => {
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
 
     expect(findVisible(screen.getAllByText('Gym'))).toBeInTheDocument()
+  })
+
+  it('hides the weekly constraint result when no constraints are saved', () => {
+    setupMocks()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    expect(
+      weeklyCheckHeadingOutcome(
+        screen.queryByRole('heading', { name: /This week/ })?.textContent ??
+          null,
+      ),
+    ).toEqual({ heading: null })
   })
 
   it('loads and saves schedule constraints and reopens the saved values', async () => {
@@ -696,6 +723,57 @@ describe('CreateScheduleModal', () => {
           { onSuccess: 'callback', onError: 'callback' },
         ],
       ],
+    })
+  })
+
+  it('checks the clicked week with constraints from the current draft', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    setupMocks()
+    mockUseScheduleConstraintCheck.mockClear()
+    const schedule = makeSchedule({
+      occurrenceDate: '2041-05-15',
+      startDate: '2041-05-15',
+      start: '2041-05-15T07:00:00',
+      end: '2041-05-15T08:00:00',
+    })
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule })
+    await selectScheduleScope(user, 'All events')
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Add constraints' })),
+        'no visible add-constraints button',
+      ),
+    )
+
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Minimum per week')),
+        'no visible minimum input',
+      ),
+      { target: { value: '2' } },
+    )
+
+    await waitFor(() => {
+      expect(mockUseScheduleConstraintCheck.mock.calls.at(-1)).toEqual([
+        schedule.scheduleId,
+        {
+          startDate: '2041-05-13',
+          endDate: '2041-05-19',
+          draft: {
+            constraints: {
+              weeklyMin: 2,
+              weeklyMax: null,
+              weeklyTarget: null,
+              maxConsecutiveDays: null,
+              windowStart: null,
+              windowEnd: null,
+              weekdays: [],
+            },
+          },
+        },
+        true,
+      ])
     })
   })
 

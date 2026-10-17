@@ -6,6 +6,7 @@ import { scheduleConstraintFormStateFromSaved } from '#components/schedule/sched
 import {
   makeSchedule,
   makeScheduleConstraint,
+  makeScheduleConstraintViolations,
   makeScheduleOverride,
 } from '#components/schedule/schedule-test-fixtures'
 
@@ -68,6 +69,11 @@ const meta = {
     onAddConstraints: fn(),
     onChangeConstraints: fn(),
     onRemoveConstraints: fn(),
+    constraintCheckDraft: undefined,
+    constraintCheckViolations: [],
+    isConstraintCheckLoading: false,
+    isConstraintCheckError: false,
+    constraintCheckIncomplete: false,
     previewText: null,
     isPreviewLoading: false,
     previewError: false,
@@ -77,6 +83,13 @@ const meta = {
     handleSubmit: fn(),
   },
 } satisfies Meta<typeof ScheduleModalDesktopPanel>
+
+const thisWeekViolations = makeScheduleConstraintViolations().filter(
+  ({ type }) =>
+    type === 'consecutive-days-exceeded' ||
+    type === 'weekly-target-not-met' ||
+    type === 'reserve-weekday',
+)
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -96,6 +109,25 @@ export const ThisEvent: Story = {
     startTime: '07:00',
     endTime: '08:00',
     occurrenceDate: '2026-01-01',
+  },
+}
+
+export const ThisEventWithConstraints: Story = {
+  name: 'the editor shows this week while targeting one occurrence',
+  args: {
+    ...ThisEvent.args,
+    schedule: makeSchedule({
+      occurrenceDate: '2041-05-15',
+      startDate: '2041-05-15',
+      start: '2041-05-15T07:00:00',
+      end: '2041-05-15T08:00:00',
+    }),
+    occurrenceDate: '2041-05-15',
+    startDate: '2041-05-15',
+    startTime: '07:00',
+    endTime: '08:00',
+    constraints: scheduleConstraintFormStateFromSaved(makeScheduleConstraint()),
+    constraintCheckViolations: thisWeekViolations,
   },
 }
 
