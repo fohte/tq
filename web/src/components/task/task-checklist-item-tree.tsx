@@ -2,7 +2,6 @@ import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import { ChevronDown } from 'lucide-react'
 import {
-  type CSSProperties,
   type KeyboardEvent,
   useCallback,
   useEffect,
@@ -10,6 +9,7 @@ import {
   useState,
 } from 'react'
 
+import { getChecklistIndentStyle } from '#components/task/checklist-indent-style'
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
 import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
 import { ChecklistItemComposer } from '#components/task/task-checklist-item-composer'
@@ -48,6 +48,7 @@ interface TaskChecklistItemTreeProps {
   onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   initiallyCollapsedItemIds?: string[] | undefined
+  initiallyOpenDetailsItemIds?: string[] | undefined
 }
 
 export function TaskChecklistItemTree({
@@ -69,6 +70,7 @@ export function TaskChecklistItemTree({
   onPromoteItem,
   onStartAddingItem,
   initiallyCollapsedItemIds = [],
+  initiallyOpenDetailsItemIds = [],
 }: TaskChecklistItemTreeProps) {
   const currentParentId = parentItem?.id ?? null
 
@@ -97,6 +99,7 @@ export function TaskChecklistItemTree({
           onCancelAddingItem={onCancelAddingItem}
           onCreateItem={onCreateItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
+          initiallyOpenDetailsItemIds={initiallyOpenDetailsItemIds}
         />
       ))}
       {addingItemParentId === currentParentId && (
@@ -133,6 +136,7 @@ function ChecklistItemRow({
   onCancelAddingItem,
   onCreateItem,
   initiallyCollapsedItemIds,
+  initiallyOpenDetailsItemIds,
 }: {
   item: TaskChecklistItem
   githubLinks: GithubLink[]
@@ -154,13 +158,16 @@ function ChecklistItemRow({
   onCancelAddingItem: () => void
   onCreateItem: (content: string, parentItemId: string | null) => void
   initiallyCollapsedItemIds: string[]
+  initiallyOpenDetailsItemIds: string[]
 }) {
   const [collapsed, setCollapsed] = useState(
     initiallyCollapsedItemIds.includes(item.id),
   )
   const [editingContent, setEditingContent] = useState(false)
   const [contentDraft, setContentDraft] = useState(item.content)
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(
+    initiallyOpenDetailsItemIds.includes(item.id),
+  )
   const [editingNote, setEditingNote] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
@@ -276,11 +283,7 @@ function ChecklistItemRow({
     <div className="group">
       <div
         className="flex min-h-10 items-center gap-2 py-1 pl-(--checklist-indent) pr-3"
-        style={
-          {
-            '--checklist-indent': `${String(12 + depth * 20)}px`,
-          } as CSSProperties & { '--checklist-indent': string }
-        }
+        style={getChecklistIndentStyle(12 + depth * 20)}
       >
         {hasChildren ? (
           <Button
@@ -346,11 +349,7 @@ function ChecklistItemRow({
 
       <div
         className="pl-(--checklist-indent)"
-        style={
-          {
-            '--checklist-indent': `${String(36 + depth * 20)}px`,
-          } as CSSProperties & { '--checklist-indent': string }
-        }
+        style={getChecklistIndentStyle(36 + depth * 20)}
       >
         <Button
           type="button"
@@ -394,17 +393,14 @@ function ChecklistItemRow({
           onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
+          initiallyOpenDetailsItemIds={initiallyOpenDetailsItemIds}
         />
       )}
 
       {detailsOpen && (
         <div
           className="ml-(--checklist-indent) border-l border-border py-2 pr-3 pl-2.5"
-          style={
-            {
-              '--checklist-indent': `${String(46 + depth * 20)}px`,
-            } as CSSProperties & { '--checklist-indent': string }
-          }
+          style={getChecklistIndentStyle(46 + depth * 20)}
         >
           <MarkdownEditor
             defaultValue={item.note ?? ''}

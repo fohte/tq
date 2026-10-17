@@ -1,5 +1,7 @@
 import { Input } from '@fohte/ui/input'
-import { type CSSProperties, useState } from 'react'
+import { useState } from 'react'
+
+import { getChecklistIndentStyle } from '#components/task/checklist-indent-style'
 
 export function ChecklistItemComposer({
   depth,
@@ -21,11 +23,7 @@ export function ChecklistItemComposer({
   return (
     <div
       className="flex min-h-10 items-center py-1 pl-(--checklist-indent) pr-3"
-      style={
-        {
-          '--checklist-indent': `${String(36 + depth * 20)}px`,
-        } as CSSProperties & { '--checklist-indent': string }
-      }
+      style={getChecklistIndentStyle(36 + depth * 20)}
     >
       <Input
         aria-label="New checklist item"

@@ -112,11 +112,13 @@ function ItemTreeStory({
   githubLinks = [],
   subtasks = [],
   initiallyCollapsedItemIds,
+  initiallyOpenDetailsItemIds,
 }: {
   items: typeof items
   githubLinks?: GithubLink[]
   subtasks?: Task[]
   initiallyCollapsedItemIds?: string[]
+  initiallyOpenDetailsItemIds?: string[]
 }) {
   return (
     <Providers>
@@ -141,6 +143,7 @@ function ItemTreeStory({
             onPromoteItem={() => {}}
             onStartAddingItem={() => {}}
             initiallyCollapsedItemIds={initiallyCollapsedItemIds}
+            initiallyOpenDetailsItemIds={initiallyOpenDetailsItemIds}
           />
         </Panel>
       </div>
@@ -165,6 +168,11 @@ export const ThreeLevels: Story = {
 export const Collapsed: Story = {
   name: 'a parent item can hide its children',
   args: { items, initiallyCollapsedItemIds: [rootId] },
+}
+
+export const NestedItemDetailsOpen: Story = {
+  name: 'details stay open beneath a nested item',
+  args: { items, initiallyOpenDetailsItemIds: [grandchildId] },
 }
 
 export const LinkedItems: Story = {
