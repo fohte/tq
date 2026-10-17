@@ -385,9 +385,10 @@ export function ScheduleModalMobilePanel({
               />
             )}
             <Button
+              size="lg"
               onClick={handleSubmit}
               disabled={!canSubmit || isPending || isPreviewLoading}
-              className="h-12 flex-1 rounded-lg text-base font-semibold"
+              className="h-12 flex-1"
             >
               {schedule ? 'Save' : 'Create'}
             </Button>

@@ -150,7 +150,7 @@ function SessionOpenButton({
 
   return (
     <Button
-      variant="ghost"
+      variant="plain"
       size="icon-xs"
       onClick={() => {
         if (action.kind === 'copy') {
@@ -177,7 +177,7 @@ function SessionOpenButton({
               : `Open: ${action.url}`
       }
       aria-label={active ? 'Focus session' : 'Resume session'}
-      className="shrink-0 text-muted-foreground hover:text-foreground"
+      className="shrink-0"
     >
       {copyState === 'copied' ? (
         <Check className="h-4 w-4" />
