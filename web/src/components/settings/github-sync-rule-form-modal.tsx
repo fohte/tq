@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@fohte/ui/dialog'
-import { Input } from '@fohte/ui/input'
 import { SegmentedControl } from '@fohte/ui/segmented-control'
 import {
   Select,
@@ -18,6 +17,7 @@ import {
 } from '@fohte/ui/select'
 import { useState } from 'react'
 
+import { GithubSyncRuleScopeFields } from '#components/settings/github-sync-rule-scope-fields'
 import { Checkbox } from '#components/ui/checkbox'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
@@ -175,32 +175,13 @@ export function GithubSyncRuleFormModal({
                   onValueChange={setScope}
                 />
               </FieldRow>
-              {scope !== 'all' && (
-                <FieldRow label="Organization">
-                  <Input
-                    type="text"
-                    value={org}
-                    onChange={(e) => {
-                      setOrg(e.target.value)
-                    }}
-                    placeholder="octocat"
-                    className="w-full"
-                  />
-                </FieldRow>
-              )}
-              {scope === 'repo' && (
-                <FieldRow label="リポジトリ">
-                  <Input
-                    type="text"
-                    value={repo}
-                    onChange={(e) => {
-                      setRepo(e.target.value)
-                    }}
-                    placeholder="hello-world"
-                    className="w-full"
-                  />
-                </FieldRow>
-              )}
+              <GithubSyncRuleScopeFields
+                scope={scope}
+                org={org}
+                repo={repo}
+                onOrgChange={setOrg}
+                onRepoChange={setRepo}
+              />
             </>
           )}
 
