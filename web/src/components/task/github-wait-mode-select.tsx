@@ -40,7 +40,9 @@ export function GithubWaitModeSelect({
         disabled={disabled}
         className="w-32 shrink-0"
       >
-        <SelectValue />
+        <span className="font-mono text-xs">
+          <SelectValue />
+        </span>
       </SelectTrigger>
       <SelectContent>
         {waitModeOptions.map(({ value: optionValue, label }) => (

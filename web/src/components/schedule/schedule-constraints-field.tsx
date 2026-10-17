@@ -413,16 +413,17 @@ function ConstraintEditor({
         </p>
       )}
 
-      <Button
-        variant="plain"
-        size="sm"
-        disabled={isPending}
-        onClick={onRemove}
-        className="self-start"
-      >
-        <Trash2 className="size-3.5" />
-        Remove constraints
-      </Button>
+      <div className="self-start font-mono text-xs">
+        <Button
+          variant="plain"
+          size="sm"
+          disabled={isPending}
+          onClick={onRemove}
+        >
+          <Trash2 className="size-3.5" />
+          Remove constraints
+        </Button>
+      </div>
     </div>
   )
 }

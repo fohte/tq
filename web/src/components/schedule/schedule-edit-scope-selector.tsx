@@ -16,7 +16,7 @@ export function ScheduleEditScopeSelector({
       <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
         APPLY TO
       </span>
-      <div className="grid grid-cols-3 gap-1 rounded-lg border border-border p-1">
+      <div className="flex gap-1 rounded-lg border border-border p-1 md:grid md:grid-cols-3">
         {(
           [
             ['this', 'This event'],
@@ -28,15 +28,17 @@ export function ScheduleEditScopeSelector({
             key={value}
             type="button"
             variant={scope === value ? 'secondary' : 'ghost'}
-            size="sm"
+            size="xs"
             aria-pressed={scope === value}
             disabled={value === 'all' && !reminderReady}
             onClick={() => {
               setScope(value)
             }}
-            className="h-auto min-h-8 w-full min-w-0 whitespace-normal"
+            className={`h-auto min-h-8 w-full flex-1 whitespace-normal ${
+              value === 'following' ? 'min-w-fit md:min-w-0' : 'min-w-0'
+            }`}
           >
-            <span className="text-2xs leading-3 md:text-xs md:leading-normal">
+            <span className="whitespace-nowrap text-2xs leading-3 md:text-xs md:leading-normal">
               {label}
             </span>
           </Button>
