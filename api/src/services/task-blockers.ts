@@ -53,7 +53,7 @@ function unacknowledgedResolvedTaskWaitSubquery() {
     )
 }
 
-export function hasUnresolvedBlockersCondition() {
+function hasUnresolvedBlockersCondition() {
   return sql`(${exists(unresolvedTaskBlockerSubquery())} OR ${exists(unresolvedGithubBlockerSubquery())} OR ${exists(unresolvedTaskWaitSubquery())})`
 }
 
