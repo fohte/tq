@@ -2938,11 +2938,11 @@
       "checkConstraints": {
         "schedule_constraints_weekly_min_check": {
           "name": "schedule_constraints_weekly_min_check",
-          "value": "\"schedule_constraints\".\"weekly_min\" >= 0"
+          "value": "\"schedule_constraints\".\"weekly_min\" BETWEEN 0 AND 7"
         },
         "schedule_constraints_weekly_max_check": {
           "name": "schedule_constraints_weekly_max_check",
-          "value": "\"schedule_constraints\".\"weekly_max\" <= 7"
+          "value": "\"schedule_constraints\".\"weekly_max\" BETWEEN 0 AND 7"
         },
         "schedule_constraints_weekly_range_check": {
           "name": "schedule_constraints_weekly_range_check",

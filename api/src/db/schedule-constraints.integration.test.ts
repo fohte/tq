@@ -77,6 +77,8 @@ const invalidConstraints: readonly {
   values: ConstraintValues
 }[] = [
   { name: 'negative weekly minimum', values: { weeklyMin: -1 } },
+  { name: 'weekly minimum above seven', values: { weeklyMin: 8 } },
+  { name: 'negative weekly maximum', values: { weeklyMax: -1 } },
   { name: 'weekly maximum above seven', values: { weeklyMax: 8 } },
   {
     name: 'weekly minimum above the maximum',

@@ -33,11 +33,11 @@ export const scheduleConstraints = pgTable(
   (table) => [
     check(
       'schedule_constraints_weekly_min_check',
-      sql`${table.weeklyMin} >= 0`,
+      sql`${table.weeklyMin} BETWEEN 0 AND 7`,
     ),
     check(
       'schedule_constraints_weekly_max_check',
-      sql`${table.weeklyMax} <= 7`,
+      sql`${table.weeklyMax} BETWEEN 0 AND 7`,
     ),
     check(
       'schedule_constraints_weekly_range_check',
