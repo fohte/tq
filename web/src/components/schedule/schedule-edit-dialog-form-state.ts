@@ -26,13 +26,13 @@ export interface RecurrenceFormDraft {
   dayOfMonth: string
 }
 
-export function recurrenceFormFromSchedule(
+function recurrenceFormFromSchedule(
   schedule: Schedule | undefined,
 ): RecurrenceFormDraft {
   return recurrenceFormFromRecurrence(schedule?.recurrence)
 }
 
-export function recurrenceFormFromRecurrence(
+function recurrenceFormFromRecurrence(
   recurrence: Schedule['recurrence'] | undefined,
 ): RecurrenceFormDraft {
   return {
@@ -44,13 +44,13 @@ export function recurrenceFormFromRecurrence(
   }
 }
 
-export function recurrenceFormFromDetails(
+function recurrenceFormFromDetails(
   details: ScheduleDetails,
 ): RecurrenceFormDraft {
   return recurrenceFormFromRecurrence(details.recurrence)
 }
 
-export function draftWithScheduleDetails(
+function draftWithScheduleDetails(
   schedule: Schedule | undefined,
   defaultStartDate: string,
   details: ScheduleDetails | undefined,

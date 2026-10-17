@@ -11,16 +11,9 @@ import { useCreateScheduleModalState } from '#components/schedule/use-create-sch
 import type { Schedule } from '#hooks/use-schedules'
 import { formatLocalDate } from '#lib/date-range'
 
-export type {
-  ContextValue,
-  RecurrenceType,
-} from '#components/schedule/schedule-modal-form-options'
+export type { RecurrenceType } from '#components/schedule/schedule-modal-form-options'
 export {
-  contextLabels,
-  contextValues,
   dayLabels,
-  presetColors,
-  recurrenceValues,
   toggleWeekday,
   WeekdayToggleRow,
 } from '#components/schedule/schedule-modal-form-options'
