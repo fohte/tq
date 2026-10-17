@@ -23,17 +23,17 @@ const weekdays = [
 ] as const
 
 const preferenceLabels = {
-  preferred: 'Candidate',
+  preferred: 'OK',
   if_free: 'If free',
   reserve: 'Backup',
-  excluded: 'Excluded',
+  excluded: 'Never',
 } as const
 
 const preferenceCellLabels = {
   preferred: 'OK',
-  if_free: 'IF FREE',
-  reserve: 'BACKUP',
-  excluded: 'NEVER',
+  if_free: 'If free',
+  reserve: 'Backup',
+  excluded: 'Never',
 } as const
 
 const preferenceClasses = {
@@ -49,6 +49,7 @@ interface ScheduleConstraintsFieldProps {
   isLoading: boolean
   isError: boolean
   saveError: boolean
+  scheduleSaveAfterConstraintsError: boolean
   isPending: boolean
   defaultOpen?: boolean
   onAdd: () => void
@@ -62,6 +63,7 @@ export function ScheduleConstraintsField({
   isLoading,
   isError,
   saveError,
+  scheduleSaveAfterConstraintsError,
   isPending,
   defaultOpen = false,
   onAdd,
@@ -77,7 +79,10 @@ export function ScheduleConstraintsField({
   if (isLoading) {
     return (
       <>
-        <ConstraintsSaveError visible={saveError} />
+        <ConstraintsSaveErrors
+          saveError={saveError}
+          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+        />
         <p role="status" className="text-xs text-muted-foreground">
           Loading constraints…
         </p>
@@ -87,7 +92,10 @@ export function ScheduleConstraintsField({
   if (isError) {
     return (
       <>
-        <ConstraintsSaveError visible={saveError} />
+        <ConstraintsSaveErrors
+          saveError={saveError}
+          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+        />
         <p role="alert" className="text-xs text-destructive">
           Constraints could not be loaded.
         </p>
@@ -108,14 +116,22 @@ export function ScheduleConstraintsField({
             <Plus className="size-3.5" />
             Add constraints
           </Button>
-          <ConstraintsSaveError visible={saveError} />
+          <ConstraintsSaveErrors
+            saveError={saveError}
+            scheduleSaveAfterConstraintsError={
+              scheduleSaveAfterConstraintsError
+            }
+          />
         </div>
       )
     }
 
     return (
       <div className="flex flex-col gap-3">
-        <ConstraintsSaveError visible={saveError} />
+        <ConstraintsSaveErrors
+          saveError={saveError}
+          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+        />
         <ConstraintEditor
           value={value}
           isPending={isPending}
@@ -141,7 +157,10 @@ export function ScheduleConstraintsField({
           <Plus className="size-3.5" />
           Add constraints
         </Button>
-        <ConstraintsSaveError visible={saveError} />
+        <ConstraintsSaveErrors
+          saveError={saveError}
+          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+        />
       </div>
     )
   }
@@ -161,7 +180,10 @@ export function ScheduleConstraintsField({
           {scheduleConstraintSummary(value)}
         </span>
       </button>
-      <ConstraintsSaveError visible={saveError} />
+      <ConstraintsSaveErrors
+        saveError={saveError}
+        scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+      />
       {isExpanded && (
         <div className="w-full rounded-lg border border-border p-3">
           <ConstraintEditor
@@ -179,13 +201,27 @@ export function ScheduleConstraintsField({
   )
 }
 
-function ConstraintsSaveError({ visible }: { visible: boolean }) {
-  if (!visible) return null
-
+function ConstraintsSaveErrors({
+  saveError,
+  scheduleSaveAfterConstraintsError,
+}: {
+  saveError: boolean
+  scheduleSaveAfterConstraintsError: boolean
+}) {
+  if (!saveError && !scheduleSaveAfterConstraintsError) return null
   return (
-    <p role="alert" className="text-xs text-destructive">
-      Failed to save schedule constraints.
-    </p>
+    <>
+      {saveError && (
+        <p role="alert" className="text-xs text-destructive">
+          Failed to save schedule constraints.
+        </p>
+      )}
+      {scheduleSaveAfterConstraintsError && (
+        <p role="alert" className="text-xs text-destructive">
+          Schedule changes were not saved. Constraint changes were saved.
+        </p>
+      )}
+    </>
   )
 }
 
@@ -346,7 +382,7 @@ function ConstraintEditor({
           })}
         </div>
         <span className="text-xs text-muted-foreground">
-          Click a day to cycle Candidate → If free → Backup → Excluded.
+          Click a day to cycle OK → If free → Backup → Never.
         </span>
       </div>
 

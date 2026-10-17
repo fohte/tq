@@ -63,6 +63,7 @@ const meta = {
     constraintsLoading: false,
     constraintsError: false,
     constraintsSaveError: false,
+    scheduleAfterConstraintsSaveError: false,
     constraintsDefaultOpen: false,
     onAddConstraints: fn(),
     onChangeConstraints: fn(),
@@ -116,10 +117,13 @@ export const ThisEventWithRestore: Story = {
   },
 }
 
-export const ThisEventWithConstraints: Story = {
-  name: 'the editor shows saved constraints for a schedule',
+export const AllEventsWithConstraints: Story = {
+  name: 'the editor shows saved constraints for all events',
   args: {
     ...ThisEvent.args,
+    scope: 'all',
+    canEditTitle: true,
+    canEditSeriesDetails: true,
     constraints: scheduleConstraintFormStateFromSaved(makeScheduleConstraint()),
   },
 }

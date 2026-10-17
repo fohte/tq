@@ -68,6 +68,16 @@ export function useCreateScheduleModalState({
   const [constraintDraft, setConstraintDraft] =
     useState<ScheduleConstraintFormState | null>(null)
   const constraintTouchedRef = useRef(false)
+  const [constraintsSaveError, setConstraintsSaveError] = useState(false)
+  const [
+    scheduleAfterConstraintsSaveError,
+    setScheduleAfterConstraintsSaveError,
+  ] = useState(false)
+  const [createdScheduleId, setCreatedScheduleId] = useState<string | null>(
+    null,
+  )
+  const [createdScheduleConstraintsSaved, setCreatedScheduleConstraintsSaved] =
+    useState(false)
   const today = formatLocalDate(new Date())
   const exceptionQuery = useScheduleOverrides(
     schedule?.scheduleId,
@@ -138,6 +148,10 @@ export function useCreateScheduleModalState({
     )
     reminderTouchedRef.current = false
     constraintTouchedRef.current = false
+    setConstraintsSaveError(false)
+    setScheduleAfterConstraintsSaveError(false)
+    setCreatedScheduleId(null)
+    setCreatedScheduleConstraintsSaved(false)
     setConstraintDraft(
       schedule
         ? scheduleConstraintFormStateFromSaved(
@@ -193,6 +207,13 @@ export function useCreateScheduleModalState({
     allInput: preview.allInput,
     recurrence: preview.recurrence,
     handleOpenChange,
+    constraintsSaveError,
+    setConstraintsSaveError,
+    setScheduleAfterConstraintsSaveError,
+    createdScheduleId,
+    setCreatedScheduleId,
+    createdScheduleConstraintsSaved,
+    setCreatedScheduleConstraintsSaved,
   })
   const canRestoreThisEvent = Boolean(
     schedule?.overridden != null ||
@@ -366,7 +387,8 @@ export function useCreateScheduleModalState({
     constraintsError: Boolean(
       schedule && scheduleConstraints.isError && !scheduleConstraints.data,
     ),
-    constraintsSaveError: save.constraintsSaveError,
+    constraintsSaveError,
+    scheduleAfterConstraintsSaveError,
     constraintsDefaultOpen:
       constraintDraft !== null && scheduleConstraints.data?.constraint == null,
     onAddConstraints: addConstraints,

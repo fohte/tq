@@ -69,6 +69,7 @@ export function ScheduleModalDesktopPanel({
   constraintsLoading,
   constraintsError,
   constraintsSaveError,
+  scheduleAfterConstraintsSaveError,
   constraintsDefaultOpen,
   onAddConstraints,
   onChangeConstraints,
@@ -259,13 +260,16 @@ export function ScheduleModalDesktopPanel({
           )}
         </div>
 
-        {schedule && (
+        {(!schedule || scope === 'all') && (
           <ScheduleConstraintsField
             variant="desktop"
             value={constraints}
             isLoading={constraintsLoading}
             isError={constraintsError}
             saveError={constraintsSaveError}
+            scheduleSaveAfterConstraintsError={
+              scheduleAfterConstraintsSaveError
+            }
             isPending={isPending}
             defaultOpen={constraintsDefaultOpen}
             onAdd={onAddConstraints}

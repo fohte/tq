@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 
 import type { ScheduleConstraintFormState } from '#components/schedule/schedule-constraints-form-state'
 import {
@@ -51,6 +51,13 @@ export function useScheduleModalSave({
   allInput,
   recurrence,
   handleOpenChange,
+  constraintsSaveError,
+  setConstraintsSaveError,
+  setScheduleAfterConstraintsSaveError,
+  createdScheduleId,
+  setCreatedScheduleId,
+  createdScheduleConstraintsSaved,
+  setCreatedScheduleConstraintsSaved,
 }: {
   schedule: Schedule | undefined
   editState: ScheduleEditFormState
@@ -66,6 +73,13 @@ export function useScheduleModalSave({
   allInput: UpdateScheduleInput
   recurrence: UpdateScheduleInput['recurrence']
   handleOpenChange: (open: boolean) => void
+  constraintsSaveError: boolean
+  setConstraintsSaveError: (value: boolean) => void
+  setScheduleAfterConstraintsSaveError: (value: boolean) => void
+  createdScheduleId: string | null
+  setCreatedScheduleId: (value: string | null) => void
+  createdScheduleConstraintsSaved: boolean
+  setCreatedScheduleConstraintsSaved: (value: boolean) => void
 }) {
   const createSchedule = useCreateSchedule()
   const updateSchedule = useUpdateSchedule()
@@ -74,7 +88,6 @@ export function useScheduleModalSave({
   const deleteScheduleConstraints = useDeleteScheduleConstraints()
   const setScheduleOverride = useSetScheduleOverride()
   const clearScheduleOverride = useClearScheduleOverride()
-  const [constraintsSaveError, setConstraintsSaveError] = useState(false)
   const isPending =
     createSchedule.isPending ||
     updateSchedule.isPending ||
@@ -91,6 +104,7 @@ export function useScheduleModalSave({
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
   const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
+  const canSaveConstraints = !schedule || scope === 'all'
   const constraintsChanged = !scheduleConstraintsMatchSaved(
     constraintDraft,
     savedConstraint,
@@ -101,6 +115,7 @@ export function useScheduleModalSave({
     startTime &&
     endTime &&
     (constraintDraft === null ||
+      !canSaveConstraints ||
       scheduleConstraintFormStateError(constraintDraft) === null) &&
     (scope !== 'all' || !schedule || reminderReady) &&
     (previewRequest == null || (!isPreviewRequestDebouncing && previewReady)),
@@ -109,112 +124,212 @@ export function useScheduleModalSave({
   const handleSubmit = () => {
     if (!canSubmit || isPending) return
 
+    setConstraintsSaveError(false)
+    setScheduleAfterConstraintsSaveError(false)
+
     const closeOnSuccess = () => {
       handleOpenChange(false)
     }
 
-    const saveSchedule = () => {
-      if (schedule) {
-        if (scope === 'this') {
-          if (rangeAction == null && previewRequest == null) {
-            closeOnSuccess()
-            return
+    const scheduleSaveOptions = (constraintsWereSaved: boolean) => ({
+      onSuccess: closeOnSuccess,
+      ...(constraintsWereSaved
+        ? {
+            onError: () => {
+              setScheduleAfterConstraintsSaveError(true)
+            },
           }
-          if (rangeAction === 'skip') {
-            setScheduleOverride.mutate(
-              {
-                scheduleId: schedule.scheduleId,
-                occurrenceDate,
-                input: { skipped: true },
+        : {}),
+    })
+
+    const createInput: CreateScheduleInput = {
+      title: editState.title.trim(),
+      startDate,
+      startTime,
+      endTime,
+      ...(recurrence ? { recurrence } : {}),
+      ...(editState.remindBeforeMinutes === ''
+        ? {}
+        : { remindBeforeMinutes: editState.remindBeforeMinutes }),
+      ...(editState.context ? { context: editState.context } : {}),
+      ...(editState.color ? { color: editState.color } : {}),
+    }
+    const createdScheduleUpdateInput: UpdateScheduleInput = {
+      title: createInput.title,
+      startDate: createInput.startDate,
+      startTime: createInput.startTime,
+      endTime: createInput.endTime,
+      recurrence: createInput.recurrence ?? null,
+      remindBeforeMinutes: createInput.remindBeforeMinutes ?? null,
+      context: editState.context || null,
+      color: editState.color || null,
+    }
+
+    const saveSchedule = (constraintsWereSaved = false) => {
+      if (!schedule) return
+
+      if (scope === 'this') {
+        if (rangeAction == null && previewRequest == null) {
+          closeOnSuccess()
+          return
+        }
+        if (rangeAction === 'skip') {
+          setScheduleOverride.mutate(
+            {
+              scheduleId: schedule.scheduleId,
+              occurrenceDate,
+              input: { skipped: true },
+            },
+            scheduleSaveOptions(constraintsWereSaved),
+          )
+        } else if (rangeAction === 'restore') {
+          clearScheduleOverride.mutate(
+            { scheduleId: schedule.scheduleId, occurrenceDate },
+            scheduleSaveOptions(constraintsWereSaved),
+          )
+        } else {
+          setScheduleOverride.mutate(
+            {
+              scheduleId: schedule.scheduleId,
+              occurrenceDate,
+              input: {
+                date: rangeDraft.thisEvent.date,
+                startTime: rangeDraft.thisEvent.startTime,
+                endTime: rangeDraft.thisEvent.endTime,
               },
-              { onSuccess: closeOnSuccess },
+            },
+            scheduleSaveOptions(constraintsWereSaved),
+          )
+        }
+      } else if (scope === 'following') {
+        if (rangeAction === 'endSeries') {
+          const endDate = previousScheduleDate(rangeDraft.following.fromDate)
+          if (endSeriesRemovesSchedule(schedule, rangeDraft)) {
+            deleteSchedule.mutate(
+              schedule.scheduleId,
+              scheduleSaveOptions(constraintsWereSaved),
             )
-          } else if (rangeAction === 'restore') {
-            clearScheduleOverride.mutate(
-              { scheduleId: schedule.scheduleId, occurrenceDate },
-              { onSuccess: closeOnSuccess },
-            )
-          } else {
-            setScheduleOverride.mutate(
-              {
-                scheduleId: schedule.scheduleId,
-                occurrenceDate,
-                input: {
-                  date: rangeDraft.thisEvent.date,
-                  startTime: rangeDraft.thisEvent.startTime,
-                  endTime: rangeDraft.thisEvent.endTime,
-                },
-              },
-              { onSuccess: closeOnSuccess },
-            )
-          }
-        } else if (scope === 'following') {
-          if (rangeAction === 'endSeries') {
-            const endDate = previousScheduleDate(rangeDraft.following.fromDate)
-            if (endSeriesRemovesSchedule(schedule, rangeDraft)) {
-              deleteSchedule.mutate(schedule.scheduleId, {
-                onSuccess: closeOnSuccess,
-              })
-            } else {
-              updateSchedule.mutate(
-                { id: schedule.scheduleId, input: { endDate } },
-                { onSuccess: closeOnSuccess },
-              )
-            }
           } else {
             updateSchedule.mutate(
-              { id: schedule.scheduleId, input: followingInput },
-              { onSuccess: closeOnSuccess },
+              { id: schedule.scheduleId, input: { endDate } },
+              scheduleSaveOptions(constraintsWereSaved),
             )
           }
         } else {
           updateSchedule.mutate(
-            { id: schedule.scheduleId, input: allInput },
-            { onSuccess: closeOnSuccess },
+            { id: schedule.scheduleId, input: followingInput },
+            scheduleSaveOptions(constraintsWereSaved),
           )
         }
+      } else {
+        updateSchedule.mutate(
+          { id: schedule.scheduleId, input: allInput },
+          scheduleSaveOptions(constraintsWereSaved),
+        )
+      }
+    }
+
+    const saveCreatedSchedule = () => {
+      if (createdScheduleId === null) {
+        createSchedule.mutate(createInput, {
+          onSuccess: (createdSchedule) => {
+            if (constraintDraft === null) {
+              closeOnSuccess()
+              return
+            }
+
+            if (constraintInput === null) {
+              setConstraintsSaveError(true)
+              return
+            }
+
+            setCreatedScheduleId(createdSchedule.id)
+            setScheduleConstraints.mutate(
+              { id: createdSchedule.id, input: constraintInput },
+              {
+                onSuccess: () => {
+                  setCreatedScheduleConstraintsSaved(true)
+                  closeOnSuccess()
+                },
+                onError: () => {
+                  setConstraintsSaveError(true)
+                },
+              },
+            )
+          },
+        })
         return
       }
 
-      const input: CreateScheduleInput = {
-        title: editState.title.trim(),
-        startDate,
-        startTime,
-        endTime,
-        ...(recurrence ? { recurrence } : {}),
-        ...(editState.remindBeforeMinutes === ''
-          ? {}
-          : { remindBeforeMinutes: editState.remindBeforeMinutes }),
-        ...(editState.context ? { context: editState.context } : {}),
-        ...(editState.color ? { color: editState.color } : {}),
+      const updateCreatedSchedule = (constraintsWereSaved: boolean) => {
+        updateSchedule.mutate(
+          { id: createdScheduleId, input: createdScheduleUpdateInput },
+          scheduleSaveOptions(constraintsWereSaved),
+        )
       }
+      const saveConstraints = () => {
+        if (constraintDraft === null) {
+          if (createdScheduleConstraintsSaved) {
+            deleteScheduleConstraints.mutate(createdScheduleId, {
+              onSuccess: () => {
+                setCreatedScheduleConstraintsSaved(false)
+                updateCreatedSchedule(true)
+              },
+              onError: () => {
+                setConstraintsSaveError(true)
+              },
+            })
+          } else {
+            updateCreatedSchedule(false)
+          }
+          return
+        }
 
-      createSchedule.mutate(input, { onSuccess: closeOnSuccess })
+        if (constraintInput === null) return
+        setScheduleConstraints.mutate(
+          { id: createdScheduleId, input: constraintInput },
+          {
+            onSuccess: () => {
+              setCreatedScheduleConstraintsSaved(true)
+              updateCreatedSchedule(true)
+            },
+            onError: () => {
+              setConstraintsSaveError(true)
+            },
+          },
+        )
+      }
+      saveConstraints()
     }
 
-    if (schedule && constraintsChanged) {
-      setConstraintsSaveError(false)
+    if (schedule && scope === 'all' && constraintsChanged) {
       const saveScheduleAfterConstraints = () => {
         setConstraintsSaveError(false)
-        saveSchedule()
-      }
-      const onConstraintSaveError = () => {
-        setConstraintsSaveError(true)
+        saveSchedule(true)
       }
       if (constraintDraft === null) {
         deleteScheduleConstraints.mutate(schedule.scheduleId, {
           onSuccess: saveScheduleAfterConstraints,
-          onError: onConstraintSaveError,
+          onError: () => {
+            setConstraintsSaveError(true)
+          },
         })
       } else if (constraintInput !== null) {
         setScheduleConstraints.mutate(
           { id: schedule.scheduleId, input: constraintInput },
           {
             onSuccess: saveScheduleAfterConstraints,
-            onError: onConstraintSaveError,
+            onError: () => {
+              setConstraintsSaveError(true)
+            },
           },
         )
       }
+      return
+    }
+
+    if (!schedule) {
+      saveCreatedSchedule()
       return
     }
 
