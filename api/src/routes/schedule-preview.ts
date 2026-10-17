@@ -37,7 +37,7 @@ const schedulePreviewOverrideSchema = z.object({
   skipped: z.boolean(),
 })
 
-export const scheduleChangePreviewSchema = z.object({
+const scheduleChangePreviewSchema = z.object({
   range: schedulePreviewRangeSchema,
   changes: z.array(
     z.object({
@@ -177,7 +177,7 @@ export function buildScheduleChangePreview(
   )
 }
 
-export function buildScheduleChangePreviewFromOccurrences(
+function buildScheduleChangePreviewFromOccurrences(
   range: SchedulePreviewRange,
   before: ScheduleDraftOccurrence[],
   after: ScheduleDraftOccurrence[],
