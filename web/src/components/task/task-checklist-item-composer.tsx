@@ -3,7 +3,7 @@ import { useState } from 'react'
 
 import {
   type ChecklistIndentStyle,
-  getChecklistIndentStyle,
+  getChecklistIndent,
 } from '#components/task/checklist-indent-style'
 
 export function ChecklistItemComposer({
@@ -16,7 +16,6 @@ export function ChecklistItemComposer({
   onCancel: () => void
 }) {
   const [content, setContent] = useState('')
-  const indentStyle = getChecklistIndentStyle(36 + depth * 20)
 
   const save = () => {
     const trimmed = content.trim()
@@ -29,7 +28,7 @@ export function ChecklistItemComposer({
       className="flex min-h-10 items-center py-1 pl-(--checklist-indent) pr-3"
       style={
         {
-          '--checklist-indent': indentStyle['--checklist-indent'],
+          '--checklist-indent': getChecklistIndent(36 + depth * 20),
         } as ChecklistIndentStyle
       }
     >

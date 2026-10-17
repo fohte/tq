@@ -3,7 +3,7 @@ import type { EventContentArg } from '@fullcalendar/core'
 import {
   type EventAccentStyle,
   getEventAccent,
-  getEventAccentStyle,
+  getEventAccentStyleValues,
 } from '#components/calendar/event-accent-style'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import {
@@ -32,15 +32,15 @@ export function renderCalendarGridEventContent(
       )
     }
     const eventAccent = getEventAccent(eventProps)
-    const eventAccentStyle = getEventAccentStyle(eventAccent)
+    const eventAccentValues = getEventAccentStyleValues(eventAccent)
 
     return (
       <div
         className="tq-month-event"
         style={
           {
-            '--event-accent': eventAccentStyle['--event-accent'],
-            '--event-fill': eventAccentStyle['--event-fill'],
+            '--event-accent': eventAccentValues.accent,
+            '--event-fill': eventAccentValues.fill,
           } as EventAccentStyle
         }
         data-event-type={eventProps.type}

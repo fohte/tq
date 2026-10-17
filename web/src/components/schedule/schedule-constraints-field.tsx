@@ -36,6 +36,13 @@ const preferenceCellLabels = {
   excluded: 'NEVER',
 } as const
 
+const preferenceCellLabelClasses = {
+  preferred: 'text-foreground',
+  if_free: 'text-tint-blue-foreground',
+  reserve: 'text-tint-yellow-foreground',
+  excluded: 'text-tint-red-foreground',
+} as const
+
 interface ScheduleConstraintsFieldProps {
   variant: 'desktop' | 'mobile'
   value: ScheduleConstraintFormState | null
@@ -388,7 +395,12 @@ function ConstraintEditor({
                 >
                   {label}
                 </span>
-                <span className="whitespace-nowrap font-mono font-normal max-md:tracking-wider schedule-constraint-preference-label">
+                <span
+                  className={cn(
+                    'whitespace-nowrap font-mono font-normal max-md:tracking-wider schedule-constraint-preference-label',
+                    preferenceCellLabelClasses[preference],
+                  )}
+                >
                   {preferenceCellLabels[preference]}
                 </span>
               </Button>

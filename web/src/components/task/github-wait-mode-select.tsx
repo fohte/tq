@@ -10,6 +10,11 @@ import type { GithubBlocker } from '#hooks/use-github-link'
 
 export type GithubWaitMode = 'until-closed' | 'until-reply'
 
+const waitModeOptions = [
+  { value: 'until-closed', label: 'until closed' },
+  { value: 'until-reply', label: 'until reply' },
+] as const
+
 export function GithubWaitModeSelect({
   blocker,
   value,
@@ -23,6 +28,7 @@ export function GithubWaitModeSelect({
 }) {
   return (
     <Select
+      items={waitModeOptions}
       value={value}
       onValueChange={(nextValue) => {
         if (nextValue === 'until-closed' || nextValue === 'until-reply') {
@@ -40,8 +46,11 @@ export function GithubWaitModeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="until-closed">until closed</SelectItem>
-        <SelectItem value="until-reply">until reply</SelectItem>
+        {waitModeOptions.map(({ value: optionValue, label }) => (
+          <SelectItem key={optionValue} value={optionValue}>
+            {label}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   )

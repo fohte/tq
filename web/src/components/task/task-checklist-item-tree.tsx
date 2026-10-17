@@ -10,7 +10,7 @@ import {
 
 import {
   type ChecklistIndentStyle,
-  getChecklistIndentStyle,
+  getChecklistIndent,
 } from '#components/task/checklist-indent-style'
 import { ChecklistItemContentInput } from '#components/task/checklist-item-content-input'
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
@@ -282,17 +282,13 @@ function ChecklistItemRow({
     onMoveItem(item.id, move)
   }
 
-  const itemIndentStyle = getChecklistIndentStyle(12 + depth * 20)
-  const detailsIndentStyle = getChecklistIndentStyle(36 + depth * 20)
-  const noteIndentStyle = getChecklistIndentStyle(46 + depth * 20)
-
   return (
     <div className="group">
       <div
         className="flex min-h-10 items-center gap-2 py-1 pl-(--checklist-indent) pr-3"
         style={
           {
-            '--checklist-indent': itemIndentStyle['--checklist-indent'],
+            '--checklist-indent': getChecklistIndent(12 + depth * 20),
           } as ChecklistIndentStyle
         }
       >
@@ -358,7 +354,7 @@ function ChecklistItemRow({
         className="pl-(--checklist-indent)"
         style={
           {
-            '--checklist-indent': detailsIndentStyle['--checklist-indent'],
+            '--checklist-indent': getChecklistIndent(36 + depth * 20),
           } as ChecklistIndentStyle
         }
       >
@@ -419,7 +415,7 @@ function ChecklistItemRow({
           className="ml-(--checklist-indent) border-l border-border py-2 pr-3 pl-2.5"
           style={
             {
-              '--checklist-indent': noteIndentStyle['--checklist-indent'],
+              '--checklist-indent': getChecklistIndent(46 + depth * 20),
             } as ChecklistIndentStyle
           }
         >

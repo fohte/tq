@@ -369,12 +369,12 @@ describe('TaskDependenciesSection', () => {
       />,
     )
 
-    await user.selectOptions(
+    await user.click(
       screen.getByRole('combobox', {
         name: 'Wait mode for example-team/sample-project#2048',
       }),
-      'until-reply',
     )
+    await user.click(await screen.findByRole('option', { name: 'until reply' }))
     const bodyInput = screen.getByRole('textbox', { name: 'Wait description' })
     const followUpInput = screen.getByLabelText('Follow-up date')
     await user.click(screen.getByRole('button', { name: 'Enable' }))
@@ -414,11 +414,13 @@ describe('TaskDependenciesSection', () => {
       />,
     )
 
-    await user.selectOptions(
+    await user.click(
       screen.getByRole('combobox', {
         name: 'Wait mode for example-team/sample-project#2048',
       }),
-      'until-closed',
+    )
+    await user.click(
+      await screen.findByRole('option', { name: 'until closed' }),
     )
 
     expect(deleteWait.mock.calls).toEqual([[wait.id]])
@@ -481,8 +483,7 @@ describe('TaskDependenciesSection', () => {
     const readInitialState = () => ({
       waitResolvedLabel:
         within(blockerGroup).getByText('wait resolved').textContent,
-      waitMode:
-        within(blockerGroup).getByRole<HTMLSelectElement>('combobox').value,
+      waitMode: within(blockerGroup).getByRole('combobox').textContent.trim(),
       actionLabel: acknowledgeButton.getAttribute('aria-label'),
       highlighted: blockerGroup.classList.contains('text-primary'),
     })
@@ -497,7 +498,7 @@ describe('TaskDependenciesSection', () => {
     expect(readActual()).toEqual({
       initial: {
         waitResolvedLabel: 'wait resolved',
-        waitMode: 'until-reply',
+        waitMode: 'until reply',
         actionLabel: 'Acknowledge wait: Review feedback',
         highlighted: true,
       },
@@ -539,14 +540,13 @@ describe('TaskDependenciesSection', () => {
     const followUpDate = within(blockerGroup).getByLabelText<HTMLInputElement>(
       'Follow-up date for Current review',
     )
-    const waitMode =
-      within(blockerGroup).getByRole<HTMLSelectElement>('combobox')
+    const waitMode = within(blockerGroup).getByRole('combobox')
     const currentAction = within(blockerGroup).getByRole('button', {
       name: 'Resolve wait: Current review',
     })
 
     const initial = () => ({
-      waitMode: waitMode.value,
+      waitMode: waitMode.textContent.trim(),
       currentAction: currentAction.getAttribute('aria-label'),
       earlierAction:
         within(blockerGroup)
@@ -555,7 +555,10 @@ describe('TaskDependenciesSection', () => {
       followUpDate: followUpDate.value,
     })
     const beforeChange = initial()
-    await user.selectOptions(waitMode, 'until-closed')
+    await user.click(waitMode)
+    await user.click(
+      await screen.findByRole('option', { name: 'until closed' }),
+    )
 
     const readActual = () => ({
       beforeChange,
@@ -563,7 +566,7 @@ describe('TaskDependenciesSection', () => {
     })
     expect(readActual()).toEqual({
       beforeChange: {
-        waitMode: 'until-reply',
+        waitMode: 'until reply',
         currentAction: 'Resolve wait: Current review',
         earlierAction: null,
         followUpDate: '2099-10-14',
@@ -594,11 +597,10 @@ describe('TaskDependenciesSection', () => {
     const blockerGroup = screen.getByRole('group', {
       name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
     })
-    const waitMode =
-      within(blockerGroup).getByRole<HTMLSelectElement>('combobox')
+    const waitMode = within(blockerGroup).getByRole('combobox')
 
     const readActual = () => ({
-      waitMode: waitMode.value,
+      waitMode: waitMode.textContent.trim(),
       resolvedLabel: within(blockerGroup).getByText('resolved Oct 12, 2099')
         .textContent,
       acknowledgeAction:
@@ -614,7 +616,7 @@ describe('TaskDependenciesSection', () => {
       dimmed: blockerGroup.classList.contains('opacity-55'),
     })
     expect(readActual()).toEqual({
-      waitMode: 'until-closed',
+      waitMode: 'until closed',
       resolvedLabel: 'resolved Oct 12, 2099',
       acknowledgeAction: null,
       resolveAction: null,

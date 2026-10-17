@@ -7,17 +7,22 @@ export interface EventAccentStyle extends CSSProperties {
   '--event-fill'?: string | undefined
 }
 
+export interface EventAccentStyleValues {
+  accent?: string | undefined
+  fill?: string | undefined
+}
+
 export interface EventAccent {
   accent?: string | undefined
   fillPercent?: number | undefined
 }
 
-export function getEventAccentStyle(
+export function getEventAccentStyleValues(
   eventAccent: EventAccent | undefined,
-): EventAccentStyle {
+): EventAccentStyleValues {
   return {
-    '--event-accent': eventAccent?.accent,
-    '--event-fill':
+    accent: eventAccent?.accent,
+    fill:
       eventAccent?.fillPercent == null
         ? undefined
         : `${String(eventAccent.fillPercent)}%`,

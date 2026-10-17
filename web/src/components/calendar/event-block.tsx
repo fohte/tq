@@ -3,8 +3,9 @@ import { Headphones, LogOut, MapPin } from 'lucide-react'
 
 import {
   type EventAccentStyle,
+  type EventAccentStyleValues,
   getEventAccent,
-  getEventAccentStyle,
+  getEventAccentStyleValues,
 } from '#components/calendar/event-accent-style'
 import {
   getTaskDateEventProps,
@@ -131,7 +132,7 @@ export function EventBlock(arg: EventContentArg) {
   const eventAccent = getEventAccent(props)
   const accentColor = eventAccent?.accent
   const isColoredAppointment = eventAccent?.fillPercent != null
-  const accentStyle: EventAccentStyle = getEventAccentStyle(eventAccent)
+  const accentValues = getEventAccentStyleValues(eventAccent)
 
   return (
     <EventBlockShell
@@ -152,7 +153,7 @@ export function EventBlock(arg: EventContentArg) {
       )}
       continuesBefore={continuesBefore}
       continuesAfter={continuesAfter}
-      accentStyle={accentStyle}
+      accentValues={accentValues}
       title={
         <span
           className={cn(
@@ -215,7 +216,7 @@ function EventBlockShell({
   className,
   continuesBefore = false,
   continuesAfter = false,
-  accentStyle,
+  accentValues,
   title,
   badge,
   meta,
@@ -225,7 +226,7 @@ function EventBlockShell({
   className?: string
   continuesBefore?: boolean
   continuesAfter?: boolean
-  accentStyle?: EventAccentStyle | undefined
+  accentValues?: EventAccentStyleValues | undefined
   title: React.ReactNode
   badge?: string | undefined
   meta: React.ReactNode
@@ -240,8 +241,8 @@ function EventBlockShell({
       )}
       style={
         {
-          '--event-accent': accentStyle?.['--event-accent'],
-          '--event-fill': accentStyle?.['--event-fill'],
+          '--event-accent': accentValues?.accent,
+          '--event-fill': accentValues?.fill,
         } as EventAccentStyle
       }
       data-continues-before={continuesBefore}

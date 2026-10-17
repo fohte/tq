@@ -4,6 +4,6 @@ export interface ChecklistIndentStyle extends CSSProperties {
   '--checklist-indent': string
 }
 
-export function getChecklistIndentStyle(indent: number): ChecklistIndentStyle {
-  return { '--checklist-indent': `${String(indent)}px` }
+export function getChecklistIndent(indent: number): string {
+  return `${String(indent)}px`
 }
