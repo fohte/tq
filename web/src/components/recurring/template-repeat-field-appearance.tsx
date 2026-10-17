@@ -1,5 +1,4 @@
 import { Button } from '@fohte/ui/button'
-import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import {
@@ -9,10 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@fohte/ui/select'
-import { ChevronDown } from 'lucide-react'
 import { useRef } from 'react'
 
 import { WeekdayToggleRow } from '#components/schedule/create-schedule-modal'
+import { FieldTriggerWithChevron } from '#components/ui/field-trigger-with-chevron'
 import { selectValueHandler } from '#lib/form-utils'
 import {
   buildRecurrenceRule,
@@ -93,18 +92,14 @@ export function TemplateRepeatFieldAppearance({
         REPEAT
       </span>
       <div className="font-mono text-xs text-foreground">
-        <FieldTrigger
+        <FieldTriggerWithChevron
           ref={anchorRef}
           onClick={() => {
             onOpenChange(true)
           }}
-          className="w-full min-w-0"
         >
-          <span className="min-w-0 truncate">
-            {formatRecurrenceSummary(recurrenceRule)}
-          </span>
-          <ChevronDown aria-hidden="true" />
-        </FieldTrigger>
+          {formatRecurrenceSummary(recurrenceRule)}
+        </FieldTriggerWithChevron>
         <Popover
           open={isEditing}
           onOpenChange={onOpenChange}

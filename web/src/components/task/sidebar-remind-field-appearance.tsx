@@ -1,11 +1,10 @@
-import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
-import { ChevronDown } from 'lucide-react'
 import { useRef } from 'react'
 
 import { SidebarField } from '#components/task/sidebar-field'
+import { FieldTriggerWithChevron } from '#components/ui/field-trigger-with-chevron'
 import { formatAbsoluteReminder, REMINDER_PRESETS } from '#lib/reminder-input'
 
 export function SidebarRemindFieldAppearance({
@@ -62,15 +61,13 @@ export function SidebarRemindFieldAppearance({
           />
         </div>
       ) : (
-        <FieldTrigger
+        <FieldTriggerWithChevron
           onClick={() => {
             onOpenChange(true)
           }}
-          className="w-full min-w-0"
         >
-          <span className="min-w-0 truncate">{remindAtLabel}</span>
-          <ChevronDown aria-hidden="true" />
-        </FieldTrigger>
+          {remindAtLabel}
+        </FieldTriggerWithChevron>
       )}
       <Popover open={isEditing} onOpenChange={onOpenChange} anchor={inputRef}>
         <PopoverContent
