@@ -4,14 +4,14 @@ const scheduleConstraintTimeSchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
 
-export const scheduleConstraintWeekdayPreferenceSchema = z.enum([
+const scheduleConstraintWeekdayPreferenceSchema = z.enum([
   'preferred',
   'if_free',
   'reserve',
   'excluded',
 ])
 
-export const scheduleConstraintWeekdaySchema = z.object({
+const scheduleConstraintWeekdaySchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
   preference: scheduleConstraintWeekdayPreferenceSchema,
 })
@@ -73,6 +73,11 @@ export const scheduleConstraintSchema = z
   })
 
 export type ScheduleConstraint = z.infer<typeof scheduleConstraintSchema>
+
+export type ScheduleConstraintEvaluationRange = {
+  startDate: string
+  endDate: string
+}
 
 export type ScheduleConstraintOccurrence = {
   date: string
@@ -187,16 +192,21 @@ function occurrenceStart(
   )
 }
 
+function durationInMinutes(
+  occurrence: Pick<ScheduleConstraintTimeBlock, 'startTime' | 'endTime'>,
+): number {
+  const start = timeInMinutes(occurrence.startTime)
+  const end = timeInMinutes(occurrence.endTime)
+  return end < start ? end + MINUTES_IN_DAY - start : end - start
+}
+
 function occurrenceEnd(
   occurrence: Pick<
     ScheduleConstraintTimeBlock,
     'date' | 'startTime' | 'endTime'
   >,
 ): number {
-  const start = timeInMinutes(occurrence.startTime)
-  const end = timeInMinutes(occurrence.endTime)
-  const duration = end < start ? end + MINUTES_IN_DAY - start : end - start
-  return occurrenceStart(occurrence) + duration
+  return occurrenceStart(occurrence) + durationInMinutes(occurrence)
 }
 
 function overlaps(
@@ -215,8 +225,7 @@ function isWithinTimeWindow(
   windowEnd: string,
 ): boolean {
   const start = timeInMinutes(occurrence.startTime)
-  const end = timeInMinutes(occurrence.endTime)
-  const duration = end < start ? end + MINUTES_IN_DAY - start : end - start
+  const duration = durationInMinutes(occurrence)
   const windowStartMinutes = timeInMinutes(windowStart)
   const rawWindowEnd = timeInMinutes(windowEnd)
   const windowEndMinutes =
@@ -254,8 +263,16 @@ function compareViolations(
   )
 }
 
+function isWithinEvaluationRange(
+  date: string,
+  range: ScheduleConstraintEvaluationRange,
+): boolean {
+  return date >= range.startDate && date <= range.endDate
+}
+
 function addWeeklyViolations(
   constraint: ScheduleConstraint,
+  range: ScheduleConstraintEvaluationRange,
   occurrences: readonly ScheduleConstraintOccurrence[],
   violations: ScheduleConstraintViolation[],
 ): void {
@@ -268,9 +285,14 @@ function addWeeklyViolations(
     occurrencesByWeek.set(start, weekOccurrences)
   }
 
-  for (const [start, weekOccurrences] of [...occurrencesByWeek].sort(
-    ([a], [b]) => a.localeCompare(b),
-  )) {
+  const lastWeekStartOrdinal = dateOrdinal(weekStart(range.endDate))
+  for (
+    let weekStartOrdinal = dateOrdinal(weekStart(range.startDate));
+    weekStartOrdinal <= lastWeekStartOrdinal;
+    weekStartOrdinal += 7
+  ) {
+    const start = dateFromOrdinal(weekStartOrdinal)
+    const weekOccurrences = occurrencesByWeek.get(start) ?? []
     const activeOccurrences = weekOccurrences
       .filter((occurrence) => !occurrence.skipped)
       .sort(compareOccurrences)
@@ -287,12 +309,11 @@ function addWeeklyViolations(
       })
     } else if (constraint.weeklyMax !== null && count > constraint.weeklyMax) {
       const triggeringOccurrence = activeOccurrences[constraint.weeklyMax]
-      if (!triggeringOccurrence) continue
       violations.push({
         type: 'weekly-count-above-maximum',
         severity: 'required',
-        date: triggeringOccurrence.date,
-        ...movementDetails(triggeringOccurrence),
+        date: triggeringOccurrence?.date ?? start,
+        ...(triggeringOccurrence ? movementDetails(triggeringOccurrence) : {}),
         weekStart: start,
         count,
         maximum: constraint.weeklyMax,
@@ -315,6 +336,7 @@ function addWeeklyViolations(
 
 function addConsecutiveDayViolations(
   maximum: number | null,
+  range: ScheduleConstraintEvaluationRange,
   occurrences: readonly ScheduleConstraintOccurrence[],
   violations: ScheduleConstraintViolation[],
 ): void {
@@ -335,7 +357,12 @@ function addConsecutiveDayViolations(
     if (streak.length <= maximum) return
 
     const firstExcessDate = streak[maximum]
-    if (firstExcessDate === undefined) return
+    if (
+      firstExcessDate === undefined ||
+      !isWithinEvaluationRange(firstExcessDate, range)
+    ) {
+      return
+    }
     const triggeringOccurrence = occurrencesByDate
       .get(firstExcessDate)
       ?.sort(compareOccurrences)[0]
@@ -368,6 +395,7 @@ function addConsecutiveDayViolations(
 
 export function checkScheduleConstraints(
   constraint: ScheduleConstraint,
+  range: ScheduleConstraintEvaluationRange,
   occurrences: readonly ScheduleConstraintOccurrence[],
   otherTimeBlocks: readonly ScheduleConstraintTimeBlock[] = [],
 ): ScheduleConstraintViolation[] {
@@ -383,14 +411,17 @@ export function checkScheduleConstraints(
   )
   const violations: ScheduleConstraintViolation[] = []
 
-  addWeeklyViolations(constraint, sortedOccurrences, violations)
+  addWeeklyViolations(constraint, range, sortedOccurrences, violations)
   addConsecutiveDayViolations(
     constraint.maxConsecutiveDays,
+    range,
     sortedOccurrences,
     violations,
   )
 
   for (const occurrence of activeOccurrences) {
+    if (!isWithinEvaluationRange(occurrence.date, range)) continue
+
     const preference = weekdayPreferences.get(dayOfWeek(occurrence.date))
     const movement = movementDetails(occurrence)
 

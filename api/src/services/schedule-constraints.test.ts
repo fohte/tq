@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  checkScheduleConstraints,
+  checkScheduleConstraints as checkScheduleConstraintsInRange,
   type ScheduleConstraint,
   type ScheduleConstraintOccurrence,
   scheduleConstraintSchema,
@@ -36,29 +36,184 @@ function makeOccurrence(
   }
 }
 
+function constraintIssues(input: unknown) {
+  const result = scheduleConstraintSchema.safeParse(input)
+  return result.success
+    ? []
+    : result.error.issues.map(({ code, message, path }) => ({
+        code,
+        message,
+        path,
+      }))
+}
+
+function checkScheduleConstraints(
+  constraint: ScheduleConstraint,
+  occurrences: readonly ScheduleConstraintOccurrence[],
+  otherTimeBlocks: Parameters<typeof checkScheduleConstraintsInRange>[3] = [],
+) {
+  const dates = occurrences.map(({ date }) => date).sort()
+  const startDate = dates[0] ?? '2030-01-01'
+  const endDate = dates.at(-1) ?? startDate
+
+  return checkScheduleConstraintsInRange(
+    constraint,
+    { startDate, endDate },
+    occurrences,
+    otherTimeBlocks,
+  )
+}
+
 describe('scheduleConstraintSchema', () => {
   it('rejects a target outside the weekly count range', () => {
-    const result = scheduleConstraintSchema.safeParse({
-      ...makeConstraint(),
-      weeklyMin: 3,
-      weeklyMax: 4,
-      weeklyTarget: 2,
-    })
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        weeklyMin: 3,
+        weeklyMax: 4,
+        weeklyTarget: 2,
+      }),
+    ).toEqual([
+      {
+        code: 'custom',
+        message: 'weeklyTarget must be within the weekly count range',
+        path: ['weeklyTarget'],
+      },
+    ])
+  })
 
-    expect(result.success).toEqual(false)
+  it('rejects a minimum above the maximum', () => {
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        weeklyMin: 3,
+        weeklyMax: 2,
+      }),
+    ).toEqual([
+      {
+        code: 'custom',
+        message: 'weeklyMin must not exceed weeklyMax',
+        path: ['weeklyMin'],
+      },
+    ])
+  })
+
+  it('rejects a target above the weekly maximum', () => {
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        weeklyMin: 1,
+        weeklyMax: 3,
+        weeklyTarget: 4,
+      }),
+    ).toEqual([
+      {
+        code: 'custom',
+        message: 'weeklyTarget must be within the weekly count range',
+        path: ['weeklyTarget'],
+      },
+    ])
   })
 
   it('rejects a time window with only one boundary', () => {
-    const result = scheduleConstraintSchema.safeParse({
-      ...makeConstraint(),
-      windowStart: '18:00',
-    })
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        windowStart: '18:00',
+      }),
+    ).toEqual([
+      {
+        code: 'custom',
+        message: 'windowStart and windowEnd must both be set or both be null',
+        path: ['windowEnd'],
+      },
+    ])
+  })
 
-    expect(result.success).toEqual(false)
+  it('rejects duplicate weekday preferences', () => {
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        weekdays: [
+          { dayOfWeek: 1, preference: 'preferred' },
+          { dayOfWeek: 1, preference: 'excluded' },
+        ],
+      }),
+    ).toEqual([
+      {
+        code: 'custom',
+        message: 'A weekday preference can only be specified once',
+        path: ['weekdays', 1, 'dayOfWeek'],
+      },
+    ])
   })
 })
 
 describe('checkScheduleConstraints', () => {
+  it('checks every overlapping week, including an empty week', () => {
+    expect(
+      checkScheduleConstraintsInRange(
+        makeConstraint({ weeklyMin: 1, weeklyTarget: 2 }),
+        { startDate: '2030-05-09', endDate: '2030-05-14' },
+        [makeOccurrence('2030-05-10')],
+      ),
+    ).toEqual([
+      {
+        type: 'weekly-target-not-met',
+        severity: 'preferred',
+        date: '2030-05-06',
+        weekStart: '2030-05-06',
+        count: 1,
+        target: 2,
+      },
+      {
+        type: 'weekly-count-below-minimum',
+        severity: 'required',
+        date: '2030-05-13',
+        weekStart: '2030-05-13',
+        count: 0,
+        minimum: 1,
+      },
+    ])
+  })
+
+  it('checks an empty week against its minimum', () => {
+    expect(
+      checkScheduleConstraintsInRange(
+        makeConstraint({ weeklyMin: 1 }),
+        { startDate: '2030-05-07', endDate: '2030-05-08' },
+        [],
+      ),
+    ).toEqual([
+      {
+        type: 'weekly-count-below-minimum',
+        severity: 'required',
+        date: '2030-05-06',
+        weekStart: '2030-05-06',
+        count: 0,
+        minimum: 1,
+      },
+    ])
+  })
+
+  it('limits occurrence-level violations to the evaluation range', () => {
+    expect(
+      checkScheduleConstraintsInRange(
+        makeConstraint({
+          weekdays: [{ dayOfWeek: 2, preference: 'excluded' }],
+        }),
+        { startDate: '2030-05-07', endDate: '2030-05-07' },
+        [makeOccurrence('2030-05-06'), makeOccurrence('2030-05-07')],
+      ),
+    ).toEqual([
+      {
+        type: 'excluded-weekday',
+        severity: 'required',
+        date: '2030-05-07',
+      },
+    ])
+  })
+
   it('counts a streak across Sunday and Monday as consecutive days', () => {
     expect(
       checkScheduleConstraints(makeConstraint({ maxConsecutiveDays: 2 }), [
@@ -222,6 +377,23 @@ describe('checkScheduleConstraints', () => {
         weekStart: '2030-05-06',
         count: 3,
         maximum: 2,
+      },
+    ])
+  })
+
+  it('reports a negative maximum violation without a triggering occurrence index', () => {
+    expect(
+      checkScheduleConstraints(makeConstraint({ weeklyMax: -1 }), [
+        makeOccurrence('2030-05-07'),
+      ]),
+    ).toEqual([
+      {
+        type: 'weekly-count-above-maximum',
+        severity: 'required',
+        date: '2030-05-06',
+        weekStart: '2030-05-06',
+        count: 1,
+        maximum: -1,
       },
     ])
   })
