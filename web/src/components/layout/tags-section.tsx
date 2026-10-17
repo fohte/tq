@@ -133,16 +133,18 @@ export function TagsSection({
           />
         ))}
         {orphanTagCount > 0 && (
-          <Button
-            aria-expanded={showOrphanTags}
-            className="w-full justify-start"
-            onClick={() => {
-              setShowOrphanTags((show) => !show)
-            }}
-            variant="plain"
-          >
-            {showOrphanTags ? 'Hide orphan tags' : 'See all tags'}
-          </Button>
+          <div className="px-3.5 py-1 font-mono text-2xs">
+            <Button
+              aria-expanded={showOrphanTags}
+              className="w-full justify-start"
+              onClick={() => {
+                setShowOrphanTags((show) => !show)
+              }}
+              variant="plain"
+            >
+              {showOrphanTags ? 'Hide orphan tags' : 'See all tags'}
+            </Button>
+          </div>
         )}
       </div>
     </div>

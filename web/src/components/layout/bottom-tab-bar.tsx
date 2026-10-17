@@ -64,22 +64,24 @@ function ActionButton({
   hasDivider?: boolean
 }) {
   return (
-    <Button
-      onClick={onClick}
-      variant="plain"
-      className="relative min-h-11 flex-1 flex-col cursor-pointer"
-    >
+    <div className="relative flex min-h-11 flex-1 flex-col border-t-2 border-t-transparent">
       {hasDivider && (
         <span
           aria-hidden="true"
           className="absolute inset-y-3 left-0 w-px bg-border"
         />
       )}
-      <span className="flex flex-col items-center gap-1">
-        <Icon className="size-5" />
-        <span className="font-mono text-2xs tracking-wider">{label}</span>
-      </span>
-    </Button>
+      <Button
+        onClick={onClick}
+        variant="plain"
+        className="min-h-0 flex-1 flex-col cursor-pointer"
+      >
+        <span className="flex flex-col items-center gap-1">
+          <Icon className="size-5" />
+          <span className="font-mono text-2xs tracking-wider">{label}</span>
+        </span>
+      </Button>
+    </div>
   )
 }
 
