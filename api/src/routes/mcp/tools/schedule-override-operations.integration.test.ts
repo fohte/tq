@@ -22,6 +22,76 @@ afterEach(async () => {
 })
 
 describe('schedule override operation tools', () => {
+  it('previews an occurrence change without saving it', async () => {
+    const occurrenceDate = '2038-02-03'
+    const destinationDate = '2038-02-05'
+    const createResponse = await app.request('/api/schedule/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Review block',
+        startDate: occurrenceDate,
+        startTime: '08:30',
+        endTime: '09:30',
+        recurrence: { type: 'daily', interval: 1 },
+      }),
+    })
+    const schedule = await jsonBody<{ id: string }>(createResponse)
+
+    const preview = await callMcpTool(client, 'schedule_override_set', {
+      scheduleId: schedule.id,
+      occurrenceDate,
+      date: destinationDate,
+      startTime: '10:00',
+      endTime: '11:00',
+      dryRun: true,
+    })
+    const saved = await callMcpTool(client, 'schedule_override_set', {
+      scheduleId: schedule.id,
+      occurrenceDate,
+      date: destinationDate,
+      startTime: '10:00',
+      endTime: '11:00',
+    })
+
+    const snapshot = () => ({
+      preview: parseToolJson(preview),
+      saved: parseToolJson(saved),
+    })
+    expect(snapshot()).toEqual({
+      preview: {
+        range: { startDate: occurrenceDate, endDate: destinationDate },
+        changes: [
+          {
+            before: {
+              date: occurrenceDate,
+              originalDate: occurrenceDate,
+              startTime: '08:30',
+              endTime: '09:30',
+              skipped: false,
+            },
+            after: {
+              date: destinationDate,
+              originalDate: occurrenceDate,
+              startTime: '10:00',
+              endTime: '11:00',
+              skipped: false,
+            },
+          },
+        ],
+        deletedOverrides: [],
+      },
+      saved: {
+        scheduleId: schedule.id,
+        occurrenceDate,
+        startTime: '10:00',
+        endTime: '11:00',
+        movedToDate: destinationDate,
+        skipped: false,
+      },
+    })
+  })
+
   it('sets a one-day time override', async () => {
     const createResponse = await app.request('/api/schedule/events', {
       method: 'POST',

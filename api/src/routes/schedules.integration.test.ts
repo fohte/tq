@@ -5,6 +5,12 @@ import { app } from '#app'
 import { db } from '#db/connection'
 import { recurrenceRules, scheduleOverrides } from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
+import {
+  expandScheduleWithDraft,
+  formatDateStr,
+} from '#routes/schedule-expansion'
+import type { ScheduleChangePreview } from '#routes/schedule-preview'
+import { loadScheduleWithRevisions } from '#routes/schedule-shared'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -66,6 +72,15 @@ interface ExpandedBlock {
   occurrenceDate: string
   overridden: 'moved' | 'time' | null
   recurrence: ScheduleResponse['recurrence']
+}
+
+interface ScheduleOverrideSnapshot {
+  scheduleId: string
+  occurrenceDate: string
+  startTime: string | null
+  endTime: string | null
+  movedToDate: string | null
+  skipped: boolean
 }
 
 async function createTask(title: string, extra: Record<string, unknown> = {}) {
@@ -216,6 +231,85 @@ async function putScheduleOverride(
       body: JSON.stringify(body),
     },
   )
+}
+
+function dateAtOffset(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return formatDateStr(date)
+}
+
+function dateOffsetFrom(dateStr: string, days: number) {
+  const date = new Date(`${dateStr}T00:00:00`)
+  date.setDate(date.getDate() + days)
+  return formatDateStr(date)
+}
+
+function previewOccurrence(
+  date: string,
+  originalDate: string,
+  startTime: string,
+  endTime: string,
+  skipped = false,
+) {
+  return { date, originalDate, startTime, endTime, skipped }
+}
+
+function normalizePreview(preview: ScheduleChangePreview) {
+  return {
+    ...preview,
+    deletedOverrides: preview.deletedOverrides.map((override) => ({
+      ...override,
+      scheduleId: 'SCHEDULE_ID',
+    })),
+  }
+}
+
+function normalizeOverrideRows(rows: ScheduleOverrideSnapshot[]) {
+  return rows.map((override) => ({
+    ...override,
+    scheduleId: 'SCHEDULE_ID',
+  }))
+}
+
+async function patchSchedule(scheduleId: string, body: unknown) {
+  return app.request(`/api/schedule/events/${scheduleId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+async function listScheduleEvents(startDate: string, endDate: string) {
+  const response = await app.request(
+    `/api/schedule/events?startDate=${startDate}&endDate=${endDate}`,
+  )
+  const blocks = await jsonBody<ExpandedBlock[]>(response)
+  return {
+    status: response.status,
+    occurrences: blocks.map((block) => ({
+      date: block.start.slice(0, 10),
+      originalDate: block.occurrenceDate,
+      startTime: block.start.slice(11, 16),
+      endTime: block.end.slice(11, 16),
+      skipped: false,
+    })),
+  }
+}
+
+async function listScheduleOverrides(scheduleId: string) {
+  return db
+    .select({
+      scheduleId: scheduleOverrides.scheduleId,
+      occurrenceDate: scheduleOverrides.occurrenceDate,
+      startTime: scheduleOverrides.startTime,
+      endTime: scheduleOverrides.endTime,
+      movedToDate: scheduleOverrides.movedToDate,
+      skipped: scheduleOverrides.skipped,
+    })
+    .from(scheduleOverrides)
+    .where(eq(scheduleOverrides.scheduleId, scheduleId))
+    .orderBy(scheduleOverrides.occurrenceDate)
 }
 
 describe('schedule/time-blocks API', () => {
@@ -1014,6 +1108,695 @@ describe('schedules API', () => {
   })
 
   describe('PATCH /api/schedule/events/:id', () => {
+    it('previews a start date change that replaces existing revisions', async () => {
+      const startDate = dateAtOffset(0)
+      const newStartDate = dateOffsetFrom(startDate, 1)
+      const secondRevisionDate = dateOffsetFrom(startDate, 2)
+      const endDate = dateOffsetFrom(startDate, 4)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate })
+      await patchSchedule(created.id, {
+        effectiveFrom: secondRevisionDate,
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+
+      const beforeSave = await listScheduleEvents(startDate, endDate)
+      const dryRunResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+        dryRun: true,
+      })
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const duringDryRun = await listScheduleEvents(startDate, endDate)
+      const saveResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+      })
+      const afterSave = await listScheduleEvents(startDate, endDate)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate,
+            endDate: dateOffsetFrom(startDate, 41),
+          },
+          changes: [
+            {
+              before: previewOccurrence(startDate, startDate, '08:00', '09:00'),
+              after: null,
+            },
+            {
+              before: previewOccurrence(
+                secondRevisionDate,
+                secondRevisionDate,
+                '09:00',
+                '10:00',
+              ),
+              after: previewOccurrence(
+                secondRevisionDate,
+                secondRevisionDate,
+                '08:00',
+                '09:00',
+              ),
+            },
+            {
+              before: previewOccurrence(
+                dateOffsetFrom(startDate, 3),
+                dateOffsetFrom(startDate, 3),
+                '09:00',
+                '10:00',
+              ),
+              after: previewOccurrence(
+                dateOffsetFrom(startDate, 3),
+                dateOffsetFrom(startDate, 3),
+                '08:00',
+                '09:00',
+              ),
+            },
+            {
+              before: previewOccurrence(endDate, endDate, '09:00', '10:00'),
+              after: previewOccurrence(endDate, endDate, '08:00', '09:00'),
+            },
+          ],
+          deletedOverrides: [],
+        },
+        beforeSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(
+            secondRevisionDate,
+            secondRevisionDate,
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 3),
+            dateOffsetFrom(startDate, 3),
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(endDate, endDate, '09:00', '10:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(
+            secondRevisionDate,
+            secondRevisionDate,
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 3),
+            dateOffsetFrom(startDate, 3),
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(endDate, endDate, '09:00', '10:00'),
+        ],
+        saveStatus: 200,
+        afterSave: [
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(
+            secondRevisionDate,
+            secondRevisionDate,
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 3),
+            dateOffsetFrom(startDate, 3),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+      })
+    })
+
+    it('includes new occurrences when a start date moves earlier', async () => {
+      const newStartDate = dateAtOffset(0)
+      const startDate = dateOffsetFrom(newStartDate, 1)
+      const endDate = dateOffsetFrom(startDate, 2)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate })
+
+      const beforeSave = await listScheduleEvents(newStartDate, endDate)
+      const dryRunResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+        dryRun: true,
+      })
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const duringDryRun = await listScheduleEvents(newStartDate, endDate)
+      const saveResponse = await patchSchedule(created.id, {
+        startDate: newStartDate,
+      })
+      const afterSave = await listScheduleEvents(newStartDate, endDate)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate: newStartDate,
+            endDate: dateOffsetFrom(newStartDate, 41),
+          },
+          changes: [
+            {
+              before: null,
+              after: previewOccurrence(
+                newStartDate,
+                newStartDate,
+                '08:00',
+                '09:00',
+              ),
+            },
+          ],
+          deletedOverrides: [],
+        },
+        beforeSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+        saveStatus: 200,
+        afterSave: [
+          previewOccurrence(newStartDate, newStartDate, '08:00', '09:00'),
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(endDate, endDate, '08:00', '09:00'),
+        ],
+      })
+    })
+
+    it('previews revision changes from effectiveFrom and removes obsolete overrides only when saved', async () => {
+      const startDate = dateAtOffset(0)
+      const firstChangedDate = dateOffsetFrom(startDate, 1)
+      const secondChangedDate = dateOffsetFrom(startDate, 2)
+      const lastDate = dateOffsetFrom(startDate, 3)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate: lastDate })
+      await putScheduleOverride(created.id, firstChangedDate, {
+        startTime: '07:00',
+        endTime: '08:00',
+      })
+      await putScheduleOverride(created.id, secondChangedDate, {
+        date: lastDate,
+        startTime: '11:00',
+        endTime: '12:00',
+      })
+
+      const beforeSave = await listScheduleEvents(firstChangedDate, lastDate)
+      const dryRunInput = {
+        effectiveFrom: firstChangedDate,
+        startTime: '13:00',
+        endTime: '14:00',
+        recurrence: {
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [new Date(`${lastDate}T00:00:00`).getDay()],
+        },
+        dryRun: true,
+      }
+      const dryRunResponse = await patchSchedule(created.id, dryRunInput)
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const duringDryRun = await listScheduleEvents(firstChangedDate, lastDate)
+      const overridesDuringDryRun = await listScheduleOverrides(created.id)
+      const saveResponse = await patchSchedule(created.id, {
+        ...dryRunInput,
+        dryRun: undefined,
+      })
+      const afterSave = await listScheduleEvents(firstChangedDate, lastDate)
+      const overridesAfterSave = await listScheduleOverrides(created.id)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        overridesDuringDryRun: normalizeOverrideRows(overridesDuringDryRun),
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+        overridesAfterSave: normalizeOverrideRows(overridesAfterSave),
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate: firstChangedDate,
+            endDate: dateOffsetFrom(firstChangedDate, 41),
+          },
+          changes: [
+            {
+              before: previewOccurrence(
+                firstChangedDate,
+                firstChangedDate,
+                '07:00',
+                '08:00',
+              ),
+              after: null,
+            },
+            {
+              before: previewOccurrence(
+                lastDate,
+                secondChangedDate,
+                '11:00',
+                '12:00',
+              ),
+              after: null,
+            },
+            {
+              before: previewOccurrence(lastDate, lastDate, '08:00', '09:00'),
+              after: previewOccurrence(lastDate, lastDate, '13:00', '14:00'),
+            },
+          ],
+          deletedOverrides: [
+            {
+              scheduleId: 'SCHEDULE_ID',
+              occurrenceDate: firstChangedDate,
+              startTime: '07:00',
+              endTime: '08:00',
+              movedToDate: null,
+              skipped: false,
+            },
+            {
+              scheduleId: 'SCHEDULE_ID',
+              occurrenceDate: secondChangedDate,
+              startTime: '11:00',
+              endTime: '12:00',
+              movedToDate: lastDate,
+              skipped: false,
+            },
+          ],
+        },
+        beforeSave: [
+          previewOccurrence(
+            firstChangedDate,
+            firstChangedDate,
+            '07:00',
+            '08:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '08:00', '09:00'),
+          previewOccurrence(lastDate, secondChangedDate, '11:00', '12:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(
+            firstChangedDate,
+            firstChangedDate,
+            '07:00',
+            '08:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '08:00', '09:00'),
+          previewOccurrence(lastDate, secondChangedDate, '11:00', '12:00'),
+        ],
+        overridesDuringDryRun: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            occurrenceDate: firstChangedDate,
+            startTime: '07:00',
+            endTime: '08:00',
+            movedToDate: null,
+            skipped: false,
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            occurrenceDate: secondChangedDate,
+            startTime: '11:00',
+            endTime: '12:00',
+            movedToDate: lastDate,
+            skipped: false,
+          },
+        ],
+        saveStatus: 200,
+        afterSave: [previewOccurrence(lastDate, lastDate, '13:00', '14:00')],
+        overridesAfterSave: [],
+      })
+    })
+
+    it('previews updates to all revisions and keeps the preview unchanged until saved', async () => {
+      const startDate = dateAtOffset(0)
+      const firstRevisionDate = dateOffsetFrom(startDate, 1)
+      const lastDate = dateOffsetFrom(startDate, 2)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate: lastDate })
+      await patchSchedule(created.id, {
+        effectiveFrom: firstRevisionDate,
+        startTime: '09:00',
+        endTime: '10:00',
+      })
+
+      const beforeSave = await listScheduleEvents(startDate, lastDate)
+      const dryRunInput = {
+        startTime: '12:00',
+        endTime: '13:00',
+        dryRun: true,
+      }
+      const dryRunResponse = await patchSchedule(created.id, dryRunInput)
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const series = await loadScheduleWithRevisions(created.id)
+      assertDefined(series)
+      const publicExpansion = expandScheduleWithDraft({
+        series,
+        overrides: await listScheduleOverrides(created.id),
+        startDate: preview.range.startDate,
+        endDate: preview.range.endDate,
+        draft: {
+          revisionChange: {
+            effectiveFrom: startDate,
+            startTime: '12:00',
+            endTime: '13:00',
+          },
+        },
+        revisionMode: 'all',
+      })
+      const previewAfter = preview.changes.flatMap((change) =>
+        change.after == null ? [] : [change.after],
+      )
+      const duringDryRun = await listScheduleEvents(startDate, lastDate)
+      const saveResponse = await patchSchedule(created.id, {
+        ...dryRunInput,
+        dryRun: undefined,
+      })
+      const afterSave = await listScheduleEvents(startDate, lastDate)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        publicExpansion,
+        previewAfter,
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate,
+            endDate: dateOffsetFrom(startDate, 41),
+          },
+          changes: [
+            {
+              before: previewOccurrence(startDate, startDate, '08:00', '09:00'),
+              after: previewOccurrence(startDate, startDate, '12:00', '13:00'),
+            },
+            {
+              before: previewOccurrence(
+                firstRevisionDate,
+                firstRevisionDate,
+                '09:00',
+                '10:00',
+              ),
+              after: previewOccurrence(
+                firstRevisionDate,
+                firstRevisionDate,
+                '12:00',
+                '13:00',
+              ),
+            },
+            {
+              before: previewOccurrence(lastDate, lastDate, '09:00', '10:00'),
+              after: previewOccurrence(lastDate, lastDate, '12:00', '13:00'),
+            },
+          ],
+          deletedOverrides: [],
+        },
+        publicExpansion: [
+          previewOccurrence(startDate, startDate, '12:00', '13:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '12:00',
+            '13:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '12:00', '13:00'),
+        ],
+        previewAfter: [
+          previewOccurrence(startDate, startDate, '12:00', '13:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '12:00',
+            '13:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '12:00', '13:00'),
+        ],
+        beforeSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '09:00', '10:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '09:00',
+            '10:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '09:00', '10:00'),
+        ],
+        saveStatus: 200,
+        afterSave: [
+          previewOccurrence(startDate, startDate, '12:00', '13:00'),
+          previewOccurrence(
+            firstRevisionDate,
+            firstRevisionDate,
+            '12:00',
+            '13:00',
+          ),
+          previewOccurrence(lastDate, lastDate, '12:00', '13:00'),
+        ],
+      })
+    })
+
+    it('previews ending a schedule and deletes later overrides only when saved', async () => {
+      const startDate = dateAtOffset(0)
+      const firstRemovedDate = dateOffsetFrom(startDate, 2)
+      const lastRemovedDate = dateOffsetFrom(startDate, 3)
+      const lastDate = dateOffsetFrom(startDate, 4)
+      const { body: created } = await createSchedule({
+        title: 'Daily review',
+        startDate,
+        startTime: '08:00',
+        endTime: '09:00',
+        recurrence: { type: 'daily', interval: 1 },
+      })
+      await patchSchedule(created.id, { endDate: lastDate })
+      await putScheduleOverride(created.id, firstRemovedDate, {
+        startTime: '10:00',
+        endTime: '11:00',
+      })
+      await putScheduleOverride(created.id, lastRemovedDate, {
+        startTime: '11:00',
+        endTime: '12:00',
+      })
+
+      const beforeSave = await listScheduleEvents(startDate, lastDate)
+      const dryRunResponse = await patchSchedule(created.id, {
+        endDate: dateOffsetFrom(startDate, 1),
+        dryRun: true,
+      })
+      const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+      const duringDryRun = await listScheduleEvents(startDate, lastDate)
+      const overridesDuringDryRun = await listScheduleOverrides(created.id)
+      const saveResponse = await patchSchedule(created.id, {
+        endDate: dateOffsetFrom(startDate, 1),
+      })
+      const afterSave = await listScheduleEvents(startDate, lastDate)
+      const overridesAfterSave = await listScheduleOverrides(created.id)
+
+      const snapshot = () => ({
+        dryRunStatus: dryRunResponse.status,
+        preview: normalizePreview(preview),
+        beforeSave: beforeSave.occurrences,
+        duringDryRun: duringDryRun.occurrences,
+        overridesDuringDryRun: normalizeOverrideRows(overridesDuringDryRun),
+        saveStatus: saveResponse.status,
+        afterSave: afterSave.occurrences,
+        overridesAfterSave: normalizeOverrideRows(overridesAfterSave),
+      })
+      expect(snapshot()).toEqual({
+        dryRunStatus: 200,
+        preview: {
+          range: {
+            startDate,
+            endDate: dateOffsetFrom(startDate, 41),
+          },
+          changes: [
+            {
+              before: previewOccurrence(
+                firstRemovedDate,
+                firstRemovedDate,
+                '10:00',
+                '11:00',
+              ),
+              after: null,
+            },
+            {
+              before: previewOccurrence(
+                lastRemovedDate,
+                lastRemovedDate,
+                '11:00',
+                '12:00',
+              ),
+              after: null,
+            },
+            {
+              before: previewOccurrence(lastDate, lastDate, '08:00', '09:00'),
+              after: null,
+            },
+          ],
+          deletedOverrides: [
+            {
+              scheduleId: 'SCHEDULE_ID',
+              occurrenceDate: firstRemovedDate,
+              startTime: '10:00',
+              endTime: '11:00',
+              movedToDate: null,
+              skipped: false,
+            },
+            {
+              scheduleId: 'SCHEDULE_ID',
+              occurrenceDate: lastRemovedDate,
+              startTime: '11:00',
+              endTime: '12:00',
+              movedToDate: null,
+              skipped: false,
+            },
+          ],
+        },
+        beforeSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(
+            firstRemovedDate,
+            firstRemovedDate,
+            '10:00',
+            '11:00',
+          ),
+          previewOccurrence(lastRemovedDate, lastRemovedDate, '11:00', '12:00'),
+          previewOccurrence(lastDate, lastDate, '08:00', '09:00'),
+        ],
+        duringDryRun: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+          previewOccurrence(
+            firstRemovedDate,
+            firstRemovedDate,
+            '10:00',
+            '11:00',
+          ),
+          previewOccurrence(lastRemovedDate, lastRemovedDate, '11:00', '12:00'),
+          previewOccurrence(lastDate, lastDate, '08:00', '09:00'),
+        ],
+        overridesDuringDryRun: [
+          {
+            scheduleId: 'SCHEDULE_ID',
+            occurrenceDate: firstRemovedDate,
+            startTime: '10:00',
+            endTime: '11:00',
+            movedToDate: null,
+            skipped: false,
+          },
+          {
+            scheduleId: 'SCHEDULE_ID',
+            occurrenceDate: lastRemovedDate,
+            startTime: '11:00',
+            endTime: '12:00',
+            movedToDate: null,
+            skipped: false,
+          },
+        ],
+        saveStatus: 200,
+        afterSave: [
+          previewOccurrence(startDate, startDate, '08:00', '09:00'),
+          previewOccurrence(
+            dateOffsetFrom(startDate, 1),
+            dateOffsetFrom(startDate, 1),
+            '08:00',
+            '09:00',
+          ),
+        ],
+        overridesAfterSave: [],
+      })
+    })
+
     it('updates startDate', async () => {
       const { body: created } = await createSchedule({
         title: 'Routine',
@@ -2455,6 +3238,189 @@ describe('schedules API', () => {
 })
 
 describe('schedule overrides API', () => {
+  it('previews a moved occurrence and leaves the override unchanged until saved', async () => {
+    const occurrenceDate = dateAtOffset(5)
+    const destinationDate = dateOffsetFrom(occurrenceDate, 2)
+    const { body: schedule } = await createSchedule({
+      title: 'Review block',
+      startDate: occurrenceDate,
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    await putScheduleOverride(schedule.id, occurrenceDate, {
+      startTime: '07:30',
+      endTime: '08:30',
+    })
+
+    const beforeSave = await listScheduleEvents(occurrenceDate, destinationDate)
+    const dryRunInput = {
+      date: destinationDate,
+      startTime: '10:00',
+      endTime: '11:00',
+      dryRun: true,
+    }
+    const dryRunResponse = await putScheduleOverride(
+      schedule.id,
+      occurrenceDate,
+      dryRunInput,
+    )
+    const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+    const overridesDuringDryRun = await listScheduleOverrides(schedule.id)
+    const saveResponse = await putScheduleOverride(
+      schedule.id,
+      occurrenceDate,
+      {
+        date: destinationDate,
+        startTime: '10:00',
+        endTime: '11:00',
+      },
+    )
+    const afterSave = await listScheduleEvents(occurrenceDate, destinationDate)
+    const overridesAfterSave = await listScheduleOverrides(schedule.id)
+
+    const snapshot = () => ({
+      dryRunStatus: dryRunResponse.status,
+      preview: normalizePreview(preview),
+      beforeSave: beforeSave.occurrences.filter(
+        (occurrence) => occurrence.originalDate === occurrenceDate,
+      ),
+      overridesDuringDryRun: normalizeOverrideRows(overridesDuringDryRun),
+      saveStatus: saveResponse.status,
+      afterSave: afterSave.occurrences.filter(
+        (occurrence) => occurrence.originalDate === occurrenceDate,
+      ),
+      overridesAfterSave: normalizeOverrideRows(overridesAfterSave),
+    })
+    expect(snapshot()).toEqual({
+      dryRunStatus: 200,
+      preview: {
+        range: { startDate: occurrenceDate, endDate: destinationDate },
+        changes: [
+          {
+            before: previewOccurrence(
+              occurrenceDate,
+              occurrenceDate,
+              '07:30',
+              '08:30',
+            ),
+            after: previewOccurrence(
+              destinationDate,
+              occurrenceDate,
+              '10:00',
+              '11:00',
+            ),
+          },
+        ],
+        deletedOverrides: [],
+      },
+      beforeSave: [
+        previewOccurrence(occurrenceDate, occurrenceDate, '07:30', '08:30'),
+      ],
+      overridesDuringDryRun: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate,
+          startTime: '07:30',
+          endTime: '08:30',
+          movedToDate: null,
+          skipped: false,
+        },
+      ],
+      saveStatus: 200,
+      afterSave: [
+        previewOccurrence(destinationDate, occurrenceDate, '10:00', '11:00'),
+      ],
+      overridesAfterSave: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate,
+          startTime: '10:00',
+          endTime: '11:00',
+          movedToDate: destinationDate,
+          skipped: false,
+        },
+      ],
+    })
+  })
+
+  it('previews skipping an occurrence without saving it', async () => {
+    const occurrenceDate = dateAtOffset(6)
+    const { body: schedule } = await createSchedule({
+      title: 'Review block',
+      startDate: occurrenceDate,
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+
+    const dryRunResponse = await putScheduleOverride(
+      schedule.id,
+      occurrenceDate,
+      { skipped: true, dryRun: true },
+    )
+    const preview = await jsonBody<ScheduleChangePreview>(dryRunResponse)
+    const overridesDuringDryRun = await listScheduleOverrides(schedule.id)
+    const saveResponse = await putScheduleOverride(
+      schedule.id,
+      occurrenceDate,
+      {
+        skipped: true,
+      },
+    )
+    const actualEvents = await listScheduleEvents(
+      occurrenceDate,
+      occurrenceDate,
+    )
+    const overridesAfterSave = await listScheduleOverrides(schedule.id)
+
+    const snapshot = () => ({
+      dryRunStatus: dryRunResponse.status,
+      preview: normalizePreview(preview),
+      overridesDuringDryRun: normalizeOverrideRows(overridesDuringDryRun),
+      saveStatus: saveResponse.status,
+      actualEvents: actualEvents.occurrences,
+      overridesAfterSave: normalizeOverrideRows(overridesAfterSave),
+    })
+    expect(snapshot()).toEqual({
+      dryRunStatus: 200,
+      preview: {
+        range: { startDate: occurrenceDate, endDate: occurrenceDate },
+        changes: [
+          {
+            before: previewOccurrence(
+              occurrenceDate,
+              occurrenceDate,
+              '08:30',
+              '09:30',
+            ),
+            after: previewOccurrence(
+              occurrenceDate,
+              occurrenceDate,
+              '08:30',
+              '09:30',
+              true,
+            ),
+          },
+        ],
+        deletedOverrides: [],
+      },
+      overridesDuringDryRun: [],
+      saveStatus: 200,
+      actualEvents: [],
+      overridesAfterSave: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate,
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
+      ],
+    })
+  })
+
   it('returns the destination date when setting a move override', async () => {
     const { body: schedule } = await createSchedule({
       title: 'Routine',

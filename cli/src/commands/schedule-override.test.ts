@@ -110,6 +110,121 @@ describe('schedule override set', () => {
       stdout: [[`${JSON.stringify(override, null, 2)}\n`]],
     })
   })
+
+  it('sends dryRun when previewing a skipped occurrence', async () => {
+    const preview = {
+      range: { startDate: '2037-04-11', endDate: '2037-04-11' },
+      changes: [
+        {
+          before: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '08:30',
+            endTime: '09:30',
+            skipped: false,
+          },
+          after: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '08:30',
+            endTime: '09:30',
+            skipped: true,
+          },
+        },
+      ],
+      deletedOverrides: [],
+    }
+
+    expect(
+      await runScheduleOverrideCli(
+        [
+          'schedule',
+          'override',
+          'set',
+          SCHEDULE_ID,
+          '2037-04-11',
+          '--mode',
+          'skip',
+          '--dry-run',
+        ],
+        new Response(JSON.stringify(preview), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PUT',
+          pathname: `/api/schedule/events/${SCHEDULE_ID}/overrides/2037-04-11`,
+          query: {},
+          body: { skipped: true, dryRun: true },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(preview, null, 2)}\n`]],
+    })
+  })
+
+  it('sends dryRun when previewing an occurrence change', async () => {
+    const preview = {
+      range: { startDate: '2037-04-11', endDate: '2037-04-13' },
+      changes: [
+        {
+          before: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '08:30',
+            endTime: '09:30',
+            skipped: false,
+          },
+          after: {
+            date: '2037-04-13',
+            originalDate: '2037-04-11',
+            startTime: '10:00',
+            endTime: '11:00',
+            skipped: false,
+          },
+        },
+      ],
+      deletedOverrides: [],
+    }
+
+    expect(
+      await runScheduleOverrideCli(
+        [
+          'schedule',
+          'override',
+          'set',
+          SCHEDULE_ID,
+          '2037-04-11',
+          '--date',
+          '2037-04-13',
+          '--start-time',
+          '10:00',
+          '--end-time',
+          '11:00',
+          '--dry-run',
+        ],
+        new Response(JSON.stringify(preview), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PUT',
+          pathname: `/api/schedule/events/${SCHEDULE_ID}/overrides/2037-04-11`,
+          query: {},
+          body: {
+            date: '2037-04-13',
+            startTime: '10:00',
+            endTime: '11:00',
+            dryRun: true,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(preview, null, 2)}\n`]],
+    })
+  })
 })
 
 describe('schedule override clear', () => {

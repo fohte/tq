@@ -7,6 +7,7 @@ import { db } from '#db/connection'
 import { scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { scheduleOccursOnDate } from '#routes/schedule-expansion'
+import { buildScheduleOverridePreview } from '#routes/schedule-preview'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
 import {
   scheduleOverrideDateSchema,
@@ -61,6 +62,22 @@ export const scheduleOverridesApp = new Hono()
                 input.date === occurrenceDate ? null : (input.date ?? null),
               skipped: false,
             }
+
+      if (input.dryRun === true) {
+        const overrides = await db
+          .select()
+          .from(scheduleOverrides)
+          .where(eq(scheduleOverrides.scheduleId, scheduleId))
+        return c.json(
+          buildScheduleOverridePreview(
+            schedule,
+            overrides,
+            occurrenceDate,
+            values,
+          ),
+          200,
+        )
+      }
 
       const override = firstOrThrow(
         await db
