@@ -58,14 +58,13 @@ export function TaskGithubLinksSection({
               />
               <Button
                 type="button"
-                variant="ghost"
-                size="icon-xs"
+                variant="plain"
                 onClick={() => {
                   unlink.mutate(link.id)
                 }}
                 disabled={unlink.isPending}
                 aria-label={`Unlink ${link.owner}/${link.repo}#${String(link.number)}`}
-                className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+                className="size-6 shrink-0"
               >
                 <X className="size-3.5" />
               </Button>
@@ -74,17 +73,18 @@ export function TaskGithubLinksSection({
         </div>
       )}
 
-      <Button
-        type="button"
-        variant="link"
-        size="xs"
-        className="h-auto w-fit p-0 text-muted-foreground-faint hover:text-foreground"
-        onClick={() => {
-          setModalOpen(true)
-        }}
-      >
-        link issue or PR
-      </Button>
+      <div className="w-fit font-mono text-xs">
+        <Button
+          type="button"
+          variant="plain"
+          className="w-fit"
+          onClick={() => {
+            setModalOpen(true)
+          }}
+        >
+          link issue or PR
+        </Button>
+      </div>
 
       <GithubIssueLinkModal
         open={modalOpen}

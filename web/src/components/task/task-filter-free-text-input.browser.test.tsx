@@ -68,7 +68,7 @@ describe('TaskFilterFreeTextInput', () => {
     const input = screen.getByRole('textbox', { name: 'Filter query' })
     await user.type(input, 'is:')
 
-    await screen.findByRole('button', { name: 'is:todo Todo' })
+    await screen.findByRole('option', { name: 'is:todo Todo' })
 
     expect(document.activeElement).toBe(input)
   })
@@ -83,6 +83,21 @@ describe('TaskFilterFreeTextInput', () => {
     await user.keyboard('{Tab}')
 
     expect(input).toHaveValue('is:todo ')
+  })
+
+  it('applies a suggestion on click', async () => {
+    mockSuggestionData = suggestionFixtures
+    const user = userEvent.setup()
+    renderInput()
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'is:')
+    await user.click(
+      await screen.findByRole('option', { name: 'is:todo Todo' }),
+    )
+
+    const actualValue = input instanceof HTMLInputElement ? input.value : null
+    expect(actualValue).toEqual('is:todo ')
   })
 
   it('commits on Enter when there are no suggestions', async () => {

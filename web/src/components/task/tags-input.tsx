@@ -1,13 +1,13 @@
 import { Button } from '@fohte/ui/button'
 import { Chip } from '@fohte/ui/chip'
 import { Input } from '@fohte/ui/input'
+import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useMemo, useRef, useState } from 'react'
 
 import { type LabelFilter, useLabelsForContext } from '#hooks/use-labels'
 import type { LabelTreeNode } from '#lib/tag-tree'
 import { buildLabelTree, flattenLabelTree } from '#lib/tag-tree'
-import { cn } from '#lib/utils'
 
 // Synthesized ancestor nodes (e.g. "dev" when only "dev/tq" exists) are
 // selectable as tags.
@@ -32,28 +32,15 @@ function LabelSuggestion({
       {/* Already-attached labels are excluded from indexByName; selecting
           one would otherwise no-op against addTag's duplicate guard. */}
       {index != null && (
-        <Button
-          type="button"
-          variant="ghost"
-          style={
-            {
-              '--label-suggestion-indent': `${String(12 + depth * 12)}px`,
-            } as React.CSSProperties & { '--label-suggestion-indent': string }
-          }
-          className={cn(
-            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-            'w-full justify-start py-1.5 pr-3 pl-(--label-suggestion-indent) text-left font-mono text-xs',
-            index === selectedIndex
-              ? 'bg-accent text-accent-foreground'
-              : 'text-popover-foreground hover:bg-accent/50',
-          )}
-          onMouseDown={(e) => {
-            e.preventDefault()
+        <ListItem
+          indent={depth}
+          highlighted={index === selectedIndex}
+          onSelect={() => {
             onSelect(node.name)
           }}
         >
-          #{displayName}
-        </Button>
+          <span className="font-mono">#{displayName}</span>
+        </ListItem>
       )}
       {node.children.map((child) => (
         <LabelSuggestion
@@ -171,7 +158,7 @@ export function TagsInput({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
       {labels.map((label) => (
         <Chip
           key={label}
@@ -209,27 +196,28 @@ export function TagsInput({
             <PopoverContent
               initialFocus={false}
               padding="none"
-              className="w-40"
+              className="w-40 text-popover-foreground"
             >
-              {suggestionTree.map((node) => (
-                <LabelSuggestion
-                  key={node.name}
-                  node={node}
-                  depth={0}
-                  indexByName={suggestionIndexByName}
-                  selectedIndex={selectedIndex}
-                  onSelect={addTag}
-                />
-              ))}
+              <List role="listbox">
+                {suggestionTree.map((node) => (
+                  <LabelSuggestion
+                    key={node.name}
+                    node={node}
+                    depth={0}
+                    indexByName={suggestionIndexByName}
+                    selectedIndex={selectedIndex}
+                    onSelect={addTag}
+                  />
+                ))}
+              </List>
             </PopoverContent>
           </Popover>
         </>
       ) : (
         <Button
           type="button"
-          variant="link"
-          size="xs"
-          className="h-auto p-0 text-muted-foreground-faint hover:text-foreground"
+          variant="plain"
+          className="w-fit"
           onClick={() => {
             setIsAdding(true)
           }}

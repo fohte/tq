@@ -125,8 +125,8 @@ const titleInputPlaceholder = /task title|タスクのタイトル/i
 
 function visibleLabelSuggestionNames() {
   return screen
-    .getAllByRole('button', { name: /^#/ })
-    .map((button) => button.innerText)
+    .getAllByRole('option', { name: /^#/ })
+    .map((option) => option.innerText)
 }
 
 function makeContextLabelsQueryClient() {

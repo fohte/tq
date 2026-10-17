@@ -20,7 +20,7 @@ async function renderTagTokens(onOuterClick: () => void) {
     validateSearch: (search: Record<string, unknown>) => search,
     component: () => (
       <div onClick={onOuterClick}>
-        <TagTokens labels={['dev:tq']} isCompleted={false} />
+        <TagTokens labels={['dev:tq']} />
       </div>
     ),
   })
