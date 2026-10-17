@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
-  draftWithScheduleDetails,
   type RecurrenceFormDraft,
-  recurrenceFormFromDetails,
   recurrenceFormFromSchedule,
+  scheduleEditDialogFormState,
 } from '#components/schedule/schedule-edit-dialog-form-state'
 import { buildScheduleEditPreviewRequest } from '#components/schedule/schedule-edit-dialog-preview-request'
 import type {
@@ -24,6 +23,7 @@ import {
 import {
   buildAllScheduleInput,
   buildFollowingScheduleInput,
+  endSeriesRemovesSchedule,
   previousScheduleDate,
 } from '#components/schedule/schedule-edit-dialog-update-input'
 import {
@@ -34,6 +34,7 @@ import {
 import { scheduleContext } from '#components/schedule/schedule-modal-form-utils'
 import type { SchedulePanelProps } from '#components/schedule/schedule-modal-panel-props'
 import { describeSchedulePreview } from '#components/schedule/schedule-preview-description'
+import { useDebounce } from '#hooks/use-debounce'
 import type { CreateScheduleInput, Schedule } from '#hooks/use-schedules'
 import {
   useClearScheduleOverride,
@@ -99,31 +100,32 @@ export function useCreateScheduleModalState({
 
   useEffect(() => {
     const details = scheduleDetails.data
-    if (
-      !open ||
-      !schedule ||
-      !details ||
-      detailsHydratedForRef.current === schedule.scheduleId
-    ) {
+    if (!open || !schedule || !details || scheduleDetails.isFetching) {
       return
     }
-    detailsHydratedForRef.current = schedule.scheduleId
-    setRangeDraft((prev) => ({
-      ...prev,
-      all: {
-        startDate: details.startDate,
-        startTime: details.startTime,
-        endTime: details.endTime,
-      },
-    }))
-    setTitle(details.title)
-    setAllRecurrence(recurrenceFormFromDetails(details))
-    setContext(details.context)
-    setColor(details.color ?? '')
+    const hydrationKey = `${schedule.scheduleId}:${details.updatedAt}`
+    if (detailsHydratedForRef.current === hydrationKey) return
+    detailsHydratedForRef.current = hydrationKey
+    const formState = scheduleEditDialogFormState(
+      schedule,
+      defaultStartDate,
+      details,
+    )
+    setRangeDraft(formState.rangeDraft)
+    setTitle(formState.title)
+    setAllRecurrence(formState.allRecurrence)
+    setContext(formState.context)
+    setColor(formState.color)
     if (!reminderTouchedRef.current) {
-      setRemindBeforeMinutesState(details.remindBeforeMinutes ?? '')
+      setRemindBeforeMinutesState(formState.remindBeforeMinutes)
     }
-  }, [open, schedule, scheduleDetails.data])
+  }, [
+    defaultStartDate,
+    open,
+    schedule,
+    scheduleDetails.data,
+    scheduleDetails.isFetching,
+  ])
 
   const createSchedule = useCreateSchedule()
   const updateSchedule = useUpdateSchedule()
@@ -136,6 +138,8 @@ export function useCreateScheduleModalState({
     deleteSchedule.isPending ||
     setScheduleOverride.isPending ||
     clearScheduleOverride.isPending
+  const reminderReady =
+    !schedule || (scheduleDetails.data != null && !scheduleDetails.isFetching)
 
   const scope = rangeDraft.scope
   const activeRecurrence = scope === 'all' ? allRecurrence : followingRecurrence
@@ -183,9 +187,17 @@ export function useCreateScheduleModalState({
     updateInputForFollowing(),
     updateInputForAll(),
   )
+  const previewRequestKey =
+    previewRequest == null ? '' : JSON.stringify(previewRequest)
+  const debouncedPreviewRequestKey = useDebounce(previewRequestKey, 300)
+  const isPreviewRequestDebouncing =
+    previewRequest != null && previewRequestKey !== debouncedPreviewRequestKey
+  const activePreviewRequest = isPreviewRequestDebouncing
+    ? null
+    : previewRequest
   const previewQuery = useScheduleChangePreview(
     schedule?.scheduleId,
-    previewRequest,
+    activePreviewRequest,
     open && schedule != null,
   )
   const canRestoreThisEvent = Boolean(
@@ -196,19 +208,19 @@ export function useCreateScheduleModalState({
   )
 
   const resetForm = useCallback(() => {
-    const details = scheduleDetails.data
-    setRangeDraft(draftWithScheduleDetails(schedule, defaultStartDate, details))
-    setTitle(details?.title ?? schedule?.title ?? '')
-    setFollowingRecurrence(recurrenceFormFromSchedule(schedule))
-    setAllRecurrence(
-      details
-        ? recurrenceFormFromDetails(details)
-        : recurrenceFormFromSchedule(schedule),
+    const formState = scheduleEditDialogFormState(
+      schedule,
+      defaultStartDate,
+      scheduleDetails.data,
     )
-    setContext(details?.context ?? scheduleContext(schedule))
-    setColor(details?.color ?? schedule?.color ?? '')
+    setRangeDraft(formState.rangeDraft)
+    setTitle(formState.title)
+    setFollowingRecurrence(formState.followingRecurrence)
+    setAllRecurrence(formState.allRecurrence)
+    setContext(formState.context)
+    setColor(formState.color)
     reminderTouchedRef.current = false
-    setRemindBeforeMinutesState(details?.remindBeforeMinutes ?? '')
+    setRemindBeforeMinutesState(formState.remindBeforeMinutes)
   }, [defaultStartDate, schedule, scheduleDetails.data])
 
   const handleOpenChange = useCallback(
@@ -225,9 +237,11 @@ export function useCreateScheduleModalState({
       !startTime ||
       !endTime ||
       ((!schedule || scope === 'all') && !title.trim()) ||
-      (scope === 'all' && schedule && !scheduleDetails.data) ||
+      (scope === 'all' && schedule && !reminderReady) ||
       (previewRequest != null &&
-        (!previewQuery.isSuccess || previewQuery.data == null)) ||
+        (isPreviewRequestDebouncing ||
+          !previewQuery.isSuccess ||
+          previewQuery.data == null)) ||
       isPending
     ) {
       return
@@ -238,6 +252,10 @@ export function useCreateScheduleModalState({
         handleOpenChange(false)
       }
       if (scope === 'this') {
+        if (rangeAction == null && previewRequest == null) {
+          handleOpenChange(false)
+          return
+        }
         if (rangeAction === 'skip') {
           setScheduleOverride.mutate(
             {
@@ -269,7 +287,7 @@ export function useCreateScheduleModalState({
       } else if (scope === 'following') {
         if (rangeAction === 'endSeries') {
           const endDate = previousScheduleDate(rangeDraft.following.fromDate)
-          if (endDate < schedule.startDate) {
+          if (endSeriesRemovesSchedule(schedule, rangeDraft)) {
             deleteSchedule.mutate(schedule.scheduleId, { onSuccess })
           } else {
             updateSchedule.mutate(
@@ -401,19 +419,20 @@ export function useCreateScheduleModalState({
     startDate &&
     startTime &&
     endTime &&
-    (scope !== 'all' || !schedule || scheduleDetails.data) &&
+    (scope !== 'all' || !schedule || reminderReady) &&
     (previewRequest == null ||
-      (previewQuery.isSuccess && previewQuery.data != null)),
+      (!isPreviewRequestDebouncing &&
+        previewQuery.isSuccess &&
+        previewQuery.data != null)),
   )
   const previewText =
     previewRequest == null
       ? scope === 'following' &&
         rangeAction === 'endSeries' &&
-        previousScheduleDate(rangeDraft.following.fromDate) <
-          (schedule?.startDate ?? '')
+        endSeriesRemovesSchedule(schedule, rangeDraft)
         ? 'Ending the series before its first occurrence removes the schedule.'
         : null
-      : previewQuery.data == null
+      : isPreviewRequestDebouncing || previewQuery.data == null
         ? null
         : describeSchedulePreview(
             previewQuery.data,
@@ -455,15 +474,18 @@ export function useCreateScheduleModalState({
     setColor,
     exceptions: exceptionQuery.data ?? [],
     isExceptionsLoading: exceptionQuery.isLoading,
+    isExceptionsError: exceptionQuery.isError,
     onRestoreException: handleRestoreException,
     isRestorePending: clearScheduleOverride.isPending,
     remindBeforeMinutes,
     setRemindBeforeMinutes,
-    reminderReady: !schedule || scheduleDetails.data != null,
+    reminderReady,
     previewText,
-    isPreviewLoading: previewQuery.isFetching && previewRequest != null,
-    previewError:
+    isPreviewLoading:
       previewRequest != null &&
+      (isPreviewRequestDebouncing || previewQuery.isFetching),
+    previewError:
+      activePreviewRequest != null &&
       (previewQuery.isError ||
         (previewQuery.isSuccess && previewQuery.data == null)),
     onDelete: handleDelete,
@@ -472,5 +494,5 @@ export function useCreateScheduleModalState({
     handleSubmit,
   }
 
-  return { panelProps, handleSubmit }
+  return { panelProps }
 }

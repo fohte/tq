@@ -19,9 +19,9 @@ export function scheduleContext(
 }
 
 export function scheduleRecurrenceType(
-  schedule: Schedule | undefined,
+  recurrence: Schedule['recurrence'] | undefined | null,
 ): RecurrenceType | '' {
-  const type = schedule?.recurrence?.type
+  const type = recurrence?.type
   return type === 'daily' ||
     type === 'weekly' ||
     type === 'monthly' ||

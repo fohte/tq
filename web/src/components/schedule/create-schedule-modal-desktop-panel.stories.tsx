@@ -51,6 +51,7 @@ const meta = {
     setColor: fn(),
     exceptions: [],
     isExceptionsLoading: false,
+    isExceptionsError: false,
     onRestoreException: fn(),
     isRestorePending: false,
     remindBeforeMinutes: '',
@@ -101,6 +102,7 @@ export const PreviewUnavailable: Story = {
   args: {
     ...ThisEvent.args,
     previewError: true,
+    canSubmit: false,
   },
 }
 
@@ -141,8 +143,6 @@ export const AllEventsWithExceptions: Story = {
       makeScheduleOverride({ occurrenceDate: '2026-01-03', skipped: true }),
       makeScheduleOverride({
         occurrenceDate: '2026-01-05',
-        startTime: '08:00',
-        endTime: '09:00',
         movedToDate: '2026-01-06',
         skipped: false,
       }),

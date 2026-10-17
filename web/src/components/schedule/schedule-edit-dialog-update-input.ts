@@ -24,14 +24,24 @@ export function buildFollowingScheduleInput(
   if (!schedule) return {}
   return {
     effectiveFrom: draft.following.fromDate,
-    ...(draft.following.startTime !== scheduleTimeOfDay(schedule.start)
+    ...(draft.following.startTime !== schedule.occurrenceStartTime
       ? { startTime: draft.following.startTime }
       : {}),
-    ...(draft.following.endTime !== scheduleTimeOfDay(schedule.end)
+    ...(draft.following.endTime !== schedule.occurrenceEndTime
       ? { endTime: draft.following.endTime }
       : {}),
     ...(!sameRecurrence(schedule.recurrence, recurrence) ? { recurrence } : {}),
   }
+}
+
+export function endSeriesRemovesSchedule(
+  schedule: Schedule | undefined,
+  draft: ScheduleEditDraft,
+) {
+  return (
+    schedule != null &&
+    previousScheduleDate(draft.following.fromDate) < schedule.startDate
+  )
 }
 
 export function buildAllScheduleInput({

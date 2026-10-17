@@ -25,23 +25,19 @@ export interface ScheduleEditDraft {
   }
 }
 
-function timeOfDay(isoDateTime: string | undefined) {
-  return isoDateTime?.slice(11, 16) ?? ''
-}
-
 export function createScheduleEditDraft(
   schedule: Schedule | undefined,
   defaultStartDate: string,
 ): ScheduleEditDraft {
   const occurrenceDate = schedule?.occurrenceDate ?? defaultStartDate
-  const startTime = timeOfDay(schedule?.start)
-  const endTime = timeOfDay(schedule?.end)
+  const startTime = schedule?.occurrenceStartTime ?? ''
+  const endTime = schedule?.occurrenceEndTime ?? ''
 
   return {
     scope: schedule ? 'this' : 'all',
     occurrenceDate,
     thisEvent: {
-      date: schedule?.start.slice(0, 10) ?? defaultStartDate,
+      date: schedule?.occurrenceStartDate ?? defaultStartDate,
       startTime,
       endTime,
       action: null,

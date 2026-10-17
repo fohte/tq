@@ -1,6 +1,12 @@
 import { createScheduleEditDraft } from '#components/schedule/schedule-edit-dialog-state'
-import type { RecurrenceType } from '#components/schedule/schedule-modal-form-options'
-import { scheduleRecurrenceType } from '#components/schedule/schedule-modal-form-utils'
+import type {
+  ContextValue,
+  RecurrenceType,
+} from '#components/schedule/schedule-modal-form-options'
+import {
+  scheduleContext,
+  scheduleRecurrenceType,
+} from '#components/schedule/schedule-modal-form-utils'
 import type { Schedule, ScheduleDetails } from '#hooks/use-schedules'
 
 export interface RecurrenceFormDraft {
@@ -13,36 +19,25 @@ export interface RecurrenceFormDraft {
 export function recurrenceFormFromSchedule(
   schedule: Schedule | undefined,
 ): RecurrenceFormDraft {
+  return recurrenceFormFromRecurrence(schedule?.recurrence)
+}
+
+export function recurrenceFormFromRecurrence(
+  recurrence: Schedule['recurrence'] | undefined,
+): RecurrenceFormDraft {
   return {
-    type: scheduleRecurrenceType(schedule),
-    interval: schedule?.recurrence?.interval ?? 1,
-    daysOfWeek: schedule?.recurrence?.daysOfWeek ?? [],
+    type: scheduleRecurrenceType(recurrence),
+    interval: recurrence?.interval ?? 1,
+    daysOfWeek: recurrence?.daysOfWeek ?? [],
     dayOfMonth:
-      schedule?.recurrence?.dayOfMonth != null
-        ? String(schedule.recurrence.dayOfMonth)
-        : '',
+      recurrence?.dayOfMonth != null ? String(recurrence.dayOfMonth) : '',
   }
 }
 
 export function recurrenceFormFromDetails(
   details: ScheduleDetails,
 ): RecurrenceFormDraft {
-  const type = details.recurrence?.type
-  return {
-    type:
-      type === 'daily' ||
-      type === 'weekly' ||
-      type === 'monthly' ||
-      type === 'custom'
-        ? type
-        : '',
-    interval: details.recurrence?.interval ?? 1,
-    daysOfWeek: details.recurrence?.daysOfWeek ?? [],
-    dayOfMonth:
-      details.recurrence?.dayOfMonth != null
-        ? String(details.recurrence.dayOfMonth)
-        : '',
-  }
+  return recurrenceFormFromRecurrence(details.recurrence)
 }
 
 export function draftWithScheduleDetails(
@@ -59,5 +54,31 @@ export function draftWithScheduleDetails(
       startTime: details.startTime,
       endTime: details.endTime,
     },
+  }
+}
+
+export function scheduleEditDialogFormState(
+  schedule: Schedule | undefined,
+  defaultStartDate: string,
+  details: ScheduleDetails | undefined,
+) {
+  return {
+    rangeDraft: draftWithScheduleDetails(schedule, defaultStartDate, details),
+    title: details?.title ?? schedule?.title ?? '',
+    followingRecurrence: recurrenceFormFromSchedule(schedule),
+    allRecurrence: details
+      ? recurrenceFormFromDetails(details)
+      : recurrenceFormFromSchedule(schedule),
+    context: details?.context ?? scheduleContext(schedule),
+    color: details?.color ?? schedule?.color ?? '',
+    remindBeforeMinutes: details?.remindBeforeMinutes ?? '',
+  } satisfies {
+    rangeDraft: ReturnType<typeof draftWithScheduleDetails>
+    title: string
+    followingRecurrence: RecurrenceFormDraft
+    allRecurrence: RecurrenceFormDraft
+    context: ContextValue | ''
+    color: string
+    remindBeforeMinutes: number | ''
   }
 }

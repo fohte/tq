@@ -2,8 +2,10 @@ import type {
   ScheduleEditAction,
   ScheduleEditDraft,
 } from '#components/schedule/schedule-edit-dialog-state'
-import { previousScheduleDate } from '#components/schedule/schedule-edit-dialog-update-input'
-import { scheduleTimeOfDay } from '#components/schedule/schedule-modal-form-utils'
+import {
+  endSeriesRemovesSchedule,
+  previousScheduleDate,
+} from '#components/schedule/schedule-edit-dialog-update-input'
 import type {
   Schedule,
   SchedulePreviewRequest,
@@ -31,9 +33,9 @@ export function buildScheduleEditPreviewRequest(
       return { kind: 'clearOverride', occurrenceDate: draft.occurrenceDate }
     }
     if (
-      draft.thisEvent.date === schedule.start.slice(0, 10) &&
-      draft.thisEvent.startTime === scheduleTimeOfDay(schedule.start) &&
-      draft.thisEvent.endTime === scheduleTimeOfDay(schedule.end)
+      draft.thisEvent.date === schedule.occurrenceStartDate &&
+      draft.thisEvent.startTime === schedule.occurrenceStartTime &&
+      draft.thisEvent.endTime === schedule.occurrenceEndTime
     ) {
       return null
     }
@@ -51,7 +53,7 @@ export function buildScheduleEditPreviewRequest(
   if (draft.scope === 'following') {
     if (rangeAction === 'endSeries') {
       const endDate = previousScheduleDate(draft.following.fromDate)
-      return endDate < schedule.startDate
+      return endSeriesRemovesSchedule(schedule, draft)
         ? null
         : { kind: 'update', input: { endDate } }
     }

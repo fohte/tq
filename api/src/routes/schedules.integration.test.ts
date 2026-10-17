@@ -67,6 +67,9 @@ interface ExpandedBlock {
   startDate: string
   start: string
   end: string
+  occurrenceStartDate: string
+  occurrenceStartTime: string
+  occurrenceEndTime: string
   context: string
   color: string | null
   occurrenceDate: string
@@ -79,6 +82,12 @@ interface ScheduleOverrideSnapshot {
   occurrenceDate: string
   startTime: string | null
   endTime: string | null
+  movedToDate: string | null
+  skipped: boolean
+}
+
+interface ScheduleOverrideListItem {
+  occurrenceDate: string
   movedToDate: string | null
   skipped: boolean
 }
@@ -162,6 +171,10 @@ function expectedDailyOccurrence({
     startDate: '2034-08-17',
     start,
     end,
+    occurrenceStartDate:
+      overridden === 'moved' ? start.slice(0, 10) : occurrenceDate,
+    occurrenceStartTime: start.slice(11, 16),
+    occurrenceEndTime: end.slice(11, 16),
     context: 'personal',
     color: null,
     occurrenceDate,
@@ -178,6 +191,10 @@ function expectedDailyOccurrence({
 
 function normalizeScheduleHttpResponse(status: number, body: ScheduleResponse) {
   return { status, body: normalizeScheduleResponse(body) }
+}
+
+function normalizeNotFoundHttpResponse(status: number, body: unknown) {
+  return { status, body }
 }
 
 function normalizeExpandedHttpResponse(
@@ -274,9 +291,9 @@ function normalizeOverrideRows(rows: ScheduleOverrideSnapshot[]) {
 
 function normalizeScheduleOverrideHttpResponse(
   status: number,
-  overrides: ScheduleOverrideSnapshot[],
+  overrides: ScheduleOverrideListItem[],
 ) {
-  return { status, overrides: normalizeOverrideRows(overrides) }
+  return { status, overrides }
 }
 
 function normalizeScheduleOverridePreviewHttpResponse(
@@ -959,6 +976,9 @@ describe('schedules API', () => {
             startDate: '2026-03-23',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
+            occurrenceStartDate: '2026-03-23',
+            occurrenceStartTime: '09:00',
+            occurrenceEndTime: '10:00',
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -1001,6 +1021,9 @@ describe('schedules API', () => {
             startDate: '2026-03-22',
             start: '2026-03-22T23:00:00',
             end: '2026-03-23T00:00:00',
+            occurrenceStartDate: '2026-03-22',
+            occurrenceStartTime: '23:00',
+            occurrenceEndTime: '07:00',
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -1016,6 +1039,9 @@ describe('schedules API', () => {
             startDate: '2026-03-22',
             start: '2026-03-23T00:00:00',
             end: '2026-03-23T07:00:00',
+            occurrenceStartDate: '2026-03-22',
+            occurrenceStartTime: '23:00',
+            occurrenceEndTime: '07:00',
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -3257,6 +3283,19 @@ describe('schedules API', () => {
 })
 
 describe('GET /api/schedule/events/:id', () => {
+  it('returns 404 when the schedule does not exist', async () => {
+    const response = await app.request(
+      '/api/schedule/events/00000000-0000-0000-0000-000000000000',
+    )
+
+    expect(
+      normalizeNotFoundHttpResponse(response.status, await jsonBody(response)),
+    ).toEqual({
+      status: 404,
+      body: { error: 'Schedule not found' },
+    })
+  })
+
   it('returns the editable schedule details including its reminder setting', async () => {
     const { body: created } = await createSchedule({
       title: 'Review block',
@@ -3297,6 +3336,19 @@ describe('GET /api/schedule/events/:id', () => {
 })
 
 describe('schedule overrides API', () => {
+  it('returns 404 when listing exceptions for an unknown schedule', async () => {
+    const response = await app.request(
+      '/api/schedule/events/00000000-0000-0000-0000-000000000000/overrides',
+    )
+
+    expect(
+      normalizeNotFoundHttpResponse(response.status, await jsonBody(response)),
+    ).toEqual({
+      status: 404,
+      body: { error: 'Schedule not found' },
+    })
+  })
+
   it('returns only the upcoming exceptions for a schedule', async () => {
     const today = dateAtOffset(0)
     const oldSkippedDate = dateAtOffset(-2)
@@ -3328,7 +3380,7 @@ describe('schedule overrides API', () => {
     const response = await app.request(
       `/api/schedule/events/${schedule.id}/overrides?fromDate=${today}`,
     )
-    const overrides = await jsonBody<ScheduleOverrideSnapshot[]>(response)
+    const overrides = await jsonBody<ScheduleOverrideListItem[]>(response)
 
     expect(
       normalizeScheduleOverrideHttpResponse(response.status, overrides),
@@ -3336,26 +3388,17 @@ describe('schedule overrides API', () => {
       status: 200,
       overrides: [
         {
-          scheduleId: 'SCHEDULE_ID',
           occurrenceDate: movedOccurrenceDate,
-          startTime: '09:00',
-          endTime: '10:00',
           movedToDate,
           skipped: false,
         },
         {
-          scheduleId: 'SCHEDULE_ID',
           occurrenceDate: changedDate,
-          startTime: '07:30',
-          endTime: '08:30',
           movedToDate: null,
           skipped: false,
         },
         {
-          scheduleId: 'SCHEDULE_ID',
           occurrenceDate: futureSkippedDate,
-          startTime: null,
-          endTime: null,
           movedToDate: null,
           skipped: true,
         },
@@ -3412,6 +3455,70 @@ describe('schedule overrides API', () => {
           endTime: null,
           movedToDate: null,
           skipped: true,
+        },
+      ],
+    })
+  })
+
+  it('previews restoring a moved occurrence without clearing the override', async () => {
+    const occurrenceDate = dateAtOffset(4)
+    const movedToDate = dateOffsetFrom(occurrenceDate, 2)
+    const { body: schedule } = await createSchedule({
+      title: 'Review block',
+      startDate: occurrenceDate,
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    await putScheduleOverride(schedule.id, occurrenceDate, {
+      date: movedToDate,
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+
+    const response = await app.request(
+      `/api/schedule/events/${schedule.id}/overrides/${occurrenceDate}?dryRun=true`,
+      { method: 'DELETE' },
+    )
+    const preview = await jsonBody<ScheduleChangePreview>(response)
+    const savedOverrides = await listScheduleOverrides(schedule.id)
+
+    expect(
+      normalizeScheduleOverridePreviewHttpResponse(
+        response.status,
+        preview,
+        savedOverrides,
+      ),
+    ).toEqual({
+      status: 200,
+      preview: {
+        range: { startDate: occurrenceDate, endDate: movedToDate },
+        changes: [
+          {
+            before: previewOccurrence(
+              movedToDate,
+              occurrenceDate,
+              '09:00',
+              '10:00',
+            ),
+            after: previewOccurrence(
+              occurrenceDate,
+              occurrenceDate,
+              '08:30',
+              '09:30',
+            ),
+          },
+        ],
+        deletedOverrides: [],
+      },
+      savedOverrides: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate,
+          startTime: '09:00',
+          endTime: '10:00',
+          movedToDate,
+          skipped: false,
         },
       ],
     })
@@ -3800,6 +3907,9 @@ describe('schedule overrides API', () => {
           startDate: '2034-08-17',
           start: '2034-08-20T23:00:00',
           end: '2034-08-21T00:00:00',
+          occurrenceStartDate: '2034-08-20',
+          occurrenceStartTime: '23:00',
+          occurrenceEndTime: '07:00',
           context: 'personal',
           color: null,
           occurrenceDate: '2034-08-17',
@@ -3814,6 +3924,9 @@ describe('schedule overrides API', () => {
           startDate: '2034-08-17',
           start: '2034-08-21T00:00:00',
           end: '2034-08-21T07:00:00',
+          occurrenceStartDate: '2034-08-20',
+          occurrenceStartTime: '23:00',
+          occurrenceEndTime: '07:00',
           context: 'personal',
           color: null,
           occurrenceDate: '2034-08-17',
@@ -3845,6 +3958,9 @@ describe('schedule overrides API', () => {
         startDate: '2026-03-22',
         start: '2026-03-22T08:30:00',
         end: '2026-03-22T09:45:00',
+        occurrenceStartDate: '2026-03-22',
+        occurrenceStartTime: '08:30',
+        occurrenceEndTime: '09:45',
         context: 'personal',
         color: null,
         occurrenceDate: '2026-03-22',

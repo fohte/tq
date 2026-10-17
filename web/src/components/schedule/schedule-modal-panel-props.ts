@@ -39,6 +39,7 @@ export interface SchedulePanelProps {
   setColor: (value: string) => void
   exceptions: ScheduleOverride[]
   isExceptionsLoading: boolean
+  isExceptionsError: boolean
   onRestoreException: (occurrenceDate: string) => void
   isRestorePending: boolean
   remindBeforeMinutes: number | ''

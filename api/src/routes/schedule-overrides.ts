@@ -61,22 +61,16 @@ export const scheduleOverridesApp = new Hono()
               ),
             )
       const overrides = await db
-        .select()
+        .select({
+          occurrenceDate: scheduleOverrides.occurrenceDate,
+          movedToDate: scheduleOverrides.movedToDate,
+          skipped: scheduleOverrides.skipped,
+        })
         .from(scheduleOverrides)
         .where(where)
         .orderBy(scheduleOverrides.occurrenceDate)
 
-      return c.json(
-        overrides.map((override) => ({
-          scheduleId: override.scheduleId,
-          occurrenceDate: override.occurrenceDate,
-          startTime: override.startTime,
-          endTime: override.endTime,
-          movedToDate: override.movedToDate,
-          skipped: override.skipped,
-        })),
-        200,
-      )
+      return c.json(overrides, 200)
     },
   )
   .put(

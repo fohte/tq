@@ -10,6 +10,8 @@ import {
 import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
+import { ScheduleEditScopeSelector } from '#components/schedule/schedule-edit-scope-selector'
+import { ScheduleExceptionList } from '#components/schedule/schedule-exception-list'
 import {
   contextLabels,
   contextValues,
@@ -18,6 +20,8 @@ import {
   WeekdayToggleRow,
 } from '#components/schedule/schedule-modal-form-options'
 import type { SchedulePanelProps } from '#components/schedule/schedule-modal-panel-props'
+import { SchedulePreviewNotice } from '#components/schedule/schedule-preview-notice'
+import { ScheduleRangeActionButtons } from '#components/schedule/schedule-range-action-buttons'
 import {
   BottomSheetHeader,
   BottomSheetOverlay,
@@ -58,6 +62,7 @@ export function ScheduleModalMobilePanel({
   setColor,
   exceptions,
   isExceptionsLoading,
+  isExceptionsError,
   onRestoreException,
   isRestorePending,
   remindBeforeMinutes,
@@ -96,35 +101,11 @@ export function ScheduleModalMobilePanel({
         {/* Content */}
         <div className="flex flex-col gap-4 px-5 pt-4">
           {schedule && (
-            <div className="flex flex-col gap-1.5">
-              <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                APPLY TO
-              </span>
-              <div className="grid grid-cols-3 gap-1 rounded-lg border border-border p-1">
-                {(
-                  [
-                    ['this', 'This event'],
-                    ['following', 'This and following'],
-                    ['all', 'All events'],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Button
-                    key={value}
-                    type="button"
-                    variant={scope === value ? 'secondary' : 'ghost'}
-                    size="sm"
-                    aria-pressed={scope === value}
-                    disabled={value === 'all' && !reminderReady}
-                    onClick={() => {
-                      setScope(value)
-                    }}
-                    className="h-auto min-h-8 px-0 text-2xs leading-3 whitespace-normal"
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </div>
-            </div>
+            <ScheduleEditScopeSelector
+              scope={scope}
+              setScope={setScope}
+              reminderReady={reminderReady}
+            />
           )}
 
           {/* Title */}
@@ -325,46 +306,13 @@ export function ScheduleModalMobilePanel({
           )}
 
           {scope === 'all' && schedule && (
-            <div className="flex flex-col gap-2">
-              <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
-                EXCEPTIONS
-              </span>
-              {isExceptionsLoading ? (
-                <p className="text-xs text-muted-foreground">
-                  Loading exceptions…
-                </p>
-              ) : exceptions.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No exceptions</p>
-              ) : (
-                <ul className="flex flex-col gap-1">
-                  {exceptions.map((exception) => (
-                    <li
-                      key={exception.occurrenceDate}
-                      className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-xs"
-                    >
-                      <span>
-                        {exception.skipped
-                          ? `${exception.occurrenceDate} · skipped`
-                          : exception.movedToDate != null
-                            ? `${exception.occurrenceDate} → ${exception.movedToDate}`
-                            : `${exception.occurrenceDate} · time changed`}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="xs"
-                        disabled={isRestorePending}
-                        onClick={() => {
-                          onRestoreException(exception.occurrenceDate)
-                        }}
-                      >
-                        Restore
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <ScheduleExceptionList
+              exceptions={exceptions}
+              isLoading={isExceptionsLoading}
+              isError={isExceptionsError}
+              onRestore={onRestoreException}
+              isRestorePending={isRestorePending}
+            />
           )}
 
           {(scope === 'all' || !schedule) && (
@@ -402,18 +350,11 @@ export function ScheduleModalMobilePanel({
             />
           )}
 
-          {(previewText !== null || isPreviewLoading || previewError) && (
-            <p
-              aria-live="polite"
-              className="rounded-md border-l-2 border-primary bg-surface-strong px-3 py-2 text-xs text-foreground"
-            >
-              {isPreviewLoading
-                ? 'Updating preview…'
-                : previewError
-                  ? 'Could not load the preview. Try again after editing.'
-                  : previewText}
-            </p>
-          )}
+          <SchedulePreviewNotice
+            text={previewText}
+            isLoading={isPreviewLoading}
+            isError={previewError}
+          />
 
           {/* Submit row */}
           <div className="flex items-center gap-2">
@@ -428,50 +369,20 @@ export function ScheduleModalMobilePanel({
               />
             )}
             {schedule && scope === 'this' && (
-              <>
-                <Button
-                  type="button"
-                  variant={rangeAction === 'skip' ? 'destructive' : 'outline'}
-                  aria-pressed={rangeAction === 'skip'}
-                  onClick={() => {
-                    setRangeAction(rangeAction === 'skip' ? null : 'skip')
-                  }}
-                >
-                  Skip this event
-                </Button>
-                {canRestoreThisEvent && (
-                  <Button
-                    type="button"
-                    variant={
-                      rangeAction === 'restore' ? 'secondary' : 'outline'
-                    }
-                    aria-pressed={rangeAction === 'restore'}
-                    onClick={() => {
-                      setRangeAction(
-                        rangeAction === 'restore' ? null : 'restore',
-                      )
-                    }}
-                  >
-                    Restore
-                  </Button>
-                )}
-              </>
+              <ScheduleRangeActionButtons
+                scope={scope}
+                action={rangeAction}
+                canRestore={canRestoreThisEvent}
+                setAction={setRangeAction}
+              />
             )}
             {schedule && scope === 'following' && (
-              <Button
-                type="button"
-                variant={
-                  rangeAction === 'endSeries' ? 'destructive' : 'outline'
-                }
-                aria-pressed={rangeAction === 'endSeries'}
-                onClick={() => {
-                  setRangeAction(
-                    rangeAction === 'endSeries' ? null : 'endSeries',
-                  )
-                }}
-              >
-                End series here
-              </Button>
+              <ScheduleRangeActionButtons
+                scope={scope}
+                action={rangeAction}
+                canRestore={canRestoreThisEvent}
+                setAction={setRangeAction}
+              />
             )}
             <Button
               onClick={handleSubmit}

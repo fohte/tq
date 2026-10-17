@@ -160,6 +160,65 @@ function normalizeMutationCalls(calls: readonly unknown[][]) {
   })
 }
 
+function normalizeNoOpSaveResult(
+  overrideCalls: readonly unknown[][],
+  closeCalls: readonly unknown[][],
+) {
+  return {
+    overrideCalls,
+    closeCalls,
+  }
+}
+
+function normalizeDialogSaveResult(
+  output:
+    | { title: string; updateCalls: readonly unknown[][] }
+    | {
+        fields: { date: string; startTime: string; endTime: string }
+        overrideCalls: readonly unknown[][]
+        closeCalls: readonly unknown[][]
+      }
+    | { previewText: string | null; mutationCalls: readonly unknown[][] }
+    | { saveDisabled: boolean; overrideCalls: readonly unknown[][] }
+    | {
+        previewText: string | null
+        callsBeforeSave: readonly unknown[][]
+        callsAfterSave: readonly unknown[][]
+      },
+) {
+  return output
+}
+
+async function clickVisibleSave(user: ReturnType<typeof userEvent.setup>) {
+  const saveButton = assertDefined(
+    findVisible(screen.getAllByRole('button', { name: 'Save' })),
+    'no visible save button',
+  )
+  await waitFor(() => {
+    if (saveButton.matches(':disabled')) {
+      throw new Error('Save is still disabled')
+    }
+  })
+  await user.click(saveButton)
+}
+
+function inputValue(element: HTMLElement) {
+  if (!(element instanceof HTMLInputElement)) {
+    throw new Error('Expected an input element')
+  }
+  return element.value
+}
+
+function visibleText(text: string) {
+  return findVisible(screen.queryAllByText(text))?.textContent ?? null
+}
+
+async function waitForVisibleText(text: string) {
+  await waitFor(() => {
+    if (visibleText(text) == null) throw new Error(`Text not visible: ${text}`)
+  })
+}
+
 const sampleSchedule = makeSchedule()
 
 describe('CreateScheduleModal', () => {
@@ -243,6 +302,143 @@ describe('CreateScheduleModal', () => {
 
     expect(findVisible(screen.getAllByText('Gym'))).toBeInTheDocument()
   })
+
+  it('closes without creating an override when the occurrence is unchanged', async () => {
+    const { setOverrideMutate } = setupMocks()
+    const user = userEvent.setup()
+    const { onOpenChange } = renderControlledModal(CreateScheduleModal, {
+      schedule: sampleSchedule,
+    })
+
+    await clickVisibleSave(user)
+
+    expect(
+      normalizeNoOpSaveResult(
+        normalizeMutationCalls(setOverrideMutate.mock.calls),
+        onOpenChange.mock.calls,
+      ),
+    ).toEqual({ overrideCalls: [], closeCalls: [[false]] })
+  })
+
+  it('hydrates refreshed all-events fields when reopening the dialog', async () => {
+    const { updateMutate } = setupMocks()
+    const user = userEvent.setup()
+    const modal = renderControlledModal(CreateScheduleModal, {
+      schedule: sampleSchedule,
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    mockUseScheduleDetails.mockReturnValue(
+      partialMutation<ReturnType<typeof useScheduleDetails>>({
+        data: {
+          id: sampleSchedule.scheduleId,
+          title: 'Updated schedule title',
+          startDate: sampleSchedule.startDate,
+          endDate: null,
+          remindBeforeMinutes: null,
+          startTime: '07:00',
+          endTime: '08:00',
+          recurrence: sampleSchedule.recurrence,
+          context: 'personal',
+          color: sampleSchedule.color,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-02T00:00:00.000Z',
+        },
+        isLoading: false,
+        isFetching: false,
+      }),
+    )
+    modal.setOpen(true)
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Remind before start')),
+        'no visible reminder input',
+      ),
+      { target: { value: '30' } },
+    )
+    const title = assertDefined(
+      findVisible(screen.getAllByPlaceholderText('Schedule title')),
+      'no visible schedule title input',
+    )
+    const titleValue = inputValue(title)
+    await clickVisibleSave(user)
+
+    expect(
+      normalizeDialogSaveResult({
+        title: titleValue,
+        updateCalls: normalizeMutationCalls(updateMutate.mock.calls),
+      }),
+    ).toEqual({
+      title: 'Updated schedule title',
+      updateCalls: [
+        [
+          { id: 'schedule-1', input: { remindBeforeMinutes: 30 } },
+          { onSuccess: 'callback' },
+        ],
+      ],
+    })
+  })
+
+  it.each([
+    ['the start segment', '2026-01-01T23:00:00', '2026-01-02T00:00:00'],
+    ['the continuation segment', '2026-01-02T00:00:00', '2026-01-02T07:00:00'],
+  ] as const)(
+    'loads the full cross-midnight occurrence when opened from %s',
+    async (_segment, start, end) => {
+      const { setOverrideMutate } = setupMocks()
+      const user = userEvent.setup()
+      const { onOpenChange } = renderControlledModal(CreateScheduleModal, {
+        schedule: makeSchedule({
+          occurrenceDate: '2026-01-01',
+          occurrenceStartDate: '2026-01-01',
+          occurrenceStartTime: '23:00',
+          occurrenceEndTime: '07:00',
+          start,
+          end,
+        }),
+      })
+
+      const fields = {
+        date: inputValue(
+          assertDefined(
+            findVisible(screen.getAllByLabelText('Start date')),
+            'no visible occurrence date input',
+          ),
+        ),
+        startTime: inputValue(
+          assertDefined(
+            findVisible(screen.getAllByLabelText('Start time')),
+            'no visible occurrence start time input',
+          ),
+        ),
+        endTime: inputValue(
+          assertDefined(
+            findVisible(screen.getAllByLabelText('End time')),
+            'no visible occurrence end time input',
+          ),
+        ),
+      }
+      await clickVisibleSave(user)
+
+      expect(
+        normalizeDialogSaveResult({
+          fields,
+          overrideCalls: normalizeMutationCalls(setOverrideMutate.mock.calls),
+          closeCalls: onOpenChange.mock.calls,
+        }),
+      ).toEqual({
+        fields: { date: '2026-01-01', startTime: '23:00', endTime: '07:00' },
+        overrideCalls: [],
+        closeCalls: [[false]],
+      })
+    },
+  )
 
   it('pre-fills the start date from the schedule being edited', () => {
     setupMocks()
@@ -384,6 +580,7 @@ describe('CreateScheduleModal', () => {
   })
 
   it('updates the schedule with the edited values when Save is clicked', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
     const { updateMutate } = setupMocks()
     const user = userEvent.setup()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
@@ -402,12 +599,7 @@ describe('CreateScheduleModal', () => {
     await user.clear(titleInput)
     await user.type(titleInput, 'Morning run')
 
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -440,8 +632,7 @@ describe('CreateScheduleModal', () => {
       { target: { value: '07:30' } },
     )
 
-    const saveButtons = screen.getAllByRole('button', { name: 'Save' })
-    await user.click(atIndex(saveButtons, 0))
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -480,12 +671,7 @@ describe('CreateScheduleModal', () => {
       ),
       { target: { value: '09:00' } },
     )
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(setOverrideMutate.mock.calls)).toEqual([
       [
@@ -514,30 +700,65 @@ describe('CreateScheduleModal', () => {
         'no visible skip button',
       ),
     )
+    const previewText =
+      'Skips this event on Thu, Jan 1. Other events are unchanged.'
+    await waitForVisibleText(previewText)
+    const visiblePreview = visibleText(previewText)
+    await clickVisibleSave(user)
+
     expect(
-      findVisible(
-        screen.getAllByText(
-          'Skips this event on Thu, Jan 1. Other events are unchanged.',
-        ),
-      ),
-    ).toBeInTheDocument()
+      normalizeDialogSaveResult({
+        previewText: visiblePreview,
+        mutationCalls: normalizeMutationCalls(setOverrideMutate.mock.calls),
+      }),
+    ).toEqual({
+      previewText,
+      mutationCalls: [
+        [
+          {
+            scheduleId: 'schedule-1',
+            occurrenceDate: '2026-01-01',
+            input: { skipped: true },
+          },
+          { onSuccess: 'callback' },
+        ],
+      ],
+    })
+  })
+
+  it('keeps Save disabled when the occurrence preview fails', async () => {
+    const { setOverrideMutate } = setupMocks()
+    mockUseScheduleChangePreview.mockReturnValue(
+      partialMutation<ReturnType<typeof useScheduleChangePreview>>({
+        data: undefined,
+        isSuccess: false,
+        isError: true,
+        isFetching: false,
+      }),
+    )
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
     await user.click(
       assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
+        findVisible(screen.getAllByRole('button', { name: 'Skip this event' })),
+        'no visible skip button',
       ),
     )
+    await waitForVisibleText(
+      'Could not load the preview. Try again after editing.',
+    )
+    const saveButton = assertDefined(
+      findVisible(screen.getAllByRole('button', { name: 'Save' })),
+      'no visible save button',
+    )
 
-    expect(normalizeMutationCalls(setOverrideMutate.mock.calls)).toEqual([
-      [
-        {
-          scheduleId: 'schedule-1',
-          occurrenceDate: '2026-01-01',
-          input: { skipped: true },
-        },
-        { onSuccess: 'callback' },
-      ],
-    ])
+    expect(
+      normalizeDialogSaveResult({
+        saveDisabled: saveButton.matches(':disabled'),
+        overrideCalls: normalizeMutationCalls(setOverrideMutate.mock.calls),
+      }),
+    ).toEqual({ saveDisabled: true, overrideCalls: [] })
   })
 
   it('restores the selected occurrence when the restore action is saved', async () => {
@@ -553,26 +774,26 @@ describe('CreateScheduleModal', () => {
         'no visible restore button',
       ),
     )
-    expect(
-      findVisible(
-        screen.getAllByText(
-          'Restores this event on Thu, Jan 1 to its scheduled date and time.',
-        ),
-      ),
-    ).toBeInTheDocument()
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    const previewText =
+      'Restores this event on Thu, Jan 1 to its scheduled date and time.'
+    await waitForVisibleText(previewText)
+    const visiblePreview = visibleText(previewText)
+    await clickVisibleSave(user)
 
-    expect(normalizeMutationCalls(clearOverrideMutate.mock.calls)).toEqual([
-      [
-        { scheduleId: 'schedule-1', occurrenceDate: '2026-01-01' },
-        { onSuccess: 'callback' },
+    expect(
+      normalizeDialogSaveResult({
+        previewText: visiblePreview,
+        mutationCalls: normalizeMutationCalls(clearOverrideMutate.mock.calls),
+      }),
+    ).toEqual({
+      previewText,
+      mutationCalls: [
+        [
+          { scheduleId: 'schedule-1', occurrenceDate: '2026-01-01' },
+          { onSuccess: 'callback' },
+        ],
       ],
-    ])
+    })
   })
 
   it('applies time changes from the selected occurrence forward', async () => {
@@ -595,12 +816,7 @@ describe('CreateScheduleModal', () => {
       ),
       { target: { value: '07:30' } },
     )
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -638,12 +854,7 @@ describe('CreateScheduleModal', () => {
         'no visible end-series button',
       ),
     )
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -671,12 +882,7 @@ describe('CreateScheduleModal', () => {
       ),
       { target: { value: '30' } },
     )
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -717,12 +923,7 @@ describe('CreateScheduleModal', () => {
       ),
       { target: { value: '30' } },
     )
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
-    )
+    await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -760,27 +961,31 @@ describe('CreateScheduleModal', () => {
         'no visible exception restore button',
       ),
     )
-    expect(
-      findVisible(
-        screen.getAllByText(
-          'Restores this event on Sat, Jan 3 to its scheduled date and time.',
-        ),
-      ),
-    ).toBeInTheDocument()
-    expect(clearOverrideMutate.mock.calls).toEqual([])
-    await user.click(
-      assertDefined(
-        findVisible(screen.getAllByRole('button', { name: 'Save' })),
-        'no visible save button',
-      ),
+    const previewText =
+      'Restores this event on Sat, Jan 3 to its scheduled date and time.'
+    await waitForVisibleText(previewText)
+    const visiblePreview = visibleText(previewText)
+    const callsBeforeSave = normalizeMutationCalls(
+      clearOverrideMutate.mock.calls,
     )
+    await clickVisibleSave(user)
 
-    expect(normalizeMutationCalls(clearOverrideMutate.mock.calls)).toEqual([
-      [
-        { scheduleId: 'schedule-1', occurrenceDate: '2026-01-03' },
-        { onSuccess: 'callback' },
+    expect(
+      normalizeDialogSaveResult({
+        previewText: visiblePreview,
+        callsBeforeSave,
+        callsAfterSave: normalizeMutationCalls(clearOverrideMutate.mock.calls),
+      }),
+    ).toEqual({
+      previewText,
+      callsBeforeSave: [],
+      callsAfterSave: [
+        [
+          { scheduleId: 'schedule-1', occurrenceDate: '2026-01-03' },
+          { onSuccess: 'callback' },
+        ],
       ],
-    ])
+    })
   })
 
   it('deletes the schedule when the delete button is confirmed', async () => {

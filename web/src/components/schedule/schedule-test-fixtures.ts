@@ -20,6 +20,17 @@ export function makeSchedule(overrides: Partial<Schedule> = {}): Schedule {
       dayOfMonth: null,
     },
     ...overrides,
+    occurrenceStartDate:
+      overrides.occurrenceStartDate ??
+      overrides.start?.slice(0, 10) ??
+      overrides.occurrenceDate ??
+      '2026-01-01',
+    occurrenceStartTime:
+      overrides.occurrenceStartTime ??
+      overrides.start?.slice(11, 16) ??
+      '07:00',
+    occurrenceEndTime:
+      overrides.occurrenceEndTime ?? overrides.end?.slice(11, 16) ?? '08:00',
   }
 }
 
@@ -27,10 +38,7 @@ export function makeScheduleOverride(
   overrides: Partial<ScheduleOverride> = {},
 ): ScheduleOverride {
   return {
-    scheduleId: 'schedule-1',
     occurrenceDate: '2026-01-03',
-    startTime: null,
-    endTime: null,
     movedToDate: null,
     skipped: true,
     ...overrides,
