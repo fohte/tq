@@ -90,36 +90,38 @@ export function SidebarParentFieldAppearance({
           // from it, so keep focus on the input instead.
           initialFocus={false}
           padding="none"
-          className="w-72 text-popover-foreground"
+          className="w-72"
         >
-          <List
-            onMouseDown={(event) => {
-              event.preventDefault()
-            }}
-          >
-            <ListItem onSelect={onClear}>—</ListItem>
-          </List>
-          <div className="mt-1 border-t border-border pt-1">
-            {query === '' ? (
-              <div className="px-3 py-1.5 text-sm text-muted-foreground">
-                Type to search...
-              </div>
-            ) : isFetching ? (
-              <div className="px-3 py-1.5 text-sm text-muted-foreground">
-                Searching...
-              </div>
-            ) : candidates.length === 0 ? (
-              <div className="px-3 py-1.5 text-sm text-muted-foreground">
-                No matching tasks
-              </div>
-            ) : (
-              <TaskCandidateList
-                candidates={candidates}
-                highlightedIndex={-1}
-                indexOffset={1}
-                onSelectCandidate={onSelectCandidate}
-              />
-            )}
+          <div className="text-popover-foreground">
+            <List
+              onMouseDown={(event) => {
+                event.preventDefault()
+              }}
+            >
+              <ListItem onSelect={onClear}>—</ListItem>
+            </List>
+            <div className="mt-1 border-t border-border pt-1">
+              {query === '' ? (
+                <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                  Type to search...
+                </div>
+              ) : isFetching ? (
+                <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                  Searching...
+                </div>
+              ) : candidates.length === 0 ? (
+                <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                  No matching tasks
+                </div>
+              ) : (
+                <TaskCandidateList
+                  candidates={candidates}
+                  highlightedIndex={-1}
+                  indexOffset={1}
+                  onSelectCandidate={onSelectCandidate}
+                />
+              )}
+            </div>
           </div>
         </PopoverContent>
       </Popover>

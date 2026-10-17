@@ -48,6 +48,10 @@ export interface TimeBlockEvent {
   isAutoScheduled?: boolean
   /** Underlying schedule id, present when type is 'schedule' */
   scheduleId?: string
+  /** Original occurrence date, present when type is 'schedule' */
+  scheduleOccurrenceDate?: string
+  /** Exception kind for this occurrence, present when the schedule is overridden. */
+  scheduleOverridden?: 'moved' | 'time'
   /** Google Calendar's color for the event's calendar */
   calendarColor?: string | null
   /** Self attendee's RSVP for a gcal event; needsAction/tentative render dimmed */
@@ -77,7 +81,9 @@ interface CalendarViewProps {
   onDateChange: (date: Date) => void
   onVisibleRangeChange?:
     ((range: { start: Date; end: Date }) => void) | undefined
-  onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
+  onScheduleClick?:
+    | ((scheduleId: string, occurrenceDate: string, start: string) => void)
+    | undefined
   onTaskClick?: ((taskId: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
 }

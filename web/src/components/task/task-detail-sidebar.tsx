@@ -28,7 +28,7 @@ import { useUpdateTask } from '#hooks/use-tasks'
 import { selectValueHandler } from '#lib/form-utils'
 import { cn } from '#lib/utils'
 
-const fieldValueClassName = 'w-full justify-start gap-1'
+const fieldValueClassName = 'w-full justify-start'
 
 // --- Sidebar (PC) ---
 

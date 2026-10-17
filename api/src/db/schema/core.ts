@@ -255,13 +255,8 @@ export const schedules = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     title: text('title').notNull(),
-    startTime: text('start_time').notNull(),
-    endTime: text('end_time').notNull(),
-    startDate: date('start_date').notNull(),
-    recurrenceRuleId: text('recurrence_rule_id').references(
-      () => recurrenceRules.id,
-      { onDelete: 'set null' },
-    ),
+    endDate: date('end_date'),
+    remindBeforeMinutes: integer('remind_before_minutes'),
     context: text('context', {
       enum: ['work', 'personal'],
     })
@@ -276,8 +271,47 @@ export const schedules = pgTable(
       .defaultNow(),
   },
   (table) => [
-    index('idx_schedules_recurrence_rule_id').on(table.recurrenceRuleId),
     index('idx_schedules_context').on(table.context),
+    check(
+      'schedules_remind_before_minutes_check',
+      sql`${table.remindBeforeMinutes} BETWEEN 0 AND 1440`,
+    ),
+  ],
+)
+
+export const scheduleRevisions = pgTable(
+  'schedule_revisions',
+  {
+    scheduleId: text('schedule_id')
+      .notNull()
+      .references(() => schedules.id, { onDelete: 'cascade' }),
+    effectiveFrom: date('effective_from').notNull(),
+    startTime: text('start_time').notNull(),
+    endTime: text('end_time').notNull(),
+    recurrenceRuleId: text('recurrence_rule_id').references(
+      () => recurrenceRules.id,
+      { onDelete: 'set null' },
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.scheduleId, table.effectiveFrom] }),
+    check(
+      'schedule_revisions_start_time_format_check',
+      sql`${table.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
+    ),
+    check(
+      'schedule_revisions_end_time_format_check',
+      sql`${table.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`,
+    ),
+    index('idx_schedule_revisions_recurrence_rule_id').on(
+      table.recurrenceRuleId,
+    ),
   ],
 )
 
@@ -290,22 +324,49 @@ export const scheduleOverrides = pgTable(
     occurrenceDate: date('occurrence_date').notNull(),
     startTime: text('start_time'),
     endTime: text('end_time'),
+    movedToDate: date('moved_to_date'),
     skipped: boolean('skipped').notNull().default(false),
   },
   (table) => [
-    unique('schedule_overrides_schedule_date_unique').on(
-      table.scheduleId,
-      table.occurrenceDate,
-    ),
+    primaryKey({ columns: [table.scheduleId, table.occurrenceDate] }),
     check(
       'schedule_overrides_time_or_skip_check',
       sql`(${table.skipped} AND ${table.startTime} IS NULL AND ${table.endTime} IS NULL) OR (NOT ${table.skipped} AND ${table.startTime} IS NOT NULL AND ${table.endTime} IS NOT NULL)`,
+    ),
+    check(
+      'schedule_overrides_moved_to_date_check',
+      sql`${table.movedToDate} IS NULL OR (NOT ${table.skipped} AND ${table.movedToDate} <> ${table.occurrenceDate})`,
     ),
     check(
       'schedule_overrides_time_format_check',
       sql`(${table.startTime} IS NULL OR ${table.startTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$') AND (${table.endTime} IS NULL OR ${table.endTime} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')`,
     ),
     index('idx_schedule_overrides_occurrence_date').on(table.occurrenceDate),
+    index('idx_schedule_overrides_moved_to_date')
+      .on(table.movedToDate)
+      .where(sql`${table.movedToDate} IS NOT NULL`),
+  ],
+)
+
+export const scheduleReminderDeliveries = pgTable(
+  'schedule_reminder_deliveries',
+  {
+    scheduleId: text('schedule_id')
+      .notNull()
+      .references(() => schedules.id, { onDelete: 'cascade' }),
+    occurrenceDate: date('occurrence_date').notNull(),
+    remindAt: timestamp('remind_at', { withTimezone: true }).notNull(),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.scheduleId, table.occurrenceDate, table.remindAt],
+    }),
+    index('idx_schedule_reminder_deliveries_delivered_at').on(
+      table.deliveredAt,
+    ),
   ],
 )
 

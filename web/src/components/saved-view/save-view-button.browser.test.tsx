@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { useCreateSavedView } from '#hooks/use-saved-views'
@@ -9,6 +10,7 @@ import {
   partialMutation,
   withOnSuccess,
 } from '#lib/test-utils'
+import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 vi.mock('#hooks/use-saved-views', async (importOriginal) => {
   const original =
@@ -45,6 +47,29 @@ describe('SaveViewButton', () => {
     await waitFor(() => {
       expect(input).toBeVisible()
     })
+  })
+
+  it('opens the dialog from the mobile trigger', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    mockUseCreateSavedView.mockReturnValue(
+      partialMutation<CreateSavedViewResult>({
+        mutate: vi.fn(),
+        isPending: false,
+        isError: false,
+      }),
+    )
+    const user = userEvent.setup()
+    render(<SaveViewButton query={query} />)
+
+    await user.click(screen.getByRole('button', { name: 'Save view' }))
+
+    const dialog = await screen.findByRole('dialog')
+    const input = screen.getByPlaceholderText('View name')
+    const dialogState = Array.of(
+      dialog.getAttribute('role'),
+      input.getAttribute('placeholder'),
+    )
+    expect(dialogState).toEqual(['dialog', 'View name'])
   })
 
   it('disables Save when the name is empty', () => {

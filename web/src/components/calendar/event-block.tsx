@@ -167,6 +167,18 @@ export function EventBlock(arg: EventContentArg) {
             gcalEventType={props.gcalEventType}
             title={event.title}
           />
+          {props.type === 'schedule' && props.scheduleOverridden != null && (
+            <span
+              aria-label={
+                props.scheduleOverridden === 'moved'
+                  ? 'Moved occurrence'
+                  : 'Time changed occurrence'
+              }
+              className="shrink-0 rounded-sm bg-surface-strong px-1 text-2xs leading-4 text-muted-foreground-strong"
+            >
+              {props.scheduleOverridden === 'moved' ? '↔ moved' : '↻ changed'}
+            </span>
+          )}
         </span>
       }
       badge={badge}

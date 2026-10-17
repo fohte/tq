@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { expandScheduleForDate } from '#routes/schedule-expansion'
+import {
+  buildScheduleOverrideIndex,
+  expandScheduleForDate as expandSchedule,
+  expandScheduleWithDraft,
+  type ScheduleSeries,
+} from '#routes/schedule-expansion'
 
 function makeSchedule(
   overrides: Partial<{
@@ -17,18 +22,41 @@ function makeSchedule(
   }> = {},
 ) {
   const now = new Date()
-  return {
+  const {
+    startDate = '2026-03-22',
+    startTime = '09:00',
+    endTime = '10:00',
+    recurrenceRuleId = null,
+    ...scheduleOverrides
+  } = overrides
+  const schedule = {
     id: 'sched-1',
     title: 'Test Schedule',
-    startDate: '2026-03-22',
-    startTime: '09:00',
-    endTime: '10:00',
-    recurrenceRuleId: null,
+    endDate: null,
+    remindBeforeMinutes: null,
     context: 'personal' as const,
     color: null,
     createdAt: now,
     updatedAt: now,
-    ...overrides,
+    ...scheduleOverrides,
+  }
+
+  return {
+    schedule,
+    revisions: [
+      {
+        revision: {
+          scheduleId: schedule.id,
+          effectiveFrom: startDate,
+          startTime,
+          endTime,
+          recurrenceRuleId,
+          createdAt: now,
+          updatedAt: now,
+        },
+        rule: null,
+      },
+    ],
   }
 }
 
@@ -57,12 +85,90 @@ function makeRule(
 }
 
 function expandOnDates(
-  schedule: ReturnType<typeof makeSchedule>,
+  schedule: ScheduleSeries,
   rule: ReturnType<typeof makeRule> | null,
   ...dates: string[]
 ) {
   return dates.map((date) => expandScheduleForDate(schedule, rule, date))
 }
+
+function expandScheduleForDate(
+  schedule: ScheduleSeries,
+  rule: ReturnType<typeof makeRule> | null,
+  date: string,
+  overrides?: Parameters<typeof expandSchedule>[2],
+) {
+  return expandSchedule(
+    {
+      ...schedule,
+      revisions: schedule.revisions.map((revision) => ({ ...revision, rule })),
+    },
+    date,
+    overrides,
+  )
+}
+
+describe('expandScheduleWithDraft', () => {
+  it('applies occurrence and revision changes over a date range', () => {
+    const schedule = makeSchedule({
+      startDate: '2037-04-11',
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrenceRuleId: 'rule-1',
+    })
+    const series = {
+      ...schedule,
+      revisions: schedule.revisions.map((revision) => ({
+        ...revision,
+        rule: makeRule(),
+      })),
+    }
+
+    expect(
+      expandScheduleWithDraft({
+        series,
+        overrides: [],
+        startDate: '2037-04-11',
+        endDate: '2037-04-13',
+        draft: {
+          occurrenceChange: {
+            originalDate: '2037-04-11',
+            date: '2037-04-13',
+            startTime: '12:00',
+            endTime: '13:00',
+          },
+          revisionChange: {
+            effectiveFrom: '2037-04-12',
+            startTime: '10:00',
+            endTime: '11:00',
+          },
+        },
+      }),
+    ).toEqual([
+      {
+        date: '2037-04-12',
+        originalDate: '2037-04-12',
+        startTime: '10:00',
+        endTime: '11:00',
+        skipped: false,
+      },
+      {
+        date: '2037-04-13',
+        originalDate: '2037-04-13',
+        startTime: '10:00',
+        endTime: '11:00',
+        skipped: false,
+      },
+      {
+        date: '2037-04-13',
+        originalDate: '2037-04-11',
+        startTime: '12:00',
+        endTime: '13:00',
+        skipped: false,
+      },
+    ])
+  })
+})
 
 describe('expandScheduleForDate', () => {
   describe('same-day schedule', () => {
@@ -81,8 +187,13 @@ describe('expandScheduleForDate', () => {
               startDate: '2026-03-22',
               start: '2026-03-22T09:00:00',
               end: '2026-03-22T10:00:00',
+              occurrenceStartDate: '2026-03-22',
+              occurrenceStartTime: '09:00',
+              occurrenceEndTime: '10:00',
               context: 'personal',
               color: null,
+              occurrenceDate: '2026-03-22',
+              overridden: null,
             },
           ],
           [],
@@ -103,8 +214,13 @@ describe('expandScheduleForDate', () => {
               startDate: '2026-03-22',
               start: '2026-03-22T23:00:00',
               end: '2026-03-23T00:00:00',
+              occurrenceStartDate: '2026-03-22',
+              occurrenceStartTime: '23:00',
+              occurrenceEndTime: '07:00',
               context: 'personal',
               color: null,
+              occurrenceDate: '2026-03-22',
+              overridden: null,
             },
           ],
           [
@@ -114,8 +230,13 @@ describe('expandScheduleForDate', () => {
               startDate: '2026-03-22',
               start: '2026-03-23T00:00:00',
               end: '2026-03-23T07:00:00',
+              occurrenceStartDate: '2026-03-22',
+              occurrenceStartTime: '23:00',
+              occurrenceEndTime: '07:00',
               context: 'personal',
               color: null,
+              occurrenceDate: '2026-03-22',
+              overridden: null,
             },
           ],
         ],
@@ -124,11 +245,14 @@ describe('expandScheduleForDate', () => {
 
     it('uses the previous occurrence override for the next date continuation', () => {
       const schedule = makeSchedule({ startTime: '23:00', endTime: '07:00' })
-      const overrides = new Map([
-        [
-          '2026-03-22',
-          { startTime: '22:30', endTime: '08:00', skipped: false },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: '22:30',
+          endTime: '08:00',
+          movedToDate: null,
+          skipped: false,
+        },
       ])
 
       expect(
@@ -140,16 +264,27 @@ describe('expandScheduleForDate', () => {
           startDate: '2026-03-22',
           start: '2026-03-23T00:00:00',
           end: '2026-03-23T08:00:00',
+          occurrenceStartDate: '2026-03-22',
+          occurrenceStartTime: '22:30',
+          occurrenceEndTime: '08:00',
           context: 'personal',
           color: null,
+          occurrenceDate: '2026-03-22',
+          overridden: 'time',
         },
       ])
     })
 
     it('omits a skipped occurrence continuation on the next date', () => {
       const schedule = makeSchedule({ startTime: '23:00', endTime: '07:00' })
-      const overrides = new Map([
-        ['2026-03-22', { startTime: null, endTime: null, skipped: true }],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
       ])
 
       expect(
@@ -159,13 +294,53 @@ describe('expandScheduleForDate', () => {
   })
 
   describe('schedule overrides', () => {
+    it('moves an occurrence to its destination date', () => {
+      const schedule = makeSchedule({ startDate: '2034-08-17' })
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2034-08-17',
+          startTime: '09:00',
+          endTime: '10:00',
+          movedToDate: '2034-08-19',
+          skipped: false,
+        },
+      ])
+
+      const expandedDates = () => [
+        expandScheduleForDate(schedule, null, '2034-08-17', overrides),
+        expandScheduleForDate(schedule, null, '2034-08-19', overrides),
+      ]
+      expect(expandedDates()).toEqual([
+        [],
+        [
+          {
+            scheduleId: 'sched-1',
+            title: 'Test Schedule',
+            startDate: '2034-08-17',
+            start: '2034-08-19T09:00:00',
+            end: '2034-08-19T10:00:00',
+            occurrenceStartDate: '2034-08-19',
+            occurrenceStartTime: '09:00',
+            occurrenceEndTime: '10:00',
+            context: 'personal',
+            color: null,
+            occurrenceDate: '2034-08-17',
+            overridden: 'moved',
+          },
+        ],
+      ])
+    })
+
     it('replaces the start and end times for one occurrence', () => {
       const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
-      const overrides = new Map([
-        [
-          '2026-03-22',
-          { startTime: '08:30', endTime: '09:45', skipped: false },
-        ],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: '08:30',
+          endTime: '09:45',
+          movedToDate: null,
+          skipped: false,
+        },
       ])
 
       expect(
@@ -177,16 +352,27 @@ describe('expandScheduleForDate', () => {
           startDate: '2026-03-22',
           start: '2026-03-22T08:30:00',
           end: '2026-03-22T09:45:00',
+          occurrenceStartDate: '2026-03-22',
+          occurrenceStartTime: '08:30',
+          occurrenceEndTime: '09:45',
           context: 'personal',
           color: null,
+          occurrenceDate: '2026-03-22',
+          overridden: 'time',
         },
       ])
     })
 
     it('omits a skipped occurrence', () => {
       const schedule = makeSchedule({ startTime: '09:00', endTime: '10:00' })
-      const overrides = new Map([
-        ['2026-03-22', { startTime: null, endTime: null, skipped: true }],
+      const overrides = buildScheduleOverrideIndex([
+        {
+          occurrenceDate: '2026-03-22',
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
       ])
 
       expect(

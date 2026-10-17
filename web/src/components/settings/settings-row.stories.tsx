@@ -38,7 +38,7 @@ export const LongDescription: Story = {
       <Input
         type="text"
         placeholder="hammerspoon://cc-focus?session={sessionId}"
-        className="h-7 w-72 font-mono text-xs"
+        className="h-7 w-72"
       />
     ),
   },

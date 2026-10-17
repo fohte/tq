@@ -1,5 +1,6 @@
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { z } from 'zod'
 
 import { app } from '#app'
 import {
@@ -10,6 +11,7 @@ import {
 } from '#routes/mcp/testing'
 import {
   makeScheduleEvent,
+  makeScheduleOccurrence,
   makeTimeBlock,
 } from '#routes/schedule-test-fixtures'
 import { createTask } from '#routes/tasks/testing'
@@ -57,6 +59,114 @@ async function createTimeBlock(
 }
 
 describe('schedule operation tools', () => {
+  it('previews an event update without saving it', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Review block',
+      startDate: '2038-02-03',
+      startTime: '08:30',
+      endTime: '09:30',
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+    const updateInput = {
+      id: schedule.id,
+      effectiveFrom: '2038-02-03',
+      startTime: '10:00',
+      endTime: '11:00',
+    }
+
+    const preview = await callMcpTool(client, 'schedule_events_update', {
+      ...updateInput,
+      dryRun: true,
+    })
+    const beforeSave = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2038-02-03',
+      endDate: '2038-02-03',
+    })
+    const saved = await callMcpTool(
+      client,
+      'schedule_events_update',
+      updateInput,
+    )
+    const afterSave = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2038-02-03',
+      endDate: '2038-02-03',
+    })
+
+    const snapshot = () => ({
+      preview: parseToolJson(preview),
+      beforeSave: normalizeDynamicValues(parseToolJson(beforeSave)),
+      saved: normalizeDynamicValues(parseToolJson(saved)),
+      afterSave: normalizeDynamicValues(parseToolJson(afterSave)),
+    })
+    expect(snapshot()).toEqual({
+      preview: {
+        range: { startDate: '2038-02-03', endDate: '2038-03-16' },
+        changes: [
+          {
+            before: {
+              date: '2038-02-03',
+              originalDate: '2038-02-03',
+              startTime: '08:30',
+              endTime: '09:30',
+              skipped: false,
+            },
+            after: {
+              date: '2038-02-03',
+              originalDate: '2038-02-03',
+              startTime: '10:00',
+              endTime: '11:00',
+              skipped: false,
+            },
+          },
+        ],
+        deletedOverrides: [],
+      },
+      beforeSave: [
+        makeScheduleOccurrence({
+          scheduleId: '<uuid>',
+          title: 'Review block',
+          startDate: '2038-02-03',
+          start: '2038-02-03T08:30:00',
+          end: '2038-02-03T09:30:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2038-02-03',
+          overridden: null,
+          recurrence: null,
+        }),
+      ],
+      saved: {
+        id: '<uuid>',
+        title: 'Review block',
+        startDate: '2038-02-03',
+        endDate: null,
+        startTime: '10:00',
+        endTime: '11:00',
+        recurrence: null,
+        remindBeforeMinutes: null,
+        context: 'personal',
+        color: null,
+        constraintViolations: [],
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+      afterSave: [
+        makeScheduleOccurrence({
+          scheduleId: '<uuid>',
+          title: 'Review block',
+          startDate: '2038-02-03',
+          start: '2038-02-03T10:00:00',
+          end: '2038-02-03T11:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2038-02-03',
+          overridden: null,
+          recurrence: null,
+        }),
+      ],
+    })
+  })
+
   it('registers schedule operations with matching annotations', async () => {
     const result = await client.listTools()
 
@@ -67,12 +177,36 @@ describe('schedule operation tools', () => {
         .sort((left, right) => left.name.localeCompare(right.name)),
     ).toEqual([
       {
+        name: 'schedule_constraints_check',
+        annotations: { readOnlyHint: true },
+      },
+      {
+        name: 'schedule_constraints_delete',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      {
+        name: 'schedule_constraints_get',
+        annotations: { readOnlyHint: true },
+      },
+      {
+        name: 'schedule_constraints_set',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
         name: 'schedule_events_create',
         annotations: { readOnlyHint: false, destructiveHint: false },
       },
       {
+        name: 'schedule_events_delete',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      {
         name: 'schedule_events_list',
         annotations: { readOnlyHint: true },
+      },
+      {
+        name: 'schedule_events_update',
+        annotations: { readOnlyHint: false, destructiveHint: false },
       },
       {
         name: 'schedule_override_clear',
@@ -108,7 +242,7 @@ describe('schedule operation tools', () => {
       result.tools.find((tool) => tool.name === 'schedule_events_create')
         ?.description,
     ).toBe(
-      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. remindBeforeMinutes optionally sends a push notification that many minutes before each occurrence starts. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
     )
   })
 
@@ -301,7 +435,7 @@ describe('schedule operation tools', () => {
         skipKeys: ['scheduleId', 'id'],
       }),
     ).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: created.id,
         title: 'Daily reset',
         startDate: '2026-12-18',
@@ -309,6 +443,8 @@ describe('schedule operation tools', () => {
         end: '2026-12-18T09:15:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-12-18',
+        overridden: null,
         recurrence: {
           id: created.recurrence.id,
           type: 'daily',
@@ -316,7 +452,7 @@ describe('schedule operation tools', () => {
           daysOfWeek: null,
           dayOfMonth: null,
         },
-      },
+      }),
     ])
   })
 
@@ -333,6 +469,7 @@ describe('schedule operation tools', () => {
       },
       context: 'work',
       color: '#b9c0ca',
+      remindBeforeMinutes: 45,
     })
 
     expect(normalizeDynamicValues(parseToolJson(result))).toEqual(
@@ -349,9 +486,179 @@ describe('schedule operation tools', () => {
           },
           context: 'work',
           color: '#b9c0ca',
+          remindBeforeMinutes: 45,
         }),
       ),
     )
+  })
+
+  it('updates a schedule from an effective date and lists the new occurrences', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Focus block',
+      startDate: '2026-12-18',
+      startTime: '08:00',
+      endTime: '09:00',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+
+    const updated = await callMcpTool(client, 'schedule_events_update', {
+      id: schedule.id,
+      effectiveFrom: '2026-12-20',
+      startTime: '09:30',
+      endTime: '10:00',
+      endDate: '2026-12-20',
+      recurrence: { type: 'weekly', interval: 1, daysOfWeek: [0] },
+      remindBeforeMinutes: 90,
+    })
+    const events = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2026-12-18',
+      endDate: '2026-12-21',
+    })
+
+    const snapshot = () => ({
+      updated: normalizeDynamicValues(parseToolJson(updated)),
+      events: normalizeDynamicValues(parseToolJson(events)),
+    })
+
+    expect(snapshot()).toEqual({
+      updated: {
+        id: '<uuid>',
+        title: 'Focus block',
+        startDate: '2026-12-18',
+        endDate: '2026-12-20',
+        startTime: '09:30',
+        endTime: '10:00',
+        recurrence: {
+          id: '<uuid>',
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [0],
+          dayOfMonth: null,
+        },
+        context: 'personal',
+        color: null,
+        constraintViolations: [],
+        remindBeforeMinutes: 90,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+      events: [
+        makeScheduleOccurrence({
+          scheduleId: '<uuid>',
+          title: 'Focus block',
+          startDate: '2026-12-18',
+          start: '2026-12-18T08:00:00',
+          end: '2026-12-18T09:00:00',
+          remindBeforeMinutes: 90,
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2026-12-18',
+          overridden: null,
+          recurrence: {
+            id: '<uuid>',
+            type: 'daily',
+            interval: 1,
+            daysOfWeek: null,
+            dayOfMonth: null,
+          },
+        }),
+        makeScheduleOccurrence({
+          scheduleId: '<uuid>',
+          title: 'Focus block',
+          startDate: '2026-12-18',
+          start: '2026-12-19T08:00:00',
+          end: '2026-12-19T09:00:00',
+          remindBeforeMinutes: 90,
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2026-12-19',
+          overridden: null,
+          recurrence: {
+            id: '<uuid>',
+            type: 'daily',
+            interval: 1,
+            daysOfWeek: null,
+            dayOfMonth: null,
+          },
+        }),
+        makeScheduleOccurrence({
+          scheduleId: '<uuid>',
+          title: 'Focus block',
+          startDate: '2026-12-18',
+          start: '2026-12-20T09:30:00',
+          end: '2026-12-20T10:00:00',
+          remindBeforeMinutes: 90,
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2026-12-20',
+          overridden: null,
+          recurrence: {
+            id: '<uuid>',
+            type: 'weekly',
+            interval: 1,
+            daysOfWeek: [0],
+            dayOfMonth: null,
+          },
+        }),
+      ],
+    })
+  })
+
+  it('clears a schedule reminder', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Planning session',
+      startDate: '2026-12-18',
+      startTime: '08:45',
+      endTime: '09:15',
+      remindBeforeMinutes: 45,
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+
+    const updated = await callMcpTool(client, 'schedule_events_update', {
+      id: schedule.id,
+      remindBeforeMinutes: null,
+    })
+
+    expect(normalizeDynamicValues(parseToolJson(updated))).toEqual(
+      normalizeDynamicValues(
+        makeScheduleEvent({
+          title: 'Planning session',
+          startDate: '2026-12-18',
+          startTime: '08:45',
+          endTime: '09:15',
+          remindBeforeMinutes: null,
+        }),
+      ),
+    )
+  })
+
+  it('deletes a schedule event', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Temporary event',
+      startDate: '2026-12-18',
+      startTime: '08:00',
+      endTime: '09:00',
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+
+    const deleted = await callMcpTool(client, 'schedule_events_delete', {
+      id: schedule.id,
+    })
+    const events = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2026-12-18',
+      endDate: '2026-12-18',
+    })
+
+    const snapshot = () => ({
+      deleted: parseToolJson(deleted),
+      events: parseToolJson(events),
+    })
+
+    expect(snapshot()).toEqual({
+      deleted: { deleted: true, id: schedule.id },
+      events: [],
+    })
   })
 
   it('rejects invalid schedule event times', async () => {
@@ -365,7 +672,7 @@ describe('schedule operation tools', () => {
     expect(result).toEqual(
       expectedToolValidationError(
         'schedule_events_create',
-        'startTime: Invalid string: must match pattern /^\\d{2}:\\d{2}$/',
+        'startTime: Invalid string: must match pattern /^(?:[01]\\d|2[0-3]):[0-5]\\d$/',
       ),
     )
   })
@@ -399,7 +706,7 @@ describe('schedule operation tools', () => {
     })
 
     expect(normalizeDynamicValues(parseToolJson(result))).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: '<uuid>',
         title: 'One-off focus',
         startDate: '2026-12-18',
@@ -407,8 +714,10 @@ describe('schedule operation tools', () => {
         end: '2026-12-18T09:15:00',
         context: 'personal',
         color: null,
+        occurrenceDate: '2026-12-18',
+        overridden: null,
         recurrence: null,
-      },
+      }),
     ])
   })
 

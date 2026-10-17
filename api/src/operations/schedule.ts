@@ -1,4 +1,4 @@
-import { err, errAsync, ok, type Result } from 'neverthrow'
+import { err, errAsync, fromThrowable, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
@@ -16,12 +16,29 @@ import {
 } from '#operations/types'
 import {
   createScheduleSchema,
+  isScheduleDateSelectionValid,
   MAX_SCHEDULE_DATE_RANGE_DAYS,
+  SCHEDULE_DATE_SELECTION_ERROR_MESSAGE,
   scheduleDateRangeInputSchema,
   scheduleDateRangeSchema,
+  updateScheduleInputSchema,
   withScheduleDateRange,
+  withScheduleDateSelection,
 } from '#schemas/schedule'
+import { scheduleConstraintDraftSchema } from '#schemas/schedule-constraint-check'
 
+const scheduleEventIdSchema = z.object({ id: z.uuid() })
+const scheduleUpdateOperationSchema = updateScheduleInputSchema.extend({
+  id: z.uuid(),
+})
+const scheduleUpdateMcpInputSchema = withScheduleDateSelection(
+  scheduleUpdateOperationSchema,
+)
+const scheduleConstraintCheckOperationSchema =
+  scheduleDateRangeInputSchema.extend({
+    id: z.uuid(),
+    draft: scheduleConstraintDraftSchema.optional(),
+  })
 const timeBlockIdSchema = z.object({ id: z.uuid() })
 
 const timeBlockListInputSchema = scheduleDateRangeInputSchema.extend({
@@ -65,6 +82,34 @@ const autoScheduleCliOptions = [
   { flags: '--manual', description: 'Mark the time block as manual' },
 ] as const
 
+const scheduleUpdateCliOptions = [
+  ...recurrenceCliOptions(),
+  {
+    flags: '--dry-run',
+    description: 'Preview changes without saving them',
+  },
+  {
+    flags: '--no-recurrence',
+    description: 'Make the schedule a one-time event from its effective date',
+  },
+  {
+    flags: '--clear-end-date',
+    description: 'Remove the schedule end date',
+  },
+  {
+    flags: '--clear-reminder',
+    description: 'Disable reminders for the schedule',
+  },
+] as const
+
+const parseScheduleConstraintDraftJson = fromThrowable(
+  (value: string): unknown => JSON.parse(value) as unknown,
+  (cause) =>
+    new Error(
+      `Invalid --draft JSON: ${cause instanceof Error ? cause.message : String(cause)}`,
+    ),
+)
+
 function mapCliTimezoneOffset(
   input: Record<string, unknown>,
   options: Record<string, unknown>,
@@ -101,6 +146,66 @@ function mapCliAutoScheduleFlags(
   if (!isAutoScheduled && !isManual) return ok(input)
 
   return ok({ ...input, isAutoScheduled })
+}
+
+function mapCliScheduleUpdate(
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  if (!isScheduleDateSelectionValid(input)) {
+    return err(new Error(SCHEDULE_DATE_SELECTION_ERROR_MESSAGE))
+  }
+
+  const noRecurrence =
+    options['recurrence'] === false || options['noRecurrence'] === true
+  const clearEndDate = options['clearEndDate'] === true
+  const clearReminder = options['clearReminder'] === true
+  const recurrence = recurrenceRuleFromCli(options)
+  if (recurrence.isErr()) return err(recurrence.error)
+
+  if (noRecurrence && recurrence.value !== undefined) {
+    return err(
+      new Error('Use only one of --no-recurrence or recurrence options'),
+    )
+  }
+  if (clearEndDate && input['endDate'] !== undefined) {
+    return err(new Error('Use only one of --clear-end-date or --end-date'))
+  }
+  if (clearReminder && input['remindBeforeMinutes'] !== undefined) {
+    return err(
+      new Error('Use only one of --clear-reminder or --remind-before-minutes'),
+    )
+  }
+
+  return ok({
+    ...input,
+    ...(options['dryRun'] === true ? { dryRun: true } : {}),
+    ...(noRecurrence
+      ? { recurrence: null }
+      : recurrence.value === undefined
+        ? {}
+        : { recurrence: recurrence.value }),
+    ...(clearEndDate ? { endDate: null } : {}),
+    ...(clearReminder ? { remindBeforeMinutes: null } : {}),
+  })
+}
+
+function mapCliScheduleConstraintDraft(
+  input: Record<string, unknown>,
+  options: Record<string, unknown>,
+): Result<Record<string, unknown>, Error> {
+  const rawDraft = options['draft']
+  if (rawDraft === undefined) return ok(input)
+  if (typeof rawDraft !== 'string') {
+    return err(new Error('--draft must be a JSON object'))
+  }
+
+  return parseScheduleConstraintDraftJson(rawDraft).andThen((value) => {
+    const draft = scheduleConstraintDraftSchema.safeParse(value)
+    return draft.success
+      ? ok({ ...input, draft: draft.data })
+      : err(new Error(formatInputIssues(draft.error)))
+  })
 }
 
 export const scheduleOperations = [
@@ -205,10 +310,43 @@ export const scheduleOperations = [
       )
     },
   }),
+  defineOperation(scheduleConstraintCheckOperationSchema, {
+    path: ['schedule', 'constraints', 'check'],
+    description: `Check schedule constraint violations for an inclusive local date range of up to ${String(MAX_SCHEDULE_DATE_RANGE_DAYS)} calendar days. Provide a draft object to preview constraint, occurrence, revision, or end-date changes without saving them. The response includes calendarDataIncomplete when connected calendars could not be read.`,
+    positionalArgs: ['id', 'startDate', 'endDate'],
+    kind: 'read',
+    routes: ['POST /api/schedule/events/:id/constraint-check'],
+    cli: {
+      customOptions: [
+        {
+          flags: '--draft <json>',
+          description:
+            'Preview changes using a JSON object with constraints, occurrenceChange, revisionChange, endDate, or revisionMode',
+        },
+      ],
+      excludeFields: ['draft'],
+      mapInput: mapCliScheduleConstraintDraft,
+      output: { kind: 'json' },
+    },
+    run: (client, { id, startDate, endDate, draft }) => {
+      const dateRange = validateScheduleDateRange({ startDate, endDate })
+      if (dateRange.isErr()) return errAsync(dateRange.error)
+
+      return requestJson(
+        client.api.schedule.events[':id']['constraint-check'].$post({
+          param: { id: encodePathSegment(id) },
+          json: {
+            ...dateRange.value,
+            ...(draft === undefined ? {} : { draft }),
+          },
+        }),
+      )
+    },
+  }),
   defineOperation(createScheduleSchema, {
     path: ['schedule', 'events', 'create'],
     description:
-      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
+      'Create a schedule event starting on the required local startDate (YYYY-MM-DD). startTime and endTime are local HH:MM times; if endTime is earlier than startTime, it ends the following day. remindBeforeMinutes optionally sends a push notification that many minutes before each occurrence starts. Without recurrence, the event appears only on startDate. For recurrence, daily and custom rules appear every day starting on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is stored but does not affect schedule event dates yet.',
     positionalArgs: ['title', 'startDate', 'startTime', 'endTime'],
     kind: 'write',
     routes: ['POST /api/schedule/events'],
@@ -225,5 +363,42 @@ export const scheduleOperations = [
     },
     run: (client, json) =>
       requestJson(client.api.schedule.events.$post({ json })),
+  }),
+  defineOperation(scheduleUpdateOperationSchema, {
+    path: ['schedule', 'events', 'update'],
+    description:
+      'Update a schedule event. Set effectiveFrom to apply time and recurrence changes from that local date onward; omit it to update the whole series. endDate is the last local date on which the schedule can occur. remindBeforeMinutes applies to the whole schedule; set it to null to disable reminders. Title, context, and color always apply to the whole schedule. Set dryRun to preview occurrence changes and removed overrides without saving.',
+    positionalArgs: ['id'],
+    kind: 'write',
+    mcpInputSchema: scheduleUpdateMcpInputSchema,
+    routes: ['PATCH /api/schedule/events/:id'],
+    cli: {
+      customOptions: scheduleUpdateCliOptions,
+      excludeFields: ['recurrence', 'dryRun'],
+      mapInput: mapCliScheduleUpdate,
+      output: { kind: 'json' },
+    },
+    run: (client, { id, ...json }) =>
+      requestJson(
+        client.api.schedule.events[':id'].$patch({
+          param: { id: encodePathSegment(id) },
+          json,
+        }),
+      ),
+  }),
+  defineOperation(scheduleEventIdSchema, {
+    path: ['schedule', 'events', 'delete'],
+    description:
+      'Delete a schedule event and all of its revisions and overrides.',
+    positionalArgs: ['id'],
+    kind: 'delete',
+    routes: ['DELETE /api/schedule/events/:id'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { id }) =>
+      requestNoContent(
+        client.api.schedule.events[':id'].$delete({
+          param: { id: encodePathSegment(id) },
+        }),
+      ).map(() => ({ deleted: true, id })),
   }),
 ] as const

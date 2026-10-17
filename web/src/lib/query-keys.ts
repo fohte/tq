@@ -124,6 +124,13 @@ export const scheduleKeys = {
   lists: ['schedules', 'list'] as const,
   list: (startDate: string, endDate: string) =>
     [...scheduleKeys.lists, { startDate, endDate }] as const,
+  detail: (id: string) => [...scheduleKeys.all, 'detail', id] as const,
+  constraints: (id: string) =>
+    [...scheduleKeys.detail(id), 'constraints'] as const,
+  overrides: (id: string, fromDate: string) =>
+    [...scheduleKeys.detail(id), 'overrides', fromDate] as const,
+  preview: (id: string, input: unknown) =>
+    [...scheduleKeys.detail(id), 'preview', input] as const,
 }
 
 export const recurringTemplateKeys = {

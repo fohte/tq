@@ -11,6 +11,9 @@ export const scheduleOverrideOperationInputSchema = z.object({
   occurrenceDate: scheduleOverrideDateSchema.describe(
     'Date on which this occurrence starts, in YYYY-MM-DD format.',
   ),
+  date: scheduleOverrideDateSchema
+    .optional()
+    .describe('Destination date in YYYY-MM-DD format.'),
   startTime: scheduleOverrideTimeSchema
     .optional()
     .describe('Replacement local start time in HH:MM format.'),
@@ -21,15 +24,26 @@ export const scheduleOverrideOperationInputSchema = z.object({
     .enum(['time', 'skip'])
     .optional()
     .describe('Use skip to omit this occurrence; time is the default.'),
+  dryRun: z
+    .boolean()
+    .optional()
+    .describe('Preview the change without saving it.'),
 })
 
 export const setScheduleOverrideBodySchema = z.union([
-  z.object({ skipped: z.literal(true) }).strict(),
   z
     .object({
+      skipped: z.literal(true),
+      dryRun: z.boolean().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      date: scheduleOverrideDateSchema.optional(),
       startTime: scheduleOverrideTimeSchema,
       endTime: scheduleOverrideTimeSchema,
       skipped: z.literal(false).optional(),
+      dryRun: z.boolean().optional(),
     })
     .strict(),
 ])

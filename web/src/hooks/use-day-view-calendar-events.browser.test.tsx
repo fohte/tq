@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import { makeCalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail-test-fixtures'
+import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
@@ -33,6 +34,64 @@ function expectedDetails(
 }
 
 describe('useDayViewCalendarEvents', () => {
+  it('keeps moved and natural occurrences distinct when their times overlap', () => {
+    const naturalOccurrence = makeSchedule({
+      scheduleId: 'schedule-overlap',
+      title: 'Routine',
+      startDate: '2034-08-18',
+      start: '2034-08-18T09:00:00',
+      end: '2034-08-18T10:00:00',
+      occurrenceDate: '2034-08-18',
+      overridden: null,
+      context: 'personal',
+      color: null,
+      recurrence: null,
+    })
+    const movedOccurrence = makeSchedule({
+      ...naturalOccurrence,
+      startDate: '2034-08-18',
+      occurrenceDate: '2034-08-17',
+      overridden: 'moved',
+    })
+
+    const { result } = renderHook(() =>
+      useDayViewCalendarEvents({
+        timeBlocksData: undefined,
+        schedulesData: [naturalOccurrence, movedOccurrence],
+        gcalEventsData: undefined,
+        dayQueueItems: [],
+        taskMap: new Map(),
+        context: 'personal',
+      }),
+    )
+
+    expect(result.current).toEqual([
+      {
+        id: 'schedule-schedule-overlap-2034-08-18-2034-08-18T09:00:00',
+        title: 'Routine',
+        start: '2034-08-18T09:00:00',
+        end: '2034-08-18T10:00:00',
+        type: 'schedule',
+        color: { accent: '#6C63FF' },
+        scheduleId: 'schedule-overlap',
+        scheduleOccurrenceDate: '2034-08-18',
+        redacted: false,
+      },
+      {
+        id: 'schedule-schedule-overlap-2034-08-17-2034-08-18T09:00:00',
+        title: 'Routine',
+        start: '2034-08-18T09:00:00',
+        end: '2034-08-18T10:00:00',
+        type: 'schedule',
+        color: { accent: '#6C63FF' },
+        scheduleId: 'schedule-overlap',
+        scheduleOccurrenceDate: '2034-08-17',
+        scheduleOverridden: 'moved',
+        redacted: false,
+      },
+    ])
+  })
+
   it('removes a past time block when its task is completed', () => {
     const task = makeTask({
       id: 'task-calendar-block',

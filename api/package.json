@@ -17,6 +17,7 @@
     "./operations": "./src/operations/index.ts",
     "./operations/test-fixtures": "./src/operations/operation-test-fixtures.ts",
     "./routes/schedule-test-fixtures": "./src/routes/schedule-test-fixtures.ts",
+    "./services/schedule-constraint-test-fixtures": "./src/services/schedule-constraint-test-fixtures.ts",
     "./schemas/agent-session": "./src/schemas/agent-session.ts",
     "./schemas/description-template": "./src/schemas/description-template.ts",
     "./schemas/label": "./src/schemas/label.ts",
@@ -47,7 +48,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.1075.0",
     "@aws-sdk/s3-request-presigner": "3.1075.0",
-    "@fohte/service-kit": "0.1.15",
+    "@fohte/service-kit": "0.1.16",
     "@hono/node-server": "1.19.17",
     "@hono/zod-validator": "0.7.6",
     "@milkdown/kit": "7.19.0",

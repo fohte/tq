@@ -169,23 +169,53 @@ comments:
       github_link_id: 'Optional GitHub issue or pull request linked to this item.'
       subtask_id: 'Optional task linked to this item as a subtask.'
   - table: schedules
-    tableComment: 'Calendar schedules with a local start date, local time range, and optional recurrence rule.'
+    tableComment: 'Calendar schedule series with optional local end date and push reminders.'
     columnComments:
       title: 'Human-readable schedule title.'
-      start_date: 'Local calendar date when the schedule starts; recurring schedules do not occur before this date.'
-      start_time: 'Local start time of the schedule in 24-hour HH:MM format.'
-      end_time: 'Local end time of the schedule in 24-hour HH:MM format.'
-      recurrence_rule_id: 'Recurrence rule associated with the schedule; null for a one-time schedule.'
+      end_date: 'Last local calendar date on which the schedule can occur; null for no end date.'
+      remind_before_minutes: 'Minutes before each occurrence starts to send a push reminder; null disables reminders.'
       context: 'Whether the schedule belongs to the work or personal context.'
       color: 'Optional color value associated with the schedule.'
+  - table: schedule_revisions
+    tableComment: 'Date-effective local time and recurrence settings for a calendar schedule.'
+    columnComments:
+      schedule_id: 'Schedule series whose settings are revised.'
+      effective_from: 'First local calendar date on which this revision applies.'
+      start_time: 'Local start time in 24-hour HH:MM format.'
+      end_time: 'Local end time in 24-hour HH:MM format.'
+      recurrence_rule_id: 'Recurrence rule associated with this revision; null for a one-time occurrence.'
+  - table: schedule_constraints
+    tableComment: 'Optional weekly frequency, consecutive-day, and time-window constraints for a calendar schedule.'
+    columnComments:
+      schedule_id: 'Schedule series whose constraints are stored here.'
+      weekly_min: 'Minimum number of non-skipped occurrences per Monday-based week; null means no minimum.'
+      weekly_max: 'Maximum number of non-skipped occurrences per Monday-based week; null means no maximum.'
+      weekly_target: 'Preferred number of occurrences per Monday-based week; null means no target.'
+      max_consecutive_days: 'Maximum number of consecutive local dates that may contain occurrences; null means no limit.'
+      window_start: 'Local start time in 24-hour HH:MM format; null with window_end disables the time window.'
+      window_end: 'Local end time in 24-hour HH:MM format; null with window_start disables the time window.'
+  - table: schedule_constraint_weekdays
+    tableComment: 'Per-weekday scheduling preferences for a schedule constraint; weekdays without rows are preferred.'
+    columnComments:
+      schedule_id: 'Schedule constraint that owns this weekday preference.'
+      day_of_week: 'Day of week from 0 (Sunday) through 6 (Saturday).'
+      preference: 'Scheduling preference: preferred, if_free, reserve, or excluded.'
   - table: schedule_overrides
-    tableComment: 'One-day time changes and skipped schedule occurrences.'
+    tableComment: 'One-day moves, time changes, and skipped schedule occurrences.'
     columnComments:
       schedule_id: 'Schedule whose occurrence is changed.'
       occurrence_date: 'Date on which the changed occurrence starts.'
       start_time: 'Replacement local start time in 24-hour HH:MM format; null when skipped.'
       end_time: 'Replacement local end time in 24-hour HH:MM format; null when skipped.'
+      moved_to_date: 'Date to which the occurrence is moved; null when it stays on occurrence_date.'
       skipped: 'Whether the occurrence is omitted for this date.'
+  - table: schedule_reminder_deliveries
+    tableComment: 'Claimed push reminders for individual schedule occurrences.'
+    columnComments:
+      schedule_id: 'Schedule series whose occurrence reminder was claimed.'
+      occurrence_date: 'Original local date of the occurrence, before a move override.'
+      remind_at: 'Instant at which the occurrence reminder was scheduled to be sent.'
+      delivered_at: 'Time when this reminder delivery was claimed.'
   - table: task_agent_sessions
     tableComment: 'Associations between tasks and coding agent sessions.'
     columnComments:

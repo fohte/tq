@@ -70,13 +70,17 @@ export function useDayViewCalendarEvents({
     if (!schedulesData) return []
     return schedulesData.map((schedule) => {
       return {
-        id: `schedule-${schedule.scheduleId}-${schedule.start}`,
+        id: `schedule-${schedule.scheduleId}-${schedule.occurrenceDate}-${schedule.start}`,
         title: schedule.title,
         start: schedule.start,
         end: schedule.end,
         type: 'schedule' as const,
         color: scheduleColorToEventColor(schedule.color),
         scheduleId: schedule.scheduleId,
+        scheduleOccurrenceDate: schedule.occurrenceDate,
+        ...(schedule.overridden == null
+          ? {}
+          : { scheduleOverridden: schedule.overridden }),
         redacted: !matchesContextFilter(schedule.context, context),
       }
     })

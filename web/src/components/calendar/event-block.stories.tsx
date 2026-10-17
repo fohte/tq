@@ -15,6 +15,7 @@ function EventBlockPreview({
   calendarColor,
   responseStatus,
   gcalEventType,
+  scheduleOverridden,
   redacted = false,
   allDay = false,
   isStart = true,
@@ -31,6 +32,7 @@ function EventBlockPreview({
   calendarColor?: string | null
   responseStatus?: TimeBlockEvent['responseStatus']
   gcalEventType?: string
+  scheduleOverridden?: TimeBlockEvent['scheduleOverridden']
   redacted?: boolean
   allDay?: boolean
   isStart?: boolean
@@ -52,6 +54,7 @@ function EventBlockPreview({
         calendarColor,
         responseStatus,
         gcalEventType,
+        scheduleOverridden,
         redacted,
       },
     },
@@ -143,6 +146,26 @@ export const DayQueue: Story = {
     title: 'Prepare a sample outline',
     timeText: '',
     allDay: true,
+  },
+}
+
+export const MovedScheduleOccurrence: Story = {
+  name: 'a moved schedule occurrence shows a moved marker',
+  args: {
+    type: 'schedule',
+    title: 'Morning practice',
+    timeText: '09:00–10:00',
+    scheduleOverridden: 'moved',
+  },
+}
+
+export const TimeChangedScheduleOccurrence: Story = {
+  name: 'a time-changed schedule occurrence shows a changed marker',
+  args: {
+    type: 'schedule',
+    title: 'Morning practice',
+    timeText: '09:00–10:00',
+    scheduleOverridden: 'time',
   },
 }
 

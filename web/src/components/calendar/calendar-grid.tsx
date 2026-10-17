@@ -89,7 +89,9 @@ interface CalendarGridProps {
   dndCallbacks?: CalendarDndCallbacks | undefined
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   onDateClick?: (date: Date) => void
-  onScheduleClick?: ((scheduleId: string, start: string) => void) | undefined
+  onScheduleClick?:
+    | ((scheduleId: string, occurrenceDate: string, start: string) => void)
+    | undefined
   onTaskClick?: ((taskId: string) => void) | undefined
   onSelectRange?: ((info: { start: Date; end: Date }) => void) | undefined
   initialDate?: Date
@@ -269,10 +271,20 @@ export const CalendarGrid = forwardRef<FullCalendar, CalendarGridProps>(
         return
       }
       if (!isClickableEvent(props)) return
-      const { type, scheduleId, scheduleStart, taskId } = props
+      const {
+        type,
+        scheduleId,
+        scheduleOccurrenceDate,
+        scheduleStart,
+        taskId,
+      } = props
       if (type === 'schedule') {
-        if (scheduleId != null && scheduleStart != null) {
-          onScheduleClick?.(scheduleId, scheduleStart)
+        if (
+          scheduleId != null &&
+          scheduleOccurrenceDate != null &&
+          scheduleStart != null
+        ) {
+          onScheduleClick?.(scheduleId, scheduleOccurrenceDate, scheduleStart)
         }
         return
       }

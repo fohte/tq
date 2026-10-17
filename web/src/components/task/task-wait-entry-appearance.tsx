@@ -64,11 +64,12 @@ export function TaskWaitEntryAppearance({
           resolved {formatShortDate(formatLocalDate(new Date(wait.resolvedAt)))}
         </span>
       ) : (
-        <label className="ml-auto inline-flex items-center gap-1.5 text-muted-foreground-faint">
+        <label className="ml-auto inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 text-muted-foreground-faint">
           follow up
           <Input
             aria-label={`Follow-up date for ${wait.label}`}
             type="date"
+            variant="ghost"
             required
             value={followUpDate}
             disabled={disabled}
@@ -79,7 +80,7 @@ export function TaskWaitEntryAppearance({
                 onFollowUpDateChange(nextFollowUpDate)
               }
             }}
-            className="h-7 w-32 border-0 bg-transparent p-0 font-mono text-xs text-muted-foreground underline decoration-border-strong underline-offset-2 focus-visible:ring-0"
+            className="h-7 w-32 mx-0"
           />
         </label>
       )}

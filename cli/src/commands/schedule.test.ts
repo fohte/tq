@@ -235,6 +235,105 @@ describe('schedule time blocks create', () => {
   })
 })
 
+describe('schedule constraints check', () => {
+  it('sends a JSON draft to the constraint-check API', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const draft = {
+      occurrenceChange: {
+        originalDate: '2030-05-09',
+        date: '2030-05-10',
+      },
+    }
+    const responseBody = { constraintViolations: [] }
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'constraints',
+          'check',
+          id,
+          '2030-05-06',
+          '2030-05-12',
+          '--draft',
+          JSON.stringify(draft),
+        ],
+        new Response(JSON.stringify(responseBody), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: `/api/schedule/events/${id}/constraint-check`,
+          query: {},
+          body: {
+            startDate: '2030-05-06',
+            endDate: '2030-05-12',
+            draft,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects malformed draft JSON before sending a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'constraints',
+          'check',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          '2030-05-06',
+          '2030-05-12',
+          '--draft',
+          '{',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          `Error: Invalid --draft JSON: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n`,
+        ],
+      ],
+      stdout: [],
+    })
+  })
+
+  it('rejects schema-invalid draft values before sending a request', async () => {
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'constraints',
+          'check',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          '2030-05-06',
+          '2030-05-12',
+          '--draft',
+          '{"constraints":{"weeklyMin":8}}',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: constraints.weeklyMin: Too big: expected number to be <=7; constraints.weeklyMax: Invalid input: expected number, received undefined; constraints.weeklyTarget: Invalid input: expected number, received undefined; constraints.maxConsecutiveDays: Invalid input: expected number, received undefined; constraints.windowStart: Invalid input: expected string, received undefined; constraints.windowEnd: Invalid input: expected string, received undefined; constraints.weekdays: Invalid input: expected array, received undefined\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
+})
+
 describe('schedule events create', () => {
   it('describes schedule dates and recurrence in CLI help', async () => {
     const expectedHelp = [
@@ -242,11 +341,12 @@ describe('schedule events create', () => {
       '',
       'Create a schedule event starting on the required local startDate (YYYY-MM-DD).',
       'startTime and endTime are local HH:MM times; if endTime is earlier than',
-      'startTime, it ends the following day. Without recurrence, the event appears only',
-      'on startDate. For recurrence, daily and custom rules appear every day starting',
-      'on startDate, weekly rules use daysOfWeek (0 = Sunday through 6 = Saturday), and',
-      'monthly rules use dayOfMonth. interval is stored but does not affect schedule',
-      'event dates yet.',
+      'startTime, it ends the following day. remindBeforeMinutes optionally sends a',
+      'push notification that many minutes before each occurrence starts. Without',
+      'recurrence, the event appears only on startDate. For recurrence, daily and',
+      'custom rules appear every day starting on startDate, weekly rules use daysOfWeek',
+      '(0 = Sunday through 6 = Saturday), and monthly rules use dayOfMonth. interval is',
+      'stored but does not affect schedule event dates yet.',
       '',
       'Options:',
       '  --recurrence-type <type>          Recurrence rule type',
@@ -257,6 +357,8 @@ describe('schedule events create', () => {
       '  --recurrence-days-of-week <days>  Comma-separated days of week for a weekly',
       '                                    rule (0=Sunday..6=Saturday)',
       '  --recurrence-day-of-month <day>   Day of month (1-31) for a monthly rule',
+      '  --remind-before-minutes <value>   Minutes before an occurrence starts to send',
+      '                                    a push reminder.',
       '  --context <value>                 Context (choices: "work", "personal")',
       '  --color <value>                   Color',
       '  -h, --help                        display help for command',
@@ -361,6 +463,48 @@ describe('schedule events create', () => {
     })
   })
 
+  it('sets a reminder lead time', async () => {
+    const responseBody = makeScheduleEvent({
+      title: 'Draft agenda',
+      remindBeforeMinutes: 45,
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'create',
+          'Draft agenda',
+          '2026-12-18',
+          '08:45',
+          '09:15',
+          '--remind-before-minutes',
+          '45',
+        ],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: '/api/schedule/events',
+          query: {},
+          body: {
+            title: 'Draft agenda',
+            startDate: '2026-12-18',
+            startTime: '08:45',
+            endTime: '09:15',
+            remindBeforeMinutes: 45,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+
   it('rejects an incomplete recurrence rule before making a request', async () => {
     expect(
       await runScheduleCli(
@@ -382,6 +526,231 @@ describe('schedule events create', () => {
       requests: [],
       stderr: [['Error: Invalid input: expected number, received NaN\n']],
       stdout: [],
+    })
+  })
+})
+
+describe('schedule events update', () => {
+  it('sends dryRun when previewing a schedule update', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const preview = {
+      range: { startDate: '2037-04-11', endDate: '2037-05-22' },
+      changes: [
+        {
+          before: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '08:30',
+            endTime: '09:30',
+            skipped: false,
+          },
+          after: {
+            date: '2037-04-11',
+            originalDate: '2037-04-11',
+            startTime: '10:00',
+            endTime: '11:00',
+            skipped: false,
+          },
+        },
+      ],
+      deletedOverrides: [],
+    }
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--effective-from',
+          '2037-04-11',
+          '--start-time',
+          '10:00',
+          '--end-time',
+          '11:00',
+          '--dry-run',
+        ],
+        new Response(JSON.stringify(preview), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: {
+            effectiveFrom: '2037-04-11',
+            startTime: '10:00',
+            endTime: '11:00',
+            dryRun: true,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(preview, null, 2)}\n`]],
+    })
+  })
+
+  it('applies recurrence and end date changes from an effective date', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const updated = makeScheduleEvent({
+      id,
+      startTime: '09:30',
+      endTime: '10:00',
+      endDate: '2026-12-20',
+      remindBeforeMinutes: 90,
+      recurrence: {
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [0],
+        dayOfMonth: null,
+      },
+    })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--effective-from',
+          '2026-12-20',
+          '--start-time',
+          '09:30',
+          '--end-time',
+          '10:00',
+          '--recurrence-type',
+          'weekly',
+          '--recurrence-interval',
+          '1',
+          '--recurrence-days-of-week',
+          '0',
+          '--end-date',
+          '2026-12-20',
+          '--remind-before-minutes',
+          '90',
+        ],
+        new Response(JSON.stringify(updated), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: {
+            effectiveFrom: '2026-12-20',
+            startTime: '09:30',
+            endTime: '10:00',
+            endDate: '2026-12-20',
+            remindBeforeMinutes: 90,
+            recurrence: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [0],
+            },
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+    })
+  })
+
+  it('clears recurrence, end date, and reminder from an effective date', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const updated = makeScheduleEvent({ id })
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--effective-from',
+          '2026-12-20',
+          '--no-recurrence',
+          '--clear-end-date',
+          '--clear-reminder',
+        ],
+        new Response(JSON.stringify(updated), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: {
+            effectiveFrom: '2026-12-20',
+            recurrence: null,
+            endDate: null,
+            remindBeforeMinutes: null,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+    })
+  })
+
+  it('rejects conflicting reminder flags before sending a request', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'events',
+          'update',
+          id,
+          '--clear-reminder',
+          '--remind-before-minutes',
+          '45',
+        ],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          'Error: Use only one of --clear-reminder or --remind-before-minutes\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
+})
+
+describe('schedule events delete', () => {
+  it('deletes the selected schedule', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+
+    expect(
+      await runScheduleCli(
+        ['schedule', 'events', 'delete', id],
+        new Response(null, { status: 204 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'DELETE',
+          pathname: `/api/schedule/events/${id}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify({ deleted: true, id }, null, 2)}\n`]],
     })
   })
 })
