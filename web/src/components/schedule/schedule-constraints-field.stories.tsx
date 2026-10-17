@@ -25,7 +25,7 @@ const meta = {
     isLoading: false,
     isError: false,
     saveError: false,
-    scheduleSaveAfterConstraintsError: false,
+    scheduleAfterConstraintsSaveError: false,
     isPending: false,
     defaultOpen: false,
     onAdd: fn(),
@@ -83,5 +83,5 @@ export const SaveFailed: Story = {
 
 export const ScheduleSaveFailed: Story = {
   name: 'the editor explains that constraints saved before schedule changes failed',
-  args: { scheduleSaveAfterConstraintsError: true },
+  args: { scheduleAfterConstraintsSaveError: true },
 }

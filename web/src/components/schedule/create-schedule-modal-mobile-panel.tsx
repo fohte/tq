@@ -304,7 +304,7 @@ export function ScheduleModalMobilePanel({
               isLoading={constraintsLoading}
               isError={constraintsError}
               saveError={constraintsSaveError}
-              scheduleSaveAfterConstraintsError={
+              scheduleAfterConstraintsSaveError={
                 scheduleAfterConstraintsSaveError
               }
               isPending={isPending}

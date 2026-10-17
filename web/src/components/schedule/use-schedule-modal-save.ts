@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react'
 import { useCallback } from 'react'
 
 import type { ScheduleConstraintFormState } from '#components/schedule/schedule-constraints-form-state'
@@ -51,13 +52,8 @@ export function useScheduleModalSave({
   allInput,
   recurrence,
   handleOpenChange,
-  constraintsSaveError,
-  setConstraintsSaveError,
-  setScheduleAfterConstraintsSaveError,
-  createdScheduleId,
-  setCreatedScheduleId,
-  createdScheduleConstraintsSaved,
-  setCreatedScheduleConstraintsSaved,
+  saveState,
+  setSaveState,
 }: {
   schedule: Schedule | undefined
   editState: ScheduleEditFormState
@@ -73,13 +69,8 @@ export function useScheduleModalSave({
   allInput: UpdateScheduleInput
   recurrence: UpdateScheduleInput['recurrence']
   handleOpenChange: (open: boolean) => void
-  constraintsSaveError: boolean
-  setConstraintsSaveError: (value: boolean) => void
-  setScheduleAfterConstraintsSaveError: (value: boolean) => void
-  createdScheduleId: string | null
-  setCreatedScheduleId: (value: string | null) => void
-  createdScheduleConstraintsSaved: boolean
-  setCreatedScheduleConstraintsSaved: (value: boolean) => void
+  saveState: ScheduleModalSaveState
+  setSaveState: Dispatch<SetStateAction<ScheduleModalSaveState>>
 }) {
   const createSchedule = useCreateSchedule()
   const updateSchedule = useUpdateSchedule()
@@ -103,6 +94,10 @@ export function useScheduleModalSave({
   const startDate = scheduleEditStartDate(rangeDraft)
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
+  const { createdScheduleId, createdScheduleConstraintsSaved } = saveState
+  const updateSaveState = (updates: Partial<ScheduleModalSaveState>) => {
+    setSaveState((prev) => ({ ...prev, ...updates }))
+  }
   const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
   const canSaveConstraints = !schedule || scope === 'all'
   const constraintsChanged = !scheduleConstraintsMatchSaved(
@@ -121,11 +116,27 @@ export function useScheduleModalSave({
     (previewRequest == null || (!isPreviewRequestDebouncing && previewReady)),
   )
 
+  const persistConstraints = (id: string, onSuccess: () => void) => {
+    const onError = () => {
+      updateSaveState({ constraintsSaveError: true })
+    }
+    if (constraintDraft === null) {
+      deleteScheduleConstraints.mutate(id, { onSuccess, onError })
+    } else if (constraintInput !== null) {
+      setScheduleConstraints.mutate(
+        { id, input: constraintInput },
+        { onSuccess, onError },
+      )
+    }
+  }
+
   const handleSubmit = () => {
     if (!canSubmit || isPending) return
 
-    setConstraintsSaveError(false)
-    setScheduleAfterConstraintsSaveError(false)
+    updateSaveState({
+      constraintsSaveError: false,
+      scheduleAfterConstraintsSaveError: false,
+    })
 
     const closeOnSuccess = () => {
       handleOpenChange(false)
@@ -136,7 +147,7 @@ export function useScheduleModalSave({
       ...(constraintsWereSaved
         ? {
             onError: () => {
-              setScheduleAfterConstraintsSaveError(true)
+              updateSaveState({ scheduleAfterConstraintsSaveError: true })
             },
           }
         : {}),
@@ -239,23 +250,15 @@ export function useScheduleModalSave({
             }
 
             if (constraintInput === null) {
-              setConstraintsSaveError(true)
+              updateSaveState({ constraintsSaveError: true })
               return
             }
 
-            setCreatedScheduleId(createdSchedule.id)
-            setScheduleConstraints.mutate(
-              { id: createdSchedule.id, input: constraintInput },
-              {
-                onSuccess: () => {
-                  setCreatedScheduleConstraintsSaved(true)
-                  closeOnSuccess()
-                },
-                onError: () => {
-                  setConstraintsSaveError(true)
-                },
-              },
-            )
+            updateSaveState({ createdScheduleId: createdSchedule.id })
+            persistConstraints(createdSchedule.id, () => {
+              updateSaveState({ createdScheduleConstraintsSaved: true })
+              closeOnSuccess()
+            })
           },
         })
         return
@@ -270,14 +273,9 @@ export function useScheduleModalSave({
       const saveConstraints = () => {
         if (constraintDraft === null) {
           if (createdScheduleConstraintsSaved) {
-            deleteScheduleConstraints.mutate(createdScheduleId, {
-              onSuccess: () => {
-                setCreatedScheduleConstraintsSaved(false)
-                updateCreatedSchedule(true)
-              },
-              onError: () => {
-                setConstraintsSaveError(true)
-              },
+            persistConstraints(createdScheduleId, () => {
+              updateSaveState({ createdScheduleConstraintsSaved: false })
+              updateCreatedSchedule(true)
             })
           } else {
             updateCreatedSchedule(false)
@@ -286,45 +284,20 @@ export function useScheduleModalSave({
         }
 
         if (constraintInput === null) return
-        setScheduleConstraints.mutate(
-          { id: createdScheduleId, input: constraintInput },
-          {
-            onSuccess: () => {
-              setCreatedScheduleConstraintsSaved(true)
-              updateCreatedSchedule(true)
-            },
-            onError: () => {
-              setConstraintsSaveError(true)
-            },
-          },
-        )
+        persistConstraints(createdScheduleId, () => {
+          updateSaveState({ createdScheduleConstraintsSaved: true })
+          updateCreatedSchedule(true)
+        })
       }
       saveConstraints()
     }
 
     if (schedule && scope === 'all' && constraintsChanged) {
       const saveScheduleAfterConstraints = () => {
-        setConstraintsSaveError(false)
+        updateSaveState({ constraintsSaveError: false })
         saveSchedule(true)
       }
-      if (constraintDraft === null) {
-        deleteScheduleConstraints.mutate(schedule.scheduleId, {
-          onSuccess: saveScheduleAfterConstraints,
-          onError: () => {
-            setConstraintsSaveError(true)
-          },
-        })
-      } else if (constraintInput !== null) {
-        setScheduleConstraints.mutate(
-          { id: schedule.scheduleId, input: constraintInput },
-          {
-            onSuccess: saveScheduleAfterConstraints,
-            onError: () => {
-              setConstraintsSaveError(true)
-            },
-          },
-        )
-      }
+      persistConstraints(schedule.scheduleId, saveScheduleAfterConstraints)
       return
     }
 
@@ -351,7 +324,13 @@ export function useScheduleModalSave({
     handleSubmit,
     isPending,
     isRestorePending: clearScheduleOverride.isPending,
-    constraintsSaveError,
     reminderReady,
   }
+}
+
+export interface ScheduleModalSaveState {
+  constraintsSaveError: boolean
+  scheduleAfterConstraintsSaveError: boolean
+  createdScheduleId: string | null
+  createdScheduleConstraintsSaved: boolean
 }

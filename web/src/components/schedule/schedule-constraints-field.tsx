@@ -49,7 +49,7 @@ interface ScheduleConstraintsFieldProps {
   isLoading: boolean
   isError: boolean
   saveError: boolean
-  scheduleSaveAfterConstraintsError: boolean
+  scheduleAfterConstraintsSaveError: boolean
   isPending: boolean
   defaultOpen?: boolean
   onAdd: () => void
@@ -63,7 +63,7 @@ export function ScheduleConstraintsField({
   isLoading,
   isError,
   saveError,
-  scheduleSaveAfterConstraintsError,
+  scheduleAfterConstraintsSaveError,
   isPending,
   defaultOpen = false,
   onAdd,
@@ -81,7 +81,7 @@ export function ScheduleConstraintsField({
       <>
         <ConstraintsSaveErrors
           saveError={saveError}
-          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+          scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
         />
         <p role="status" className="text-xs text-muted-foreground">
           Loading constraints…
@@ -94,7 +94,7 @@ export function ScheduleConstraintsField({
       <>
         <ConstraintsSaveErrors
           saveError={saveError}
-          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+          scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
         />
         <p role="alert" className="text-xs text-destructive">
           Constraints could not be loaded.
@@ -118,8 +118,8 @@ export function ScheduleConstraintsField({
           </Button>
           <ConstraintsSaveErrors
             saveError={saveError}
-            scheduleSaveAfterConstraintsError={
-              scheduleSaveAfterConstraintsError
+            scheduleAfterConstraintsSaveError={
+              scheduleAfterConstraintsSaveError
             }
           />
         </div>
@@ -130,7 +130,7 @@ export function ScheduleConstraintsField({
       <div className="flex flex-col gap-3">
         <ConstraintsSaveErrors
           saveError={saveError}
-          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+          scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
         />
         <ConstraintEditor
           value={value}
@@ -159,7 +159,7 @@ export function ScheduleConstraintsField({
         </Button>
         <ConstraintsSaveErrors
           saveError={saveError}
-          scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+          scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
         />
       </div>
     )
@@ -182,7 +182,7 @@ export function ScheduleConstraintsField({
       </button>
       <ConstraintsSaveErrors
         saveError={saveError}
-        scheduleSaveAfterConstraintsError={scheduleSaveAfterConstraintsError}
+        scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
       />
       {isExpanded && (
         <div className="w-full rounded-lg border border-border p-3">
@@ -203,12 +203,12 @@ export function ScheduleConstraintsField({
 
 function ConstraintsSaveErrors({
   saveError,
-  scheduleSaveAfterConstraintsError,
+  scheduleAfterConstraintsSaveError,
 }: {
   saveError: boolean
-  scheduleSaveAfterConstraintsError: boolean
+  scheduleAfterConstraintsSaveError: boolean
 }) {
-  if (!saveError && !scheduleSaveAfterConstraintsError) return null
+  if (!saveError && !scheduleAfterConstraintsSaveError) return null
   return (
     <>
       {saveError && (
@@ -216,7 +216,7 @@ function ConstraintsSaveErrors({
           Failed to save schedule constraints.
         </p>
       )}
-      {scheduleSaveAfterConstraintsError && (
+      {scheduleAfterConstraintsSaveError && (
         <p role="alert" className="text-xs text-destructive">
           Schedule changes were not saved. Constraint changes were saved.
         </p>
