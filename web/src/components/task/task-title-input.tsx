@@ -178,41 +178,43 @@ export function TaskTitleInput({
         <PopoverContent
           initialFocus={false}
           padding="none"
-          className={isParentTrigger ? 'w-64' : 'w-40'}
+          className={
+            isParentTrigger
+              ? 'w-64 text-popover-foreground'
+              : 'w-40 text-popover-foreground'
+          }
         >
-          <div className="text-popover-foreground">
-            <List role="listbox">
-              {isParentTrigger
-                ? parentSuggestions.map((item, index) => (
-                    <ListItem
-                      key={item.id}
-                      highlighted={index === selectedIndex}
-                      onSelect={() => {
-                        applyParentSuggestion(item)
-                      }}
-                    >
-                      <TaskMentionSummary
-                        status={item.status}
-                        statusReason={item.statusReason ?? null}
-                        number={item.number}
-                        title={item.title}
-                      />
-                    </ListItem>
-                  ))
-                : suggestions.map((item, index) => (
-                    <ListItem
-                      key={item.value}
-                      highlighted={index === selectedIndex}
-                      onSelect={() => {
-                        applySuggestion(item)
-                      }}
-                    >
-                      {cursorTrigger?.trigger}
-                      {item.display}
-                    </ListItem>
-                  ))}
-            </List>
-          </div>
+          <List role="listbox">
+            {isParentTrigger
+              ? parentSuggestions.map((item, index) => (
+                  <ListItem
+                    key={item.id}
+                    highlighted={index === selectedIndex}
+                    onSelect={() => {
+                      applyParentSuggestion(item)
+                    }}
+                  >
+                    <TaskMentionSummary
+                      status={item.status}
+                      statusReason={item.statusReason ?? null}
+                      number={item.number}
+                      title={item.title}
+                    />
+                  </ListItem>
+                ))
+              : suggestions.map((item, index) => (
+                  <ListItem
+                    key={item.value}
+                    highlighted={index === selectedIndex}
+                    onSelect={() => {
+                      applySuggestion(item)
+                    }}
+                  >
+                    {cursorTrigger?.trigger}
+                    {item.display}
+                  </ListItem>
+                ))}
+          </List>
         </PopoverContent>
       </Popover>
     </>

@@ -68,6 +68,18 @@ describe('TaskTitleInput', () => {
     expect(screen.queryByText('@tomorrow')).not.toBeInTheDocument()
   })
 
+  it('selects a due date suggestion on click, replacing the partial token', async () => {
+    const user = userEvent.setup()
+    renderTaskTitleInput()
+
+    const input = screen.getByRole('textbox')
+    await user.type(input, 'Buy milk @tom')
+
+    await user.click(await screen.findByRole('option', { name: '@tomorrow' }))
+
+    expect(input).toHaveValue('Buy milk @tomorrow ')
+  })
+
   it('selects a parent suggestion on Enter, replacing the partial token', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },

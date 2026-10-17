@@ -358,7 +358,7 @@ function ChecklistItemRow({
             <ChevronDown
               className={`size-3 transition-transform ${detailsOpen ? '' : '-rotate-90'}`}
             />
-            <span>
+            <span className="text-2xs">
               {item.note == null || item.note === ''
                 ? 'add details'
                 : 'details'}

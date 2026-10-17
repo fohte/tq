@@ -115,7 +115,7 @@ export function TaskChecklistList({
         onClick={onCreateChecklist}
         className="w-fit"
       >
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 font-mono text-xs">
           <Plus className="size-3" />
           add checklist
         </span>

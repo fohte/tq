@@ -196,22 +196,20 @@ export function TagsInput({
             <PopoverContent
               initialFocus={false}
               padding="none"
-              className="w-40"
+              className="w-40 text-popover-foreground"
             >
-              <div className="text-popover-foreground">
-                <List role="listbox">
-                  {suggestionTree.map((node) => (
-                    <LabelSuggestion
-                      key={node.name}
-                      node={node}
-                      depth={0}
-                      indexByName={suggestionIndexByName}
-                      selectedIndex={selectedIndex}
-                      onSelect={addTag}
-                    />
-                  ))}
-                </List>
-              </div>
+              <List role="listbox">
+                {suggestionTree.map((node) => (
+                  <LabelSuggestion
+                    key={node.name}
+                    node={node}
+                    depth={0}
+                    indexByName={suggestionIndexByName}
+                    selectedIndex={selectedIndex}
+                    onSelect={addTag}
+                  />
+                ))}
+              </List>
             </PopoverContent>
           </Popover>
         </>

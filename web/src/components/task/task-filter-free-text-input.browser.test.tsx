@@ -85,6 +85,21 @@ describe('TaskFilterFreeTextInput', () => {
     expect(input).toHaveValue('is:todo ')
   })
 
+  it('applies a suggestion on click', async () => {
+    mockSuggestionData = suggestionFixtures
+    const user = userEvent.setup()
+    renderInput()
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'is:')
+    await user.click(
+      await screen.findByRole('option', { name: 'is:todo Todo' }),
+    )
+
+    const actualValue = input instanceof HTMLInputElement ? input.value : null
+    expect(actualValue).toEqual('is:todo ')
+  })
+
   it('commits on Enter when there are no suggestions', async () => {
     const user = userEvent.setup()
     const { onCommit } = renderInput({ freeText: 'sort:updated' })

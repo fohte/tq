@@ -190,7 +190,7 @@ export function PageCardPresentation({
                   setExpanded(true)
                 }}
               >
-                show more
+                <span className="text-2xs">show more</span>
               </Button>
             )}
           </div>

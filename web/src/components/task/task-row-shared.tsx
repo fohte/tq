@@ -117,7 +117,7 @@ export function TagTokens({ labels }: { labels: string[] }) {
           }}
           className="shrink whitespace-normal"
         >
-          #{label}
+          <span className="font-mono text-xs">#{label}</span>
         </Button>
       ))}
     </div>
@@ -218,7 +218,7 @@ export function RecurrenceLabel({
         void navigate({ to: '/recurring/$templateId', params: { templateId } })
       }}
     >
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1 font-mono text-xs">
         <Repeat className="size-3" />
         {summary}
       </span>

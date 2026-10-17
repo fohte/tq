@@ -77,46 +77,44 @@ export function SidebarRemindFieldAppearance({
       )}
       <Popover open={isEditing} onOpenChange={onOpenChange} anchor={inputRef}>
         <PopoverContent
-          // The input owns keyboard navigation, so keep focus there while the
-          // reminder options are open.
+          // The input needs focus so users can keep typing a reminder expression
+          // while the options are open.
           initialFocus={false}
           padding="none"
-          className="w-64"
+          className="w-64 text-popover-foreground"
         >
-          <div className="text-popover-foreground">
-            <List role="listbox">
-              <ListItem onSelect={onClear}>None</ListItem>
-            </List>
-            <div className="mt-1 border-t border-border pt-1">
-              {query.trim() === '' ? (
-                <List role="listbox">
-                  {REMINDER_PRESETS.map((preset) => (
-                    <ListItem
-                      key={preset}
-                      onSelect={() => {
-                        onSelectPreset(preset)
-                      }}
-                    >
-                      {preset}
-                    </ListItem>
-                  ))}
-                </List>
-              ) : parsedDate != null ? (
-                <List role="listbox">
+          <List role="listbox">
+            <ListItem onSelect={onClear}>None</ListItem>
+          </List>
+          <div className="mt-1 border-t border-border pt-1">
+            {query.trim() === '' ? (
+              <List role="listbox">
+                {REMINDER_PRESETS.map((preset) => (
                   <ListItem
+                    key={preset}
                     onSelect={() => {
-                      onCommit(parsedDate)
+                      onSelectPreset(preset)
                     }}
                   >
-                    {formatAbsoluteReminder(parsedDate)}
+                    {preset}
                   </ListItem>
-                </List>
-              ) : (
-                <div className="px-3 py-1.5 text-sm text-muted-foreground">
-                  Unrecognized date
-                </div>
-              )}
-            </div>
+                ))}
+              </List>
+            ) : parsedDate != null ? (
+              <List role="listbox">
+                <ListItem
+                  onSelect={() => {
+                    onCommit(parsedDate)
+                  }}
+                >
+                  {formatAbsoluteReminder(parsedDate)}
+                </ListItem>
+              </List>
+            ) : (
+              <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                Unrecognized date
+              </div>
+            )}
           </div>
         </PopoverContent>
       </Popover>

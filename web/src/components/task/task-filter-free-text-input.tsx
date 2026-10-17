@@ -163,26 +163,24 @@ export function TaskFilterFreeTextInput({
         <PopoverContent
           initialFocus={false}
           padding="none"
-          className="min-w-(--anchor-width)"
+          className="min-w-(--anchor-width) text-popover-foreground"
         >
-          <div className="text-popover-foreground">
-            <List role="listbox">
-              {availableSuggestions?.map((suggestion, index) => (
-                <ListItem
-                  key={suggestion.value}
-                  highlighted={index === selectedIndex}
-                  onSelect={() => {
-                    applySuggestion(suggestion)
-                  }}
-                >
-                  <span>{suggestion.value}</span>
-                  <span className="text-muted-foreground">
-                    {suggestion.display}
-                  </span>
-                </ListItem>
-              ))}
-            </List>
-          </div>
+          <List role="listbox">
+            {availableSuggestions?.map((suggestion, index) => (
+              <ListItem
+                key={suggestion.value}
+                highlighted={index === selectedIndex}
+                onSelect={() => {
+                  applySuggestion(suggestion)
+                }}
+              >
+                <span>{suggestion.value}</span>
+                <span className="text-muted-foreground">
+                  {suggestion.display}
+                </span>
+              </ListItem>
+            ))}
+          </List>
         </PopoverContent>
       </Popover>
       <SearchSyntaxHelpPopover
