@@ -2,8 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
 import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
+import { scheduleConstraintFormStateFromSaved } from '#components/schedule/schedule-constraints-form-state'
 import {
   makeSchedule,
+  makeScheduleConstraint,
   makeScheduleOverride,
 } from '#components/schedule/schedule-test-fixtures'
 
@@ -60,6 +62,13 @@ const meta = {
     remindBeforeMinutes: '',
     setRemindBeforeMinutes: fn(),
     reminderReady: true,
+    constraints: null,
+    constraintsLoading: false,
+    constraintsError: false,
+    constraintsDefaultOpen: false,
+    onAddConstraints: fn(),
+    onChangeConstraints: fn(),
+    onRemoveConstraints: fn(),
     previewText: null,
     isPreviewLoading: false,
     previewError: false,
@@ -106,6 +115,14 @@ export const ThisEventWithRestore: Story = {
     ...ThisEvent.args,
     schedule: makeSchedule({ overridden: 'time' }),
     canRestoreThisEvent: true,
+  },
+}
+
+export const ThisEventWithConstraints: Story = {
+  name: 'the editor shows a compact summary of saved constraints',
+  args: {
+    ...ThisEvent.args,
+    constraints: scheduleConstraintFormStateFromSaved(makeScheduleConstraint()),
   },
 }
 
