@@ -108,7 +108,7 @@ export function TaskWaitEntryAppearance({
           data-wait-action="acknowledge"
           onClick={onAcknowledge}
           aria-label={`Acknowledge wait: ${wait.label}`}
-          className="shrink-0 text-primary"
+          className="shrink-0 text-primary hover:text-primary"
         >
           <span className="flex items-center gap-1">
             <Check className="size-3.5" aria-hidden="true" />
