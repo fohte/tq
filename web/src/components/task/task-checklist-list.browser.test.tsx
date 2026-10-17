@@ -217,6 +217,13 @@ function getChecklistMarkdownState(root: Element) {
   }
 }
 
+function getInlineMarkdownStyleState(element: Element) {
+  return {
+    text: element.textContent,
+    textDecoration: getComputedStyle(element).textDecorationLine,
+  }
+}
+
 function getChecklistInlineEditState(content: string) {
   const input = screen.queryByRole<HTMLInputElement>('textbox', {
     name: `Edit ${content}`,
@@ -285,6 +292,37 @@ describe('TaskChecklistList', () => {
         `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
         `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
       ],
+    })
+  })
+
+  it('keeps strikethrough on checked Markdown text', async () => {
+    const content = 'Review **the sample**'
+    const rendered = renderChecklist({
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000744',
+              content,
+              checkedAt: '2026-01-02T00:00:00.000Z',
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Uncheck ${content}` })
+    const fieldTrigger = assertDefined(
+      rendered.container.querySelector('[data-slot="field-trigger"]'),
+      'the checklist item has an editable Markdown field',
+    )
+    const inlineContent = assertDefined(
+      fieldTrigger.querySelector(':scope > span'),
+      'the field trigger has a text wrapper',
+    )
+
+    expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
+      text: 'Review the sample',
+      textDecoration: 'line-through',
     })
   })
 
