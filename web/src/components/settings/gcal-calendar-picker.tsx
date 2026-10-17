@@ -32,14 +32,17 @@ export function GcalCalendarPicker({
       <Button
         type="button"
         variant="plain"
-        className="w-fit gap-1"
+        className="w-fit"
         onClick={() => {
           setOpen((prev) => !prev)
         }}
         aria-expanded={open}
       >
         <ChevronRight
-          className={cn('size-3 transition-transform', open && 'rotate-90')}
+          className={cn(
+            'mr-1 size-3 transition-transform',
+            open && 'rotate-90',
+          )}
         />
         カレンダーを選択
       </Button>

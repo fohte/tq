@@ -186,16 +186,18 @@ function ViewsSection() {
           <ViewLink key={view.id} view={view} isActive={q === view.query} />
         ))}
         {!isExpanded && hiddenCount > 0 && (
-          <Button
-            type="button"
-            variant="plain"
-            onClick={() => {
-              setIsExpanded(true)
-            }}
-            className="w-full justify-start"
-          >
-            + {hiddenCount} more
-          </Button>
+          <div className="px-3.5">
+            <Button
+              type="button"
+              variant="plain"
+              onClick={() => {
+                setIsExpanded(true)
+              }}
+              className="w-full justify-start"
+            >
+              + {hiddenCount} more
+            </Button>
+          </div>
         )}
       </div>
     </div>
