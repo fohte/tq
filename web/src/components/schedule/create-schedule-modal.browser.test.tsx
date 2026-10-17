@@ -20,6 +20,7 @@ import {
   useSetScheduleOverride,
   useUpdateSchedule,
 } from '#hooks/use-schedules'
+import { formatLocalDate } from '#lib/date-range'
 import { renderControlledModal } from '#lib/render-controlled-modal'
 import {
   assertDefined,
@@ -222,6 +223,44 @@ async function waitForVisibleText(text: string) {
 const sampleSchedule = makeSchedule()
 
 describe('CreateScheduleModal', () => {
+  it('loads exceptions from today onward', () => {
+    setupMocks()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    expect(mockUseScheduleOverrides.mock.calls.at(-1)).toEqual([
+      sampleSchedule.scheduleId,
+      true,
+      formatLocalDate(new Date()),
+    ])
+  })
+
+  it('shows exception dates with a weekday and month-day label', async () => {
+    setupMocks()
+    mockUseScheduleOverrides.mockReturnValue(
+      partialMutation<ReturnType<typeof useScheduleOverrides>>({
+        data: [
+          makeScheduleOverride({
+            occurrenceDate: '2030-04-20',
+            skipped: true,
+          }),
+        ],
+        isLoading: false,
+      }),
+    )
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+
+    await waitForVisibleText('Sat 04-20 · skipped')
+
+    expect(visibleText('Sat 04-20 · skipped')).toEqual('Sat 04-20 · skipped')
+  })
+
   it('removes the modal from the DOM when the close (X) button is clicked', async () => {
     setupMocks()
     const user = userEvent.setup()
@@ -647,6 +686,34 @@ describe('CreateScheduleModal', () => {
 
   it('saves a move for only the selected occurrence', async () => {
     const { setOverrideMutate } = setupMocks()
+    mockUseScheduleChangePreview.mockReturnValue(
+      partialMutation<ReturnType<typeof useScheduleChangePreview>>({
+        data: {
+          range: { startDate: '2026-01-01', endDate: '2026-01-31' },
+          changes: [
+            {
+              before: {
+                date: '2026-01-01',
+                originalDate: '2026-01-01',
+                startTime: '07:00',
+                endTime: '08:00',
+                skipped: false,
+              },
+              after: {
+                date: '2026-01-02',
+                originalDate: '2026-01-01',
+                startTime: '08:00',
+                endTime: '09:00',
+                skipped: false,
+              },
+            },
+          ],
+          deletedOverrides: [],
+        },
+        isSuccess: true,
+        isFetching: false,
+      }),
+    )
     const user = userEvent.setup()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
 
@@ -671,22 +738,34 @@ describe('CreateScheduleModal', () => {
       ),
       { target: { value: '09:00' } },
     )
+    const previewText =
+      'Moves this event from Thu, Jan 1 to Fri, Jan 2. Other events are unchanged.'
+    await waitForVisibleText(previewText)
+    const visiblePreview = visibleText(previewText)
     await clickVisibleSave(user)
 
-    expect(normalizeMutationCalls(setOverrideMutate.mock.calls)).toEqual([
-      [
-        {
-          scheduleId: 'schedule-1',
-          occurrenceDate: '2026-01-01',
-          input: {
-            date: '2026-01-02',
-            startTime: '08:00',
-            endTime: '09:00',
+    expect(
+      normalizeDialogSaveResult({
+        previewText: visiblePreview,
+        mutationCalls: normalizeMutationCalls(setOverrideMutate.mock.calls),
+      }),
+    ).toEqual({
+      previewText,
+      mutationCalls: [
+        [
+          {
+            scheduleId: 'schedule-1',
+            occurrenceDate: '2026-01-01',
+            input: {
+              date: '2026-01-02',
+              startTime: '08:00',
+              endTime: '09:00',
+            },
           },
-        },
-        { onSuccess: 'callback' },
+          { onSuccess: 'callback' },
+        ],
       ],
-    ])
+    })
   })
 
   it('previews and saves skipping only the selected occurrence', async () => {

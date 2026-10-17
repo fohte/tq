@@ -2,17 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   type RecurrenceFormDraft,
-  recurrenceFormFromSchedule,
   scheduleEditDialogFormState,
 } from '#components/schedule/schedule-edit-dialog-form-state'
-import { buildScheduleEditPreviewRequest } from '#components/schedule/schedule-edit-dialog-preview-request'
 import type {
   ScheduleEditAction,
   ScheduleEditScope,
 } from '#components/schedule/schedule-edit-dialog-state'
 import {
   createScheduleEditDraft,
-  currentScheduleEditAction,
   scheduleEditEndTime,
   scheduleEditStartDate,
   scheduleEditStartTime,
@@ -21,31 +18,15 @@ import {
   setScheduleEditStartTime,
 } from '#components/schedule/schedule-edit-dialog-state'
 import {
-  buildAllScheduleInput,
-  buildFollowingScheduleInput,
-  endSeriesRemovesSchedule,
-  previousScheduleDate,
-} from '#components/schedule/schedule-edit-dialog-update-input'
-import {
-  type ContextValue,
   type RecurrenceType,
   toggleWeekday,
 } from '#components/schedule/schedule-modal-form-options'
-import { scheduleContext } from '#components/schedule/schedule-modal-form-utils'
 import type { SchedulePanelProps } from '#components/schedule/schedule-modal-panel-props'
-import { describeSchedulePreview } from '#components/schedule/schedule-preview-description'
-import { useDebounce } from '#hooks/use-debounce'
-import type { CreateScheduleInput, Schedule } from '#hooks/use-schedules'
-import {
-  useClearScheduleOverride,
-  useCreateSchedule,
-  useDeleteSchedule,
-  useScheduleChangePreview,
-  useScheduleDetails,
-  useScheduleOverrides,
-  useSetScheduleOverride,
-  useUpdateSchedule,
-} from '#hooks/use-schedules'
+import { useScheduleModalPreview } from '#components/schedule/use-schedule-modal-preview'
+import { useScheduleModalSave } from '#components/schedule/use-schedule-modal-save'
+import type { Schedule } from '#hooks/use-schedules'
+import { useScheduleDetails, useScheduleOverrides } from '#hooks/use-schedules'
+import { formatLocalDate } from '#lib/date-range'
 
 interface CreateScheduleModalStateOptions {
   open: boolean
@@ -60,23 +41,9 @@ export function useCreateScheduleModalState({
   schedule,
   defaultStartDate,
 }: CreateScheduleModalStateOptions) {
-  const [rangeDraft, setRangeDraft] = useState(() =>
-    createScheduleEditDraft(schedule, defaultStartDate),
+  const [editState, setEditState] = useState(() =>
+    scheduleEditDialogFormState(schedule, defaultStartDate, undefined),
   )
-  const [title, setTitle] = useState(schedule?.title ?? '')
-  const [followingRecurrence, setFollowingRecurrence] = useState(() =>
-    recurrenceFormFromSchedule(schedule),
-  )
-  const [allRecurrence, setAllRecurrence] = useState(() =>
-    recurrenceFormFromSchedule(schedule),
-  )
-  const [context, setContext] = useState<ContextValue | ''>(
-    scheduleContext(schedule),
-  )
-  const [color, setColor] = useState(schedule?.color ?? '')
-  const [remindBeforeMinutes, setRemindBeforeMinutesState] = useState<
-    number | ''
-  >('')
   const reminderTouchedRef = useRef(false)
   const wasOpenRef = useRef(open)
   const detailsHydratedForRef = useRef<string | null>(null)
@@ -85,16 +52,21 @@ export function useCreateScheduleModalState({
     schedule?.scheduleId,
     open && schedule != null,
   )
+  const today = formatLocalDate(new Date())
   const exceptionQuery = useScheduleOverrides(
     schedule?.scheduleId,
     open && schedule != null,
+    today,
   )
 
   useEffect(() => {
     const didOpen = open && !wasOpenRef.current
     wasOpenRef.current = open
     if (didOpen && !schedule) {
-      setRangeDraft(createScheduleEditDraft(undefined, defaultStartDate))
+      setEditState((prev) => ({
+        ...prev,
+        rangeDraft: createScheduleEditDraft(undefined, defaultStartDate),
+      }))
     }
   }, [defaultStartDate, open, schedule])
 
@@ -106,19 +78,17 @@ export function useCreateScheduleModalState({
     const hydrationKey = `${schedule.scheduleId}:${details.updatedAt}`
     if (detailsHydratedForRef.current === hydrationKey) return
     detailsHydratedForRef.current = hydrationKey
-    const formState = scheduleEditDialogFormState(
+    const nextFormState = scheduleEditDialogFormState(
       schedule,
       defaultStartDate,
       details,
     )
-    setRangeDraft(formState.rangeDraft)
-    setTitle(formState.title)
-    setAllRecurrence(formState.allRecurrence)
-    setContext(formState.context)
-    setColor(formState.color)
-    if (!reminderTouchedRef.current) {
-      setRemindBeforeMinutesState(formState.remindBeforeMinutes)
-    }
+    setEditState((prev) => ({
+      ...nextFormState,
+      remindBeforeMinutes: reminderTouchedRef.current
+        ? prev.remindBeforeMinutes
+        : nextFormState.remindBeforeMinutes,
+    }))
   }, [
     defaultStartDate,
     open,
@@ -127,100 +97,15 @@ export function useCreateScheduleModalState({
     scheduleDetails.isFetching,
   ])
 
-  const createSchedule = useCreateSchedule()
-  const updateSchedule = useUpdateSchedule()
-  const deleteSchedule = useDeleteSchedule()
-  const setScheduleOverride = useSetScheduleOverride()
-  const clearScheduleOverride = useClearScheduleOverride()
-  const isPending =
-    createSchedule.isPending ||
-    updateSchedule.isPending ||
-    deleteSchedule.isPending ||
-    setScheduleOverride.isPending ||
-    clearScheduleOverride.isPending
-  const reminderReady =
-    !schedule || (scheduleDetails.data != null && !scheduleDetails.isFetching)
-
-  const scope = rangeDraft.scope
-  const activeRecurrence = scope === 'all' ? allRecurrence : followingRecurrence
-  const recurrenceType = activeRecurrence.type
-  const daysOfWeek = activeRecurrence.daysOfWeek
-  const dayOfMonth = activeRecurrence.dayOfMonth
-  const occurrenceDate = rangeDraft.occurrenceDate
-  const startDate = scheduleEditStartDate(rangeDraft)
-  const startTime = scheduleEditStartTime(rangeDraft)
-  const endTime = scheduleEditEndTime(rangeDraft)
-
-  const recurrence = recurrenceType
-    ? {
-        type: recurrenceType,
-        interval: activeRecurrence.interval,
-        ...(recurrenceType === 'weekly' && daysOfWeek.length > 0
-          ? { daysOfWeek }
-          : {}),
-        ...(recurrenceType === 'monthly' && dayOfMonth
-          ? { dayOfMonth: Number.parseInt(dayOfMonth, 10) }
-          : {}),
-      }
-    : null
-
-  const updateInputForFollowing = () =>
-    buildFollowingScheduleInput(schedule, rangeDraft, recurrence)
-  const updateInputForAll = () =>
-    buildAllScheduleInput({
-      schedule,
-      draft: rangeDraft,
-      recurrence,
-      title,
-      context,
-      color,
-      remindBeforeMinutes,
-      currentReminder: scheduleDetails.data?.remindBeforeMinutes ?? null,
-      currentDetails: scheduleDetails.data,
-    })
-
-  const rangeAction = currentScheduleEditAction(rangeDraft)
-  const previewRequest = buildScheduleEditPreviewRequest(
-    schedule,
-    rangeDraft,
-    rangeAction,
-    updateInputForFollowing(),
-    updateInputForAll(),
-  )
-  const previewRequestKey =
-    previewRequest == null ? '' : JSON.stringify(previewRequest)
-  const debouncedPreviewRequestKey = useDebounce(previewRequestKey, 300)
-  const isPreviewRequestDebouncing =
-    previewRequest != null && previewRequestKey !== debouncedPreviewRequestKey
-  const activePreviewRequest = isPreviewRequestDebouncing
-    ? null
-    : previewRequest
-  const previewQuery = useScheduleChangePreview(
-    schedule?.scheduleId,
-    activePreviewRequest,
-    open && schedule != null,
-  )
-  const canRestoreThisEvent = Boolean(
-    schedule?.overridden != null ||
-    exceptionQuery.data?.some(
-      (exception) => exception.occurrenceDate === occurrenceDate,
-    ),
-  )
-
   const resetForm = useCallback(() => {
-    const formState = scheduleEditDialogFormState(
-      schedule,
-      defaultStartDate,
-      scheduleDetails.data,
+    setEditState(
+      scheduleEditDialogFormState(
+        schedule,
+        defaultStartDate,
+        scheduleDetails.data,
+      ),
     )
-    setRangeDraft(formState.rangeDraft)
-    setTitle(formState.title)
-    setFollowingRecurrence(formState.followingRecurrence)
-    setAllRecurrence(formState.allRecurrence)
-    setContext(formState.context)
-    setColor(formState.color)
     reminderTouchedRef.current = false
-    setRemindBeforeMinutesState(formState.remindBeforeMinutes)
   }, [defaultStartDate, schedule, scheduleDetails.data])
 
   const handleOpenChange = useCallback(
@@ -231,122 +116,58 @@ export function useCreateScheduleModalState({
     [onOpenChange, resetForm],
   )
 
-  const handleSubmit = () => {
-    if (
-      !startDate ||
-      !startTime ||
-      !endTime ||
-      ((!schedule || scope === 'all') && !title.trim()) ||
-      (scope === 'all' && schedule && !reminderReady) ||
-      (previewRequest != null &&
-        (isPreviewRequestDebouncing ||
-          !previewQuery.isSuccess ||
-          previewQuery.data == null)) ||
-      isPending
-    ) {
-      return
-    }
-
-    if (schedule) {
-      const onSuccess = () => {
-        handleOpenChange(false)
-      }
-      if (scope === 'this') {
-        if (rangeAction == null && previewRequest == null) {
-          handleOpenChange(false)
-          return
-        }
-        if (rangeAction === 'skip') {
-          setScheduleOverride.mutate(
-            {
-              scheduleId: schedule.scheduleId,
-              occurrenceDate,
-              input: { skipped: true },
-            },
-            { onSuccess },
-          )
-        } else if (rangeAction === 'restore') {
-          clearScheduleOverride.mutate(
-            { scheduleId: schedule.scheduleId, occurrenceDate },
-            { onSuccess },
-          )
-        } else {
-          setScheduleOverride.mutate(
-            {
-              scheduleId: schedule.scheduleId,
-              occurrenceDate,
-              input: {
-                date: rangeDraft.thisEvent.date,
-                startTime: rangeDraft.thisEvent.startTime,
-                endTime: rangeDraft.thisEvent.endTime,
-              },
-            },
-            { onSuccess },
-          )
-        }
-      } else if (scope === 'following') {
-        if (rangeAction === 'endSeries') {
-          const endDate = previousScheduleDate(rangeDraft.following.fromDate)
-          if (endSeriesRemovesSchedule(schedule, rangeDraft)) {
-            deleteSchedule.mutate(schedule.scheduleId, { onSuccess })
-          } else {
-            updateSchedule.mutate(
-              { id: schedule.scheduleId, input: { endDate } },
-              { onSuccess },
-            )
-          }
-        } else {
-          updateSchedule.mutate(
-            { id: schedule.scheduleId, input: updateInputForFollowing() },
-            { onSuccess },
-          )
-        }
-      } else {
-        updateSchedule.mutate(
-          { id: schedule.scheduleId, input: updateInputForAll() },
-          { onSuccess },
-        )
-      }
-      return
-    }
-
-    const input: CreateScheduleInput = {
-      title: title.trim(),
-      startDate,
-      startTime,
-      endTime,
-      ...(recurrence ? { recurrence } : {}),
-      ...(remindBeforeMinutes === '' ? {} : { remindBeforeMinutes }),
-      ...(context ? { context } : {}),
-      ...(color ? { color } : {}),
-    }
-
-    createSchedule.mutate(input, {
-      onSuccess: () => {
-        handleOpenChange(false)
-      },
-    })
-  }
-
-  const handleDelete = useCallback(() => {
-    if (!schedule) return
-    deleteSchedule.mutate(schedule.scheduleId, {
-      onSuccess: () => {
-        handleOpenChange(false)
-      },
-    })
-  }, [schedule, deleteSchedule, handleOpenChange])
+  const { rangeDraft } = editState
+  const scope = rangeDraft.scope
+  const activeRecurrence =
+    scope === 'all' ? editState.allRecurrence : editState.followingRecurrence
+  const recurrenceType = activeRecurrence.type
+  const daysOfWeek = activeRecurrence.daysOfWeek
+  const dayOfMonth = activeRecurrence.dayOfMonth
+  const occurrenceDate = rangeDraft.occurrenceDate
+  const startDate = scheduleEditStartDate(rangeDraft)
+  const startTime = scheduleEditStartTime(rangeDraft)
+  const endTime = scheduleEditEndTime(rangeDraft)
+  const preview = useScheduleModalPreview({
+    schedule,
+    editState,
+    details: scheduleDetails.data,
+    open,
+  })
+  const save = useScheduleModalSave({
+    schedule,
+    editState,
+    details: scheduleDetails.data,
+    isDetailsFetching: scheduleDetails.isFetching,
+    rangeAction: preview.rangeAction,
+    previewRequest: preview.previewRequest,
+    previewReady:
+      preview.previewQuery.isSuccess && preview.previewQuery.data != null,
+    isPreviewRequestDebouncing: preview.isPreviewRequestDebouncing,
+    followingInput: preview.followingInput,
+    allInput: preview.allInput,
+    recurrence: preview.recurrence,
+    handleOpenChange,
+  })
+  const canRestoreThisEvent = Boolean(
+    schedule?.overridden != null ||
+    exceptionQuery.data?.some(
+      (exception) => exception.occurrenceDate === occurrenceDate,
+    ),
+  )
 
   const handleRestoreException = useCallback(
     (exceptionOccurrenceDate: string) => {
-      setRangeDraft((prev) => ({
+      setEditState((prev) => ({
         ...prev,
-        scope: 'this',
-        occurrenceDate: exceptionOccurrenceDate,
-        thisEvent: {
-          ...prev.thisEvent,
-          date: exceptionOccurrenceDate,
-          action: 'restore',
+        rangeDraft: {
+          ...prev.rangeDraft,
+          scope: 'this',
+          occurrenceDate: exceptionOccurrenceDate,
+          thisEvent: {
+            ...prev.rangeDraft.thisEvent,
+            date: exceptionOccurrenceDate,
+            action: 'restore',
+          },
         },
       }))
     },
@@ -356,9 +177,11 @@ export function useCreateScheduleModalState({
   const updateActiveRecurrence = (
     updater: (prev: RecurrenceFormDraft) => RecurrenceFormDraft,
   ) => {
-    const setRecurrence =
-      scope === 'all' ? setAllRecurrence : setFollowingRecurrence
-    setRecurrence(updater)
+    setEditState((prev) =>
+      prev.rangeDraft.scope === 'all'
+        ? { ...prev, allRecurrence: updater(prev.allRecurrence) }
+        : { ...prev, followingRecurrence: updater(prev.followingRecurrence) },
+    )
   }
   const setRecurrenceType = (value: RecurrenceType | '') => {
     updateActiveRecurrence((prev) => ({ ...prev, type: value }))
@@ -374,26 +197,37 @@ export function useCreateScheduleModalState({
   }
 
   const setScope = (nextScope: ScheduleEditScope) => {
-    setRangeDraft((prev) => ({ ...prev, scope: nextScope }))
+    setEditState((prev) => ({
+      ...prev,
+      rangeDraft: { ...prev.rangeDraft, scope: nextScope },
+    }))
   }
   const setRangeAction = (action: ScheduleEditAction) => {
-    setRangeDraft((prev) => {
-      if (prev.scope === 'this') {
+    setEditState((prev) => {
+      if (prev.rangeDraft.scope === 'this') {
         if (action === 'endSeries') return prev
         return {
           ...prev,
-          thisEvent: {
-            ...prev.thisEvent,
-            action: prev.thisEvent.action === action ? null : action,
+          rangeDraft: {
+            ...prev.rangeDraft,
+            thisEvent: {
+              ...prev.rangeDraft.thisEvent,
+              action:
+                prev.rangeDraft.thisEvent.action === action ? null : action,
+            },
           },
         }
       }
-      if (prev.scope === 'following') {
+      if (prev.rangeDraft.scope === 'following') {
         return {
           ...prev,
-          following: {
-            ...prev.following,
-            endSeries: action === 'endSeries' && !prev.following.endSeries,
+          rangeDraft: {
+            ...prev.rangeDraft,
+            following: {
+              ...prev.rangeDraft.following,
+              endSeries:
+                action === 'endSeries' && !prev.rangeDraft.following.endSeries,
+            },
           },
         }
       }
@@ -401,47 +235,36 @@ export function useCreateScheduleModalState({
     })
   }
   const setStartDate = (value: string) => {
-    setRangeDraft((prev) => setScheduleEditStartDate(prev, value))
+    setEditState((prev) => ({
+      ...prev,
+      rangeDraft: setScheduleEditStartDate(prev.rangeDraft, value),
+    }))
   }
   const setStartTime = (value: string) => {
-    setRangeDraft((prev) => setScheduleEditStartTime(prev, value))
+    setEditState((prev) => ({
+      ...prev,
+      rangeDraft: setScheduleEditStartTime(prev.rangeDraft, value),
+    }))
   }
   const setEndTime = (value: string) => {
-    setRangeDraft((prev) => setScheduleEditEndTime(prev, value))
+    setEditState((prev) => ({
+      ...prev,
+      rangeDraft: setScheduleEditEndTime(prev.rangeDraft, value),
+    }))
+  }
+  const setTitle = (value: string) => {
+    setEditState((prev) => ({ ...prev, title: value }))
+  }
+  const setContext = (value: typeof editState.context) => {
+    setEditState((prev) => ({ ...prev, context: value }))
+  }
+  const setColor = (value: string) => {
+    setEditState((prev) => ({ ...prev, color: value }))
   }
   const setRemindBeforeMinutes = (value: number | '') => {
     reminderTouchedRef.current = true
-    setRemindBeforeMinutesState(value)
+    setEditState((prev) => ({ ...prev, remindBeforeMinutes: value }))
   }
-
-  const canSubmit = Boolean(
-    ((schedule && scope !== 'all') || title.trim()) &&
-    startDate &&
-    startTime &&
-    endTime &&
-    (scope !== 'all' || !schedule || reminderReady) &&
-    (previewRequest == null ||
-      (!isPreviewRequestDebouncing &&
-        previewQuery.isSuccess &&
-        previewQuery.data != null)),
-  )
-  const previewText =
-    previewRequest == null
-      ? scope === 'following' &&
-        rangeAction === 'endSeries' &&
-        endSeriesRemovesSchedule(schedule, rangeDraft)
-        ? 'Ending the series before its first occurrence removes the schedule.'
-        : null
-      : isPreviewRequestDebouncing || previewQuery.data == null
-        ? null
-        : describeSchedulePreview(
-            previewQuery.data,
-            scope,
-            rangeAction,
-            scope === 'this'
-              ? rangeDraft.thisEvent.date
-              : rangeDraft.following.fromDate,
-          )
 
   const panelProps: SchedulePanelProps = {
     schedule,
@@ -449,12 +272,12 @@ export function useCreateScheduleModalState({
     scope,
     setScope,
     occurrenceDate,
-    rangeAction,
+    rangeAction: preview.rangeAction,
     setRangeAction,
     canRestoreThisEvent,
     canEditTitle: !schedule || scope === 'all',
     canEditSeriesDetails: scope !== 'this',
-    title,
+    title: editState.title,
     setTitle,
     startDate,
     setStartDate,
@@ -468,30 +291,25 @@ export function useCreateScheduleModalState({
     toggleDay,
     dayOfMonth,
     setDayOfMonth,
-    context,
+    context: editState.context,
     setContext,
-    color,
+    color: editState.color,
     setColor,
     exceptions: exceptionQuery.data ?? [],
     isExceptionsLoading: exceptionQuery.isLoading,
     isExceptionsError: exceptionQuery.isError,
     onRestoreException: handleRestoreException,
-    isRestorePending: clearScheduleOverride.isPending,
-    remindBeforeMinutes,
+    isRestorePending: save.isRestorePending,
+    remindBeforeMinutes: editState.remindBeforeMinutes,
     setRemindBeforeMinutes,
-    reminderReady,
-    previewText,
-    isPreviewLoading:
-      previewRequest != null &&
-      (isPreviewRequestDebouncing || previewQuery.isFetching),
-    previewError:
-      activePreviewRequest != null &&
-      (previewQuery.isError ||
-        (previewQuery.isSuccess && previewQuery.data == null)),
-    onDelete: handleDelete,
-    isPending,
-    canSubmit,
-    handleSubmit,
+    reminderReady: save.reminderReady,
+    previewText: preview.previewText,
+    isPreviewLoading: preview.isPreviewLoading,
+    previewError: preview.previewError,
+    onDelete: save.handleDelete,
+    isPending: save.isPending,
+    canSubmit: save.canSubmit,
+    handleSubmit: save.handleSubmit,
   }
 
   return { panelProps }

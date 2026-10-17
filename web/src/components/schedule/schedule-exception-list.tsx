@@ -2,6 +2,13 @@ import { Button } from '@fohte/ui/button'
 
 import type { ScheduleOverride } from '#hooks/use-schedules'
 
+function formatExceptionDate(date: string) {
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+  }).format(new Date(`${date}T12:00:00`))
+  return `${weekday} ${date.slice(5, 7)}-${date.slice(8, 10)}`
+}
+
 export function ScheduleExceptionList({
   exceptions,
   isLoading,
@@ -35,10 +42,10 @@ export function ScheduleExceptionList({
             >
               <span>
                 {exception.skipped
-                  ? `${exception.occurrenceDate} · skipped`
+                  ? `${formatExceptionDate(exception.occurrenceDate)} · skipped`
                   : exception.movedToDate != null
-                    ? `${exception.occurrenceDate} → ${exception.movedToDate}`
-                    : `${exception.occurrenceDate} · time changed`}
+                    ? `${formatExceptionDate(exception.occurrenceDate)} → ${formatExceptionDate(exception.movedToDate)}`
+                    : `${formatExceptionDate(exception.occurrenceDate)} · time changed`}
               </span>
               <Button
                 type="button"

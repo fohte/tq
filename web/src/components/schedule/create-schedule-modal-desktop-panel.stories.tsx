@@ -71,7 +71,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the desktop panel shows the selected start date',
+  name: 'the desktop panel creates a schedule on the selected date',
 }
 
 export const ThisEvent: Story = {
@@ -94,6 +94,15 @@ export const ThisEventPreview: Story = {
     ...ThisEvent.args,
     rangeAction: 'skip',
     previewText: 'Skips this event on Thu, Jan 1. Other events are unchanged.',
+  },
+}
+
+export const ThisEventWithRestore: Story = {
+  name: 'the editor can restore an occurrence with an exception',
+  args: {
+    ...ThisEvent.args,
+    schedule: makeSchedule({ overridden: 'time' }),
+    canRestoreThisEvent: true,
   },
 }
 
@@ -147,6 +156,17 @@ export const AllEventsWithExceptions: Story = {
         skipped: false,
       }),
     ],
+    remindBeforeMinutes: 30,
+  },
+}
+
+export const AllEventsWithReminder: Story = {
+  name: 'the editor shows a reminder for all events',
+  args: {
+    schedule: makeSchedule(),
+    scope: 'all',
+    canEditTitle: true,
+    canEditSeriesDetails: true,
     remindBeforeMinutes: 30,
   },
 }

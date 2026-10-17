@@ -3,6 +3,7 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
+import { formatLocalDate } from '#lib/date-range'
 import { scheduleKeys } from '#lib/query-keys'
 
 type Schedule = InferResponseType<
@@ -87,17 +88,18 @@ export function useScheduleDetails(
 export function useScheduleOverrides(
   scheduleId: string | undefined,
   enabled = true,
+  fromDate = formatLocalDate(new Date()),
 ) {
   return useQuery({
     queryKey:
       scheduleId != null
-        ? scheduleKeys.overrides(scheduleId)
+        ? scheduleKeys.overrides(scheduleId, fromDate)
         : [...scheduleKeys.all, 'overrides', 'disabled'],
     enabled: enabled && scheduleId != null,
     queryFn: async () => {
       const res = await api.api.schedule.events[':scheduleId'].overrides.$get({
         param: { scheduleId: scheduleId ?? '' },
-        query: {},
+        query: { fromDate },
       })
       return unwrapOrThrow(assertOk(res)).json()
     },

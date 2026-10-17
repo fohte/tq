@@ -9,6 +9,16 @@ import {
 } from '#components/schedule/schedule-modal-form-utils'
 import type { Schedule, ScheduleDetails } from '#hooks/use-schedules'
 
+export interface ScheduleEditFormState {
+  rangeDraft: ReturnType<typeof draftWithScheduleDetails>
+  title: string
+  followingRecurrence: RecurrenceFormDraft
+  allRecurrence: RecurrenceFormDraft
+  context: ContextValue | ''
+  color: string
+  remindBeforeMinutes: number | ''
+}
+
 export interface RecurrenceFormDraft {
   type: RecurrenceType | ''
   interval: number
@@ -61,7 +71,7 @@ export function scheduleEditDialogFormState(
   schedule: Schedule | undefined,
   defaultStartDate: string,
   details: ScheduleDetails | undefined,
-) {
+): ScheduleEditFormState {
   return {
     rangeDraft: draftWithScheduleDetails(schedule, defaultStartDate, details),
     title: details?.title ?? schedule?.title ?? '',
@@ -72,13 +82,5 @@ export function scheduleEditDialogFormState(
     context: details?.context ?? scheduleContext(schedule),
     color: details?.color ?? schedule?.color ?? '',
     remindBeforeMinutes: details?.remindBeforeMinutes ?? '',
-  } satisfies {
-    rangeDraft: ReturnType<typeof draftWithScheduleDetails>
-    title: string
-    followingRecurrence: RecurrenceFormDraft
-    allRecurrence: RecurrenceFormDraft
-    context: ContextValue | ''
-    color: string
-    remindBeforeMinutes: number | ''
   }
 }
