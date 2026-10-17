@@ -34,6 +34,7 @@ import {
 import type { ScheduleConstraintDraft } from '#schemas/schedule-constraint-check'
 import {
   checkScheduleConstraints,
+  normalizeScheduleConstraint,
   type ScheduleConstraintEvaluationRange,
   type ScheduleConstraintOccurrence,
   scheduleConstraintSchema,
@@ -74,7 +75,7 @@ export async function loadScheduleConstraint(scheduleId: string) {
     windowEnd: row.windowEnd,
     weekdays,
   })
-  if (parsed.success) return parsed.data
+  if (parsed.success) return normalizeScheduleConstraint(parsed.data)
 
   captureWithFingerprint(
     parsed.error,

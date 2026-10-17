@@ -1,6 +1,9 @@
+import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
+import { db } from '#db/connection'
+import { scheduleConstraintWeekdays } from '#db/schema'
 import { addCalendarDays, calendarDayOfWeek } from '#lib/timezone'
 import { formatDateStr } from '#routes/schedule-expansion'
 import { makeScheduleConstraint } from '#services/schedule-constraint-test-fixtures'
@@ -92,14 +95,18 @@ describe('/api/schedule/events/:id/constraints', () => {
     )
     const constraint = {
       ...input,
-      weekdays: [
-        { dayOfWeek: 1, preference: 'preferred' },
-        { dayOfWeek: 5, preference: 'excluded' },
-      ],
+      weekdays: [{ dayOfWeek: 5, preference: 'excluded' }],
     }
     const snapshot = async () => ({
       set: await responseSnapshot(setResponse),
       get: await responseSnapshot(getResponse),
+      storedWeekdays: await db
+        .select({
+          dayOfWeek: scheduleConstraintWeekdays.dayOfWeek,
+          preference: scheduleConstraintWeekdays.preference,
+        })
+        .from(scheduleConstraintWeekdays)
+        .where(eq(scheduleConstraintWeekdays.scheduleId, schedule.id)),
     })
 
     expect(await snapshot()).toEqual({
@@ -108,6 +115,55 @@ describe('/api/schedule/events/:id/constraints', () => {
         body: { constraint, constraintViolations: [] },
       },
       get: { status: 200, body: { constraint } },
+      storedWeekdays: [{ dayOfWeek: 5, preference: 'excluded' }],
+    })
+  })
+
+  it('replaces weekday preferences on a second put', async () => {
+    const schedule = await createSchedule('2030-05-07')
+    await requestJson(
+      'PUT',
+      `/api/schedule/events/${schedule.id}/constraints`,
+      makeScheduleConstraint({
+        weekdays: [
+          { dayOfWeek: 1, preference: 'if_free' },
+          { dayOfWeek: 5, preference: 'excluded' },
+        ],
+      }),
+    )
+    const setResponse = await requestJson(
+      'PUT',
+      `/api/schedule/events/${schedule.id}/constraints`,
+      makeScheduleConstraint({
+        weekdays: [{ dayOfWeek: 3, preference: 'reserve' }],
+      }),
+    )
+    const getResponse = await requestJson(
+      'GET',
+      `/api/schedule/events/${schedule.id}/constraints`,
+    )
+    const constraint = makeScheduleConstraint({
+      weekdays: [{ dayOfWeek: 3, preference: 'reserve' }],
+    })
+    const snapshot = async () => ({
+      set: await responseSnapshot(setResponse),
+      get: await responseSnapshot(getResponse),
+      storedWeekdays: await db
+        .select({
+          dayOfWeek: scheduleConstraintWeekdays.dayOfWeek,
+          preference: scheduleConstraintWeekdays.preference,
+        })
+        .from(scheduleConstraintWeekdays)
+        .where(eq(scheduleConstraintWeekdays.scheduleId, schedule.id)),
+    })
+
+    expect(await snapshot()).toEqual({
+      set: {
+        status: 200,
+        body: { constraint, constraintViolations: [] },
+      },
+      get: { status: 200, body: { constraint } },
+      storedWeekdays: [{ dayOfWeek: 3, preference: 'reserve' }],
     })
   })
 

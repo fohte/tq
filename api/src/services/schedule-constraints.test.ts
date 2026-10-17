@@ -230,6 +230,21 @@ describe('checkScheduleConstraints', () => {
     ])
   })
 
+  it('treats weekdays without entries as preferred', () => {
+    const occurrence = makeOccurrence('2030-05-07')
+    const snapshot = () => ({
+      omitted: checkScheduleConstraints(makeConstraint(), [occurrence]),
+      explicit: checkScheduleConstraints(
+        makeConstraint({
+          weekdays: [{ dayOfWeek: 2, preference: 'preferred' }],
+        }),
+        [occurrence],
+      ),
+    })
+
+    expect(snapshot()).toEqual({ omitted: [], explicit: [] })
+  })
+
   it('counts a streak across Sunday and Monday as consecutive days', () => {
     expect(
       checkScheduleConstraints(makeConstraint({ maxConsecutiveDays: 2 }), [

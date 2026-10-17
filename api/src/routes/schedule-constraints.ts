@@ -9,7 +9,10 @@ import {
   loadScheduleConstraint,
 } from '#routes/schedule-constraint-evaluation'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
-import { scheduleConstraintSchema } from '#services/schedule-constraints'
+import {
+  normalizeScheduleConstraint,
+  scheduleConstraintSchema,
+} from '#services/schedule-constraints'
 
 export const scheduleConstraintsApp = new Hono()
   .get('/events/:id/constraints', async (c) => {
@@ -24,8 +27,8 @@ export const scheduleConstraintsApp = new Hono()
     zValidator('json', scheduleConstraintSchema),
     async (c) => {
       const scheduleId = c.req.param('id')
-      const input = c.req.valid('json')
-      const { weekdays, ...values } = input
+      const constraint = normalizeScheduleConstraint(c.req.valid('json'))
+      const { weekdays, ...values } = constraint
       const updatedAt = new Date()
       const series = await db.transaction(async (tx) => {
         const existingSeries = await loadScheduleWithRevisions(scheduleId, tx)
@@ -50,12 +53,6 @@ export const scheduleConstraintsApp = new Hono()
       })
       if (!series) return c.json({ error: 'Schedule not found' }, 404)
 
-      const constraint = {
-        ...input,
-        weekdays: [...weekdays].sort(
-          (left, right) => left.dayOfWeek - right.dayOfWeek,
-        ),
-      }
       const evaluation = await evaluateSavedScheduleConstraintViolations(
         series,
         series.revisions[0]?.revision.effectiveFrom,
