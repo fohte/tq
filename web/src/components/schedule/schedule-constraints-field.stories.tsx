@@ -51,11 +51,6 @@ export const MobileSummary: Story = {
   args: { variant: 'mobile' },
 }
 
-export const MobileWithoutConstraints: Story = {
-  name: 'the mobile editor offers a button when no constraints are saved',
-  args: { variant: 'mobile', value: null },
-}
-
 export const MobileEditorExpanded: Story = {
   name: 'the mobile chip expands to show the constraint fields',
   args: { variant: 'mobile', defaultOpen: true },
