@@ -64,6 +64,16 @@ function addGithubWait(
   })
 }
 
+async function resolveWithoutAcknowledging(waitId: string): Promise<void> {
+  await db
+    .update(taskWaits)
+    .set({
+      resolvedAt: new Date('2036-04-04T12:00:00.000Z'),
+      acknowledgedAt: null,
+    })
+    .where(eq(taskWaits.id, waitId))
+}
+
 async function createGithubBlocker(
   taskId: string,
   role: 'subject' | 'blocker' = 'blocker',
@@ -147,8 +157,9 @@ function waitCollectionsSnapshot<TResolved, TDetail, TSummary>(
   detail: TDetail,
   list: TSummary,
   resolvedOnlyList: unknown,
+  pendingReplyList: unknown,
 ) {
-  return { resolved, detail, list, resolvedOnlyList }
+  return { resolved, detail, list, resolvedOnlyList, pendingReplyList }
 }
 
 function waitUpdatesSnapshot<T>(
@@ -446,7 +457,7 @@ describe('task waits API', () => {
     ])
   })
 
-  it('returns wait history in detail and only unresolved summaries in the task list', async () => {
+  it('returns wait history in detail and visible summaries in the task list', async () => {
     const task = await createTask('Waiting task')
     const created = await addWait(
       task.id,
@@ -472,10 +483,15 @@ describe('task waits API', () => {
       `/api/tasks/${resolvedOnlyTask.id}/waits/${resolvedOnlyWait.id}/resolve`,
       { method: 'POST' },
     )
+    const pendingReplyTask = await createTask('Reply received')
+    const pendingReplyWait = await jsonBody<TaskWaitResponse>(
+      await addWait(pendingReplyTask.id, 'Review the response', '2036-04-08'),
+    )
+    await resolveWithoutAcknowledging(pendingReplyWait.id)
     const [detailRes, listRes] = await Promise.all([
       app.request(`/api/tasks/${task.id}`),
       app.request(
-        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id},${resolvedOnlyTask.id}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id},${resolvedOnlyTask.id},${pendingReplyTask.id}`,
       ),
     ])
     const detail = await jsonBody<TaskResponse>(detailRes)
@@ -483,6 +499,9 @@ describe('task waits API', () => {
     const listItem = listItems.find((item) => item.id === task.id)
     const resolvedOnlyListItem = listItems.find(
       (item) => item.id === resolvedOnlyTask.id,
+    )
+    const pendingReplyListItem = listItems.find(
+      (item) => item.id === pendingReplyTask.id,
     )
 
     expect(
@@ -495,6 +514,7 @@ describe('task waits API', () => {
           ?.map(normalizeSummary)
           .sort((left, right) => left.label.localeCompare(right.label)),
         resolvedOnlyListItem?.waits ?? null,
+        pendingReplyListItem?.waits?.map(normalizeSummary) ?? null,
       ),
     ).toEqual({
       resolved: {
@@ -543,6 +563,16 @@ describe('task waits API', () => {
         },
       ],
       resolvedOnlyList: null,
+      pendingReplyList: [
+        {
+          id: 'WAIT_ID',
+          label: 'Review the response',
+          followUpDate: '2036-04-08',
+          githubLinkId: null,
+          resolvedAt: 'RESOLVED_AT',
+          acknowledgedAt: null,
+        },
+      ],
     })
   })
 
@@ -682,7 +712,7 @@ describe('task waits API', () => {
     })
   })
 
-  it('treats only unresolved waits as blockers and finds follow-ups due today', async () => {
+  it('includes unresolved and unacknowledged resolved waits in blocker filters', async () => {
     const dueTask = await createTask('Due wait')
     const futureTask = await createTask('Future wait')
     const resolvedTask = await createTask('Resolved wait')
@@ -710,10 +740,7 @@ describe('task waits API', () => {
         addDaysAtOffset(now, tzOffset, -1),
       ),
     )
-    await db
-      .update(taskWaits)
-      .set({ resolvedAt: new Date() })
-      .where(eq(taskWaits.id, unacknowledged.id))
+    await resolveWithoutAcknowledging(unacknowledged.id)
 
     const taskIds = async (query: string) => {
       const response = await app.request(
@@ -747,17 +774,20 @@ describe('task waits API', () => {
         await taskIds('has:resolved-wait'),
       ),
     ).toEqual({
-      blockers: { status: 200, taskIds: [dueTask.id, futureTask.id].sort() },
+      blockers: {
+        status: 200,
+        taskIds: [dueTask.id, futureTask.id, unacknowledgedTask.id].sort(),
+      },
       noBlockers: {
         status: 200,
-        taskIds: [resolvedTask.id, unacknowledgedTask.id, clearTask.id].sort(),
+        taskIds: [resolvedTask.id, clearTask.id].sort(),
       },
       followUpDue: { status: 200, taskIds: [dueTask.id] },
       resolvedWait: { status: 200, taskIds: [unacknowledgedTask.id] },
     })
   })
 
-  it('includes only due follow-ups among blocked tasks in queue candidates', async () => {
+  it('includes due follow-ups and unacknowledged replies among blocked tasks in queue candidates', async () => {
     const now = new Date()
     const tzOffset = offsetWithDifferentUtcDate(now)
     const today = dateAtOffset(now, tzOffset)
@@ -777,6 +807,13 @@ describe('task waits API', () => {
     const overdueFollowUp = await createTask('Overdue follow-up candidate')
     const futureFollowUp = await createTask('Future follow-up')
     const resolvedFollowUp = await createTask('Resolved follow-up')
+    const resolvedReplyBlocker = await createTask('Reply wait blocker')
+    const resolvedReplyCandidate = await createTask('Reply received candidate')
+    await app.request(`/api/tasks/${resolvedReplyCandidate.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blockedBy: [resolvedReplyBlocker.id] }),
+    })
     await addWait(dueFollowUp.id, 'Check in', today)
     await addWait(
       overdueFollowUp.id,
@@ -799,6 +836,10 @@ describe('task waits API', () => {
       `/api/tasks/${resolvedFollowUp.id}/waits/${resolvedWait.id}/resolve`,
       { method: 'POST' },
     )
+    const resolvedReply = await jsonBody<TaskWaitResponse>(
+      await addWait(resolvedReplyCandidate.id, 'Review received', today),
+    )
+    await resolveWithoutAcknowledging(resolvedReply.id)
 
     const response = await app.request(
       `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
@@ -812,7 +853,12 @@ describe('task waits API', () => {
       ),
     ).toEqual({
       status: 200,
-      body: [overdueFollowUp.id, dueFollowUp.id, regularCandidate.id],
+      body: [
+        resolvedReplyCandidate.id,
+        overdueFollowUp.id,
+        dueFollowUp.id,
+        regularCandidate.id,
+      ],
     })
   })
 
@@ -825,6 +871,9 @@ describe('task waits API', () => {
       commitment: 'inbox',
     })
     const followUp = await createTask('Follow-up task', {
+      commitment: 'inbox',
+    })
+    const waitResolved = await createTask('Reply received task', {
       commitment: 'inbox',
     })
     await createTask('Due today task', {
@@ -843,6 +892,10 @@ describe('task waits API', () => {
       commitment: 'active',
     })
     await addWait(followUp.id, 'Check in', today)
+    const resolvedReply = await jsonBody<TaskWaitResponse>(
+      await addWait(waitResolved.id, 'Review received', today),
+    )
+    await resolveWithoutAcknowledging(resolvedReply.id)
 
     const response = await app.request(
       `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
@@ -860,6 +913,7 @@ describe('task waits API', () => {
     ).toEqual({
       status: 200,
       body: [
+        { title: 'Reply received task', reason: { kind: 'wait-resolved' } },
         { title: 'Overdue task', reason: { kind: 'overdue', days: 2 } },
         { title: 'Follow-up task', reason: { kind: 'follow-up', days: 0 } },
         { title: 'Due today task', reason: { kind: 'due-today' } },
@@ -1002,12 +1056,7 @@ describe('task waits API', () => {
         addDaysAtOffset(now, tzOffset, -5),
       ),
     )
-    await app.request(
-      `/api/tasks/${resolved.id}/waits/${resolvedWait.id}/resolve`,
-      {
-        method: 'POST',
-      },
-    )
+    await resolveWithoutAcknowledging(resolvedWait.id)
 
     const response = await app.request(
       '/api/tasks?view=full&context=all&status=todo&limit=unlimited' +
@@ -1023,6 +1072,7 @@ describe('task waits API', () => {
     ).toEqual({
       status: 200,
       body: [
+        'Resolved wait',
         'Earlier follow-up',
         'Multiple follow-ups',
         'Later follow-up',

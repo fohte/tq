@@ -1,4 +1,7 @@
+import { isTaskWaitResolvedAndUnacknowledged } from '#services/task-waits'
+
 export type TaskQueueCandidateReason =
+  | { kind: 'wait-resolved' }
   | { kind: 'overdue'; days: number }
   | { kind: 'follow-up'; days: number }
   | { kind: 'due-today' }
@@ -11,7 +14,13 @@ interface CandidateTask {
   dueDate: string | null
   startDate: string | null
   commitment: string
-  waits?: { followUpDate: string; resolvedAt: string | null }[] | undefined
+  waits?:
+    | {
+        followUpDate: string
+        resolvedAt: string | null
+        acknowledgedAt: string | null
+      }[]
+    | undefined
 }
 
 function daysBetween(fromDate: string, toDate: string) {
@@ -25,6 +34,10 @@ export function getTaskQueueCandidateReason(
   // Keep this precedence aligned with resolveTaskCandidateOrderBy so each
   // candidate's displayed reason matches the category that sorted it.
   if (task.status === 'completed') return null
+
+  if (task.waits?.some(isTaskWaitResolvedAndUnacknowledged) === true) {
+    return { kind: 'wait-resolved' }
+  }
 
   const followUpDate = task.waits
     ?.filter(

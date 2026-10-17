@@ -26,3 +26,13 @@ type Story = StoryObj<typeof meta>
 export const AddWait: Story = {
   name: 'the dialog is ready to add a Markdown reply wait',
 }
+
+export const GitHubReplyWait: Story = {
+  name: 'the dialog lets a GitHub reply wait omit its Markdown body',
+  args: {
+    title: 'Wait for GitHub reply',
+    submitLabel: 'Enable',
+    body: '',
+    bodyRequired: false,
+  },
+}

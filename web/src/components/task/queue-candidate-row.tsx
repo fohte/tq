@@ -15,7 +15,8 @@ export function CandidateReasonBadge({ reason }: { reason: CandidateReason }) {
     <span
       className={cn(
         'shrink-0 font-mono text-xs',
-        reason.kind === 'overdue' ||
+        reason.kind === 'wait-resolved' ||
+          reason.kind === 'overdue' ||
           (reason.kind === 'follow-up' && reason.days > 0)
           ? 'text-primary'
           : 'text-muted-foreground',

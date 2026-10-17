@@ -25,6 +25,7 @@ import {
 } from '#routes/tasks/checklist-data'
 import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
 import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
+import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 import {
   getOpenGithubBlockerRefsByTaskId,
   type GithubBlockerRef,
@@ -34,7 +35,7 @@ import {
   getDuplicateOfNumbersByTaskId,
 } from '#services/task-relations'
 import {
-  getUnresolvedTaskWaitSummariesByTaskId,
+  getVisibleTaskWaitSummariesByTaskId,
   type TaskWaitSummary,
 } from '#services/task-waits'
 
@@ -49,10 +50,11 @@ function resolvePrimaryTaskListOrderBy(
       return order === 'desc'
         ? sql`${tasks.dueDate} DESC NULLS LAST`
         : sql`${tasks.dueDate} ASC NULLS LAST`
-    case 'follow-up':
-      return order === 'desc'
-        ? sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) DESC NULLS LAST`
-        : sql`(${earliestUnresolvedTaskWaitFollowUpSubquery()}) ASC NULLS LAST`
+    case 'follow-up': {
+      const waitResolved = hasUnacknowledgedResolvedTaskWaitCondition()
+      const direction = order === 'desc' ? sql`DESC` : sql`ASC`
+      return sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) ${direction} NULLS LAST`
+    }
     case 'created':
     default:
       return order === 'desc' ? desc(tasks.createdAt) : tasks.createdAt
@@ -384,7 +386,7 @@ async function hydrateTaskListRowsWith<
     getDuplicateOfNumbersByTaskId(ids),
     getBlockedByNumbersByTaskId(ids),
     getOpenGithubBlockerRefsByTaskId(ids),
-    getUnresolvedTaskWaitSummariesByTaskId(ids),
+    getVisibleTaskWaitSummariesByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
   ])

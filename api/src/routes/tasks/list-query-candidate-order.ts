@@ -5,9 +5,12 @@ import {
   earliestUnresolvedTaskWaitFollowUpSubquery,
   followUpDueTaskWaitSubquery,
 } from '#routes/tasks/list-query-waits'
+import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 
 export function resolveTaskCandidateOrderBy(candidateDate: string): SQL[] {
   const hasDueFollowUp = exists(followUpDueTaskWaitSubquery(candidateDate))
+  const hasUnacknowledgedResolvedWait =
+    hasUnacknowledgedResolvedTaskWaitCondition()
   const isOverdue = sql`
     NOT (${hasDueFollowUp})
     AND ${tasks.status} <> 'completed'
@@ -30,6 +33,7 @@ export function resolveTaskCandidateOrderBy(candidateDate: string): SQL[] {
   return [
     sql`CASE
       WHEN ${tasks.status} = 'completed' THEN 6
+      WHEN ${hasUnacknowledgedResolvedWait} THEN -1
       WHEN ${hasDueFollowUp} THEN 1
       WHEN ${tasks.dueDate} < ${candidateDate} THEN 0
       WHEN ${tasks.dueDate} = ${candidateDate} THEN 2

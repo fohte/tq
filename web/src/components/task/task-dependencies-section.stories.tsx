@@ -57,6 +57,22 @@ const githubBlockers = [
   }),
 ]
 
+const githubReplyBlocker = makeGithubBlocker({
+  id: 'github-blocker-reply',
+  owner: 'example-team',
+  repo: 'sample-project',
+  number: 175,
+  title: 'Review the proposed change',
+})
+
+const githubResolvedReplyBlocker = makeGithubBlocker({
+  id: 'github-blocker-resolved-reply',
+  owner: 'example-team',
+  repo: 'sample-project',
+  number: 176,
+  title: 'Review the follow-up change',
+})
+
 const waits: TaskWait[] = [
   makeTaskWait({
     body: 'Review the proposal\n\nPlease confirm the updated timeline.',
@@ -70,7 +86,22 @@ const waits: TaskWait[] = [
     resolvedAt: '2099-10-11T00:00:00.000Z',
     acknowledgedAt: '2099-10-11T00:00:00.000Z',
   }),
+  makeTaskWait({
+    id: 'wait-example-003',
+    body: 'Review received',
+    label: 'Review received',
+    githubLinkId: githubResolvedReplyBlocker.id,
+    resolvedAt: '2099-10-12T00:00:00.000Z',
+    acknowledgedAt: null,
+  }),
 ]
+
+const githubReplyWait = makeTaskWait({
+  id: 'wait-example-004',
+  body: 'Please review the change',
+  label: 'Please review the change',
+  githubLinkId: githubReplyBlocker.id,
+})
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -154,12 +185,22 @@ export const WithGitHubBlockers: Story = {
   },
 }
 
+export const WithGithubReplyWait: Story = {
+  name: 'the GitHub blocker waits for a reply and a follow-up date',
+  args: {
+    blockedBy: [],
+    blocking: [],
+    githubBlockers: [githubReplyBlocker],
+    waits: [githubReplyWait],
+  },
+}
+
 export const WithWaits: Story = {
   name: 'the section keeps active and resolved reply waits visible',
   args: {
     blockedBy: blockedByTasks.slice(0, 1),
     blocking: [],
-    githubBlockers: [],
+    githubBlockers: [githubResolvedReplyBlocker],
     waits,
   },
 }

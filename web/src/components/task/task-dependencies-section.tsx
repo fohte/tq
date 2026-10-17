@@ -1,34 +1,26 @@
 import { Button } from '@fohte/ui/button'
-import { Input } from '@fohte/ui/input'
 import { Panel } from '@fohte/ui/panel'
-import { Check, Hourglass, Plus, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Plus, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
+import { GithubBlockerRowAppearance } from '#components/task/github-blocker-row-appearance'
 import { GithubBlockerUpdateError } from '#components/task/github-blocker-update-error'
-import { GitHubNotifyEventsPicker } from '#components/task/github-notify-events-picker'
-import { GithubRefSummary } from '#components/task/github-ref-summary'
+import { GithubWaitModeSelect } from '#components/task/github-wait-mode-select'
 import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
+import { TaskWaitEntry } from '#components/task/task-wait-entry'
 import { TaskWaitFormDialog } from '#components/task/task-wait-form-dialog'
 import { TaskWaitMutationError } from '#components/task/task-wait-mutation-error'
-import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
 import { SectionHeading } from '#components/ui/section-heading'
-import { useDebouncedSave } from '#hooks/use-debounced-save'
 import type { GithubBlocker } from '#hooks/use-github-link'
 import { useUpdateGithubLinkNotifyEvents } from '#hooks/use-github-link'
 import type { SearchResult } from '#hooks/use-search'
-import {
-  useCreateTaskWait,
-  useDeleteTaskWait,
-  useResolveTaskWait,
-  useUpdateTaskWait,
-} from '#hooks/use-task-waits'
+import { useCreateTaskWait, useDeleteTaskWait } from '#hooks/use-task-waits'
 import type { LinkedTaskSummary, TaskWait } from '#hooks/use-tasks'
 import { useUpdateTaskBlockedBy } from '#hooks/use-tasks'
 import { addLocalDays, formatLocalDate } from '#lib/date-range'
-import { formatShortDate } from '#lib/task-due-date'
-import { cn } from '#lib/utils'
+import { isTaskWaitBlocking, needsWaitAcknowledgement } from '#lib/task-waits'
 
 export function TaskDependenciesSection({
   taskId,
@@ -89,9 +81,12 @@ function BlockedByGroup({
   const [waitDialogOpen, setWaitDialogOpen] = useState(false)
   const [newWaitBody, setNewWaitBody] = useState('')
   const [newWaitFollowUpDate, setNewWaitFollowUpDate] = useState('')
+  const [githubWaitBlocker, setGithubWaitBlocker] =
+    useState<GithubBlocker | null>(null)
   const updateBlockedBy = useUpdateTaskBlockedBy()
   const updateNotifyEvents = useUpdateGithubLinkNotifyEvents(taskId)
   const createWait = useCreateTaskWait()
+  const deleteWait = useDeleteTaskWait(taskId)
   const githubBlockerUrls = githubBlockers.map(({ url }) => url)
 
   const excludedTaskIds = useMemo(
@@ -105,13 +100,15 @@ function BlockedByGroup({
         blocked by
       </span>
       <Panel padding="none">
-        {waits.map((wait) => (
-          <TaskWaitEntry
-            key={`${wait.id}:${wait.resolvedAt ?? ''}`}
-            taskId={taskId}
-            wait={wait}
-          />
-        ))}
+        {waits
+          .filter((wait) => wait.githubLinkId == null)
+          .map((wait) => (
+            <TaskWaitEntry
+              key={`${wait.id}:${wait.resolvedAt ?? ''}`}
+              taskId={taskId}
+              wait={wait}
+            />
+          ))}
         {blockedBy.map((task) => (
           <TaskRowAppearance
             key={task.id}
@@ -138,54 +135,64 @@ function BlockedByGroup({
             }
           />
         ))}
-        {githubBlockers.map((blocker) => (
-          <div
-            key={blocker.id}
-            className="flex items-center gap-2 border-b border-border px-3 py-2 last:border-b-0"
-          >
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <a
-                href={blocker.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-w-0 items-center gap-2 text-sm hover:underline"
-                title={`${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
-              >
-                <GithubRefSummary
-                  kind={blocker.kind}
-                  state={blocker.state}
-                  owner={blocker.owner}
-                  repo={blocker.repo}
-                  number={blocker.number}
-                  title={blocker.title}
-                  refClassName="min-w-0 shrink truncate"
-                  titleClassName={
-                    blocker.state === 'open'
-                      ? 'min-w-0 flex-1'
-                      : 'min-w-0 flex-1 text-muted-foreground'
-                  }
-                />
-              </a>
-              <span className="font-mono text-2xs text-muted-foreground-faint">
-                github · {blocker.state}
-              </span>
-            </div>
-            <GitHubNotifyEventsPicker
-              value={blocker.notifyEvents}
-              onChange={(notifyEvents) => {
+        {githubBlockers.map((blocker) => {
+          const linkedReplyWaits = waits.filter(
+            (wait) => wait.githubLinkId === blocker.id,
+          )
+          const activeReplyWait = linkedReplyWaits.find(isTaskWaitBlocking)
+          const replyWait =
+            activeReplyWait ??
+            linkedReplyWaits[linkedReplyWaits.length - 1] ??
+            null
+          const waitMode =
+            activeReplyWait != null ? 'until-reply' : 'until-closed'
+          const handleWaitModeChange = (
+            mode: 'until-closed' | 'until-reply',
+          ) => {
+            if (mode === 'until-closed') {
+              if (activeReplyWait != null) deleteWait.mutate(activeReplyWait.id)
+              return
+            }
+            if (blocker.state !== 'open') return
+
+            createWait.reset()
+            setNewWaitBody('')
+            setNewWaitFollowUpDate(addLocalDays(formatLocalDate(new Date()), 3))
+            setGithubWaitBlocker(blocker)
+            setWaitDialogOpen(true)
+          }
+          const waitModeControl =
+            blocker.state === 'open' ? (
+              <GithubWaitModeSelect
+                blocker={blocker}
+                value={waitMode}
+                disabled={createWait.isPending || deleteWait.isPending}
+                onChange={handleWaitModeChange}
+              />
+            ) : undefined
+
+          return (
+            <GithubBlockerRowAppearance
+              key={blocker.id}
+              blocker={blocker}
+              waitModeControl={
+                activeReplyWait == null ? waitModeControl : undefined
+              }
+              needsAcknowledgement={
+                replyWait != null && needsWaitAcknowledgement(replyWait)
+              }
+              resolved={replyWait != null && activeReplyWait == null}
+              notifyEventsDisabled={
+                updateNotifyEvents.isPending || updateBlockedBy.isPending
+              }
+              removeDisabled={updateBlockedBy.isPending}
+              onNotifyEventsChange={(notifyEvents) => {
                 updateNotifyEvents.mutate({
                   linkId: blocker.id,
                   notifyEvents,
                 })
               }}
-              disabled={
-                updateNotifyEvents.isPending || updateBlockedBy.isPending
-              }
-            />
-            <Button
-              type="button"
-              variant="plain"
-              onClick={() => {
+              onRemove={() => {
                 updateBlockedBy.mutate({
                   id: taskId,
                   blockedBy,
@@ -194,14 +201,21 @@ function BlockedByGroup({
                   ),
                 })
               }}
-              disabled={updateBlockedBy.isPending}
-              aria-label={`Remove ${blocker.owner}/${blocker.repo}#${String(blocker.number)} as blocker`}
-              className="size-6 shrink-0"
             >
-              <X className="size-3" />
-            </Button>
-          </div>
-        ))}
+              {replyWait != null && (
+                <TaskWaitEntry
+                  key={`${replyWait.id}:${replyWait.resolvedAt ?? ''}`}
+                  taskId={taskId}
+                  wait={replyWait}
+                  layout="github-blocker"
+                  waitModeControl={
+                    activeReplyWait != null ? waitModeControl : undefined
+                  }
+                />
+              )}
+            </GithubBlockerRowAppearance>
+          )
+        })}
         <PanelAddRow
           icon={Plus}
           label="add blocker"
@@ -218,6 +232,15 @@ function BlockedByGroup({
             updateBlockedBy.error instanceof Error
               ? updateBlockedBy.error.message
               : 'Unable to update blockers.'
+          }
+        />
+      )}
+      {deleteWait.isError && (
+        <TaskWaitMutationError
+          message={
+            deleteWait.error instanceof Error
+              ? deleteWait.error.message
+              : 'Unable to remove the GitHub reply wait.'
           }
         />
       )}
@@ -251,6 +274,7 @@ function BlockedByGroup({
         onSelectWait={(body) => {
           createWait.reset()
           setDialogOpen(false)
+          setGithubWaitBlocker(null)
           setNewWaitBody(body)
           setNewWaitFollowUpDate(addLocalDays(formatLocalDate(new Date()), 3))
           setWaitDialogOpen(true)
@@ -259,9 +283,15 @@ function BlockedByGroup({
 
       <TaskWaitFormDialog
         open={waitDialogOpen}
-        onOpenChange={setWaitDialogOpen}
+        onOpenChange={(open) => {
+          setWaitDialogOpen(open)
+          if (!open) setGithubWaitBlocker(null)
+        }}
         body={newWaitBody}
         followUpDate={newWaitFollowUpDate}
+        title={githubWaitBlocker == null ? 'Wait for' : 'Wait for GitHub reply'}
+        submitLabel={githubWaitBlocker == null ? 'Add' : 'Enable'}
+        bodyRequired={githubWaitBlocker == null}
         onBodyChange={setNewWaitBody}
         onFollowUpDateChange={setNewWaitFollowUpDate}
         isPending={createWait.isPending}
@@ -271,171 +301,27 @@ function BlockedByGroup({
             : undefined
         }
         onSubmit={() => {
-          createWait.mutate(
-            {
-              taskId,
-              body: newWaitBody,
-              followUpDate: newWaitFollowUpDate,
+          const input =
+            githubWaitBlocker == null
+              ? {
+                  taskId,
+                  body: newWaitBody,
+                  followUpDate: newWaitFollowUpDate,
+                }
+              : {
+                  taskId,
+                  followUpDate: newWaitFollowUpDate,
+                  githubUrl: githubWaitBlocker.url,
+                  ...(newWaitBody.trim() === '' ? {} : { body: newWaitBody }),
+                }
+          createWait.mutate(input, {
+            onSuccess: () => {
+              setWaitDialogOpen(false)
+              setGithubWaitBlocker(null)
             },
-            {
-              onSuccess: () => {
-                setWaitDialogOpen(false)
-              },
-            },
-          )
+          })
         }}
       />
-    </div>
-  )
-}
-
-function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
-  const [followUpDate, setFollowUpDate] = useState(wait.followUpDate)
-  useEffect(() => {
-    setFollowUpDate(wait.followUpDate)
-  }, [wait.followUpDate])
-  const updateWait = useUpdateTaskWait(taskId)
-  const resolveWait = useResolveTaskWait(taskId)
-  const deleteWait = useDeleteTaskWait(taskId)
-  const { onChange, flush, cancel } = useDebouncedSave((body) => {
-    updateWait.mutate({ waitId: wait.id, body })
-  })
-  const isResolved = wait.resolvedAt != null
-  const disabled =
-    updateWait.isPending || resolveWait.isPending || deleteWait.isPending
-  const resolvedAt = wait.resolvedAt
-
-  const saveFollowUpDate = () => {
-    if (followUpDate === wait.followUpDate) return
-    updateWait.mutate(
-      { waitId: wait.id, followUpDate },
-      {
-        onError: () => {
-          setFollowUpDate(wait.followUpDate)
-        },
-      },
-    )
-  }
-
-  return (
-    <div
-      className={cn(
-        'flex flex-col gap-1.5 border-b border-border px-3 py-2 last:border-b-0',
-        isResolved && 'opacity-55',
-      )}
-    >
-      <div className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted-foreground">
-        <Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
-        <span>{isResolved ? 'resolved' : 'waiting'}</span>
-        {resolvedAt != null ? (
-          <span className="ml-auto text-muted-foreground-faint">
-            resolved {formatShortDate(formatLocalDate(new Date(resolvedAt)))}
-          </span>
-        ) : (
-          <label className="ml-auto inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 text-muted-foreground-faint">
-            follow up
-            <Input
-              aria-label={`Follow-up date for ${wait.label}`}
-              type="date"
-              variant="ghost"
-              required
-              value={followUpDate}
-              disabled={disabled}
-              onBlur={(event) => {
-                if (
-                  event.relatedTarget instanceof Element &&
-                  event.relatedTarget.closest('[data-wait-action]') != null
-                )
-                  return
-                saveFollowUpDate()
-              }}
-              onChange={(event) => {
-                const nextFollowUpDate = event.target.value
-                if (nextFollowUpDate !== '') {
-                  setFollowUpDate(nextFollowUpDate)
-                }
-              }}
-              className="h-7 w-32 mx-0"
-            />
-          </label>
-        )}
-        {!isResolved && (
-          <Button
-            type="button"
-            variant="plain"
-            disabled={disabled}
-            data-wait-action="resolve"
-            onClick={() => {
-              flush()
-              saveFollowUpDate()
-              resolveWait.mutate(wait.id)
-            }}
-            aria-label={`Resolve wait: ${wait.label}`}
-            className="shrink-0"
-          >
-            <span className="flex items-center gap-1">
-              <Check className="size-3.5" aria-hidden="true" />
-              resolve
-            </span>
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="plain"
-          disabled={disabled}
-          data-wait-action="remove"
-          onClick={() => {
-            cancel()
-            deleteWait.mutate(wait.id)
-          }}
-          aria-label={`Remove wait: ${wait.label}`}
-          className="size-6 shrink-0"
-        >
-          <X className="size-3" aria-hidden="true" />
-        </Button>
-      </div>
-      <div
-        className={cn(
-          'pl-5 font-sans text-sm leading-relaxed',
-          isResolved && 'text-muted-foreground line-through',
-        )}
-      >
-        <EditableMarkdownDescription
-          variant="inline"
-          defaultValue={wait.body}
-          placeholder="Add wait details..."
-          editButtonLabel="Edit wait details"
-          onChange={onChange}
-          onExitEditMode={flush}
-        />
-      </div>
-      {updateWait.isError && (
-        <TaskWaitMutationError
-          message={
-            updateWait.error instanceof Error
-              ? updateWait.error.message
-              : 'Unable to update wait.'
-          }
-        />
-      )}
-      {resolveWait.isError && (
-        <TaskWaitMutationError
-          message={
-            resolveWait.error instanceof Error
-              ? resolveWait.error.message
-              : 'Unable to resolve wait.'
-          }
-        />
-      )}
-      {deleteWait.isError && (
-        <TaskWaitMutationError
-          message={
-            deleteWait.error instanceof Error
-              ? deleteWait.error.message
-              : 'Unable to remove wait.'
-          }
-        />
-      )}
     </div>
   )
 }

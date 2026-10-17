@@ -57,3 +57,33 @@ export const OverdueWait: Story = {
     waits: [makeTaskWaitSummary({ followUpDate: '2000-01-01' })],
   },
 }
+
+export const WaitResolved: Story = {
+  name: 'the badge emphasizes a reply that needs acknowledgement',
+  args: {
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    waits: [
+      makeTaskWaitSummary({
+        label: 'Review the response',
+        resolvedAt: '2099-10-12T00:00:00.000Z',
+        acknowledgedAt: null,
+      }),
+    ],
+  },
+}
+
+export const WaitResolvedWithAnotherBlocker: Story = {
+  name: 'the badge counts blockers while highlighting the received reply',
+  args: {
+    blockedByNumbers: [312],
+    blockedByGithubRefs: [],
+    waits: [
+      makeTaskWaitSummary({
+        label: 'Review the response',
+        resolvedAt: '2099-10-12T00:00:00.000Z',
+        acknowledgedAt: null,
+      }),
+    ],
+  },
+}

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +20,7 @@ import {
 } from '#hooks/use-github-link'
 import { useSearchTasks } from '#hooks/use-search'
 import {
+  useAcknowledgeTaskWait,
   useCreateTaskWait,
   useDeleteTaskWait,
   useResolveTaskWait,
@@ -48,6 +55,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 })
 
 vi.mock('#hooks/use-task-waits', () => ({
+  useAcknowledgeTaskWait: vi.fn(),
   useCreateTaskWait: vi.fn(),
   useDeleteTaskWait: vi.fn(),
   useResolveTaskWait: vi.fn(),
@@ -62,12 +70,15 @@ const mockUseUpdateGithubLinkNotifyEvents = vi.mocked(
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
 const mockUseUpdateTaskBlockedBy = vi.mocked(useUpdateTaskBlockedBy)
 const mockUseCreateTaskWait = vi.mocked(useCreateTaskWait)
+const mockUseAcknowledgeTaskWait = vi.mocked(useAcknowledgeTaskWait)
 const mockUseDeleteTaskWait = vi.mocked(useDeleteTaskWait)
 const mockUseResolveTaskWait = vi.mocked(useResolveTaskWait)
 const mockUseUpdateTaskWait = vi.mocked(useUpdateTaskWait)
 const updateBlockedBy = vi.fn()
 const updateNotifyEvents = vi.fn()
 const createWait = vi.fn<ReturnType<typeof useCreateTaskWait>['mutate']>()
+const acknowledgeWait =
+  vi.fn<ReturnType<typeof useAcknowledgeTaskWait>['mutate']>()
 let createWaitError: Error | null = null
 const resetCreateWait = vi.fn(() => {
   createWaitError = null
@@ -84,6 +95,7 @@ beforeEach(() => {
   updateBlockedBy.mockReset()
   updateNotifyEvents.mockReset()
   createWait.mockReset()
+  acknowledgeWait.mockReset()
   createWaitError = null
   resetCreateWait.mockClear()
   updateWait.mockReset()
@@ -120,6 +132,12 @@ beforeEach(() => {
       isPending: false,
       error: createWaitError,
       reset: resetCreateWait,
+    }),
+  )
+  mockUseAcknowledgeTaskWait.mockReturnValue(
+    partialMutation<ReturnType<typeof useAcknowledgeTaskWait>>({
+      mutate: acknowledgeWait,
+      isPending: false,
     }),
   )
   mockUseUpdateTaskWait.mockReturnValue(
@@ -337,6 +355,308 @@ describe('TaskDependenciesSection', () => {
     })
   })
 
+  it('enables a GitHub reply wait with an optional body and a default follow-up date', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const user = userEvent.setup()
+    const followUpDate = addLocalDays(formatLocalDate(new Date()), 3)
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[]}
+      />,
+    )
+
+    await user.selectOptions(
+      screen.getByRole('combobox', {
+        name: 'Wait mode for example-team/sample-project#2048',
+      }),
+      'until-reply',
+    )
+    const bodyInput = screen.getByRole('textbox', { name: 'Wait description' })
+    const followUpInput = screen.getByLabelText('Follow-up date')
+    await user.click(screen.getByRole('button', { name: 'Enable' }))
+
+    const readActual = () => ({
+      title: screen.getByRole('heading', { name: 'Wait for GitHub reply' })
+        .textContent,
+      body: bodyInput instanceof HTMLTextAreaElement ? bodyInput.value : null,
+      followUpDate:
+        followUpInput instanceof HTMLInputElement ? followUpInput.value : null,
+      createCalls: createWait.mock.calls.map(([input]) => input),
+    })
+
+    expect(readActual()).toEqual({
+      title: 'Wait for GitHub reply',
+      body: '',
+      followUpDate,
+      createCalls: [{ taskId, followUpDate, githubUrl: blocker.url }],
+    })
+  })
+
+  it('returns a GitHub blocker to until closed by removing its reply wait', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const wait = makeTaskWait({
+      githubLinkId: blocker.id,
+      body: null,
+      label: 'Waiting for GitHub activity',
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[wait]}
+      />,
+    )
+
+    await user.selectOptions(
+      screen.getByRole('combobox', {
+        name: 'Wait mode for example-team/sample-project#2048',
+      }),
+      'until-closed',
+    )
+
+    expect(deleteWait.mock.calls).toEqual([[wait.id]])
+  })
+
+  it('does not show a wait mode selector for a closed GitHub blocker', () => {
+    const blocker = makeGithubBlocker({
+      id: 'github-blocker-merged',
+      kind: 'pull_request',
+      state: 'merged',
+    })
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[]}
+      />,
+    )
+
+    const blockerGroup = screen.getByRole('group', {
+      name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
+    })
+
+    expect(
+      within(blockerGroup)
+        .queryAllByRole('combobox')
+        .map((element) => element.getAttribute('aria-label')),
+    ).toEqual([])
+  })
+
+  it('shows and acknowledges a resolved GitHub reply on its blocker row', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const wait = makeTaskWait({
+      label: 'Review feedback',
+      githubLinkId: blocker.id,
+      body: 'Review feedback',
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: null,
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[wait]}
+      />,
+    )
+
+    const blockerGroup = screen.getByRole('group', {
+      name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
+    })
+    const acknowledgeButton = within(blockerGroup).getByRole('button', {
+      name: 'Acknowledge wait: Review feedback',
+    })
+
+    const readInitialState = () => ({
+      waitResolvedLabel:
+        within(blockerGroup).getByText('wait resolved').textContent,
+      waitMode:
+        within(blockerGroup).getByRole<HTMLSelectElement>('combobox').value,
+      actionLabel: acknowledgeButton.getAttribute('aria-label'),
+      highlighted: blockerGroup.classList.contains('text-primary'),
+    })
+
+    const initial = readInitialState()
+    await user.click(acknowledgeButton)
+
+    const readActual = () => ({
+      initial,
+      acknowledgeCalls: acknowledgeWait.mock.calls,
+    })
+    expect(readActual()).toEqual({
+      initial: {
+        waitResolvedLabel: 'wait resolved',
+        waitMode: 'until-reply',
+        actionLabel: 'Acknowledge wait: Review feedback',
+        highlighted: true,
+      },
+      acknowledgeCalls: [[wait.id]],
+    })
+  })
+
+  it('uses the active GitHub reply wait when an earlier one was acknowledged', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const acknowledgedWait = makeTaskWait({
+      id: 'wait-example-old',
+      label: 'Earlier review',
+      body: 'Earlier review was received',
+      githubLinkId: blocker.id,
+      resolvedAt: '2099-10-11T00:00:00.000Z',
+      acknowledgedAt: '2099-10-11T00:00:00.000Z',
+    })
+    const activeWait = makeTaskWait({
+      id: 'wait-example-current',
+      label: 'Current review',
+      body: 'Please review the latest change',
+      githubLinkId: blocker.id,
+      followUpDate: '2099-10-14',
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[acknowledgedWait, activeWait]}
+      />,
+    )
+
+    const blockerGroup = screen.getByRole('group', {
+      name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
+    })
+    const followUpDate = within(blockerGroup).getByLabelText<HTMLInputElement>(
+      'Follow-up date for Current review',
+    )
+    const waitMode =
+      within(blockerGroup).getByRole<HTMLSelectElement>('combobox')
+    const currentAction = within(blockerGroup).getByRole('button', {
+      name: 'Resolve wait: Current review',
+    })
+
+    const initial = () => ({
+      waitMode: waitMode.value,
+      currentAction: currentAction.getAttribute('aria-label'),
+      earlierAction:
+        within(blockerGroup)
+          .queryByRole('button', { name: 'Resolve wait: Earlier review' })
+          ?.getAttribute('aria-label') ?? null,
+      followUpDate: followUpDate.value,
+    })
+    const beforeChange = initial()
+    await user.selectOptions(waitMode, 'until-closed')
+
+    const readActual = () => ({
+      beforeChange,
+      deleteCalls: deleteWait.mock.calls,
+    })
+    expect(readActual()).toEqual({
+      beforeChange: {
+        waitMode: 'until-reply',
+        currentAction: 'Resolve wait: Current review',
+        earlierAction: null,
+        followUpDate: '2099-10-14',
+      },
+      deleteCalls: [[activeWait.id]],
+    })
+  })
+
+  it('shows an acknowledged GitHub reply as resolved', () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const wait = makeTaskWait({
+      label: 'Review feedback',
+      body: 'Review received',
+      githubLinkId: blocker.id,
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: '2099-10-12T00:00:00.000Z',
+    })
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[wait]}
+      />,
+    )
+
+    const blockerGroup = screen.getByRole('group', {
+      name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
+    })
+    const waitMode =
+      within(blockerGroup).getByRole<HTMLSelectElement>('combobox')
+
+    const readActual = () => ({
+      waitMode: waitMode.value,
+      resolvedLabel: within(blockerGroup).getByText('resolved Oct 12, 2099')
+        .textContent,
+      acknowledgeAction:
+        within(blockerGroup)
+          .queryByRole('button', {
+            name: 'Acknowledge wait: Review feedback',
+          })
+          ?.getAttribute('aria-label') ?? null,
+      resolveAction:
+        within(blockerGroup)
+          .queryByRole('button', { name: 'Resolve wait: Review feedback' })
+          ?.getAttribute('aria-label') ?? null,
+      dimmed: blockerGroup.classList.contains('opacity-55'),
+    })
+    expect(readActual()).toEqual({
+      waitMode: 'until-closed',
+      resolvedLabel: 'resolved Oct 12, 2099',
+      acknowledgeAction: null,
+      resolveAction: null,
+      dimmed: true,
+    })
+  })
+
+  it('acknowledges a standalone wait', async () => {
+    const wait = makeTaskWait({
+      label: 'Review received',
+      body: 'Review received',
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: null,
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[wait]}
+      />,
+    )
+
+    const acknowledgeButton = screen.getByRole('button', {
+      name: 'Acknowledge wait: Review received',
+    })
+    await user.click(acknowledgeButton)
+
+    const readActual = () => ({
+      status: screen.getByText('wait resolved').textContent,
+      acknowledgeAction: acknowledgeButton.getAttribute('aria-label'),
+      acknowledgeCalls: acknowledgeWait.mock.calls,
+    })
+    expect(readActual()).toEqual({
+      status: 'wait resolved',
+      acknowledgeAction: 'Acknowledge wait: Review received',
+      acknowledgeCalls: [[wait.id]],
+    })
+  })
+
   it('saves a complete follow-up date after keyboard edits finish', () => {
     const wait = makeTaskWait({
       id: 'wait-example-007',
@@ -533,6 +853,6 @@ describe('TaskDependenciesSection', () => {
 
     const readActual = () =>
       screen.getAllByRole('alert').map((alert) => alert.textContent)
-    expect(readActual()).toEqual(['Delete failed'])
+    expect(readActual()).toEqual(['Delete failed', 'Delete failed'])
   })
 })

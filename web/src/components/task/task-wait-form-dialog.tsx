@@ -14,6 +14,9 @@ export function TaskWaitFormDialog({
   onOpenChange,
   body,
   followUpDate,
+  title = 'Wait for',
+  submitLabel = 'Add',
+  bodyRequired = true,
   onBodyChange,
   onFollowUpDateChange,
   onSubmit,
@@ -24,6 +27,9 @@ export function TaskWaitFormDialog({
   onOpenChange: (open: boolean) => void
   body: string
   followUpDate: string
+  title?: string
+  submitLabel?: string
+  bodyRequired?: boolean
   onBodyChange: (body: string) => void
   onFollowUpDateChange: (date: string) => void
   onSubmit: () => void
@@ -34,7 +40,7 @@ export function TaskWaitFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Wait for</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form
           className="flex flex-col gap-4"
@@ -45,6 +51,7 @@ export function TaskWaitFormDialog({
         >
           <Textarea
             aria-label="Wait description"
+            required={bodyRequired}
             autoFocus
             value={body}
             onChange={(event) => {
@@ -83,8 +90,11 @@ export function TaskWaitFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending || body.trim() === ''}>
-              Add
+            <Button
+              type="submit"
+              disabled={isPending || (bodyRequired && body.trim() === '')}
+            >
+              {submitLabel}
             </Button>
           </div>
         </form>
