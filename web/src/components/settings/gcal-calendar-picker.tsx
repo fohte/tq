@@ -28,7 +28,7 @@ export function GcalCalendarPicker({
   const updateContext = useUpdateCalendarContext(account.id)
 
   return (
-    <div className="pb-2">
+    <div className="pb-2 text-xs">
       <Button
         type="button"
         variant="plain"

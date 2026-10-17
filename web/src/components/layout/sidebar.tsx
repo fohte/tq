@@ -186,7 +186,7 @@ function ViewsSection() {
           <ViewLink key={view.id} view={view} isActive={q === view.query} />
         ))}
         {!isExpanded && hiddenCount > 0 && (
-          <div className="px-3.5">
+          <div className="px-3.5 font-mono text-2xs">
             <Button
               type="button"
               variant="plain"
