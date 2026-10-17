@@ -188,18 +188,14 @@ export function useCreateScheduleModalState({
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
   const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
+  const hasActiveConstraintDraft =
+    scope === 'all' && constraintTouchedRef.current && constraintDraft !== null
   const constraintCheckDraftInvalid =
-    scope === 'all' &&
-    constraintTouchedRef.current &&
-    constraintDraft !== null &&
-    constraintInput === null
+    hasActiveConstraintDraft && constraintInput === null
   const constraintCheckDraft =
-    scope !== 'all' ||
-    !constraintTouchedRef.current ||
-    constraintDraft === null ||
-    constraintInput === null
-      ? undefined
-      : { constraints: constraintInput }
+    hasActiveConstraintDraft && constraintInput !== null
+      ? { constraints: constraintInput }
+      : undefined
   const constraintCheckRange = getLocalWeekDateRange(
     new Date(`${occurrenceDate}T00:00:00`),
   )
