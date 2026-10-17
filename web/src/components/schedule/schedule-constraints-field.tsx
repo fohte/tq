@@ -36,11 +36,11 @@ const preferenceCellLabels = {
   excluded: 'NEVER',
 } as const
 
-const preferenceClasses = {
-  preferred: 'border-border-strong bg-surface-strong text-foreground',
-  if_free: 'border-border bg-tint-blue text-tint-blue-foreground',
-  reserve: 'border-border bg-tint-yellow text-tint-yellow-foreground',
-  excluded: 'border-border bg-tint-red text-tint-red-foreground',
+const preferenceButtonVariants = {
+  preferred: 'default',
+  if_free: 'secondary',
+  reserve: 'outline',
+  excluded: 'ghost',
 } as const
 
 interface ScheduleConstraintsFieldProps {
@@ -168,19 +168,21 @@ export function ScheduleConstraintsField({
 
   return (
     <div className={cn('flex min-w-0 flex-col gap-2', isExpanded && 'w-full')}>
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         type="button"
         aria-expanded={isExpanded}
         onClick={() => {
           setIsExpanded((expanded) => !expanded)
         }}
-        className="inline-flex min-h-9 max-w-full items-center gap-2 self-start rounded-lg border border-border px-3 py-2 text-xs font-mono text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="max-w-full self-start"
       >
         <SlidersHorizontal className="size-3.5 shrink-0" />
-        <span className="break-words text-left">
+        <span className="break-words text-left font-mono text-xs">
           {scheduleConstraintSummary(value)}
         </span>
-      </button>
+      </Button>
       <ConstraintsSaveErrors
         saveError={saveError}
         scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
@@ -362,8 +364,10 @@ function ConstraintEditor({
           {weekdays.map(({ dayOfWeek, label, name }) => {
             const preference = value.weekdays[dayOfWeek] ?? 'preferred'
             return (
-              <button
+              <Button
                 key={dayOfWeek}
+                variant={preferenceButtonVariants[preference]}
+                size="sm"
                 type="button"
                 aria-label={`${name}: ${preferenceLabels[preference]}`}
                 aria-pressed={preference !== 'preferred'}
@@ -380,11 +384,10 @@ function ConstraintEditor({
                   })
                 }}
                 className={cn(
-                  'flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 border text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+                  'h-11 min-w-0 flex-col items-center justify-center',
                   variant === 'mobile'
                     ? 'w-full'
                     : 'w-full md:w-15 md:flex-none',
-                  preferenceClasses[preference],
                 )}
               >
                 <span
@@ -395,7 +398,7 @@ function ConstraintEditor({
                 <span className="whitespace-nowrap font-mono font-normal max-md:tracking-wider schedule-constraint-preference-label">
                   {preferenceCellLabels[preference]}
                 </span>
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -410,16 +413,17 @@ function ConstraintEditor({
         </p>
       )}
 
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={isPending}
-        onClick={onRemove}
-        className="self-start text-destructive hover:text-destructive"
-      >
-        <Trash2 className="size-3.5" />
-        Remove constraints
-      </Button>
+      <div className="self-start font-mono text-xs">
+        <Button
+          variant="plain"
+          size="sm"
+          disabled={isPending}
+          onClick={onRemove}
+        >
+          <Trash2 className="size-3.5" />
+          Remove constraints
+        </Button>
+      </div>
     </div>
   )
 }

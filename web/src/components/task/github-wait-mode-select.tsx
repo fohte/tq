@@ -1,6 +1,20 @@
-import type { GithubBlocker } from '#hooks/use-github-link'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
 
-export type GithubWaitMode = 'until-closed' | 'until-reply'
+import type { GithubBlocker } from '#hooks/use-github-link'
+import { selectValueHandler } from '#lib/form-utils'
+
+const waitModeOptions = [
+  { value: 'until-closed', label: 'until closed' },
+  { value: 'until-reply', label: 'until reply' },
+] as const
+export type GithubWaitMode = (typeof waitModeOptions)[number]['value']
+const waitModeValues = waitModeOptions.map(({ value }) => value)
 
 export function GithubWaitModeSelect({
   blocker,
@@ -14,19 +28,29 @@ export function GithubWaitModeSelect({
   onChange: (mode: GithubWaitMode) => void
 }) {
   return (
-    <select
-      aria-label={`Wait mode for ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
+    <Select
+      items={waitModeOptions}
       value={value}
-      disabled={disabled}
-      onChange={(event) => {
-        onChange(
-          event.target.value === 'until-reply' ? 'until-reply' : 'until-closed',
-        )
-      }}
-      className="h-7 w-32 shrink-0 border-0 bg-transparent p-0 font-mono text-xs text-muted-foreground underline decoration-border-strong underline-offset-2 focus-visible:ring-0"
+      onValueChange={selectValueHandler(onChange, waitModeValues)}
     >
-      <option value="until-closed">until closed</option>
-      <option value="until-reply">until reply</option>
-    </select>
+      <SelectTrigger
+        aria-label={`Wait mode for ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        className="w-32 shrink-0"
+      >
+        <span className="font-mono text-xs">
+          <SelectValue />
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {waitModeOptions.map(({ value: optionValue, label }) => (
+          <SelectItem key={optionValue} value={optionValue}>
+            {label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }

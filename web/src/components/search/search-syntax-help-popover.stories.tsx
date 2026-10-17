@@ -19,11 +19,12 @@ function AnchoredPopoverExample({
       <Input
         ref={inputRef}
         autoFocus={open}
+        variant="ghost"
         value=""
         readOnly
         placeholder="Filter…"
         aria-label="Filter query"
-        className="w-full border-0 bg-transparent font-mono text-sm outline-none placeholder:text-muted-foreground"
+        className="w-full"
       />
       <SearchSyntaxHelpPopover
         anchor={inputRef}

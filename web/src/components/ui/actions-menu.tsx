@@ -43,16 +43,16 @@ function stopEventPropagation(e: React.SyntheticEvent) {
 export function ActionsMenu({
   items,
   mobileItems = items,
-  desktopTriggerClassName,
-  mobileTriggerClassName,
+  desktopTriggerLayout = 'default',
+  mobileTriggerLayout = 'default',
   hideDesktopTriggerUntilHover = false,
   'aria-label': ariaLabel = 'Actions',
   defaultOpen,
 }: {
   items: ActionsMenuItem[]
   mobileItems?: ActionsMenuItem[]
-  desktopTriggerClassName?: string
-  mobileTriggerClassName?: string
+  desktopTriggerLayout?: 'default' | 'compact'
+  mobileTriggerLayout?: 'default' | 'compact-icon' | 'compact-row' | 'tree-row'
   hideDesktopTriggerUntilHover?: boolean
   'aria-label'?: string
   defaultOpen?: 'desktop' | 'mobile' | undefined
@@ -79,7 +79,7 @@ export function ActionsMenu({
                 'hidden h-5 w-5 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:flex',
                 hideDesktopTriggerUntilHover &&
                   'opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100',
-                desktopTriggerClassName,
+                desktopTriggerLayout === 'compact' && 'h-3.5 w-3.5',
               )}
             />
           }
@@ -114,7 +114,9 @@ export function ActionsMenu({
                 type="button"
                 className={cn(
                   'flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground md:hidden',
-                  mobileTriggerClassName,
+                  mobileTriggerLayout === 'compact-icon' && 'h-4 w-4',
+                  mobileTriggerLayout === 'compact-row' && 'mr-1 h-9 w-9',
+                  mobileTriggerLayout === 'tree-row' && '-mr-2 size-9',
                 )}
               />
             }

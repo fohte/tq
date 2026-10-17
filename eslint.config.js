@@ -1,11 +1,20 @@
+import { resolve } from 'node:path'
+
 import { config } from '@fohte/eslint-config'
-import { plugin as shadcn } from '@shadcn/lint'
 import storybook from 'eslint-plugin-storybook'
 
 export default config(
   {
     typescript: { typeChecked: true },
     errorHandling: {},
+    shadcn: {
+      files: ['web/src/**/*.ts{,x}'],
+      rootDir: resolve(import.meta.dirname, 'web'),
+    },
+    noRawFormElements: {
+      files: ['web/src/**/*.tsx'],
+      ignores: ['web/src/components/ui/**'],
+    },
     // Keep web/ on design tokens (see docs/design-system.md) instead of
     // Tailwind arbitrary values.
     tailwind: {
@@ -14,8 +23,37 @@ export default config(
     },
   },
   {
-    // CLI --rule overrides are unscoped, so the plugin must be globally available.
-    plugins: { shadcn },
+    files: ['web/src/**/*.ts{,x}'],
+    ignores: [
+      'web/src/**/*.{test,spec}.{ts,tsx}',
+      'web/src/**/__tests__/**/*.{ts,tsx}',
+    ],
+    rules: {
+      'shadcn/no-inline-styles': [
+        'error',
+        { allow: ['transform', 'transition'] },
+      ],
+      'shadcn/no-unknown-classes': [
+        'error',
+        {
+          allow: [
+            'compact-memo-editor',
+            'image-source-text',
+            'inline-reference-card',
+            'inline-reference-chip',
+            'milkdown-wrapper',
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['web/src/components/ui/**/*.tsx'],
+    ignores: [
+      'web/src/**/*.{test,spec}.{ts,tsx}',
+      'web/src/**/__tests__/**/*.{ts,tsx}',
+    ],
+    rules: { 'shadcn/no-restyle': 'off' },
   },
   {
     ignores: ['**/routeTree.gen.ts'],

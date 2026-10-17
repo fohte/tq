@@ -50,7 +50,7 @@ export function ScheduleConstraintCheckResult({
           role="status"
           className={cn(
             'flex items-center gap-2 rounded-md border border-tint-green bg-tint-green px-2.5 py-2 text-xs text-tint-green-foreground',
-            isIncomplete && 'border-border bg-surface text-muted-foreground',
+            isIncomplete && 'border-border bg-muted text-muted-foreground',
           )}
         >
           {isIncomplete ? (

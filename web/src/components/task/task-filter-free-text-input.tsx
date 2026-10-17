@@ -163,7 +163,7 @@ export function TaskFilterFreeTextInput({
         <PopoverContent
           initialFocus={false}
           padding="none"
-          className="min-w-(--anchor-width) text-popover-foreground"
+          className="min-w-(--anchor-width)"
         >
           <List role="listbox">
             {availableSuggestions?.map((suggestion, index) => (

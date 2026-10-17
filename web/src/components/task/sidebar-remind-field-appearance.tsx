@@ -75,7 +75,7 @@ export function SidebarRemindFieldAppearance({
           // while the options are open.
           initialFocus={false}
           padding="none"
-          className="w-64 text-popover-foreground"
+          className="w-64"
         >
           <List role="listbox">
             <ListItem onSelect={onClear}>None</ListItem>

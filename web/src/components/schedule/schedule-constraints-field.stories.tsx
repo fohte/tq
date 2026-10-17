@@ -8,6 +8,15 @@ import { makeScheduleConstraint } from '#components/schedule/schedule-test-fixtu
 const configuredConstraints = scheduleConstraintFormStateFromSaved(
   makeScheduleConstraint(),
 )
+const allWeekdayPreferences = scheduleConstraintFormStateFromSaved(
+  makeScheduleConstraint({
+    weekdays: [
+      { dayOfWeek: 0, preference: 'if_free' },
+      { dayOfWeek: 1, preference: 'reserve' },
+      { dayOfWeek: 2, preference: 'excluded' },
+    ],
+  }),
+)
 
 const meta = {
   title: 'Schedule/ScheduleConstraintsField',
@@ -39,6 +48,11 @@ type Story = StoryObj<typeof meta>
 
 export const DesktopEditor: Story = {
   name: 'the desktop editor shows weekly limits and weekday rules',
+}
+
+export const AllWeekdayPreferences: Story = {
+  name: 'the editor distinguishes each weekday preference',
+  args: { value: allWeekdayPreferences },
 }
 
 export const DesktopWithoutConstraints: Story = {

@@ -1,3 +1,4 @@
+import { Chip } from '@fohte/ui/chip'
 import { Link } from '@tanstack/react-router'
 
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
@@ -31,12 +32,11 @@ export function ProjectUrlChip({
 
   return (
     <PreviewCard defaultOpen={defaultOpen}>
-      <PreviewCardTrigger
-        render={<span />}
-        className="inline-flex cursor-text items-center gap-1.5 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"
-      >
-        <ProjectStatusMark status={status} />
-        <span className="max-w-48 truncate">{project.title}</span>
+      <PreviewCardTrigger render={<span />}>
+        <Chip size="md" tone="strong">
+          <ProjectStatusMark status={status} />
+          <span className="max-w-48 truncate">{project.title}</span>
+        </Chip>
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>

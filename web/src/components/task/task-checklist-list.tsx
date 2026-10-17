@@ -306,7 +306,7 @@ function ChecklistPanel({
               <ActionsMenu
                 aria-label="Checklist actions"
                 items={checklistActions}
-                mobileTriggerClassName="mr-1 h-9 w-9"
+                mobileTriggerLayout="compact-row"
               />
             )
           }

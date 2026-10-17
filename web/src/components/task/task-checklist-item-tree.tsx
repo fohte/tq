@@ -8,7 +8,10 @@ import {
   useState,
 } from 'react'
 
-import { getChecklistIndentStyle } from '#components/task/checklist-indent-style'
+import {
+  type ChecklistIndentStyle,
+  getChecklistIndent,
+} from '#components/task/checklist-indent-style'
 import { ChecklistItemContentInput } from '#components/task/checklist-item-content-input'
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
 import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
@@ -283,7 +286,11 @@ function ChecklistItemRow({
     <div className="group">
       <div
         className="flex min-h-10 items-center gap-2 py-1 pl-(--checklist-indent) pr-3"
-        style={getChecklistIndentStyle(12 + depth * 20)}
+        style={
+          {
+            '--checklist-indent': getChecklistIndent(12 + depth * 20),
+          } as ChecklistIndentStyle
+        }
       >
         {hasChildren ? (
           <Button
@@ -339,13 +346,17 @@ function ChecklistItemRow({
         <ActionsMenu
           aria-label={`Actions for ${item.content}`}
           items={itemActions}
-          mobileTriggerClassName="-mr-2 size-9"
+          mobileTriggerLayout="tree-row"
         />
       </div>
 
       <div
         className="pl-(--checklist-indent)"
-        style={getChecklistIndentStyle(36 + depth * 20)}
+        style={
+          {
+            '--checklist-indent': getChecklistIndent(36 + depth * 20),
+          } as ChecklistIndentStyle
+        }
       >
         <Button
           type="button"
@@ -402,7 +413,11 @@ function ChecklistItemRow({
       {detailsOpen && (
         <div
           className="ml-(--checklist-indent) border-l border-border py-2 pr-3 pl-2.5"
-          style={getChecklistIndentStyle(46 + depth * 20)}
+          style={
+            {
+              '--checklist-indent': getChecklistIndent(46 + depth * 20),
+            } as ChecklistIndentStyle
+          }
         >
           <MarkdownEditor
             defaultValue={item.note ?? ''}

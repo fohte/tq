@@ -178,11 +178,7 @@ export function TaskTitleInput({
         <PopoverContent
           initialFocus={false}
           padding="none"
-          className={
-            isParentTrigger
-              ? 'w-64 text-popover-foreground'
-              : 'w-40 text-popover-foreground'
-          }
+          className={isParentTrigger ? 'w-64' : 'w-40'}
         >
           <List role="listbox">
             {isParentTrigger
