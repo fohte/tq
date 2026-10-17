@@ -32,12 +32,17 @@ export function renderCalendarGridEventContent(
       )
     }
     const eventAccent = getEventAccent(eventProps)
-    const eventAccentStyle: EventAccentStyle = getEventAccentStyle(eventAccent)
+    const eventAccentStyle = getEventAccentStyle(eventAccent)
 
     return (
       <div
         className="tq-month-event"
-        style={eventAccentStyle}
+        style={
+          {
+            '--event-accent': eventAccentStyle['--event-accent'],
+            '--event-fill': eventAccentStyle['--event-fill'],
+          } as EventAccentStyle
+        }
         data-event-type={eventProps.type}
         data-event-filled={eventAccent?.fillPercent != null}
         data-redacted={eventProps.redacted === true}

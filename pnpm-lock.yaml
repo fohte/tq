@@ -170,14 +170,14 @@ importers:
         specifier: 21.2.3
         version: 21.2.3(@types/node@24.19.0)(conventional-commits-parser@7.1.2)(typescript@6.0.3)
       '@fohte/eslint-config':
-        specifier: 0.5.1
-        version: 0.5.1(2bc9a577b3a49a3778503480830adacb)
+        specifier: 0.5.3
+        version: 0.5.3(06bc86e482f1d056238b763c39e27f9a)
       '@ninoseki/eslint-plugin-neverthrow':
         specifier: 0.3.2
         version: 0.3.2(@typescript-eslint/parser@8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       '@shadcn/lint':
-        specifier: 0.1.1
-        version: 0.1.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+        specifier: 0.2.1
+        version: 0.2.1(@typescript-eslint/parser@8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
       '@tsconfig/node-lts':
         specifier: 24.0.1
         version: 24.0.1
@@ -2206,12 +2206,13 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@fohte/eslint-config@0.5.1':
-    resolution: {integrity: sha512-yh6DtqFrjo/d4LZEFoPE8vq3P2LZ4C4I4NjscMFeoIaFZOX40KC981hGfzwqnqYJNG6A3PTo/17Fb3+7ZwNlAg==}
+  '@fohte/eslint-config@0.5.3':
+    resolution: {integrity: sha512-Qm6u7ygB+mYnuV46hRYFEABpTrYopVs/x3TNl7i4jh3iSXaws0FHaMrh144TAVefe5eA3oX/B5XZ56Ha8rgI1w==}
     engines: {node: '>=20.19.0 || >=22.13.0'}
     peerDependencies:
       '@eslint-community/eslint-plugin-eslint-comments': ^4.0.0
       '@ninoseki/eslint-plugin-neverthrow': '>=0.2.0'
+      '@shadcn/lint': '>=0.1.2'
       '@typescript-eslint/eslint-plugin': ^8.60.0
       '@typescript-eslint/parser': ^8.60.0
       '@vitest/eslint-plugin': ^1.0.0
@@ -2223,6 +2224,8 @@ packages:
       typescript: '>=5.0.0'
     peerDependenciesMeta:
       '@ninoseki/eslint-plugin-neverthrow':
+        optional: true
+      '@shadcn/lint':
         optional: true
       eslint-plugin-tailwindcss:
         optional: true
@@ -4155,12 +4158,15 @@ packages:
     resolution: {integrity: sha512-PywIl2jvl+tO5R4j+n72Lcf3ItanHcaMN/oL1U9ZHE8icaT2zpo2W4uOaslpQeQvqPC24HGZ3BW2etzsCFQbag==}
     engines: {node: '>=18'}
 
-  '@shadcn/lint@0.1.1':
-    resolution: {integrity: sha512-00FroeyOehwp18oWk6ybuGJDm5IMc7ywmEvCODIj2yjPISSzgx+fv/BB4V6nh/Wiwrw6XoRobk89d/T2Hc3QJg==}
+  '@shadcn/lint@0.2.1':
+    resolution: {integrity: sha512-sDgmh/lb4yiPJMJZe5/jE6Vq5mgBzaIvKcdQ98faZk4c99WKTqASEhUqR6XCp7DDc29LwqTRIsula7kfhhDQnQ==}
     engines: {node: '>=20.19'}
     peerDependencies:
+      '@typescript-eslint/parser': '>=8.40.0'
       eslint: '>=9.30.0'
     peerDependenciesMeta:
+      '@typescript-eslint/parser':
+        optional: true
       eslint:
         optional: true
 
@@ -5508,6 +5514,11 @@ packages:
 
   cn@0.2.6:
     resolution: {integrity: sha512-+i4L0zUGgRcEnhsxueVrP7iBGxBx5iD0WOTYg1MwFEu2ZyCmH5Ov2V1cul2Ht5UchRQQgftCf4be/RxspuW6QQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  cn@0.4.0:
+    resolution: {integrity: sha512-qOAeUhPwPzBxx6jaeQdo646XIKliKHc2j1ZF7Ngb1o0pJZKH5gq8FkA0aVdUdPFUDXNXyUCXpCtoJISo6dhizg==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -11668,7 +11679,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@fohte/eslint-config@0.5.1(2bc9a577b3a49a3778503480830adacb)':
+  '@fohte/eslint-config@0.5.3(06bc86e482f1d056238b763c39e27f9a)':
     dependencies:
       '@eslint-community/eslint-plugin-eslint-comments': 4.7.2(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
       '@eslint/eslintrc': 3.3.6(supports-color@10.2.2)
@@ -11679,8 +11690,10 @@ snapshots:
       eslint-config-prettier: 10.1.8(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
       eslint-plugin-import-x: 4.17.1(@typescript-eslint/utils@8.70.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)
       eslint-plugin-simple-import-sort: 13.0.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
+      neverthrow: 8.2.0
     optionalDependencies:
       '@ninoseki/eslint-plugin-neverthrow': 0.3.2(@typescript-eslint/parser@8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
+      '@shadcn/lint': 0.2.1(@typescript-eslint/parser@8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
       eslint-plugin-tailwindcss: 4.4.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(tailwindcss@4.3.3)(typescript@6.0.3)
       typescript: 6.0.3
     transitivePeerDependencies:
@@ -13708,17 +13721,14 @@ snapshots:
     dependencies:
       '@sentry/core': 10.58.0
 
-  '@shadcn/lint@0.1.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)':
+  '@shadcn/lint@0.2.1(@typescript-eslint/parser@8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))':
     dependencies:
       '@eslint/core': 0.17.0
-      '@typescript-eslint/parser': 8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
-      cn: 0.2.6
+      cn: 0.4.0
     optionalDependencies:
+      '@typescript-eslint/parser': 8.66.0(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3)
       eslint: 10.11.0(jiti@2.7.0)(supports-color@10.2.2)
       oxc-parser: 0.148.0
-    transitivePeerDependencies:
-      - supports-color
-      - typescript
 
   '@simple-libs/child-process-utils@2.0.0':
     dependencies:
@@ -15200,6 +15210,8 @@ snapshots:
   clsx@2.1.1: {}
 
   cn@0.2.6: {}
+
+  cn@0.4.0: {}
 
   code-block-writer@13.0.3: {}
 

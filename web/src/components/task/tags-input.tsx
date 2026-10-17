@@ -196,7 +196,7 @@ export function TagsInput({
             <PopoverContent
               initialFocus={false}
               padding="none"
-              className="w-40 text-popover-foreground"
+              className="w-40"
             >
               <List role="listbox">
                 {suggestionTree.map((node) => (

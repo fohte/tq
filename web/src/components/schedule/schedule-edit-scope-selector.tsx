@@ -34,7 +34,7 @@ export function ScheduleEditScopeSelector({
             onClick={() => {
               setScope(value)
             }}
-            className="h-auto min-h-8 px-0 text-2xs leading-3 whitespace-normal md:h-8 md:px-2 md:text-xs md:leading-normal md:whitespace-nowrap"
+            className="h-auto min-h-8 w-full min-w-0 whitespace-normal"
           >
             {label}
           </Button>

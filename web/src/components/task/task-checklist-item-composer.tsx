@@ -1,7 +1,10 @@
 import { Input } from '@fohte/ui/input'
 import { useState } from 'react'
 
-import { getChecklistIndentStyle } from '#components/task/checklist-indent-style'
+import {
+  type ChecklistIndentStyle,
+  getChecklistIndentStyle,
+} from '#components/task/checklist-indent-style'
 
 export function ChecklistItemComposer({
   depth,
@@ -13,6 +16,7 @@ export function ChecklistItemComposer({
   onCancel: () => void
 }) {
   const [content, setContent] = useState('')
+  const indentStyle = getChecklistIndentStyle(36 + depth * 20)
 
   const save = () => {
     const trimmed = content.trim()
@@ -23,7 +27,11 @@ export function ChecklistItemComposer({
   return (
     <div
       className="flex min-h-10 items-center py-1 pl-(--checklist-indent) pr-3"
-      style={getChecklistIndentStyle(36 + depth * 20)}
+      style={
+        {
+          '--checklist-indent': indentStyle['--checklist-indent'],
+        } as ChecklistIndentStyle
+      }
     >
       <Input
         aria-label="New checklist item"

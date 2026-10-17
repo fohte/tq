@@ -152,7 +152,7 @@ export function EventBlock(arg: EventContentArg) {
       )}
       continuesBefore={continuesBefore}
       continuesAfter={continuesAfter}
-      style={accentStyle}
+      accentStyle={accentStyle}
       title={
         <span
           className={cn(
@@ -215,7 +215,7 @@ function EventBlockShell({
   className,
   continuesBefore = false,
   continuesAfter = false,
-  style,
+  accentStyle,
   title,
   badge,
   meta,
@@ -225,7 +225,7 @@ function EventBlockShell({
   className?: string
   continuesBefore?: boolean
   continuesAfter?: boolean
-  style?: EventAccentStyle | undefined
+  accentStyle?: EventAccentStyle | undefined
   title: React.ReactNode
   badge?: string | undefined
   meta: React.ReactNode
@@ -238,7 +238,12 @@ function EventBlockShell({
         isShort ? 'flex-row items-center py-px' : 'flex-col py-1',
         className,
       )}
-      style={style}
+      style={
+        {
+          '--event-accent': accentStyle?.['--event-accent'],
+          '--event-fill': accentStyle?.['--event-fill'],
+        } as EventAccentStyle
+      }
       data-continues-before={continuesBefore}
       data-continues-after={continuesAfter}
     >

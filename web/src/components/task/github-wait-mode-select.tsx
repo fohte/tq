@@ -1,3 +1,11 @@
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fohte/ui/select'
+
 import type { GithubBlocker } from '#hooks/use-github-link'
 
 export type GithubWaitMode = 'until-closed' | 'until-reply'
@@ -14,19 +22,27 @@ export function GithubWaitModeSelect({
   onChange: (mode: GithubWaitMode) => void
 }) {
   return (
-    <select
-      aria-label={`Wait mode for ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
+    <Select
       value={value}
-      disabled={disabled}
-      onChange={(event) => {
-        onChange(
-          event.target.value === 'until-reply' ? 'until-reply' : 'until-closed',
-        )
+      onValueChange={(nextValue) => {
+        if (nextValue === 'until-closed' || nextValue === 'until-reply') {
+          onChange(nextValue)
+        }
       }}
-      className="h-7 w-32 shrink-0 border-0 bg-transparent p-0 font-mono text-xs text-muted-foreground underline decoration-border-strong underline-offset-2 focus-visible:ring-0"
     >
-      <option value="until-closed">until closed</option>
-      <option value="until-reply">until reply</option>
-    </select>
+      <SelectTrigger
+        aria-label={`Wait mode for ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
+        variant="ghost"
+        size="sm"
+        disabled={disabled}
+        className="w-32 shrink-0"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="until-closed">until closed</SelectItem>
+        <SelectItem value="until-reply">until reply</SelectItem>
+      </SelectContent>
+    </Select>
   )
 }

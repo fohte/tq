@@ -1,3 +1,4 @@
+import { Chip } from '@fohte/ui/chip'
 import { Link } from '@tanstack/react-router'
 
 import { GithubRefSummary } from '#components/task/github-ref-summary'
@@ -29,11 +30,10 @@ export function GithubUrlChip({
 
   return (
     <PreviewCard defaultOpen={defaultOpen}>
-      <PreviewCardTrigger
-        render={<span />}
-        className="inline-flex cursor-text items-center gap-1 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"
-      >
-        <GithubRefSummary {...summary} titleClassName="max-w-48" />
+      <PreviewCardTrigger render={<span />}>
+        <Chip size="md" tone="strong">
+          <GithubRefSummary {...summary} titleClassName="max-w-48" />
+        </Chip>
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>

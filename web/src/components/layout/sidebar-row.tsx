@@ -75,8 +75,8 @@ export function SidebarActionableRow({
         {children}
         <ActionsMenu
           aria-label={actionsAriaLabel}
-          desktopTriggerClassName="h-3.5 w-3.5"
-          mobileTriggerClassName="h-4 w-4"
+          desktopTriggerLayout="compact"
+          mobileTriggerLayout="compact-icon"
           defaultOpen={defaultOpen}
           items={[
             {

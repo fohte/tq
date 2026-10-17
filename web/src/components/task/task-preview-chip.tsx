@@ -1,3 +1,4 @@
+import { Chip } from '@fohte/ui/chip'
 import { Link } from '@tanstack/react-router'
 
 import { TaskMentionSummary } from '#components/task/task-mention-summary'
@@ -35,17 +36,16 @@ export function TaskPreviewChip({
 
   return (
     <PreviewCard defaultOpen={defaultOpen}>
-      <PreviewCardTrigger
-        render={<span />}
-        className="inline-flex cursor-text items-center gap-1 border border-border bg-secondary/50 px-1.5 py-0.5 align-baseline text-sm leading-none"
-      >
-        <TaskMentionSummary
-          status={task.status}
-          statusReason={task.statusReason ?? null}
-          number={task.number}
-          title={task.title}
-          titleClassName="max-w-48"
-        />
+      <PreviewCardTrigger render={<span />}>
+        <Chip size="md" tone="strong">
+          <TaskMentionSummary
+            status={task.status}
+            statusReason={task.statusReason ?? null}
+            number={task.number}
+            title={task.title}
+            titleClassName="max-w-48"
+          />
+        </Chip>
       </PreviewCardTrigger>
       <PreviewCardPortal>
         <PreviewCardPositioner>

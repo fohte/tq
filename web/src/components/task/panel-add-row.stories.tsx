@@ -44,7 +44,7 @@ export const WithTrailingMenu: Story = {
       <ActionsMenu
         aria-label="Checklist actions"
         items={[{ icon: <Plus />, label: 'edit', onClick: fn() }]}
-        mobileTriggerClassName="mr-1 h-9 w-9"
+        mobileTriggerLayout="compact-row"
       />
     ),
   },
