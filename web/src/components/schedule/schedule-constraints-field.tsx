@@ -133,6 +133,7 @@ export function ScheduleConstraintsField({
           scheduleAfterConstraintsSaveError={scheduleAfterConstraintsSaveError}
         />
         <ConstraintEditor
+          variant="desktop"
           value={value}
           isPending={isPending}
           onChange={onChange}
@@ -187,6 +188,7 @@ export function ScheduleConstraintsField({
       {isExpanded && (
         <div className="w-full rounded-lg border border-border p-3">
           <ConstraintEditor
+            variant="mobile"
             value={value}
             isPending={isPending}
             onChange={onChange}
@@ -226,11 +228,13 @@ function ConstraintsSaveErrors({
 }
 
 function ConstraintEditor({
+  variant,
   value,
   isPending,
   onChange,
   onRemove,
 }: {
+  variant: 'desktop' | 'mobile'
   value: ScheduleConstraintFormState
   isPending: boolean
   onChange: (value: ScheduleConstraintFormState) => void
@@ -349,8 +353,10 @@ function ConstraintEditor({
         </span>
         <div
           className={cn(
-            'gap-1',
-            variant === 'mobile' ? 'grid grid-cols-7' : 'flex',
+            'gap-0 md:gap-1',
+            variant === 'mobile'
+              ? 'grid grid-cols-7'
+              : 'grid grid-cols-7 md:flex',
           )}
         >
           {weekdays.map(({ dayOfWeek, label, name }) => {
@@ -375,7 +381,9 @@ function ConstraintEditor({
                 }}
                 className={cn(
                   'flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 border text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
-                  variant === 'mobile' ? 'w-full' : 'w-15 flex-none',
+                  variant === 'mobile'
+                    ? 'w-full'
+                    : 'w-full md:w-15 md:flex-none',
                   preferenceClasses[preference],
                 )}
               >
@@ -384,10 +392,7 @@ function ConstraintEditor({
                 >
                   {label}
                 </span>
-                <span
-                  className="whitespace-nowrap font-mono text-2xs font-normal"
-                  style={{ fontSize: '9px', letterSpacing: '0.08em' }}
-                >
+                <span className="whitespace-nowrap font-mono font-normal max-md:tracking-wider schedule-constraint-preference-label">
                   {preferenceCellLabels[preference]}
                 </span>
               </button>
