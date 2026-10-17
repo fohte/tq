@@ -109,7 +109,7 @@ export function TreeTaskGridRow({
         onClick={handleExpand}
         data-no-dnd=""
         data-testid="child-completion"
-        className="h-10 min-h-10 min-w-10 shrink-0 px-1.5 py-0"
+        className="h-10 min-h-10 min-w-10 shrink-0"
         aria-label={expanded ? 'Collapse' : 'Expand'}
         aria-describedby={childCountDescriptionId}
         aria-expanded={expanded}

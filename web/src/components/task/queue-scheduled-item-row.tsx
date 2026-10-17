@@ -30,15 +30,14 @@ export function QueueScheduledItemRow({
         {task.title}
       </Link>
       <Button
-        variant="ghost"
-        size="icon-xs"
+        variant="plain"
         onClick={onRemove}
         aria-label={`Remove day from ${task.title}`}
         title="Remove day"
         data-no-dnd=""
-        className="shrink-0 text-muted-foreground hover:text-destructive"
+        className="size-6 shrink-0"
       >
-        <X className="h-4 w-4" />
+        <X className="size-3" />
       </Button>
     </div>
   )

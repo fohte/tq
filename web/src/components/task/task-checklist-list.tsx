@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { ChecklistNameInput } from '#components/task/checklist-name-input'
+import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskChecklistItemTree } from '#components/task/task-checklist-item-tree'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
@@ -111,12 +112,14 @@ export function TaskChecklistList({
 
       <Button
         type="button"
-        variant="ghost"
+        variant="plain"
         onClick={onCreateChecklist}
-        className="h-auto min-h-0 w-fit justify-start rounded-none border-0 bg-transparent px-0 py-0 font-mono text-xs font-normal text-muted-foreground-faint shadow-none transition-colors hover:bg-transparent hover:text-muted-foreground active:translate-y-0"
+        className="w-fit"
       >
-        <Plus className="size-3" />
-        add checklist
+        <span className="flex items-center gap-1 font-mono text-xs">
+          <Plus className="size-3" />
+          add checklist
+        </span>
       </Button>
     </section>
   )
@@ -292,26 +295,22 @@ function ChecklistPanel({
             setAddingItemParentId(itemId)
           }}
         />
-        <div className="flex min-h-11 items-center border-t border-dashed border-border">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setAddingItemParentId(null)
-            }}
-            className="h-auto min-h-0 flex-1 justify-start gap-1.5 rounded-none border-0 bg-transparent px-3 py-2 text-left font-mono text-xs font-normal text-muted-foreground-faint shadow-none transition-colors hover:bg-transparent hover:text-muted-foreground active:translate-y-0"
-          >
-            <Plus className="size-3" />
-            add item
-          </Button>
-          {checklist.name == null && (
-            <ActionsMenu
-              aria-label="Checklist actions"
-              items={checklistActions}
-              mobileTriggerClassName="mr-1 h-9 w-9"
-            />
-          )}
-        </div>
+        <PanelAddRow
+          icon={Plus}
+          label="add item"
+          onClick={() => {
+            setAddingItemParentId(null)
+          }}
+          trailing={
+            checklist.name == null && (
+              <ActionsMenu
+                aria-label="Checklist actions"
+                items={checklistActions}
+                mobileTriggerClassName="mr-1 h-9 w-9"
+              />
+            )
+          }
+        />
       </div>
 
       <DeleteConfirmDialog

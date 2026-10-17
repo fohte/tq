@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 import { GithubBlockerRowAppearance } from '#components/task/github-blocker-row-appearance'
 import { GithubBlockerUpdateError } from '#components/task/github-blocker-update-error'
 import { GithubWaitModeSelect } from '#components/task/github-wait-mode-select'
+import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { TaskWaitEntry } from '#components/task/task-wait-entry'
@@ -115,8 +116,7 @@ function BlockedByGroup({
             trailing={
               <Button
                 type="button"
-                variant="ghost"
-                size="icon-xs"
+                variant="plain"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -128,9 +128,9 @@ function BlockedByGroup({
                 }}
                 disabled={updateBlockedBy.isPending}
                 aria-label={`Remove #${String(task.number)} as blocker`}
-                className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+                className="size-6 shrink-0"
               >
-                <X className="size-3.5" />
+                <X className="size-3" />
               </Button>
             }
           />
@@ -216,18 +216,14 @@ function BlockedByGroup({
             </GithubBlockerRowAppearance>
           )
         })}
-        <Button
-          type="button"
-          variant="ghost"
+        <PanelAddRow
+          icon={Plus}
+          label="add blocker"
           disabled={updateBlockedBy.isPending}
           onClick={() => {
             setDialogOpen(true)
           }}
-          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-        >
-          <Plus className="size-3" />
-          add blocker
-        </Button>
+        />
       </Panel>
 
       {updateBlockedBy.isError && (

@@ -75,14 +75,13 @@ export function GithubBlockerRowAppearance({
         />
         <Button
           type="button"
-          variant="ghost"
-          size="icon-xs"
+          variant="plain"
           onClick={onRemove}
           disabled={removeDisabled}
           aria-label={`Remove ${ref} as blocker`}
-          className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+          className="size-6 shrink-0"
         >
-          <X className="size-3.5" />
+          <X className="size-3" />
         </Button>
       </div>
       {waitModeControl}

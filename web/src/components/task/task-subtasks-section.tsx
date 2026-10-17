@@ -1,4 +1,3 @@
-import { Button } from '@fohte/ui/button'
 import { Panel } from '@fohte/ui/panel'
 import { Link2, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -6,6 +5,7 @@ import { useState } from 'react'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import type { ContextValue } from '#components/task/create-task-modal-fields'
 import { LinkExistingTaskMenu } from '#components/task/link-existing-task-menu'
+import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { SectionHeading } from '#components/ui/section-heading'
 import { SectionLoadingIndicator } from '#components/ui/section-loading-indicator'
@@ -119,17 +119,13 @@ function LinkExistingTaskRow({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
+      <PanelAddRow
+        icon={Link2}
+        label="link existing task"
         onClick={() => {
           setIsMenuOpen(true)
         }}
-        className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-      >
-        <Link2 className="size-3" />
-        link existing task
-      </Button>
+      />
       <LinkExistingTaskMenu
         open={isMenuOpen}
         onOpenChange={setIsMenuOpen}
@@ -158,17 +154,13 @@ function AddSubtaskRow({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
+      <PanelAddRow
+        icon={Plus}
+        label="add subtask"
         onClick={() => {
           setIsModalOpen(true)
         }}
-        className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-      >
-        <Plus className="size-3" />
-        add subtask
-      </Button>
+      />
       <CreateTaskModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}

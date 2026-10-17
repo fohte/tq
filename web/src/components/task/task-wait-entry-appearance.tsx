@@ -87,43 +87,46 @@ export function TaskWaitEntryAppearance({
       {!isResolved && (
         <Button
           type="button"
-          variant="ghost"
+          variant="plain"
           disabled={disabled}
           data-wait-action="resolve"
           onClick={onResolve}
           aria-label={`Resolve wait: ${wait.label}`}
-          className="h-auto min-h-0 shrink-0 justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-mono text-xs font-normal text-muted-foreground shadow-none transition-none hover:bg-transparent hover:text-foreground active:translate-y-0"
+          className="shrink-0"
         >
-          <Check className="size-3.5" aria-hidden="true" />
-          resolve
+          <span className="flex items-center gap-1">
+            <Check className="size-3.5" aria-hidden="true" />
+            resolve
+          </span>
         </Button>
       )}
       {needsAcknowledgement && (
         <Button
           type="button"
-          variant="ghost"
+          variant="plain"
           disabled={disabled}
           data-wait-action="acknowledge"
           onClick={onAcknowledge}
           aria-label={`Acknowledge wait: ${wait.label}`}
-          className="h-auto min-h-0 shrink-0 justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-mono text-xs font-normal text-primary shadow-none transition-none hover:bg-transparent hover:text-primary active:translate-y-0"
+          className="shrink-0 text-primary"
         >
-          <Check className="size-3.5" aria-hidden="true" />
-          acknowledge
+          <span className="flex items-center gap-1">
+            <Check className="size-3.5" aria-hidden="true" />
+            acknowledge
+          </span>
         </Button>
       )}
       {layout === 'standalone' && (
         <Button
           type="button"
-          variant="ghost"
-          size="icon-xs"
+          variant="plain"
           disabled={disabled}
           data-wait-action="remove"
           onClick={onRemove}
           aria-label={`Remove wait: ${wait.label}`}
-          className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+          className="size-6 shrink-0"
         >
-          <X className="size-3.5" aria-hidden="true" />
+          <X className="size-3" aria-hidden="true" />
         </Button>
       )}
     </>

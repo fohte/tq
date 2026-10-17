@@ -280,15 +280,14 @@ function ChecklistItemRow({
         {hasChildren ? (
           <Button
             type="button"
-            variant="ghost"
-            size="icon-xs"
+            variant="plain"
             aria-label={
               collapsed ? `Expand ${item.content}` : `Collapse ${item.content}`
             }
             onClick={() => {
               setCollapsed((value) => !value)
             }}
-            className="size-5 shrink-0 rounded-none p-0"
+            className="size-5 shrink-0"
           >
             <ChevronDown
               className={`size-3.5 transition-transform ${collapsed ? '-rotate-90' : ''}`}
@@ -339,7 +338,7 @@ function ChecklistItemRow({
       <div style={{ paddingLeft: `${String(36 + depth * 20)}px` }}>
         <Button
           type="button"
-          variant="ghost"
+          variant="plain"
           onClick={() => {
             if (detailsOpen) {
               flushNoteChange()
@@ -350,12 +349,18 @@ function ChecklistItemRow({
               if (item.note == null || item.note === '') setEditingNote(true)
             }
           }}
-          className="h-5 min-h-0 justify-start gap-1 rounded-none border-0 bg-transparent p-0 text-2xs font-normal text-muted-foreground-faint shadow-none hover:bg-transparent hover:text-muted-foreground active:translate-y-0"
+          className="h-5 min-h-0 justify-start"
         >
-          <ChevronDown
-            className={`size-3 transition-transform ${detailsOpen ? '' : '-rotate-90'}`}
-          />
-          {item.note == null || item.note === '' ? 'add details' : 'details'}
+          <span className="inline-flex items-center gap-1">
+            <ChevronDown
+              className={`size-3 transition-transform ${detailsOpen ? '' : '-rotate-90'}`}
+            />
+            <span className="text-2xs">
+              {item.note == null || item.note === ''
+                ? 'add details'
+                : 'details'}
+            </span>
+          </span>
         </Button>
       </div>
 

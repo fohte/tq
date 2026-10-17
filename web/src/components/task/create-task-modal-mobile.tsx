@@ -96,12 +96,11 @@ export function CreateTaskModalMobile({
           </div>
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
+            variant="plain"
             onClick={() => {
               handleOpenChange(false)
             }}
-            className="text-muted-foreground"
+            className="size-8"
           >
             <X className="size-5" />
             <span className="sr-only">Close</span>
@@ -225,9 +224,10 @@ export function CreateTaskModalMobile({
 
           {/* Create button */}
           <Button
+            size="lg"
             onClick={handleSubmit}
             disabled={submitDisabled}
-            className="h-12 w-full rounded-lg text-base font-semibold"
+            className="h-12 w-full"
           >
             Create
           </Button>

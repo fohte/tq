@@ -27,8 +27,8 @@ describe('SidebarTagsField', () => {
     await waitFor(() => {
       expect(
         screen
-          .getAllByRole('button', { name: /^#/ })
-          .map((button) => button.innerText),
+          .getAllByRole('option', { name: /^#/ })
+          .map((option) => option.innerText),
       ).toEqual(['#personal-only'])
     })
   })

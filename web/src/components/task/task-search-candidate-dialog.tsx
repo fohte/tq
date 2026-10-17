@@ -1,4 +1,3 @@
-import { Button } from '@fohte/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -162,26 +161,25 @@ export function TaskSearchCandidateDialogAppearance({
                   <div className="px-3 py-1 font-mono text-2xs text-muted-foreground-faint">
                     GitHub
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-start gap-2 px-3 py-2 text-left text-sm text-popover-foreground hover:bg-accent/50"
-                    onClick={() => {
-                      onSelectGithubCandidate?.(githubCandidate)
-                    }}
-                  >
-                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <GithubRefSummary {...githubCandidate} />
+                  <List>
+                    <ListItem
+                      onSelect={() => {
+                        onSelectGithubCandidate?.(githubCandidate)
+                      }}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <GithubRefSummary {...githubCandidate} />
+                        </span>
+                        <span className="font-mono text-2xs text-muted-foreground-faint">
+                          {githubCandidate.kind === 'pull_request'
+                            ? 'pull request'
+                            : 'issue'}{' '}
+                          · {githubCandidate.state}
+                        </span>
                       </span>
-                      <span className="font-mono text-2xs text-muted-foreground-faint">
-                        {githubCandidate.kind === 'pull_request'
-                          ? 'pull request'
-                          : 'issue'}{' '}
-                        · {githubCandidate.state}
-                      </span>
-                    </span>
-                  </Button>
+                    </ListItem>
+                  </List>
                 </div>
               )}
             </>
@@ -189,14 +187,15 @@ export function TaskSearchCandidateDialogAppearance({
         </div>
 
         {skipAction != null && (
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 min-h-11 w-full border-t border-border px-3 text-center text-sm text-muted-foreground hover:bg-accent/50"
-            onClick={skipAction.onSkip}
-          >
-            {skipAction.label}
-          </Button>
+          <div className="border-t border-border">
+            <List>
+              <ListItem onSelect={skipAction.onSkip}>
+                <span className="w-full text-center text-muted-foreground">
+                  {skipAction.label}
+                </span>
+              </ListItem>
+            </List>
+          </div>
         )}
       </DialogContent>
     </Dialog>
