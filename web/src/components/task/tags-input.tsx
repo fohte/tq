@@ -158,7 +158,7 @@ export function TagsInput({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
       {labels.map((label) => (
         <Chip
           key={label}

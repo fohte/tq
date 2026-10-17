@@ -216,13 +216,11 @@ export function CreateTaskModalMobile({
           </div>
 
           {/* Tags */}
-          <div className="font-mono text-xs">
-            <TagsInput
-              labels={labels}
-              onLabelsChange={setLabels}
-              context={context}
-            />
-          </div>
+          <TagsInput
+            labels={labels}
+            onLabelsChange={setLabels}
+            context={context}
+          />
 
           {/* Create button */}
           <Button
