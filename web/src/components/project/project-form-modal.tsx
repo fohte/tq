@@ -302,9 +302,9 @@ export function ProjectFormModal({
                 Cancel
               </Button>
               <Button
+                size="lg"
                 onClick={handleSubmit}
                 disabled={!title.trim() || isPending}
-                className="h-9 rounded-lg px-4"
               >
                 {isEditing ? 'Save' : 'Create Project'}
               </Button>

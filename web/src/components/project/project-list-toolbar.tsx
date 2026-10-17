@@ -30,7 +30,7 @@ export function ProjectListToolbar({
           onValueChange={onFilterChange}
         />
       </div>
-      <Button size="xs" className="ml-auto text-2xs" onClick={onCreate}>
+      <Button size="xs" className="ml-auto" onClick={onCreate}>
         + new
       </Button>
     </ScreenHeaderBar>

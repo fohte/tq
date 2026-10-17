@@ -186,16 +186,18 @@ function ViewsSection() {
           <ViewLink key={view.id} view={view} isActive={q === view.query} />
         ))}
         {!isExpanded && hiddenCount > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setIsExpanded(true)
-            }}
-            className="h-auto min-h-0 w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 px-3.5 py-1 text-left font-mono text-2xs text-muted-foreground-faint hover:text-foreground"
-          >
-            + {hiddenCount} more
-          </Button>
+          <div className="px-3.5 font-mono text-2xs">
+            <Button
+              type="button"
+              variant="plain"
+              onClick={() => {
+                setIsExpanded(true)
+              }}
+              className="w-full justify-start"
+            >
+              + {hiddenCount} more
+            </Button>
+          </div>
         )}
       </div>
     </div>

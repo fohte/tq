@@ -398,9 +398,9 @@ export function ScheduleModalDesktopPanel({
             Cancel
           </Button>
           <Button
+            size="lg"
             onClick={handleSubmit}
             disabled={!canSubmit || isPending || isPreviewLoading}
-            className="h-9 rounded-lg px-4"
           >
             {schedule ? 'Save' : 'Create Schedule'}
           </Button>

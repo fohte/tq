@@ -160,14 +160,13 @@ function TaskKanbanCandidateCard({
       </div>
 
       <Button
-        variant="ghost"
-        size="icon-xs"
+        variant="plain"
         data-no-dnd=""
         onClick={() => {
           onAdd(task.id)
         }}
         aria-label="Add to today's queue"
-        className="mr-1 shrink-0 text-muted-foreground hover:text-foreground"
+        className="mr-1 size-6 shrink-0"
       >
         <Plus className="h-3.5 w-3.5" />
       </Button>
