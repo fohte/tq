@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { scheduleConstraintChecksApp } from '#routes/schedule-constraint-checks'
 import { evaluateScheduleConstraintViolationsSafely } from '#routes/schedule-constraint-evaluation'
+import { scheduleConstraintsApp } from '#routes/schedule-constraints'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -156,5 +157,6 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
+  .route('/', scheduleConstraintsApp)
   .route('/', scheduleConstraintChecksApp)
   .route('/', scheduleOverridesApp)
