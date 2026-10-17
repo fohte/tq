@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@fohte/ui/dialog'
-import { Input } from '@fohte/ui/input'
 import { SegmentedControl } from '@fohte/ui/segmented-control'
 import {
   Select,
@@ -18,6 +17,7 @@ import {
 } from '@fohte/ui/select'
 import { useState } from 'react'
 
+import { GithubSyncRuleScopeFields } from '#components/settings/github-sync-rule-scope-fields'
 import { Checkbox } from '#components/ui/checkbox'
 import type { SyncRule } from '#hooks/use-github-sync-rules'
 import {
@@ -175,32 +175,13 @@ export function GithubSyncRuleFormModal({
                   onValueChange={setScope}
                 />
               </FieldRow>
-              {scope !== 'all' && (
-                <FieldRow label="Organization">
-                  <Input
-                    type="text"
-                    value={org}
-                    onChange={(e) => {
-                      setOrg(e.target.value)
-                    }}
-                    placeholder="octocat"
-                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
-                  />
-                </FieldRow>
-              )}
-              {scope === 'repo' && (
-                <FieldRow label="リポジトリ">
-                  <Input
-                    type="text"
-                    value={repo}
-                    onChange={(e) => {
-                      setRepo(e.target.value)
-                    }}
-                    placeholder="hello-world"
-                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
-                  />
-                </FieldRow>
-              )}
+              <GithubSyncRuleScopeFields
+                scope={scope}
+                org={org}
+                repo={repo}
+                onOrgChange={setOrg}
+                onRepoChange={setRepo}
+              />
             </>
           )}
 
@@ -210,11 +191,7 @@ export function GithubSyncRuleFormModal({
               value={targetProjectId}
               onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
-              <SelectTrigger
-                variant="ghost"
-                iconClassName="size-4 translate-x-0.5 text-foreground stroke-2"
-                className="w-full gap-0.5"
-              >
+              <SelectTrigger variant="ghost" className="w-full">
                 <SelectValue placeholder="選択してください" />
               </SelectTrigger>
               <SelectContent>

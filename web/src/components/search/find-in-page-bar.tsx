@@ -80,8 +80,9 @@ export function FindInPageBar({
       <Button
         type="button"
         variant="ghost"
+        size="icon"
         aria-label="Find previous match"
-        className="size-8 shrink-0 rounded-none p-0"
+        className="shrink-0"
         onClick={() => {
           findMatch(true)
         }}
@@ -91,8 +92,9 @@ export function FindInPageBar({
       <Button
         type="button"
         variant="ghost"
+        size="icon"
         aria-label="Find next match"
-        className="size-8 shrink-0 rounded-none p-0"
+        className="shrink-0"
         onClick={() => {
           findMatch(false)
         }}
@@ -105,8 +107,9 @@ export function FindInPageBar({
       <Button
         type="button"
         variant="ghost"
+        size="icon"
         aria-label="Close find bar"
-        className="size-8 shrink-0 rounded-none p-0"
+        className="shrink-0"
         onClick={onClose}
       >
         <X aria-hidden="true" className="size-4" />

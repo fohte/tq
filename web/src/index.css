@@ -64,19 +64,13 @@
   font-family: inherit;
 }
 
+@utility schedule-constraint-preference-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
 @utility outline-auto {
   outline-style: auto;
-}
-
-/* Align select indicators with the browser's native caret. */
-@utility native-select-caret-stroke {
-  stroke-width: 2.8px;
-}
-
-@utility native-select-status-caret-offset {
-  & path {
-    translate: 4.5px 0;
-  }
 }
 
 /*

@@ -1,5 +1,4 @@
 import { Button } from '@fohte/ui/button'
-import { Input } from '@fohte/ui/input'
 import { ChevronDown } from 'lucide-react'
 import {
   type KeyboardEvent,
@@ -9,6 +8,7 @@ import {
   useState,
 } from 'react'
 
+import { ChecklistItemContentInput } from '#components/task/checklist-item-content-input'
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
 import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
 import { ChecklistItemComposer } from '#components/task/task-checklist-item-composer'
@@ -303,20 +303,17 @@ function ChecklistItemRow({
           onCheckedChange={(checked) => {
             onSetItemChecked(item.id, checked)
           }}
-          className={isLocked ? 'border-dashed' : undefined}
         />
         <div className="min-w-0 flex-1">
           {editingContent ? (
-            <Input
-              aria-label={`Edit ${item.content}`}
-              autoFocus
+            <ChecklistItemContentInput
+              itemContent={item.content}
               value={contentDraft}
               onChange={(event) => {
                 setContentDraft(event.currentTarget.value)
               }}
               onBlur={saveContent}
               onKeyDown={handleContentKeyDown}
-              className="h-7 min-w-0 border-0 px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
             />
           ) : (
             checklistItemMarkdown

@@ -300,11 +300,10 @@ export function renderChecklistItemMarkdown({
         <Button
           key="checklist-item:edit"
           type="button"
-          variant="ghost"
-          size="icon-xs"
+          variant="plain"
           aria-label={`Edit ${content}`}
           onClick={onEdit}
-          className="ml-1 inline-flex align-middle text-muted-foreground"
+          className="ml-1 inline-flex size-6 align-middle"
         >
           <Pencil className="size-3" />
         </Button>

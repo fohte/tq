@@ -1,4 +1,8 @@
-import type { Schedule, ScheduleOverride } from '#hooks/use-schedules'
+import type {
+  Schedule,
+  ScheduleConstraint,
+  ScheduleOverride,
+} from '#hooks/use-schedules'
 
 export function makeSchedule(overrides: Partial<Schedule> = {}): Schedule {
   return {
@@ -41,6 +45,24 @@ export function makeScheduleOverride(
     occurrenceDate: '2026-01-03',
     movedToDate: null,
     skipped: true,
+    ...overrides,
+  }
+}
+
+export function makeScheduleConstraint(
+  overrides: Partial<ScheduleConstraint> = {},
+): ScheduleConstraint {
+  return {
+    weeklyMin: 3,
+    weeklyMax: 4,
+    weeklyTarget: 4,
+    maxConsecutiveDays: 2,
+    windowStart: null,
+    windowEnd: null,
+    weekdays: [
+      { dayOfWeek: 2, preference: 'if_free' },
+      { dayOfWeek: 5, preference: 'excluded' },
+    ],
     ...overrides,
   }
 }
