@@ -218,9 +218,14 @@ function getChecklistMarkdownState(root: Element) {
 }
 
 function getInlineMarkdownStyleState(element: Element) {
+  const style = getComputedStyle(element)
   return {
     text: element.textContent,
-    textDecoration: getComputedStyle(element).textDecorationLine,
+    minWidth: style.minWidth,
+    overflow: style.overflow,
+    textDecoration: style.textDecorationLine,
+    textOverflow: style.textOverflow,
+    whiteSpace: style.whiteSpace,
   }
 }
 
@@ -322,7 +327,11 @@ describe('TaskChecklistList', () => {
 
     expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
       text: 'Review the sample',
+      minWidth: '0px',
+      overflow: 'hidden',
       textDecoration: 'line-through',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
     })
   })
 
@@ -372,7 +381,11 @@ describe('TaskChecklistList', () => {
 
     expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
       text: content,
+      minWidth: '0px',
+      overflow: 'hidden',
       textDecoration: 'line-through',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
     })
   })
 
