@@ -24,6 +24,30 @@ function allConstraintsMetOutcome(container: HTMLElement) {
   }
 }
 
+function incompleteOutcome(container: HTMLElement) {
+  return {
+    heading: normalizedText(container.querySelector('h3')),
+    result: normalizedText(container.querySelector('[role="status"]')),
+    iconLabel:
+      container
+        .querySelector('[role="status"] [role="img"]')
+        ?.getAttribute('aria-label') ?? null,
+  }
+}
+
+function incompleteWithViolationsOutcome(container: HTMLElement) {
+  const status = container.querySelector('[role="status"]')
+  return {
+    heading: normalizedText(container.querySelector('h3')),
+    rows: Array.from(container.querySelectorAll('[role="listitem"]')).map(
+      normalizedText,
+    ),
+    incompleteMessage: normalizedText(status),
+    incompleteMessageParentRole:
+      status?.parentElement?.getAttribute('role') ?? null,
+  }
+}
+
 function invalidDraftOutcome(container: HTMLElement) {
   return {
     heading: normalizedText(container.querySelector('h3')),
@@ -79,6 +103,47 @@ describe('ScheduleConstraintCheckResult', () => {
     expect(allConstraintsMetOutcome(container)).toEqual({
       heading: 'This week · May 13 – 19',
       result: 'All constraints met',
+    })
+  })
+
+  it('shows a warning icon when an incomplete check has no violations', () => {
+    const { container } = render(
+      <ScheduleConstraintCheckResult
+        startDate="2041-05-13"
+        endDate="2041-05-19"
+        constraintViolations={[]}
+        isLoading={false}
+        isError={false}
+        isIncomplete
+        draftInvalid={false}
+      />,
+    )
+
+    expect(incompleteOutcome(container)).toEqual({
+      heading: 'This week · May 13 – 19',
+      result: 'Some constraints could not be checked.',
+      iconLabel: 'Warning',
+    })
+  })
+
+  it('places the incomplete note outside the violation list', () => {
+    const { container } = render(
+      <ScheduleConstraintCheckResult
+        startDate="2041-05-13"
+        endDate="2041-05-19"
+        constraintViolations={makeScheduleConstraintViolations().slice(0, 1)}
+        isLoading={false}
+        isError={false}
+        isIncomplete
+        draftInvalid={false}
+      />,
+    )
+
+    expect(incompleteWithViolationsOutcome(container)).toEqual({
+      heading: 'This week · May 13 – 19',
+      rows: ['2 of min 5 this week REQUIRED'],
+      incompleteMessage: 'Some constraints could not be checked.',
+      incompleteMessageParentRole: null,
     })
   })
 

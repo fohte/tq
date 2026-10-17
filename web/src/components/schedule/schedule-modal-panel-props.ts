@@ -9,8 +9,8 @@ import type {
 } from '#components/schedule/schedule-modal-form-options'
 import type {
   Schedule,
+  ScheduleConstraintCheckDraft,
   ScheduleConstraintCheckInput,
-  ScheduleConstraintCheckResponse,
   ScheduleOverride,
 } from '#hooks/use-schedules'
 
@@ -64,11 +64,9 @@ export interface SchedulePanelProps {
     ScheduleConstraintCheckInput,
     'startDate' | 'endDate'
   >
+  constraintCheckDraft: ScheduleConstraintCheckDraft | undefined
   constraintCheckDraftInvalid: boolean
-  constraintCheckViolations: ScheduleConstraintCheckResponse['constraintViolations']
-  isConstraintCheckLoading: boolean
-  isConstraintCheckError: boolean
-  constraintCheckIncomplete: boolean
+  isConstraintCheckEnabled: boolean
   previewText: string | null
   isPreviewLoading: boolean
   previewError: boolean

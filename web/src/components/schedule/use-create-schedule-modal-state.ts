@@ -33,10 +33,8 @@ import {
   type ScheduleModalSaveState,
   useScheduleModalSave,
 } from '#components/schedule/use-schedule-modal-save'
-import { useDebounce } from '#hooks/use-debounce'
 import {
   type Schedule,
-  useScheduleConstraintCheck,
   useScheduleConstraints,
   useScheduleDetails,
   useScheduleOverrides,
@@ -190,40 +188,29 @@ export function useCreateScheduleModalState({
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
   const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
+  const constraintCheckDraftInvalid =
+    scope === 'all' &&
+    constraintTouchedRef.current &&
+    constraintDraft !== null &&
+    constraintInput === null
   const constraintCheckDraft =
-    scope !== 'all' || !constraintTouchedRef.current || constraintDraft === null
+    scope !== 'all' ||
+    !constraintTouchedRef.current ||
+    constraintDraft === null ||
+    constraintInput === null
       ? undefined
-      : constraintInput === null
-        ? null
-        : { constraints: constraintInput }
+      : { constraints: constraintInput }
   const constraintCheckRange = getLocalWeekDateRange(
     new Date(`${occurrenceDate}T00:00:00`),
   )
-  const constraintCheckInput = {
-    ...constraintCheckRange,
-    ...(constraintCheckDraft == null ? {} : { draft: constraintCheckDraft }),
-  }
-  const constraintCheckInputKey = JSON.stringify(constraintCheckInput)
-  const debouncedConstraintCheckInputKey = useDebounce(
-    constraintCheckInputKey,
-    300,
-  )
-  const isConstraintCheckDebouncing =
-    constraintCheckDraft !== null &&
-    constraintCheckInputKey !== debouncedConstraintCheckInputKey
   const constraintsQueryUnavailable =
     scheduleConstraints.isError && !scheduleConstraints.data
-  const constraintCheck = useScheduleConstraintCheck(
-    schedule?.scheduleId,
-    constraintCheckInput,
+  const isConstraintCheckEnabled =
     open &&
-      schedule != null &&
-      constraintDraft !== null &&
-      !scheduleConstraints.isPending &&
-      !constraintsQueryUnavailable &&
-      constraintCheckDraft !== null &&
-      !isConstraintCheckDebouncing,
-  )
+    schedule != null &&
+    constraintDraft !== null &&
+    !scheduleConstraints.isPending &&
+    !constraintsQueryUnavailable
   const preview = useScheduleModalPreview({
     schedule,
     editState,
@@ -430,15 +417,9 @@ export function useCreateScheduleModalState({
     onChangeConstraints: updateConstraints,
     onRemoveConstraints: removeConstraints,
     constraintCheckRange,
-    constraintCheckDraftInvalid: constraintCheckDraft === null,
-    constraintCheckViolations: constraintCheck.data?.constraintViolations ?? [],
-    isConstraintCheckLoading:
-      isConstraintCheckDebouncing || constraintCheck.isFetching,
-    isConstraintCheckError: constraintCheck.isError,
-    constraintCheckIncomplete: Boolean(
-      constraintCheck.data?.calendarDataIncomplete ||
-      constraintCheck.data?.constraintEvaluationIncomplete,
-    ),
+    constraintCheckDraft,
+    constraintCheckDraftInvalid,
+    isConstraintCheckEnabled,
     previewText: preview.previewText,
     isPreviewLoading: preview.isPreviewLoading,
     previewError: preview.previewError,

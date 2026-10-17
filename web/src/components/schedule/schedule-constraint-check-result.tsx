@@ -53,29 +53,43 @@ export function ScheduleConstraintCheckResult({
             isIncomplete && 'border-border bg-surface text-muted-foreground',
           )}
         >
-          <CircleCheck className="size-3.5 shrink-0" />
+          {isIncomplete ? (
+            <TriangleAlert
+              role="img"
+              aria-label="Warning"
+              className="size-3.5 shrink-0 text-tint-yellow-foreground"
+            />
+          ) : (
+            <CircleCheck
+              role="img"
+              aria-label="Success"
+              className="size-3.5 shrink-0"
+            />
+          )}
           {isIncomplete
             ? 'Some constraints could not be checked.'
             : 'All constraints met'}
         </div>
       ) : (
-        <div
-          role="list"
-          aria-label="Constraint violations"
-          className="flex flex-col gap-1.5"
-        >
-          {constraintViolations.map((violation, index) => (
-            <ViolationRow
-              key={`${violation.type}-${violation.date}-${String(index)}`}
-              violation={violation}
-            />
-          ))}
+        <>
+          <div
+            role="list"
+            aria-label="Constraint violations"
+            className="flex flex-col gap-1.5"
+          >
+            {constraintViolations.map((violation, index) => (
+              <ViolationRow
+                key={`${violation.type}-${violation.date}-${String(index)}`}
+                violation={violation}
+              />
+            ))}
+          </div>
           {isIncomplete && (
             <p role="status" className="text-xs text-muted-foreground">
               Some constraints could not be checked.
             </p>
           )}
-        </div>
+        </>
       )}
     </section>
   )

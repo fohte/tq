@@ -43,6 +43,15 @@ export const RequiredAndPreferredViolations: Story = {
   },
 }
 
+export const RequiredViolationsOnly: Story = {
+  name: 'the week has only required violations',
+  args: {
+    constraintViolations: sampleViolations.filter(
+      ({ severity }) => severity === 'required',
+    ),
+  },
+}
+
 export const PreferredViolationsOnly: Story = {
   name: 'the week has preferred violations only',
   args: {
@@ -60,6 +69,14 @@ export const Checking: Story = {
 export const Incomplete: Story = {
   name: 'the week could not be checked completely',
   args: { isIncomplete: true },
+}
+
+export const IncompleteWithViolations: Story = {
+  name: 'the week has violations and an incomplete check',
+  args: {
+    constraintViolations: sampleViolations.slice(0, 1),
+    isIncomplete: true,
+  },
 }
 
 export const InvalidDraft: Story = {

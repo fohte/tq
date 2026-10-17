@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
 import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
@@ -10,20 +12,36 @@ import {
   makeScheduleOverride,
 } from '#components/schedule/schedule-test-fixtures'
 
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+
 const meta = {
   title: 'Schedule/CreateScheduleModalMobilePanel',
   component: ScheduleModalMobilePanel,
   parameters: {
     layout: 'fullscreen',
     overflowCheck: { ignoreSelectors: ['.overflow-x-auto'] },
+    msw: {
+      handlers: [
+        http.post('/api/schedule/events/:id/constraint-check', () =>
+          HttpResponse.json({
+            constraintViolations:
+              makeMixedSeverityScheduleConstraintViolations(),
+          }),
+        ),
+      ],
+    },
   },
   tags: ['mobile-only'],
   decorators: [
     (Story) => (
-      <div className="dark min-h-screen bg-background">
-        <div className="fixed inset-0 bg-black/40" />
-        <Story />
-      </div>
+      <QueryClientProvider client={queryClient}>
+        <div className="dark min-h-screen bg-background">
+          <div className="fixed inset-0 bg-black/40" />
+          <Story />
+        </div>
+      </QueryClientProvider>
     ),
   ],
   args: {
@@ -73,11 +91,9 @@ const meta = {
     onChangeConstraints: fn(),
     onRemoveConstraints: fn(),
     constraintCheckRange: { startDate: '2030-04-15', endDate: '2030-04-21' },
+    constraintCheckDraft: undefined,
     constraintCheckDraftInvalid: false,
-    constraintCheckViolations: [],
-    isConstraintCheckLoading: false,
-    isConstraintCheckError: false,
-    constraintCheckIncomplete: false,
+    isConstraintCheckEnabled: false,
     previewText: null,
     isPreviewLoading: false,
     previewError: false,
@@ -125,7 +141,8 @@ export const ThisEventWithConstraints: Story = {
     endTime: '08:00',
     constraints: scheduleConstraintFormStateFromSaved(makeScheduleConstraint()),
     constraintCheckRange: { startDate: '2041-05-13', endDate: '2041-05-19' },
-    constraintCheckViolations: makeMixedSeverityScheduleConstraintViolations(),
+    constraintCheckDraft: { constraints: makeScheduleConstraint() },
+    isConstraintCheckEnabled: true,
   },
 }
 

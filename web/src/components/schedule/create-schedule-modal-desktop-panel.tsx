@@ -11,7 +11,7 @@ import {
 import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
-import { ScheduleConstraintCheckResult } from '#components/schedule/schedule-constraint-check-result'
+import { ScheduleConstraintCheckPreview } from '#components/schedule/schedule-constraint-check-preview'
 import { ScheduleConstraintsField } from '#components/schedule/schedule-constraints-field'
 import { ScheduleEditScopeSelector } from '#components/schedule/schedule-edit-scope-selector'
 import { ScheduleExceptionList } from '#components/schedule/schedule-exception-list'
@@ -76,11 +76,9 @@ export function ScheduleModalDesktopPanel({
   onChangeConstraints,
   onRemoveConstraints,
   constraintCheckRange,
+  constraintCheckDraft,
   constraintCheckDraftInvalid,
-  constraintCheckViolations,
-  isConstraintCheckLoading,
-  isConstraintCheckError,
-  constraintCheckIncomplete,
+  isConstraintCheckEnabled,
   previewText,
   isPreviewLoading,
   previewError,
@@ -289,13 +287,11 @@ export function ScheduleModalDesktopPanel({
           constraints !== null &&
           !constraintsLoading &&
           !constraintsError && (
-            <ScheduleConstraintCheckResult
-              startDate={constraintCheckRange.startDate}
-              endDate={constraintCheckRange.endDate}
-              constraintViolations={constraintCheckViolations}
-              isLoading={isConstraintCheckLoading}
-              isError={isConstraintCheckError}
-              isIncomplete={constraintCheckIncomplete}
+            <ScheduleConstraintCheckPreview
+              scheduleId={schedule.scheduleId}
+              range={constraintCheckRange}
+              draft={constraintCheckDraft}
+              enabled={isConstraintCheckEnabled}
               draftInvalid={constraintCheckDraftInvalid}
             />
           )}
