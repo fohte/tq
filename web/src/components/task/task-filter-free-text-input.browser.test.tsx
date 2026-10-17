@@ -68,7 +68,7 @@ describe('TaskFilterFreeTextInput', () => {
     const input = screen.getByRole('textbox', { name: 'Filter query' })
     await user.type(input, 'is:')
 
-    await screen.findByRole('button', { name: 'is:todo Todo' })
+    await screen.findByRole('option', { name: 'is:todo Todo' })
 
     expect(document.activeElement).toBe(input)
   })

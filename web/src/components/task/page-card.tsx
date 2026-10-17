@@ -101,12 +101,12 @@ export function PageCardPresentation({
       <div className="flex items-center gap-2 px-2.5 py-2">
         <Button
           type="button"
-          variant="ghost"
-          size="icon-xs"
+          variant="plain"
           onClick={() => {
             setExpanded(!isExpanded)
           }}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          className="size-6"
         >
           <ChevronDown
             className={cn(
@@ -117,16 +117,18 @@ export function PageCardPresentation({
         </Button>
         <Button
           type="button"
-          variant="ghost"
+          variant="plain"
           onClick={() => {
             setExpanded(!isExpanded)
           }}
-          className="h-auto min-h-0 justify-start rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex flex-1 items-center gap-2 overflow-hidden text-left"
+          className="flex flex-1 overflow-hidden text-left"
         >
-          <span className="truncate font-mono text-xs font-medium text-foreground">
-            {page.title}
+          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+            <span className="truncate font-mono text-xs font-medium text-foreground">
+              {page.title}
+            </span>
+            <AuthorLabel author={page.author} compact />
           </span>
-          <AuthorLabel author={page.author} compact />
         </Button>
 
         <span className="shrink-0 font-mono text-2xs text-muted-foreground-ghost">
@@ -182,9 +184,8 @@ export function PageCardPresentation({
             {hasMore && (
               <Button
                 type="button"
-                variant="link"
-                size="xs"
-                className="h-auto w-fit p-0 text-2xs"
+                variant="plain"
+                className="w-fit"
                 onClick={() => {
                   setExpanded(true)
                 }}

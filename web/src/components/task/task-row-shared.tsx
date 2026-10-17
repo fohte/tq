@@ -100,13 +100,7 @@ export function useHandleStatusChange(
   return { handleValueChange, duplicatePicker }
 }
 
-export function TagTokens({
-  labels,
-  isCompleted,
-}: {
-  labels: string[]
-  isCompleted: boolean
-}) {
+export function TagTokens({ labels }: { labels: string[] }) {
   const navigate = useNavigate()
 
   return (
@@ -115,19 +109,13 @@ export function TagTokens({
         <Button
           key={label}
           type="button"
-          variant="ghost"
+          variant="plain"
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
             void navigate({ to: '/tasks', search: tagFilterSearch(label) })
           }}
-          className={cn(
-            'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-            'font-mono text-xs hover:text-foreground',
-            isCompleted
-              ? 'text-muted-foreground-faint'
-              : 'text-muted-foreground',
-          )}
+          className="shrink whitespace-normal"
         >
           #{label}
         </Button>
@@ -223,16 +211,17 @@ export function RecurrenceLabel({
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="plain"
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
         void navigate({ to: '/recurring/$templateId', params: { templateId } })
       }}
-      className="h-auto min-h-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 inline-flex shrink-0 items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
     >
-      <Repeat className="size-3" />
-      {summary}
+      <span className="inline-flex items-center gap-1">
+        <Repeat className="size-3" />
+        {summary}
+      </span>
     </Button>
   )
 }

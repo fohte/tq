@@ -118,8 +118,7 @@ function BlockedByGroup({
             trailing={
               <Button
                 type="button"
-                variant="ghost"
-                size="icon-xs"
+                variant="plain"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -131,7 +130,7 @@ function BlockedByGroup({
                 }}
                 disabled={updateBlockedBy.isPending}
                 aria-label={`Remove #${String(task.number)} as blocker`}
-                className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+                className="size-6 shrink-0"
               >
                 <X className="size-3.5" />
               </Button>
@@ -184,8 +183,7 @@ function BlockedByGroup({
             />
             <Button
               type="button"
-              variant="ghost"
-              size="icon-xs"
+              variant="plain"
               onClick={() => {
                 updateBlockedBy.mutate({
                   id: taskId,
@@ -197,24 +195,28 @@ function BlockedByGroup({
               }}
               disabled={updateBlockedBy.isPending}
               aria-label={`Remove ${blocker.owner}/${blocker.repo}#${String(blocker.number)} as blocker`}
-              className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+              className="size-6 shrink-0"
             >
               <X className="size-3.5" />
             </Button>
           </div>
         ))}
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={updateBlockedBy.isPending}
-          onClick={() => {
-            setDialogOpen(true)
-          }}
-          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-        >
-          <Plus className="size-3" />
-          add blocker
-        </Button>
+        <div className="flex min-h-11 items-center border-t border-dashed border-border px-3 font-mono text-xs">
+          <Button
+            type="button"
+            variant="plain"
+            disabled={updateBlockedBy.isPending}
+            onClick={() => {
+              setDialogOpen(true)
+            }}
+            className="w-full justify-start whitespace-normal"
+          >
+            <span className="flex items-center gap-1.5">
+              <Plus className="size-3" />
+              add blocker
+            </span>
+          </Button>
+        </div>
       </Panel>
 
       {updateBlockedBy.isError && (
@@ -366,7 +368,7 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
         {!isResolved && (
           <Button
             type="button"
-            variant="ghost"
+            variant="plain"
             disabled={disabled}
             data-wait-action="resolve"
             onClick={() => {
@@ -375,16 +377,17 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
               resolveWait.mutate(wait.id)
             }}
             aria-label={`Resolve wait: ${wait.label}`}
-            className="h-auto min-h-0 shrink-0 justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-mono text-xs font-normal text-muted-foreground shadow-none transition-none hover:bg-transparent hover:text-foreground active:translate-y-0"
+            className="shrink-0"
           >
-            <Check className="size-3.5" aria-hidden="true" />
-            resolve
+            <span className="flex items-center gap-1">
+              <Check className="size-3.5" aria-hidden="true" />
+              resolve
+            </span>
           </Button>
         )}
         <Button
           type="button"
-          variant="ghost"
-          size="icon-xs"
+          variant="plain"
           disabled={disabled}
           data-wait-action="remove"
           onClick={() => {
@@ -392,7 +395,7 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
             deleteWait.mutate(wait.id)
           }}
           aria-label={`Remove wait: ${wait.label}`}
-          className="shrink-0 text-muted-foreground-faint hover:text-destructive"
+          className="size-6 shrink-0"
         >
           <X className="size-3.5" aria-hidden="true" />
         </Button>

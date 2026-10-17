@@ -96,9 +96,7 @@ export function TaskRowAppearance({
     )
 
   const secondLineItems: React.ReactNode[] = [
-    task.labels.length > 0 ? (
-      <TagTokens labels={task.labels} isCompleted={isCompleted} />
-    ) : null,
+    task.labels.length > 0 ? <TagTokens labels={task.labels} /> : null,
     task.projectId != null ? (
       <TaskProjectLabel projectId={task.projectId} />
     ) : null,

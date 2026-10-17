@@ -91,12 +91,11 @@ export function CreateTaskModalDesktop({
         </div>
         <Button
           type="button"
-          variant="ghost"
-          size="icon"
+          variant="plain"
           onClick={() => {
             handleOpenChange(false)
           }}
-          className="text-muted-foreground"
+          className="size-8"
         >
           <X className="size-5" />
           <span className="sr-only">Close</span>
@@ -217,19 +216,14 @@ export function CreateTaskModalDesktop({
       <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-6 py-3">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           onClick={() => {
             handleOpenChange(false)
           }}
-          className="text-muted-foreground"
         >
           Cancel
         </Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={submitDisabled}
-          className="h-9 rounded-lg px-4"
-        >
+        <Button size="lg" onClick={handleSubmit} disabled={submitDisabled}>
           Create Task
         </Button>
       </div>

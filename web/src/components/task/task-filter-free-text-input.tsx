@@ -1,5 +1,5 @@
-import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
@@ -15,7 +15,6 @@ import {
   extractCurrentPrefix,
   useSearchSuggestions,
 } from '#hooks/use-search'
-import { cn } from '#lib/utils'
 
 interface TaskFilterFreeTextInputProps {
   id: string
@@ -166,29 +165,24 @@ export function TaskFilterFreeTextInput({
           padding="none"
           className="min-w-(--anchor-width)"
         >
-          {availableSuggestions?.map((suggestion, index) => (
-            <Button
-              key={suggestion.value}
-              type="button"
-              variant="ghost"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                applySuggestion(suggestion)
-              }}
-              className={cn(
-                'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0',
-                'flex w-full items-center justify-start gap-2 px-3 py-1.5 text-left font-mono text-xs',
-                index === selectedIndex
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-popover-foreground hover:bg-accent/50',
-              )}
-            >
-              <span>{suggestion.value}</span>
-              <span className="text-muted-foreground">
-                {suggestion.display}
-              </span>
-            </Button>
-          ))}
+          <div className="text-popover-foreground">
+            <List role="listbox">
+              {availableSuggestions?.map((suggestion, index) => (
+                <ListItem
+                  key={suggestion.value}
+                  highlighted={index === selectedIndex}
+                  onSelect={() => {
+                    applySuggestion(suggestion)
+                  }}
+                >
+                  <span>{suggestion.value}</span>
+                  <span className="text-muted-foreground">
+                    {suggestion.display}
+                  </span>
+                </ListItem>
+              ))}
+            </List>
+          </div>
         </PopoverContent>
       </Popover>
       <SearchSyntaxHelpPopover

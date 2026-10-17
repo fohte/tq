@@ -119,17 +119,21 @@ function LinkExistingTaskRow({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => {
-          setIsMenuOpen(true)
-        }}
-        className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-      >
-        <Link2 className="size-3" />
-        link existing task
-      </Button>
+      <div className="flex min-h-11 items-center border-t border-dashed border-border px-3 font-mono text-xs">
+        <Button
+          type="button"
+          variant="plain"
+          onClick={() => {
+            setIsMenuOpen(true)
+          }}
+          className="w-full justify-start whitespace-normal"
+        >
+          <span className="flex items-center gap-1.5">
+            <Link2 className="size-3" />
+            link existing task
+          </span>
+        </Button>
+      </div>
       <LinkExistingTaskMenu
         open={isMenuOpen}
         onOpenChange={setIsMenuOpen}
@@ -158,17 +162,21 @@ function AddSubtaskRow({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => {
-          setIsModalOpen(true)
-        }}
-        className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex min-h-11 w-full items-center gap-1.5 border-t border-dashed border-border px-3 font-mono text-xs text-muted-foreground-faint transition-colors hover:text-muted-foreground"
-      >
-        <Plus className="size-3" />
-        add subtask
-      </Button>
+      <div className="flex min-h-11 items-center border-t border-dashed border-border px-3 font-mono text-xs">
+        <Button
+          type="button"
+          variant="plain"
+          onClick={() => {
+            setIsModalOpen(true)
+          }}
+          className="w-full justify-start whitespace-normal"
+        >
+          <span className="flex items-center gap-1.5">
+            <Plus className="size-3" />
+            add subtask
+          </span>
+        </Button>
+      </div>
       <CreateTaskModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}

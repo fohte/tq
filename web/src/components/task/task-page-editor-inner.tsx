@@ -114,7 +114,7 @@ export function PageEditorInner({
           type="button"
           variant="ghost"
           size="xs"
-          className="ml-auto h-5 px-1 text-2xs"
+          className="ml-auto h-5"
           onClick={() => {
             setIsContentEditing(true)
           }}

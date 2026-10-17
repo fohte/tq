@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
+import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useRef } from 'react'
 
@@ -8,10 +9,6 @@ import {
   sidebarFieldValueButtonClassName,
 } from '#components/task/sidebar-field'
 import { formatAbsoluteReminder, REMINDER_PRESETS } from '#lib/reminder-input'
-import { cn } from '#lib/utils'
-
-const popupRowClassName =
-  'h-auto min-h-0 shrink whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 block w-full px-3 py-1.5 text-left text-sm text-popover-foreground hover:bg-accent/50'
 
 export function SidebarRemindFieldAppearance({
   remindAtLabel,
@@ -80,58 +77,46 @@ export function SidebarRemindFieldAppearance({
       )}
       <Popover open={isEditing} onOpenChange={onOpenChange} anchor={inputRef}>
         <PopoverContent
-          // Base UI's popover moves focus to the popup's first focusable
-          // element (the "None" button below) as soon as it opens. That races
-          // the anchor `Input`'s own `autoFocus` and steals keystrokes away
-          // from it, so keep focus on the input instead.
+          // The input owns keyboard navigation, so keep focus there while the
+          // reminder options are open.
           initialFocus={false}
           padding="none"
           className="w-64"
         >
-          <Button
-            type="button"
-            variant="ghost"
-            className={popupRowClassName}
-            onMouseDown={(e) => {
-              e.preventDefault()
-              onClear()
-            }}
-          >
-            None
-          </Button>
-          <div className="mt-1 border-t border-border pt-1">
-            {query.trim() === '' ? (
-              REMINDER_PRESETS.map((preset) => (
-                <Button
-                  key={preset}
-                  type="button"
-                  variant="ghost"
-                  className={popupRowClassName}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    onSelectPreset(preset)
-                  }}
-                >
-                  {preset}
-                </Button>
-              ))
-            ) : parsedDate != null ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className={cn(popupRowClassName, 'font-mono')}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  onCommit(parsedDate)
-                }}
-              >
-                {formatAbsoluteReminder(parsedDate)}
-              </Button>
-            ) : (
-              <div className="px-3 py-1.5 text-sm text-muted-foreground">
-                Unrecognized date
-              </div>
-            )}
+          <div className="text-popover-foreground">
+            <List role="listbox">
+              <ListItem onSelect={onClear}>None</ListItem>
+            </List>
+            <div className="mt-1 border-t border-border pt-1">
+              {query.trim() === '' ? (
+                <List role="listbox">
+                  {REMINDER_PRESETS.map((preset) => (
+                    <ListItem
+                      key={preset}
+                      onSelect={() => {
+                        onSelectPreset(preset)
+                      }}
+                    >
+                      {preset}
+                    </ListItem>
+                  ))}
+                </List>
+              ) : parsedDate != null ? (
+                <List role="listbox">
+                  <ListItem
+                    onSelect={() => {
+                      onCommit(parsedDate)
+                    }}
+                  >
+                    {formatAbsoluteReminder(parsedDate)}
+                  </ListItem>
+                </List>
+              ) : (
+                <div className="px-3 py-1.5 text-sm text-muted-foreground">
+                  Unrecognized date
+                </div>
+              )}
+            </div>
           </div>
         </PopoverContent>
       </Popover>

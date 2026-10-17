@@ -111,12 +111,14 @@ export function TaskChecklistList({
 
       <Button
         type="button"
-        variant="ghost"
+        variant="plain"
         onClick={onCreateChecklist}
-        className="h-auto min-h-0 w-fit justify-start rounded-none border-0 bg-transparent px-0 py-0 font-mono text-xs font-normal text-muted-foreground-faint shadow-none transition-colors hover:bg-transparent hover:text-muted-foreground active:translate-y-0"
+        className="w-fit"
       >
-        <Plus className="size-3" />
-        add checklist
+        <span className="flex items-center gap-1">
+          <Plus className="size-3" />
+          add checklist
+        </span>
       </Button>
     </section>
   )
@@ -296,17 +298,21 @@ function ChecklistPanel({
           }}
         />
         <div className="flex min-h-11 items-center border-t border-dashed border-border">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setAddingItemParentId(null)
-            }}
-            className="h-auto min-h-0 flex-1 justify-start gap-1.5 rounded-none border-0 bg-transparent px-3 py-2 text-left font-mono text-xs font-normal text-muted-foreground-faint shadow-none transition-colors hover:bg-transparent hover:text-muted-foreground active:translate-y-0"
-          >
-            <Plus className="size-3" />
-            add item
-          </Button>
+          <div className="flex flex-1 items-center px-3 py-2 font-mono text-xs">
+            <Button
+              type="button"
+              variant="plain"
+              onClick={() => {
+                setAddingItemParentId(null)
+              }}
+              className="w-full justify-start text-left"
+            >
+              <span className="flex items-center gap-1.5">
+                <Plus className="size-3" />
+                add item
+              </span>
+            </Button>
+          </div>
           {checklist.name == null && (
             <ActionsMenu
               aria-label="Checklist actions"
