@@ -237,6 +237,7 @@ function ChecklistPanel({
           {editingName ? (
             <Input
               aria-label="Checklist name"
+              variant="ghost"
               autoFocus
               value={nameDraft}
               onChange={(event) => {
@@ -252,7 +253,7 @@ function ChecklistPanel({
                   setEditingName(false)
                 }
               }}
-              className="h-6 min-w-0 max-w-sm px-1 font-mono text-xs"
+              className="h-6 min-w-0 max-w-sm"
             />
           ) : (
             <>

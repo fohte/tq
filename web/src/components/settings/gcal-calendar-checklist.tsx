@@ -43,9 +43,9 @@ export function GcalCalendarChecklist({
   }
 
   return (
-    <ul className="flex flex-col gap-0.5 border-l border-border pl-3">
+    <ul className="flex min-w-0 flex-col gap-0.5 border-l border-border pl-3">
       {calendars.map((calendar) => (
-        <li key={calendar.id} className="flex items-center gap-2 py-1">
+        <li key={calendar.id} className="flex min-w-0 items-center gap-2 py-1">
           {updatingCalendarId === calendar.id ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
           ) : (
@@ -86,7 +86,11 @@ export function GcalCalendarChecklist({
                 updatingContextCalendarId === calendar.id
               }
             >
-              <SelectTrigger size="sm" className="h-6 shrink-0 px-1.5 text-xs">
+              <SelectTrigger
+                variant="ghost"
+                size="sm"
+                className="h-6 min-w-0 mx-0"
+              >
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>

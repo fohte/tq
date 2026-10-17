@@ -96,7 +96,7 @@ export function DescriptionTemplateFormModal({
                 setName(event.target.value)
               }}
               placeholder="Template name"
-              className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
+              className="h-auto w-full"
             />
           </FieldRow>
 
@@ -108,7 +108,7 @@ export function DescriptionTemplateFormModal({
               onChange={(event) => {
                 setWhenToUse(event.target.value)
               }}
-              className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
+              className="h-auto w-full"
             />
           </FieldRow>
 

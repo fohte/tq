@@ -184,7 +184,7 @@ export function GithubSyncRuleFormModal({
                       setOrg(e.target.value)
                     }}
                     placeholder="octocat"
-                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
+                    className="h-auto w-full"
                   />
                 </FieldRow>
               )}
@@ -197,7 +197,7 @@ export function GithubSyncRuleFormModal({
                       setRepo(e.target.value)
                     }}
                     placeholder="hello-world"
-                    className="h-auto w-full rounded-md border border-border bg-transparent dark:bg-transparent px-2 py-1 text-sm outline-none focus:border-primary/50 focus-visible:border-primary/50 focus-visible:ring-0"
+                    className="h-auto w-full"
                   />
                 </FieldRow>
               )}
@@ -210,11 +210,7 @@ export function GithubSyncRuleFormModal({
               value={targetProjectId}
               onValueChange={selectValueHandler(setTargetProjectId, projectIds)}
             >
-              <SelectTrigger
-                variant="ghost"
-                iconClassName="size-4 translate-x-0.5 text-foreground stroke-2"
-                className="w-full gap-0.5"
-              >
+              <SelectTrigger variant="ghost" className="w-full">
                 <SelectValue placeholder="選択してください" />
               </SelectTrigger>
               <SelectContent>
