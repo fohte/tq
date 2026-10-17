@@ -192,7 +192,7 @@ function ViewsSection() {
             onClick={() => {
               setIsExpanded(true)
             }}
-            className="h-auto min-h-0 w-full justify-start gap-0"
+            className="w-full justify-start"
           >
             + {hiddenCount} more
           </Button>
