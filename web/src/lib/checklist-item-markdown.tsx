@@ -283,9 +283,9 @@ export function renderChecklistItemMarkdown({
           <FieldTrigger
             key={segment.key}
             onClick={onEdit}
-            className="inline cursor-text"
+            className="inline-block max-w-full cursor-text"
           >
-            <span className={cn('min-w-0 truncate', checked && 'line-through')}>
+            <span className={cn('block truncate', checked && 'line-through')}>
               {segment.node}
             </span>
           </FieldTrigger>

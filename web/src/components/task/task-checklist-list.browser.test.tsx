@@ -221,11 +221,29 @@ function getInlineMarkdownStyleState(element: Element) {
   const style = getComputedStyle(element)
   return {
     text: element.textContent,
-    minWidth: style.minWidth,
+    display: style.display,
     overflow: style.overflow,
     textDecoration: style.textDecorationLine,
     textOverflow: style.textOverflow,
     whiteSpace: style.whiteSpace,
+  }
+}
+
+function getInlineMarkdownTruncationState(
+  fieldTrigger: Element,
+  inlineContent: Element,
+) {
+  const fieldTriggerBounds = fieldTrigger.getBoundingClientRect()
+  const rowBounds = assertDefined(
+    fieldTrigger.parentElement,
+    'the checklist text has a row container',
+  ).getBoundingClientRect()
+
+  return {
+    text: inlineContent.textContent,
+    fieldTriggerDisplay: getComputedStyle(fieldTrigger).display,
+    contentOverflows: inlineContent.scrollWidth > inlineContent.clientWidth,
+    fieldTriggerFitsRow: fieldTriggerBounds.right <= rowBounds.right,
   }
 }
 
@@ -300,6 +318,42 @@ describe('TaskChecklistList', () => {
     })
   })
 
+  it('truncates long checklist text inside the edit trigger', async () => {
+    const content = 'Pack the entire campsite before sunrise. '
+      .repeat(30)
+      .trim()
+    const rendered = renderChecklist({
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000748',
+              content,
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Check ${content}` })
+    const fieldTrigger = assertDefined(
+      rendered.container.querySelector('[data-slot="field-trigger"]'),
+      'the checklist item has an editable plain-text field',
+    )
+    const inlineContent = assertDefined(
+      fieldTrigger.querySelector(':scope > span'),
+      'the field trigger has a text wrapper',
+    )
+
+    expect(
+      getInlineMarkdownTruncationState(fieldTrigger, inlineContent),
+    ).toEqual({
+      text: content,
+      fieldTriggerDisplay: 'inline-block',
+      contentOverflows: true,
+      fieldTriggerFitsRow: true,
+    })
+  })
+
   it('keeps strikethrough on checked Markdown text', async () => {
     const content = 'Review **the sample**'
     const rendered = renderChecklist({
@@ -327,7 +381,7 @@ describe('TaskChecklistList', () => {
 
     expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
       text: 'Review the sample',
-      minWidth: '0px',
+      display: 'block',
       overflow: 'hidden',
       textDecoration: 'line-through',
       textOverflow: 'ellipsis',
@@ -381,7 +435,7 @@ describe('TaskChecklistList', () => {
 
     expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
       text: content,
-      minWidth: '0px',
+      display: 'block',
       overflow: 'hidden',
       textDecoration: 'line-through',
       textOverflow: 'ellipsis',
