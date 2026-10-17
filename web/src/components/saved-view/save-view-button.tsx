@@ -50,10 +50,18 @@ export function SaveViewButton({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="shrink-0 md:h-7 md:w-auto md:gap-1 md:px-2.5"
+            className="shrink-0 md:hidden"
+            aria-label="Save view"
           >
+            <Bookmark />
+          </Button>
+        }
+      />
+      <DialogTrigger
+        render={
+          <Button variant="ghost" size="sm" className="hidden md:inline-flex">
             <Bookmark data-icon="inline-start" />
-            <span className="sr-only md:not-sr-only">Save view</span>
+            Save view
           </Button>
         }
       />

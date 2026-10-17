@@ -199,7 +199,6 @@ function StatusSelect({
         <SelectTrigger
           variant="ghost"
           size="sm"
-          iconClassName="size-4 text-foreground native-select-caret-stroke native-select-status-caret-offset"
           className={cn('w-fit min-w-20', mobileLayout && 'translate-y-px')}
         >
           <SelectValue />
@@ -243,7 +242,6 @@ function ContextSelect({
         <SelectTrigger
           variant="ghost"
           size="sm"
-          iconClassName="size-4 -translate-x-1.5 text-foreground native-select-caret-stroke"
           className={cn('w-fit min-w-20.5', mobileLayout && 'translate-y-px')}
         >
           <SelectValue />
@@ -274,6 +272,7 @@ function DateInput({
   return (
     <Input
       type="date"
+      variant="ghost"
       value={value ?? ''}
       onChange={(e) => {
         updateProject.mutate({
@@ -281,7 +280,7 @@ function DateInput({
           input: { [field]: e.target.value || null },
         })
       }}
-      className="h-auto w-full rounded-none border border-border bg-transparent dark:bg-transparent px-2 py-1 font-mono text-xs md:text-xs text-foreground shadow-none outline-none focus-visible:border-primary/50 focus-visible:ring-0"
+      className="h-auto w-full"
     />
   )
 }

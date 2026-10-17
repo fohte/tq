@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { InferResponseType } from 'hono/client'
+import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
@@ -12,6 +12,17 @@ type Schedule = InferResponseType<
 >[number]
 
 export type { Schedule }
+
+export type ScheduleConstraint = NonNullable<
+  InferResponseType<
+    (typeof api.api.schedule.events)[':id']['constraints']['$get'],
+    200
+  >['constraint']
+>
+
+export type ScheduleConstraintInput = InferRequestType<
+  (typeof api.api.schedule.events)[':id']['constraints']['$put']
+>['json']
 
 export type ScheduleDetails = InferResponseType<
   (typeof api.api.schedule.events)[':id']['$get'],
@@ -81,6 +92,68 @@ export function useScheduleDetails(
         param: { id: scheduleId ?? '' },
       })
       return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useScheduleConstraints(
+  scheduleId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey:
+      scheduleId != null
+        ? scheduleKeys.constraints(scheduleId)
+        : [...scheduleKeys.all, 'constraints', 'disabled'],
+    enabled: enabled && scheduleId != null,
+    queryFn: async () => {
+      const res = await api.api.schedule.events[':id'].constraints.$get({
+        param: { id: scheduleId ?? '' },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useSetScheduleConstraints() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      input,
+    }: {
+      id: string
+      input: ScheduleConstraintInput
+    }) => {
+      const res = await api.api.schedule.events[':id'].constraints.$put({
+        param: { id },
+        json: input,
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onSettled: (_data, _error, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.constraints(variables.id),
+      })
+    },
+  })
+}
+
+export function useDeleteScheduleConstraints() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.schedule.events[':id'].constraints.$delete({
+        param: { id },
+      })
+      assertOkOrThrow(res)
+    },
+    onSettled: (_data, _error, id) => {
+      void queryClient.invalidateQueries({
+        queryKey: scheduleKeys.constraints(id),
+      })
     },
   })
 }

@@ -11,6 +11,7 @@ import {
 import { CalendarDays, Clock, Layers, Palette, Repeat, X } from 'lucide-react'
 
 import { ColorSwatchRadioGroup } from '#components/color-swatch-radio-group'
+import { ScheduleConstraintsField } from '#components/schedule/schedule-constraints-field'
 import { ScheduleEditScopeSelector } from '#components/schedule/schedule-edit-scope-selector'
 import { ScheduleExceptionList } from '#components/schedule/schedule-exception-list'
 import {
@@ -64,6 +65,15 @@ export function ScheduleModalDesktopPanel({
   remindBeforeMinutes,
   setRemindBeforeMinutes,
   reminderReady,
+  constraints,
+  constraintsLoading,
+  constraintsError,
+  constraintsSaveError,
+  scheduleAfterConstraintsSaveError,
+  constraintsDefaultOpen,
+  onAddConstraints,
+  onChangeConstraints,
+  onRemoveConstraints,
   previewText,
   isPreviewLoading,
   previewError,
@@ -250,6 +260,24 @@ export function ScheduleModalDesktopPanel({
           )}
         </div>
 
+        {(!schedule || scope === 'all') && (
+          <ScheduleConstraintsField
+            variant="desktop"
+            value={constraints}
+            isLoading={constraintsLoading}
+            isError={constraintsError}
+            saveError={constraintsSaveError}
+            scheduleAfterConstraintsSaveError={
+              scheduleAfterConstraintsSaveError
+            }
+            isPending={isPending}
+            defaultOpen={constraintsDefaultOpen}
+            onAdd={onAddConstraints}
+            onChange={onChangeConstraints}
+            onRemove={onRemoveConstraints}
+          />
+        )}
+
         {/* Context & Color */}
         {(scope === 'all' || !schedule) && (
           <div className="flex flex-wrap items-end gap-4">
@@ -370,9 +398,9 @@ export function ScheduleModalDesktopPanel({
             Cancel
           </Button>
           <Button
+            size="lg"
             onClick={handleSubmit}
             disabled={!canSubmit || isPending || isPreviewLoading}
-            className="h-9 rounded-lg px-4"
           >
             {schedule ? 'Save' : 'Create Schedule'}
           </Button>

@@ -4,7 +4,10 @@ import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
-import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
+import {
+  makeSchedule,
+  makeScheduleConstraint,
+} from '#components/schedule/schedule-test-fixtures'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -75,6 +78,9 @@ export const Edit: Story = {
         ),
         http.get('/api/schedule/events/:scheduleId/overrides', () =>
           HttpResponse.json([]),
+        ),
+        http.get('/api/schedule/events/:id/constraints', () =>
+          HttpResponse.json({ constraint: makeScheduleConstraint() }),
         ),
       ],
     },

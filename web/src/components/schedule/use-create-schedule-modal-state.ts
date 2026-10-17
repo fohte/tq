@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import type { ScheduleConstraintFormState } from '#components/schedule/schedule-constraints-form-state'
+import {
+  emptyScheduleConstraintFormState,
+  scheduleConstraintFormStateFromSaved,
+} from '#components/schedule/schedule-constraints-form-state'
 import {
   type RecurrenceFormDraft,
   scheduleEditDialogFormState,
@@ -23,9 +28,16 @@ import {
 } from '#components/schedule/schedule-modal-form-options'
 import type { SchedulePanelProps } from '#components/schedule/schedule-modal-panel-props'
 import { useScheduleModalPreview } from '#components/schedule/use-schedule-modal-preview'
-import { useScheduleModalSave } from '#components/schedule/use-schedule-modal-save'
+import {
+  type ScheduleModalSaveState,
+  useScheduleModalSave,
+} from '#components/schedule/use-schedule-modal-save'
 import type { Schedule } from '#hooks/use-schedules'
-import { useScheduleDetails, useScheduleOverrides } from '#hooks/use-schedules'
+import {
+  useScheduleConstraints,
+  useScheduleDetails,
+  useScheduleOverrides,
+} from '#hooks/use-schedules'
 import { formatLocalDate } from '#lib/date-range'
 
 interface CreateScheduleModalStateOptions {
@@ -52,6 +64,19 @@ export function useCreateScheduleModalState({
     schedule?.scheduleId,
     open && schedule != null,
   )
+  const scheduleConstraints = useScheduleConstraints(
+    schedule?.scheduleId,
+    open && schedule != null,
+  )
+  const [constraintDraft, setConstraintDraft] =
+    useState<ScheduleConstraintFormState | null>(null)
+  const constraintTouchedRef = useRef(false)
+  const [saveState, setSaveState] = useState<ScheduleModalSaveState>({
+    constraintsSaveError: false,
+    scheduleAfterConstraintsSaveError: false,
+    createdScheduleId: null,
+    createdScheduleConstraintsSaved: false,
+  })
   const today = formatLocalDate(new Date())
   const exceptionQuery = useScheduleOverrides(
     schedule?.scheduleId,
@@ -97,6 +122,21 @@ export function useCreateScheduleModalState({
     scheduleDetails.isFetching,
   ])
 
+  useEffect(() => {
+    if (
+      !open ||
+      !schedule ||
+      scheduleConstraints.isFetching ||
+      scheduleConstraints.data === undefined ||
+      constraintTouchedRef.current
+    ) {
+      return
+    }
+    setConstraintDraft(
+      scheduleConstraintFormStateFromSaved(scheduleConstraints.data.constraint),
+    )
+  }, [open, schedule, scheduleConstraints.data, scheduleConstraints.isFetching])
+
   const resetForm = useCallback(() => {
     setEditState(
       scheduleEditDialogFormState(
@@ -106,7 +146,26 @@ export function useCreateScheduleModalState({
       ),
     )
     reminderTouchedRef.current = false
-  }, [defaultStartDate, schedule, scheduleDetails.data])
+    constraintTouchedRef.current = false
+    setSaveState({
+      constraintsSaveError: false,
+      scheduleAfterConstraintsSaveError: false,
+      createdScheduleId: null,
+      createdScheduleConstraintsSaved: false,
+    })
+    setConstraintDraft(
+      schedule
+        ? scheduleConstraintFormStateFromSaved(
+            scheduleConstraints.data?.constraint ?? null,
+          )
+        : null,
+    )
+  }, [
+    defaultStartDate,
+    schedule,
+    scheduleConstraints.data,
+    scheduleDetails.data,
+  ])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -137,6 +196,8 @@ export function useCreateScheduleModalState({
     schedule,
     editState,
     details: scheduleDetails.data,
+    constraintDraft,
+    savedConstraint: scheduleConstraints.data?.constraint ?? null,
     isDetailsFetching: scheduleDetails.isFetching,
     rangeAction: preview.rangeAction,
     previewRequest: preview.previewRequest,
@@ -147,6 +208,8 @@ export function useCreateScheduleModalState({
     allInput: preview.allInput,
     recurrence: preview.recurrence,
     handleOpenChange,
+    saveState,
+    setSaveState,
   })
   const canRestoreThisEvent = Boolean(
     schedule?.overridden != null ||
@@ -265,6 +328,18 @@ export function useCreateScheduleModalState({
     reminderTouchedRef.current = true
     setEditState((prev) => ({ ...prev, remindBeforeMinutes: value }))
   }
+  const addConstraints = () => {
+    constraintTouchedRef.current = true
+    setConstraintDraft(emptyScheduleConstraintFormState())
+  }
+  const updateConstraints = (value: ScheduleConstraintFormState) => {
+    constraintTouchedRef.current = true
+    setConstraintDraft(value)
+  }
+  const removeConstraints = () => {
+    constraintTouchedRef.current = true
+    setConstraintDraft(null)
+  }
 
   const panelProps: SchedulePanelProps = {
     schedule,
@@ -303,6 +378,19 @@ export function useCreateScheduleModalState({
     remindBeforeMinutes: editState.remindBeforeMinutes,
     setRemindBeforeMinutes,
     reminderReady: save.reminderReady,
+    constraints: constraintDraft,
+    constraintsLoading: Boolean(schedule && scheduleConstraints.isPending),
+    constraintsError: Boolean(
+      schedule && scheduleConstraints.isError && !scheduleConstraints.data,
+    ),
+    constraintsSaveError: saveState.constraintsSaveError,
+    scheduleAfterConstraintsSaveError:
+      saveState.scheduleAfterConstraintsSaveError,
+    constraintsDefaultOpen:
+      constraintDraft !== null && scheduleConstraints.data?.constraint == null,
+    onAddConstraints: addConstraints,
+    onChangeConstraints: updateConstraints,
+    onRemoveConstraints: removeConstraints,
     previewText: preview.previewText,
     isPreviewLoading: preview.isPreviewLoading,
     previewError: preview.previewError,
