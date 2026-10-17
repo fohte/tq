@@ -143,6 +143,24 @@ beforeEach(() => {
 })
 
 describe('TaskDependenciesSection', () => {
+  it('keeps the add-blocker control at least 44px tall', () => {
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[]}
+      />,
+    )
+
+    const height = screen
+      .getByRole('button', { name: 'add blocker' })
+      .getBoundingClientRect().height
+
+    expect(height >= 44).toBe(true)
+  })
+
   it('updates notification events for a GitHub blocker', async () => {
     const githubBlockers = [makeGithubBlocker({ id: 'github-blocker-open' })]
     const user = userEvent.setup()

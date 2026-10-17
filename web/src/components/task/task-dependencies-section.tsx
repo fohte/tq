@@ -201,7 +201,7 @@ function BlockedByGroup({
             </Button>
           </div>
         ))}
-        <div className="flex min-h-11 items-center border-t border-dashed border-border px-3 font-mono text-xs">
+        <div className="flex items-center border-t border-dashed border-border px-3 font-mono text-xs">
           <Button
             type="button"
             variant="plain"
@@ -209,7 +209,7 @@ function BlockedByGroup({
             onClick={() => {
               setDialogOpen(true)
             }}
-            className="w-full justify-start whitespace-normal"
+            className="min-h-11 flex-1 self-stretch justify-start whitespace-normal"
           >
             <span className="flex items-center gap-1.5">
               <Plus className="size-3" />

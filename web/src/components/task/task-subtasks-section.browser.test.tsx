@@ -59,6 +59,21 @@ async function renderSection(inherited: InheritedTaskAttributes) {
 }
 
 describe('TaskSubtasksList', () => {
+  it('keeps both add rows at least 44px tall', async () => {
+    await renderSection({ context: 'work', projectId: null, labels: [] })
+
+    const heights = [
+      screen
+        .getByRole('button', { name: /link existing task/i })
+        .getBoundingClientRect().height,
+      screen
+        .getByRole('button', { name: /add subtask/i })
+        .getBoundingClientRect().height,
+    ]
+
+    expect(heights.every((height) => height >= 44)).toBe(true)
+  })
+
   it('opens the create-task modal pre-filled with the parent and inherited attributes when "add subtask" is clicked', async () => {
     const user = userEvent.setup()
     await renderSection({
