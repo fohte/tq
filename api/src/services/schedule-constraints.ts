@@ -18,8 +18,8 @@ const scheduleConstraintWeekdaySchema = z.object({
 
 export const scheduleConstraintSchema = z
   .object({
-    weeklyMin: z.number().int().min(0).nullable(),
-    weeklyMax: z.number().int().max(7).nullable(),
+    weeklyMin: z.number().int().min(0).max(7).nullable(),
+    weeklyMax: z.number().int().min(0).max(7).nullable(),
     weeklyTarget: z.number().int().min(0).max(7).nullable(),
     maxConsecutiveDays: z.number().int().min(1).nullable(),
     windowStart: scheduleConstraintTimeSchema.nullable(),

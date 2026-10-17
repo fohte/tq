@@ -115,6 +115,36 @@ describe('scheduleConstraintSchema', () => {
     ])
   })
 
+  it('rejects a weekly minimum above seven', () => {
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        weeklyMin: 8,
+      }),
+    ).toEqual([
+      {
+        code: 'too_big',
+        message: 'Too big: expected number to be <=7',
+        path: ['weeklyMin'],
+      },
+    ])
+  })
+
+  it('rejects a weekly maximum below zero', () => {
+    expect(
+      constraintIssues({
+        ...makeConstraint(),
+        weeklyMax: -1,
+      }),
+    ).toEqual([
+      {
+        code: 'too_small',
+        message: 'Too small: expected number to be >=0',
+        path: ['weeklyMax'],
+      },
+    ])
+  })
+
   it('rejects a time window with only one boundary', () => {
     expect(
       constraintIssues({
@@ -377,23 +407,6 @@ describe('checkScheduleConstraints', () => {
         weekStart: '2030-05-06',
         count: 3,
         maximum: 2,
-      },
-    ])
-  })
-
-  it('reports a negative maximum violation without a triggering occurrence index', () => {
-    expect(
-      checkScheduleConstraints(makeConstraint({ weeklyMax: -1 }), [
-        makeOccurrence('2030-05-07'),
-      ]),
-    ).toEqual([
-      {
-        type: 'weekly-count-above-maximum',
-        severity: 'required',
-        date: '2030-05-06',
-        weekStart: '2030-05-06',
-        count: 1,
-        maximum: -1,
       },
     ])
   })

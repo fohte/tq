@@ -60,6 +60,7 @@ const REGISTERED_TOOL_NAMES = [
   'saved_view_get',
   'saved_view_list',
   'saved_view_update',
+  'schedule_constraints_check',
   'schedule_events_create',
   'schedule_events_delete',
   'schedule_events_list',

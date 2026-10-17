@@ -731,6 +731,7 @@ describe('operation tool input schemas', () => {
       saved_view_get: false,
       saved_view_list: false,
       saved_view_update: false,
+      schedule_constraints_check: false,
       schedule_override_clear: false,
       schedule_override_set: false,
       schedule_events_create: false,
@@ -828,6 +829,7 @@ describe('operation tool annotations', () => {
         readOnlyHint: false,
         destructiveHint: false,
       },
+      schedule_constraints_check: { readOnlyHint: true },
       schedule_events_update: {
         readOnlyHint: false,
         destructiveHint: false,

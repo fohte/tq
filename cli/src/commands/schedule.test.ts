@@ -235,6 +235,51 @@ describe('schedule time blocks create', () => {
   })
 })
 
+describe('schedule constraints check', () => {
+  it('sends a JSON draft to the constraint-check API', async () => {
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const draft = {
+      occurrenceChange: {
+        originalDate: '2030-05-09',
+        date: '2030-05-10',
+      },
+    }
+    const responseBody = { constraintViolations: [] }
+
+    expect(
+      await runScheduleCli(
+        [
+          'schedule',
+          'constraints',
+          'check',
+          id,
+          '2030-05-06',
+          '2030-05-12',
+          '--draft',
+          JSON.stringify(draft),
+        ],
+        new Response(JSON.stringify(responseBody), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: `/api/schedule/events/${id}/constraint-check`,
+          query: {},
+          body: {
+            startDate: '2030-05-06',
+            endDate: '2030-05-12',
+            draft,
+          },
+        },
+      ],
+      stderr: [],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+    })
+  })
+})
+
 describe('schedule events create', () => {
   it('describes schedule dates and recurrence in CLI help', async () => {
     const expectedHelp = [

@@ -57,6 +57,7 @@ interface ScheduleResponse {
   } | null
   context: string
   color: string | null
+  constraintViolations: unknown[]
   createdAt: string
   updatedAt: string
 }
@@ -707,6 +708,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -735,6 +737,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -1824,6 +1827,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -1878,6 +1882,7 @@ describe('schedules API', () => {
             recurrence: null,
             context: 'personal',
             color: null,
+            constraintViolations: [],
             createdAt: 'TIMESTAMP',
             updatedAt: 'TIMESTAMP',
           },
@@ -1895,6 +1900,7 @@ describe('schedules API', () => {
             recurrence: null,
             context: 'personal',
             color: null,
+            constraintViolations: [],
             createdAt: 'TIMESTAMP',
             updatedAt: 'TIMESTAMP',
           },
@@ -2527,6 +2533,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -3443,6 +3450,7 @@ describe('schedule overrides API', () => {
       endTime: string | null
       movedToDate: string | null
       skipped: boolean
+      constraintViolations: unknown[]
     }>(setResponse)
 
     const setSnapshot = () => ({ status: setResponse.status, body: setBody })
@@ -3455,6 +3463,7 @@ describe('schedule overrides API', () => {
         endTime: '10:00',
         movedToDate: destinationDate,
         skipped: false,
+        constraintViolations: [],
       },
     })
   })

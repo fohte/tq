@@ -36,6 +36,7 @@ const defaultScheduleEvent: ScheduleEventResponse = {
   recurrence: null,
   context: 'personal',
   color: null,
+  constraintViolations: [],
   createdAt: '2026-12-18T08:00:00.000Z',
   updatedAt: '2026-12-18T08:00:00.000Z',
 }
