@@ -1,16 +1,15 @@
 import { CalendarDays, CircleCheck, CircleX, TriangleAlert } from 'lucide-react'
 
+import { dayLabels } from '#components/schedule/schedule-modal-form-options'
 import type { ScheduleConstraintCheckResponse } from '#hooks/use-schedules'
-import { getLocalWeekDateRange } from '#lib/date-range'
 import { cn } from '#lib/utils'
 
 type ScheduleConstraintViolation =
   ScheduleConstraintCheckResponse['constraintViolations'][number]
 
-const weekdayAbbreviations = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
 interface ScheduleConstraintCheckResultProps {
-  occurrenceDate: string
+  startDate: string
+  endDate: string
   constraintViolations: ScheduleConstraintViolation[]
   isLoading: boolean
   isError: boolean
@@ -19,16 +18,14 @@ interface ScheduleConstraintCheckResultProps {
 }
 
 export function ScheduleConstraintCheckResult({
-  occurrenceDate,
+  startDate,
+  endDate,
   constraintViolations,
   isLoading,
   isError,
   isIncomplete,
   draftInvalid,
 }: ScheduleConstraintCheckResultProps) {
-  const date = new Date(`${occurrenceDate}T00:00:00`)
-  const { startDate, endDate } = getLocalWeekDateRange(date)
-
   return (
     <section className="flex flex-col gap-2">
       <h3 className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
@@ -140,7 +137,7 @@ function formatViolation(violation: ScheduleConstraintViolation): string {
 
 function weekdayName(date: string): string {
   const dayOfWeek = new Date(`${date}T00:00:00`).getDay()
-  return weekdayAbbreviations[dayOfWeek] ?? ''
+  return dayLabels[dayOfWeek] ?? ''
 }
 
 function formatDateRangeLabel(startDate: string, endDate: string): string {

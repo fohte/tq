@@ -137,3 +137,12 @@ export function makeScheduleConstraintViolations(): ScheduleConstraintViolation[
     },
   ]
 }
+
+export function makeMixedSeverityScheduleConstraintViolations(): ScheduleConstraintViolation[] {
+  return makeScheduleConstraintViolations().filter(
+    ({ type }) =>
+      type === 'consecutive-days-exceeded' ||
+      type === 'weekly-target-not-met' ||
+      type === 'reserve-weekday',
+  )
+}

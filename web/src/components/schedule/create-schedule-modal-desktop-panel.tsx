@@ -75,7 +75,8 @@ export function ScheduleModalDesktopPanel({
   onAddConstraints,
   onChangeConstraints,
   onRemoveConstraints,
-  constraintCheckDraft,
+  constraintCheckRange,
+  constraintCheckDraftInvalid,
   constraintCheckViolations,
   isConstraintCheckLoading,
   isConstraintCheckError,
@@ -289,12 +290,13 @@ export function ScheduleModalDesktopPanel({
           !constraintsLoading &&
           !constraintsError && (
             <ScheduleConstraintCheckResult
-              occurrenceDate={occurrenceDate}
+              startDate={constraintCheckRange.startDate}
+              endDate={constraintCheckRange.endDate}
               constraintViolations={constraintCheckViolations}
               isLoading={isConstraintCheckLoading}
               isError={isConstraintCheckError}
               isIncomplete={constraintCheckIncomplete}
-              draftInvalid={constraintCheckDraft === null}
+              draftInvalid={constraintCheckDraftInvalid}
             />
           )}
 

@@ -24,11 +24,22 @@ function allConstraintsMetOutcome(container: HTMLElement) {
   }
 }
 
+function invalidDraftOutcome(container: HTMLElement) {
+  return {
+    heading: normalizedText(container.querySelector('h3')),
+    message: normalizedText(container.querySelector('[role="status"]')),
+    rows: Array.from(container.querySelectorAll('[role="listitem"]')).map(
+      normalizedText,
+    ),
+  }
+}
+
 describe('ScheduleConstraintCheckResult', () => {
   it('formats every constraint violation with its severity', () => {
     const { container } = render(
       <ScheduleConstraintCheckResult
-        occurrenceDate="2041-05-15"
+        startDate="2041-05-13"
+        endDate="2041-05-19"
         constraintViolations={makeScheduleConstraintViolations()}
         isLoading={false}
         isError={false}
@@ -55,7 +66,8 @@ describe('ScheduleConstraintCheckResult', () => {
   it('shows a green result when every constraint is met', () => {
     const { container } = render(
       <ScheduleConstraintCheckResult
-        occurrenceDate="2041-05-15"
+        startDate="2041-05-13"
+        endDate="2041-05-19"
         constraintViolations={[]}
         isLoading={false}
         isError={false}
@@ -67,6 +79,26 @@ describe('ScheduleConstraintCheckResult', () => {
     expect(allConstraintsMetOutcome(container)).toEqual({
       heading: 'This week · May 13 – 19',
       result: 'All constraints met',
+    })
+  })
+
+  it('hides stale violations while the edited constraints are invalid', () => {
+    const { container } = render(
+      <ScheduleConstraintCheckResult
+        startDate="2041-05-13"
+        endDate="2041-05-19"
+        constraintViolations={makeScheduleConstraintViolations()}
+        isLoading={false}
+        isError={false}
+        isIncomplete={false}
+        draftInvalid
+      />,
+    )
+
+    expect(invalidDraftOutcome(container)).toEqual({
+      heading: 'This week · May 13 – 19',
+      message: 'Complete valid constraints to check this week.',
+      rows: [],
     })
   })
 })

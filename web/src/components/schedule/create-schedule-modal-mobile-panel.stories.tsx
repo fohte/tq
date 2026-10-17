@@ -4,9 +4,9 @@ import { fn } from 'storybook/test'
 import { ScheduleModalMobilePanel } from '#components/schedule/create-schedule-modal-mobile-panel'
 import { scheduleConstraintFormStateFromSaved } from '#components/schedule/schedule-constraints-form-state'
 import {
+  makeMixedSeverityScheduleConstraintViolations,
   makeSchedule,
   makeScheduleConstraint,
-  makeScheduleConstraintViolations,
   makeScheduleOverride,
 } from '#components/schedule/schedule-test-fixtures'
 
@@ -72,7 +72,8 @@ const meta = {
     onAddConstraints: fn(),
     onChangeConstraints: fn(),
     onRemoveConstraints: fn(),
-    constraintCheckDraft: undefined,
+    constraintCheckRange: { startDate: '2030-04-15', endDate: '2030-04-21' },
+    constraintCheckDraftInvalid: false,
     constraintCheckViolations: [],
     isConstraintCheckLoading: false,
     isConstraintCheckError: false,
@@ -86,13 +87,6 @@ const meta = {
     handleSubmit: fn(),
   },
 } satisfies Meta<typeof ScheduleModalMobilePanel>
-
-const thisWeekViolations = makeScheduleConstraintViolations().filter(
-  ({ type }) =>
-    type === 'consecutive-days-exceeded' ||
-    type === 'weekly-target-not-met' ||
-    type === 'reserve-weekday',
-)
 
 export default meta
 type Story = StoryObj<typeof meta>
@@ -130,7 +124,8 @@ export const ThisEventWithConstraints: Story = {
     startTime: '07:00',
     endTime: '08:00',
     constraints: scheduleConstraintFormStateFromSaved(makeScheduleConstraint()),
-    constraintCheckViolations: thisWeekViolations,
+    constraintCheckRange: { startDate: '2041-05-13', endDate: '2041-05-19' },
+    constraintCheckViolations: makeMixedSeverityScheduleConstraintViolations(),
   },
 }
 

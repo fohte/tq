@@ -33,6 +33,7 @@ import {
   type ScheduleModalSaveState,
   useScheduleModalSave,
 } from '#components/schedule/use-schedule-modal-save'
+import { useDebounce } from '#hooks/use-debounce'
 import {
   type Schedule,
   useScheduleConstraintCheck,
@@ -198,18 +199,30 @@ export function useCreateScheduleModalState({
   const constraintCheckRange = getLocalWeekDateRange(
     new Date(`${occurrenceDate}T00:00:00`),
   )
+  const constraintCheckInput = {
+    ...constraintCheckRange,
+    ...(constraintCheckDraft == null ? {} : { draft: constraintCheckDraft }),
+  }
+  const constraintCheckInputKey = JSON.stringify(constraintCheckInput)
+  const debouncedConstraintCheckInputKey = useDebounce(
+    constraintCheckInputKey,
+    300,
+  )
+  const isConstraintCheckDebouncing =
+    constraintCheckDraft !== null &&
+    constraintCheckInputKey !== debouncedConstraintCheckInputKey
+  const constraintsQueryUnavailable =
+    scheduleConstraints.isError && !scheduleConstraints.data
   const constraintCheck = useScheduleConstraintCheck(
     schedule?.scheduleId,
-    {
-      ...constraintCheckRange,
-      ...(constraintCheckDraft == null ? {} : { draft: constraintCheckDraft }),
-    },
+    constraintCheckInput,
     open &&
       schedule != null &&
       constraintDraft !== null &&
       !scheduleConstraints.isPending &&
-      !scheduleConstraints.isError &&
-      constraintCheckDraft !== null,
+      !constraintsQueryUnavailable &&
+      constraintCheckDraft !== null &&
+      !isConstraintCheckDebouncing,
   )
   const preview = useScheduleModalPreview({
     schedule,
@@ -416,9 +429,11 @@ export function useCreateScheduleModalState({
     onAddConstraints: addConstraints,
     onChangeConstraints: updateConstraints,
     onRemoveConstraints: removeConstraints,
-    constraintCheckDraft,
+    constraintCheckRange,
+    constraintCheckDraftInvalid: constraintCheckDraft === null,
     constraintCheckViolations: constraintCheck.data?.constraintViolations ?? [],
-    isConstraintCheckLoading: constraintCheck.isPending,
+    isConstraintCheckLoading:
+      isConstraintCheckDebouncing || constraintCheck.isFetching,
     isConstraintCheckError: constraintCheck.isError,
     constraintCheckIncomplete: Boolean(
       constraintCheck.data?.calendarDataIncomplete ||

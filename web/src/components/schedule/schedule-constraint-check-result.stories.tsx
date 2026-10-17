@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { ScheduleConstraintCheckResult } from '#components/schedule/schedule-constraint-check-result'
-import { makeScheduleConstraintViolations } from '#components/schedule/schedule-test-fixtures'
+import {
+  makeMixedSeverityScheduleConstraintViolations,
+  makeScheduleConstraintViolations,
+} from '#components/schedule/schedule-test-fixtures'
 
 const sampleViolations = makeScheduleConstraintViolations()
 
@@ -9,7 +12,8 @@ const meta = {
   title: 'Schedule/ScheduleConstraintCheckResult',
   component: ScheduleConstraintCheckResult,
   args: {
-    occurrenceDate: '2041-05-15',
+    startDate: '2041-05-13',
+    endDate: '2041-05-19',
     constraintViolations: [],
     isLoading: false,
     isError: false,
@@ -35,12 +39,7 @@ export const AllConstraintsMet: Story = {
 export const RequiredAndPreferredViolations: Story = {
   name: 'the week has required and preferred violations',
   args: {
-    constraintViolations: sampleViolations.filter(
-      ({ type }) =>
-        type === 'consecutive-days-exceeded' ||
-        type === 'weekly-target-not-met' ||
-        type === 'reserve-weekday',
-    ),
+    constraintViolations: makeMixedSeverityScheduleConstraintViolations(),
   },
 }
 
@@ -65,5 +64,10 @@ export const Incomplete: Story = {
 
 export const InvalidDraft: Story = {
   name: 'the edited constraints need to be completed',
-  args: { draftInvalid: true },
+  args: { constraintViolations: sampleViolations, draftInvalid: true },
+}
+
+export const Error: Story = {
+  name: 'the check could not be completed',
+  args: { isError: true },
 }
