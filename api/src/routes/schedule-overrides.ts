@@ -7,8 +7,7 @@ import { db } from '#db/connection'
 import { scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
-  evaluateScheduleConstraintViolations,
-  evaluateScheduleConstraintViolationsForSaveResponse,
+  evaluateScheduleConstraintViolationsSafely,
   scheduleConstraintWeekRange,
 } from '#routes/schedule-constraint-evaluation'
 import { scheduleOccursOnDate } from '#routes/schedule-expansion'
@@ -124,10 +123,10 @@ export const scheduleOverridesApp = new Hono()
       ]
       const evaluations = await Promise.all(
         affectedRanges.map((range) =>
-          evaluateScheduleConstraintViolationsForSaveResponse(
-            evaluateScheduleConstraintViolations({ series: schedule, range }),
-            schedule.schedule.id,
-          ),
+          evaluateScheduleConstraintViolationsSafely({
+            series: schedule,
+            range,
+          }),
         ),
       )
       const constraintViolations = evaluations.flatMap(

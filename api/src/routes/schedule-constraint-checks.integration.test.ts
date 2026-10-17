@@ -10,11 +10,10 @@ import {
 } from '#db/schema'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import { addCalendarDays, mondayWeekStart } from '#lib/timezone'
-import * as scheduleConstraintEvaluation from '#routes/schedule-constraint-evaluation'
 import { formatDateStr } from '#routes/schedule-expansion'
 import { MAX_SCHEDULE_DATE_RANGE_DAYS } from '#schemas/schedule'
 import { makeScheduleConstraint } from '#services/schedule-constraint-test-fixtures'
-import type { ScheduleConstraint } from '#services/schedule-constraints'
+import * as scheduleConstraintService from '#services/schedule-constraints'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -105,8 +104,10 @@ function saveOutcomeSnapshot<TResponse, TPersisted>(
 
 async function addScheduleConstraint(
   scheduleId: string,
-  weekdays: ScheduleConstraint['weekdays'],
-  values: Pick<ScheduleConstraint, 'weeklyMin'> = { weeklyMin: null },
+  weekdays: scheduleConstraintService.ScheduleConstraint['weekdays'],
+  values: Pick<scheduleConstraintService.ScheduleConstraint, 'weeklyMin'> = {
+    weeklyMin: null,
+  },
 ) {
   await db.insert(scheduleConstraints).values({ scheduleId, ...values })
   if (weekdays.length === 0) return
@@ -557,10 +558,13 @@ describe('schedule save responses', () => {
       endTime: '19:00',
       recurrence: { type: 'weekly', interval: 1, daysOfWeek: [1] },
     })
+    await addScheduleConstraint(target.id, [])
     vi.spyOn(
-      scheduleConstraintEvaluation,
-      'evaluateScheduleConstraintViolations',
-    ).mockRejectedValue(new Error('database unavailable'))
+      scheduleConstraintService,
+      'checkScheduleConstraints',
+    ).mockImplementation(() => {
+      throw new Error('evaluation unavailable')
+    })
 
     const response = await app.request(
       `/api/schedule/events/${target.id}/overrides/2040-01-02`,

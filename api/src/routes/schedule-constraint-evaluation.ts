@@ -325,18 +325,20 @@ export async function evaluateScheduleConstraintViolations({
   }
 }
 
-export async function evaluateScheduleConstraintViolationsForSaveResponse(
-  evaluation: Promise<ScheduleConstraintEvaluationResult>,
-  scheduleId: string,
+export async function evaluateScheduleConstraintViolationsSafely(
+  args: Parameters<typeof evaluateScheduleConstraintViolations>[0],
 ): Promise<ScheduleConstraintEvaluationResult> {
-  const result = await ResultAsync.fromPromise(evaluation, (error) => error)
+  const result = await ResultAsync.fromPromise(
+    evaluateScheduleConstraintViolations(args),
+    (error) => error,
+  )
   return result.match(
     (value) => value,
     (error) => {
       captureWithFingerprint(
         error,
         'api.schedule.constraints.evaluation-failed',
-        { extras: { scheduleId } },
+        { extras: { scheduleId: args.series.schedule.id } },
       )
       return {
         constraintViolations: [],

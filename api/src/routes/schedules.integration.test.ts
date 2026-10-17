@@ -3,15 +3,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
+import {
+  recurrenceRules,
+  scheduleConstraints,
+  scheduleOverrides,
+  schedules,
+} from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
-import * as scheduleConstraintEvaluation from '#routes/schedule-constraint-evaluation'
 import {
   expandScheduleWithDraft,
   formatDateStr,
 } from '#routes/schedule-expansion'
 import type { ScheduleChangePreview } from '#routes/schedule-preview'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
+import * as scheduleConstraintService from '#services/schedule-constraints'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -1129,10 +1134,13 @@ describe('schedules API', () => {
         startTime: '18:00',
         endTime: '19:00',
       })
+      await db.insert(scheduleConstraints).values({ scheduleId: schedule.id })
       vi.spyOn(
-        scheduleConstraintEvaluation,
-        'evaluateScheduleConstraintViolations',
-      ).mockRejectedValue(new Error('database unavailable'))
+        scheduleConstraintService,
+        'checkScheduleConstraints',
+      ).mockImplementation(() => {
+        throw new Error('evaluation unavailable')
+      })
 
       const response = await patchSchedule(schedule.id, {
         title: 'Updated routine',
