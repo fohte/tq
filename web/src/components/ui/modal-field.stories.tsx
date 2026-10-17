@@ -80,7 +80,7 @@ export const ExpandableFieldChipExpanded: Story = {
           variant="ghost"
           defaultValue="2026-08-01"
           autoFocus
-          className="w-28"
+          className="w-auto sm:w-28"
         />
       )}
     />

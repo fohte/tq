@@ -80,7 +80,7 @@ export function TaskWaitEntryAppearance({
                 onFollowUpDateChange(nextFollowUpDate)
               }
             }}
-            className="h-7 w-32 mx-0"
+            className="h-7 w-auto mx-0 sm:w-32"
           />
         </label>
       )}
