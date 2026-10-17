@@ -142,7 +142,7 @@ export function CreateTaskModalMobile({
                     setStartDate(e.target.value)
                   }}
                   autoFocus
-                  className="w-28"
+                  className="w-auto sm:w-28"
                 />
               )}
             />
@@ -159,7 +159,7 @@ export function CreateTaskModalMobile({
                     setDueDate(e.target.value)
                   }}
                   autoFocus
-                  className="w-28"
+                  className="w-auto sm:w-28"
                 />
               )}
             />
