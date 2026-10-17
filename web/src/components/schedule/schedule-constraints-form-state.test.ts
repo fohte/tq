@@ -7,6 +7,7 @@ import {
   scheduleConstraintFormStateError,
   scheduleConstraintFormStateFromSaved,
   scheduleConstraintInputFromFormState,
+  scheduleConstraintsMatchSaved,
   scheduleConstraintSummary,
 } from '#components/schedule/schedule-constraints-form-state'
 import { makeScheduleConstraint } from '#components/schedule/schedule-test-fixtures'
@@ -100,6 +101,7 @@ describe('schedule constraint form state', () => {
         weeklyTarget: '3',
         weeklyMax: '2',
       },
+      { ...emptyScheduleConstraintFormState(), maxConsecutiveDays: '0' },
       { ...emptyScheduleConstraintFormState(), windowStart: '08:00' },
     ]
 
@@ -107,8 +109,18 @@ describe('schedule constraint form state', () => {
       'Use whole numbers from 0 to 7 for weekly counts.',
       'Minimum per week cannot exceed the maximum.',
       'Target must be within the weekly range.',
+      'Use a whole number of at least 1 for consecutive days.',
       'Set both window times.',
     ])
+  })
+
+  it('does not match an invalid draft to an empty saved constraint', () => {
+    expect(
+      scheduleConstraintsMatchSaved(
+        { ...emptyScheduleConstraintFormState(), weeklyMin: '8' },
+        null,
+      ),
+    ).toEqual(false)
   })
 
   it('summarizes the configured values for a mobile chip', () => {

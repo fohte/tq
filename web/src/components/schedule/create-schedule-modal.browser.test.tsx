@@ -187,6 +187,14 @@ function normalizeMutationCalls(calls: readonly unknown[][]) {
               typeof options.onSuccess === 'function'
                 ? 'callback'
                 : options.onSuccess,
+            ...('onError' in options
+              ? {
+                  onError:
+                    typeof options.onError === 'function'
+                      ? 'callback'
+                      : options.onError,
+                }
+              : {}),
           }
         : options
 
@@ -216,6 +224,25 @@ function scheduleUpdateOutcome(
   }
 }
 
+function constraintSaveSequenceOutcome(
+  callsBeforeSuccess: {
+    constraintCalls: ReturnType<typeof normalizeMutationCalls>
+    scheduleCalls: ReturnType<typeof normalizeMutationCalls>
+  },
+  scheduleCallsAfterConstraintSuccess: ReturnType<
+    typeof normalizeMutationCalls
+  >,
+) {
+  return { callsBeforeSuccess, scheduleCallsAfterConstraintSuccess }
+}
+
+function constraintSaveFailureOutcome(
+  errorMessage: string | null,
+  scheduleCalls: ReturnType<typeof normalizeMutationCalls>,
+) {
+  return { errorMessage, scheduleCalls }
+}
+
 function hasSuccessCallback(
   value: unknown,
 ): value is { onSuccess: () => void } {
@@ -224,6 +251,15 @@ function hasSuccessCallback(
     value !== null &&
     'onSuccess' in value &&
     typeof value.onSuccess === 'function'
+  )
+}
+
+function hasErrorCallback(value: unknown): value is { onError: () => void } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'onError' in value &&
+    typeof value.onError === 'function'
   )
 }
 
@@ -502,7 +538,7 @@ describe('CreateScheduleModal', () => {
               ],
             },
           },
-          { onSuccess: 'callback' },
+          { onSuccess: 'callback', onError: 'callback' },
         ],
       ],
       reopenedMinimum: '2',
@@ -544,7 +580,7 @@ describe('CreateScheduleModal', () => {
             weekdays: [{ dayOfWeek: 1, preference: 'if_free' }],
           },
         },
-        { onSuccess: 'callback' },
+        { onSuccess: 'callback', onError: 'callback' },
       ],
     ])
   })
@@ -569,8 +605,138 @@ describe('CreateScheduleModal', () => {
     await clickVisibleSave(user)
 
     expect(normalizeMutationCalls(deleteConstraintsMutate.mock.calls)).toEqual([
-      [sampleSchedule.scheduleId, { onSuccess: 'callback' }],
+      [
+        sampleSchedule.scheduleId,
+        { onSuccess: 'callback', onError: 'callback' },
+      ],
     ])
+  })
+
+  it('saves schedule edits after the changed constraints succeed', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    const { updateMutate, setConstraintsMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+    await waitFor(() => {
+      const allEventsButton = findVisible(
+        screen.getAllByRole('button', { name: 'All events' }),
+      )
+      if (allEventsButton?.getAttribute('aria-pressed') !== 'true') {
+        throw new Error('All-events scope was not selected')
+      }
+    })
+    await user.click(
+      await screen.findByRole('button', { name: 'Add constraints' }),
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Minimum per week')),
+        'no visible minimum input',
+      ),
+      { target: { value: '3' } },
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByPlaceholderText('Schedule title')),
+        'no visible schedule title input',
+      ),
+      { target: { value: 'Morning run' } },
+    )
+    await clickVisibleSave(user)
+
+    const callsBeforeSuccess = {
+      constraintCalls: normalizeMutationCalls(setConstraintsMutate.mock.calls),
+      scheduleCalls: normalizeMutationCalls(updateMutate.mock.calls),
+    }
+    const mutationOptions: unknown = setConstraintsMutate.mock.calls[0]?.[1]
+    if (!hasSuccessCallback(mutationOptions)) {
+      throw new Error('No constraint save callback')
+    }
+    mutationOptions.onSuccess()
+
+    expect(
+      constraintSaveSequenceOutcome(
+        callsBeforeSuccess,
+        normalizeMutationCalls(updateMutate.mock.calls),
+      ),
+    ).toEqual({
+      callsBeforeSuccess: {
+        constraintCalls: [
+          [
+            {
+              id: sampleSchedule.scheduleId,
+              input: {
+                weeklyMin: 3,
+                weeklyMax: null,
+                weeklyTarget: null,
+                maxConsecutiveDays: null,
+                windowStart: null,
+                windowEnd: null,
+                weekdays: [],
+              },
+            },
+            { onSuccess: 'callback', onError: 'callback' },
+          ],
+        ],
+        scheduleCalls: [],
+      },
+      scheduleCallsAfterConstraintSuccess: [
+        [
+          {
+            id: sampleSchedule.scheduleId,
+            input: { title: 'Morning run' },
+          },
+          { onSuccess: 'callback' },
+        ],
+      ],
+    })
+  })
+
+  it('shows an error and keeps the schedule unsaved when constraint saving fails', async () => {
+    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    const { updateMutate, setConstraintsMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Add constraints' }),
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Minimum per week')),
+        'no visible minimum input',
+      ),
+      { target: { value: '3' } },
+    )
+    await clickVisibleSave(user)
+
+    const mutationOptions: unknown = setConstraintsMutate.mock.calls[0]?.[1]
+    if (!hasErrorCallback(mutationOptions)) {
+      throw new Error('No constraint error callback')
+    }
+    mutationOptions.onError()
+    await waitFor(() => {
+      if (visibleText('Failed to save schedule constraints.') === null) {
+        throw new Error('Constraint save error was not shown')
+      }
+    })
+
+    expect(
+      constraintSaveFailureOutcome(
+        visibleText('Failed to save schedule constraints.'),
+        normalizeMutationCalls(updateMutate.mock.calls),
+      ),
+    ).toEqual({
+      errorMessage: 'Failed to save schedule constraints.',
+      scheduleCalls: [],
+    })
   })
 
   it('closes without creating an override when the occurrence is unchanged', async () => {

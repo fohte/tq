@@ -48,6 +48,7 @@ interface ScheduleConstraintsFieldProps {
   value: ScheduleConstraintFormState | null
   isLoading: boolean
   isError: boolean
+  saveError: boolean
   isPending: boolean
   defaultOpen?: boolean
   onAdd: () => void
@@ -60,6 +61,7 @@ export function ScheduleConstraintsField({
   value,
   isLoading,
   isError,
+  saveError,
   isPending,
   defaultOpen = false,
   onAdd,
@@ -74,36 +76,46 @@ export function ScheduleConstraintsField({
 
   if (isLoading) {
     return (
-      <p role="status" className="text-xs text-muted-foreground">
-        Loading constraints…
-      </p>
+      <>
+        <ConstraintsSaveError visible={saveError} />
+        <p role="status" className="text-xs text-muted-foreground">
+          Loading constraints…
+        </p>
+      </>
     )
   }
   if (isError) {
     return (
-      <p role="alert" className="text-xs text-destructive">
-        Constraints could not be loaded.
-      </p>
+      <>
+        <ConstraintsSaveError visible={saveError} />
+        <p role="alert" className="text-xs text-destructive">
+          Constraints could not be loaded.
+        </p>
+      </>
     )
   }
 
   if (variant === 'desktop') {
     if (value === null) {
       return (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onAdd}
-          className="self-start"
-        >
-          <Plus className="size-3.5" />
-          Add constraints
-        </Button>
+        <div className="flex flex-col items-start gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onAdd}
+            className="self-start"
+          >
+            <Plus className="size-3.5" />
+            Add constraints
+          </Button>
+          <ConstraintsSaveError visible={saveError} />
+        </div>
       )
     }
 
     return (
       <div className="flex flex-col gap-3">
+        <ConstraintsSaveError visible={saveError} />
         <ConstraintEditor
           value={value}
           isPending={isPending}
@@ -116,18 +128,21 @@ export function ScheduleConstraintsField({
 
   if (value === null) {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          setIsExpanded(true)
-          onAdd()
-        }}
-        className="self-start"
-      >
-        <Plus className="size-3.5" />
-        Add constraints
-      </Button>
+      <div className="flex flex-col items-start gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setIsExpanded(true)
+            onAdd()
+          }}
+          className="self-start"
+        >
+          <Plus className="size-3.5" />
+          Add constraints
+        </Button>
+        <ConstraintsSaveError visible={saveError} />
+      </div>
     )
   }
 
@@ -146,6 +161,7 @@ export function ScheduleConstraintsField({
           {scheduleConstraintSummary(value)}
         </span>
       </button>
+      <ConstraintsSaveError visible={saveError} />
       {isExpanded && (
         <div className="w-full rounded-lg border border-border p-3">
           <ConstraintEditor
@@ -160,6 +176,16 @@ export function ScheduleConstraintsField({
         </div>
       )}
     </div>
+  )
+}
+
+function ConstraintsSaveError({ visible }: { visible: boolean }) {
+  if (!visible) return null
+
+  return (
+    <p role="alert" className="text-xs text-destructive">
+      Failed to save schedule constraints.
+    </p>
   )
 }
 

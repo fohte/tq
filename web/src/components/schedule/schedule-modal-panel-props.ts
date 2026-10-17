@@ -49,6 +49,7 @@ export interface SchedulePanelProps {
   constraints: ScheduleConstraintFormState | null
   constraintsLoading: boolean
   constraintsError: boolean
+  constraintsSaveError: boolean
   constraintsDefaultOpen: boolean
   onAddConstraints: () => void
   onChangeConstraints: (value: ScheduleConstraintFormState) => void

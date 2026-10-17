@@ -68,6 +68,7 @@ export function ScheduleModalDesktopPanel({
   constraints,
   constraintsLoading,
   constraintsError,
+  constraintsSaveError,
   constraintsDefaultOpen,
   onAddConstraints,
   onChangeConstraints,
@@ -264,6 +265,7 @@ export function ScheduleModalDesktopPanel({
             value={constraints}
             isLoading={constraintsLoading}
             isError={constraintsError}
+            saveError={constraintsSaveError}
             isPending={isPending}
             defaultOpen={constraintsDefaultOpen}
             onAdd={onAddConstraints}

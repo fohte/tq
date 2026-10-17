@@ -3,7 +3,7 @@ import type {
   ScheduleConstraintInput,
 } from '#hooks/use-schedules'
 
-export type ScheduleConstraintWeekdayPreference =
+type ScheduleConstraintWeekdayPreference =
   ScheduleConstraint['weekdays'][number]['preference']
 
 export interface ScheduleConstraintFormState {
@@ -139,6 +139,9 @@ export function scheduleConstraintsMatchSaved(
   form: ScheduleConstraintFormState | null,
   saved: ScheduleConstraint | null,
 ): boolean {
+  if (form === null) return saved === null
+  if (scheduleConstraintFormStateError(form) !== null) return false
+
   const next = scheduleConstraintInputFromFormState(form)
   const current = saved === null ? null : savedConstraintInput(saved)
   return JSON.stringify(next) === JSON.stringify(current)

@@ -62,6 +62,7 @@ const meta = {
     constraints: null,
     constraintsLoading: false,
     constraintsError: false,
+    constraintsSaveError: false,
     constraintsDefaultOpen: false,
     onAddConstraints: fn(),
     onChangeConstraints: fn(),

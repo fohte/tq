@@ -24,6 +24,7 @@ const meta = {
     value: configuredConstraints,
     isLoading: false,
     isError: false,
+    saveError: false,
     isPending: false,
     defaultOpen: false,
     onAdd: fn(),
@@ -57,4 +58,24 @@ export const MobileWithoutConstraints: Story = {
 export const MobileEditorExpanded: Story = {
   name: 'the mobile chip expands to show the constraint fields',
   args: { variant: 'mobile', defaultOpen: true },
+}
+
+export const Loading: Story = {
+  name: 'the editor shows a loading message while constraints load',
+  args: { isLoading: true },
+}
+
+export const Unavailable: Story = {
+  name: 'the editor explains when constraints could not be loaded',
+  args: { isError: true },
+}
+
+export const Saving: Story = {
+  name: 'the editor disables its controls while constraints save',
+  args: { isPending: true },
+}
+
+export const SaveFailed: Story = {
+  name: 'the editor shows an error when saving constraints fails',
+  args: { saveError: true },
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 import type { ScheduleConstraintFormState } from '#components/schedule/schedule-constraints-form-state'
 import {
@@ -74,6 +74,7 @@ export function useScheduleModalSave({
   const deleteScheduleConstraints = useDeleteScheduleConstraints()
   const setScheduleOverride = useSetScheduleOverride()
   const clearScheduleOverride = useClearScheduleOverride()
+  const [constraintsSaveError, setConstraintsSaveError] = useState(false)
   const isPending =
     createSchedule.isPending ||
     updateSchedule.isPending ||
@@ -192,17 +193,26 @@ export function useScheduleModalSave({
     }
 
     if (schedule && constraintsChanged) {
+      setConstraintsSaveError(false)
       const saveScheduleAfterConstraints = () => {
+        setConstraintsSaveError(false)
         saveSchedule()
       }
-      if (constraintInput === null) {
+      const onConstraintSaveError = () => {
+        setConstraintsSaveError(true)
+      }
+      if (constraintDraft === null) {
         deleteScheduleConstraints.mutate(schedule.scheduleId, {
           onSuccess: saveScheduleAfterConstraints,
+          onError: onConstraintSaveError,
         })
-      } else {
+      } else if (constraintInput !== null) {
         setScheduleConstraints.mutate(
           { id: schedule.scheduleId, input: constraintInput },
-          { onSuccess: saveScheduleAfterConstraints },
+          {
+            onSuccess: saveScheduleAfterConstraints,
+            onError: onConstraintSaveError,
+          },
         )
       }
       return
@@ -226,6 +236,7 @@ export function useScheduleModalSave({
     handleSubmit,
     isPending,
     isRestorePending: clearScheduleOverride.isPending,
+    constraintsSaveError,
     reminderReady,
   }
 }

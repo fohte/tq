@@ -362,11 +362,11 @@ export function useCreateScheduleModalState({
     setRemindBeforeMinutes,
     reminderReady: save.reminderReady,
     constraints: constraintDraft,
-    constraintsLoading: Boolean(
-      schedule &&
-      (scheduleConstraints.isPending || scheduleConstraints.isFetching),
+    constraintsLoading: Boolean(schedule && scheduleConstraints.isPending),
+    constraintsError: Boolean(
+      schedule && scheduleConstraints.isError && !scheduleConstraints.data,
     ),
-    constraintsError: Boolean(schedule && scheduleConstraints.isError),
+    constraintsSaveError: save.constraintsSaveError,
     constraintsDefaultOpen:
       constraintDraft !== null && scheduleConstraints.data?.constraint == null,
     onAddConstraints: addConstraints,

@@ -72,6 +72,7 @@ export function ScheduleModalMobilePanel({
   constraints,
   constraintsLoading,
   constraintsError,
+  constraintsSaveError,
   constraintsDefaultOpen,
   onAddConstraints,
   onChangeConstraints,
@@ -301,6 +302,7 @@ export function ScheduleModalMobilePanel({
               value={constraints}
               isLoading={constraintsLoading}
               isError={constraintsError}
+              saveError={constraintsSaveError}
               isPending={isPending}
               defaultOpen={constraintsDefaultOpen}
               onAdd={onAddConstraints}
