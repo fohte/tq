@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { ButtonGroup } from '@fohte/ui/button-group'
 import { SegmentedControl } from '@fohte/ui/segmented-control'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -67,7 +68,7 @@ export function CalendarHeader({
         {formatWeekday(currentDate)}
       </span>
 
-      <div className="ml-2 flex">
+      <ButtonGroup className="ml-2">
         <Button
           variant="outline"
           size="icon-xs"
@@ -76,12 +77,7 @@ export function CalendarHeader({
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={onToday}
-          className="border-x-0"
-        >
+        <Button variant="outline" size="xs" onClick={onToday}>
           today
         </Button>
         <Button
@@ -92,7 +88,7 @@ export function CalendarHeader({
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
-      </div>
+      </ButtonGroup>
 
       {showViewSwitcher && (
         <div className="ml-auto">
