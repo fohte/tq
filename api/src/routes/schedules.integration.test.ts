@@ -16,6 +16,10 @@ import {
 } from '#routes/schedule-expansion'
 import type { ScheduleChangePreview } from '#routes/schedule-preview'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
+import {
+  makeScheduleOccurrence,
+  type ScheduleOccurrence,
+} from '#routes/schedule-test-fixtures'
 import * as scheduleConstraintService from '#services/schedule-constraints'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -71,22 +75,7 @@ interface ScheduleResponse {
   updatedAt: string
 }
 
-interface ExpandedBlock {
-  scheduleId: string
-  title: string
-  startDate: string
-  start: string
-  end: string
-  occurrenceStartDate: string
-  occurrenceStartTime: string
-  occurrenceEndTime: string
-  remindBeforeMinutes: number | null
-  context: string
-  color: string | null
-  occurrenceDate: string
-  overridden: 'moved' | 'time' | null
-  recurrence: ScheduleResponse['recurrence']
-}
+type ExpandedBlock = ScheduleOccurrence
 
 interface ScheduleOverrideSnapshot {
   scheduleId: string
@@ -176,21 +165,13 @@ function expectedDailyOccurrence({
   ExpandedBlock,
   'occurrenceDate' | 'start' | 'end' | 'overridden'
 >): ExpandedBlock {
-  return {
-    scheduleId: 'SCHEDULE_ID',
+  return makeScheduleOccurrence({
     title: 'Routine',
     startDate: '2034-08-17',
     start,
     end,
-    occurrenceStartDate:
-      overridden === 'moved' ? start.slice(0, 10) : occurrenceDate,
-    occurrenceStartTime: start.slice(11, 16),
-    occurrenceEndTime: end.slice(11, 16),
-    context: 'personal',
-    color: null,
     occurrenceDate,
     overridden,
-    remindBeforeMinutes: null,
     recurrence: {
       id: 'RECURRENCE_ID',
       type: 'daily',
@@ -198,7 +179,7 @@ function expectedDailyOccurrence({
       daysOfWeek: null,
       dayOfMonth: null,
     },
-  }
+  })
 }
 
 function normalizeScheduleHttpResponse(status: number, body: ScheduleResponse) {
@@ -990,22 +971,18 @@ describe('schedules API', () => {
       ).toEqual({
         status: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-23',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
       })
     })
@@ -1036,41 +1013,35 @@ describe('schedules API', () => {
       ).toEqual({
         status: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Sleep',
             startDate: '2026-03-22',
             start: '2026-03-22T23:00:00',
             end: '2026-03-23T00:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '23:00',
             occurrenceEndTime: '07:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
         nextDateStatus: 200,
         nextDateBlocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Sleep',
             startDate: '2026-03-22',
             start: '2026-03-23T00:00:00',
             end: '2026-03-23T07:00:00',
-            occurrenceStartDate: '2026-03-22',
             occurrenceStartTime: '23:00',
-            occurrenceEndTime: '07:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
       })
     })
@@ -1152,16 +1123,12 @@ describe('schedules API', () => {
       ).toEqual({
         status: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Gym',
             startDate: '2026-03-24',
             start: '2026-03-30T18:00:00',
             end: '2026-03-30T19:00:00',
-            occurrenceStartDate: '2026-03-30',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-30',
@@ -1173,7 +1140,7 @@ describe('schedules API', () => {
               daysOfWeek: [1],
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -2075,16 +2042,12 @@ describe('schedules API', () => {
         patchStatus: 200,
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -2096,17 +2059,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -2118,17 +2077,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-24T18:00:00',
             end: '2026-03-24T19:00:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
@@ -2140,17 +2095,13 @@ describe('schedules API', () => {
               daysOfWeek: [2, 4],
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-26T18:00:00',
             end: '2026-03-26T19:00:00',
-            occurrenceStartDate: '2026-03-26',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-26',
@@ -2162,7 +2113,7 @@ describe('schedules API', () => {
               daysOfWeek: [2, 4],
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -2256,16 +2207,12 @@ describe('schedules API', () => {
         obsoleteRuleIds: [],
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -2277,17 +2224,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -2299,17 +2242,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-24T18:00:00',
             end: '2026-03-24T19:00:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
@@ -2321,17 +2260,13 @@ describe('schedules API', () => {
               daysOfWeek: [2, 4],
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-26T20:00:00',
             end: '2026-03-26T21:00:00',
-            occurrenceStartDate: '2026-03-26',
-            occurrenceStartTime: '20:00',
-            occurrenceEndTime: '21:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-26',
@@ -2343,7 +2278,7 @@ describe('schedules API', () => {
               daysOfWeek: [4],
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -2388,16 +2323,12 @@ describe('schedules API', () => {
         patchStatus: 200,
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-23T11:00:00',
             end: '2026-03-23T12:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '11:00',
-            occurrenceEndTime: '12:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -2409,7 +2340,7 @@ describe('schedules API', () => {
               daysOfWeek: [1],
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -2517,16 +2448,12 @@ describe('schedules API', () => {
         patchStatuses: [200, 200],
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Updated Routine',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -2538,17 +2465,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Updated Routine',
             startDate: '2026-03-22',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -2560,17 +2483,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Updated Routine',
             startDate: '2026-03-22',
             start: '2026-03-24T18:00:00',
             end: '2026-03-24T19:00:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
@@ -2582,17 +2501,13 @@ describe('schedules API', () => {
               daysOfWeek: [2, 4],
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Updated Routine',
             startDate: '2026-03-22',
             start: '2026-03-26T18:00:00',
             end: '2026-03-26T19:00:00',
-            occurrenceStartDate: '2026-03-26',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-26',
@@ -2604,7 +2519,7 @@ describe('schedules API', () => {
               daysOfWeek: [2, 4],
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -2648,22 +2563,18 @@ describe('schedules API', () => {
         },
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
       })
     })
@@ -2720,22 +2631,18 @@ describe('schedules API', () => {
         },
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Updated Event',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
       })
     })
@@ -2776,32 +2683,24 @@ describe('schedules API', () => {
         patchStatus: 200,
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
             overridden: null,
             recurrence: null,
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-24T18:00:00',
             end: '2026-03-24T19:00:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
@@ -2813,17 +2712,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-25T18:00:00',
             end: '2026-03-25T19:00:00',
-            occurrenceStartDate: '2026-03-25',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-25',
@@ -2835,17 +2730,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-26T18:00:00',
             end: '2026-03-26T19:00:00',
-            occurrenceStartDate: '2026-03-26',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-26',
@@ -2857,7 +2748,7 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -2898,38 +2789,30 @@ describe('schedules API', () => {
         patchStatus: 200,
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
             overridden: null,
             recurrence: null,
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Single Event',
             startDate: '2026-03-22',
             start: '2026-03-23T18:00:00',
             end: '2026-03-23T19:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
       })
     })
@@ -2969,16 +2852,12 @@ describe('schedules API', () => {
         patchStatus: 200,
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -2990,17 +2869,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -3012,23 +2887,19 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-24T09:00:00',
             end: '2026-03-24T10:00:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
             overridden: null,
             recurrence: null,
-          },
+          }),
         ],
       })
     })
@@ -3097,16 +2968,12 @@ describe('schedules API', () => {
         patchStatuses: [200, 200],
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-24T08:30:00',
             end: '2026-03-24T09:30:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '08:30',
-            occurrenceEndTime: '09:30',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
@@ -3118,17 +2985,13 @@ describe('schedules API', () => {
               daysOfWeek: [2],
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-25T18:00:00',
             end: '2026-03-25T19:00:00',
-            occurrenceStartDate: '2026-03-25',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-25',
@@ -3140,17 +3003,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-26T18:00:00',
             end: '2026-03-26T19:00:00',
-            occurrenceStartDate: '2026-03-26',
-            occurrenceStartTime: '18:00',
-            occurrenceEndTime: '19:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-26',
@@ -3162,7 +3021,7 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -3227,16 +3086,12 @@ describe('schedules API', () => {
         remainingOverrides: [],
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-24T09:00:00',
             end: '2026-03-24T10:00:00',
-            occurrenceStartDate: '2026-03-24',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-24',
@@ -3248,7 +3103,7 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -3287,16 +3142,12 @@ describe('schedules API', () => {
         endDate: '2026-03-23',
         listStatus: 200,
         blocks: [
-          {
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-22T09:00:00',
             end: '2026-03-22T10:00:00',
-            occurrenceStartDate: '2026-03-22',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-22',
@@ -3308,17 +3159,13 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
-          {
+          }),
+          makeScheduleOccurrence({
             scheduleId: 'SCHEDULE_ID',
             title: 'Routine',
             startDate: '2026-03-22',
             start: '2026-03-23T09:00:00',
             end: '2026-03-23T10:00:00',
-            occurrenceStartDate: '2026-03-23',
-            occurrenceStartTime: '09:00',
-            occurrenceEndTime: '10:00',
-            remindBeforeMinutes: null,
             context: 'personal',
             color: null,
             occurrenceDate: '2026-03-23',
@@ -3330,7 +3177,7 @@ describe('schedules API', () => {
               daysOfWeek: null,
               dayOfMonth: null,
             },
-          },
+          }),
         ],
       })
     })
@@ -4116,25 +3963,22 @@ describe('schedule overrides API', () => {
     const expandedBlocks = () => [destinationBlocks, continuationBlocks]
     expect(expandedBlocks()).toEqual([
       [
-        {
+        makeScheduleOccurrence({
           scheduleId: 'SCHEDULE_ID',
           title: 'Overnight Routine',
           startDate: '2034-08-17',
           start: '2034-08-20T23:00:00',
           end: '2034-08-21T00:00:00',
-          occurrenceStartDate: '2034-08-20',
-          occurrenceStartTime: '23:00',
           occurrenceEndTime: '07:00',
-          remindBeforeMinutes: null,
           context: 'personal',
           color: null,
           occurrenceDate: '2034-08-17',
           overridden: 'moved',
           recurrence: null,
-        },
+        }),
       ],
       [
-        {
+        makeScheduleOccurrence({
           scheduleId: 'SCHEDULE_ID',
           title: 'Overnight Routine',
           startDate: '2034-08-17',
@@ -4142,14 +3986,12 @@ describe('schedule overrides API', () => {
           end: '2034-08-21T07:00:00',
           occurrenceStartDate: '2034-08-20',
           occurrenceStartTime: '23:00',
-          occurrenceEndTime: '07:00',
-          remindBeforeMinutes: null,
           context: 'personal',
           color: null,
           occurrenceDate: '2034-08-17',
           overridden: 'moved',
           recurrence: null,
-        },
+        }),
       ],
     ])
   })
@@ -4169,22 +4011,18 @@ describe('schedule overrides API', () => {
       '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
     )
     expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: schedule.id,
         title: 'Routine',
         startDate: '2026-03-22',
         start: '2026-03-22T08:30:00',
         end: '2026-03-22T09:45:00',
-        occurrenceStartDate: '2026-03-22',
-        occurrenceStartTime: '08:30',
-        occurrenceEndTime: '09:45',
-        remindBeforeMinutes: null,
         context: 'personal',
         color: null,
         occurrenceDate: '2026-03-22',
         overridden: 'time',
         recurrence: null,
-      },
+      }),
     ])
   })
 
@@ -4205,22 +4043,18 @@ describe('schedule overrides API', () => {
       '/api/schedule/events?startDate=2026-03-22&endDate=2026-03-22',
     )
     expect(await jsonBody<ExpandedBlock[]>(response)).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: schedule.id,
         title: 'Routine',
         startDate: '2026-03-22',
         start: '2026-03-22T09:00:00',
         end: '2026-03-22T10:00:00',
-        occurrenceStartDate: '2026-03-22',
-        occurrenceStartTime: '09:00',
-        occurrenceEndTime: '10:00',
-        remindBeforeMinutes: null,
         context: 'personal',
         color: null,
         occurrenceDate: '2026-03-22',
         overridden: null,
         recurrence: null,
-      },
+      }),
     ])
   })
 
@@ -4239,16 +4073,12 @@ describe('schedule overrides API', () => {
     expect(
       normalizeExpandedBlocks(await jsonBody<ExpandedBlock[]>(response)),
     ).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: 'SCHEDULE_ID',
         title: 'Routine',
         startDate: '2026-03-22',
         start: '2026-03-23T09:00:00',
         end: '2026-03-23T10:00:00',
-        occurrenceStartDate: '2026-03-23',
-        occurrenceStartTime: '09:00',
-        occurrenceEndTime: '10:00',
-        remindBeforeMinutes: null,
         context: 'personal',
         color: null,
         occurrenceDate: '2026-03-23',
@@ -4260,7 +4090,7 @@ describe('schedule overrides API', () => {
           daysOfWeek: null,
           dayOfMonth: null,
         },
-      },
+      }),
     ])
   })
 
@@ -4283,22 +4113,19 @@ describe('schedule overrides API', () => {
         await jsonBody<ExpandedBlock[]>(nextDateResponse),
       ),
     ).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: 'SCHEDULE_ID',
         title: 'Overnight Routine',
         startDate: '2026-03-22',
         start: '2026-03-23T00:00:00',
         end: '2026-03-23T08:00:00',
-        occurrenceStartDate: '2026-03-22',
         occurrenceStartTime: '22:30',
-        occurrenceEndTime: '08:00',
-        remindBeforeMinutes: null,
         context: 'personal',
         color: null,
         occurrenceDate: '2026-03-22',
         overridden: 'time',
         recurrence: null,
-      },
+      }),
     ])
   })
 
