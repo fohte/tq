@@ -71,12 +71,15 @@ describe('BottomTabBar', () => {
       'BottomTabBar renders a row wrapping tabs and actions',
     )
 
-    const renderedItems = Array.from(row.children, (item) => ({
-      element: item.tagName.toLowerCase(),
-      label: item.textContent.trim(),
-      destination: item.getAttribute('href'),
-      type: item instanceof HTMLButtonElement ? item.type : null,
-    }))
+    const renderedItems = Array.from(
+      row.querySelectorAll('a, button'),
+      (item) => ({
+        element: item.tagName.toLowerCase(),
+        label: item.textContent.trim(),
+        destination: item.getAttribute('href'),
+        type: item instanceof HTMLButtonElement ? item.type : null,
+      }),
+    )
 
     expect(renderedItems).toEqual([
       {
