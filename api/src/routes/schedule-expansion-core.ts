@@ -168,6 +168,9 @@ export function expandScheduleForDate(
   startDate: string
   start: string
   end: string
+  occurrenceStartDate: string
+  occurrenceStartTime: string
+  occurrenceEndTime: string
   context: string
   color: string | null
   occurrenceDate: string
@@ -184,6 +187,9 @@ export function expandScheduleForDate(
     startDate: string
     start: string
     end: string
+    occurrenceStartDate: string
+    occurrenceStartTime: string
+    occurrenceEndTime: string
     context: string
     color: string | null
     occurrenceDate: string
@@ -206,6 +212,9 @@ export function expandScheduleForDate(
       end: isCrossMidnight
         ? `${formatDateStr(nextDate)}T00:00:00`
         : `${dateStr}T${occurrence.endTime}:00`,
+      occurrenceStartDate: dateStr,
+      occurrenceStartTime: occurrence.startTime,
+      occurrenceEndTime: occurrence.endTime,
       context: schedule.context,
       color: schedule.color,
       occurrenceDate: occurrence.occurrenceDate,
@@ -230,6 +239,9 @@ export function expandScheduleForDate(
       startDate: firstRevision.revision.effectiveFrom,
       start: `${dateStr}T00:00:00`,
       end: `${dateStr}T${occurrence.endTime}:00`,
+      occurrenceStartDate: prevDateStr,
+      occurrenceStartTime: occurrence.startTime,
+      occurrenceEndTime: occurrence.endTime,
       context: schedule.context,
       color: schedule.color,
       occurrenceDate: occurrence.occurrenceDate,

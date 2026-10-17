@@ -78,6 +78,9 @@ export function useDayViewCalendarEvents({
         color: scheduleColorToEventColor(schedule.color),
         scheduleId: schedule.scheduleId,
         scheduleOccurrenceDate: schedule.occurrenceDate,
+        ...(schedule.overridden == null
+          ? {}
+          : { scheduleOverridden: schedule.overridden }),
         redacted: !matchesContextFilter(schedule.context, context),
       }
     })

@@ -308,7 +308,7 @@ export function DayViewPresentation({
       )}
 
       <CreateScheduleModal
-        key={editingSchedule?.scheduleId ?? 'new'}
+        key={`${editingSchedule?.scheduleId ?? 'new'}:${editingSchedule?.occurrenceDate ?? 'new'}:${editingSchedule?.start ?? 'new'}`}
         open={isScheduleModalOpen}
         onOpenChange={setIsScheduleModalOpen}
         schedule={editingSchedule}

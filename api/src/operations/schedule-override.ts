@@ -99,6 +99,7 @@ export const scheduleOverrideOperations = [
             scheduleId: encodePathSegment(scheduleId),
             occurrenceDate: encodePathSegment(occurrenceDate),
           },
+          query: {},
         }),
       ).map(() => ({ cleared: true, scheduleId, occurrenceDate })),
   }),

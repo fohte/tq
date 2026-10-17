@@ -2,6 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
 import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
+import {
+  makeSchedule,
+  makeScheduleOverride,
+} from '#components/schedule/schedule-test-fixtures'
 
 const meta = {
   title: 'Schedule/CreateScheduleModalDesktopPanel',
@@ -19,6 +23,14 @@ const meta = {
   args: {
     schedule: undefined,
     handleOpenChange: fn(),
+    scope: 'all',
+    setScope: fn(),
+    occurrenceDate: '2030-04-17',
+    rangeAction: null,
+    setRangeAction: fn(),
+    canRestoreThisEvent: false,
+    canEditTitle: true,
+    canEditSeriesDetails: true,
     title: 'Sample schedule',
     setTitle: fn(),
     startDate: '2030-04-17',
@@ -37,6 +49,17 @@ const meta = {
     setContext: fn(),
     color: '',
     setColor: fn(),
+    exceptions: [],
+    isExceptionsLoading: false,
+    isExceptionsError: false,
+    onRestoreException: fn(),
+    isRestorePending: false,
+    remindBeforeMinutes: '',
+    setRemindBeforeMinutes: fn(),
+    reminderReady: true,
+    previewText: null,
+    isPreviewLoading: false,
+    previewError: false,
     onDelete: fn(),
     isPending: false,
     canSubmit: true,
@@ -48,5 +71,102 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
-  name: 'the desktop panel shows the selected start date',
+  name: 'the desktop panel creates a schedule on the selected date',
+}
+
+export const ThisEvent: Story = {
+  name: 'the editor targets one occurrence',
+  args: {
+    schedule: makeSchedule(),
+    scope: 'this',
+    canEditTitle: false,
+    canEditSeriesDetails: false,
+    startDate: '2026-01-01',
+    startTime: '07:00',
+    endTime: '08:00',
+    occurrenceDate: '2026-01-01',
+  },
+}
+
+export const ThisEventPreview: Story = {
+  name: 'the editor previews a skipped occurrence',
+  args: {
+    ...ThisEvent.args,
+    rangeAction: 'skip',
+    previewText: 'Skips this event on Thu, Jan 1. Other events are unchanged.',
+  },
+}
+
+export const ThisEventWithRestore: Story = {
+  name: 'the editor can restore an occurrence with an exception',
+  args: {
+    ...ThisEvent.args,
+    schedule: makeSchedule({ overridden: 'time' }),
+    canRestoreThisEvent: true,
+  },
+}
+
+export const PreviewUnavailable: Story = {
+  name: 'the editor explains when a preview could not load',
+  args: {
+    ...ThisEvent.args,
+    previewError: true,
+    canSubmit: false,
+  },
+}
+
+export const ThisAndFollowing: Story = {
+  name: 'the editor changes this and following occurrences',
+  args: {
+    schedule: makeSchedule(),
+    scope: 'following',
+    canEditTitle: false,
+    canEditSeriesDetails: true,
+    startDate: '2026-01-03',
+    startTime: '08:30',
+    endTime: '09:30',
+    occurrenceDate: '2026-01-03',
+    recurrenceType: 'weekly',
+    daysOfWeek: [1, 3, 5],
+  },
+}
+
+export const ThisAndFollowingPreview: Story = {
+  name: 'the editor previews changes to following occurrences',
+  args: {
+    ...ThisAndFollowing.args,
+    rangeAction: 'endSeries',
+    previewText:
+      'From Sat, Jan 3: 3 occurrences will change. Earlier events are unchanged. 1 exception will be removed.',
+  },
+}
+
+export const AllEventsWithExceptions: Story = {
+  name: 'the editor lists and restores exceptions for all events',
+  args: {
+    schedule: makeSchedule(),
+    scope: 'all',
+    canEditTitle: true,
+    canEditSeriesDetails: true,
+    exceptions: [
+      makeScheduleOverride({ occurrenceDate: '2026-01-03', skipped: true }),
+      makeScheduleOverride({
+        occurrenceDate: '2026-01-05',
+        movedToDate: '2026-01-06',
+        skipped: false,
+      }),
+    ],
+    remindBeforeMinutes: 30,
+  },
+}
+
+export const AllEventsWithReminder: Story = {
+  name: 'the editor shows a reminder for all events',
+  args: {
+    schedule: makeSchedule(),
+    scope: 'all',
+    canEditTitle: true,
+    canEditSeriesDetails: true,
+    remindBeforeMinutes: 30,
+  },
 }

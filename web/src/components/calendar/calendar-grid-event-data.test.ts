@@ -4,6 +4,54 @@ import { mapCalendarGridEvents } from '#components/calendar/calendar-grid-event-
 import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
 
 describe('mapCalendarGridEvents', () => {
+  it('passes the exception kind to the schedule event content', () => {
+    const event = makeTimeBlockEvent({
+      id: 'schedule-moved-occurrence',
+      title: 'Routine',
+      start: '2034-08-18T09:00:00',
+      end: '2034-08-18T10:00:00',
+      type: 'schedule',
+      scheduleId: 'schedule-overlap',
+      scheduleOccurrenceDate: '2034-08-17',
+      scheduleOverridden: 'moved',
+    })
+
+    expect(mapCalendarGridEvents([event], 'day')).toEqual([
+      {
+        id: 'schedule-moved-occurrence',
+        title: 'Routine',
+        start: '2034-08-18T09:00:00',
+        end: '2034-08-18T10:00:00',
+        allDay: false,
+        queueOrder: 1,
+        queuePosition: undefined,
+        displayPriority: 0,
+        editable: false,
+        durationEditable: true,
+        extendedProps: {
+          type: 'schedule',
+          parentRef: undefined,
+          color: undefined,
+          taskId: undefined,
+          dateTaskKind: undefined,
+          dateTaskOverdue: undefined,
+          dateTaskDueDateLabel: undefined,
+          displayPriority: 0,
+          isAutoScheduled: undefined,
+          scheduleId: 'schedule-overlap',
+          scheduleOccurrenceDate: '2034-08-17',
+          scheduleOverridden: 'moved',
+          scheduleStart: '2034-08-18T09:00:00',
+          queuePosition: undefined,
+          redacted: undefined,
+          calendarColor: undefined,
+          responseStatus: undefined,
+          gcalEventType: undefined,
+        },
+      },
+    ])
+  })
+
   it('passes the original occurrence date to schedule click handlers', () => {
     const event = makeTimeBlockEvent({
       id: 'schedule-moved-occurrence',

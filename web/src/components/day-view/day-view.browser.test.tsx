@@ -235,13 +235,23 @@ describe('DayViewPresentation', () => {
       )
     })
 
-    const titleInputs = await screen.findAllByPlaceholderText('Schedule title')
-    expect(
-      assertDefined(
-        findVisible(titleInputs),
-        'no visible "Schedule title" input found',
-      ),
-    ).toHaveValue('Sleep')
+    const visibleStartDateInput = findVisible(
+      screen.getAllByLabelText('Start date'),
+    )
+    const getActual = () => ({
+      dialogTitle: findVisible(screen.getAllByText('Edit Schedule'))
+        ?.textContent,
+      scheduleTitle: findVisible(screen.getAllByText('Sleep'))?.textContent,
+      startDate:
+        visibleStartDateInput instanceof HTMLInputElement
+          ? visibleStartDateInput.value
+          : null,
+    })
+    expect(getActual()).toEqual({
+      dialogTitle: 'Edit Schedule',
+      scheduleTitle: 'Sleep',
+      startDate: '2026-07-20',
+    })
   })
 
   it('has no reachable mobile Layout action-sheet trigger while the calendar tab is active', async () => {

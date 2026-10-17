@@ -115,6 +115,38 @@ export function buildScheduleOverridePreview(
   return buildScheduleChangePreviewFromOccurrences(range, before, after, [])
 }
 
+export function buildScheduleOverrideClearPreview(
+  series: ScheduleSeries,
+  overrides: SchedulePreviewOverride[],
+  occurrenceDate: string,
+): ScheduleChangePreview {
+  const existingOverride = overrides.find(
+    (override) => override.occurrenceDate === occurrenceDate,
+  )
+  const movedToDate = existingOverride?.movedToDate ?? occurrenceDate
+  const range = {
+    startDate: occurrenceDate < movedToDate ? occurrenceDate : movedToDate,
+    endDate: occurrenceDate > movedToDate ? occurrenceDate : movedToDate,
+  }
+  const restoredOverrides = overrides.filter(
+    (override) => override.occurrenceDate !== occurrenceDate,
+  )
+  const before = expandScheduleWithDraft({
+    series,
+    overrides,
+    ...range,
+    draft: {},
+  }).filter((occurrence) => occurrence.originalDate === occurrenceDate)
+  const after = expandScheduleWithDraft({
+    series,
+    overrides: restoredOverrides,
+    ...range,
+    draft: {},
+  }).filter((occurrence) => occurrence.originalDate === occurrenceDate)
+
+  return buildScheduleChangePreviewFromOccurrences(range, before, after, [])
+}
+
 export function getDeletedScheduleOverrides(
   series: ScheduleSeries,
   overrides: readonly SchedulePreviewOverride[],

@@ -74,6 +74,9 @@ export function mapCalendarGridEvents(
         ...(event.scheduleOccurrenceDate == null
           ? {}
           : { scheduleOccurrenceDate: event.scheduleOccurrenceDate }),
+        ...(event.scheduleOverridden == null
+          ? {}
+          : { scheduleOverridden: event.scheduleOverridden }),
         scheduleStart: event.start,
         queuePosition: event.queuePosition,
         redacted: event.redacted,

@@ -11,6 +11,7 @@ import {
 } from '#routes/mcp/testing'
 import {
   makeScheduleEvent,
+  makeScheduleOccurrence,
   makeTimeBlock,
 } from '#routes/schedule-test-fixtures'
 import { createTask } from '#routes/tasks/testing'
@@ -121,7 +122,7 @@ describe('schedule operation tools', () => {
         deletedOverrides: [],
       },
       beforeSave: [
-        {
+        makeScheduleOccurrence({
           scheduleId: '<uuid>',
           title: 'Review block',
           startDate: '2038-02-03',
@@ -132,7 +133,7 @@ describe('schedule operation tools', () => {
           occurrenceDate: '2038-02-03',
           overridden: null,
           recurrence: null,
-        },
+        }),
       ],
       saved: {
         id: '<uuid>',
@@ -150,7 +151,7 @@ describe('schedule operation tools', () => {
         updatedAt: '<timestamp>',
       },
       afterSave: [
-        {
+        makeScheduleOccurrence({
           scheduleId: '<uuid>',
           title: 'Review block',
           startDate: '2038-02-03',
@@ -161,7 +162,7 @@ describe('schedule operation tools', () => {
           occurrenceDate: '2038-02-03',
           overridden: null,
           recurrence: null,
-        },
+        }),
       ],
     })
   })
@@ -422,7 +423,7 @@ describe('schedule operation tools', () => {
         skipKeys: ['scheduleId', 'id'],
       }),
     ).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: created.id,
         title: 'Daily reset',
         startDate: '2026-12-18',
@@ -439,7 +440,7 @@ describe('schedule operation tools', () => {
           daysOfWeek: null,
           dayOfMonth: null,
         },
-      },
+      }),
     ])
   })
 
@@ -531,12 +532,13 @@ describe('schedule operation tools', () => {
         updatedAt: '<timestamp>',
       },
       events: [
-        {
+        makeScheduleOccurrence({
           scheduleId: '<uuid>',
           title: 'Focus block',
           startDate: '2026-12-18',
           start: '2026-12-18T08:00:00',
           end: '2026-12-18T09:00:00',
+          remindBeforeMinutes: 90,
           context: 'personal',
           color: null,
           occurrenceDate: '2026-12-18',
@@ -548,13 +550,14 @@ describe('schedule operation tools', () => {
             daysOfWeek: null,
             dayOfMonth: null,
           },
-        },
-        {
+        }),
+        makeScheduleOccurrence({
           scheduleId: '<uuid>',
           title: 'Focus block',
           startDate: '2026-12-18',
           start: '2026-12-19T08:00:00',
           end: '2026-12-19T09:00:00',
+          remindBeforeMinutes: 90,
           context: 'personal',
           color: null,
           occurrenceDate: '2026-12-19',
@@ -566,13 +569,14 @@ describe('schedule operation tools', () => {
             daysOfWeek: null,
             dayOfMonth: null,
           },
-        },
-        {
+        }),
+        makeScheduleOccurrence({
           scheduleId: '<uuid>',
           title: 'Focus block',
           startDate: '2026-12-18',
           start: '2026-12-20T09:30:00',
           end: '2026-12-20T10:00:00',
+          remindBeforeMinutes: 90,
           context: 'personal',
           color: null,
           occurrenceDate: '2026-12-20',
@@ -584,7 +588,7 @@ describe('schedule operation tools', () => {
             daysOfWeek: [0],
             dayOfMonth: null,
           },
-        },
+        }),
       ],
     })
   })
@@ -690,7 +694,7 @@ describe('schedule operation tools', () => {
     })
 
     expect(normalizeDynamicValues(parseToolJson(result))).toEqual([
-      {
+      makeScheduleOccurrence({
         scheduleId: '<uuid>',
         title: 'One-off focus',
         startDate: '2026-12-18',
@@ -701,7 +705,7 @@ describe('schedule operation tools', () => {
         occurrenceDate: '2026-12-18',
         overridden: null,
         recurrence: null,
-      },
+      }),
     ])
   })
 
