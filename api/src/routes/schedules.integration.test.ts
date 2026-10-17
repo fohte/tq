@@ -1,10 +1,11 @@
 import { eq, inArray } from 'drizzle-orm'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { recurrenceRules, scheduleOverrides } from '#db/schema'
+import { recurrenceRules, scheduleOverrides, schedules } from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
+import * as scheduleConstraintEvaluation from '#routes/schedule-constraint-evaluation'
 import {
   expandScheduleWithDraft,
   formatDateStr,
@@ -20,6 +21,7 @@ let stopWatchingChanges: (() => void) | undefined
 afterEach(() => {
   stopWatchingChanges?.()
   stopWatchingChanges = undefined
+  vi.restoreAllMocks()
 })
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
@@ -59,6 +61,7 @@ interface ScheduleResponse {
   color: string | null
   constraintViolations: unknown[]
   calendarDataIncomplete?: true
+  constraintEvaluationIncomplete?: true
   createdAt: string
   updatedAt: string
 }
@@ -180,6 +183,13 @@ function expectedDailyOccurrence({
 
 function normalizeScheduleHttpResponse(status: number, body: ScheduleResponse) {
   return { status, body: normalizeScheduleResponse(body) }
+}
+
+function saveOutcomeSnapshot<TResponse, TPersisted>(
+  response: TResponse,
+  persisted: TPersisted,
+) {
+  return { response, persisted }
 }
 
 function normalizeExpandedHttpResponse(
@@ -1112,6 +1122,59 @@ describe('schedules API', () => {
   })
 
   describe('PATCH /api/schedule/events/:id', () => {
+    it('returns the saved schedule when constraint evaluation fails', async () => {
+      const { body: schedule } = await createSchedule({
+        title: 'Routine',
+        startDate: '2040-01-02',
+        startTime: '18:00',
+        endTime: '19:00',
+      })
+      vi.spyOn(
+        scheduleConstraintEvaluation,
+        'evaluateScheduleConstraintViolations',
+      ).mockRejectedValue(new Error('database unavailable'))
+
+      const response = await patchSchedule(schedule.id, {
+        title: 'Updated routine',
+      })
+      const [savedSchedule] = await db
+        .select({ title: schedules.title })
+        .from(schedules)
+        .where(eq(schedules.id, schedule.id))
+        .limit(1)
+
+      expect(
+        saveOutcomeSnapshot(
+          normalizeScheduleHttpResponse(
+            response.status,
+            await jsonBody<ScheduleResponse>(response),
+          ),
+          savedSchedule?.title ?? null,
+        ),
+      ).toEqual({
+        response: {
+          status: 200,
+          body: {
+            id: 'SCHEDULE_ID',
+            title: 'Updated routine',
+            startDate: '2040-01-02',
+            endDate: null,
+            remindBeforeMinutes: null,
+            startTime: '18:00',
+            endTime: '19:00',
+            recurrence: null,
+            context: 'personal',
+            color: null,
+            constraintViolations: [],
+            constraintEvaluationIncomplete: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+        },
+        persisted: 'Updated routine',
+      })
+    })
+
     it('previews a start date change that replaces existing revisions', async () => {
       const startDate = dateAtOffset(0)
       const newStartDate = dateOffsetFrom(startDate, 1)

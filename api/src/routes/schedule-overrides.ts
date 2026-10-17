@@ -8,6 +8,7 @@ import { scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   evaluateScheduleConstraintViolations,
+  evaluateScheduleConstraintViolationsForSaveResponse,
   scheduleConstraintWeekRange,
 } from '#routes/schedule-constraint-evaluation'
 import { scheduleOccursOnDate } from '#routes/schedule-expansion'
@@ -123,7 +124,10 @@ export const scheduleOverridesApp = new Hono()
       ]
       const evaluations = await Promise.all(
         affectedRanges.map((range) =>
-          evaluateScheduleConstraintViolations({ series: schedule, range }),
+          evaluateScheduleConstraintViolationsForSaveResponse(
+            evaluateScheduleConstraintViolations({ series: schedule, range }),
+            schedule.schedule.id,
+          ),
         ),
       )
       const constraintViolations = evaluations.flatMap(
@@ -131,6 +135,9 @@ export const scheduleOverridesApp = new Hono()
       )
       const calendarDataIncomplete = evaluations.some(
         ({ calendarDataIncomplete }) => calendarDataIncomplete,
+      )
+      const constraintEvaluationIncomplete = evaluations.some(
+        ({ constraintEvaluationIncomplete }) => constraintEvaluationIncomplete,
       )
 
       return c.json(
@@ -143,6 +150,9 @@ export const scheduleOverridesApp = new Hono()
           skipped: override.skipped,
           constraintViolations,
           ...(calendarDataIncomplete ? { calendarDataIncomplete: true } : {}),
+          ...(constraintEvaluationIncomplete
+            ? { constraintEvaluationIncomplete: true }
+            : {}),
         },
         200,
       )

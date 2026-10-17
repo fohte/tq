@@ -3,7 +3,10 @@ import { Hono } from 'hono'
 
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { scheduleConstraintChecksApp } from '#routes/schedule-constraint-checks'
-import { evaluateScheduleConstraintViolations } from '#routes/schedule-constraint-evaluation'
+import {
+  evaluateScheduleConstraintViolations,
+  evaluateScheduleConstraintViolationsForSaveResponse,
+} from '#routes/schedule-constraint-evaluation'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -70,10 +73,13 @@ async function scheduleToResponseWithConstraints(
   const evaluation =
     endDate < range.startDate
       ? { constraintViolations: [] }
-      : await evaluateScheduleConstraintViolations({
-          series,
-          range: { startDate: range.startDate, endDate },
-        })
+      : await evaluateScheduleConstraintViolationsForSaveResponse(
+          evaluateScheduleConstraintViolations({
+            series,
+            range: { startDate: range.startDate, endDate },
+          }),
+          series.schedule.id,
+        )
 
   return { ...response, ...evaluation }
 }

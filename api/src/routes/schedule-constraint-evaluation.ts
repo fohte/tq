@@ -1,5 +1,6 @@
 import { captureWithFingerprint } from '@fohte/service-kit/observability'
 import { eq } from 'drizzle-orm'
+import { ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
 import {
@@ -252,6 +253,12 @@ function toScheduleDraft(
   }
 }
 
+type ScheduleConstraintEvaluationResult = {
+  constraintViolations: ScheduleConstraintViolation[]
+  calendarDataIncomplete?: true
+  constraintEvaluationIncomplete?: true
+}
+
 export async function evaluateScheduleConstraintViolations({
   series,
   range,
@@ -260,10 +267,7 @@ export async function evaluateScheduleConstraintViolations({
   series: ScheduleSeries
   range: ScheduleConstraintEvaluationRange
   draft?: ScheduleConstraintDraft
-}): Promise<{
-  constraintViolations: ScheduleConstraintViolation[]
-  calendarDataIncomplete?: true
-}> {
+}): Promise<ScheduleConstraintEvaluationResult> {
   const constraint =
     draft?.constraints === undefined
       ? await loadScheduleConstraint(series.schedule.id)
@@ -319,4 +323,25 @@ export async function evaluateScheduleConstraintViolations({
     ),
     ...(googleCalendar.incomplete ? { calendarDataIncomplete: true } : {}),
   }
+}
+
+export async function evaluateScheduleConstraintViolationsForSaveResponse(
+  evaluation: Promise<ScheduleConstraintEvaluationResult>,
+  scheduleId: string,
+): Promise<ScheduleConstraintEvaluationResult> {
+  const result = await ResultAsync.fromPromise(evaluation, (error) => error)
+  return result.match(
+    (value) => value,
+    (error) => {
+      captureWithFingerprint(
+        error,
+        'api.schedule.constraints.evaluation-failed',
+        { extras: { scheduleId } },
+      )
+      return {
+        constraintViolations: [],
+        constraintEvaluationIncomplete: true as const,
+      }
+    },
+  )
 }

@@ -1,10 +1,16 @@
+import { eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { scheduleConstraints, scheduleConstraintWeekdays } from '#db/schema'
+import {
+  scheduleConstraints,
+  scheduleConstraintWeekdays,
+  scheduleOverrides,
+} from '#db/schema'
 import { upsertGoogleCalendarToken } from '#integrations/google-calendar/testing'
 import { addCalendarDays, mondayWeekStart } from '#lib/timezone'
+import * as scheduleConstraintEvaluation from '#routes/schedule-constraint-evaluation'
 import { formatDateStr } from '#routes/schedule-expansion'
 import { MAX_SCHEDULE_DATE_RANGE_DAYS } from '#schemas/schedule'
 import { makeScheduleConstraint } from '#services/schedule-constraint-test-fixtures'
@@ -38,6 +44,7 @@ type ScheduleResponse = {
   color: string | null
   constraintViolations: unknown[]
   calendarDataIncomplete?: true
+  constraintEvaluationIncomplete?: true
   createdAt: string
   updatedAt: string
 }
@@ -81,11 +88,19 @@ async function overrideResponseSnapshot(response: Response) {
     skipped: boolean
     constraintViolations: unknown[]
     calendarDataIncomplete?: true
+    constraintEvaluationIncomplete?: true
   }>(response)
   return {
     status: response.status,
     body: { ...body, scheduleId: 'SCHEDULE_ID' },
   }
+}
+
+function saveOutcomeSnapshot<TResponse, TPersisted>(
+  response: TResponse,
+  persisted: TPersisted,
+) {
+  return { response, persisted }
 }
 
 async function addScheduleConstraint(
@@ -530,6 +545,70 @@ describe('schedule save responses', () => {
             originalDate: '2030-05-09',
           },
         ],
+      },
+    })
+  })
+
+  it('returns a saved override when constraint evaluation fails', async () => {
+    const target = await createSchedule({
+      title: 'Routine',
+      startDate: '2040-01-02',
+      startTime: '18:00',
+      endTime: '19:00',
+      recurrence: { type: 'weekly', interval: 1, daysOfWeek: [1] },
+    })
+    vi.spyOn(
+      scheduleConstraintEvaluation,
+      'evaluateScheduleConstraintViolations',
+    ).mockRejectedValue(new Error('database unavailable'))
+
+    const response = await app.request(
+      `/api/schedule/events/${target.id}/overrides/2040-01-02`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: '2040-01-03',
+          startTime: '18:00',
+          endTime: '19:00',
+        }),
+      },
+    )
+    const [savedOverride] = await db
+      .select({
+        startTime: scheduleOverrides.startTime,
+        endTime: scheduleOverrides.endTime,
+        movedToDate: scheduleOverrides.movedToDate,
+        skipped: scheduleOverrides.skipped,
+      })
+      .from(scheduleOverrides)
+      .where(eq(scheduleOverrides.scheduleId, target.id))
+      .limit(1)
+
+    expect(
+      saveOutcomeSnapshot(
+        await overrideResponseSnapshot(response),
+        savedOverride,
+      ),
+    ).toEqual({
+      response: {
+        status: 200,
+        body: {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: '2040-01-02',
+          startTime: '18:00',
+          endTime: '19:00',
+          movedToDate: '2040-01-03',
+          skipped: false,
+          constraintViolations: [],
+          constraintEvaluationIncomplete: true,
+        },
+      },
+      persisted: {
+        startTime: '18:00',
+        endTime: '19:00',
+        movedToDate: '2040-01-03',
+        skipped: false,
       },
     })
   })
