@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Pencil } from 'lucide-react'
 import { fromMarkdown } from 'mdast-util-from-markdown'
 import type { ReactNode } from 'react'
@@ -279,19 +280,13 @@ export function renderChecklistItemMarkdown({
     >
       {segments.map((segment) =>
         segment.kind === 'text' ? (
-          <Button
+          <FieldTrigger
             key={segment.key}
-            type="button"
-            variant="ghost"
             onClick={onEdit}
-            className={cn(
-              'inline h-auto min-h-0 justify-start overflow-hidden rounded-none border-0 bg-transparent p-0 text-left font-mono text-xs shadow-none transition-none hover:bg-transparent active:translate-y-0',
-              bold ? 'font-semibold' : 'font-normal',
-              checked ? 'text-muted-foreground' : 'text-foreground',
-            )}
+            className="inline-flex cursor-text"
           >
             {segment.node}
-          </Button>
+          </FieldTrigger>
         ) : (
           <span key={segment.key}>{segment.node}</span>
         ),

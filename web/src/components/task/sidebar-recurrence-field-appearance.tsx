@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import {
@@ -9,13 +10,11 @@ import {
   SelectValue,
 } from '@fohte/ui/select'
 import { Link } from '@tanstack/react-router'
+import { ChevronDown } from 'lucide-react'
 import { useRef } from 'react'
 
 import { WeekdayToggleRow } from '#components/schedule/create-schedule-modal'
-import {
-  SidebarField,
-  sidebarFieldValueButtonClassName,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import { formatLocalDate } from '#lib/date-range'
 import { selectValueHandler } from '#lib/form-utils'
 import {
@@ -118,21 +117,20 @@ export function SidebarRecurrenceFieldAppearance({
 
   return (
     <SidebarField label="RECURRENCE">
-      <Button
+      <FieldTrigger
         ref={anchorRef}
-        type="button"
-        variant="ghost"
         onClick={() => {
           onOpenChange(true)
         }}
-        className={`${sidebarFieldValueButtonClassName} min-w-0`}
+        className="w-full min-w-0"
       >
         <span className="min-w-0 truncate">
           {recurrenceRule != null
             ? formatRecurrenceSummary(recurrenceRule)
             : '—'}
         </span>
-      </Button>
+        <ChevronDown aria-hidden="true" />
+      </FieldTrigger>
       <Popover open={isEditing} onOpenChange={onOpenChange} anchor={anchorRef}>
         <PopoverContent padding="md" className="w-72">
           <div className="flex flex-col gap-3">

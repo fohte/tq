@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Chip } from '@fohte/ui/chip'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { Check, Terminal, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -99,19 +100,21 @@ function EditableSessionLabel({
   }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      onClick={() => {
-        setIsEditing(true)
-      }}
+    <div
       className={cn(
-        'h-auto min-h-0 min-w-0 flex-1 justify-start gap-0 rounded-none border-0 bg-transparent p-0 font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 text-left font-mono text-xs',
+        'min-w-0 flex-1 font-mono text-xs',
         label != null ? 'text-muted-foreground' : 'text-muted-foreground-faint',
       )}
     >
-      <span className="min-w-0 truncate">{label ?? 'no label'}</span>
-    </Button>
+      <FieldTrigger
+        onClick={() => {
+          setIsEditing(true)
+        }}
+        className="w-full min-w-0 cursor-text"
+      >
+        <span className="min-w-0 truncate">{label ?? 'no label'}</span>
+      </FieldTrigger>
+    </div>
   )
 }
 

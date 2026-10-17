@@ -1,13 +1,11 @@
-import { Button } from '@fohte/ui/button'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
+import { ChevronDown } from 'lucide-react'
 import { useRef } from 'react'
 
-import {
-  SidebarField,
-  sidebarFieldValueButtonClassName,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import { TaskCandidateList } from '#components/task/task-candidate-list'
 import type { SearchResult } from '#hooks/use-search'
 
@@ -61,20 +59,19 @@ export function SidebarParentFieldAppearance({
           />
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="ghost"
+        <FieldTrigger
           onClick={() => {
             onOpenChange(true)
           }}
-          className={`${sidebarFieldValueButtonClassName} min-w-0`}
+          className="w-full min-w-0"
         >
           <span className="min-w-0 truncate">
             {currentParent != null
               ? `#${String(currentParent.number)} ${currentParent.title}`
               : '—'}
           </span>
-        </Button>
+          <ChevronDown aria-hidden="true" />
+        </FieldTrigger>
       )}
       <Popover
         open={isEditing}

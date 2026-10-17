@@ -1,4 +1,5 @@
 import { Button } from '@fohte/ui/button'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import {
@@ -8,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@fohte/ui/select'
+import { ChevronDown } from 'lucide-react'
 import { useRef } from 'react'
 
 import { WeekdayToggleRow } from '#components/schedule/create-schedule-modal'
@@ -91,19 +93,18 @@ export function TemplateRepeatFieldAppearance({
         REPEAT
       </span>
       <div className="font-mono text-xs text-foreground">
-        <Button
+        <FieldTrigger
           ref={anchorRef}
-          type="button"
-          variant="ghost"
           onClick={() => {
             onOpenChange(true)
           }}
-          className="h-auto w-full min-w-0 shrink justify-start rounded-none border-0 bg-transparent p-0 text-left text-xs font-normal text-foreground shadow-none cursor-text transition-colors hover:bg-transparent hover:text-muted-foreground-strong active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
+          className="w-full min-w-0"
         >
           <span className="min-w-0 truncate">
             {formatRecurrenceSummary(recurrenceRule)}
           </span>
-        </Button>
+          <ChevronDown aria-hidden="true" />
+        </FieldTrigger>
         <Popover
           open={isEditing}
           onOpenChange={onOpenChange}
