@@ -7,13 +7,14 @@ import {
 } from '@fohte/ui/select'
 
 import type { GithubBlocker } from '#hooks/use-github-link'
-
-export type GithubWaitMode = 'until-closed' | 'until-reply'
+import { selectValueHandler } from '#lib/form-utils'
 
 const waitModeOptions = [
   { value: 'until-closed', label: 'until closed' },
   { value: 'until-reply', label: 'until reply' },
 ] as const
+export type GithubWaitMode = (typeof waitModeOptions)[number]['value']
+const waitModeValues = waitModeOptions.map(({ value }) => value)
 
 export function GithubWaitModeSelect({
   blocker,
@@ -30,11 +31,7 @@ export function GithubWaitModeSelect({
     <Select
       items={waitModeOptions}
       value={value}
-      onValueChange={(nextValue) => {
-        if (nextValue === 'until-closed' || nextValue === 'until-reply') {
-          onChange(nextValue)
-        }
-      }}
+      onValueChange={selectValueHandler(onChange, waitModeValues)}
     >
       <SelectTrigger
         aria-label={`Wait mode for ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`}
