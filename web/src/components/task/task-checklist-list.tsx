@@ -1,9 +1,9 @@
 import { Button } from '@fohte/ui/button'
-import { Input } from '@fohte/ui/input'
 import { Panel } from '@fohte/ui/panel'
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
+import { ChecklistNameInput } from '#components/task/checklist-name-input'
 import { TaskChecklistItemTree } from '#components/task/task-checklist-item-tree'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
@@ -235,10 +235,7 @@ function ChecklistPanel({
       {showHeader && (
         <div className="flex min-h-9 items-center gap-2 border-b border-border bg-card px-3 py-1.5">
           {editingName ? (
-            <Input
-              aria-label="Checklist name"
-              variant="ghost"
-              autoFocus
+            <ChecklistNameInput
               value={nameDraft}
               onChange={(event) => {
                 setNameDraft(event.currentTarget.value)
@@ -253,7 +250,6 @@ function ChecklistPanel({
                   setEditingName(false)
                 }
               }}
-              className="h-6 min-w-0 max-w-sm"
             />
           ) : (
             <>
