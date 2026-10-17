@@ -57,7 +57,7 @@ export function SidebarProjectField({
           <SelectTrigger
             variant="ghost"
             size="sm"
-            className="w-full justify-start gap-1"
+            className="w-full justify-start"
           >
             <SelectValue />
           </SelectTrigger>

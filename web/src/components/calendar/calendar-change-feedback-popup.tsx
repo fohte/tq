@@ -24,20 +24,22 @@ export function CalendarChangeFeedbackPopup({
       <PopoverContent
         initialFocus={false}
         padding="sm"
-        className="flex items-center gap-2 text-xs whitespace-nowrap"
+        className="whitespace-nowrap"
       >
-        {feedback?.kind === 'error' ? (
-          <span className="text-destructive">
-            Couldn't save — reverted to the original time
-          </span>
-        ) : feedback?.kind === 'undo' ? (
-          <>
-            <span className="text-muted-foreground">Moved</span>
-            <Button type="button" variant="plain" onClick={feedback.onUndo}>
-              Undo
-            </Button>
-          </>
-        ) : null}
+        <div className="flex items-center gap-2 text-xs">
+          {feedback?.kind === 'error' ? (
+            <span className="text-destructive">
+              Couldn't save — reverted to the original time
+            </span>
+          ) : feedback?.kind === 'undo' ? (
+            <>
+              <span className="text-muted-foreground">Moved</span>
+              <Button type="button" variant="plain" onClick={feedback.onUndo}>
+                Undo
+              </Button>
+            </>
+          ) : null}
+        </div>
       </PopoverContent>
     </Popover>
   )

@@ -192,11 +192,7 @@ function StateSelect({
         <SelectTrigger
           variant="ghost"
           size="sm"
-          iconClassName="size-4 -translate-x-0.5 text-foreground native-select-caret-stroke"
-          className={cn(
-            'w-fit min-w-0 gap-0.5',
-            mobileLayout && 'translate-y-px',
-          )}
+          className={cn('w-fit min-w-0', mobileLayout && 'translate-y-px')}
         >
           <SelectValue />
         </SelectTrigger>

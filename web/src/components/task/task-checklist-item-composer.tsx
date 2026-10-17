@@ -25,6 +25,7 @@ export function ChecklistItemComposer({
     >
       <Input
         aria-label="New checklist item"
+        variant="ghost"
         autoFocus
         value={content}
         onChange={(event) => {
@@ -40,7 +41,7 @@ export function ChecklistItemComposer({
           }
         }}
         placeholder="Item title"
-        className="h-7 min-w-0 border-0 px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-1"
+        className="h-7 min-w-0"
       />
     </div>
   )
