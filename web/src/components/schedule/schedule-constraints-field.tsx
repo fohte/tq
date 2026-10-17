@@ -347,7 +347,12 @@ function ConstraintEditor({
         <span className="font-mono text-2xs tracking-widest text-muted-foreground-faint">
           Weekdays
         </span>
-        <div className="flex flex-wrap gap-1">
+        <div
+          className={cn(
+            'gap-1',
+            variant === 'mobile' ? 'grid grid-cols-7' : 'flex',
+          )}
+        >
           {weekdays.map(({ dayOfWeek, label, name }) => {
             const preference = value.weekdays[dayOfWeek] ?? 'preferred'
             return (
@@ -369,12 +374,20 @@ function ConstraintEditor({
                   })
                 }}
                 className={cn(
-                  'flex h-12 w-10 flex-col items-center justify-center gap-0.5 border text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+                  'flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 border text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+                  variant === 'mobile' ? 'w-full' : 'w-15 flex-none',
                   preferenceClasses[preference],
                 )}
               >
-                <span>{label}</span>
-                <span className="font-mono text-2xs font-normal tracking-tight">
+                <span
+                  className={cn(preference === 'excluded' && 'line-through')}
+                >
+                  {label}
+                </span>
+                <span
+                  className="whitespace-nowrap font-mono text-2xs font-normal"
+                  style={{ fontSize: '9px', letterSpacing: '0.08em' }}
+                >
                   {preferenceCellLabels[preference]}
                 </span>
               </button>
