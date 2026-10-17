@@ -1,7 +1,5 @@
 import { Button } from '@fohte/ui/button'
 
-import { cn } from '#lib/utils'
-
 export type ContextValue = 'work' | 'personal'
 export const contextValues = [
   '',
@@ -49,25 +47,24 @@ export function WeekdayToggleRow({
 }) {
   return (
     <div className="flex gap-1">
-      {dayLabels.map((label, idx) => (
-        <Button
-          key={label}
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            toggleDay(idx)
-          }}
-          className={cn(
-            'gap-0 rounded-none border bg-transparent p-0 font-inherit font-medium shadow-none transition-colors hover:bg-transparent active:translate-y-0 text-xs',
-            daysOfWeek.includes(idx)
-              ? 'border-border-strong bg-surface-strong text-foreground'
-              : 'border-border text-muted-foreground hover:border-border-strong',
-          )}
-        >
-          {label.charAt(0)}
-        </Button>
-      ))}
+      {dayLabels.map((label, idx) => {
+        const selected = daysOfWeek.includes(idx)
+
+        return (
+          <Button
+            key={label}
+            type="button"
+            variant={selected ? 'default' : 'secondary'}
+            size="icon"
+            aria-pressed={selected}
+            onClick={() => {
+              toggleDay(idx)
+            }}
+          >
+            {label.charAt(0)}
+          </Button>
+        )
+      })}
     </div>
   )
 }

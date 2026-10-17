@@ -64,6 +64,11 @@
   font-family: inherit;
 }
 
+@utility schedule-constraint-preference-label {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
 @utility outline-auto {
   outline-style: auto;
 }

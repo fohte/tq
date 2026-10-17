@@ -34,13 +34,7 @@ export function CalendarChangeFeedbackPopup({
           ) : feedback?.kind === 'undo' ? (
             <>
               <span className="text-muted-foreground">Moved</span>
-              <Button
-                type="button"
-                variant="link"
-                size="xs"
-                className="h-auto p-0"
-                onClick={feedback.onUndo}
-              >
+              <Button type="button" variant="plain" onClick={feedback.onUndo}>
                 Undo
               </Button>
             </>
