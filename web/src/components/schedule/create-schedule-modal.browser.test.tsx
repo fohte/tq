@@ -9,6 +9,7 @@ import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import {
   makeSchedule,
   makeScheduleConstraint,
+  makeScheduleDetails,
   makeScheduleOverride,
 } from '#components/schedule/schedule-test-fixtures'
 import {
@@ -115,20 +116,7 @@ function setupMocks() {
   )
   mockUseScheduleDetails.mockReturnValue(
     partialMutation<ReturnType<typeof useScheduleDetails>>({
-      data: {
-        id: sampleSchedule.scheduleId,
-        title: sampleSchedule.title,
-        startDate: sampleSchedule.startDate,
-        endDate: null,
-        remindBeforeMinutes: null,
-        startTime: '07:00',
-        endTime: '08:00',
-        recurrence: sampleSchedule.recurrence,
-        context: 'personal',
-        color: sampleSchedule.color,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      },
+      data: makeScheduleDetails(),
       isLoading: false,
     }),
   )
@@ -1122,20 +1110,10 @@ describe('CreateScheduleModal', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     mockUseScheduleDetails.mockReturnValue(
       partialMutation<ReturnType<typeof useScheduleDetails>>({
-        data: {
-          id: sampleSchedule.scheduleId,
+        data: makeScheduleDetails({
           title: 'Updated schedule title',
-          startDate: sampleSchedule.startDate,
-          endDate: null,
-          remindBeforeMinutes: null,
-          startTime: '07:00',
-          endTime: '08:00',
-          recurrence: sampleSchedule.recurrence,
-          context: 'personal',
-          color: sampleSchedule.color,
-          createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-02T00:00:00.000Z',
-        },
+        }),
         isLoading: false,
         isFetching: false,
       }),

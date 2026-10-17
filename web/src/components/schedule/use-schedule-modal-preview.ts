@@ -8,6 +8,7 @@ import {
   buildAllScheduleInput,
   buildFollowingScheduleInput,
   endSeriesRemovesSchedule,
+  previousScheduleDate,
 } from '#components/schedule/schedule-edit-dialog-update-input'
 import { describeSchedulePreview } from '#components/schedule/schedule-preview-description'
 import { useDebounce } from '#hooks/use-debounce'
@@ -63,6 +64,12 @@ export function useScheduleModalPreview({
     currentDetails: details,
   })
   const rangeAction = currentScheduleEditAction(rangeDraft)
+  const endSeriesEndDate =
+    scope === 'following' &&
+    rangeAction === 'endSeries' &&
+    endSeriesRemovesSchedule(schedule, rangeDraft)
+      ? previousScheduleDate(rangeDraft.following.fromDate)
+      : undefined
   const previewRequest = buildScheduleEditPreviewRequest(
     schedule,
     rangeDraft,
@@ -85,9 +92,7 @@ export function useScheduleModalPreview({
   )
   const previewText =
     previewRequest == null
-      ? scope === 'following' &&
-        rangeAction === 'endSeries' &&
-        endSeriesRemovesSchedule(schedule, rangeDraft)
+      ? endSeriesEndDate !== undefined
         ? 'Ending the series before its first occurrence removes the schedule.'
         : null
       : isPreviewRequestDebouncing || previewQuery.data == null
@@ -108,6 +113,7 @@ export function useScheduleModalPreview({
     followingInput,
     recurrence,
     rangeAction,
+    endSeriesEndDate,
     previewRequest,
     previewQuery,
     isPreviewRequestDebouncing,

@@ -145,6 +145,17 @@ export const ThisEventWithConstraints: Story = {
   },
 }
 
+export const ThisEventWithConstraintViolations: Story = {
+  name: 'the editor shows constraint violations after skipping an occurrence',
+  args: {
+    ...ThisEventWithConstraints.args,
+    rangeAction: 'skip',
+    constraintCheckDraft: {
+      occurrenceChange: { originalDate: '2041-05-15', skipped: true },
+    },
+  },
+}
+
 export const ThisEventPreview: Story = {
   name: 'the editor previews a skipped occurrence',
   args: {
