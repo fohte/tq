@@ -1,14 +1,11 @@
-import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { useRef } from 'react'
 
-import {
-  SidebarField,
-  sidebarFieldValueButtonClassName,
-} from '#components/task/sidebar-field'
+import { SidebarField } from '#components/task/sidebar-field'
 import { TaskCandidateList } from '#components/task/task-candidate-list'
+import { FieldTriggerWithChevron } from '#components/ui/field-trigger-with-chevron'
 import type { SearchResult } from '#hooks/use-search'
 
 export function SidebarParentFieldAppearance({
@@ -61,20 +58,15 @@ export function SidebarParentFieldAppearance({
           />
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="ghost"
+        <FieldTriggerWithChevron
           onClick={() => {
             onOpenChange(true)
           }}
-          className={`${sidebarFieldValueButtonClassName} min-w-0`}
         >
-          <span className="min-w-0 truncate">
-            {currentParent != null
-              ? `#${String(currentParent.number)} ${currentParent.title}`
-              : '—'}
-          </span>
-        </Button>
+          {currentParent != null
+            ? `#${String(currentParent.number)} ${currentParent.title}`
+            : '—'}
+        </FieldTriggerWithChevron>
       )}
       <Popover
         open={isEditing}

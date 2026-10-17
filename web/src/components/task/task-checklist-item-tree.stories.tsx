@@ -90,6 +90,13 @@ const inlineMarkdownItems = [
     content: `#${String(CHECKLIST_ITEM_TASK_NUMBER)}`,
   }),
 ]
+const checkedInlineMarkdownItems = [
+  makeTaskChecklistItem({
+    id: '30000000-0000-4000-8000-000000000215',
+    content: 'Pack **the sample** before leaving.',
+    checkedAt: '2026-01-02T00:00:00.000Z',
+  }),
+]
 
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
@@ -187,5 +194,11 @@ export const LinkedItems: Story = {
 export const InlineMarkdown: Story = {
   name: 'the checklist shows formatted text and live reference chips',
   args: { items: inlineMarkdownItems },
+  render: (args) => <ItemTreeStory {...args} />,
+}
+
+export const CheckedInlineMarkdown: Story = {
+  name: 'checked Markdown text keeps its formatting and strike-through',
+  args: { items: checkedInlineMarkdownItems },
   render: (args) => <ItemTreeStory {...args} />,
 }

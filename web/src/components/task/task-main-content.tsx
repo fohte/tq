@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Chip } from '@fohte/ui/chip'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
@@ -322,16 +323,16 @@ function EditableTitle({
           className="flex-1"
         />
       ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-          className="h-auto min-h-0 shrink justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-inherit font-normal shadow-none transition-none hover:bg-transparent active:translate-y-0 flex-1 cursor-text text-left text-2xl font-bold text-foreground"
-        >
-          {value}
-        </Button>
+        <div className="min-w-0 flex-1 text-2xl font-bold text-foreground">
+          <FieldTrigger
+            onClick={() => {
+              setIsEditing(true)
+            }}
+            className="w-full min-w-0 whitespace-normal cursor-text"
+          >
+            {value}
+          </FieldTrigger>
+        </div>
       )}
       <span className="mt-2 shrink-0">
         <AuthorLabel author={author} />

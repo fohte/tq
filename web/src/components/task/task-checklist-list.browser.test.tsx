@@ -217,6 +217,27 @@ function getChecklistMarkdownState(root: Element) {
   }
 }
 
+function getInlineMarkdownStyleState(element: Element) {
+  return {
+    text: element.textContent,
+    textDecoration: getComputedStyle(element).textDecorationLine,
+  }
+}
+
+function getInlineMarkdownTruncationState(row: Element, fieldTrigger: Element) {
+  const style = getComputedStyle(row)
+
+  return {
+    text: row.textContent,
+    rowDisplay: style.display,
+    rowOverflow: style.overflow,
+    rowTextOverflow: style.textOverflow,
+    rowWhiteSpace: style.whiteSpace,
+    fieldTriggerDisplay: getComputedStyle(fieldTrigger).display,
+    contentOverflows: row.scrollWidth > row.clientWidth,
+  }
+}
+
 function getChecklistInlineEditState(content: string) {
   const input = screen.queryByRole<HTMLInputElement>('textbox', {
     name: `Edit ${content}`,
@@ -263,7 +284,9 @@ describe('TaskChecklistList', () => {
     })
     await screen.findByRole('checkbox', { name: `Check ${content}` })
     const contentElement = assertDefined(
-      rendered.container.querySelector('strong')?.parentElement?.parentElement,
+      rendered.container
+        .querySelector('strong')
+        ?.closest('[data-slot="field-trigger"]')?.parentElement?.parentElement,
       'the checklist item has a Markdown content view',
     )
 
@@ -283,6 +306,124 @@ describe('TaskChecklistList', () => {
         `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
         `#${String(CHECKLIST_ITEM_TASK_NUMBER)}${CHECKLIST_ITEM_TASK_TITLE}`,
       ],
+    })
+  })
+
+  it('truncates long checklist text in the item row', async () => {
+    const content = 'Pack the entire campsite before sunrise. '
+      .repeat(30)
+      .trim()
+    const rendered = renderChecklist({
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000748',
+              content,
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Check ${content}` })
+    const fieldTrigger = assertDefined(
+      rendered.container.querySelector('[data-slot="field-trigger"]'),
+      'the checklist item has an editable plain-text field',
+    )
+    const row = assertDefined(
+      fieldTrigger.parentElement,
+      'the checklist text has a row container',
+    )
+
+    expect(getInlineMarkdownTruncationState(row, fieldTrigger)).toEqual({
+      text: content,
+      rowDisplay: 'block',
+      rowOverflow: 'hidden',
+      rowTextOverflow: 'ellipsis',
+      rowWhiteSpace: 'nowrap',
+      fieldTriggerDisplay: 'inline-block',
+      contentOverflows: true,
+    })
+  })
+
+  it('keeps strikethrough on checked Markdown text', async () => {
+    const content = 'Review **the sample**'
+    const rendered = renderChecklist({
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: '30000000-0000-4000-8000-000000000744',
+              content,
+              checkedAt: '2026-01-02T00:00:00.000Z',
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Uncheck ${content}` })
+    const fieldTrigger = assertDefined(
+      rendered.container.querySelector('[data-slot="field-trigger"]'),
+      'the checklist item has an editable Markdown field',
+    )
+    const inlineContent = assertDefined(
+      fieldTrigger.querySelector(':scope > span'),
+      'the field trigger has a text wrapper',
+    )
+
+    expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
+      text: 'Review the sample',
+      textDecoration: 'line-through',
+    })
+  })
+
+  it('keeps strikethrough on checked plain text in nested items', async () => {
+    const content = 'Pack socks'
+    const rootItemId = '30000000-0000-4000-8000-000000000745'
+    const childItemId = '30000000-0000-4000-8000-000000000746'
+
+    const rendered = renderChecklist({
+      checklists: [
+        makeTaskChecklist({
+          items: [
+            makeTaskChecklistItem({
+              id: rootItemId,
+              content: 'Pack a backpack',
+              children: [
+                makeTaskChecklistItem({
+                  id: childItemId,
+                  parentItemId: rootItemId,
+                  content: 'Pack clothes',
+                  children: [
+                    makeTaskChecklistItem({
+                      id: '30000000-0000-4000-8000-000000000747',
+                      parentItemId: childItemId,
+                      content,
+                      checkedAt: '2026-01-02T00:00:00.000Z',
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    })
+    await screen.findByRole('checkbox', { name: `Uncheck ${content}` })
+    const fieldTrigger = assertDefined(
+      [
+        ...rendered.container.querySelectorAll('[data-slot="field-trigger"]'),
+      ].find((element) => element.textContent === content),
+      'the nested checklist item has an editable plain-text field',
+    )
+    const inlineContent = assertDefined(
+      fieldTrigger.querySelector(':scope > span'),
+      'the field trigger has a text wrapper',
+    )
+
+    expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
+      text: content,
+      textDecoration: 'line-through',
     })
   })
 
@@ -793,7 +934,7 @@ describe('TaskChecklistList', () => {
         throw new Error('The details editor is still mounting')
       }
     })
-    await focusDescriptionEditor(user, container)
+    await focusDescriptionEditor(user, container, { timeout: 10_000 })
     await user.keyboard('Pack a compass')
 
     await waitFor(

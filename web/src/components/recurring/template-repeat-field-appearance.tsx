@@ -11,6 +11,7 @@ import {
 import { useRef } from 'react'
 
 import { WeekdayToggleRow } from '#components/schedule/create-schedule-modal'
+import { FieldTriggerWithChevron } from '#components/ui/field-trigger-with-chevron'
 import { selectValueHandler } from '#lib/form-utils'
 import {
   buildRecurrenceRule,
@@ -91,19 +92,14 @@ export function TemplateRepeatFieldAppearance({
         REPEAT
       </span>
       <div className="font-mono text-xs text-foreground">
-        <Button
+        <FieldTriggerWithChevron
           ref={anchorRef}
-          type="button"
-          variant="ghost"
           onClick={() => {
             onOpenChange(true)
           }}
-          className="h-auto w-full min-w-0 shrink justify-start rounded-none border-0 bg-transparent p-0 text-left text-xs font-normal text-foreground shadow-none cursor-text transition-colors hover:bg-transparent hover:text-muted-foreground-strong active:translate-y-0 focus-visible:border-0 focus-visible:ring-0"
         >
-          <span className="min-w-0 truncate">
-            {formatRecurrenceSummary(recurrenceRule)}
-          </span>
-        </Button>
+          {formatRecurrenceSummary(recurrenceRule)}
+        </FieldTriggerWithChevron>
         <Popover
           open={isEditing}
           onOpenChange={onOpenChange}
