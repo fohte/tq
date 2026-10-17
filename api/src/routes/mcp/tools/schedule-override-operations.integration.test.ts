@@ -88,6 +88,7 @@ describe('schedule override operation tools', () => {
         endTime: '11:00',
         movedToDate: destinationDate,
         skipped: false,
+        constraintViolations: [],
       },
     })
   })
@@ -118,6 +119,7 @@ describe('schedule override operation tools', () => {
       endTime: '09:45',
       movedToDate: null,
       skipped: false,
+      constraintViolations: [],
     })
   })
 
@@ -150,6 +152,7 @@ describe('schedule override operation tools', () => {
       endTime: '10:00',
       movedToDate: '2034-08-19',
       skipped: false,
+      constraintViolations: [],
     })
   })
 
@@ -210,6 +213,7 @@ describe('schedule override operation tools', () => {
       endTime: null,
       movedToDate: null,
       skipped: true,
+      constraintViolations: [],
     })
   })
 

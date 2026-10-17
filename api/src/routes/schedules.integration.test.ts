@@ -1,9 +1,14 @@
 import { eq, inArray } from 'drizzle-orm'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { recurrenceRules, scheduleOverrides } from '#db/schema'
+import {
+  recurrenceRules,
+  scheduleConstraints,
+  scheduleOverrides,
+  schedules,
+} from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import {
   expandScheduleWithDraft,
@@ -11,6 +16,7 @@ import {
 } from '#routes/schedule-expansion'
 import type { ScheduleChangePreview } from '#routes/schedule-preview'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
+import * as scheduleConstraintService from '#services/schedule-constraints'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -20,6 +26,7 @@ let stopWatchingChanges: (() => void) | undefined
 afterEach(() => {
   stopWatchingChanges?.()
   stopWatchingChanges = undefined
+  vi.restoreAllMocks()
 })
 
 const TEST_UUID = '550e8400-e29b-41d4-a716-446655440000'
@@ -57,6 +64,9 @@ interface ScheduleResponse {
   } | null
   context: string
   color: string | null
+  constraintViolations: unknown[]
+  calendarDataIncomplete?: true
+  constraintEvaluationIncomplete?: true
   createdAt: string
   updatedAt: string
 }
@@ -178,6 +188,13 @@ function expectedDailyOccurrence({
 
 function normalizeScheduleHttpResponse(status: number, body: ScheduleResponse) {
   return { status, body: normalizeScheduleResponse(body) }
+}
+
+function saveOutcomeSnapshot<TResponse, TPersisted>(
+  response: TResponse,
+  persisted: TPersisted,
+) {
+  return { response, persisted }
 }
 
 function normalizeExpandedHttpResponse(
@@ -707,6 +724,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -735,6 +753,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -1108,6 +1127,62 @@ describe('schedules API', () => {
   })
 
   describe('PATCH /api/schedule/events/:id', () => {
+    it('returns the saved schedule when constraint evaluation fails', async () => {
+      const { body: schedule } = await createSchedule({
+        title: 'Routine',
+        startDate: '2040-01-02',
+        startTime: '18:00',
+        endTime: '19:00',
+      })
+      await db.insert(scheduleConstraints).values({ scheduleId: schedule.id })
+      vi.spyOn(
+        scheduleConstraintService,
+        'checkScheduleConstraints',
+      ).mockImplementation(() => {
+        throw new Error('evaluation unavailable')
+      })
+
+      const response = await patchSchedule(schedule.id, {
+        title: 'Updated routine',
+      })
+      const [savedSchedule] = await db
+        .select({ title: schedules.title })
+        .from(schedules)
+        .where(eq(schedules.id, schedule.id))
+        .limit(1)
+
+      expect(
+        saveOutcomeSnapshot(
+          normalizeScheduleHttpResponse(
+            response.status,
+            await jsonBody<ScheduleResponse>(response),
+          ),
+          savedSchedule?.title ?? null,
+        ),
+      ).toEqual({
+        response: {
+          status: 200,
+          body: {
+            id: 'SCHEDULE_ID',
+            title: 'Updated routine',
+            startDate: '2040-01-02',
+            endDate: null,
+            remindBeforeMinutes: null,
+            startTime: '18:00',
+            endTime: '19:00',
+            recurrence: null,
+            context: 'personal',
+            color: null,
+            constraintViolations: [],
+            constraintEvaluationIncomplete: true,
+            createdAt: 'TIMESTAMP',
+            updatedAt: 'TIMESTAMP',
+          },
+        },
+        persisted: 'Updated routine',
+      })
+    })
+
     it('previews a start date change that replaces existing revisions', async () => {
       const startDate = dateAtOffset(0)
       const newStartDate = dateOffsetFrom(startDate, 1)
@@ -1824,6 +1899,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -1878,6 +1954,7 @@ describe('schedules API', () => {
             recurrence: null,
             context: 'personal',
             color: null,
+            constraintViolations: [],
             createdAt: 'TIMESTAMP',
             updatedAt: 'TIMESTAMP',
           },
@@ -1895,6 +1972,7 @@ describe('schedules API', () => {
             recurrence: null,
             context: 'personal',
             color: null,
+            constraintViolations: [],
             createdAt: 'TIMESTAMP',
             updatedAt: 'TIMESTAMP',
           },
@@ -2527,6 +2605,7 @@ describe('schedules API', () => {
           recurrence: null,
           context: 'personal',
           color: null,
+          constraintViolations: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
         },
@@ -3443,6 +3522,7 @@ describe('schedule overrides API', () => {
       endTime: string | null
       movedToDate: string | null
       skipped: boolean
+      constraintViolations: unknown[]
     }>(setResponse)
 
     const setSnapshot = () => ({ status: setResponse.status, body: setBody })
@@ -3455,6 +3535,7 @@ describe('schedule overrides API', () => {
         endTime: '10:00',
         movedToDate: destinationDate,
         skipped: false,
+        constraintViolations: [],
       },
     })
   })

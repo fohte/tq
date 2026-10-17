@@ -2,6 +2,8 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { scheduleConstraintChecksApp } from '#routes/schedule-constraint-checks'
+import { evaluateScheduleConstraintViolationsSafely } from '#routes/schedule-constraint-evaluation'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -11,6 +13,7 @@ import {
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
 import { scheduleOverridesApp } from '#routes/schedule-overrides'
+import { buildSchedulePreviewRange } from '#routes/schedule-preview'
 import {
   createScheduleSeries,
   deleteScheduleSeries,
@@ -49,6 +52,32 @@ function scheduleToResponse(
   }
 }
 
+async function scheduleToResponseWithConstraints(
+  series: ScheduleSeries,
+  revision: ScheduleRevisionWithRule,
+) {
+  const response = scheduleToResponse(series, revision)
+  const today = formatDateStr(new Date())
+  const requestedStart =
+    revision.revision.effectiveFrom > today
+      ? revision.revision.effectiveFrom
+      : undefined
+  const range = buildSchedulePreviewRange(series, requestedStart)
+  const endDate =
+    series.schedule.endDate == null || series.schedule.endDate > range.endDate
+      ? range.endDate
+      : series.schedule.endDate
+  const evaluation =
+    endDate < range.startDate
+      ? { constraintViolations: [] }
+      : await evaluateScheduleConstraintViolationsSafely({
+          series,
+          range: { startDate: range.startDate, endDate },
+        })
+
+  return { ...response, ...evaluation }
+}
+
 export const schedulesApp = new Hono()
   .route('/', scheduleTimeBlocksApp)
   .post('/events', zValidator('json', createScheduleSchema), async (c) => {
@@ -56,7 +85,10 @@ export const schedulesApp = new Hono()
     const series = await createScheduleSeries(input)
     const initialRevision = firstOrThrow(series.revisions)
 
-    return c.json(scheduleToResponse(series, initialRevision), 201)
+    return c.json(
+      await scheduleToResponseWithConstraints(series, initialRevision),
+      201,
+    )
   })
   .get('/events', zValidator('query', scheduleDateRangeSchema), async (c) => {
     const { startDate, endDate } = c.req.valid('query')
@@ -109,7 +141,10 @@ export const schedulesApp = new Hono()
     }
 
     return c.json(
-      scheduleToResponse(result.series, result.responseRevision),
+      await scheduleToResponseWithConstraints(
+        result.series,
+        result.responseRevision,
+      ),
       200,
     )
   })
@@ -121,4 +156,5 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
+  .route('/', scheduleConstraintChecksApp)
   .route('/', scheduleOverridesApp)

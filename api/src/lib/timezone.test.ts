@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addCalendarDays,
   formatDateInTimeZone,
+  formatDateTimeInTimeZone,
   localDateTimeToUtc,
 } from '#lib/timezone'
 
@@ -13,6 +14,10 @@ function scheduleDateTimeSnapshot() {
       'Asia/Tokyo',
     ),
     instant: localDateTimeToUtc('2026-12-17', '14:30', 'Asia/Tokyo'),
+    dateTime: formatDateTimeInTimeZone(
+      new Date('2030-05-07T09:30:00.000Z'),
+      'Asia/Tokyo',
+    ),
   }
 }
 
@@ -21,6 +26,7 @@ describe('time zone conversion', () => {
     expect(scheduleDateTimeSnapshot()).toEqual({
       date: '2026-12-17',
       instant: new Date('2026-12-17T05:30:00.000Z'),
+      dateTime: { date: '2030-05-07', time: '18:30' },
     })
   })
 

@@ -20,17 +20,7 @@ export function formatDateAtOffset(date: Date, tzOffsetMinutes = 0): string {
 }
 
 export function formatDateInTimeZone(date: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date)
-  const values = new Map(parts.map(({ type, value }) => [type, value]))
-  const year = values.get('year') ?? ''
-  const month = values.get('month') ?? ''
-  const day = values.get('day') ?? ''
-  return `${year}-${month}-${day}`
+  return formatDateTimeInTimeZone(date, timeZone).date
 }
 
 export function addCalendarDays(date: string, amount: number): string {
@@ -39,6 +29,53 @@ export function addCalendarDays(date: string, amount: number): string {
   const day = Number(date.slice(8, 10))
   const result = new Date(Date.UTC(year, month - 1, day + amount))
   return result.toISOString().slice(0, 10)
+}
+
+export function mondayWeekStart(date: string): string {
+  return addCalendarDays(date, -((calendarDayOfWeek(date) + 6) % 7))
+}
+
+export function calendarDayOfWeek(date: string): number {
+  const year = Number(date.slice(0, 4))
+  const month = Number(date.slice(5, 7))
+  const day = Number(date.slice(8, 10))
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+}
+
+export function enumerateCalendarDates(
+  startDate: string,
+  endDate: string,
+): string[] {
+  const dates: string[] = []
+  for (let date = startDate; date <= endDate; date = addCalendarDays(date, 1)) {
+    dates.push(date)
+  }
+  return dates
+}
+
+export function formatDateTimeInTimeZone(
+  instant: Date,
+  timeZone: string,
+): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant)
+  const values = new Map(parts.map(({ type, value }) => [type, value]))
+  const year = values.get('year') ?? ''
+  const month = values.get('month') ?? ''
+  const day = values.get('day') ?? ''
+  const hour = values.get('hour') ?? ''
+  const minute = values.get('minute') ?? ''
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hour}:${minute}`,
+  }
 }
 
 export function localDateTimeToUtc(

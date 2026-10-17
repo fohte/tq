@@ -7,7 +7,7 @@ const SCHEDULE_DATE_RANGE_ERROR_MESSAGE = `Date range must be chronological and 
 
 const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000
 
-const scheduleTimeSchema = z
+export const scheduleTimeSchema = z
   .string()
   .regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/)
   .describe('Local time in HH:MM format.')
