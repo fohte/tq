@@ -73,16 +73,18 @@ export function TaskGithubLinksSection({
         </div>
       )}
 
-      <Button
-        type="button"
-        variant="plain"
-        className="w-fit"
-        onClick={() => {
-          setModalOpen(true)
-        }}
-      >
-        link issue or PR
-      </Button>
+      <div className="w-fit font-mono text-xs">
+        <Button
+          type="button"
+          variant="plain"
+          className="w-fit"
+          onClick={() => {
+            setModalOpen(true)
+          }}
+        >
+          link issue or PR
+        </Button>
+      </div>
 
       <GithubIssueLinkModal
         open={modalOpen}

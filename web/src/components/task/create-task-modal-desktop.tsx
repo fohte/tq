@@ -199,7 +199,7 @@ export function CreateTaskModalDesktop({
         </div>
 
         {/* Tags */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 font-mono text-xs">
           <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">
             <Tag className="size-3.5" />
             TAGS

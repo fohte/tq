@@ -37,7 +37,7 @@ export function QueueScheduledItemRow({
         data-no-dnd=""
         className="size-6 shrink-0"
       >
-        <X className="h-4 w-4" />
+        <X className="size-3" />
       </Button>
     </div>
   )

@@ -133,7 +133,7 @@ function BlockedByGroup({
                 aria-label={`Remove #${String(task.number)} as blocker`}
                 className="size-6 shrink-0"
               >
-                <X className="size-3.5" />
+                <X className="size-3" />
               </Button>
             }
           />
@@ -198,7 +198,7 @@ function BlockedByGroup({
               aria-label={`Remove ${blocker.owner}/${blocker.repo}#${String(blocker.number)} as blocker`}
               className="size-6 shrink-0"
             >
-              <X className="size-3.5" />
+              <X className="size-3" />
             </Button>
           </div>
         ))}
@@ -390,7 +390,7 @@ function TaskWaitEntry({ taskId, wait }: { taskId: string; wait: TaskWait }) {
           aria-label={`Remove wait: ${wait.label}`}
           className="size-6 shrink-0"
         >
-          <X className="size-3.5" aria-hidden="true" />
+          <X className="size-3" aria-hidden="true" />
         </Button>
       </div>
       <div
