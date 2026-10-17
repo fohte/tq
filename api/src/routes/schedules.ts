@@ -104,6 +104,9 @@ export const schedulesApp = new Hono()
     if (result.kind === 'invalid') {
       return c.json({ error: result.message }, 422)
     }
+    if (result.kind === 'dryRun') {
+      return c.json(result.preview, 200)
+    }
 
     return c.json(
       scheduleToResponse(result.series, result.responseRevision),

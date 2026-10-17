@@ -24,16 +24,26 @@ export const scheduleOverrideOperationInputSchema = z.object({
     .enum(['time', 'skip'])
     .optional()
     .describe('Use skip to omit this occurrence; time is the default.'),
+  dryRun: z
+    .boolean()
+    .optional()
+    .describe('Preview the change without saving it.'),
 })
 
 export const setScheduleOverrideBodySchema = z.union([
-  z.object({ skipped: z.literal(true) }).strict(),
+  z
+    .object({
+      skipped: z.literal(true),
+      dryRun: z.boolean().optional(),
+    })
+    .strict(),
   z
     .object({
       date: scheduleOverrideDateSchema.optional(),
       startTime: scheduleOverrideTimeSchema,
       endTime: scheduleOverrideTimeSchema,
       skipped: z.literal(false).optional(),
+      dryRun: z.boolean().optional(),
     })
     .strict(),
 ])

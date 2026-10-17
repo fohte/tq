@@ -58,6 +58,113 @@ async function createTimeBlock(
 }
 
 describe('schedule operation tools', () => {
+  it('previews an event update without saving it', async () => {
+    const created = await callMcpTool(client, 'schedule_events_create', {
+      title: 'Review block',
+      startDate: '2038-02-03',
+      startTime: '08:30',
+      endTime: '09:30',
+    })
+    const schedule = z.object({ id: z.uuid() }).parse(parseToolJson(created))
+    const updateInput = {
+      id: schedule.id,
+      effectiveFrom: '2038-02-03',
+      startTime: '10:00',
+      endTime: '11:00',
+    }
+
+    const preview = await callMcpTool(client, 'schedule_events_update', {
+      ...updateInput,
+      dryRun: true,
+    })
+    const beforeSave = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2038-02-03',
+      endDate: '2038-02-03',
+    })
+    const saved = await callMcpTool(
+      client,
+      'schedule_events_update',
+      updateInput,
+    )
+    const afterSave = await callMcpTool(client, 'schedule_events_list', {
+      startDate: '2038-02-03',
+      endDate: '2038-02-03',
+    })
+
+    const snapshot = () => ({
+      preview: parseToolJson(preview),
+      beforeSave: normalizeDynamicValues(parseToolJson(beforeSave)),
+      saved: normalizeDynamicValues(parseToolJson(saved)),
+      afterSave: normalizeDynamicValues(parseToolJson(afterSave)),
+    })
+    expect(snapshot()).toEqual({
+      preview: {
+        range: { startDate: '2038-02-03', endDate: '2038-03-16' },
+        changes: [
+          {
+            before: {
+              date: '2038-02-03',
+              originalDate: '2038-02-03',
+              startTime: '08:30',
+              endTime: '09:30',
+              skipped: false,
+            },
+            after: {
+              date: '2038-02-03',
+              originalDate: '2038-02-03',
+              startTime: '10:00',
+              endTime: '11:00',
+              skipped: false,
+            },
+          },
+        ],
+        deletedOverrides: [],
+      },
+      beforeSave: [
+        {
+          scheduleId: '<uuid>',
+          title: 'Review block',
+          startDate: '2038-02-03',
+          start: '2038-02-03T08:30:00',
+          end: '2038-02-03T09:30:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2038-02-03',
+          overridden: null,
+          recurrence: null,
+        },
+      ],
+      saved: {
+        id: '<uuid>',
+        title: 'Review block',
+        startDate: '2038-02-03',
+        endDate: null,
+        startTime: '10:00',
+        endTime: '11:00',
+        recurrence: null,
+        remindBeforeMinutes: null,
+        context: 'personal',
+        color: null,
+        createdAt: '<timestamp>',
+        updatedAt: '<timestamp>',
+      },
+      afterSave: [
+        {
+          scheduleId: '<uuid>',
+          title: 'Review block',
+          startDate: '2038-02-03',
+          start: '2038-02-03T10:00:00',
+          end: '2038-02-03T11:00:00',
+          context: 'personal',
+          color: null,
+          occurrenceDate: '2038-02-03',
+          overridden: null,
+          recurrence: null,
+        },
+      ],
+    })
+  })
+
   it('registers schedule operations with matching annotations', async () => {
     const result = await client.listTools()
 
