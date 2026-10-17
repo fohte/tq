@@ -285,7 +285,7 @@ export function renderChecklistItemMarkdown({
             onClick={onEdit}
             className="inline-flex cursor-text"
           >
-            {segment.node}
+            <span className="block truncate">{segment.node}</span>
           </FieldTrigger>
         ) : (
           <span key={segment.key}>{segment.node}</span>

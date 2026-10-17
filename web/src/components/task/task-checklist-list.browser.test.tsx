@@ -263,7 +263,9 @@ describe('TaskChecklistList', () => {
     })
     await screen.findByRole('checkbox', { name: `Check ${content}` })
     const contentElement = assertDefined(
-      rendered.container.querySelector('strong')?.parentElement?.parentElement,
+      rendered.container
+        .querySelector('strong')
+        ?.closest('[data-slot="field-trigger"]')?.parentElement?.parentElement,
       'the checklist item has a Markdown content view',
     )
 
