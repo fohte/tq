@@ -1,10 +1,11 @@
-import { Button } from '@fohte/ui/button'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Check } from 'lucide-react'
 import { fn } from 'storybook/test'
 
 import { GithubBlockerRowAppearance } from '#components/task/github-blocker-row-appearance'
 import { makeGithubBlocker } from '#components/task/github-link-test-fixtures'
+import { GithubWaitModeSelect } from '#components/task/github-wait-mode-select'
+import { TaskWaitEntryAppearance } from '#components/task/task-wait-entry-appearance'
+import { makeTaskWait } from '#components/task/task-wait-test-fixtures'
 
 const meta = {
   title: 'Task/GithubBlockerRowAppearance',
@@ -18,31 +19,68 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const blocker = makeGithubBlocker()
+
 function waitModeControl(value: 'until-closed' | 'until-reply') {
   return (
-    <select
-      aria-label="Wait mode for example-team/sample-project#2048"
-      defaultValue={value}
-      className="h-7 w-32 shrink-0 border-0 bg-transparent p-0 font-mono text-xs text-muted-foreground underline decoration-border-strong underline-offset-2 focus-visible:ring-0"
-    >
-      <option value="until-closed">until closed</option>
-      <option value="until-reply">until reply</option>
-    </select>
+    <GithubWaitModeSelect
+      blocker={blocker}
+      value={value}
+      disabled={false}
+      onChange={fn()}
+    />
+  )
+}
+
+function replyWaitAppearance(acknowledged = false) {
+  return (
+    <TaskWaitEntryAppearance
+      wait={makeTaskWait({
+        label: 'Review feedback',
+        body: 'Review received',
+        githubLinkId: blocker.id,
+        resolvedAt: '2099-10-12T00:00:00.000Z',
+        acknowledgedAt: acknowledged ? '2099-10-12T00:00:00.000Z' : null,
+      })}
+      layout="github-blocker"
+      waitModeControl={
+        acknowledged ? undefined : waitModeControl('until-reply')
+      }
+      followUpDate="2099-10-13"
+      disabled={false}
+      onFollowUpDateChange={fn()}
+      onFollowUpDateBlur={fn()}
+      onResolve={fn()}
+      onAcknowledge={fn()}
+      onRemove={fn()}
+      onBodyChange={fn()}
+      onExitEditMode={fn()}
+    />
   )
 }
 
 export const UntilClosed: Story = {
   name: 'the GitHub blocker waits until it is closed',
   args: {
-    blocker: makeGithubBlocker(),
+    blocker,
     waitModeControl: waitModeControl('until-closed'),
+  },
+}
+
+export const ReplyAcknowledged: Story = {
+  name: 'the GitHub blocker appears resolved after acknowledgement',
+  args: {
+    blocker,
+    waitModeControl: waitModeControl('until-closed'),
+    resolved: true,
+    children: replyWaitAppearance(true),
   },
 }
 
 export const UntilReply: Story = {
   name: 'the GitHub blocker waits for a reply',
   args: {
-    blocker: makeGithubBlocker(),
+    blocker,
     waitModeControl: waitModeControl('until-reply'),
   },
 }
@@ -50,32 +88,8 @@ export const UntilReply: Story = {
 export const ReplyReceived: Story = {
   name: 'the GitHub blocker highlights a reply that needs acknowledgement',
   args: {
-    blocker: makeGithubBlocker(),
-    waitModeControl: waitModeControl('until-reply'),
+    blocker,
     needsAcknowledgement: true,
-    resolved: true,
-    children: (
-      <>
-        <div className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted-foreground">
-          <span className="font-mono text-xs text-primary">wait resolved</span>
-          <span className="ml-auto text-muted-foreground-faint">
-            resolved Oct 12
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-auto min-h-0 shrink-0 justify-start whitespace-normal gap-0 rounded-none border-0 bg-transparent p-0 font-mono text-xs font-normal text-primary shadow-none transition-none hover:bg-transparent hover:text-primary active:translate-y-0"
-            aria-label="Acknowledge wait: Review feedback"
-            onClick={fn()}
-          >
-            <Check className="size-3.5" aria-hidden="true" />
-            acknowledge
-          </Button>
-        </div>
-        <div className="pl-5 font-sans text-sm leading-relaxed text-muted-foreground line-through">
-          Review received
-        </div>
-      </>
-    ),
+    children: replyWaitAppearance(),
   },
 }

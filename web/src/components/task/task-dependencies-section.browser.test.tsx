@@ -478,7 +478,7 @@ describe('TaskDependenciesSection', () => {
       name: 'Acknowledge wait: Review feedback',
     })
 
-    const readActual = () => ({
+    const readInitialState = () => ({
       waitResolvedLabel:
         within(blockerGroup).getByText('wait resolved').textContent,
       waitMode:
@@ -487,16 +487,174 @@ describe('TaskDependenciesSection', () => {
       highlighted: blockerGroup.classList.contains('text-primary'),
     })
 
-    expect(readActual()).toEqual({
-      waitResolvedLabel: 'wait resolved',
-      waitMode: 'until-reply',
-      actionLabel: 'Acknowledge wait: Review feedback',
-      highlighted: true,
-    })
-
+    const initial = readInitialState()
     await user.click(acknowledgeButton)
 
-    expect(acknowledgeWait.mock.calls).toEqual([[wait.id]])
+    const readActual = () => ({
+      initial,
+      acknowledgeCalls: acknowledgeWait.mock.calls,
+    })
+    expect(readActual()).toEqual({
+      initial: {
+        waitResolvedLabel: 'wait resolved',
+        waitMode: 'until-reply',
+        actionLabel: 'Acknowledge wait: Review feedback',
+        highlighted: true,
+      },
+      acknowledgeCalls: [[wait.id]],
+    })
+  })
+
+  it('uses the active GitHub reply wait when an earlier one was acknowledged', async () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const acknowledgedWait = makeTaskWait({
+      id: 'wait-example-old',
+      label: 'Earlier review',
+      body: 'Earlier review was received',
+      githubLinkId: blocker.id,
+      resolvedAt: '2099-10-11T00:00:00.000Z',
+      acknowledgedAt: '2099-10-11T00:00:00.000Z',
+    })
+    const activeWait = makeTaskWait({
+      id: 'wait-example-current',
+      label: 'Current review',
+      body: 'Please review the latest change',
+      githubLinkId: blocker.id,
+      followUpDate: '2099-10-14',
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[acknowledgedWait, activeWait]}
+      />,
+    )
+
+    const blockerGroup = screen.getByRole('group', {
+      name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
+    })
+    const followUpDate = within(blockerGroup).getByLabelText<HTMLInputElement>(
+      'Follow-up date for Current review',
+    )
+    const waitMode =
+      within(blockerGroup).getByRole<HTMLSelectElement>('combobox')
+    const currentAction = within(blockerGroup).getByRole('button', {
+      name: 'Resolve wait: Current review',
+    })
+
+    const initial = () => ({
+      waitMode: waitMode.value,
+      currentAction: currentAction.getAttribute('aria-label'),
+      earlierAction:
+        within(blockerGroup)
+          .queryByRole('button', { name: 'Resolve wait: Earlier review' })
+          ?.getAttribute('aria-label') ?? null,
+      followUpDate: followUpDate.value,
+    })
+    const beforeChange = initial()
+    await user.selectOptions(waitMode, 'until-closed')
+
+    const readActual = () => ({
+      beforeChange,
+      deleteCalls: deleteWait.mock.calls,
+    })
+    expect(readActual()).toEqual({
+      beforeChange: {
+        waitMode: 'until-reply',
+        currentAction: 'Resolve wait: Current review',
+        earlierAction: null,
+        followUpDate: '2099-10-14',
+      },
+      deleteCalls: [[activeWait.id]],
+    })
+  })
+
+  it('shows an acknowledged GitHub reply as resolved', () => {
+    const blocker = makeGithubBlocker({ id: 'github-blocker-open' })
+    const wait = makeTaskWait({
+      label: 'Review feedback',
+      body: 'Review received',
+      githubLinkId: blocker.id,
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: '2099-10-12T00:00:00.000Z',
+    })
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[blocker]}
+        waits={[wait]}
+      />,
+    )
+
+    const blockerGroup = screen.getByRole('group', {
+      name: `GitHub blocker ${blocker.owner}/${blocker.repo}#${String(blocker.number)}`,
+    })
+    const waitMode =
+      within(blockerGroup).getByRole<HTMLSelectElement>('combobox')
+
+    const readActual = () => ({
+      waitMode: waitMode.value,
+      resolvedLabel: within(blockerGroup).getByText('resolved Oct 12, 2099')
+        .textContent,
+      acknowledgeAction:
+        within(blockerGroup)
+          .queryByRole('button', {
+            name: 'Acknowledge wait: Review feedback',
+          })
+          ?.getAttribute('aria-label') ?? null,
+      resolveAction:
+        within(blockerGroup)
+          .queryByRole('button', { name: 'Resolve wait: Review feedback' })
+          ?.getAttribute('aria-label') ?? null,
+      dimmed: blockerGroup.classList.contains('opacity-55'),
+    })
+    expect(readActual()).toEqual({
+      waitMode: 'until-closed',
+      resolvedLabel: 'resolved Oct 12, 2099',
+      acknowledgeAction: null,
+      resolveAction: null,
+      dimmed: true,
+    })
+  })
+
+  it('acknowledges a standalone wait', async () => {
+    const wait = makeTaskWait({
+      label: 'Review received',
+      body: 'Review received',
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: null,
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        waits={[wait]}
+      />,
+    )
+
+    const acknowledgeButton = screen.getByRole('button', {
+      name: 'Acknowledge wait: Review received',
+    })
+    await user.click(acknowledgeButton)
+
+    const readActual = () => ({
+      status: screen.getByText('wait resolved').textContent,
+      acknowledgeAction: acknowledgeButton.getAttribute('aria-label'),
+      acknowledgeCalls: acknowledgeWait.mock.calls,
+    })
+    expect(readActual()).toEqual({
+      status: 'wait resolved',
+      acknowledgeAction: 'Acknowledge wait: Review received',
+      acknowledgeCalls: [[wait.id]],
+    })
   })
 
   it('saves a complete follow-up date after keyboard edits finish', () => {
