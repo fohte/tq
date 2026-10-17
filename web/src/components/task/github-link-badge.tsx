@@ -1,5 +1,3 @@
-import '#components/task/github-link-badge.css'
-
 import { Chip } from '@fohte/ui/chip'
 import { CircleDot, GitPullRequest } from 'lucide-react'
 
@@ -23,33 +21,34 @@ export function GithubLinkBadge({
   extraCount?: number
 }) {
   return (
-    <Chip
-      as="button"
-      data-github-link-badge="true"
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        window.open(link.url, '_blank', 'noopener,noreferrer')
-      }}
-    >
-      <span
-        className={cn(
-          'inline-flex items-center gap-1',
-          link.state === 'open' && STATE_COLORS.open,
-          link.state === 'closed' && STATE_COLORS.closed,
-          link.state === 'merged' && STATE_COLORS.merged,
-        )}
+    <span className="inline-flex shrink-0">
+      <Chip
+        as="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          window.open(link.url, '_blank', 'noopener,noreferrer')
+        }}
       >
-        {link.kind === 'pull_request' ? (
-          <GitPullRequest className="size-3" />
-        ) : (
-          <CircleDot className="size-3" />
+        <span
+          className={cn(
+            'inline-flex items-center gap-1',
+            link.state === 'open' && STATE_COLORS.open,
+            link.state === 'closed' && STATE_COLORS.closed,
+            link.state === 'merged' && STATE_COLORS.merged,
+          )}
+        >
+          {link.kind === 'pull_request' ? (
+            <GitPullRequest className="size-3" />
+          ) : (
+            <CircleDot className="size-3" />
+          )}
+          {link.repo}#{link.number}
+        </span>
+        {extraCount != null && extraCount > 0 && (
+          <span className="text-muted-foreground-faint">+{extraCount}</span>
         )}
-        {link.repo}#{link.number}
-      </span>
-      {extraCount != null && extraCount > 0 && (
-        <span className="text-muted-foreground-faint">+{extraCount}</span>
-      )}
-    </Chip>
+      </Chip>
+    </span>
   )
 }
