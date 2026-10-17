@@ -6,6 +6,7 @@ import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import {
   makeSchedule,
   makeScheduleConstraint,
+  makeScheduleDetails,
 } from '#components/schedule/schedule-test-fixtures'
 import {
   useClearScheduleOverride,
@@ -104,20 +105,7 @@ function setupMocks() {
   )
   mockUseScheduleDetails.mockReturnValue(
     partialMutation<ReturnType<typeof useScheduleDetails>>({
-      data: {
-        id: sampleSchedule.scheduleId,
-        title: sampleSchedule.title,
-        startDate: sampleSchedule.startDate,
-        endDate: null,
-        remindBeforeMinutes: null,
-        startTime: '07:00',
-        endTime: '08:00',
-        recurrence: sampleSchedule.recurrence,
-        context: 'personal',
-        color: sampleSchedule.color,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      },
+      data: makeScheduleDetails(),
       isFetching: false,
     }),
   )
@@ -171,7 +159,10 @@ function activeConstraintCheckCall() {
   return call ? { scheduleId: call[0], input: call[1], enabled: call[2] } : null
 }
 
-async function waitForActiveRequests(expectedConstraintInput: unknown) {
+async function waitForActiveRequests(
+  expectedConstraintInput: unknown,
+  { requirePreview = true }: { requirePreview?: boolean } = {},
+) {
   await waitFor(() => {
     const check = activeConstraintCheckCall()
     if (
@@ -179,8 +170,11 @@ async function waitForActiveRequests(expectedConstraintInput: unknown) {
     ) {
       throw new Error('Constraint check request has not settled')
     }
-    if (activePreviewCall() == null) {
+    if (requirePreview && activePreviewCall() == null) {
       throw new Error('Schedule preview request has not settled')
+    }
+    if (!requirePreview && activePreviewCall() != null) {
+      throw new Error('Unexpected schedule preview request')
     }
   })
 
@@ -190,27 +184,8 @@ async function waitForActiveRequests(expectedConstraintInput: unknown) {
   }
 }
 
-async function waitForConstraintCheck(expectedConstraintInput: unknown) {
-  await waitFor(() => {
-    const check = activeConstraintCheckCall()
-    if (
-      JSON.stringify(check?.input) !== JSON.stringify(expectedConstraintInput)
-    ) {
-      throw new Error('Constraint check request has not settled')
-    }
-  })
-  return activeConstraintCheckCall()
-}
-
 function checkInput(draft: object) {
   return { ...getLocalWeekDateRange(new Date('2026-01-01T00:00:00')), draft }
-}
-
-function endSeriesConstraintCheckOutcome(
-  preview: ReturnType<typeof activePreviewCall>,
-  constraintCheck: ReturnType<typeof activeConstraintCheckCall>,
-) {
-  return { preview, constraintCheck }
 }
 
 function visibleInput(label: string) {
@@ -423,12 +398,11 @@ describe('CreateScheduleModal constraint check draft', () => {
       ),
     )
 
-    const constraintCheck = await waitForConstraintCheck(
+    const requests = await waitForActiveRequests(
       checkInput({ endDate: '2025-12-31' }),
+      { requirePreview: false },
     )
-    expect(
-      endSeriesConstraintCheckOutcome(activePreviewCall(), constraintCheck),
-    ).toEqual({
+    expect(requests).toEqual({
       preview: null,
       constraintCheck: {
         scheduleId: sampleSchedule.scheduleId,
@@ -497,6 +471,103 @@ describe('CreateScheduleModal constraint check draft', () => {
       constraintCheck: {
         scheduleId: sampleSchedule.scheduleId,
         input: checkInput({
+          revisionChange: {
+            effectiveFrom: '2026-01-01',
+            startTime: '07:30',
+          },
+          revisionMode: 'all',
+        }),
+        enabled: true,
+      },
+    })
+  })
+
+  it('uses replace mode for an all-events start-date change', async () => {
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+    await selectScope(user, 'All events')
+    fireEvent.change(visibleInput('Start date'), {
+      target: { value: '2026-01-02' },
+    })
+
+    const requests = await waitForActiveRequests(
+      checkInput({
+        revisionChange: { effectiveFrom: '2026-01-02' },
+        revisionMode: 'replace',
+      }),
+    )
+
+    expect(requests).toEqual({
+      preview: {
+        scheduleId: sampleSchedule.scheduleId,
+        request: { kind: 'update', input: { startDate: '2026-01-02' } },
+        enabled: true,
+      },
+      constraintCheck: {
+        scheduleId: sampleSchedule.scheduleId,
+        input: checkInput({
+          revisionChange: { effectiveFrom: '2026-01-02' },
+          revisionMode: 'replace',
+        }),
+        enabled: true,
+      },
+    })
+  })
+
+  it('combines edited constraints with the all-events preview request', async () => {
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+    await selectScope(user, 'All events')
+    fireEvent.change(visibleInput('Start time'), {
+      target: { value: '07:30' },
+    })
+    fireEvent.change(visibleInput('Minimum per week'), {
+      target: { value: '2' },
+    })
+
+    const requests = await waitForActiveRequests(
+      checkInput({
+        constraints: {
+          weeklyMin: 2,
+          weeklyMax: 4,
+          weeklyTarget: 4,
+          maxConsecutiveDays: 2,
+          windowStart: null,
+          windowEnd: null,
+          weekdays: [
+            { dayOfWeek: 2, preference: 'if_free' },
+            { dayOfWeek: 5, preference: 'excluded' },
+          ],
+        },
+        revisionChange: {
+          effectiveFrom: '2026-01-01',
+          startTime: '07:30',
+        },
+        revisionMode: 'all',
+      }),
+    )
+
+    expect(requests).toEqual({
+      preview: {
+        scheduleId: sampleSchedule.scheduleId,
+        request: { kind: 'update', input: { startTime: '07:30' } },
+        enabled: true,
+      },
+      constraintCheck: {
+        scheduleId: sampleSchedule.scheduleId,
+        input: checkInput({
+          constraints: {
+            weeklyMin: 2,
+            weeklyMax: 4,
+            weeklyTarget: 4,
+            maxConsecutiveDays: 2,
+            windowStart: null,
+            windowEnd: null,
+            weekdays: [
+              { dayOfWeek: 2, preference: 'if_free' },
+              { dayOfWeek: 5, preference: 'excluded' },
+            ],
+          },
           revisionChange: {
             effectiveFrom: '2026-01-01',
             startTime: '07:30',

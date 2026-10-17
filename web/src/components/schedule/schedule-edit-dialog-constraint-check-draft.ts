@@ -1,12 +1,4 @@
 import type {
-  ScheduleEditAction,
-  ScheduleEditDraft,
-} from '#components/schedule/schedule-edit-dialog-state'
-import {
-  endSeriesRemovesSchedule,
-  previousScheduleDate,
-} from '#components/schedule/schedule-edit-dialog-update-input'
-import type {
   Schedule,
   ScheduleConstraintCheckDraft,
   ScheduleConstraintInput,
@@ -25,15 +17,13 @@ function scheduleRevisionMode(
 
 export function buildScheduleEditConstraintCheckDraft({
   schedule,
-  rangeDraft,
-  rangeAction,
   previewRequest,
+  endSeriesEndDate,
   constraints,
 }: {
   schedule: Schedule | undefined
-  rangeDraft: ScheduleEditDraft
-  rangeAction: ScheduleEditAction
   previewRequest: SchedulePreviewRequest | null
+  endSeriesEndDate: string | undefined
   constraints?: ScheduleConstraintInput
 }): ScheduleConstraintCheckDraft | undefined {
   const draft: ScheduleConstraintCheckDraft = {
@@ -79,13 +69,10 @@ export function buildScheduleEditConstraintCheckDraft({
       }
       draft.revisionMode = scheduleRevisionMode(input)
     }
-  } else if (
-    schedule &&
-    rangeDraft.scope === 'following' &&
-    rangeAction === 'endSeries' &&
-    endSeriesRemovesSchedule(schedule, rangeDraft)
-  ) {
-    draft.endDate = previousScheduleDate(rangeDraft.following.fromDate)
+  }
+
+  if (previewRequest?.kind !== 'update' && endSeriesEndDate !== undefined) {
+    draft.endDate = endSeriesEndDate
   }
 
   return Object.keys(draft).length === 0 ? undefined : draft

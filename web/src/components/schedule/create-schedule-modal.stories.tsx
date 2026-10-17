@@ -7,6 +7,7 @@ import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
 import {
   makeSchedule,
   makeScheduleConstraint,
+  makeScheduleDetails,
 } from '#components/schedule/schedule-test-fixtures'
 
 const queryClient = new QueryClient({
@@ -52,25 +53,7 @@ export const Edit: Story = {
       handlers: [
         http.get('/api/schedule/events/:id', ({ params }) =>
           params['id'] === 'schedule-1'
-            ? HttpResponse.json({
-                id: 'schedule-1',
-                title: 'Gym',
-                startDate: '2026-01-01',
-                endDate: null,
-                startTime: '07:00',
-                endTime: '08:00',
-                remindBeforeMinutes: null,
-                recurrence: {
-                  type: 'weekly',
-                  interval: 1,
-                  daysOfWeek: [1, 3, 5],
-                  dayOfMonth: null,
-                },
-                context: 'personal',
-                color: '#6C63FF',
-                createdAt: '2026-01-01T00:00:00.000Z',
-                updatedAt: '2026-01-01T00:00:00.000Z',
-              })
+            ? HttpResponse.json(makeScheduleDetails())
             : HttpResponse.json(
                 { error: 'Schedule not found' },
                 { status: 404 },

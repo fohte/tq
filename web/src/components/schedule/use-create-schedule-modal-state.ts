@@ -201,9 +201,8 @@ export function useCreateScheduleModalState({
     hasActiveConstraintDraft && constraintInput === null
   const constraintCheckDraft = buildScheduleEditConstraintCheckDraft({
     schedule,
-    rangeDraft,
-    rangeAction: preview.rangeAction,
     previewRequest: preview.previewRequest,
+    endSeriesEndDate: preview.endSeriesEndDate,
     ...(hasActiveConstraintDraft && constraintInput !== null
       ? { constraints: constraintInput }
       : {}),

@@ -2,6 +2,7 @@ import type {
   Schedule,
   ScheduleConstraint,
   ScheduleConstraintCheckResponse,
+  ScheduleDetails,
   ScheduleOverride,
 } from '#hooks/use-schedules'
 
@@ -39,6 +40,32 @@ export function makeSchedule(overrides: Partial<Schedule> = {}): Schedule {
       '07:00',
     occurrenceEndTime:
       overrides.occurrenceEndTime ?? overrides.end?.slice(11, 16) ?? '08:00',
+  }
+}
+
+export function makeScheduleDetails(
+  overrides: Partial<ScheduleDetails> = {},
+): ScheduleDetails {
+  return {
+    id: 'schedule-1',
+    title: 'Gym',
+    startDate: '2026-01-01',
+    endDate: null,
+    startTime: '07:00',
+    endTime: '08:00',
+    remindBeforeMinutes: null,
+    recurrence: {
+      id: 'rule-1',
+      type: 'weekly',
+      interval: 1,
+      daysOfWeek: [1, 3, 5],
+      dayOfMonth: null,
+    },
+    context: 'personal',
+    color: '#6C63FF',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
   }
 }
 
