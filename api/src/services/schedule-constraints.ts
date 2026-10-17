@@ -73,6 +73,17 @@ export const scheduleConstraintSchema = z
 
 export type ScheduleConstraint = z.infer<typeof scheduleConstraintSchema>
 
+export function normalizeScheduleConstraint(
+  constraint: ScheduleConstraint,
+): ScheduleConstraint {
+  return {
+    ...constraint,
+    weekdays: constraint.weekdays
+      .filter(({ preference }) => preference !== 'preferred')
+      .sort((left, right) => left.dayOfWeek - right.dayOfWeek),
+  }
+}
+
 export type ScheduleConstraintEvaluationRange = {
   startDate: string
   endDate: string

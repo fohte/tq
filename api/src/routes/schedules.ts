@@ -3,7 +3,8 @@ import { Hono } from 'hono'
 
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { scheduleConstraintChecksApp } from '#routes/schedule-constraint-checks'
-import { evaluateScheduleConstraintViolationsSafely } from '#routes/schedule-constraint-evaluation'
+import { evaluateSavedScheduleConstraintViolations } from '#routes/schedule-constraint-evaluation'
+import { scheduleConstraintsApp } from '#routes/schedule-constraints'
 import {
   expandScheduleForDate,
   formatDateStr,
@@ -13,7 +14,6 @@ import {
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
 import { scheduleOverridesApp } from '#routes/schedule-overrides'
-import { buildSchedulePreviewRange } from '#routes/schedule-preview'
 import {
   createScheduleSeries,
   deleteScheduleSeries,
@@ -58,23 +58,10 @@ async function scheduleToResponseWithConstraints(
   revision: ScheduleRevisionWithRule,
 ) {
   const response = scheduleToResponse(series, revision)
-  const today = formatDateStr(new Date())
-  const requestedStart =
-    revision.revision.effectiveFrom > today
-      ? revision.revision.effectiveFrom
-      : undefined
-  const range = buildSchedulePreviewRange(series, requestedStart)
-  const endDate =
-    series.schedule.endDate == null || series.schedule.endDate > range.endDate
-      ? range.endDate
-      : series.schedule.endDate
-  const evaluation =
-    endDate < range.startDate
-      ? { constraintViolations: [] }
-      : await evaluateScheduleConstraintViolationsSafely({
-          series,
-          range: { startDate: range.startDate, endDate },
-        })
+  const evaluation = await evaluateSavedScheduleConstraintViolations(
+    series,
+    revision.revision.effectiveFrom,
+  )
 
   return { ...response, ...evaluation }
 }
@@ -166,5 +153,6 @@ export const schedulesApp = new Hono()
 
     return c.body(null, 204)
   })
+  .route('/', scheduleConstraintsApp)
   .route('/', scheduleConstraintChecksApp)
   .route('/', scheduleOverridesApp)

@@ -14,6 +14,7 @@ import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
 import { savedViewOperations } from '#operations/saved-view'
 import { scheduleOperations } from '#operations/schedule'
+import { scheduleConstraintOperations } from '#operations/schedule-constraints'
 import { scheduleOverrideOperations } from '#operations/schedule-override'
 import { sessionOperations } from '#operations/session'
 import { taskReadOperations } from '#operations/task-read'
@@ -37,6 +38,7 @@ export {
   projectOperations,
   queueOperations,
   savedViewOperations,
+  scheduleConstraintOperations,
   scheduleOperations,
   scheduleOverrideOperations,
   sessionOperations,
@@ -62,6 +64,7 @@ export const operations = [
   ...queueOperations,
   ...savedViewOperations,
   ...scheduleOperations,
+  ...scheduleConstraintOperations,
   ...scheduleOverrideOperations,
   ...sessionOperations,
   ...taskReadOperations,

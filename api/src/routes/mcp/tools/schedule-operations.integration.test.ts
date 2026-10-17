@@ -181,6 +181,18 @@ describe('schedule operation tools', () => {
         annotations: { readOnlyHint: true },
       },
       {
+        name: 'schedule_constraints_delete',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      {
+        name: 'schedule_constraints_get',
+        annotations: { readOnlyHint: true },
+      },
+      {
+        name: 'schedule_constraints_set',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
         name: 'schedule_events_create',
         annotations: { readOnlyHint: false, destructiveHint: false },
       },
