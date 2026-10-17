@@ -36,11 +36,11 @@ const preferenceCellLabels = {
   excluded: 'NEVER',
 } as const
 
-const preferenceCellLabelClasses = {
-  preferred: 'text-foreground',
-  if_free: 'text-tint-blue-foreground',
-  reserve: 'text-tint-yellow-foreground',
-  excluded: 'text-tint-red-foreground',
+const preferenceButtonVariants = {
+  preferred: 'default',
+  if_free: 'secondary',
+  reserve: 'outline',
+  excluded: 'ghost',
 } as const
 
 interface ScheduleConstraintsFieldProps {
@@ -179,7 +179,7 @@ export function ScheduleConstraintsField({
         className="max-w-full self-start"
       >
         <SlidersHorizontal className="size-3.5 shrink-0" />
-        <span className="break-words text-left">
+        <span className="break-words text-left font-mono text-xs">
           {scheduleConstraintSummary(value)}
         </span>
       </Button>
@@ -366,7 +366,7 @@ function ConstraintEditor({
             return (
               <Button
                 key={dayOfWeek}
-                variant="secondary"
+                variant={preferenceButtonVariants[preference]}
                 size="sm"
                 type="button"
                 aria-label={`${name}: ${preferenceLabels[preference]}`}
@@ -395,12 +395,7 @@ function ConstraintEditor({
                 >
                   {label}
                 </span>
-                <span
-                  className={cn(
-                    'whitespace-nowrap font-mono font-normal max-md:tracking-wider schedule-constraint-preference-label',
-                    preferenceCellLabelClasses[preference],
-                  )}
-                >
+                <span className="whitespace-nowrap font-mono font-normal max-md:tracking-wider schedule-constraint-preference-label">
                   {preferenceCellLabels[preference]}
                 </span>
               </Button>
@@ -419,7 +414,7 @@ function ConstraintEditor({
       )}
 
       <Button
-        variant="destructive"
+        variant="plain"
         size="sm"
         disabled={isPending}
         onClick={onRemove}

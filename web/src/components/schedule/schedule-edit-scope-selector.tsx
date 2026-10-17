@@ -36,7 +36,9 @@ export function ScheduleEditScopeSelector({
             }}
             className="h-auto min-h-8 w-full min-w-0 whitespace-normal"
           >
-            {label}
+            <span className="text-2xs leading-3 md:text-xs md:leading-normal">
+              {label}
+            </span>
           </Button>
         ))}
       </div>
