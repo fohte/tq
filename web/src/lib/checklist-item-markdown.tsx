@@ -275,7 +275,7 @@ export function renderChecklistItemMarkdown({
       className={cn(
         'block truncate font-mono text-xs',
         checked ? 'text-muted-foreground line-through' : 'text-foreground',
-        bold && 'font-semibold',
+        bold ? 'font-semibold' : 'font-normal',
       )}
     >
       {segments.map((segment) =>
