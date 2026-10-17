@@ -127,6 +127,8 @@ export const scheduleKeys = {
   detail: (id: string) => [...scheduleKeys.all, 'detail', id] as const,
   constraints: (id: string) =>
     [...scheduleKeys.detail(id), 'constraints'] as const,
+  constraintCheck: (id: string, input: unknown) =>
+    [...scheduleKeys.detail(id), 'constraint-check', input] as const,
   overrides: (id: string, fromDate: string) =>
     [...scheduleKeys.detail(id), 'overrides', fromDate] as const,
   preview: (id: string, input: unknown) =>

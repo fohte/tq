@@ -1,25 +1,46 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
 import { ScheduleModalDesktopPanel } from '#components/schedule/create-schedule-modal-desktop-panel'
 import { scheduleConstraintFormStateFromSaved } from '#components/schedule/schedule-constraints-form-state'
 import {
+  makeMixedSeverityScheduleConstraintViolations,
   makeSchedule,
   makeScheduleConstraint,
   makeScheduleOverride,
 } from '#components/schedule/schedule-test-fixtures'
 
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+})
+
 const meta = {
   title: 'Schedule/CreateScheduleModalDesktopPanel',
   component: ScheduleModalDesktopPanel,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    msw: {
+      handlers: [
+        http.post('/api/schedule/events/:id/constraint-check', () =>
+          HttpResponse.json({
+            constraintViolations:
+              makeMixedSeverityScheduleConstraintViolations(),
+          }),
+        ),
+      ],
+    },
+  },
   tags: ['desktop-only'],
   decorators: [
     (Story) => (
-      <div className="dark min-h-screen bg-background">
-        <div className="fixed inset-0 bg-black/40" />
-        <Story />
-      </div>
+      <QueryClientProvider client={queryClient}>
+        <div className="dark min-h-screen bg-background">
+          <div className="fixed inset-0 bg-black/40" />
+          <Story />
+        </div>
+      </QueryClientProvider>
     ),
   ],
   args: {
@@ -68,6 +89,10 @@ const meta = {
     onAddConstraints: fn(),
     onChangeConstraints: fn(),
     onRemoveConstraints: fn(),
+    constraintCheckRange: { startDate: '2030-04-15', endDate: '2030-04-21' },
+    constraintCheckDraft: undefined,
+    constraintCheckDraftInvalid: false,
+    isConstraintCheckEnabled: false,
     previewText: null,
     isPreviewLoading: false,
     previewError: false,
@@ -96,6 +121,27 @@ export const ThisEvent: Story = {
     startTime: '07:00',
     endTime: '08:00',
     occurrenceDate: '2026-01-01',
+  },
+}
+
+export const ThisEventWithConstraints: Story = {
+  name: 'the editor shows this week while targeting one occurrence',
+  args: {
+    ...ThisEvent.args,
+    schedule: makeSchedule({
+      occurrenceDate: '2041-05-15',
+      startDate: '2041-05-15',
+      start: '2041-05-15T07:00:00',
+      end: '2041-05-15T08:00:00',
+    }),
+    occurrenceDate: '2041-05-15',
+    startDate: '2041-05-15',
+    startTime: '07:00',
+    endTime: '08:00',
+    constraints: scheduleConstraintFormStateFromSaved(makeScheduleConstraint()),
+    constraintCheckRange: { startDate: '2041-05-13', endDate: '2041-05-19' },
+    constraintCheckDraft: { constraints: makeScheduleConstraint() },
+    isConstraintCheckEnabled: true,
   },
 }
 

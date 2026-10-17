@@ -7,7 +7,12 @@ import type {
   ContextValue,
   RecurrenceType,
 } from '#components/schedule/schedule-modal-form-options'
-import type { Schedule, ScheduleOverride } from '#hooks/use-schedules'
+import type {
+  Schedule,
+  ScheduleConstraintCheckDraft,
+  ScheduleConstraintCheckInput,
+  ScheduleOverride,
+} from '#hooks/use-schedules'
 
 export interface SchedulePanelProps {
   schedule: Schedule | undefined
@@ -55,6 +60,13 @@ export interface SchedulePanelProps {
   onAddConstraints: () => void
   onChangeConstraints: (value: ScheduleConstraintFormState) => void
   onRemoveConstraints: () => void
+  constraintCheckRange: Pick<
+    ScheduleConstraintCheckInput,
+    'startDate' | 'endDate'
+  >
+  constraintCheckDraft: ScheduleConstraintCheckDraft | undefined
+  constraintCheckDraftInvalid: boolean
+  isConstraintCheckEnabled: boolean
   previewText: string | null
   isPreviewLoading: boolean
   previewError: boolean

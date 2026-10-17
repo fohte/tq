@@ -4,6 +4,7 @@ import type { ScheduleConstraintFormState } from '#components/schedule/schedule-
 import {
   emptyScheduleConstraintFormState,
   scheduleConstraintFormStateFromSaved,
+  scheduleConstraintInputFromFormState,
 } from '#components/schedule/schedule-constraints-form-state'
 import {
   type RecurrenceFormDraft,
@@ -32,13 +33,13 @@ import {
   type ScheduleModalSaveState,
   useScheduleModalSave,
 } from '#components/schedule/use-schedule-modal-save'
-import type { Schedule } from '#hooks/use-schedules'
 import {
+  type Schedule,
   useScheduleConstraints,
   useScheduleDetails,
   useScheduleOverrides,
 } from '#hooks/use-schedules'
-import { formatLocalDate } from '#lib/date-range'
+import { formatLocalDate, getLocalWeekDateRange } from '#lib/date-range'
 
 interface CreateScheduleModalStateOptions {
   open: boolean
@@ -186,6 +187,26 @@ export function useCreateScheduleModalState({
   const startDate = scheduleEditStartDate(rangeDraft)
   const startTime = scheduleEditStartTime(rangeDraft)
   const endTime = scheduleEditEndTime(rangeDraft)
+  const constraintInput = scheduleConstraintInputFromFormState(constraintDraft)
+  const hasActiveConstraintDraft =
+    scope === 'all' && constraintTouchedRef.current && constraintDraft !== null
+  const constraintCheckDraftInvalid =
+    hasActiveConstraintDraft && constraintInput === null
+  const constraintCheckDraft =
+    hasActiveConstraintDraft && constraintInput !== null
+      ? { constraints: constraintInput }
+      : undefined
+  const constraintCheckRange = getLocalWeekDateRange(
+    new Date(`${occurrenceDate}T00:00:00`),
+  )
+  const constraintsQueryUnavailable =
+    scheduleConstraints.isError && !scheduleConstraints.data
+  const isConstraintCheckEnabled =
+    open &&
+    schedule != null &&
+    constraintDraft !== null &&
+    !scheduleConstraints.isPending &&
+    !constraintsQueryUnavailable
   const preview = useScheduleModalPreview({
     schedule,
     editState,
@@ -391,6 +412,10 @@ export function useCreateScheduleModalState({
     onAddConstraints: addConstraints,
     onChangeConstraints: updateConstraints,
     onRemoveConstraints: removeConstraints,
+    constraintCheckRange,
+    constraintCheckDraft,
+    constraintCheckDraftInvalid,
+    isConstraintCheckEnabled,
     previewText: preview.previewText,
     isPreviewLoading: preview.isPreviewLoading,
     previewError: preview.previewError,

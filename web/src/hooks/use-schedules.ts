@@ -24,6 +24,19 @@ export type ScheduleConstraintInput = InferRequestType<
   (typeof api.api.schedule.events)[':id']['constraints']['$put']
 >['json']
 
+export type ScheduleConstraintCheckInput = InferRequestType<
+  (typeof api.api.schedule.events)[':id']['constraint-check']['$post']
+>['json']
+
+export type ScheduleConstraintCheckDraft = NonNullable<
+  ScheduleConstraintCheckInput['draft']
+>
+
+export type ScheduleConstraintCheckResponse = InferResponseType<
+  (typeof api.api.schedule.events)[':id']['constraint-check']['$post'],
+  200
+>
+
 export type ScheduleDetails = InferResponseType<
   (typeof api.api.schedule.events)[':id']['$get'],
   200
@@ -109,6 +122,28 @@ export function useScheduleConstraints(
     queryFn: async () => {
       const res = await api.api.schedule.events[':id'].constraints.$get({
         param: { id: scheduleId ?? '' },
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useScheduleConstraintCheck(
+  scheduleId: string | undefined,
+  input: ScheduleConstraintCheckInput,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: scheduleKeys.constraintCheck(scheduleId ?? 'disabled', input),
+    enabled: enabled && scheduleId != null,
+    queryFn: async () => {
+      if (scheduleId == null) return null
+
+      const res = await api.api.schedule.events[':id'][
+        'constraint-check'
+      ].$post({
+        param: { id: scheduleId },
+        json: input,
       })
       return unwrapOrThrow(assertOk(res)).json()
     },
