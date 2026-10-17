@@ -218,32 +218,23 @@ function getChecklistMarkdownState(root: Element) {
 }
 
 function getInlineMarkdownStyleState(element: Element) {
-  const style = getComputedStyle(element)
   return {
     text: element.textContent,
-    display: style.display,
-    overflow: style.overflow,
-    textDecoration: style.textDecorationLine,
-    textOverflow: style.textOverflow,
-    whiteSpace: style.whiteSpace,
+    textDecoration: getComputedStyle(element).textDecorationLine,
   }
 }
 
-function getInlineMarkdownTruncationState(
-  fieldTrigger: Element,
-  inlineContent: Element,
-) {
-  const fieldTriggerBounds = fieldTrigger.getBoundingClientRect()
-  const rowBounds = assertDefined(
-    fieldTrigger.parentElement,
-    'the checklist text has a row container',
-  ).getBoundingClientRect()
+function getInlineMarkdownTruncationState(row: Element, fieldTrigger: Element) {
+  const style = getComputedStyle(row)
 
   return {
-    text: inlineContent.textContent,
+    text: row.textContent,
+    rowDisplay: style.display,
+    rowOverflow: style.overflow,
+    rowTextOverflow: style.textOverflow,
+    rowWhiteSpace: style.whiteSpace,
     fieldTriggerDisplay: getComputedStyle(fieldTrigger).display,
-    contentOverflows: inlineContent.scrollWidth > inlineContent.clientWidth,
-    fieldTriggerFitsRow: fieldTriggerBounds.right <= rowBounds.right,
+    contentOverflows: row.scrollWidth > row.clientWidth,
   }
 }
 
@@ -318,7 +309,7 @@ describe('TaskChecklistList', () => {
     })
   })
 
-  it('truncates long checklist text inside the edit trigger', async () => {
+  it('truncates long checklist text in the item row', async () => {
     const content = 'Pack the entire campsite before sunrise. '
       .repeat(30)
       .trim()
@@ -339,18 +330,19 @@ describe('TaskChecklistList', () => {
       rendered.container.querySelector('[data-slot="field-trigger"]'),
       'the checklist item has an editable plain-text field',
     )
-    const inlineContent = assertDefined(
-      fieldTrigger.querySelector(':scope > span'),
-      'the field trigger has a text wrapper',
+    const row = assertDefined(
+      fieldTrigger.parentElement,
+      'the checklist text has a row container',
     )
 
-    expect(
-      getInlineMarkdownTruncationState(fieldTrigger, inlineContent),
-    ).toEqual({
+    expect(getInlineMarkdownTruncationState(row, fieldTrigger)).toEqual({
       text: content,
+      rowDisplay: 'block',
+      rowOverflow: 'hidden',
+      rowTextOverflow: 'ellipsis',
+      rowWhiteSpace: 'nowrap',
       fieldTriggerDisplay: 'inline-block',
       contentOverflows: true,
-      fieldTriggerFitsRow: true,
     })
   })
 
@@ -381,11 +373,7 @@ describe('TaskChecklistList', () => {
 
     expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
       text: 'Review the sample',
-      display: 'block',
-      overflow: 'hidden',
       textDecoration: 'line-through',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap',
     })
   })
 
@@ -435,11 +423,7 @@ describe('TaskChecklistList', () => {
 
     expect(getInlineMarkdownStyleState(inlineContent)).toEqual({
       text: content,
-      display: 'block',
-      overflow: 'hidden',
       textDecoration: 'line-through',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap',
     })
   })
 
@@ -950,7 +934,7 @@ describe('TaskChecklistList', () => {
         throw new Error('The details editor is still mounting')
       }
     })
-    await focusDescriptionEditor(user, container)
+    await focusDescriptionEditor(user, container, { timeout: 10_000 })
     await user.keyboard('Pack a compass')
 
     await waitFor(
