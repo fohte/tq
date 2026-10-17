@@ -7,6 +7,7 @@ import {
   connectMcpClient,
   parseToolJson,
 } from '#routes/mcp/testing'
+import { makeScheduleConstraint } from '#services/schedule-constraint-test-fixtures'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -21,15 +22,7 @@ afterEach(async () => {
   await client.close()
 })
 
-const CONSTRAINTS = {
-  weeklyMin: null,
-  weeklyMax: null,
-  weeklyTarget: null,
-  maxConsecutiveDays: null,
-  windowStart: null,
-  windowEnd: null,
-  weekdays: [],
-}
+const CONSTRAINTS = makeScheduleConstraint()
 
 async function createSchedule(): Promise<string> {
   const response = await app.request('/api/schedule/events', {

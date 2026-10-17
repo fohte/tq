@@ -22,9 +22,11 @@ import {
 import {
   expandScheduleForDate,
   expandScheduleWithDraft,
+  formatDateStr,
   type ScheduleDraft,
   type ScheduleSeries,
 } from '#routes/schedule-expansion'
+import { buildSchedulePreviewRange } from '#routes/schedule-preview'
 import {
   loadScheduleOverridesForExpansion,
   loadSchedulesWithRules,
@@ -46,7 +48,7 @@ export function scheduleConstraintWeekRange(
   return { startDate, endDate: addCalendarDays(startDate, 6) }
 }
 
-async function loadScheduleConstraint(scheduleId: string) {
+export async function loadScheduleConstraint(scheduleId: string) {
   const [row] = await db
     .select()
     .from(scheduleConstraints)
@@ -346,4 +348,25 @@ export async function evaluateScheduleConstraintViolationsSafely(
       }
     },
   )
+}
+
+export async function evaluateSavedScheduleConstraintViolations(
+  series: ScheduleSeries,
+  effectiveFrom?: string,
+): Promise<ScheduleConstraintEvaluationResult> {
+  const today = formatDateStr(new Date())
+  const requestedStart =
+    effectiveFrom != null && effectiveFrom > today ? effectiveFrom : undefined
+  const range = buildSchedulePreviewRange(series, requestedStart)
+  const endDate =
+    series.schedule.endDate == null || series.schedule.endDate > range.endDate
+      ? range.endDate
+      : series.schedule.endDate
+
+  return endDate < range.startDate
+    ? { constraintViolations: [] }
+    : evaluateScheduleConstraintViolationsSafely({
+        series,
+        range: { startDate: range.startDate, endDate },
+      })
 }

@@ -1,3 +1,4 @@
+import { makeScheduleConstraint } from 'api/services/schedule-constraint-test-fixtures'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
@@ -11,7 +12,7 @@ import {
 } from '#commands/test-support'
 
 const SCHEDULE_ID = '11111111-1111-4111-8111-111111111111'
-const CONSTRAINTS = {
+const CONSTRAINTS = makeScheduleConstraint({
   weeklyMin: 3,
   weeklyMax: 4,
   weeklyTarget: 4,
@@ -22,7 +23,7 @@ const CONSTRAINTS = {
     { dayOfWeek: 1, preference: 'if_free' },
     { dayOfWeek: 5, preference: 'excluded' },
   ],
-}
+})
 
 async function runScheduleConstraintCli(args: string[], response: Response) {
   const { fetchStub, calls } = captureFetch(() => response)
@@ -126,6 +127,24 @@ describe('schedule constraints set', () => {
       stderr: [
         [
           'Error: windowEnd: windowStart and windowEnd must both be set or both be null\n',
+        ],
+      ],
+      stdout: [],
+    })
+  })
+
+  it('rejects malformed constraints JSON before sending a request', async () => {
+    expect(
+      await runScheduleConstraintCli(
+        ['schedule', 'constraints', 'set', SCHEDULE_ID, '--constraints', '{'],
+        new Response('{}', { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [],
+      stderr: [
+        [
+          `Error: Invalid --constraints JSON: Expected property name or '}' in JSON at position 1 (line 1 column 2)\n`,
         ],
       ],
       stdout: [],
