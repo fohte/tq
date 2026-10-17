@@ -65,6 +65,14 @@ const githubReplyBlocker = makeGithubBlocker({
   title: 'Review the proposed change',
 })
 
+const githubResolvedReplyBlocker = makeGithubBlocker({
+  id: 'github-blocker-resolved-reply',
+  owner: 'example-team',
+  repo: 'sample-project',
+  number: 176,
+  title: 'Review the follow-up change',
+})
+
 const waits: TaskWait[] = [
   makeTaskWait({
     body: 'Review the proposal\n\nPlease confirm the updated timeline.',
@@ -82,6 +90,7 @@ const waits: TaskWait[] = [
     id: 'wait-example-003',
     body: 'Review received',
     label: 'Review received',
+    githubLinkId: githubResolvedReplyBlocker.id,
     resolvedAt: '2099-10-12T00:00:00.000Z',
     acknowledgedAt: null,
   }),
@@ -191,7 +200,7 @@ export const WithWaits: Story = {
   args: {
     blockedBy: blockedByTasks.slice(0, 1),
     blocking: [],
-    githubBlockers: [],
+    githubBlockers: [githubResolvedReplyBlocker],
     waits,
   },
 }
