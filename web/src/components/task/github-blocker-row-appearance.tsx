@@ -68,7 +68,6 @@ export function GithubBlockerRowAppearance({
             github · {blocker.state}
           </span>
         </div>
-        {waitModeControl}
         <GitHubNotifyEventsPicker
           value={blocker.notifyEvents}
           onChange={onNotifyEventsChange}
@@ -86,6 +85,7 @@ export function GithubBlockerRowAppearance({
           <X className="size-3.5" />
         </Button>
       </div>
+      {waitModeControl}
       {children}
     </div>
   )
