@@ -1,7 +1,6 @@
 import { resolve } from 'node:path'
 
 import { config } from '@fohte/eslint-config'
-import { plugin as shadcn } from '@shadcn/lint'
 import storybook from 'eslint-plugin-storybook'
 
 export default config(
@@ -29,7 +28,6 @@ export default config(
       'web/src/**/*.{test,spec}.{ts,tsx}',
       'web/src/**/__tests__/**/*.{ts,tsx}',
     ],
-    plugins: { shadcn },
     rules: {
       'shadcn/no-inline-styles': [
         'error',
@@ -55,7 +53,6 @@ export default config(
       'web/src/**/*.{test,spec}.{ts,tsx}',
       'web/src/**/__tests__/**/*.{ts,tsx}',
     ],
-    plugins: { shadcn },
     rules: { 'shadcn/no-restyle': 'off' },
   },
   {
