@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, gte, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -7,7 +7,10 @@ import { db } from '#db/connection'
 import { scheduleOverrides, schedules } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { scheduleOccursOnDate } from '#routes/schedule-expansion'
-import { buildScheduleOverridePreview } from '#routes/schedule-preview'
+import {
+  buildScheduleOverrideClearPreview,
+  buildScheduleOverridePreview,
+} from '#routes/schedule-preview'
 import { loadScheduleWithRevisions } from '#routes/schedule-shared'
 import {
   scheduleOverrideDateSchema,
@@ -19,6 +22,14 @@ const scheduleOverrideParamsSchema = z.object({
   occurrenceDate: scheduleOverrideDateSchema,
 })
 
+const scheduleOverridesQuerySchema = z.object({
+  fromDate: scheduleOverrideDateSchema.optional(),
+})
+
+const clearScheduleOverrideQuerySchema = z.object({
+  dryRun: z.enum(['true', 'false']).optional(),
+})
+
 async function findSchedule(scheduleId: string) {
   return db.query.schedules.findFirst({
     where: eq(schedules.id, scheduleId),
@@ -26,6 +37,48 @@ async function findSchedule(scheduleId: string) {
 }
 
 export const scheduleOverridesApp = new Hono()
+  .get(
+    '/events/:scheduleId/overrides',
+    zValidator('param', z.object({ scheduleId: z.string().min(1) })),
+    zValidator('query', scheduleOverridesQuerySchema),
+    async (c) => {
+      const { scheduleId } = c.req.valid('param')
+      const schedule = await findSchedule(scheduleId)
+      if (!schedule) {
+        return c.json({ error: 'Schedule not found' }, 404)
+      }
+
+      const { fromDate } = c.req.valid('query')
+      const conditions = [eq(scheduleOverrides.scheduleId, scheduleId)]
+      const where =
+        fromDate === undefined
+          ? conditions[0]
+          : and(
+              conditions[0],
+              or(
+                gte(scheduleOverrides.occurrenceDate, fromDate),
+                gte(scheduleOverrides.movedToDate, fromDate),
+              ),
+            )
+      const overrides = await db
+        .select()
+        .from(scheduleOverrides)
+        .where(where)
+        .orderBy(scheduleOverrides.occurrenceDate)
+
+      return c.json(
+        overrides.map((override) => ({
+          scheduleId: override.scheduleId,
+          occurrenceDate: override.occurrenceDate,
+          startTime: override.startTime,
+          endTime: override.endTime,
+          movedToDate: override.movedToDate,
+          skipped: override.skipped,
+        })),
+        200,
+      )
+    },
+  )
   .put(
     '/events/:scheduleId/overrides/:occurrenceDate',
     zValidator('param', scheduleOverrideParamsSchema),
@@ -109,10 +162,28 @@ export const scheduleOverridesApp = new Hono()
   .delete(
     '/events/:scheduleId/overrides/:occurrenceDate',
     zValidator('param', scheduleOverrideParamsSchema),
+    zValidator('query', clearScheduleOverrideQuerySchema),
     async (c) => {
       const { scheduleId, occurrenceDate } = c.req.valid('param')
-      if (!(await findSchedule(scheduleId))) {
+      const schedule = await loadScheduleWithRevisions(scheduleId)
+      if (!schedule) {
         return c.json({ error: 'Schedule not found' }, 404)
+      }
+
+      const { dryRun } = c.req.valid('query')
+      if (dryRun === 'true') {
+        const overrides = await db
+          .select()
+          .from(scheduleOverrides)
+          .where(eq(scheduleOverrides.scheduleId, scheduleId))
+        return c.json(
+          buildScheduleOverrideClearPreview(
+            schedule,
+            overrides,
+            occurrenceDate,
+          ),
+          200,
+        )
       }
 
       await db

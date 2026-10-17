@@ -272,6 +272,25 @@ function normalizeOverrideRows(rows: ScheduleOverrideSnapshot[]) {
   }))
 }
 
+function normalizeScheduleOverrideHttpResponse(
+  status: number,
+  overrides: ScheduleOverrideSnapshot[],
+) {
+  return { status, overrides: normalizeOverrideRows(overrides) }
+}
+
+function normalizeScheduleOverridePreviewHttpResponse(
+  status: number,
+  preview: ScheduleChangePreview,
+  savedOverrides: ScheduleOverrideSnapshot[],
+) {
+  return {
+    status,
+    preview: normalizePreview(preview),
+    savedOverrides: normalizeOverrideRows(savedOverrides),
+  }
+}
+
 async function patchSchedule(scheduleId: string, body: unknown) {
   return app.request(`/api/schedule/events/${scheduleId}`, {
     method: 'PATCH',
@@ -3237,7 +3256,167 @@ describe('schedules API', () => {
   })
 })
 
+describe('GET /api/schedule/events/:id', () => {
+  it('returns the editable schedule details including its reminder setting', async () => {
+    const { body: created } = await createSchedule({
+      title: 'Review block',
+      startDate: '2034-08-17',
+      startTime: '08:30',
+      endTime: '09:30',
+      remindBeforeMinutes: 45,
+      recurrence: { type: 'weekly', interval: 1, daysOfWeek: [1, 3] },
+    })
+
+    const response = await app.request(`/api/schedule/events/${created.id}`)
+    const schedule = await jsonBody<ScheduleResponse>(response)
+
+    expect(normalizeScheduleHttpResponse(response.status, schedule)).toEqual({
+      status: 200,
+      body: {
+        id: 'SCHEDULE_ID',
+        title: 'Review block',
+        startDate: '2034-08-17',
+        endDate: null,
+        remindBeforeMinutes: 45,
+        startTime: '08:30',
+        endTime: '09:30',
+        recurrence: {
+          id: 'RECURRENCE_ID',
+          type: 'weekly',
+          interval: 1,
+          daysOfWeek: [1, 3],
+          dayOfMonth: null,
+        },
+        context: 'personal',
+        color: null,
+        createdAt: 'TIMESTAMP',
+        updatedAt: 'TIMESTAMP',
+      },
+    })
+  })
+})
+
 describe('schedule overrides API', () => {
+  it('returns only the upcoming exceptions for a schedule', async () => {
+    const today = dateAtOffset(0)
+    const oldSkippedDate = dateAtOffset(-2)
+    const movedOccurrenceDate = dateAtOffset(-1)
+    const movedToDate = dateAtOffset(1)
+    const changedDate = dateAtOffset(0)
+    const futureSkippedDate = dateAtOffset(2)
+    const { body: schedule } = await createSchedule({
+      title: 'Review block',
+      startDate: dateAtOffset(-3),
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    await putScheduleOverride(schedule.id, oldSkippedDate, { skipped: true })
+    await putScheduleOverride(schedule.id, movedOccurrenceDate, {
+      date: movedToDate,
+      startTime: '09:00',
+      endTime: '10:00',
+    })
+    await putScheduleOverride(schedule.id, changedDate, {
+      startTime: '07:30',
+      endTime: '08:30',
+    })
+    await putScheduleOverride(schedule.id, futureSkippedDate, {
+      skipped: true,
+    })
+
+    const response = await app.request(
+      `/api/schedule/events/${schedule.id}/overrides?fromDate=${today}`,
+    )
+    const overrides = await jsonBody<ScheduleOverrideSnapshot[]>(response)
+
+    expect(
+      normalizeScheduleOverrideHttpResponse(response.status, overrides),
+    ).toEqual({
+      status: 200,
+      overrides: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: movedOccurrenceDate,
+          startTime: '09:00',
+          endTime: '10:00',
+          movedToDate,
+          skipped: false,
+        },
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: changedDate,
+          startTime: '07:30',
+          endTime: '08:30',
+          movedToDate: null,
+          skipped: false,
+        },
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate: futureSkippedDate,
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
+      ],
+    })
+  })
+
+  it('previews restoring a skipped occurrence without clearing the override', async () => {
+    const occurrenceDate = dateAtOffset(4)
+    const { body: schedule } = await createSchedule({
+      title: 'Review block',
+      startDate: occurrenceDate,
+      startTime: '08:30',
+      endTime: '09:30',
+      recurrence: { type: 'daily', interval: 1 },
+    })
+    await putScheduleOverride(schedule.id, occurrenceDate, { skipped: true })
+
+    const response = await app.request(
+      `/api/schedule/events/${schedule.id}/overrides/${occurrenceDate}?dryRun=true`,
+      { method: 'DELETE' },
+    )
+    const preview = await jsonBody<ScheduleChangePreview>(response)
+    const savedOverrides = await listScheduleOverrides(schedule.id)
+
+    expect(
+      normalizeScheduleOverridePreviewHttpResponse(
+        response.status,
+        preview,
+        savedOverrides,
+      ),
+    ).toEqual({
+      status: 200,
+      preview: {
+        range: { startDate: occurrenceDate, endDate: occurrenceDate },
+        changes: [
+          {
+            before: null,
+            after: previewOccurrence(
+              occurrenceDate,
+              occurrenceDate,
+              '08:30',
+              '09:30',
+            ),
+          },
+        ],
+        deletedOverrides: [],
+      },
+      savedOverrides: [
+        {
+          scheduleId: 'SCHEDULE_ID',
+          occurrenceDate,
+          startTime: null,
+          endTime: null,
+          movedToDate: null,
+          skipped: true,
+        },
+      ],
+    })
+  })
+
   it('previews a moved occurrence and leaves the override unchanged until saved', async () => {
     const occurrenceDate = dateAtOffset(5)
     const destinationDate = dateOffsetFrom(occurrenceDate, 2)

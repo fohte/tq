@@ -19,6 +19,7 @@ import {
 import {
   loadScheduleOverridesForExpansion,
   loadSchedulesWithRules,
+  loadScheduleWithRevisions,
 } from '#routes/schedule-shared'
 import { scheduleTimeBlocksApp } from '#routes/schedule-time-blocks'
 import {
@@ -83,6 +84,7 @@ export const schedulesApp = new Hono()
           overridesBySchedule.get(series.schedule.id),
         ).map((block) => ({
           ...block,
+          remindBeforeMinutes: series.schedule.remindBeforeMinutes,
           recurrence: recurrenceRuleToResponse(
             getScheduleRevisionForDate(series.revisions, block.occurrenceDate)
               ?.rule ?? null,
@@ -92,6 +94,14 @@ export const schedulesApp = new Hono()
     )
 
     return c.json(expanded, 200)
+  })
+  .get('/events/:id', async (c) => {
+    const series = await loadScheduleWithRevisions(c.req.param('id'))
+    if (!series) {
+      return c.json({ error: 'Schedule not found' }, 404)
+    }
+    const initialRevision = firstOrThrow(series.revisions)
+    return c.json(scheduleToResponse(series, initialRevision), 200)
   })
   .patch('/events/:id', zValidator('json', updateScheduleSchema), async (c) => {
     const result = await updateScheduleSeries(

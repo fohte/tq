@@ -86,6 +86,7 @@ describe('useDayViewCalendarEvents', () => {
         color: { accent: '#6C63FF' },
         scheduleId: 'schedule-overlap',
         scheduleOccurrenceDate: '2034-08-17',
+        scheduleOverridden: 'moved',
         redacted: false,
       },
     ])

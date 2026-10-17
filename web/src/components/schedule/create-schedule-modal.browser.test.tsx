@@ -6,10 +6,18 @@ import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { CreateScheduleModal } from '#components/schedule/create-schedule-modal'
-import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
 import {
+  makeSchedule,
+  makeScheduleOverride,
+} from '#components/schedule/schedule-test-fixtures'
+import {
+  useClearScheduleOverride,
   useCreateSchedule,
   useDeleteSchedule,
+  useScheduleChangePreview,
+  useScheduleDetails,
+  useScheduleOverrides,
+  useSetScheduleOverride,
   useUpdateSchedule,
 } from '#hooks/use-schedules'
 import { renderControlledModal } from '#lib/render-controlled-modal'
@@ -31,12 +39,22 @@ vi.mock('#hooks/use-schedules', async (importOriginal) => {
     useCreateSchedule: vi.fn(),
     useUpdateSchedule: vi.fn(),
     useDeleteSchedule: vi.fn(),
+    useScheduleDetails: vi.fn(),
+    useScheduleOverrides: vi.fn(),
+    useScheduleChangePreview: vi.fn(),
+    useSetScheduleOverride: vi.fn(),
+    useClearScheduleOverride: vi.fn(),
   }
 })
 
 const mockUseCreateSchedule = vi.mocked(useCreateSchedule)
 const mockUseUpdateSchedule = vi.mocked(useUpdateSchedule)
 const mockUseDeleteSchedule = vi.mocked(useDeleteSchedule)
+const mockUseScheduleDetails = vi.mocked(useScheduleDetails)
+const mockUseScheduleOverrides = vi.mocked(useScheduleOverrides)
+const mockUseScheduleChangePreview = vi.mocked(useScheduleChangePreview)
+const mockUseSetScheduleOverride = vi.mocked(useSetScheduleOverride)
+const mockUseClearScheduleOverride = vi.mocked(useClearScheduleOverride)
 
 function dateInputState(input: HTMLInputElement) {
   return { type: input.type, value: input.value }
@@ -46,6 +64,8 @@ function setupMocks() {
   const createMutate = vi.fn()
   const updateMutate = vi.fn()
   const deleteMutate = vi.fn()
+  const setOverrideMutate = vi.fn()
+  const clearOverrideMutate = vi.fn()
 
   mockUseCreateSchedule.mockReturnValue(
     partialMutation<ReturnType<typeof useCreateSchedule>>({
@@ -65,8 +85,62 @@ function setupMocks() {
       isPending: false,
     }),
   )
+  mockUseSetScheduleOverride.mockReturnValue(
+    partialMutation<ReturnType<typeof useSetScheduleOverride>>({
+      mutate: setOverrideMutate,
+      isPending: false,
+    }),
+  )
+  mockUseClearScheduleOverride.mockReturnValue(
+    partialMutation<ReturnType<typeof useClearScheduleOverride>>({
+      mutate: clearOverrideMutate,
+      isPending: false,
+    }),
+  )
+  mockUseScheduleDetails.mockReturnValue(
+    partialMutation<ReturnType<typeof useScheduleDetails>>({
+      data: {
+        id: sampleSchedule.scheduleId,
+        title: sampleSchedule.title,
+        startDate: sampleSchedule.startDate,
+        endDate: null,
+        remindBeforeMinutes: null,
+        startTime: '07:00',
+        endTime: '08:00',
+        recurrence: sampleSchedule.recurrence,
+        context: 'personal',
+        color: sampleSchedule.color,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      isLoading: false,
+    }),
+  )
+  mockUseScheduleOverrides.mockReturnValue(
+    partialMutation<ReturnType<typeof useScheduleOverrides>>({
+      data: [],
+      isLoading: false,
+    }),
+  )
+  mockUseScheduleChangePreview.mockReturnValue(
+    partialMutation<ReturnType<typeof useScheduleChangePreview>>({
+      data: {
+        range: { startDate: '2026-01-01', endDate: '2026-01-31' },
+        changes: [],
+        deletedOverrides: [],
+      },
+      isSuccess: true,
+      isFetching: false,
+    }),
+  )
 
-  return { createMutate, updateMutate, deleteMutate }
+  return {
+    createMutate,
+    updateMutate,
+    deleteMutate,
+    setOverrideMutate,
+    clearOverrideMutate,
+  }
 }
 
 function normalizeMutationCalls(calls: readonly unknown[][]) {
@@ -163,12 +237,11 @@ describe('CreateScheduleModal', () => {
     },
   )
 
-  it('pre-fills the title input with the schedule being edited', () => {
+  it('shows the schedule title while editing one occurrence', () => {
     setupMocks()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
 
-    const titleInputs = screen.getAllByPlaceholderText('Schedule title')
-    expect(atIndex(titleInputs, 0)).toHaveValue('Gym')
+    expect(findVisible(screen.getAllByText('Gym'))).toBeInTheDocument()
   })
 
   it('pre-fills the start date from the schedule being edited', () => {
@@ -191,7 +264,7 @@ describe('CreateScheduleModal', () => {
       defaultStartDate: '2026-07-20',
     })
 
-    await user.click(screen.getByRole('button', { name: '2026-07-20' }))
+    await user.click(screen.getByRole('button', { name: 'Start: 2026-07-20' }))
 
     const startDateInputs = screen
       .getAllByLabelText('Start date')
@@ -282,8 +355,11 @@ describe('CreateScheduleModal', () => {
       { target: { value: '2026-07-21' } },
     )
 
-    const titleInputs = screen.getAllByPlaceholderText('Schedule title')
-    await user.type(atIndex(titleInputs, 0), 'Team sync')
+    const titleInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText('Schedule title')),
+      'no visible schedule title input',
+    )
+    await user.type(titleInput, 'Team sync')
 
     const startTimeInputs = screen.getAllByLabelText('Start time')
     fireEvent.change(atIndex(startTimeInputs, 0), {
@@ -312,13 +388,26 @@ describe('CreateScheduleModal', () => {
     const user = userEvent.setup()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
 
-    const titleInputs = screen.getAllByPlaceholderText('Schedule title')
-    const titleInput = atIndex(titleInputs, 0)
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+
+    const titleInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText('Schedule title')),
+      'no visible schedule title input',
+    )
     await user.clear(titleInput)
     await user.type(titleInput, 'Morning run')
 
-    const saveButtons = screen.getAllByRole('button', { name: 'Save' })
-    await user.click(atIndex(saveButtons, 0))
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
 
     expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
       [
@@ -335,6 +424,13 @@ describe('CreateScheduleModal', () => {
     const { updateMutate } = setupMocks()
     const user = userEvent.setup()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
 
     fireEvent.change(
       assertDefined(
@@ -358,10 +454,346 @@ describe('CreateScheduleModal', () => {
     ])
   })
 
+  it('saves a move for only the selected occurrence', async () => {
+    const { setOverrideMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Start date')),
+        'no visible occurrence date input',
+      ),
+      { target: { value: '2026-01-02' } },
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Start time')),
+        'no visible occurrence start time input',
+      ),
+      { target: { value: '08:00' } },
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('End time')),
+        'no visible occurrence end time input',
+      ),
+      { target: { value: '09:00' } },
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(setOverrideMutate.mock.calls)).toEqual([
+      [
+        {
+          scheduleId: 'schedule-1',
+          occurrenceDate: '2026-01-01',
+          input: {
+            date: '2026-01-02',
+            startTime: '08:00',
+            endTime: '09:00',
+          },
+        },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('previews and saves skipping only the selected occurrence', async () => {
+    const { setOverrideMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Skip this event' })),
+        'no visible skip button',
+      ),
+    )
+    expect(
+      findVisible(
+        screen.getAllByText(
+          'Skips this event on Thu, Jan 1. Other events are unchanged.',
+        ),
+      ),
+    ).toBeInTheDocument()
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(setOverrideMutate.mock.calls)).toEqual([
+      [
+        {
+          scheduleId: 'schedule-1',
+          occurrenceDate: '2026-01-01',
+          input: { skipped: true },
+        },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('restores the selected occurrence when the restore action is saved', async () => {
+    const { clearOverrideMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, {
+      schedule: makeSchedule({ overridden: 'time' }),
+    })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Restore' })),
+        'no visible restore button',
+      ),
+    )
+    expect(
+      findVisible(
+        screen.getAllByText(
+          'Restores this event on Thu, Jan 1 to its scheduled date and time.',
+        ),
+      ),
+    ).toBeInTheDocument()
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(clearOverrideMutate.mock.calls)).toEqual([
+      [
+        { scheduleId: 'schedule-1', occurrenceDate: '2026-01-01' },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('applies time changes from the selected occurrence forward', async () => {
+    const { updateMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(
+          screen.getAllByRole('button', { name: 'This and following' }),
+        ),
+        'no visible following-events scope button',
+      ),
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Start time')),
+        'no visible start time input',
+      ),
+      { target: { value: '07:30' } },
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
+      [
+        {
+          id: 'schedule-1',
+          input: { effectiveFrom: '2026-01-01', startTime: '07:30' },
+        },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('ends the series before the selected date', async () => {
+    const { updateMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, {
+      schedule: makeSchedule({
+        occurrenceDate: '2026-01-03',
+        start: '2026-01-03T07:00:00',
+        end: '2026-01-03T08:00:00',
+      }),
+    })
+
+    await user.click(
+      assertDefined(
+        findVisible(
+          screen.getAllByRole('button', { name: 'This and following' }),
+        ),
+        'no visible following-events scope button',
+      ),
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'End series here' })),
+        'no visible end-series button',
+      ),
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
+      [
+        { id: 'schedule-1', input: { endDate: '2026-01-02' } },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('sets a reminder for all occurrences', async () => {
+    const { updateMutate } = setupMocks()
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Remind before start')),
+        'no visible reminder input',
+      ),
+      { target: { value: '30' } },
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
+      [
+        { id: 'schedule-1', input: { remindBeforeMinutes: 30 } },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('compares all-events changes with the first revision values', async () => {
+    const { updateMutate } = setupMocks()
+    const user = userEvent.setup()
+    const laterRevisionSchedule = makeSchedule({
+      start: '2026-01-01T09:00:00',
+      end: '2026-01-01T10:00:00',
+      recurrence: {
+        id: 'later-rule',
+        type: 'daily',
+        interval: 1,
+        daysOfWeek: null,
+        dayOfMonth: null,
+      },
+    })
+    renderControlledModal(CreateScheduleModal, {
+      schedule: laterRevisionSchedule,
+    })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByLabelText('Remind before start')),
+        'no visible reminder input',
+      ),
+      { target: { value: '30' } },
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(updateMutate.mock.calls)).toEqual([
+      [
+        { id: 'schedule-1', input: { remindBeforeMinutes: 30 } },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
+  it('restores an exception from the all-events list', async () => {
+    const { clearOverrideMutate } = setupMocks()
+    mockUseScheduleOverrides.mockReturnValue(
+      partialMutation<ReturnType<typeof useScheduleOverrides>>({
+        data: [
+          makeScheduleOverride({
+            occurrenceDate: '2026-01-03',
+            skipped: true,
+          }),
+        ],
+        isLoading: false,
+      }),
+    )
+    const user = userEvent.setup()
+    renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Restore' })),
+        'no visible exception restore button',
+      ),
+    )
+    expect(
+      findVisible(
+        screen.getAllByText(
+          'Restores this event on Sat, Jan 3 to its scheduled date and time.',
+        ),
+      ),
+    ).toBeInTheDocument()
+    expect(clearOverrideMutate.mock.calls).toEqual([])
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Save' })),
+        'no visible save button',
+      ),
+    )
+
+    expect(normalizeMutationCalls(clearOverrideMutate.mock.calls)).toEqual([
+      [
+        { scheduleId: 'schedule-1', occurrenceDate: '2026-01-03' },
+        { onSuccess: 'callback' },
+      ],
+    ])
+  })
+
   it('deletes the schedule when the delete button is confirmed', async () => {
     const { deleteMutate } = setupMocks()
     const user = userEvent.setup()
     renderControlledModal(CreateScheduleModal, { schedule: sampleSchedule })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'All events' })),
+        'no visible all-events scope button',
+      ),
+    )
 
     const deleteTriggers = screen.getAllByRole('button', {
       name: 'Delete schedule',
