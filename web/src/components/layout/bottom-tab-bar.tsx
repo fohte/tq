@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import {
   Calendar,
@@ -55,33 +56,32 @@ function ActionButton({
   icon: Icon,
   label,
   onClick,
-  isPrimary = false,
   hasDivider = false,
 }: {
   icon: LucideIcon
   label: string
   onClick: () => void
-  isPrimary?: boolean
   hasDivider?: boolean
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'relative flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-center gap-1 border-t-2 border-t-transparent',
-        isPrimary ? 'text-primary' : 'text-muted-foreground-faint',
-      )}
-    >
+    <div className="relative flex min-h-11 flex-1 flex-col border-t-2 border-t-transparent">
       {hasDivider && (
         <span
           aria-hidden="true"
           className="absolute inset-y-3 left-0 w-px bg-border"
         />
       )}
-      <Icon className="size-5" />
-      <span className="font-mono text-2xs tracking-wider">{label}</span>
-    </button>
+      <Button
+        onClick={onClick}
+        variant="plain"
+        className="min-h-0 flex-1 flex-col cursor-pointer"
+      >
+        <span className="flex flex-col items-center gap-1">
+          <Icon className="size-5" />
+          <span className="font-mono text-2xs tracking-wider">{label}</span>
+        </span>
+      </Button>
+    </div>
   )
 }
 
@@ -98,7 +98,7 @@ export function BottomTabBar({ onSearch, onNewTask }: BottomTabBarProps) {
           onClick={onSearch}
           hasDivider
         />
-        <ActionButton icon={Plus} label="new" onClick={onNewTask} isPrimary />
+        <ActionButton icon={Plus} label="new" onClick={onNewTask} />
       </div>
     </nav>
   )

@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 
+import { getChecklistIndentStyle } from '#components/task/checklist-indent-style'
 import { ChecklistItemContentInput } from '#components/task/checklist-item-content-input'
 import { ChecklistItemGithubLinkDialog } from '#components/task/checklist-item-github-link-dialog'
 import { createChecklistItemActions } from '#components/task/task-checklist-item-actions'
@@ -47,6 +48,7 @@ interface TaskChecklistItemTreeProps {
   onPromoteItem: (itemId: string) => void
   onStartAddingItem: (parentItemId: string) => void
   initiallyCollapsedItemIds?: string[] | undefined
+  initiallyOpenDetailsItemIds?: string[] | undefined
 }
 
 export function TaskChecklistItemTree({
@@ -68,6 +70,7 @@ export function TaskChecklistItemTree({
   onPromoteItem,
   onStartAddingItem,
   initiallyCollapsedItemIds = [],
+  initiallyOpenDetailsItemIds = [],
 }: TaskChecklistItemTreeProps) {
   const currentParentId = parentItem?.id ?? null
 
@@ -96,6 +99,7 @@ export function TaskChecklistItemTree({
           onCancelAddingItem={onCancelAddingItem}
           onCreateItem={onCreateItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
+          initiallyOpenDetailsItemIds={initiallyOpenDetailsItemIds}
         />
       ))}
       {addingItemParentId === currentParentId && (
@@ -132,6 +136,7 @@ function ChecklistItemRow({
   onCancelAddingItem,
   onCreateItem,
   initiallyCollapsedItemIds,
+  initiallyOpenDetailsItemIds,
 }: {
   item: TaskChecklistItem
   githubLinks: GithubLink[]
@@ -153,13 +158,16 @@ function ChecklistItemRow({
   onCancelAddingItem: () => void
   onCreateItem: (content: string, parentItemId: string | null) => void
   initiallyCollapsedItemIds: string[]
+  initiallyOpenDetailsItemIds: string[]
 }) {
   const [collapsed, setCollapsed] = useState(
     initiallyCollapsedItemIds.includes(item.id),
   )
   const [editingContent, setEditingContent] = useState(false)
   const [contentDraft, setContentDraft] = useState(item.content)
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(
+    initiallyOpenDetailsItemIds.includes(item.id),
+  )
   const [editingNote, setEditingNote] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
@@ -274,8 +282,8 @@ function ChecklistItemRow({
   return (
     <div className="group">
       <div
-        className="flex min-h-10 items-center gap-2 px-3 py-1"
-        style={{ paddingLeft: `${String(12 + depth * 20)}px` }}
+        className="flex min-h-10 items-center gap-2 py-1 pl-(--checklist-indent) pr-3"
+        style={getChecklistIndentStyle(12 + depth * 20)}
       >
         {hasChildren ? (
           <Button
@@ -335,7 +343,10 @@ function ChecklistItemRow({
         />
       </div>
 
-      <div style={{ paddingLeft: `${String(36 + depth * 20)}px` }}>
+      <div
+        className="pl-(--checklist-indent)"
+        style={getChecklistIndentStyle(36 + depth * 20)}
+      >
         <Button
           type="button"
           variant="plain"
@@ -384,16 +395,14 @@ function ChecklistItemRow({
           onPromoteItem={onPromoteItem}
           onStartAddingItem={onStartAddingItem}
           initiallyCollapsedItemIds={initiallyCollapsedItemIds}
+          initiallyOpenDetailsItemIds={initiallyOpenDetailsItemIds}
         />
       )}
 
       {detailsOpen && (
         <div
-          className="border-l border-border py-2 pr-3"
-          style={{
-            marginLeft: `${String(46 + depth * 20)}px`,
-            paddingLeft: '10px',
-          }}
+          className="ml-(--checklist-indent) border-l border-border py-2 pr-3 pl-2.5"
+          style={getChecklistIndentStyle(46 + depth * 20)}
         >
           <MarkdownEditor
             defaultValue={item.note ?? ''}

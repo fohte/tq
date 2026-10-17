@@ -3,6 +3,7 @@ import { Headphones, LogOut, MapPin } from 'lucide-react'
 
 import {
   type EventAccentStyle,
+  getEventAccent,
   getEventAccentStyle,
 } from '#components/calendar/event-accent-style'
 import {
@@ -127,9 +128,10 @@ export function EventBlock(arg: EventContentArg) {
 
   const badge = type === 'auto' ? 'auto' : undefined
 
-  const accentStyle = getEventAccentStyle(props)
-  const accentColor = accentStyle?.['--event-accent']
-  const isColoredAppointment = accentStyle?.['--event-fill'] != null
+  const eventAccent = getEventAccent(props)
+  const accentColor = eventAccent?.accent
+  const isColoredAppointment = eventAccent?.fillPercent != null
+  const accentStyle: EventAccentStyle = getEventAccentStyle(eventAccent)
 
   return (
     <EventBlockShell
@@ -143,6 +145,7 @@ export function EventBlock(arg: EventContentArg) {
         type === 'auto' && 'border-dashed',
         type === 'auto' && 'border-l-solid!',
         type !== 'auto' && accentColor != null && 'border-l-(--event-accent)',
+        isColoredAppointment && 'tq-event-filled',
         isPendingResponse && 'opacity-50',
         event.allDay && 'tq-all-day-content',
         continuesBefore && 'border-l-0',

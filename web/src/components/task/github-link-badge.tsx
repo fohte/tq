@@ -1,3 +1,4 @@
+import { Chip } from '@fohte/ui/chip'
 import { CircleDot, GitPullRequest } from 'lucide-react'
 
 import type { GithubLink } from '#hooks/use-github-link'
@@ -20,29 +21,34 @@ export function GithubLinkBadge({
   extraCount?: number
 }) {
   return (
-    <button
-      type="button"
-      className={cn(
-        'inline-flex shrink-0 cursor-pointer items-center gap-1 border border-border px-1 font-mono text-2xs',
-        link.state === 'open' && STATE_COLORS.open,
-        link.state === 'closed' && STATE_COLORS.closed,
-        link.state === 'merged' && STATE_COLORS.merged,
-      )}
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        window.open(link.url, '_blank', 'noopener,noreferrer')
-      }}
-    >
-      {link.kind === 'pull_request' ? (
-        <GitPullRequest className="size-3" />
-      ) : (
-        <CircleDot className="size-3" />
-      )}
-      {link.repo}#{link.number}
-      {extraCount != null && extraCount > 0 && (
-        <span className="text-muted-foreground-faint">+{extraCount}</span>
-      )}
-    </button>
+    <span className="inline-flex shrink-0">
+      <Chip
+        as="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          window.open(link.url, '_blank', 'noopener,noreferrer')
+        }}
+      >
+        <span
+          className={cn(
+            'inline-flex items-center gap-1',
+            link.state === 'open' && STATE_COLORS.open,
+            link.state === 'closed' && STATE_COLORS.closed,
+            link.state === 'merged' && STATE_COLORS.merged,
+          )}
+        >
+          {link.kind === 'pull_request' ? (
+            <GitPullRequest className="size-3" />
+          ) : (
+            <CircleDot className="size-3" />
+          )}
+          {link.repo}#{link.number}
+        </span>
+        {extraCount != null && extraCount > 0 && (
+          <span className="text-muted-foreground-faint">+{extraCount}</span>
+        )}
+      </Chip>
+    </span>
   )
 }

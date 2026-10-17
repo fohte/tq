@@ -306,9 +306,7 @@ export function BlockedByLabel({
       ) : (
         <>
           blocked by{' '}
-          <button
-            type="button"
-            className="hover:text-foreground hover:underline"
+          <Button
             aria-label={`Open ${soleGithubBlocker.owner}/${soleGithubBlocker.repo}#${String(soleGithubBlocker.number)} on GitHub`}
             onClick={(event) => {
               event.preventDefault()
@@ -319,10 +317,11 @@ export function BlockedByLabel({
                 'noopener,noreferrer',
               )
             }}
+            variant="plain"
           >
             {soleGithubBlocker.owner}/{soleGithubBlocker.repo}#
             {soleGithubBlocker.number}
-          </button>
+          </Button>
         </>
       )}
     </span>

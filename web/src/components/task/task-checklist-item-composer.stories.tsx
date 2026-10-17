@@ -19,3 +19,8 @@ export const Empty: Story = {
   name: 'a new checklist item can be entered',
   args: { depth: 0 },
 }
+
+export const NestedItem: Story = {
+  name: 'a nested checklist item starts at the correct indentation',
+  args: { depth: 1 },
+}

@@ -1,3 +1,4 @@
+import { Input } from '@fohte/ui/input'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useRef } from 'react'
 
@@ -15,7 +16,7 @@ function AnchoredPopoverExample({
 
   return (
     <div className="w-full max-w-96 border border-border bg-background p-3">
-      <input
+      <Input
         ref={inputRef}
         autoFocus={open}
         value=""

@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import type { LucideIcon } from 'lucide-react'
 import { X } from 'lucide-react'
 
@@ -57,14 +58,14 @@ export function TaskFilterChip({
         {children}
       </FilterMenu>
       {onRemove != null && (
-        <button
-          type="button"
+        <Button
           aria-label={`Remove ${menuTitle.toLowerCase()} filter`}
           onClick={onRemove}
-          className="inline-flex size-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-1 focus-visible:outline-ring"
+          className="size-4"
+          variant="plain"
         >
           <X className="size-3" aria-hidden="true" />
-        </button>
+        </Button>
       )}
     </span>
   )

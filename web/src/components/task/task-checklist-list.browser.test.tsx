@@ -186,7 +186,8 @@ function getLinkedItemState(
   return {
     pullRequestChip: {
       text: pullRequestChip.textContent,
-      openStateColor: pullRequestChip.classList.contains('text-github-open'),
+      openStateColor:
+        pullRequestChip.querySelector('.text-github-open') != null,
     },
     subtaskChip: {
       label: subtaskChip.getAttribute('aria-label'),
