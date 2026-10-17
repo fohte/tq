@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import type { Ref } from 'react'
 
@@ -76,13 +77,9 @@ export function GeneratedTasksListAppearance({
               className="flex items-center justify-between border-t border-border p-2 font-mono text-xs text-destructive"
             >
               <span>Failed to load more generated tasks.</span>
-              <button
-                type="button"
-                onClick={onRetry}
-                className="underline underline-offset-2"
-              >
+              <Button onClick={onRetry} variant="plain">
                 Retry
-              </button>
+              </Button>
             </div>
           )}
         </div>

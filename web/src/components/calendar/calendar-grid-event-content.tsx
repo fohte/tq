@@ -1,6 +1,9 @@
 import type { EventContentArg } from '@fullcalendar/core'
 
-import { getEventAccentStyle } from '#components/calendar/event-accent-style'
+import {
+  type EventAccentStyle,
+  getEventAccent,
+} from '#components/calendar/event-accent-style'
 import { EventBlock, GcalStatusBand } from '#components/calendar/event-block'
 import {
   getTaskDateEventProps,
@@ -27,13 +30,21 @@ export function renderCalendarGridEventContent(
         />
       )
     }
-    const eventAccentStyle = getEventAccentStyle(eventProps)
+    const eventAccent = getEventAccent(eventProps)
+    const eventAccentStyle: EventAccentStyle = {
+      '--event-accent': eventAccent?.accent,
+      '--event-fill':
+        eventAccent?.fillPercent == null
+          ? undefined
+          : `${String(eventAccent.fillPercent)}%`,
+    }
 
     return (
       <div
         className="tq-month-event"
         style={eventAccentStyle}
         data-event-type={eventProps.type}
+        data-event-filled={eventAccent?.fillPercent != null}
         data-redacted={eventProps.redacted === true}
         data-pending-response={isPendingGcalResponse(eventProps)}
         data-continues-before={arg.event.allDay && !arg.isStart}

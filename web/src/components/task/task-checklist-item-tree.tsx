@@ -2,6 +2,7 @@ import { Button } from '@fohte/ui/button'
 import { Input } from '@fohte/ui/input'
 import { ChevronDown } from 'lucide-react'
 import {
+  type CSSProperties,
   type KeyboardEvent,
   useCallback,
   useEffect,
@@ -274,8 +275,12 @@ function ChecklistItemRow({
   return (
     <div className="group">
       <div
-        className="flex min-h-10 items-center gap-2 px-3 py-1"
-        style={{ paddingLeft: `${String(12 + depth * 20)}px` }}
+        className="flex min-h-10 items-center gap-2 py-1 pl-(--checklist-indent) pr-3"
+        style={
+          {
+            '--checklist-indent': `${String(12 + depth * 20)}px`,
+          } as CSSProperties & { '--checklist-indent': string }
+        }
       >
         {hasChildren ? (
           <Button
@@ -339,7 +344,14 @@ function ChecklistItemRow({
         />
       </div>
 
-      <div style={{ paddingLeft: `${String(36 + depth * 20)}px` }}>
+      <div
+        className="pl-(--checklist-indent)"
+        style={
+          {
+            '--checklist-indent': `${String(36 + depth * 20)}px`,
+          } as CSSProperties & { '--checklist-indent': string }
+        }
+      >
         <Button
           type="button"
           variant="ghost"
@@ -387,11 +399,12 @@ function ChecklistItemRow({
 
       {detailsOpen && (
         <div
-          className="border-l border-border py-2 pr-3"
-          style={{
-            marginLeft: `${String(46 + depth * 20)}px`,
-            paddingLeft: '10px',
-          }}
+          className="ml-(--checklist-indent) border-l border-border py-2 pr-3 pl-2.5"
+          style={
+            {
+              '--checklist-indent': `${String(46 + depth * 20)}px`,
+            } as CSSProperties & { '--checklist-indent': string }
+          }
         >
           <MarkdownEditor
             defaultValue={item.note ?? ''}

@@ -1,5 +1,6 @@
 import '#components/day-view/compact-memo-panel.css'
 
+import { Button } from '@fohte/ui/button'
 import { ArrowUpRight } from 'lucide-react'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
@@ -38,15 +39,14 @@ export function CompactMemoPanel({
           <span aria-live="polite" className="text-2xs text-muted-foreground">
             {status}
           </span>
-          <button
+          <Button
             aria-label="Open memo window"
-            className="rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={openMemoWindow}
             title="Open memo window"
-            type="button"
+            variant="plain"
           >
             <ArrowUpRight aria-hidden="true" className="size-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
       <div className="h-18 shrink-0 overflow-y-auto rounded-md border border-border bg-card">

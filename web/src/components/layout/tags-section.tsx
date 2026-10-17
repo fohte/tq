@@ -1,3 +1,4 @@
+import { Button } from '@fohte/ui/button'
 import { useSearch } from '@tanstack/react-router'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useState } from 'react'
@@ -132,16 +133,16 @@ export function TagsSection({
           />
         ))}
         {orphanTagCount > 0 && (
-          <button
-            type="button"
+          <Button
             aria-expanded={showOrphanTags}
-            className="px-3.5 py-1 text-left font-mono text-2xs text-muted-foreground-faint hover:text-muted-foreground-strong"
+            className="w-full justify-start"
             onClick={() => {
               setShowOrphanTags((show) => !show)
             }}
+            variant="plain"
           >
             {showOrphanTags ? 'Hide orphan tags' : 'See all tags'}
-          </button>
+          </Button>
         )}
       </div>
     </div>

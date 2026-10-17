@@ -3,13 +3,18 @@ import type { CSSProperties } from 'react'
 import type { CalendarEventProps } from '#lib/calendar-utils'
 
 export interface EventAccentStyle extends CSSProperties {
-  '--event-accent'?: string
-  '--event-fill'?: string
+  '--event-accent'?: string | undefined
+  '--event-fill'?: string | undefined
 }
 
-export function getEventAccentStyle(
+export interface EventAccent {
+  accent?: string | undefined
+  fillPercent?: number | undefined
+}
+
+export function getEventAccent(
   props: CalendarEventProps,
-): EventAccentStyle | undefined {
+): EventAccent | undefined {
   if (props.redacted === true) return undefined
 
   const type = props.type
@@ -29,13 +34,7 @@ export function getEventAccentStyle(
   if (accent == null && fillPercent == null) return undefined
 
   return {
-    ...(accent == null ? {} : { '--event-accent': accent }),
-    ...(fillPercent == null
-      ? {}
-      : {
-          '--event-fill': `${String(fillPercent)}%`,
-          backgroundColor:
-            'color-mix(in srgb, var(--event-accent, var(--border)) var(--event-fill), var(--card))',
-        }),
+    accent,
+    fillPercent,
   }
 }
