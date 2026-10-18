@@ -10,6 +10,7 @@ import {
   handleOAuthCallbackRoute,
 } from '#routes/integration-handlers'
 import { taskToResponse } from '#routes/tasks/shared'
+import { githubLinkLookupQuerySchema } from '#schemas/github-link'
 import { syncAllGithubLinks } from '#services/github-sync'
 import {
   findTaskByGithubRef,
@@ -17,7 +18,6 @@ import {
 } from '#services/task-github-links'
 
 const resolveSchema = z.object({ url: z.string().min(1) })
-const linkQuerySchema = z.object({ url: z.string().min(1) })
 
 // Connection status/auth-url/disconnect are handled generically by
 // routes/integrations.ts. This file only keeps the OAuth callback (its URL
@@ -75,7 +75,7 @@ export const githubApp = new Hono()
   })
   // DB-only counterpart to /resolve: never calls the GitHub API, so an
   // untracked URL simply resolves to `{ task: null }`.
-  .get('/link', zValidator('query', linkQuerySchema), async (c) => {
+  .get('/link', zValidator('query', githubLinkLookupQuerySchema), async (c) => {
     const { url } = c.req.valid('query')
 
     const result = await parseGithubIssueUrl(url).asyncAndThen((ref) =>
