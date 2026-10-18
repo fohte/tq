@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+import {
+  githubLinkLookupQuerySchema,
+  githubLinkLookupResponseSchema,
+  githubLinkLookupTaskResponseSchema,
+} from '#schemas/github-link'
 import { createTaskSchema } from '#schemas/task'
 import { createTaskResponseSchema } from '#schemas/task-response'
 import { taskStatusChangedWebhookEventSchema } from '#schemas/webhook'
@@ -13,16 +18,33 @@ const createTaskResponseJsonSchema = z.toJSONSchema(createTaskResponseSchema, {
   target: 'openapi-3.0',
   io: 'input',
 })
-const githubLinkLookupQueryUrlSchema = z.toJSONSchema(z.string().min(1), {
-  target: 'openapi-3.0',
-  io: 'input',
-})
-const githubLinkLookupResponseSchema = z.toJSONSchema(
-  z.object({
-    task: createTaskResponseSchema.omit({ linkSync: true }).nullable(),
-  }),
-  { target: 'openapi-3.0', io: 'input' },
+const githubLinkLookupQueryUrlSchema = z.toJSONSchema(
+  githubLinkLookupQuerySchema.shape.url,
+  {
+    target: 'openapi-3.0',
+    io: 'input',
+  },
 )
+const githubLinkLookupTaskResponseJsonSchema = z.toJSONSchema(
+  githubLinkLookupTaskResponseSchema,
+  {
+    target: 'openapi-3.0',
+    io: 'input',
+  },
+)
+const githubLinkLookupResponseJsonSchema = {
+  ...z.toJSONSchema(githubLinkLookupResponseSchema, {
+    target: 'openapi-3.0',
+    io: 'input',
+  }),
+  properties: {
+    task: {
+      type: 'object',
+      nullable: true,
+      allOf: [{ $ref: '#/components/schemas/GithubLinkLookupTaskResponse' }],
+    },
+  },
+}
 const taskStatusChangedWebhookEventJsonSchema = z.toJSONSchema(
   taskStatusChangedWebhookEventSchema,
   { target: 'openapi-3.0', io: 'input' },
@@ -93,7 +115,8 @@ export const openApiDocument = {
     schemas: {
       CreateTaskRequest: createTaskRequestSchema,
       CreateTaskResponse: createTaskResponseJsonSchema,
-      GithubLinkLookupResponse: githubLinkLookupResponseSchema,
+      GithubLinkLookupTaskResponse: githubLinkLookupTaskResponseJsonSchema,
+      GithubLinkLookupResponse: githubLinkLookupResponseJsonSchema,
       TaskStatusChangedWebhookEvent: taskStatusChangedWebhookEventJsonSchema,
     },
   },
