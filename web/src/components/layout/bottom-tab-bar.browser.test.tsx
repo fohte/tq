@@ -224,7 +224,7 @@ describe('BottomTabBar', () => {
     expect(dividerDimensions).toBe('12px|12px|0px|1px')
   })
 
-  it('marks a nested route as current and preserves its selected appearance', async () => {
+  it('marks a nested route and preserves navigation colors', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     await renderBottomTabBar({ currentPath: '/tasks/example' })
     const nav = screen.getByRole('navigation')
@@ -235,6 +235,9 @@ describe('BottomTabBar', () => {
         current: item.getAttribute('aria-current'),
         selectedBorder: item.classList.contains('border-t-primary'),
         selectedText: item.classList.contains('text-foreground'),
+        mutedText: item.classList.contains('text-muted-foreground'),
+        faintText: item.classList.contains('text-muted-foreground-faint'),
+        destructiveHover: item.classList.contains('hover:text-destructive'),
       }),
     )
 
@@ -244,36 +247,54 @@ describe('BottomTabBar', () => {
         current: null,
         selectedBorder: false,
         selectedText: false,
+        mutedText: false,
+        faintText: true,
+        destructiveHover: false,
       },
       {
         label: 'today',
         current: null,
         selectedBorder: false,
         selectedText: false,
+        mutedText: false,
+        faintText: true,
+        destructiveHover: false,
       },
       {
         label: 'calendar',
         current: null,
         selectedBorder: false,
         selectedText: false,
+        mutedText: false,
+        faintText: true,
+        destructiveHover: false,
       },
       {
         label: 'tasks',
         current: 'page',
         selectedBorder: true,
         selectedText: true,
+        mutedText: false,
+        faintText: false,
+        destructiveHover: false,
       },
       {
         label: 'search',
         current: null,
         selectedBorder: false,
         selectedText: false,
+        mutedText: true,
+        faintText: false,
+        destructiveHover: true,
       },
       {
         label: 'new',
         current: null,
         selectedBorder: false,
         selectedText: false,
+        mutedText: true,
+        faintText: false,
+        destructiveHover: true,
       },
     ])
   })

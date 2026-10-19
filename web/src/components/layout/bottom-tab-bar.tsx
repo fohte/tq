@@ -37,6 +37,9 @@ interface BottomTabBarProps {
 const itemClassName =
   'w-full border-t-2 bg-transparent [&_[data-slot=bottom-navigation-icon]]:size-5 [&_[data-slot=bottom-navigation-label]]:font-mono [&_[data-slot=bottom-navigation-label]]:text-2xs [&_[data-slot=bottom-navigation-label]]:tracking-wider'
 
+const actionItemColorClassName =
+  'border-t-transparent text-muted-foreground hover:text-destructive'
+
 function getItemColorClassName(selected: boolean) {
   return selected
     ? 'border-t-primary text-foreground hover:text-foreground'
@@ -68,7 +71,7 @@ export function BottomTabBar({ onSearch, onNewTask }: BottomTabBarProps) {
       onClick: onSearch,
       className: cn(
         itemClassName,
-        getItemColorClassName(false),
+        actionItemColorClassName,
         'before:absolute before:inset-y-3 before:left-0 before:w-px before:bg-border',
       ),
     },
@@ -78,7 +81,7 @@ export function BottomTabBar({ onSearch, onNewTask }: BottomTabBarProps) {
       label: 'new',
       icon: <Plus className="size-5" />,
       onClick: onNewTask,
-      className: cn(itemClassName, getItemColorClassName(false)),
+      className: cn(itemClassName, actionItemColorClassName),
     },
   ] satisfies ReadonlyArray<BottomNavigationItem>
 
