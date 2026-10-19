@@ -35,7 +35,7 @@ interface BottomTabBarProps {
 }
 
 const itemClassName =
-  'w-full border-t-2 bg-transparent [&_[data-slot=bottom-navigation-label]]:font-mono [&_[data-slot=bottom-navigation-label]]:text-2xs [&_[data-slot=bottom-navigation-label]]:tracking-wider'
+  'w-full border-t-2 bg-transparent [&_[data-slot=bottom-navigation-icon]]:size-5 [&_[data-slot=bottom-navigation-label]]:font-mono [&_[data-slot=bottom-navigation-label]]:text-2xs [&_[data-slot=bottom-navigation-label]]:tracking-wider'
 
 function getItemColorClassName(selected: boolean) {
   return selected
@@ -69,7 +69,7 @@ export function BottomTabBar({ onSearch, onNewTask }: BottomTabBarProps) {
       className: cn(
         itemClassName,
         getItemColorClassName(false),
-        'border-l border-border',
+        'before:absolute before:inset-y-3 before:left-0 before:w-px before:bg-border',
       ),
     },
     {

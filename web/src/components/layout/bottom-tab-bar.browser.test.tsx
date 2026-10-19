@@ -188,6 +188,42 @@ describe('BottomTabBar', () => {
     ])
   })
 
+  it('keeps all icons at their original 20px size', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    await renderBottomTabBar()
+    const nav = screen.getByRole('navigation')
+    const iconSizes = Array.from(
+      nav.querySelectorAll<SVGElement>(
+        '[data-slot="bottom-navigation-icon"] > svg',
+      ),
+      (icon) => {
+        const { width, height } = icon.getBoundingClientRect()
+        return { width, height }
+      },
+    )
+
+    expect(iconSizes).toEqual([
+      { width: 20, height: 20 },
+      { width: 20, height: 20 },
+      { width: 20, height: 20 },
+      { width: 20, height: 20 },
+      { width: 20, height: 20 },
+      { width: 20, height: 20 },
+    ])
+  })
+
+  it('keeps the search divider inset from the item edges', async () => {
+    await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
+    await renderBottomTabBar()
+    const divider = getComputedStyle(
+      screen.getByRole('button', { name: 'search' }),
+      '::before',
+    )
+    const dividerDimensions = `${divider.top}|${divider.bottom}|${divider.left}|${divider.width}`
+
+    expect(dividerDimensions).toBe('12px|12px|0px|1px')
+  })
+
   it('marks a nested route as current and preserves its selected appearance', async () => {
     await page.viewport(MOBILE_VIEWPORT.width, MOBILE_VIEWPORT.height)
     await renderBottomTabBar({ currentPath: '/tasks/example' })
