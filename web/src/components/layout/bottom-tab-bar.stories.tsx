@@ -48,6 +48,13 @@ export const TasksActive: Story = {
   },
 }
 
+export const TodayActive: Story = {
+  name: 'the mobile tab bar highlights the today section',
+  args: {
+    currentPath: '/today',
+  },
+}
+
 export const BrowseActive: Story = {
   name: 'the mobile tab bar highlights the browse section',
   args: {

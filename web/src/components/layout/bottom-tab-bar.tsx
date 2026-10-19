@@ -1,4 +1,7 @@
-import { Button } from '@fohte/ui/button'
+import {
+  BottomNavigation,
+  type BottomNavigationItem,
+} from '@fohte/ui/bottom-navigation'
 import { Link, useMatchRoute } from '@tanstack/react-router'
 import {
   Calendar,
@@ -31,75 +34,60 @@ interface BottomTabBarProps {
   onNewTask: () => void
 }
 
-function Tab({ tab }: { tab: TabItem }) {
-  const matchRoute = useMatchRoute()
-  const isActive =
-    matchRoute({ to: tab.to, fuzzy: tab.exact !== true }) !== false
+const itemClassName =
+  'w-full border-t-2 bg-transparent [&_[data-slot=bottom-navigation-icon]]:size-5 [&_[data-slot=bottom-navigation-label]]:font-mono [&_[data-slot=bottom-navigation-label]]:text-2xs [&_[data-slot=bottom-navigation-label]]:tracking-wider'
 
-  return (
-    <Link
-      to={tab.to}
-      className={cn(
-        'flex min-h-11 flex-1 flex-col items-center justify-center gap-1 border-t-2',
-        isActive
-          ? 'border-t-primary text-foreground'
-          : 'border-t-transparent text-muted-foreground-faint',
-      )}
-    >
-      <tab.icon className="size-5" />
-      <span className="font-mono text-2xs tracking-wider">{tab.label}</span>
-    </Link>
-  )
-}
+const actionItemColorClassName =
+  'border-t-transparent text-muted-foreground hover:text-destructive'
 
-function ActionButton({
-  icon: Icon,
-  label,
-  onClick,
-  hasDivider = false,
-}: {
-  icon: LucideIcon
-  label: string
-  onClick: () => void
-  hasDivider?: boolean
-}) {
-  return (
-    <div className="relative flex min-h-11 flex-1 flex-col border-t-2 border-t-transparent">
-      {hasDivider && (
-        <span
-          aria-hidden="true"
-          className="absolute inset-y-3 left-0 w-px bg-border"
-        />
-      )}
-      <Button
-        onClick={onClick}
-        variant="plain"
-        className="min-h-0 flex-1 flex-col cursor-pointer"
-      >
-        <span className="flex flex-col items-center gap-1">
-          <Icon className="size-5" />
-          <span className="font-mono text-2xs tracking-wider">{label}</span>
-        </span>
-      </Button>
-    </div>
-  )
+function getItemColorClassName(selected: boolean) {
+  return selected
+    ? 'border-t-primary text-foreground hover:text-foreground'
+    : 'border-t-transparent text-muted-foreground-faint hover:text-muted-foreground-faint'
 }
 
 export function BottomTabBar({ onSearch, onNewTask }: BottomTabBarProps) {
+  const matchRoute = useMatchRoute()
+  const items = [
+    ...tabs.map((tab): BottomNavigationItem => {
+      const selected =
+        matchRoute({ to: tab.to, fuzzy: tab.exact !== true }) !== false
+
+      return {
+        id: tab.to,
+        type: 'link',
+        label: tab.label,
+        icon: <tab.icon className="size-5" />,
+        selected,
+        className: cn(itemClassName, getItemColorClassName(selected)),
+        renderLink: (props) => <Link to={tab.to} {...props} />,
+      }
+    }),
+    {
+      id: 'search',
+      type: 'button',
+      label: 'search',
+      icon: <Search className="size-5" />,
+      onClick: onSearch,
+      className: cn(
+        itemClassName,
+        actionItemColorClassName,
+        'before:absolute before:inset-y-3 before:left-0 before:w-px before:bg-border',
+      ),
+    },
+    {
+      id: 'new',
+      type: 'button',
+      label: 'new',
+      icon: <Plus className="size-5" />,
+      onClick: onNewTask,
+      className: cn(itemClassName, actionItemColorClassName),
+    },
+  ] satisfies ReadonlyArray<BottomNavigationItem>
+
   return (
-    <nav className="sticky bottom-0 flex shrink-0 flex-col border-t border-border bg-background md:hidden">
-      <div className="flex h-13 items-stretch">
-        {tabs.map((tab) => (
-          <Tab key={tab.to} tab={tab} />
-        ))}
-        <ActionButton
-          icon={Search}
-          label="search"
-          onClick={onSearch}
-          hasDivider
-        />
-        <ActionButton icon={Plus} label="new" onClick={onNewTask} />
-      </div>
-    </nav>
+    <div className="sticky bottom-0 shrink-0 border-t border-border bg-background md:hidden">
+      <BottomNavigation aria-label="Primary navigation" items={items} />
+    </div>
   )
 }
