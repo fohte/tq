@@ -381,12 +381,14 @@ which owns the one canonical width, `w-60` (240px) — callers render
 `w-[236px]`; there was no reason for a task's sidebar to be 4px narrower
 than a project's.
 
-The global nav rail (`layout/sidebar.tsx`, `w-50`/200px) and the mobile
-`BottomTabBar` height (`h-13`/52px) are both plain literals on their
-components — neither has a second consumer to justify extracting a shared
-constant. The sidebar rail's test pins its literal independently (asserting
-the full class string) rather than importing it, since a test importing the
-exact value it's meant to verify can never catch that value regressing.
+The global nav rail (`layout/sidebar.tsx`, `w-50`/200px) remains a plain
+literal on its component because it has no second consumer to justify
+extracting a shared constant. The mobile `BottomTabBar` uses the shared
+`@fohte/ui` `BottomNavigation`, which gives each item a 52px minimum height;
+`BottomTabBar` owns its placement in the app layout. The sidebar rail's test
+pins its literal independently (asserting the full class string) rather than
+importing it, since a test importing the exact value it's meant to verify can
+never catch that value regressing.
 
 The same defect showed up once more in the page/task editors: `MarkdownEditor`,
 `HtmlPageEditor`, and `HtmlPageViewer` (`web/src/components/ui/`) had no
