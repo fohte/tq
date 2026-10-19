@@ -12,6 +12,7 @@ permissions:
   contents: read
 
 jobs:
+<<<<<<< before updating
   # vitest's shard sequencer sorts specs by sha1(file path) and slices ranges
   # off that order — it never looks at which `--project` a spec belongs to.
   # Running both `storybook` and `storybook-mobile` in one `vitest` invocation
@@ -28,7 +29,66 @@ jobs:
       matrix:
         project: [storybook, storybook-mobile]
         shard: [1, 2]
+||||||| last update
+  detect-changes-web:
+    runs-on: ubuntu-slim
+    outputs:
+      changed: ${{ steps.changes.outputs.any_modified }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Check for changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        id: changes
+        with:
+          files: |
+            web/**
+            .github/workflows/vrt.yml
+            package.json
+            pnpm-lock.yaml
+            pnpm-workspace.yaml
+
+  capture-web:
+    needs: detect-changes-web
+    if: needs.detect-changes-web.outputs.changed == 'true'
+=======
+  detect-changes-web:
+    runs-on: ubuntu-slim
+    timeout-minutes: 30
+    outputs:
+      changed: ${{ steps.changes.outputs.any_modified }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Check for changes
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        id: changes
+        with:
+          files: |
+            web/**
+            .github/workflows/vrt.yml
+            package.json
+            pnpm-lock.yaml
+            pnpm-workspace.yaml
+
+  capture-web:
+    needs: detect-changes-web
+    if: needs.detect-changes-web.outputs.changed == 'true'
+>>>>>>> after updating
     runs-on: ubuntu-latest
+<<<<<<< before updating
+||||||| last update
+    permissions:
+      contents: read
+=======
+    timeout-minutes: 30
+    permissions:
+      contents: read
+>>>>>>> after updating
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -36,9 +96,49 @@ jobs:
 
       - uses: fohte/storybook-vrt-workflows/vrt-capture@a793831ba144b09649eec6b8b8082655a84f459d # v0.2.1
         with:
+<<<<<<< before updating
           project: ${{ matrix.project }}
           shard: ${{ matrix.shard }}
           shards: 2
+||||||| last update
+          path: |
+            ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+
+      - run: pnpm install --filter "web..." --frozen-lockfile
+
+      # project must match the `name` passed to createStorybookProject() in
+      # vitest.screenshot.config.ts, and stay unique across every vrt_pkgs
+      # entry -- vrt-capture's upload-artifact step names the artifact
+      # `vrt-screenshots-<project>-<shard>`, and a workflow run can't upload
+      # two artifacts with the same name.
+      - uses: fohte/storybook-vrt-workflows/vrt-capture@9a6313f4cbaba30b44a6a910e0656d5876743bf3 # v0.2.0
+        with:
+          project: storybook-screenshot-web
+          shard: 1
+          shards: 1
+          capture-script: storybook:screenshot
+=======
+          path: |
+            ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+
+      - run: pnpm install --filter "web..." --frozen-lockfile
+
+      # project must match the `name` passed to createStorybookProject() in
+      # vitest.screenshot.config.ts, and stay unique across every vrt_pkgs
+      # entry -- vrt-capture's upload-artifact step names the artifact
+      # `vrt-screenshots-<project>-<shard>`, and a workflow run can't upload
+      # two artifacts with the same name.
+      - uses: fohte/storybook-vrt-workflows/vrt-capture@a793831ba144b09649eec6b8b8082655a84f459d # v0.2.1
+        with:
+          project: storybook-screenshot-web
+          shard: 1
+          shards: 1
+          capture-script: storybook:screenshot
+>>>>>>> after updating
           package-dir: web
           capture-script: test:storybook:capture
 
@@ -51,6 +151,7 @@ jobs:
   report:
     needs: shard
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       pull-requests: write
@@ -67,6 +168,23 @@ jobs:
 
       - uses: ./.github/actions/setup-workspace
 
+<<<<<<< before updating
+||||||| last update
+      # Only one `<project_name>-vrt` R2 bucket is provisioned per repo, and
+      # vrt-report's storage keys (baseline/, branch/<branch>/) carry no
+      # per-project segment -- if more than one vrt_pkgs entry exists, their
+      # reports overwrite each other in this bucket. Keep vrt: true on a
+      # single subpackage until fohte/storybook-vrt-workflows adds a key
+      # prefix input.
+      - uses: fohte/storybook-vrt-workflows/vrt-report@9a6313f4cbaba30b44a6a910e0656d5876743bf3 # v0.2.0
+=======
+      # Only one `<project_name>-vrt` R2 bucket is provisioned per repo, and
+      # vrt-report's storage keys (baseline/, branch/<branch>/) carry no
+      # per-project segment -- if more than one vrt_pkgs entry exists, their
+      # reports overwrite each other in this bucket. Keep vrt: true on a
+      # single subpackage until fohte/storybook-vrt-workflows adds a key
+      # prefix input.
+>>>>>>> after updating
       - uses: fohte/storybook-vrt-workflows/vrt-report@a793831ba144b09649eec6b8b8082655a84f459d # v0.2.1
         with:
           package-dir: web
