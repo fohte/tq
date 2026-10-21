@@ -28,8 +28,8 @@ minimumReleaseAge: 10080
 # First-party scopes: publisher account is trusted, so skip the release-age delay.
 minimumReleaseAgeExclude:
   - '@fohte/*'
-  # Renovate security update: vite@7.3.5
-  - vite@7.3.5
+  # Renovate security update: vite@7.3.5 || 8.3.3
+  - vite@7.3.5 || 8.3.3
   # Renovate security update: hono@4.12.25 || 4.12.27 || 4.12.34
   - hono@4.12.25 || 4.12.27 || 4.12.34
   # Renovate security update: @hono/node-server@1.19.15
