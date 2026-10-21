@@ -30,6 +30,32 @@ function operationOutputSnapshot(
   return { ...operationSnapshot(exitCode, call), stdout }
 }
 
+function operationErrorSnapshot(
+  exitCode: number,
+  call: Parameters<typeof request>[0],
+  stdout: unknown,
+  stderr: unknown,
+) {
+  return { ...operationSnapshot(exitCode, call), stdout, stderr }
+}
+
+function commandOutputSnapshot(
+  exitCode: number,
+  output: Record<string, unknown>,
+  stdout: unknown,
+  stderr: unknown,
+) {
+  return { exitCode, ...output, stdout, stderr }
+}
+
+function commandHelpSnapshot(
+  exitCode: number,
+  stdout: unknown,
+  stderr: unknown,
+) {
+  return { exitCode, stdout, stderr }
+}
+
 describe('task create', () => {
   it('sends only the title when no optional flags are given and prints the response', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
@@ -630,74 +656,283 @@ describe('task update', () => {
 })
 
 describe('task delete', () => {
-  it('prints a deletion confirmation', async () => {
+  const task = {
+    id: '11111111-1111-4111-8111-111111111111',
+    number: 987654321,
+    title: 'Imaginary cleanup task',
+  }
+  const warnings = [
+    "Permanent deletion removes this task, its pages, and its comments. Child tasks are reparented to this task's parent.",
+    'To cancel work while keeping its task number and comments, use task complete <id> --reason not_planned.',
+  ]
+
+  it('shows the resolved task and deletion impact without sending DELETE', async () => {
+    const responses = [new Response(JSON.stringify(task), { status: 200 })]
     const { fetchStub, calls } = captureFetch(
-      () => new Response(null, { status: 204 }),
+      () => responses.shift() ?? new Response(null, { status: 500 }),
     )
     const write = spyStdout()
+    const stderr = spyStderr()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'delete', '42'],
+      ['--api-url', apiUrl, 'task', 'delete', String(task.number)],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'DELETE',
-      pathname: '/api/tasks/42',
-      query: {},
-      body: undefined,
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { requests: calls.map(request) },
+        write.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${String(task.number)}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [
+        [
+          `${JSON.stringify(
+            {
+              deleted: false,
+              task,
+              warnings,
+              confirmWith: `tq task delete ${String(task.number)} --confirm-delete ${String(task.number)}`,
+            },
+            null,
+            2,
+          )}\n`,
+        ],
+      ],
+      stderr: [],
     })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify({ deleted: true, id: '42' }, null, 2)}\n`],
-    ])
+  })
+
+  it('does not send DELETE when the confirmation resolves to another task', async () => {
+    const otherTask = {
+      id: '22222222-2222-4222-8222-222222222222',
+      number: 987654322,
+      title: 'Imaginary separate task',
+    }
+    const responses = [
+      new Response(JSON.stringify(task), { status: 200 }),
+      new Response(JSON.stringify(otherTask), { status: 200 }),
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    const stderr = spyStderr()
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'delete',
+        String(task.number),
+        '--confirm-delete',
+        otherTask.id,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { requests: calls.map(request) },
+        write.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${String(task.number)}`,
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${otherTask.id}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [],
+      stderr: [
+        [
+          `Error: --confirm-delete resolved to task #${String(otherTask.number)} "${otherTask.title}", not task #${String(task.number)} "${task.title}". No task was deleted.\n${warnings.join('\n')}\n`,
+        ],
+      ],
+    })
+  })
+
+  it('does not send DELETE when the confirmation lookup fails', async () => {
+    const responses = [
+      new Response(JSON.stringify(task), { status: 200 }),
+      Response.json({ error: 'Task not found' }, { status: 404 }),
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    const stderr = spyStderr()
+    const write = spyStdout()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'delete',
+        String(task.number),
+        '--confirm-delete',
+        '987654323',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { requests: calls.map(request) },
+        write.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${String(task.number)}`,
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: '/api/tasks/987654323',
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [],
+      stderr: [['Error: Task not found (HTTP 404)\n']],
+    })
+  })
+
+  it('deletes the resolved task when the confirmation matches by UUID and number', async () => {
+    const refreshedTask = {
+      ...task,
+      number: task.number + 1,
+      title: 'Imaginary refreshed cleanup task',
+    }
+    const responses = [
+      new Response(JSON.stringify(task), { status: 200 }),
+      new Response(JSON.stringify(refreshedTask), { status: 200 }),
+      new Response(null, { status: 204 }),
+    ]
+    const { fetchStub, calls } = captureFetch(
+      () => responses.shift() ?? new Response(null, { status: 500 }),
+    )
+    const write = spyStdout()
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'delete',
+        String(task.number),
+        '--confirm-delete',
+        task.id,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { requests: calls.map(request) },
+        write.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${String(task.number)}`,
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${task.id}`,
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'DELETE',
+          pathname: `/api/tasks/${task.id}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [
+        [
+          `${JSON.stringify(
+            { deleted: true, task: refreshedTask, warnings },
+            null,
+            2,
+          )}\n`,
+        ],
+      ],
+      stderr: [],
+    })
   })
 })
 
-describe('task status', () => {
-  it('sends the validated status and prints the response', async () => {
-    const updated = { id: 't1', number: 1, status: 'completed' }
+describe('task reopen', () => {
+  it('sets a task to todo', async () => {
+    const updated = {
+      id: '11111111-1111-4111-8111-111111111111',
+      status: 'todo',
+    }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(updated), { status: 200 }),
     )
     const write = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'status', '42', 'completed'],
+      ['--api-url', apiUrl, 'task', 'reopen', '987654321'],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'PATCH',
-      pathname: '/api/tasks/42/status',
-      query: {},
-      body: { status: 'completed' },
+    expect(
+      operationOutputSnapshot(exitCode, calls[0], write.mock.calls),
+    ).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'PATCH',
+        pathname: '/api/tasks/987654321/status',
+        query: {},
+        body: { status: 'todo' },
+      },
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
     })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(updated, null, 2)}\n`],
-    ])
-  })
-
-  it('rejects an invalid status before making any fetch call and reports the error on stderr', async () => {
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify({}), { status: 200 }),
-    )
-    const stderr = spyStderr()
-
-    const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'status', '42', 'bogus'],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(exitCode).toBe(1)
-    expect(calls.length).toBe(0)
-    expect(stderr.mock.calls).toEqual([
-      ['Error: Invalid option: expected one of "todo"|"completed"\n'],
-    ])
   })
 })
 
@@ -776,12 +1011,14 @@ describe('task complete', () => {
       `0
 Usage: tq task complete [options] <id>
 
-Complete a task
+Complete a task. LLM authors must choose --reason explicitly.
 
 Options:
-  --reason <reason>        Why the task is being closed (completed, not_planned,
-                           duplicate); defaults to completed (choices:
-                           "completed", "not_planned", "duplicate")
+  --reason <reason>        Reason for closing: completed for work that is done,
+                           not_planned when work will not be done, or duplicate
+                           when another task tracks the same work. Required for
+                           LLM authors. (choices: "completed", "not_planned",
+                           "duplicate")
   --duplicate-of <taskId>  Task id or number this task is a duplicate of (only
                            used when --reason duplicate)
   -h, --help               display help for command
@@ -789,33 +1026,55 @@ Options:
     )
   })
 
-  it('sends an empty body and prints the whole response', async () => {
-    const completed = {
-      id: 't1',
-      number: 1,
-      status: 'completed',
-    }
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(completed), { status: 200 }),
+  it('lets the API reject an LLM completion without a reason', async () => {
+    const { fetchStub, calls } = captureFetch(() =>
+      Response.json(
+        {
+          error:
+            'LLM-authored completions require an explicit statusReason: "completed" for work that is done, "not_planned" when work will not be done, or "duplicate" when another task tracks the same work.',
+        },
+        { status: 400 },
+      ),
     )
-    const write = spyStdout()
+    const stderr = spyStderr()
+    const stdout = spyStdout()
 
     const exitCode = await runCli(
-      ['--api-url', apiUrl, 'task', 'complete', '42'],
+      [
+        '--api-url',
+        apiUrl,
+        '--author',
+        'fictional-agent',
+        'task',
+        'complete',
+        '987654321',
+      ],
       fetchStub,
       fakeStdin(true),
     )
 
-    expect(exitCode).toBe(0)
-    expect(request(calls[0])).toEqual({
-      method: 'POST',
-      pathname: '/api/tasks/42/complete',
-      query: {},
-      body: {},
+    expect(
+      operationErrorSnapshot(
+        exitCode,
+        calls[0],
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks/987654321/complete',
+        query: {},
+        body: {},
+      },
+      stdout: [],
+      stderr: [
+        [
+          'Error: LLM-authored completions require an explicit statusReason: "completed" for work that is done, "not_planned" when work will not be done, or "duplicate" when another task tracks the same work. (HTTP 400)\n',
+        ],
+      ],
     })
-    expect(write.mock.calls).toEqual([
-      [`${JSON.stringify(completed, null, 2)}\n`],
-    ])
   })
 
   it('sends the parsed --reason as statusReason', async () => {
@@ -926,6 +1185,89 @@ Options:
     )
 
     expect(exitCode).not.toBe(0)
+  })
+})
+
+describe('task help', () => {
+  it('documents task states, closure reasons, and command migrations', async () => {
+    const stdout = spyStdout()
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(['task', '--help'], fetch, fakeStdin(true))
+
+    expect(
+      commandHelpSnapshot(exitCode, stdout.mock.calls, stderr.mock.calls),
+    ).toEqual({
+      exitCode: 0,
+      stdout: [
+        [
+          `Usage: tq task [options] [command]
+
+Manage tasks. Status is todo or completed. Closure reasons are completed for
+work that is done, not_planned when work will not be done, or duplicate when
+another task tracks the same work. Use task complete --reason to close or task
+reopen to return to todo.
+
+Options:
+  -h, --help                display help for command
+
+Commands:
+  list [options]            List tasks by status, project, parent, context, or
+                            other supported filters, including an optional
+                            free-text query. Descriptions are omitted by
+                            default; set full to include them.
+  get <id>                  Get a task's full detail: attributes, recurrence
+                            rule, time blocks, page metadata and short previews,
+                            checklist trees and leaf-item progress, linked tasks
+                            (mentions or pasted task URLs, as
+                            links.outgoing/links.incoming), labels, and nested
+                            subtask summaries. Subtask descriptions are omitted;
+                            use task_get (or CLI: task get) on a subtask to
+                            retrieve its description. Page bodies are available
+                            through page_get.
+  url <id>                  Print a task's web URL.
+  create [options] <title>  Create a task
+  update [options] <id>     Update a task
+  delete [options] <id>     Show the task and deletion impact; use
+                            --confirm-delete <id> to proceed only for that task
+  reopen <id>               Return a completed task to todo
+  parent <id> [parentId]    Set or clear a task's parent (omit parentId to clear
+                            it)
+  complete [options] <id>   Complete a task. LLM authors must choose --reason
+                            explicitly.
+  search [options] [query]  Search tasks using the TQ search bar query syntax.
+                            The q string matches title, description, and page
+                            content, and accepts filter tokens that combine with
+                            free text: is:todo|completed (repeat is: to match
+                            multiple statuses),
+                            reason:completed|not_planned|duplicate, label:<name>
+                            (also matches descendants under a /-separated path),
+                            context:work|personal,
+                            commitment:inbox|active|someday,
+                            has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
+                            parent:<uuid|number>|root, project:<uuid|title>, and
+                            sort:due|created|updated. has:follow-up-due matches
+                            tasks with an unresolved wait whose follow-up date
+                            is today or earlier in the client timezone.
+                            has:resolved-wait matches tasks with a resolved wait
+                            that has not been acknowledged and is available
+                            through q. Search filters with corresponding fields
+                            in the task search schema can also be sent as
+                            explicit parameters. For example, q: "is:todo
+                            label:example context:work planning" finds matching
+                            todo tasks whose title, description, or pages
+                            mention planning. Task descriptions are omitted from
+                            results by default; set full to include them.
+  activity <id>             Get the activity history of a task.
+  sessions <id>             List agent sessions linked to a task.
+  from-github <url>         Create a task from a GitHub issue or pull request
+                            URL
+  help [command]            display help for command
+`,
+        ],
+      ],
+      stderr: [],
+    })
   })
 })
 

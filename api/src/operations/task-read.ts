@@ -250,7 +250,11 @@ export const taskReadOperations = [
     routes: ['GET /api/tasks'],
     mcpInputSchema: taskListMcpInputSchema,
     cli: {
-      group: { description: 'Manage tasks', order: 1 },
+      group: {
+        description:
+          'Manage tasks. Status is todo or completed. Closure reasons are completed for work that is done, not_planned when work will not be done, or duplicate when another task tracks the same work. Use task complete --reason to close or task reopen to return to todo.',
+        order: 1,
+      },
       commandOrder: 0,
       excludeFields: ['tzOffset'],
       envDefaults: { context: 'TQ_CONTEXT' },

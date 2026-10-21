@@ -196,8 +196,16 @@ describe('tasks actions API', () => {
     it('records the author from the X-Author header', async () => {
       const task = await createTask('Task')
 
-      await setStatus(task.id, 'completed', {
-        'X-Author': 'llm:claude-opus-5',
+      await app.request(`/api/tasks/${task.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Author': 'llm:sample-agent',
+        },
+        body: JSON.stringify({
+          status: 'completed',
+          statusReason: 'completed',
+        }),
       })
 
       expect(await fetchTaskEvents(task.id)).toEqual([
@@ -211,7 +219,7 @@ describe('tasks actions API', () => {
           githubNumber: null,
           githubKind: null,
           authorKind: 'llm',
-          authorAgent: 'claude-opus-5',
+          authorAgent: 'sample-agent',
         },
       ])
     })
@@ -1087,16 +1095,17 @@ describe('tasks actions API', () => {
     async function completeTask(
       taskId: string,
       method: 'PATCH' | 'POST',
-      statusReason?: 'completed' | 'not_planned' | 'duplicate',
+      statusReason:
+        'completed' | 'not_planned' | 'duplicate' | null = 'completed',
       author = 'llm:completion-checker',
     ) {
       const body =
         method === 'PATCH'
           ? {
               status: 'completed',
-              ...(statusReason === undefined ? {} : { statusReason }),
+              ...(statusReason === null ? {} : { statusReason }),
             }
-          : statusReason === undefined
+          : statusReason === null
             ? {}
             : { statusReason }
       const route =
@@ -1112,6 +1121,46 @@ describe('tasks actions API', () => {
         body: JSON.stringify(body),
       })
     }
+
+    it('requires LLMs to specify a reason before either route can update the task', async () => {
+      const attempts = [
+        { method: 'PATCH' as const, title: 'Reason required through status' },
+        { method: 'POST' as const, title: 'Reason required through complete' },
+      ]
+      const actual = []
+      for (const attempt of attempts) {
+        const task = await createTask(attempt.title)
+        const res = await completeTask(task.id, attempt.method, null)
+        const body = await jsonBody<{ error: string }>(res)
+        const [storedTask] = await db
+          .select({ status: tasks.status, statusReason: tasks.statusReason })
+          .from(tasks)
+          .where(eq(tasks.id, task.id))
+        actual.push({
+          method: attempt.method,
+          status: res.status,
+          body,
+          task: storedTask,
+        })
+      }
+
+      const requiredReasonMessage =
+        'LLM-authored completions require an explicit statusReason: "completed" for work that is done, "not_planned" when work will not be done, or "duplicate" when another task tracks the same work.'
+      expect(actual).toEqual([
+        {
+          method: 'PATCH',
+          status: 400,
+          body: { error: requiredReasonMessage },
+          task: { status: 'todo', statusReason: null },
+        },
+        {
+          method: 'POST',
+          status: 400,
+          body: { error: requiredReasonMessage },
+          task: { status: 'todo', statusReason: null },
+        },
+      ])
+    })
 
     it('returns unchecked criteria for LLM completion through both routes', async () => {
       const description = [
@@ -1433,13 +1482,13 @@ describe('tasks actions API', () => {
           method: 'PATCH' as const,
           title: 'Human status task',
           author: 'human',
-          statusReason: undefined,
+          statusReason: null,
         },
         {
           method: 'POST' as const,
           title: 'Human complete task',
           author: 'human',
-          statusReason: undefined,
+          statusReason: null,
         },
         {
           method: 'PATCH' as const,
@@ -1539,7 +1588,7 @@ describe('tasks actions API', () => {
       const retryTask = await createTask('Completed retry task', {
         description: '- [ ] Verify the result',
       })
-      await completeTask(retryTask.id, 'PATCH', undefined, 'human')
+      await completeTask(retryTask.id, 'PATCH', null, 'human')
       const retryRes = await completeTask(retryTask.id, 'PATCH')
       const [retryTaskState] = await db
         .select({ status: tasks.status, statusReason: tasks.statusReason })

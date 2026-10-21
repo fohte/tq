@@ -25,6 +25,7 @@ import { syncChecklistItemWithSubtaskStatus } from '#services/task-checklist-sub
 import {
   checkTaskComplete,
   taskConventionViolationBody,
+  taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
 import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
 
@@ -43,6 +44,9 @@ export const tasksCompleteApp = new Hono().post(
     const id = existing.id
     const author = c.get('author')
     const { statusReason, duplicateOfTaskId } = c.req.valid('json')
+    if (statusReason === undefined && author.kind === 'llm') {
+      return c.json({ error: taskStatusReasonRequiredMessage }, 400)
+    }
     const reason = statusReason ?? 'completed'
     let duplicateTarget: DuplicateTaskSummary | null = null
 

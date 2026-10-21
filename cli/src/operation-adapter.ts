@@ -104,6 +104,20 @@ function printWebUrl(
   })
 }
 
+function addUnknownCommandHelp(group: Command, groupName: string): void {
+  group.on('command:*', (operands: string[]) => {
+    const unknownCommand = operands[0] ?? ''
+    const migration =
+      groupName === 'task' && unknownCommand === 'status'
+        ? "\nThe task status command no longer sends updates. Use 'task reopen <id>' to return to todo or 'task complete <id> --reason <reason>' to close."
+        : ''
+    group.error(
+      `error: unknown command '${unknownCommand}'${migration}\nRun 'tq ${groupName} --help' for available commands.`,
+      { code: 'commander.unknownCommand' },
+    )
+  })
+}
+
 type OperationInput =
   Record<string, unknown> | (() => Result<Record<string, unknown>, Error>)
 
@@ -285,6 +299,7 @@ export function registerOperations(
       stdin,
       handlers,
     )
+    addUnknownCommandHelp(group, groupName)
   }
 }
 

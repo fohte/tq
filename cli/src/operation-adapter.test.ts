@@ -178,7 +178,7 @@ describe('registerOperations', () => {
           'create',
           'update',
           'delete',
-          'status',
+          'reopen',
           'parent',
           'complete',
           'search',
