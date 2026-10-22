@@ -902,16 +902,23 @@ describe('task delete', () => {
       ],
       sequence: ['GET', 'GET', 'stderr', 'DELETE', 'stdout'],
       stdout: [
+        [`${JSON.stringify({ deleted: true, id: task.id }, null, 2)}\n`],
+      ],
+      stderr: [
         [
           `${JSON.stringify(
-            { deleted: true, task: refreshedTask, warnings },
+            {
+              kind: 'task-delete',
+              task: {
+                number: refreshedTask.number,
+                title: refreshedTask.title,
+              },
+              warnings,
+            },
             null,
             2,
           )}\n`,
         ],
-      ],
-      stderr: [
-        [`${JSON.stringify({ task: refreshedTask, warnings }, null, 2)}\n`],
       ],
     })
   })
@@ -991,7 +998,20 @@ describe('task delete', () => {
       sequence: ['GET', 'GET', 'warning', 'DELETE', 'error'],
       stdout: [],
       stderr: [
-        [`${JSON.stringify({ task: refreshedTask, warnings }, null, 2)}\n`],
+        [
+          `${JSON.stringify(
+            {
+              kind: 'task-delete',
+              task: {
+                number: refreshedTask.number,
+                title: refreshedTask.title,
+              },
+              warnings,
+            },
+            null,
+            2,
+          )}\n`,
+        ],
         ['Error: Task could not be deleted (HTTP 409)\n'],
       ],
     })

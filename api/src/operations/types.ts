@@ -20,8 +20,14 @@ export type OperationError =
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
 
+export type OperationPreflight = {
+  kind: 'task-delete'
+  task: { number: number; title: string }
+  warnings: readonly string[]
+}
+
 export type OperationRunContext = {
-  reportProgress?: (value: unknown) => void
+  reportPreflight?: (value: OperationPreflight) => void
 }
 
 export function omitKeyRecursively(value: unknown, key: string): unknown {

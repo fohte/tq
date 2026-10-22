@@ -264,8 +264,12 @@ export const taskWriteOperations = [
               })
             }
 
-            context?.reportProgress?.({
-              task: confirmedTask,
+            context?.reportPreflight?.({
+              kind: 'task-delete',
+              task: {
+                number: confirmedTask.number,
+                title: confirmedTask.title,
+              },
               warnings: taskDeleteWarnings,
             })
 
@@ -273,11 +277,7 @@ export const taskWriteOperations = [
               client.api.tasks[':id'].$delete({
                 param: { id: encodePathSegment(confirmedTask.id) },
               }),
-            ).map(() => ({
-              deleted: true,
-              task: confirmedTask,
-              warnings: taskDeleteWarnings,
-            }))
+            ).map(() => ({ deleted: true, id: confirmedTask.id }))
           },
         )
       }),

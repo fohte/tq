@@ -142,7 +142,7 @@ async function executeOperation(
   ignoreErrors: boolean,
 ): Promise<void> {
   const result = await operation.run(client, input, {
-    reportProgress: (value) => {
+    reportPreflight: (value) => {
       process.stderr.write(`${JSON.stringify(value, null, 2)}\n`)
     },
   })
