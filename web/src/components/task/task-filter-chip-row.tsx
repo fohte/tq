@@ -224,7 +224,7 @@ export function TaskFilterChipRow({
         <span aria-hidden="true">›</span>
       </label>
 
-      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
         {!disableStatusFilter &&
           parsed.status != null &&
           parsed.status.length > 0 && (
