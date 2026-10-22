@@ -141,7 +141,11 @@ async function executeOperation(
   fetchImpl: typeof fetch,
   ignoreErrors: boolean,
 ): Promise<void> {
-  const result = await operation.run(client, input)
+  const result = await operation.run(client, input, {
+    reportProgress: (value) => {
+      process.stderr.write(`${JSON.stringify(value, null, 2)}\n`)
+    },
+  })
   if (result.isErr()) {
     const operationError = result.error
     const error =

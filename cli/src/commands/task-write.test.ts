@@ -841,11 +841,21 @@ describe('task delete', () => {
       new Response(JSON.stringify(refreshedTask), { status: 200 }),
       new Response(null, { status: 204 }),
     ]
-    const { fetchStub, calls } = captureFetch(
-      () => responses.shift() ?? new Response(null, { status: 500 }),
-    )
+    const sequence: string[] = []
+    const { fetchStub, calls } = captureFetch(() => {
+      sequence.push(calls.at(-1)?.method ?? 'unknown')
+      return responses.shift() ?? new Response(null, { status: 500 })
+    })
     const write = spyStdout()
+    write.mockImplementation(() => {
+      sequence.push('stdout')
+      return true
+    })
     const stderr = spyStderr()
+    stderr.mockImplementation(() => {
+      sequence.push('stderr')
+      return true
+    })
 
     const exitCode = await runCli(
       [
@@ -864,7 +874,7 @@ describe('task delete', () => {
     expect(
       commandOutputSnapshot(
         exitCode,
-        { requests: calls.map(request) },
+        { requests: calls.map(request), sequence },
         write.mock.calls,
         stderr.mock.calls,
       ),
@@ -890,6 +900,7 @@ describe('task delete', () => {
           body: undefined,
         },
       ],
+      sequence: ['GET', 'GET', 'stderr', 'DELETE', 'stdout'],
       stdout: [
         [
           `${JSON.stringify(
@@ -899,7 +910,90 @@ describe('task delete', () => {
           )}\n`,
         ],
       ],
-      stderr: [],
+      stderr: [
+        [`${JSON.stringify({ task: refreshedTask, warnings }, null, 2)}\n`],
+      ],
+    })
+  })
+
+  it('shows the refreshed task and warnings before reporting a DELETE error', async () => {
+    const refreshedTask = {
+      ...task,
+      number: task.number + 1,
+      title: 'Imaginary refreshed cleanup task',
+    }
+    const responses = [
+      new Response(JSON.stringify(task), { status: 200 }),
+      new Response(JSON.stringify(refreshedTask), { status: 200 }),
+      Response.json({ error: 'Task could not be deleted' }, { status: 409 }),
+    ]
+    const sequence: string[] = []
+    const { fetchStub, calls } = captureFetch(() => {
+      sequence.push(calls.at(-1)?.method ?? 'unknown')
+      return responses.shift() ?? new Response(null, { status: 500 })
+    })
+    const write = spyStdout()
+    write.mockImplementation(() => {
+      sequence.push('stdout')
+      return true
+    })
+    const stderr = spyStderr()
+    let stderrWrites = 0
+    stderr.mockImplementation(() => {
+      stderrWrites += 1
+      sequence.push(stderrWrites === 1 ? 'warning' : 'error')
+      return true
+    })
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'delete',
+        String(task.number),
+        '--confirm-delete',
+        task.id,
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { requests: calls.map(request), sequence },
+        write.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${String(task.number)}`,
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'GET',
+          pathname: `/api/tasks/${task.id}`,
+          query: {},
+          body: undefined,
+        },
+        {
+          method: 'DELETE',
+          pathname: `/api/tasks/${task.id}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      sequence: ['GET', 'GET', 'warning', 'DELETE', 'error'],
+      stdout: [],
+      stderr: [
+        [`${JSON.stringify({ task: refreshedTask, warnings }, null, 2)}\n`],
+        ['Error: Task could not be deleted (HTTP 409)\n'],
+      ],
     })
   })
 })

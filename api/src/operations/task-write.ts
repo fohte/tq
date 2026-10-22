@@ -248,7 +248,7 @@ export const taskWriteOperations = [
       optionMetavars: { confirmDelete: 'id' },
       output: { kind: 'json' },
     },
-    run: (client, { taskId, confirmDelete }) =>
+    run: (client, { taskId, confirmDelete }, context) =>
       getTaskDeleteSummary(client, taskId).andThen((task) => {
         if (confirmDelete === undefined) return okAsync(taskDeletePreview(task))
 
@@ -263,6 +263,11 @@ export const taskWriteOperations = [
                 ].join('\n'),
               })
             }
+
+            context?.reportProgress?.({
+              task: confirmedTask,
+              warnings: taskDeleteWarnings,
+            })
 
             return requestNoContent(
               client.api.tasks[':id'].$delete({
