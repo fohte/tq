@@ -43,6 +43,10 @@ export type OperationCommandHandlers = Readonly<
   Record<string, OperationCommandHandler>
 >
 
+type RemovedCommandHints = Readonly<
+  Record<string, Readonly<Record<string, string>>>
+>
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -105,17 +109,13 @@ function printWebUrl(
 }
 
 type OperationRegistrationOptions = {
-  removedCommandHints?: Readonly<
-    Record<string, Readonly<Record<string, string>>>
-  >
+  removedCommandHints?: RemovedCommandHints
 }
 
 function addUnknownCommandHelp(
   group: Command,
   groupName: string,
-  removedCommandHints: Readonly<
-    Record<string, Readonly<Record<string, string>>>
-  >,
+  removedCommandHints: RemovedCommandHints,
 ): void {
   group.on('command:*', (operands: string[]) => {
     const unknownCommand = operands[0] ?? ''
