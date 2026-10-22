@@ -258,8 +258,8 @@ importers:
         version: 4.3.6
     devDependencies:
       '@modelcontextprotocol/sdk':
-        specifier: 1.31.0
-        version: 1.31.0(supports-color@10.2.2)(zod@4.3.6)
+        specifier: 1.32.0
+        version: 1.32.0(supports-color@10.2.2)(zod@4.3.6)
       '@types/web-push':
         specifier: 3.6.4
         version: 3.6.4
@@ -2590,8 +2590,8 @@ packages:
       '@cfworker/json-schema':
         optional: true
 
-  '@modelcontextprotocol/sdk@1.31.0':
-    resolution: {integrity: sha512-UvTMgnNlnIBO/22ob2RcVGDlcvOslQs8T59+FTGdA0L27a39fdGF/EDETNtDVK4DZGpwomlsYpRdA8UXcVL/pw==}
+  '@modelcontextprotocol/sdk@1.32.0':
+    resolution: {integrity: sha512-8BviX/hK4Gd2eL1KdTwm0gfl4d3wdoErW0Jd00h6nomUAtk6IJk5vwQJc6kfWtJTzN5OEV/lgIiJKI8fiDGAlA==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
@@ -12302,7 +12302,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/sdk@1.31.0(supports-color@10.2.2)(zod@4.3.6)':
+  '@modelcontextprotocol/sdk@1.32.0(supports-color@10.2.2)(zod@4.3.6)':
     dependencies:
       '@hono/node-server': 1.19.17(hono@4.12.34)
       ajv: 8.20.0
