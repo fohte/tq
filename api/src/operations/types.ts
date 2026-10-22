@@ -20,7 +20,7 @@ export type OperationError =
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
 
-export type OperationPreflight = {
+type OperationPreflight = {
   kind: 'task-delete'
   task: { number: number; title: string }
   warnings: readonly string[]
