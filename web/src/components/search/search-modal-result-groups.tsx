@@ -279,8 +279,8 @@ export function useSearchModalResultGroups({
         isVisible: (_query, itemCount) => itemCount > 0,
       },
       {
-        id: 'task-number',
-        title: 'Task number',
+        id: 'exact-task',
+        title: 'Exact task match',
         items: taskByIdOrNumberItems,
         isVisible: (_query, itemCount) => itemCount > 0,
       },
