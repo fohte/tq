@@ -20,6 +20,16 @@ export type OperationError =
   | { kind: 'http'; response: Response }
   | { kind: 'request'; error: Error }
 
+type OperationPreflight = {
+  kind: 'task-delete'
+  task: { number: number; title: string }
+  warnings: readonly string[]
+}
+
+export type OperationRunContext = {
+  reportPreflight?: (value: OperationPreflight) => void
+}
+
 export function omitKeyRecursively(value: unknown, key: string): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => omitKeyRecursively(item, key))
@@ -154,6 +164,7 @@ export interface OperationDefinition {
   run: (
     client: OperationClient,
     input: unknown,
+    context?: OperationRunContext,
   ) => ResultAsync<unknown, OperationError>
 }
 
@@ -170,6 +181,7 @@ type OperationConfig<Schema extends z.ZodObject, Output> = {
   run: (
     client: OperationClient,
     input: z.output<Schema>,
+    context?: OperationRunContext,
   ) => ResultAsync<Output, OperationError>
 }
 
@@ -184,12 +196,17 @@ export function defineOperation<
   run: (
     client: OperationClient,
     input: unknown,
+    context?: OperationRunContext,
   ) => ResultAsync<Output, OperationError>
 } {
   return {
     ...definition,
     inputSchema,
-    run(client, input) {
+    run(
+      client: OperationClient,
+      input: unknown,
+      context?: OperationRunContext,
+    ) {
       const parsed = inputSchema.safeParse(input)
       if (!parsed.success) {
         return errAsync({
@@ -197,7 +214,7 @@ export function defineOperation<
           message: formatInputIssues(parsed.error),
         })
       }
-      return definition.run(client, parsed.data)
+      return definition.run(client, parsed.data, context)
     },
   }
 }

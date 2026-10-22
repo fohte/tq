@@ -1,4 +1,4 @@
-import { err, ok } from 'neverthrow'
+import { err, errAsync, ok, okAsync } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
@@ -10,12 +10,12 @@ import {
 } from '#operations/recurrence-cli'
 import {
   defineOperation,
+  type OperationClient,
   requestJson,
   requestNoContent,
 } from '#operations/types'
 import {
   createTaskSchema,
-  taskStatus,
   taskStatusReason,
   updateTaskSchema,
 } from '#schemas/task'
@@ -24,9 +24,18 @@ const taskIdSchema = z.object({ taskId: taskIdOrNumber })
 const updateTaskInputSchema = updateTaskSchema.extend({
   taskId: taskIdOrNumber,
 })
-const taskStatusInputSchema = taskIdSchema.extend({ status: taskStatus })
 const taskStatusToolInputSchema = taskIdSchema.extend({
   status: z.literal('todo'),
+})
+const taskDeleteCliInputSchema = taskIdSchema.extend({
+  confirmDelete: taskIdOrNumber
+    .describe('Id or number of the task to confirm deleting')
+    .optional(),
+})
+const taskDeleteSummarySchema = z.object({
+  id: z.uuid(),
+  number: z.number(),
+  title: z.string(),
 })
 const taskParentInputSchema = taskIdSchema.extend({
   parentId: taskIdOrNumber.optional(),
@@ -39,6 +48,10 @@ const taskCompleteInputSchema = taskIdSchema.extend({
 })
 const fromGithubInputSchema = z.object({ url: z.string() })
 const fromGithubToolInputSchema = z.object({ url: z.string().min(1) })
+const taskDeleteWarnings = [
+  "Permanent deletion removes this task, its pages, and its comments. Child tasks are reparented to this task's parent.",
+  'To cancel work while keeping its task number and comments, use task complete <id> --reason not_planned.',
+]
 
 function mapCreateCliInput(
   input: Record<string, unknown>,
@@ -72,11 +85,29 @@ function mapUpdateCliInput(
   })
 }
 
-function mapTaskStatusCliInput(input: Record<string, unknown>) {
-  const parsed = taskStatusInputSchema.safeParse(input)
-  return parsed.success
-    ? ok(parsed.data)
-    : err(new Error(parsed.error.issues[0]?.message ?? 'Invalid value'))
+function getTaskDeleteSummary(
+  client: OperationClient,
+  taskId: string | number,
+) {
+  return requestJson(
+    client.api.tasks[':id'].$get({
+      param: { id: encodePathSegment(String(taskId)) },
+    }),
+  ).andThen((response) => {
+    const parsed = taskDeleteSummarySchema.safeParse(response)
+    return parsed.success
+      ? okAsync(parsed.data)
+      : errAsync({ kind: 'request' as const, error: parsed.error })
+  })
+}
+
+function taskDeletePreview(task: z.infer<typeof taskDeleteSummarySchema>) {
+  return {
+    deleted: false,
+    task,
+    warnings: taskDeleteWarnings,
+    confirmWith: `tq task delete ${String(task.number)} --confirm-delete ${String(task.number)}`,
+  }
 }
 
 export const taskWriteOperations = [
@@ -179,6 +210,11 @@ export const taskWriteOperations = [
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'delete',
     routes: ['DELETE /api/tasks/:id'],
+    surface: {
+      only: 'mcp',
+      reason:
+        'CLI deletion requires a confirmation lookup before the DELETE request.',
+    },
     cli: {
       commandOrder: 5,
       description: 'Delete a task',
@@ -191,7 +227,62 @@ export const taskWriteOperations = [
         }),
       ).map(() => ({ deleted: true, id: String(taskId) })),
   }),
-  defineOperation(taskStatusInputSchema, {
+  defineOperation(taskDeleteCliInputSchema, {
+    path: ['task', 'delete'],
+    description: 'Delete a task after showing its impact.',
+    positionalArgs: [{ name: 'id', field: 'taskId' }],
+    kind: 'delete',
+    routes: ['GET /api/tasks/:id', 'DELETE /api/tasks/:id'],
+    surface: {
+      only: 'cli',
+      reason: 'MCP keeps the direct task_delete operation.',
+    },
+    cli: {
+      commandOrder: 5,
+      description:
+        'Show the task and deletion impact; use --confirm-delete <id> to proceed only for that task',
+      optionDescriptions: {
+        confirmDelete:
+          'Delete only when this id or number resolves to the same task',
+      },
+      optionMetavars: { confirmDelete: 'id' },
+      output: { kind: 'json' },
+    },
+    run: (client, { taskId, confirmDelete }, context) =>
+      getTaskDeleteSummary(client, taskId).andThen((task) => {
+        if (confirmDelete === undefined) return okAsync(taskDeletePreview(task))
+
+        return getTaskDeleteSummary(client, confirmDelete).andThen(
+          (confirmedTask) => {
+            if (confirmedTask.id !== task.id) {
+              return errAsync({
+                kind: 'input' as const,
+                message: [
+                  `--confirm-delete resolved to task #${String(confirmedTask.number)} "${confirmedTask.title}", not task #${String(task.number)} "${task.title}". No task was deleted.`,
+                  ...taskDeleteWarnings,
+                ].join('\n'),
+              })
+            }
+
+            context?.reportPreflight?.({
+              kind: 'task-delete',
+              task: {
+                number: confirmedTask.number,
+                title: confirmedTask.title,
+              },
+              warnings: taskDeleteWarnings,
+            })
+
+            return requestNoContent(
+              client.api.tasks[':id'].$delete({
+                param: { id: encodePathSegment(confirmedTask.id) },
+              }),
+            ).map(() => ({ deleted: true, id: confirmedTask.id }))
+          },
+        )
+      }),
+  }),
+  defineOperation(taskStatusToolInputSchema, {
     path: ['task', 'status'],
     description:
       'Reopen a task by setting its status to todo. To complete a task, use ' +
@@ -200,11 +291,13 @@ export const taskWriteOperations = [
     kind: 'write',
     attribution: 'agent',
     routes: ['PATCH /api/tasks/:id/status'],
-    mcpInputSchema: taskStatusToolInputSchema,
+    surface: {
+      only: 'mcp',
+      reason: 'CLI uses task_reopen to return tasks to todo.',
+    },
     cli: {
       commandOrder: 6,
-      description: `Update task status (${taskStatus.options.join(', ')})`,
-      mapInput: mapTaskStatusCliInput,
+      description: 'Update task status',
       output: { kind: 'json' },
     },
     run: (client, { taskId, status }) =>
@@ -212,6 +305,30 @@ export const taskWriteOperations = [
         client.api.tasks[':id'].status.$patch({
           param: { id: encodePathSegment(String(taskId)) },
           json: { status },
+        }),
+      ),
+  }),
+  defineOperation(taskIdSchema, {
+    path: ['task', 'reopen'],
+    description: 'Reopen a task and set its status to todo.',
+    positionalArgs: [{ name: 'id', field: 'taskId' }],
+    kind: 'write',
+    attribution: 'agent',
+    routes: ['PATCH /api/tasks/:id/status'],
+    surface: {
+      only: 'cli',
+      reason: 'MCP keeps task_status with its todo-only schema.',
+    },
+    cli: {
+      commandOrder: 6,
+      description: 'Return a completed task to todo',
+      output: { kind: 'json' },
+    },
+    run: (client, { taskId }) =>
+      requestJson(
+        client.api.tasks[':id'].status.$patch({
+          param: { id: encodePathSegment(String(taskId)) },
+          json: { status: 'todo' },
         }),
       ),
   }),
@@ -241,22 +358,25 @@ export const taskWriteOperations = [
   defineOperation(taskCompleteInputSchema, {
     path: ['task', 'complete'],
     description:
-      'Complete a task, optionally recording why it was closed and which ' +
-      'task it duplicates. `duplicateOfTaskId` is used only when ' +
-      '`statusReason` is duplicate.',
+      'Complete a task. LLM-authored completions require a statusReason: ' +
+      'completed for work that is done, not_planned when work will not be ' +
+      'done, or duplicate when another task tracks the same work. ' +
+      '`duplicateOfTaskId` is used only when `statusReason` is duplicate.',
     positionalArgs: [{ name: 'id', field: 'taskId' }],
     kind: 'write',
     attribution: 'agent',
     routes: ['POST /api/tasks/:id/complete'],
     cli: {
       commandOrder: 8,
-      description: 'Complete a task',
+      description:
+        'Complete a task. LLM authors must choose --reason explicitly.',
       optionNames: {
         statusReason: 'reason',
         duplicateOfTaskId: 'duplicate-of',
       },
       optionDescriptions: {
-        statusReason: `Why the task is being closed (${taskStatusReason.options.join(', ')}); defaults to completed`,
+        statusReason:
+          'Reason for closing: completed for work that is done, not_planned when work will not be done, or duplicate when another task tracks the same work. Required for LLM authors.',
         duplicateOfTaskId:
           'Task id or number this task is a duplicate of (only used when --reason duplicate)',
       },

@@ -3,15 +3,19 @@ import { eq, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { db, type DbTransaction } from '#db/connection'
-import { recurrenceRules, taskRelations, tasks } from '#db/schema'
+import { db } from '#db/connection'
+import { tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { taskIdOrNumber } from '#lib/numeric-id'
 import { recordStatusChanged } from '#lib/task-events'
+import { tasksCompleteApp } from '#routes/tasks/complete'
 import {
-  findTaskByIdOrNumber,
+  checkNotBlocked,
+  insertDuplicateOfRelation,
+  resolveDuplicateTarget,
+} from '#routes/tasks/completion-helpers'
+import {
   getLabelNamesByTaskId,
-  getRecurrenceRulesByTemplateIds,
   requireTask,
   resolveParentId,
   taskToResponse,
@@ -21,18 +25,11 @@ import type { DuplicateTaskSummary } from '#schemas/webhook'
 import { syncChecklistItemWithSubtaskStatus } from '#services/task-checklist-subtasks'
 import {
   checkTaskComplete,
+  isLlmCompletionReasonMissing,
   taskConventionViolationBody,
+  taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
-import {
-  getIncompleteGithubBlockerRefs,
-  type GithubBlockerRef,
-} from '#services/task-github-blockers'
-import { getIncompleteBlockerNumbers } from '#services/task-relations'
 import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
-import {
-  getIncompleteTaskWaits,
-  type TaskWaitSummary,
-} from '#services/task-waits'
 
 const updateStatusSchema = z.object({
   status: taskStatus,
@@ -44,103 +41,6 @@ const updateParentSchema = z.object({
   parentId: taskIdOrNumber.nullable(),
 })
 
-// Both close-as-duplicate routes need the target UUID for self-reference
-// checks and relation writes.
-async function resolveDuplicateTarget(
-  id: string,
-  duplicateOfTaskId: string | number,
-): Promise<
-  | { target: DuplicateTaskSummary }
-  | { error: { body: { error: string }; status: 400 | 404 } }
-> {
-  const duplicateTarget = await findTaskByIdOrNumber(String(duplicateOfTaskId))
-  if (!duplicateTarget) {
-    return {
-      error: {
-        body: { error: 'Duplicate target task not found' },
-        status: 404,
-      },
-    }
-  }
-
-  if (duplicateTarget.id === id) {
-    return {
-      error: {
-        body: { error: 'A task cannot be a duplicate of itself' },
-        status: 400,
-      },
-    }
-  }
-
-  return {
-    target: {
-      id: duplicateTarget.id,
-      number: duplicateTarget.number,
-      title: duplicateTarget.title,
-    },
-  }
-}
-
-// Must run against the same `tx` as the status update it gates.
-async function checkNotBlocked(
-  tx: DbTransaction,
-  id: string,
-): Promise<{
-  body: {
-    error: string
-    blockedByNumbers: number[]
-    blockedByGithubRefs: GithubBlockerRef[]
-    blockedByWaits?: TaskWaitSummary[]
-  }
-  status: 409
-} | null> {
-  const [blockedByNumbers, blockedByGithubRefs, blockedByWaits] =
-    await Promise.all([
-      getIncompleteBlockerNumbers(id, tx),
-      getIncompleteGithubBlockerRefs(id, tx),
-      getIncompleteTaskWaits(id, tx),
-    ])
-  if (
-    blockedByNumbers.length === 0 &&
-    blockedByGithubRefs.length === 0 &&
-    blockedByWaits.length === 0
-  ) {
-    return null
-  }
-
-  const blockerNames = [
-    ...blockedByNumbers.map((number) => `#${String(number)}`),
-    ...blockedByGithubRefs.map(
-      ({ owner, repo, number }) => `${owner}/${repo}#${String(number)}`,
-    ),
-    ...blockedByWaits.map(({ id: waitId, label }) => `wait ${label || waitId}`),
-  ]
-
-  return {
-    body: {
-      error: `Task is blocked by unresolved blockers: ${blockerNames.join(', ')}`,
-      blockedByNumbers,
-      blockedByGithubRefs,
-      ...(blockedByWaits.length > 0 ? { blockedByWaits } : {}),
-    },
-    status: 409,
-  }
-}
-
-// Records the `duplicate_of` relation for a close-as-duplicate transition.
-// `onConflictDoNothing` makes re-closing a task as a duplicate of the same
-// target (its primary key) idempotent instead of erroring.
-async function insertDuplicateOfRelation(
-  tx: DbTransaction,
-  sourceTaskId: string,
-  targetTaskId: string,
-) {
-  await tx
-    .insert(taskRelations)
-    .values({ sourceTaskId, targetTaskId, type: 'duplicate_of' })
-    .onConflictDoNothing()
-}
-
 export const tasksActionsApp = new Hono()
   .patch(
     '/:id/status',
@@ -151,6 +51,12 @@ export const tasksActionsApp = new Hono()
       const id = existing.id
       const { status, statusReason, duplicateOfTaskId } = c.req.valid('json')
       const author = c.get('author')
+      if (
+        status === 'completed' &&
+        isLlmCompletionReasonMissing(author, statusReason)
+      ) {
+        return c.json({ error: taskStatusReasonRequiredMessage }, 400)
+      }
       const nextStatusReason =
         status === 'completed' ? (statusReason ?? 'completed') : null
       let duplicateTarget: DuplicateTaskSummary | null = null
@@ -336,147 +242,4 @@ export const tasksActionsApp = new Hono()
       )
     },
   )
-  .post(
-    '/:id/complete',
-    requireTask,
-    zValidator(
-      'json',
-      z.object({
-        statusReason: taskStatusReason.optional(),
-        duplicateOfTaskId: taskIdOrNumber.optional(),
-      }),
-    ),
-    async (c) => {
-      const existing = c.get('task')
-      const id = existing.id
-      const author = c.get('author')
-      const { statusReason, duplicateOfTaskId } = c.req.valid('json')
-      const reason = statusReason ?? 'completed'
-      let duplicateTarget: DuplicateTaskSummary | null = null
-
-      if (reason === 'duplicate' && duplicateOfTaskId != null) {
-        const resolvedDuplicateTarget = await resolveDuplicateTarget(
-          id,
-          duplicateOfTaskId,
-        )
-        if ('error' in resolvedDuplicateTarget) {
-          return c.json(
-            resolvedDuplicateTarget.error.body,
-            resolvedDuplicateTarget.error.status,
-          )
-        }
-        duplicateTarget = resolvedDuplicateTarget.target
-      }
-
-      // `existing.status` was read by requireTask outside this transaction,
-      // so the already-completed check must be re-evaluated against a locked,
-      // freshly-read row: two concurrent completions of the same task would
-      // otherwise both see the stale pre-completion status and both record a
-      // status_changed event.
-      const result = await db.transaction(async (tx) => {
-        const current = firstOrThrow(
-          await tx
-            .select({
-              id: tasks.id,
-              status: tasks.status,
-              description: tasks.description,
-            })
-            .from(tasks)
-            .where(eq(tasks.id, id))
-            .for('update'),
-        )
-
-        if (current.status === 'completed') {
-          return {
-            kind: 'error' as const,
-            body: { error: 'Task is already completed' },
-            status: 409 as const,
-          }
-        }
-
-        const conventionViolation = await checkTaskComplete(
-          author,
-          current,
-          reason,
-          tx,
-        )
-        if (conventionViolation !== null) {
-          return {
-            kind: 'error' as const,
-            body: taskConventionViolationBody(
-              conventionViolation,
-              'completion',
-            ),
-            status: 400 as const,
-          }
-        }
-
-        const blockedError = await checkNotBlocked(tx, id)
-        if (blockedError) return { kind: 'error' as const, ...blockedError }
-
-        const updatedTask = firstOrThrow(
-          await tx
-            .update(tasks)
-            .set({
-              status: 'completed',
-              statusReason: reason,
-              updatedAt: new Date(),
-            })
-            .where(eq(tasks.id, id))
-            .returning(),
-        )
-
-        await recordStatusChanged(
-          tx,
-          id,
-          current.status,
-          'completed',
-          reason,
-          author,
-        )
-        await syncChecklistItemWithSubtaskStatus(tx, id, 'completed')
-
-        if (duplicateTarget != null) {
-          await insertDuplicateOfRelation(tx, id, duplicateTarget.id)
-        }
-
-        return {
-          kind: 'ok' as const,
-          task: updatedTask,
-        }
-      })
-
-      if (result.kind === 'error') {
-        return c.json(result.body, result.status)
-      }
-      const updatedTask = result.task
-
-      await dispatchTaskStatusChangedWebhook(updatedTask, duplicateTarget)
-
-      let completedTaskRule: typeof recurrenceRules.$inferSelect | null = null
-      if (updatedTask.templateId != null) {
-        const rulesByTemplateId = await getRecurrenceRulesByTemplateIds([
-          updatedTask.templateId,
-        ])
-        completedTaskRule =
-          rulesByTemplateId.get(updatedTask.templateId) ?? null
-      } else if (updatedTask.recurrenceRuleId != null) {
-        completedTaskRule =
-          (await db.query.recurrenceRules.findFirst({
-            where: eq(recurrenceRules.id, updatedTask.recurrenceRuleId),
-          })) ?? null
-      }
-
-      const labelsByTaskId = await getLabelNamesByTaskId([id])
-
-      return c.json(
-        taskToResponse(
-          updatedTask,
-          completedTaskRule,
-          undefined,
-          labelsByTaskId.get(id) ?? [],
-        ),
-        200,
-      )
-    },
-  )
+  .route('/', tasksCompleteApp)

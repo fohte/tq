@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { labels, taskDescriptionTemplates, taskGithubLinks } from '#db/schema'
+import {
+  labels,
+  taskDescriptionTemplates,
+  taskGithubLinks,
+  tasks,
+} from '#db/schema'
 import {
   mockGithubIssueResponse,
   upsertGithubToken,
@@ -46,6 +51,10 @@ function summarizeTaskDeletion(
   lookupStatus: number,
 ) {
   return { result: parseToolJson(result), lookupStatus }
+}
+
+function taskCompletionSnapshot(result: unknown, task: unknown) {
+  return { result, task }
 }
 
 function taskCreateTemplateSnapshot(
@@ -586,6 +595,7 @@ describe('task_complete tool', () => {
 
     const result = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
+      statusReason: 'completed',
     })
 
     expect(parseToolData(result)).toEqual({
@@ -613,12 +623,38 @@ describe('task_complete tool', () => {
     })
   })
 
+  it('requires an explicit reason for LLM-authored completions', async () => {
+    const task = await createTask('Reason required')
+
+    const result = await callMcpTool(client, 'task_complete', {
+      taskId: task.id,
+    })
+    const [storedTask] = await db
+      .select({ status: tasks.status, statusReason: tasks.statusReason })
+      .from(tasks)
+      .where(eq(tasks.id, task.id))
+
+    expect(taskCompletionSnapshot(result, storedTask)).toEqual({
+      result: {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: 'LLM-authored completions require an explicit statusReason: "completed" for work that is done, "not_planned" when work will not be done, or "duplicate" when another task tracks the same work.',
+          },
+        ],
+      },
+      task: { status: 'todo', statusReason: null },
+    })
+  })
+
   it('keeps the labels of a labeled task', async () => {
     await createLabel('urgent')
     const task = await createTask('Start me', { labels: ['urgent'] })
 
     const result = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
+      statusReason: 'completed',
     })
 
     expect(parseToolData(result)).toEqual({
@@ -793,6 +829,7 @@ describe('task_status tool', () => {
     const task = await createTask('Reopen me')
     await callMcpTool(client, 'task_complete', {
       taskId: task.id,
+      statusReason: 'completed',
     })
 
     const result = await callMcpTool(client, 'task_status', {

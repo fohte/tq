@@ -199,6 +199,16 @@ export async function checkTaskComplete(
       }
 }
 
+export const taskStatusReasonRequiredMessage =
+  'LLM-authored completions require an explicit statusReason: "completed" for work that is done, "not_planned" when work will not be done, or "duplicate" when another task tracks the same work.'
+
+export function isLlmCompletionReasonMissing(
+  author: Author,
+  statusReason: TaskStatusReason | undefined,
+): boolean {
+  return author.kind === 'llm' && statusReason === undefined
+}
+
 export function taskConventionViolationBody(
   violation: TaskConventionViolation,
   operation: 'creation' | 'update' | 'completion',

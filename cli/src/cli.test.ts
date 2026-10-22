@@ -3,6 +3,7 @@ import { Readable } from 'node:stream'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { runCli } from '#cli'
+import { spyStdout } from '#commands/test-support'
 import type { ReadableStdin } from '#input'
 
 function fakeStdin(): ReadableStdin {
@@ -20,6 +21,15 @@ function makeCliResult<TFetchCalls, TStderr>(
   stderr: TStderr,
 ) {
   return { exitCode, fetchCalls, stderr }
+}
+
+function cliResultSnapshot<TFetchCalls, TStdout, TStderr>(
+  exitCode: number,
+  fetchCalls: TFetchCalls,
+  stdout: TStdout,
+  stderr: TStderr,
+) {
+  return { exitCode, fetchCalls, stdout, stderr }
 }
 
 afterEach(() => {
@@ -43,6 +53,66 @@ describe('runCli', () => {
     const exitCode = await runCli(['image'], fetchStub, fakeStdin())
 
     expect(exitCode).toEqual(1)
+  })
+
+  it('keeps task view unknown and directs users to task help without a request', async () => {
+    const fetchStub = vi.fn()
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', 'http://api.test', 'task', 'view', '987654321'],
+      fetchStub,
+      fakeStdin(),
+    )
+
+    expect(
+      cliResultSnapshot(
+        exitCode,
+        fetchStub.mock.calls,
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      fetchCalls: [],
+      stdout: [],
+      stderr: [
+        [
+          "error: unknown command 'view'\nRun 'tq task --help' for available commands.\n",
+        ],
+      ],
+    })
+  })
+
+  it('rejects the removed task status command and explains the replacements', async () => {
+    const fetchStub = vi.fn()
+    const stderr = spyStderr()
+    const stdout = spyStdout()
+
+    const exitCode = await runCli(
+      ['--api-url', 'http://api.test', 'task', 'status', '987654321'],
+      fetchStub,
+      fakeStdin(),
+    )
+
+    expect(
+      cliResultSnapshot(
+        exitCode,
+        fetchStub.mock.calls,
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      fetchCalls: [],
+      stdout: [],
+      stderr: [
+        [
+          "error: unknown command 'status'\nThe task status command no longer sends updates. Use 'task reopen <id>' to return to todo or 'task complete <id> --reason <reason>' to close.\nRun 'tq task --help' for available commands.\n",
+        ],
+      ],
+    })
   })
 
   it('returns exit code 1 and reports the HTTP status when the server responds with an error', async () => {

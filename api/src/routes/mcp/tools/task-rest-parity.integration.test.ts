@@ -194,6 +194,7 @@ describe('REST/MCP parity', () => {
 
     const completed = await callMcpTool(client, 'task_complete', {
       taskId: task.id,
+      statusReason: 'completed',
     })
     const data = passthroughSchema<TaskResponse>().parse(
       parseToolJson(completed),

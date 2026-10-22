@@ -43,6 +43,10 @@ export type OperationCommandHandlers = Readonly<
   Record<string, OperationCommandHandler>
 >
 
+type RemovedCommandHints = Readonly<
+  Record<string, Readonly<Record<string, string>>>
+>
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -104,6 +108,26 @@ function printWebUrl(
   })
 }
 
+type OperationRegistrationOptions = {
+  removedCommandHints?: RemovedCommandHints
+}
+
+function addUnknownCommandHelp(
+  group: Command,
+  groupName: string,
+  removedCommandHints: RemovedCommandHints,
+): void {
+  group.on('command:*', (operands: string[]) => {
+    const unknownCommand = operands[0] ?? ''
+    const migrationHint = removedCommandHints[groupName]?.[unknownCommand]
+    const migration = migrationHint == null ? '' : `\n${migrationHint}`
+    group.error(
+      `error: unknown command '${unknownCommand}'${migration}\nRun 'tq ${groupName} --help' for available commands.`,
+      { code: 'commander.unknownCommand' },
+    )
+  })
+}
+
 type OperationInput =
   Record<string, unknown> | (() => Result<Record<string, unknown>, Error>)
 
@@ -117,7 +141,11 @@ async function executeOperation(
   fetchImpl: typeof fetch,
   ignoreErrors: boolean,
 ): Promise<void> {
-  const result = await operation.run(client, input)
+  const result = await operation.run(client, input, {
+    reportPreflight: (value) => {
+      process.stderr.write(`${JSON.stringify(value, null, 2)}\n`)
+    },
+  })
   if (result.isErr()) {
     const operationError = result.error
     const error =
@@ -269,6 +297,7 @@ export function registerOperations(
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
   handlers: OperationCommandHandlers = {},
+  options: OperationRegistrationOptions = {},
 ): void {
   for (const {
     groupName,
@@ -285,6 +314,7 @@ export function registerOperations(
       stdin,
       handlers,
     )
+    addUnknownCommandHelp(group, groupName, options.removedCommandHints ?? {})
   }
 }
 
