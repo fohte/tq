@@ -7,6 +7,7 @@ import { formatError } from '#errors'
 import { collectHeader } from '#headers'
 import type { ReadableStdin } from '#input'
 import { registerOperations } from '#operation-adapter'
+import { removedCommandHints } from '#removed-command-hints'
 
 function buildProgram(
   fetchImpl: typeof fetch = fetch,
@@ -44,10 +45,17 @@ function buildProgram(
       '\nSet TQ_HEADERS_JSON to a JSON object of header names and string values. Use it for secrets because -H values may be visible in process listings.\n',
     )
 
-  registerOperations(program, operations, fetchImpl, stdin, {
-    hook: hookOperationHandler,
-    link: linkOperationHandler,
-  })
+  registerOperations(
+    program,
+    operations,
+    fetchImpl,
+    stdin,
+    {
+      hook: hookOperationHandler,
+      link: linkOperationHandler,
+    },
+    { removedCommandHints },
+  )
 
   return program
 }

@@ -25,6 +25,7 @@ import type { DuplicateTaskSummary } from '#schemas/webhook'
 import { syncChecklistItemWithSubtaskStatus } from '#services/task-checklist-subtasks'
 import {
   checkTaskComplete,
+  isLlmCompletionReasonMissing,
   taskConventionViolationBody,
   taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
@@ -52,8 +53,7 @@ export const tasksActionsApp = new Hono()
       const author = c.get('author')
       if (
         status === 'completed' &&
-        statusReason === undefined &&
-        author.kind === 'llm'
+        isLlmCompletionReasonMissing(author, statusReason)
       ) {
         return c.json({ error: taskStatusReasonRequiredMessage }, 400)
       }

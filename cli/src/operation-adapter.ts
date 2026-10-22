@@ -104,13 +104,23 @@ function printWebUrl(
   })
 }
 
-function addUnknownCommandHelp(group: Command, groupName: string): void {
+type OperationRegistrationOptions = {
+  removedCommandHints?: Readonly<
+    Record<string, Readonly<Record<string, string>>>
+  >
+}
+
+function addUnknownCommandHelp(
+  group: Command,
+  groupName: string,
+  removedCommandHints: Readonly<
+    Record<string, Readonly<Record<string, string>>>
+  >,
+): void {
   group.on('command:*', (operands: string[]) => {
     const unknownCommand = operands[0] ?? ''
-    const migration =
-      groupName === 'task' && unknownCommand === 'status'
-        ? "\nThe task status command no longer sends updates. Use 'task reopen <id>' to return to todo or 'task complete <id> --reason <reason>' to close."
-        : ''
+    const migrationHint = removedCommandHints[groupName]?.[unknownCommand]
+    const migration = migrationHint == null ? '' : `\n${migrationHint}`
     group.error(
       `error: unknown command '${unknownCommand}'${migration}\nRun 'tq ${groupName} --help' for available commands.`,
       { code: 'commander.unknownCommand' },
@@ -283,6 +293,7 @@ export function registerOperations(
   fetchImpl: typeof fetch,
   stdin: ReadableStdin,
   handlers: OperationCommandHandlers = {},
+  options: OperationRegistrationOptions = {},
 ): void {
   for (const {
     groupName,
@@ -299,7 +310,7 @@ export function registerOperations(
       stdin,
       handlers,
     )
-    addUnknownCommandHelp(group, groupName)
+    addUnknownCommandHelp(group, groupName, options.removedCommandHints ?? {})
   }
 }
 

@@ -24,6 +24,7 @@ import type { DuplicateTaskSummary } from '#schemas/webhook'
 import { syncChecklistItemWithSubtaskStatus } from '#services/task-checklist-subtasks'
 import {
   checkTaskComplete,
+  isLlmCompletionReasonMissing,
   taskConventionViolationBody,
   taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
@@ -44,7 +45,7 @@ export const tasksCompleteApp = new Hono().post(
     const id = existing.id
     const author = c.get('author')
     const { statusReason, duplicateOfTaskId } = c.req.valid('json')
-    if (statusReason === undefined && author.kind === 'llm') {
+    if (isLlmCompletionReasonMissing(author, statusReason)) {
       return c.json({ error: taskStatusReasonRequiredMessage }, 400)
     }
     const reason = statusReason ?? 'completed'
