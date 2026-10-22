@@ -133,7 +133,7 @@ let mockSearchDataForQuery:
 let mockIsFetchingTasks = false
 let mockIsDebouncingTasks = false
 let mockIsFetchingSavedViews = false
-let mockNumberTaskData: MockTask | undefined
+let mockIdOrNumberTaskData: MockTask | undefined
 let mockPageSearchData: PageSearchResult[] = []
 let mockSuggestionData: typeof mockSuggestions = []
 let mockProjectData: Project[] = []
@@ -157,8 +157,8 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
       isFetching: mockIsFetchingTasks,
       isDebouncing: mockIsDebouncingTasks,
     }),
-    useSearchTaskByNumber: () => ({
-      data: mockNumberTaskData,
+    useSearchTaskByIdOrNumber: () => ({
+      data: mockIdOrNumberTaskData,
       isFetching: false,
       isDebouncing: false,
     }),
@@ -358,7 +358,7 @@ describe('SearchModal', () => {
     mockIsFetchingTasks = false
     mockIsDebouncingTasks = false
     mockIsFetchingSavedViews = false
-    mockNumberTaskData = undefined
+    mockIdOrNumberTaskData = undefined
     mockPageSearchData = []
     mockSuggestionData = []
     mockProjectData = []
@@ -677,7 +677,7 @@ describe('SearchModal', () => {
   })
 
   it('opens an exact task number match before scoped search results', async () => {
-    mockNumberTaskData = personalTask
+    mockIdOrNumberTaskData = personalTask
     mockSearchData = mockTasks.slice(1, 2)
     const onOpenChange = vi.fn()
 
@@ -719,7 +719,7 @@ describe('SearchModal', () => {
   })
 
   it('does not repeat the exact match in scoped search results', async () => {
-    mockNumberTaskData = firstMockTask
+    mockIdOrNumberTaskData = firstMockTask
     mockSearchData = [firstMockTask]
 
     const user = userEvent.setup()

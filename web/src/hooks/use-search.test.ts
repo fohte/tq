@@ -11,27 +11,64 @@ import {
   extractCurrentPrefix,
   resolveSearchContext,
 } from '#hooks/use-search'
-import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
+import {
+  extractTaskIdOrNumber,
+  taskDetailToSearchResult,
+} from '#lib/search-utils'
 
-describe('extractTaskNumber', () => {
+describe('extractTaskIdOrNumber', () => {
+  const host = 'tasks.example'
+
   it('accepts a bare number', () => {
-    expect(extractTaskNumber('5')).toBe('5')
+    expect(extractTaskIdOrNumber('5', host)).toEqual('5')
   })
 
   it('accepts a hash-prefixed number', () => {
-    expect(extractTaskNumber('#5')).toBe('5')
+    expect(extractTaskIdOrNumber('#5', host)).toEqual('5')
   })
 
   it('rejects a non-numeric hash token', () => {
-    expect(extractTaskNumber('#task')).toBeUndefined()
+    expect(extractTaskIdOrNumber('#task', host)).toBeUndefined()
   })
 
   it('rejects a number followed by other text', () => {
-    expect(extractTaskNumber('5 task')).toBeUndefined()
+    expect(extractTaskIdOrNumber('5 task', host)).toBeUndefined()
   })
 
   it('rejects an empty query', () => {
-    expect(extractTaskNumber('')).toBeUndefined()
+    expect(extractTaskIdOrNumber('', host)).toBeUndefined()
+  })
+
+  it('accepts task URLs with a number or UUID', () => {
+    const uuid = '00000000-0000-4000-8000-000000000011'
+    const urls = [`https://${host}/tasks/5`, `https://${host}/tasks/${uuid}`]
+
+    expect(urls.map((url) => extractTaskIdOrNumber(url, host))).toEqual([
+      '5',
+      uuid,
+    ])
+  })
+
+  it('accepts a task URL with a trailing slash and fragment', () => {
+    expect(
+      extractTaskIdOrNumber(`https://${host}/tasks/5/#details`, host),
+    ).toEqual('5')
+  })
+
+  it('rejects URLs that do not identify exactly one valid task', () => {
+    const urls = [
+      'https://other.example/tasks/5',
+      `https://${host}/tasks/5/details`,
+      `https://${host}/tasks/not-a-uuid`,
+      `https://${host}/tasks/5 https://${host}/tasks/6`,
+    ]
+
+    expect(urls.map((url) => extractTaskIdOrNumber(url, host))).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ])
   })
 })
 

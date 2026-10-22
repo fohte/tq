@@ -18,6 +18,7 @@ import {
 import {
   SEARCH_QUERY_DEBOUNCE_MS,
   type SearchResult,
+  useSearchTaskByIdOrNumber,
   useSearchTasks,
 } from '#hooks/use-search'
 
@@ -234,11 +235,31 @@ export function TaskSearchCandidateDialog({
     }
   }, [open])
 
-  const { data: searchResults, isFetching } = useSearchTasks(query)
+  const {
+    data: searchResults,
+    isFetching: isFetchingSearch,
+    isDebouncing: isDebouncingSearch,
+  } = useSearchTasks(query)
+  const {
+    data: taskByIdOrNumber,
+    isFetching: isFetchingTaskByIdOrNumber,
+    isDebouncing: isDebouncingTaskByIdOrNumber,
+  } = useSearchTaskByIdOrNumber(query)
 
-  const candidates = (searchResults ?? []).filter(
-    (t) => !excludedTaskIds.has(t.id),
-  )
+  const candidates = [
+    ...(taskByIdOrNumber != null && !excludedTaskIds.has(taskByIdOrNumber.id)
+      ? [taskByIdOrNumber]
+      : []),
+    ...(searchResults ?? []).filter(
+      (task) =>
+        !excludedTaskIds.has(task.id) && task.id !== taskByIdOrNumber?.id,
+    ),
+  ]
+  const isFetching =
+    isFetchingSearch ||
+    isDebouncingSearch ||
+    isFetchingTaskByIdOrNumber ||
+    isDebouncingTaskByIdOrNumber
   const trimmedQuery = query.trim()
   const renderAppearance = (githubCandidateState: {
     githubCandidate: GithubUrlCandidate | null

@@ -40,7 +40,7 @@ import {
   SEARCH_QUERY_DEBOUNCE_MS,
   useSearchPages,
   useSearchSuggestions,
-  useSearchTaskByNumber,
+  useSearchTaskByIdOrNumber,
   useSearchTasks,
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
@@ -210,10 +210,10 @@ export function SearchModal({
   )
 
   const {
-    data: taskByNumber,
-    isFetching: isFetchingTaskByNumber,
-    isDebouncing: isDebouncingTaskByNumber,
-  } = useSearchTaskByNumber(canSearchTasks ? searchQuery : '')
+    data: taskByIdOrNumber,
+    isFetching: isFetchingTaskByIdOrNumber,
+    isDebouncing: isDebouncingTaskByIdOrNumber,
+  } = useSearchTaskByIdOrNumber(canSearchTasks ? searchQuery : '')
   const {
     data: pages,
     isFetching: isFetchingPages,
@@ -221,14 +221,14 @@ export function SearchModal({
   } = useSearchPages(canSearchPages ? searchQuery : '')
   const isFetching =
     isFetchingTasks ||
-    isFetchingTaskByNumber ||
+    isFetchingTaskByIdOrNumber ||
     isFetchingPages ||
     isFetchingProjects ||
     isFetchingSavedViews
   const isSearchPending =
     isFetching ||
     isDebouncingTasks ||
-    isDebouncingTaskByNumber ||
+    isDebouncingTaskByIdOrNumber ||
     isDebouncingPages ||
     debouncedFreeTextQuery !== freeTextQuery ||
     debouncedContext !== context
@@ -261,7 +261,7 @@ export function SearchModal({
     copyTaskUrl,
     suggestions,
     tasks,
-    taskByNumber,
+    taskByIdOrNumber,
     pages,
     projects,
     savedViews,
