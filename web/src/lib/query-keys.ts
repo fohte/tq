@@ -159,8 +159,8 @@ export const searchKeys = {
   all: ['search'] as const,
   results: (q: string, context: SearchContext | undefined) =>
     [...searchKeys.all, 'results', q, context] as const,
-  number: (number: string | undefined) =>
-    [...searchKeys.all, 'number', number] as const,
+  idOrNumber: (idOrNumber: string | undefined) =>
+    [...searchKeys.all, 'id-or-number', idOrNumber] as const,
   pages: (q: string) => [...searchKeys.all, 'pages', q] as const,
   suggestions: (prefix: string) =>
     [...searchKeys.all, 'suggestions', prefix] as const,
