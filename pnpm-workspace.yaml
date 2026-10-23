@@ -36,3 +36,5 @@ minimumReleaseAgeExclude:
   - '@hono/node-server@1.19.15'
   # Renovate security update: @modelcontextprotocol/sdk@1.31.0 || 1.32.0
   - '@modelcontextprotocol/sdk@1.31.0 || 1.32.0'
+  # Renovate security update: @storybook/addon-vitest@10.6.2
+  - "@storybook/addon-vitest@10.6.2"
