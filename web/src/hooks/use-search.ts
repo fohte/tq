@@ -12,7 +12,10 @@ import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
 import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
-import { extractTaskNumber, taskDetailToSearchResult } from '#lib/search-utils'
+import {
+  extractTaskIdOrNumber,
+  taskDetailToSearchResult,
+} from '#lib/search-utils'
 
 type SearchResult = Task & {
   description?: TaskWithDescription['description']
@@ -70,26 +73,26 @@ export function useSearchTasks(query: string, defaultContext?: SearchContext) {
   return { ...queryResult, isDebouncing: debouncedQuery !== query }
 }
 
-export function useSearchTaskByNumber(query: string) {
+export function useSearchTaskByIdOrNumber(query: string) {
   const debouncedQuery = useDebouncedSearchQuery(query)
-  const taskNumber = extractTaskNumber(debouncedQuery)
+  const taskIdOrNumber = extractTaskIdOrNumber(debouncedQuery, location.host)
 
   const queryResult = useQuery({
-    queryKey: searchKeys.number(taskNumber),
+    queryKey: searchKeys.idOrNumber(taskIdOrNumber),
     queryFn: async () => {
-      if (taskNumber == null) return null
+      if (taskIdOrNumber == null) return null
 
       const res = await api.api.tasks[':id'].$get({
-        param: { id: taskNumber },
+        param: { id: taskIdOrNumber },
       })
       if (res.status === 404) return null
 
       return taskDetailToSearchResult(await unwrapOrThrow(assertOk(res)).json())
     },
-    enabled: taskNumber != null,
+    enabled: taskIdOrNumber != null,
     retry: false,
     throwOnError: (error) => {
-      console.error('Failed to load task by number', error)
+      console.error('Failed to load task by id or number', error)
       return false
     },
   })

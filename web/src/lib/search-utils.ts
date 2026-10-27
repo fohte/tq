@@ -1,3 +1,5 @@
+import { matchAppResourceUrls } from 'api/lib/app-url'
+import { isTaskIdentifier } from 'api/lib/task-identifier'
 import type { InferResponseType } from 'hono/client'
 
 import type { TaskWithDescription } from '#hooks/use-task-queries'
@@ -6,8 +8,23 @@ import { api } from '#lib/api'
 type SearchResult = TaskWithDescription
 type TaskDetail = InferResponseType<(typeof api.api.tasks)[':id']['$get'], 200>
 
-export function extractTaskNumber(query: string): string | undefined {
-  return /^#?(\d+)$/.exec(query)?.[1]
+export function extractTaskIdOrNumber(
+  query: string,
+  host: string,
+): string | undefined {
+  const numberMatch = /^#?(\d+)$/.exec(query)
+  if (numberMatch != null) return numberMatch[1]
+
+  const trimmedQuery = query.trim()
+  const matches = matchAppResourceUrls(trimmedQuery, host, 'tasks')
+  const [match] = matches
+  if (match == null || match.start !== 0 || matches.length !== 1) {
+    return undefined
+  }
+
+  const suffix = trimmedQuery.slice(match.end)
+  if (suffix !== '' && !/^[?#][^\s]*$/.test(suffix)) return undefined
+  return isTaskIdentifier(match.id) ? match.id : undefined
 }
 
 export function taskDetailToSearchResult(task: TaskDetail): SearchResult {

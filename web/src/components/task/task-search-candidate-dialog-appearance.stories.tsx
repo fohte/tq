@@ -22,6 +22,13 @@ const candidateWithParent: SearchResult = makeTask({
   parentNumber: 3,
 })
 
+const taskUrlCandidate: SearchResult = makeTask({
+  id: '00000000-0000-0000-0000-000000000027',
+  number: 27,
+  title: 'Confirm duplicate report',
+  context: 'work',
+})
+
 const meta = {
   title: 'Task/TaskSearchCandidateDialogAppearance',
   component: TaskSearchCandidateDialogAppearance,
@@ -52,6 +59,15 @@ export const WithCandidates: Story = {
   args: {
     query: 'Deploy',
     candidates: [orphanCandidate, candidateWithParent],
+  },
+}
+
+export const WithTaskUrlCandidate: Story = {
+  name: 'the pasted task URL shows its matching task',
+  args: {
+    title: 'Duplicate of',
+    query: 'https://tasks.example/tasks/27',
+    candidates: [taskUrlCandidate],
   },
 }
 

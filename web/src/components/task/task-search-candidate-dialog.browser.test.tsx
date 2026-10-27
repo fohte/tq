@@ -6,7 +6,11 @@ import { makeResolveGithubUrlResult } from '#components/task/github-link-test-fi
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { TaskSearchCandidateDialog } from '#components/task/task-search-candidate-dialog'
 import { useResolveGithubUrlQuery } from '#hooks/use-github-link'
-import { type SearchResult, useSearchTasks } from '#hooks/use-search'
+import {
+  type SearchResult,
+  useSearchTaskByIdOrNumber,
+  useSearchTasks,
+} from '#hooks/use-search'
 import { partialMutation } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
@@ -14,6 +18,7 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   return {
     ...original,
     useSearchTasks: vi.fn(),
+    useSearchTaskByIdOrNumber: vi.fn(),
   }
 })
 
@@ -27,9 +32,11 @@ vi.mock('#hooks/use-github-link', async (importOriginal) => {
 })
 
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
+const mockUseSearchTaskByIdOrNumber = vi.mocked(useSearchTaskByIdOrNumber)
 const mockUseResolveGithubUrlQuery = vi.mocked(useResolveGithubUrlQuery)
 
 type SearchTasksResult = ReturnType<typeof useSearchTasks>
+type SearchTaskByIdOrNumberResult = ReturnType<typeof useSearchTaskByIdOrNumber>
 
 function mockSearchResults(data: SearchResult[], isFetching = false) {
   mockUseSearchTasks.mockReturnValue(
@@ -38,6 +45,13 @@ function mockSearchResults(data: SearchResult[], isFetching = false) {
 }
 
 beforeEach(() => {
+  mockUseSearchTaskByIdOrNumber.mockReturnValue(
+    partialMutation<SearchTaskByIdOrNumberResult>({
+      data: undefined,
+      isFetching: false,
+      isDebouncing: false,
+    }),
+  )
   mockUseResolveGithubUrlQuery.mockReturnValue(
     partialMutation<ReturnType<typeof useResolveGithubUrlQuery>>({
       data: undefined,
@@ -48,10 +62,14 @@ beforeEach(() => {
 })
 
 const orphanCandidate: SearchResult = makeTask({
-  id: '00000000-0000-0000-0000-000000000011',
+  id: '00000000-0000-4000-8000-000000000011',
   number: 12,
   title: 'Deploy to production',
 })
+const orphanCandidateWithDescription = {
+  ...orphanCandidate,
+  description: null,
+}
 
 const candidateWithParent: SearchResult = makeTask({
   id: '00000000-0000-0000-0000-000000000012',
@@ -88,6 +106,62 @@ describe('TaskSearchCandidateDialog', () => {
     expect(screen.getByText('Deploy to production')).toBeInTheDocument()
     expect(screen.getByText('Deploy docs site')).toBeInTheDocument()
     expect(screen.getByText('← #3')).toBeInTheDocument()
+  })
+
+  it('shows and selects the task identified by a pasted task URL', async () => {
+    const taskUrl = `https://${window.location.host}/tasks/${orphanCandidate.id}`
+    mockSearchResults([orphanCandidate])
+    mockUseSearchTaskByIdOrNumber.mockImplementation((query) =>
+      partialMutation<SearchTaskByIdOrNumberResult>({
+        data: query === taskUrl ? orphanCandidateWithDescription : undefined,
+        isFetching: false,
+        isDebouncing: false,
+      }),
+    )
+    const onSelectCandidate = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <TaskSearchCandidateDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Duplicate of"
+        excludedTaskIds={new Set()}
+        onSelectCandidate={onSelectCandidate}
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('Search tasks...'), taskUrl)
+    await user.click(screen.getByText(orphanCandidate.title))
+
+    expect(onSelectCandidate.mock.calls).toEqual([
+      [orphanCandidateWithDescription],
+    ])
+  })
+
+  it('excludes a direct URL match when its task id is excluded', async () => {
+    const taskUrl = `https://${window.location.host}/tasks/${orphanCandidate.id}`
+    mockSearchResults([])
+    mockUseSearchTaskByIdOrNumber.mockImplementation((query) =>
+      partialMutation<SearchTaskByIdOrNumberResult>({
+        data: query === taskUrl ? orphanCandidateWithDescription : undefined,
+        isFetching: false,
+        isDebouncing: false,
+      }),
+    )
+    const user = userEvent.setup()
+    render(
+      <TaskSearchCandidateDialog
+        open
+        onOpenChange={vi.fn()}
+        title="Duplicate of"
+        excludedTaskIds={new Set([orphanCandidate.id])}
+        onSelectCandidate={vi.fn()}
+      />,
+    )
+
+    await user.type(screen.getByPlaceholderText('Search tasks...'), taskUrl)
+
+    expect(screen.queryByText(orphanCandidate.title)).toBeNull()
   })
 
   it('filters out excluded task ids from the results', async () => {

@@ -57,7 +57,7 @@ interface SearchModalResultGroupsOptions {
   copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void
   suggestions: Suggestion[] | undefined
   tasks: SearchResult[] | undefined
-  taskByNumber: SearchResult | null | undefined
+  taskByIdOrNumber: SearchResult | null | undefined
   pages: PageSearchResult[] | undefined
   projects: Project[] | undefined
   savedViews: SavedView[] | undefined
@@ -98,7 +98,7 @@ export function useSearchModalResultGroups({
   copyTaskUrl,
   suggestions,
   tasks,
-  taskByNumber,
+  taskByIdOrNumber,
   pages,
   projects,
   savedViews,
@@ -186,7 +186,7 @@ export function useSearchModalResultGroups({
     })
     const taskSearchResults =
       canSearchTasks && hasSearchQuery
-        ? (tasks?.filter((task) => task.id !== taskByNumber?.id) ?? [])
+        ? (tasks?.filter((task) => task.id !== taskByIdOrNumber?.id) ?? [])
         : []
     const titleTaskItems = taskSearchResults
       .filter(isTitleSearchMatch)
@@ -213,9 +213,9 @@ export function useSearchModalResultGroups({
               items: bodyTaskItems,
             },
           ].filter((section) => section.items.length > 0)
-    const taskNumberItems: ListItem[] =
-      canSearchTasks && hasSearchQuery && taskByNumber != null
-        ? [toTaskListItem(taskByNumber, 'number:')]
+    const taskByIdOrNumberItems: ListItem[] =
+      canSearchTasks && hasSearchQuery && taskByIdOrNumber != null
+        ? [toTaskListItem(taskByIdOrNumber, 'id-or-number:')]
         : []
     const taskCommandItems: ListItem[] =
       searchMode === 'commands' && currentTask != null
@@ -281,7 +281,7 @@ export function useSearchModalResultGroups({
       {
         id: 'task-number',
         title: 'Task number',
-        items: taskNumberItems,
+        items: taskByIdOrNumberItems,
         isVisible: (_query, itemCount) => itemCount > 0,
       },
       {
@@ -336,7 +336,7 @@ export function useSearchModalResultGroups({
     openRoute,
     suggestions,
     tasks,
-    taskByNumber,
+    taskByIdOrNumber,
     pages,
     projects,
     savedViews,
