@@ -18,7 +18,7 @@ import {
   useResolveGithubUrlQuery,
   useUpdateGithubLinkNotifyEvents,
 } from '#hooks/use-github-link'
-import { useSearchTasks } from '#hooks/use-search'
+import { useSearchTaskByIdOrNumber, useSearchTasks } from '#hooks/use-search'
 import {
   useAcknowledgeTaskWait,
   useCreateTaskWait,
@@ -46,7 +46,11 @@ vi.mock('#hooks/use-github-link', async (importOriginal) => {
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-search')>()
-  return { ...original, useSearchTasks: vi.fn() }
+  return {
+    ...original,
+    useSearchTaskByIdOrNumber: vi.fn(),
+    useSearchTasks: vi.fn(),
+  }
 })
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
@@ -67,6 +71,7 @@ const mockUseResolveGithubUrlQuery = vi.mocked(useResolveGithubUrlQuery)
 const mockUseUpdateGithubLinkNotifyEvents = vi.mocked(
   useUpdateGithubLinkNotifyEvents,
 )
+const mockUseSearchTaskByIdOrNumber = vi.mocked(useSearchTaskByIdOrNumber)
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
 const mockUseUpdateTaskBlockedBy = vi.mocked(useUpdateTaskBlockedBy)
 const mockUseCreateTaskWait = vi.mocked(useCreateTaskWait)
@@ -112,6 +117,13 @@ beforeEach(() => {
     partialMutation<ReturnType<typeof useUpdateGithubLinkNotifyEvents>>({
       mutate: updateNotifyEvents,
       isPending: false,
+    }),
+  )
+  mockUseSearchTaskByIdOrNumber.mockReturnValue(
+    partialMutation<ReturnType<typeof useSearchTaskByIdOrNumber>>({
+      data: undefined,
+      isFetching: false,
+      isDebouncing: false,
     }),
   )
   mockUseSearchTasks.mockReturnValue(

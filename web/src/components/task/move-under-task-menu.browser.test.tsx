@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MoveUnderTaskMenu } from '#components/task/move-under-task-menu'
 import { makeTask } from '#components/task/task-row-test-fixtures'
-import { type SearchResult, useSearchTasks } from '#hooks/use-search'
+import {
+  type SearchResult,
+  useSearchTaskByIdOrNumber,
+  useSearchTasks,
+} from '#hooks/use-search'
 import {
   useSelfAndDescendantIds,
   useTaskList,
@@ -16,6 +20,7 @@ vi.mock('#hooks/use-search', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-search')>()
   return {
     ...original,
+    useSearchTaskByIdOrNumber: vi.fn(),
     useSearchTasks: vi.fn(),
   }
 })
@@ -30,6 +35,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
   }
 })
 
+const mockUseSearchTaskByIdOrNumber = vi.mocked(useSearchTaskByIdOrNumber)
 const mockUseSearchTasks = vi.mocked(useSearchTasks)
 const mockUseSelfAndDescendantIds = vi.mocked(useSelfAndDescendantIds)
 const mockUseTaskList = vi.mocked(useTaskList)
@@ -82,6 +88,13 @@ function candidateSnapshot(
 
 describe('MoveUnderTaskMenu', () => {
   beforeEach(() => {
+    mockUseSearchTaskByIdOrNumber.mockReturnValue(
+      partialMutation<ReturnType<typeof useSearchTaskByIdOrNumber>>({
+        data: undefined,
+        isFetching: false,
+        isDebouncing: false,
+      }),
+    )
     mockUseSelfAndDescendantIds.mockImplementation((taskId, enabled) => {
       const { categorized } = mockUseTaskList(
         {
