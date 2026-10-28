@@ -299,6 +299,8 @@ export function useDayQueueCalendar({
   return {
     dayQueueItems,
     dayQueueItemsInRange: dayQueueItemsQuery.data ?? [],
+    dayQueueItemsInRangeDataAvailable: dayQueueItemsQuery.data !== undefined,
+    dayQueueItemsInRangeError: dayQueueItemsQuery.error,
     dndCallbacks,
   }
 }

@@ -31,17 +31,26 @@ export function useDayViewTaskData({
 }: UseDayViewTaskDataOptions) {
   const selectedDateStr = formatLocalDate(selectedDate)
   const todayStr = formatLocalDate(new Date())
+  const queueTaskIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...queueItems.map((item) => item.taskId),
+          ...visibleDayQueueItems.map(({ item }) => item.taskId),
+        ]),
+      ),
+    [queueItems, visibleDayQueueItems],
+  )
   const taskIds = useMemo(
     () =>
       [
         ...new Set([
-          ...queueItems.map((item) => item.taskId),
-          ...visibleDayQueueItems.map(({ item }) => item.taskId),
+          ...queueTaskIds,
           ...(visibleTimeBlocks ?? []).map((block) => block.taskId),
           ...(nowPanelTimeBlocks ?? []).map((block) => block.taskId),
         ]),
       ].sort(),
-    [nowPanelTimeBlocks, queueItems, visibleDayQueueItems, visibleTimeBlocks],
+    [nowPanelTimeBlocks, queueTaskIds, visibleTimeBlocks],
   )
   const candidateTasksQuery = useTaskList({
     view: 'row',
@@ -176,6 +185,17 @@ export function useDayViewTaskData({
       candidateTasksQuery.isLoading ||
       taskDateTasksQuery.isLoading ||
       dueTasksQuery.isLoading,
+    hasRequiredData:
+      candidateTasksQuery.data !== undefined &&
+      taskDateTasksQuery.data !== undefined &&
+      (!shouldFetchDueTasks || dueTasksQuery.data !== undefined) &&
+      queueTaskIds.every((taskId) => taskMap.has(taskId)),
+    hasRequiredDataError:
+      candidateTasksQuery.error != null ||
+      taskDateTasksQuery.error != null ||
+      (shouldFetchDueTasks && dueTasksQuery.error != null) ||
+      (queueTaskIds.some((taskId) => !taskMap.has(taskId)) &&
+        referencedTasksQuery.error != null),
     queueCandidates,
     taskDateTasks,
     tasksDueOnOrBeforeToday: dueTasksQuery.data ?? [],

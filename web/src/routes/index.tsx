@@ -1,8 +1,8 @@
-import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
+import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
   type DayViewMode,
   DayViewPresentation,
@@ -18,6 +18,8 @@ import { useCompactRefreshErrorLogging } from '#hooks/use-compact-refresh-error-
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useDayQueueCalendar } from '#hooks/use-day-queue-calendar'
 import { useDayViewCalendarEvents } from '#hooks/use-day-view-calendar-events'
+import { useDayViewQueueActions } from '#hooks/use-day-view-queue-actions'
+import { useDayViewQueueTransition } from '#hooks/use-day-view-queue-transition'
 import { useDayViewTaskData } from '#hooks/use-day-view-task-data'
 import { useBaseFilter } from '#hooks/use-filtered-tasks'
 import { useFutureDayQueueItems } from '#hooks/use-future-day-queue-items'
@@ -27,12 +29,10 @@ import { useNowPanelData, useNowPanelQueries } from '#hooks/use-now-panel-data'
 import {
   DAY_QUEUE_KEY,
   type QueueItem,
-  queueKeys,
   useQueueCarryOver,
   useQueueItemsForQueues,
   useQueues,
   useSetQueueItems,
-  WEEK_QUEUE_KEY,
 } from '#hooks/use-queues'
 import { useScheduleList } from '#hooks/use-schedules'
 import { useSelectedDate } from '#hooks/use-selected-date'
@@ -45,7 +45,6 @@ import {
 import { isCompactDayLayoutSearch } from '#lib/compact-layout'
 import { formatLocalDate, toLocalDateRange } from '#lib/date-range'
 import { buildKanbanFilterQuery } from '#lib/kanban-filter-query'
-import { appendQueueTaskId } from '#lib/queue-task-order'
 
 const dayViewSearchDefaults = { view: 'queue', q: '' } as const
 
@@ -151,7 +150,8 @@ function DayView() {
     visibleRange.endDate,
   )
   const { data: schedulesData } = schedulesQuery
-  const { data: queuesData } = useQueues()
+  const queuesQuery = useQueues()
+  const { data: queuesData } = queuesQuery
   const queueItemsResults = useQueueItemsForQueues(
     queuesData,
     selectedDateStr,
@@ -164,8 +164,6 @@ function DayView() {
     enabled: isCompactLayout,
     context,
   })
-  const queryClient = useQueryClient()
-
   const {
     changeFeedback,
     changeFeedbackAnchorRef,
@@ -194,16 +192,21 @@ function DayView() {
   }, [gcalEventsQuery.error])
 
   const setQueueItems = useSetQueueItems()
-  const { dayQueueItems, dayQueueItemsInRange, dndCallbacks } =
-    useDayQueueCalendar({
-      queues: queuesData,
-      selectedDate,
-      startDate: visibleRange.startDate,
-      endDate: visibleRange.endDate,
-      createTimeBlock,
-      setQueueItems,
-      onTimeBlockChange: handleTimeBlockChange,
-    })
+  const {
+    dayQueueItems,
+    dayQueueItemsInRange,
+    dayQueueItemsInRangeDataAvailable,
+    dayQueueItemsInRangeError,
+    dndCallbacks,
+  } = useDayQueueCalendar({
+    queues: queuesData,
+    selectedDate,
+    startDate: visibleRange.startDate,
+    endDate: visibleRange.endDate,
+    createTimeBlock,
+    setQueueItems,
+    onTimeBlockChange: handleTimeBlockChange,
+  })
 
   const futureDayQueueItems = useFutureDayQueueItems({
     selectedDate,
@@ -244,6 +247,8 @@ function DayView() {
   })
   const {
     isLoading,
+    hasRequiredData: hasRequiredTaskData,
+    hasRequiredDataError: hasRequiredTaskDataError,
     taskMap,
     queueCandidates: allQueueCandidates,
     taskDateTasks,
@@ -261,7 +266,10 @@ function DayView() {
   } = useNowPanelData({
     queryData: nowPanelQueryData,
     taskMap,
-    isTasksLoading: isLoading,
+    isTasksLoading:
+      nowPanelQueryData.timeBlocksData?.some(
+        (timeBlock) => !taskMap.has(timeBlock.taskId),
+      ) ?? false,
   })
   const compactMemoProps = useCompactMemoData({
     enabled: isCompactLayout,
@@ -327,6 +335,93 @@ function DayView() {
     [allQueueCandidates, filterTaskIds],
   )
 
+  const queueDisplayData = useMemo(
+    () => ({
+      queueSections: visibleQueueSections,
+      dayQueueTasks,
+      queueCandidates,
+      taskRowStates:
+        selectedDateStr === formatLocalDate(now)
+          ? compactTaskRowStates
+          : undefined,
+    }),
+    [
+      compactTaskRowStates,
+      dayQueueTasks,
+      now,
+      queueCandidates,
+      selectedDateStr,
+      visibleQueueSections,
+    ],
+  )
+  const hasDayQueue =
+    queuesData?.some((queue) => queue.key === DAY_QUEUE_KEY) === true
+  const queueItemsReady =
+    canReadQueueItems &&
+    queuesData != null &&
+    queueItemsResults.length === queuesData.length &&
+    queueItemsResults.every(
+      (result) => result.data !== undefined && result.error == null,
+    )
+  const queueRangeReady =
+    !hasDayQueue ||
+    (dayQueueItemsInRangeDataAvailable && dayQueueItemsInRangeError == null)
+  const queueDisplayTransition = useDayViewQueueTransition({
+    context,
+    date: selectedDateStr,
+    scope: JSON.stringify([
+      isCompactLayout,
+      viewMode,
+      isKanbanFiltering ? q : '',
+    ]),
+    value: queueDisplayData,
+    isReady:
+      hasRequiredTaskData &&
+      queueItemsReady &&
+      queueRangeReady &&
+      !queueCarryOver.isCarryingOver &&
+      !(isKanbanFiltering && filteredTasksQuery.data === undefined),
+    hasError:
+      queuesQuery.error != null ||
+      hasRequiredTaskDataError ||
+      queueItemsResults.some((result) => result.error != null) ||
+      dayQueueItemsInRangeError != null ||
+      (isKanbanFiltering && filteredTasksQuery.error != null),
+  })
+  const {
+    queueSections: displayQueueSections,
+    dayQueueTasks: displayDayQueueTasks,
+    queueCandidates: displayQueueCandidates,
+    taskRowStates: displayTaskRowStates,
+  } = queueDisplayTransition.value
+  const isRetainingPreviousQueue =
+    queueDisplayTransition.isRetainingPreviousQueue
+  const displayNowPanelProps = isRetainingPreviousQueue
+    ? { ...nowPanelProps, isLoading: nowPanelQueryData.isPending }
+    : nowPanelProps
+  const transitionDndCallbacks = useMemo<CalendarDndCallbacks>(
+    () => ({
+      ...dndCallbacks,
+      onEventDrop: (info) => {
+        if (
+          isRetainingPreviousQueue &&
+          info.eventType === 'day-queue' &&
+          info.wasAllDay &&
+          info.isAllDay
+        ) {
+          info.revert()
+          return
+        }
+        dndCallbacks.onEventDrop?.(info)
+      },
+      onExternalDrop: (info) => {
+        if (isRetainingPreviousQueue && info.allDay) return
+        dndCallbacks.onExternalDrop?.(info)
+      },
+    }),
+    [dndCallbacks, isRetainingPreviousQueue],
+  )
+
   const calendarEvents = useDayViewCalendarEvents({
     timeBlocksData,
     schedulesData,
@@ -338,137 +433,49 @@ function DayView() {
     visibleRange,
   })
 
-  const appendedTaskIdsFor = (queueKey: string, taskId: string) => {
-    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
-      return null
-    const taskIds = (rawItemsByKey.get(queueKey) ?? []).map(
-      (item) => item.taskId,
-    )
-    return appendQueueTaskId(taskIds, taskId)
-  }
-
-  const handleInsertCandidate = (queueKey: string, taskId: string) => {
-    const taskIds = appendedTaskIdsFor(queueKey, taskId)
-    if (taskIds == null) return
-    setQueueItems.mutate({
-      key: queueKey,
-      date: selectedDateStr,
-      taskIds,
-    })
-  }
-
-  const handleAddCandidate = (taskId: string) => {
-    handleInsertCandidate(DAY_QUEUE_KEY, taskId)
-  }
-
-  const handleRemoveFromQueue = (queueKey: string, taskId: string) => {
-    if (setQueueItems.isPending && setQueueItems.variables.key === queueKey)
-      return
-    const rawIds = (rawItemsByKey.get(queueKey) ?? []).map(
-      (item) => item.taskId,
-    )
-    setQueueItems.mutate({
-      key: queueKey,
-      date: selectedDateStr,
-      taskIds: rawIds.filter((id) => id !== taskId),
-    })
-  }
-
-  const handleMoveScheduledTaskToWeek = (taskId: string, date: string) => {
-    const weekQueueIndex =
-      queuesData?.findIndex((queue) => queue.key === WEEK_QUEUE_KEY) ?? -1
-    if (
-      weekQueueIndex === -1 ||
-      queueItemsResults[weekQueueIndex]?.data == null
-    )
-      return
-    const taskIds = appendedTaskIdsFor(WEEK_QUEUE_KEY, taskId)
-    if (taskIds == null) return
-    setQueueItems.mutate(
-      { key: WEEK_QUEUE_KEY, date, taskIds },
-      {
-        onSuccess: () => {
-          void queryClient.invalidateQueries({
-            queryKey: [...queueKeys.all, WEEK_QUEUE_KEY, 'items'],
-          })
-          void queryClient.invalidateQueries({
-            queryKey: queueKeys.itemsForQueue(DAY_QUEUE_KEY),
-          })
-        },
-      },
-    )
-  }
-
-  const handleMoveTask = (
-    taskId: string,
-    fromQueueKey: string,
-    toQueueKey: string,
-  ) => {
-    const taskIds = appendedTaskIdsFor(toQueueKey, taskId)
-    if (taskIds == null) return
-    setQueueItems.mutate(
-      {
-        key: toQueueKey,
-        date: selectedDateStr,
-        taskIds,
-      },
-      {
-        onSuccess: () => {
-          // The server enforces "at most one queue per task" itself and
-          // already dropped this task from fromQueueKey's stored selection
-          // — patch its cached items locally instead of refetching so the
-          // UI doesn't show the task in both sections until the next fetch.
-          queryClient.setQueriesData<QueueItem[]>(
-            { queryKey: queueKeys.items(fromQueueKey, selectedDateStr) },
-            (old: QueueItem[] | undefined) =>
-              old?.filter((item) => item.taskId !== taskId) ?? old,
-          )
-          queryClient.setQueriesData<QueueItem[]>(
-            {
-              queryKey: queueKeys.itemsForQueue(fromQueueKey),
-              predicate: ({ queryKey }) =>
-                queueKeys.rangeContainsDate(
-                  queryKey,
-                  fromQueueKey,
-                  selectedDateStr,
-                ),
-            },
-            (old: QueueItem[] | undefined) =>
-              old?.filter(
-                (item) =>
-                  item.taskId !== taskId ||
-                  item.periodStart !== selectedDateStr,
-              ) ?? old,
-          )
-        },
-      },
-    )
-  }
+  const {
+    handleAddCandidate,
+    handleInsertCandidate,
+    handleMoveScheduledTaskToWeek,
+    handleMoveTask,
+    handleRemoveFromQueue,
+  } = useDayViewQueueActions({
+    queues: queuesData,
+    queueItemsResults,
+    rawItemsByKey,
+    selectedDate: selectedDateStr,
+    setQueueItems,
+    isQueueTransitioning: isRetainingPreviousQueue,
+  })
 
   return (
     <>
       <DayViewPresentation
         layout={isCompactLayout ? 'compact' : 'default'}
-        nowPanel={nowPanelProps}
-        {...(selectedDateStr === formatLocalDate(now)
-          ? { taskRowStates: compactTaskRowStates }
-          : {})}
+        isQueueRefreshing={isRetainingPreviousQueue}
+        nowPanel={displayNowPanelProps}
+        {...(displayTaskRowStates == null
+          ? {}
+          : { taskRowStates: displayTaskRowStates })}
         compactMemo={compactMemoProps}
         isLoading={
-          isLoading ||
-          queueCarryOver.isCarryingOver ||
-          (isKanbanFiltering && filteredTasksQuery.isLoading)
+          !isRetainingPreviousQueue &&
+          !queueDisplayTransition.isReady &&
+          !queueDisplayTransition.hasError &&
+          (isLoading ||
+            queueCarryOver.isCarryingOver ||
+            (isKanbanFiltering && filteredTasksQuery.isLoading))
         }
         calendarEvents={calendarEvents}
         schedules={schedulesData ?? []}
-        dndCallbacks={dndCallbacks}
+        dndCallbacks={transitionDndCallbacks}
         onCreateTimeBlock={createTimeBlock.mutate}
         {...(gcalAuthRequired && gcalAuthUrlQuery.data?.url != null
           ? { gcalAuthUrl: gcalAuthUrlQuery.data.url }
           : {})}
-        queueSections={visibleQueueSections}
-        dayQueueTasks={dayQueueTasks}
-        queueCandidates={queueCandidates}
+        queueSections={displayQueueSections}
+        dayQueueTasks={displayDayQueueTasks}
+        queueCandidates={displayQueueCandidates}
         onMoveTask={handleMoveTask}
         onInsertCandidate={handleInsertCandidate}
         onAddCandidate={handleAddCandidate}

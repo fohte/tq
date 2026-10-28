@@ -137,3 +137,12 @@ export const Loading: Story = {
     queueCandidates: [],
   },
 }
+
+export const Refreshing: Story = {
+  name: 'the previous queue stays visible while the next date loads',
+  args: {
+    ...Default.args,
+    isLoading: false,
+    isRefreshing: true,
+  },
+}

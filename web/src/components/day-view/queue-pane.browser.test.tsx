@@ -49,12 +49,14 @@ function renderQueuePane(
   onMoveTask = vi.fn(),
   onInsertCandidate = vi.fn(),
   onMoveScheduledTaskToWeek = vi.fn(),
+  isRefreshing = false,
 ) {
   render(
     <Providers>
       <div style={{ height: 600, width: 480 }}>
         <QueuePane
           isLoading={false}
+          isRefreshing={isRefreshing}
           queueDate="2026-01-01"
           queueSections={[
             makeQueueSectionData({
@@ -87,6 +89,18 @@ function renderQueuePane(
     </Providers>,
   )
   return { onMoveTask, onInsertCandidate, onMoveScheduledTaskToWeek }
+}
+
+function readRefreshingQueueState(onMoveTask: {
+  mock: { calls: unknown[][] }
+}) {
+  const pane = document.querySelector('[data-scroll-restoration-id="day-view"]')
+  return {
+    callbackCalls: onMoveTask.mock.calls,
+    ariaBusy: pane?.getAttribute('aria-busy'),
+    isDimmed: pane?.classList.contains('opacity-50'),
+    visibleTask: screen.getByText('Day task').textContent,
+  }
 }
 
 async function waitForDndClickSuppressionToClear() {
@@ -168,6 +182,21 @@ describe('QueuePane dragging', () => {
 
     await waitFor(() => {
       expect(onInsertCandidate.mock.calls).toEqual([['week', 'candidate-task']])
+    })
+  })
+
+  it('keeps the previous queue visible and does not drag tasks while refreshing', async () => {
+    const { onMoveTask } = renderQueuePane(vi.fn(), vi.fn(), vi.fn(), true)
+
+    await dragByTitle('Day task', 'Week task')
+
+    await waitFor(() => {
+      expect(readRefreshingQueueState(onMoveTask)).toEqual({
+        callbackCalls: [],
+        ariaBusy: 'true',
+        isDimmed: true,
+        visibleTask: 'Day task',
+      })
     })
   })
 

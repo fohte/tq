@@ -39,6 +39,7 @@ function isQueueTaskDragData(
 
 export interface QueuePaneProps {
   isLoading: boolean
+  isRefreshing?: boolean
   queueSections: QueueSectionData[]
   queueDate: string
   queueCandidates: QueueCandidate<Task>[]
@@ -52,6 +53,7 @@ export interface QueuePaneProps {
 
 export function QueuePane({
   isLoading,
+  isRefreshing = false,
   queueSections,
   queueDate,
   queueCandidates,
@@ -71,6 +73,8 @@ export function QueuePane({
   )
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isRefreshing) return
+
     const { active, over } = event
     if (over == null) return
     const overId = String(over.id)
@@ -93,7 +97,12 @@ export function QueuePane({
 
   return (
     <div
-      className={cn('flex-1 overflow-auto', className)}
+      aria-busy={isLoading || isRefreshing}
+      className={cn(
+        'flex-1 overflow-auto',
+        isRefreshing && 'opacity-50',
+        className,
+      )}
       data-scroll-restoration-id="day-view"
     >
       {isLoading ? (
