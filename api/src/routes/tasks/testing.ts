@@ -104,6 +104,7 @@ export interface TaskResponse {
   githubLinks: GithubLinkResponse[]
   // Present only on the single-task detail response.
   githubBlockers?: GithubLinkResponse[]
+  hasUnresolvedWait?: boolean
   waits?: TaskWaitResponse[]
   createdAt: string
   updatedAt: string
@@ -159,6 +160,7 @@ export interface TaskListItemResponse {
     number: number
     url: string
   }[]
+  hasUnresolvedWait: boolean
   waits?: TaskWaitSummaryResponse[]
   candidateReason?: TaskQueueCandidateReason | null
   childCompletionCount?: { completed: number; total: number }
@@ -264,6 +266,8 @@ export function toListItemResponse(
     duplicateOfNumber: null,
     blockedByNumbers: opts.blockedByNumbers ?? [],
     blockedByGithubRefs: opts.blockedByGithubRefs ?? [],
+    hasUnresolvedWait:
+      opts.waits?.some((wait) => wait.resolvedAt == null) ?? false,
     ...(opts.waits != null && opts.waits.length > 0
       ? { waits: opts.waits }
       : {}),
@@ -388,6 +392,7 @@ const taskListItemResponseSchema = z.object({
       url: z.string(),
     }),
   ),
+  hasUnresolvedWait: z.boolean(),
   waits: z.array(taskWaitSummaryResponseSchema).optional(),
   childCompletionCount: z
     .object({ completed: z.number(), total: z.number() })
@@ -419,6 +424,7 @@ const taskResponseSchema = z.object({
   occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   githubBlockers: z.array(githubLinkResponseSchema).optional(),
+  hasUnresolvedWait: z.boolean().optional(),
   waits: z.array(taskWaitResponseSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),

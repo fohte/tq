@@ -776,6 +776,7 @@ describe('task_complete tool', () => {
         githubLinks: [],
         createdAt: '<timestamp>',
         updatedAt: '<timestamp>',
+        hasUnresolvedWait: false,
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],

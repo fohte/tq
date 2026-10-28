@@ -348,11 +348,19 @@
 }
 
 .tq-month-event-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 10px;
   line-height: 1.4;
   color: var(--foreground);
   white-space: nowrap;
+}
+
+.tq-month-event-title-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }

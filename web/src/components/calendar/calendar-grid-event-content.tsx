@@ -11,8 +11,13 @@ import {
   TaskDateEvent,
 } from '#components/calendar/task-date-event'
 import { TimeBlockPreviewTrigger } from '#components/calendar/time-block-preview-trigger'
+import { TaskWaitingIcon } from '#components/task/task-waiting-icon'
 import { formatHm } from '#lib/calendar-grid-time'
-import { getEventProps, isPendingGcalResponse } from '#lib/calendar-utils'
+import {
+  getEventProps,
+  isPendingGcalResponse,
+  shouldShowWaitingIcon,
+} from '#lib/calendar-utils'
 
 export function renderCalendarGridEventContent(
   arg: EventContentArg,
@@ -51,7 +56,10 @@ export function renderCalendarGridEventContent(
         data-continues-after={arg.event.allDay && !arg.isEnd}
       >
         <span className="tq-month-event-title">
-          {eventProps.redacted === true ? '予定あり' : arg.event.title}
+          {shouldShowWaitingIcon(eventProps) && <TaskWaitingIcon />}
+          <span className="tq-month-event-title-text">
+            {eventProps.redacted === true ? '予定あり' : arg.event.title}
+          </span>
         </span>
       </div>
     )

@@ -57,6 +57,7 @@ async function completeTask(
 function expectedTaskListItem(task: CreatedTaskResponse) {
   return {
     ...withoutLinkSync(task),
+    hasUnresolvedWait: false,
     parentNumber: null,
     duplicateOfNumber: null,
     blockedByNumbers: [],
@@ -69,7 +70,7 @@ function expectedTaskListItem(task: CreatedTaskResponse) {
 function withoutDescription(task: CreatedTaskResponse) {
   const { description, ...taskWithoutDescription } = withoutLinkSync(task)
   void description
-  return taskWithoutDescription
+  return { ...taskWithoutDescription, hasUnresolvedWait: false }
 }
 
 function expectedTaskListRowItem(task: CreatedTaskResponse) {

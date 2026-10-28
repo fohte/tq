@@ -162,6 +162,7 @@ function taskListItemFieldsToResponse(
     duplicateOfNumber,
     blockedByNumbers,
     blockedByGithubRefs,
+    hasUnresolvedWait: waits.some((wait) => wait.resolvedAt == null),
     ...(waits.length > 0 ? { waits } : {}),
     checklistCompletionCount,
   }

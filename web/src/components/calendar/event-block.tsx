@@ -11,6 +11,7 @@ import {
   getTaskDateEventProps,
   TaskDateEvent,
 } from '#components/calendar/task-date-event'
+import { TaskWaitingIcon } from '#components/task/task-waiting-icon'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import {
   type CalendarEventProps,
@@ -19,6 +20,7 @@ import {
   GCAL_WORKING_LOCATION_EVENT_TYPE,
   getEventProps,
   isPendingGcalResponse,
+  shouldShowWaitingIcon,
 } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
@@ -167,6 +169,7 @@ export function EventBlock(arg: EventContentArg) {
                   : 'font-mono text-foreground',
           )}
         >
+          {shouldShowWaitingIcon(props) && <TaskWaitingIcon />}
           <GcalEventIconTitle
             gcalEventType={props.gcalEventType}
             title={event.title}

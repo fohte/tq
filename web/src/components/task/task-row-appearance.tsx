@@ -21,6 +21,7 @@ import {
   TaskNumberLabel,
   TaskProjectLabel,
 } from '#components/task/task-row-shared'
+import { TaskWaitingIcon } from '#components/task/task-waiting-icon'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task } from '#hooks/use-tasks'
@@ -170,10 +171,15 @@ export function TaskRowAppearance({
         <div className="flex items-start gap-2" onClick={onClick}>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-baseline gap-2">
-              <TaskStatusGlyph
-                status={task.status}
-                statusReason={task.statusReason}
-              />
+              {(isCompleted || task.hasUnresolvedWait) && (
+                <span className="inline-flex items-center gap-1">
+                  <TaskStatusGlyph
+                    status={task.status}
+                    statusReason={task.statusReason}
+                  />
+                  {task.hasUnresolvedWait && <TaskWaitingIcon />}
+                </span>
+              )}
               <TaskNumberLabel number={task.number} />
               <span
                 className={cn(

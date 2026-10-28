@@ -22,6 +22,7 @@ export interface CalendarEventProps {
   dateTaskKind?: DateTaskCalendarEventKind
   dateTaskOverdue?: boolean
   dateTaskDueDateLabel?: string
+  hasUnresolvedWait?: boolean
   displayPriority?: number
   /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto'. */
   isAutoScheduled?: boolean
@@ -50,6 +51,21 @@ export function getEventProps(event: EventApi): CalendarEventProps {
   // FullCalendar types extendedProps as Record<string, any>
 
   return event.extendedProps
+}
+
+const WAITING_ICON_EVENT_TYPES = new Set<CalendarEventProps['type']>([
+  'manual',
+  'auto',
+  'day-queue',
+  'task-date',
+])
+
+export function shouldShowWaitingIcon(props: CalendarEventProps): boolean {
+  return (
+    props.hasUnresolvedWait === true &&
+    props.redacted !== true &&
+    WAITING_ICON_EVENT_TYPES.has(props.type)
+  )
 }
 
 /** True for any of the gcal-derived display types (kept in sync with the `'gcal-'` prefix below). */

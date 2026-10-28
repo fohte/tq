@@ -1,8 +1,10 @@
 import { Flag, Play } from 'lucide-react'
 
-import type {
-  CalendarEventProps,
-  DateTaskCalendarEventKind,
+import { TaskWaitingIcon } from '#components/task/task-waiting-icon'
+import {
+  type CalendarEventProps,
+  type DateTaskCalendarEventKind,
+  shouldShowWaitingIcon,
 } from '#lib/calendar-utils'
 import { cn } from '#lib/utils'
 
@@ -11,6 +13,7 @@ interface TaskDateEventProps {
   dateTaskKind: DateTaskCalendarEventKind
   dateTaskOverdue?: boolean
   dateTaskDueDateLabel?: string
+  hasUnresolvedWait?: boolean
   isStart?: boolean
   isEnd?: boolean
   variant?: 'calendar' | 'month'
@@ -20,7 +23,10 @@ export function getTaskDateEventProps(
   props: CalendarEventProps,
 ): Pick<
   TaskDateEventProps,
-  'dateTaskKind' | 'dateTaskOverdue' | 'dateTaskDueDateLabel'
+  | 'dateTaskKind'
+  | 'dateTaskOverdue'
+  | 'dateTaskDueDateLabel'
+  | 'hasUnresolvedWait'
 > {
   return {
     dateTaskKind: props.dateTaskKind ?? 'range',
@@ -30,6 +36,7 @@ export function getTaskDateEventProps(
     ...(props.dateTaskDueDateLabel == null
       ? {}
       : { dateTaskDueDateLabel: props.dateTaskDueDateLabel }),
+    ...(shouldShowWaitingIcon(props) ? { hasUnresolvedWait: true } : {}),
   }
 }
 
@@ -38,6 +45,7 @@ export function TaskDateEvent({
   dateTaskKind,
   dateTaskOverdue = false,
   dateTaskDueDateLabel,
+  hasUnresolvedWait = false,
   isStart = true,
   isEnd = true,
   variant = 'calendar',
@@ -72,6 +80,7 @@ export function TaskDateEvent({
           )}
         />
       )}
+      {hasUnresolvedWait && <TaskWaitingIcon />}
       <span className="min-w-0 flex-1 truncate">{title}</span>
       {dateTaskDueDateLabel != null && (
         <span className="ml-auto hidden shrink-0 text-primary/70 @min-[100px]/task-date:inline">

@@ -47,6 +47,10 @@ export function useDayViewCalendarEvents({
 
       const parentTask =
         task?.parentId != null ? taskMap.get(task.parentId) : undefined
+      const redacted = !matchesContextFilter(
+        task?.context ?? 'personal',
+        context,
+      )
 
       return [
         {
@@ -57,10 +61,13 @@ export function useDayViewCalendarEvents({
           type: block.isAutoScheduled ? 'auto' : 'manual',
           taskId: block.taskId,
           isAutoScheduled: block.isAutoScheduled,
+          ...(!redacted && task?.hasUnresolvedWait === true
+            ? { hasUnresolvedWait: true }
+            : {}),
           ...(parentTask != null
             ? { parentRef: `#${String(parentTask.number)} ${parentTask.title}` }
             : {}),
-          redacted: !matchesContextFilter(task?.context ?? 'personal', context),
+          redacted,
         },
       ]
     })
@@ -91,6 +98,7 @@ export function useDayViewCalendarEvents({
       dayQueueItems.flatMap(({ date, item, queuePosition }) => {
         const task = taskMap.get(item.taskId)
         if (task == null || task.status === 'completed') return []
+        const redacted = !matchesContextFilter(task.context, context)
 
         return [
           {
@@ -102,7 +110,10 @@ export function useDayViewCalendarEvents({
             taskId: task.id,
             allDay: true,
             queuePosition,
-            redacted: !matchesContextFilter(task.context, context),
+            ...(!redacted && task.hasUnresolvedWait
+              ? { hasUnresolvedWait: true }
+              : {}),
+            redacted,
           },
         ]
       }),

@@ -121,7 +121,24 @@ export const WaitingForReply: Story = {
   name: 'the row identifies the reply it is waiting for',
   args: {
     task: makeTask({
+      hasUnresolvedWait: true,
       waits: [makeTaskWaitSummary({ label: 'Review the proposal' })],
+    }),
+  },
+}
+
+export const ResolvedWait: Story = {
+  name: 'the row shows the resolved wait message without a status marker',
+  args: {
+    task: makeTask({
+      hasUnresolvedWait: false,
+      waits: [
+        makeTaskWaitSummary({
+          label: 'Review the proposal',
+          resolvedAt: '2099-10-12T00:00:00.000Z',
+          acknowledgedAt: null,
+        }),
+      ],
     }),
   },
 }
@@ -237,6 +254,17 @@ export const Duplicate: Story = {
       statusReason: 'duplicate',
       title: 'Set up CI pipeline',
     },
+  },
+}
+
+export const CompletedWaitingForReply: Story = {
+  name: 'the row keeps the close reason beside the wait icon',
+  args: {
+    task: makeTask({
+      status: 'completed',
+      statusReason: 'duplicate',
+      hasUnresolvedWait: true,
+    }),
   },
 }
 

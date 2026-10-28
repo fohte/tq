@@ -111,6 +111,7 @@ describe('mapCalendarGridEvents', () => {
       dateTaskOverdue: true,
       dateTaskDueDateLabel: 'Oct 3',
       displayPriority: 1,
+      hasUnresolvedWait: true,
     })
 
     expect(mapCalendarGridEvents([event], 'day')).toEqual([
@@ -133,10 +134,57 @@ describe('mapCalendarGridEvents', () => {
           dateTaskKind: 'overdue-today',
           dateTaskOverdue: true,
           dateTaskDueDateLabel: 'Oct 3',
+          hasUnresolvedWait: true,
           displayPriority: 1,
           isAutoScheduled: undefined,
           scheduleId: undefined,
           scheduleStart: '2026-10-06',
+          queuePosition: undefined,
+          redacted: undefined,
+          calendarColor: undefined,
+          responseStatus: undefined,
+          gcalEventType: undefined,
+        },
+      },
+    ])
+  })
+
+  it('passes wait status to timed task event content', () => {
+    const event = makeTimeBlockEvent({
+      id: 'waiting-time-block',
+      title: 'Review a sample outline',
+      start: '2031-04-09T10:00:00',
+      end: '2031-04-09T11:30:00',
+      type: 'manual',
+      taskId: 'waiting-task',
+      hasUnresolvedWait: true,
+    })
+
+    expect(mapCalendarGridEvents([event], 'day')).toEqual([
+      {
+        id: 'waiting-time-block',
+        title: 'Review a sample outline',
+        start: '2031-04-09T10:00:00',
+        end: '2031-04-09T11:30:00',
+        allDay: false,
+        queueOrder: 1,
+        queuePosition: undefined,
+        displayPriority: 0,
+        editable: true,
+        durationEditable: true,
+        extendedProps: {
+          type: 'manual',
+          parentRef: undefined,
+          color: undefined,
+          taskId: 'waiting-task',
+          dateTaskKind: undefined,
+          dateTaskOverdue: undefined,
+          dateTaskDueDateLabel: undefined,
+          hasUnresolvedWait: true,
+          displayPriority: 0,
+          isAutoScheduled: undefined,
+          scheduleId: undefined,
+          scheduleStart: '2031-04-09T10:00:00',
           queuePosition: undefined,
           redacted: undefined,
           calendarColor: undefined,

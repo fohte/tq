@@ -70,6 +70,14 @@ export const DueDateOnly: Story = {
   },
 }
 
+export const WaitingForReply: Story = {
+  name: 'a task waiting for a reply keeps its due date flag',
+  args: {
+    dateTaskKind: 'due',
+    hasUnresolvedWait: true,
+  },
+}
+
 export const StartDateOnly: Story = {
   name: 'a task with only a start date shows a play icon',
   args: {
@@ -101,5 +109,6 @@ export const OverdueTodayInMonthView: Story = {
     dateTaskOverdue: true,
     dateTaskDueDateLabel: 'Oct 5',
     variant: 'month',
+    hasUnresolvedWait: true,
   },
 }

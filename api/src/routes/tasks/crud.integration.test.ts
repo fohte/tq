@@ -1593,6 +1593,7 @@ describe('tasks CRUD API', () => {
       expect(body.map(normalizeTask)).toEqual([
         {
           ...normalizeTask(withoutLinkSync(taskA)),
+          hasUnresolvedWait: false,
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -1602,6 +1603,7 @@ describe('tasks CRUD API', () => {
         },
         {
           ...normalizeTask(withoutLinkSync(taskB)),
+          hasUnresolvedWait: false,
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -1690,6 +1692,7 @@ describe('tasks CRUD API', () => {
       expect(body.map(normalizeTask)).toEqual([
         {
           ...normalizeTask(patchedTaskB),
+          hasUnresolvedWait: false,
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -1699,6 +1702,7 @@ describe('tasks CRUD API', () => {
         },
         {
           ...normalizeTask(patchedTaskC),
+          hasUnresolvedWait: false,
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],
@@ -1708,6 +1712,7 @@ describe('tasks CRUD API', () => {
         },
         {
           ...normalizeTask(patchedTaskA),
+          hasUnresolvedWait: false,
           parentNumber: null,
           duplicateOfNumber: null,
           blockedByNumbers: [],

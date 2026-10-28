@@ -68,6 +68,9 @@ export function mapCalendarGridEvents(
         dateTaskKind: event.dateTaskKind,
         dateTaskOverdue: event.dateTaskOverdue,
         dateTaskDueDateLabel: event.dateTaskDueDateLabel,
+        ...(event.hasUnresolvedWait === true
+          ? { hasUnresolvedWait: true }
+          : {}),
         displayPriority: event.displayPriority ?? 0,
         isAutoScheduled: event.isAutoScheduled,
         scheduleId: event.scheduleId,

@@ -122,6 +122,7 @@ describe('taskDetailToSearchResult', () => {
       templateId: task.templateId,
       occurrenceDate: task.occurrenceDate,
       githubLinks: task.githubLinks,
+      hasUnresolvedWait: false,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       childCompletionCount: task.childCompletionCount,

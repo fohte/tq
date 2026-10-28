@@ -44,6 +44,7 @@ export interface TimeBlockEvent {
   dateTaskKind?: DateTaskCalendarEventKind
   dateTaskOverdue?: boolean
   dateTaskDueDateLabel?: string
+  hasUnresolvedWait?: boolean
   displayPriority?: number
   /** Underlying time block's raw auto-scheduled flag; present when type is 'manual' | 'auto' */
   isAutoScheduled?: boolean
