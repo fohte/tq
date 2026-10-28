@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { CalendarViewControl } from '#components/calendar/calendar-header'
 import {
   DayViewPresentation,
   type DayViewPresentationProps,
@@ -30,7 +31,7 @@ let capturedOnTaskClick: ((taskId: string) => void) | undefined
 let capturedOnScheduleClick:
   | ((scheduleId: string, occurrenceDate: string, start: string) => void)
   | undefined
-let capturedViewControl: 'segmented' | 'week-toggle' | 'none' | undefined
+let capturedViewControl: CalendarViewControl | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
@@ -46,7 +47,7 @@ vi.mock('#components/calendar/calendar-view', () => ({
       occurrenceDate: string,
       start: string,
     ) => void
-    viewControl?: 'segmented' | 'week-toggle' | 'none'
+    viewControl?: CalendarViewControl
   }) => {
     capturedOnSelectRange = props.onSelectRange
     capturedOnTaskClick = props.onTaskClick

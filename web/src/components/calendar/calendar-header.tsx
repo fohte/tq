@@ -7,7 +7,7 @@ import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { formatLocalDate } from '#lib/date-range'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
-export type CalendarViewControl = 'segmented' | 'week-toggle' | 'none'
+export type CalendarViewControl = 'segmented' | 'week-toggle'
 
 const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
   day: 'timeGridDay',
