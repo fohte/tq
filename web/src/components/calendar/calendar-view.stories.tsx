@@ -261,8 +261,7 @@ export const CompactDay: Story = {
   ],
   args: {
     events: sampleEvents,
-    showViewSwitcher: false,
-    showWeekToggle: true,
+    viewControl: 'week-toggle',
   },
 }
 
@@ -279,8 +278,7 @@ export const CompactWeek: Story = {
   args: {
     events: sampleEvents,
     initialView: 'week',
-    showViewSwitcher: false,
-    showWeekToggle: true,
+    viewControl: 'week-toggle',
   },
 }
 

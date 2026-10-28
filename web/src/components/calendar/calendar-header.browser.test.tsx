@@ -133,8 +133,7 @@ describe('CalendarHeader', () => {
           onNext={vi.fn()}
           onToday={vi.fn()}
           onViewChange={onViewChange}
-          showViewSwitcher={false}
-          showWeekToggle
+          viewControl="week-toggle"
         />,
       )
 
@@ -154,8 +153,7 @@ describe('CalendarHeader', () => {
         onNext={vi.fn()}
         onToday={vi.fn()}
         onViewChange={onViewChange}
-        showViewSwitcher={false}
-        showWeekToggle
+        viewControl="week-toggle"
       />,
     )
     const toggle = screen.getByRole('button', { name: 'week' })
@@ -169,8 +167,7 @@ describe('CalendarHeader', () => {
         onNext={vi.fn()}
         onToday={vi.fn()}
         onViewChange={onViewChange}
-        showViewSwitcher={false}
-        showWeekToggle
+        viewControl="week-toggle"
       />,
     )
     pressedStates.push(toggle.getAttribute('aria-pressed'))

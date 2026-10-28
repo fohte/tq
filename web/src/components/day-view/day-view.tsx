@@ -436,8 +436,7 @@ export function DayViewPresentation({
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}
-              showViewSwitcher={!isCompactLayout}
-              showWeekToggle={isCompactLayout}
+              viewControl={isCompactLayout ? 'week-toggle' : 'segmented'}
               onScheduleClick={handleScheduleClick}
               onTaskClick={handleTaskClick}
               onSelectRange={openCreateModal}

@@ -7,6 +7,7 @@ import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { formatLocalDate } from '#lib/date-range'
 
 export type CalendarViewType = 'day' | 'week' | 'month'
+export type CalendarViewControl = 'segmented' | 'week-toggle' | 'none'
 
 const FULLCALENDAR_VIEW_MAP: Record<CalendarViewType, string> = {
   day: 'timeGridDay',
@@ -43,8 +44,7 @@ interface CalendarHeaderProps {
   onNext: () => void
   onToday: () => void
   onViewChange: (view: CalendarViewType) => void
-  showViewSwitcher?: boolean
-  showWeekToggle?: boolean
+  viewControl?: CalendarViewControl
 }
 
 function formatWeekday(date: Date): string {
@@ -58,8 +58,7 @@ export function CalendarHeader({
   onNext,
   onToday,
   onViewChange,
-  showViewSwitcher = true,
-  showWeekToggle = false,
+  viewControl = 'segmented',
 }: CalendarHeaderProps) {
   const isWeekView = activeView === 'week'
 
@@ -94,7 +93,7 @@ export function CalendarHeader({
         </Button>
       </ButtonGroup>
 
-      {showViewSwitcher && (
+      {viewControl === 'segmented' && (
         <div className="ml-auto">
           <SegmentedControl
             value={activeView}
@@ -103,7 +102,7 @@ export function CalendarHeader({
           />
         </div>
       )}
-      {!showViewSwitcher && showWeekToggle && (
+      {viewControl === 'week-toggle' && (
         <div className="ml-auto">
           <Button
             variant={isWeekView ? 'default' : 'outline'}
