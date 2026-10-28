@@ -10,6 +10,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   makeGithubBlocker,
+  makeGithubLink,
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
@@ -92,6 +93,19 @@ const updateWait = vi.fn<ReturnType<typeof useUpdateTaskWait>['mutate']>()
 const resolveWait = vi.fn<ReturnType<typeof useResolveTaskWait>['mutate']>()
 const deleteWait = vi.fn<ReturnType<typeof useDeleteTaskWait>['mutate']>()
 
+function subjectWaitGroupOutcome(group: HTMLElement) {
+  const link = within(group).getByRole('link')
+  return {
+    groupLabel: group.getAttribute('aria-label'),
+    subjectLink: {
+      href: link.getAttribute('href'),
+      title: link.textContent,
+    },
+    resolvedLabel: within(group).getByText('wait resolved').textContent,
+    acknowledgeCalls: acknowledgeWait.mock.calls,
+  }
+}
+
 beforeAll(async () => {
   await import('#components/ui/markdown-editor-crepe')
 }, 20_000)
@@ -173,6 +187,56 @@ beforeEach(() => {
 })
 
 describe('TaskDependenciesSection', () => {
+  it('shows and acknowledges a review wait on a subject pull request', async () => {
+    const pullRequest = makeGithubLink({
+      id: 'github-subject-pr',
+      owner: 'example-org',
+      repo: 'sample-repo',
+      number: 73,
+      kind: 'pull_request',
+      role: 'subject',
+      title: 'Add request validation',
+      url: 'https://github.com/example-org/sample-repo/pull/73',
+    })
+    const wait = makeTaskWait({
+      id: 'wait-subject-review',
+      label: 'Review feedback',
+      body: 'Review the validation changes.',
+      githubLinkId: pullRequest.id,
+      resolvedAt: '2099-10-12T00:00:00.000Z',
+      acknowledgedAt: null,
+    })
+    const user = userEvent.setup()
+    render(
+      <TaskDependenciesSection
+        taskId={taskId}
+        blockedBy={[]}
+        blocking={[]}
+        githubBlockers={[]}
+        githubSubjects={[pullRequest]}
+        waits={[wait]}
+      />,
+    )
+
+    const subjectGroup = screen.getByRole('group', {
+      name: 'GitHub subject PR example-org/sample-repo#73',
+    })
+    const acknowledgeButton = within(subjectGroup).getByRole('button', {
+      name: 'Acknowledge wait: Review feedback',
+    })
+    await user.click(acknowledgeButton)
+
+    expect(subjectWaitGroupOutcome(subjectGroup)).toEqual({
+      groupLabel: 'GitHub subject PR example-org/sample-repo#73',
+      subjectLink: {
+        href: 'https://github.com/example-org/sample-repo/pull/73',
+        title: 'example-org/sample-repo#73Add request validation',
+      },
+      resolvedLabel: 'wait resolved',
+      acknowledgeCalls: [[wait.id]],
+    })
+  })
+
   it('updates notification events for a GitHub blocker', async () => {
     const githubBlockers = [makeGithubBlocker({ id: 'github-blocker-open' })]
     const user = userEvent.setup()

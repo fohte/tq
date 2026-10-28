@@ -52,7 +52,8 @@ export const waitOperations = [
           : ok(input),
       optionDescriptions: {
         body: 'Markdown describing what response the task is waiting for',
-        githubUrl: 'GitHub issue or pull request blocker URL',
+        githubUrl:
+          'GitHub issue or pull request blocker URL, or subject pull request URL',
         followUpDate: 'Date to follow up if there is no response (YYYY-MM-DD)',
       },
       optionMetavars: {

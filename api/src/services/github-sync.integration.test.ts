@@ -143,6 +143,20 @@ function timelineEvent(
   return makeGithubTimelineEvent(event, login, timestamp, actorType)
 }
 
+function submittedReviewEvent(
+  login: string,
+  state: string,
+  submittedAt: string,
+  createdAt = submittedAt,
+  actorType?: string,
+) {
+  return {
+    ...timelineEvent('reviewed', login, createdAt, actorType),
+    state,
+    submitted_at: submittedAt,
+  }
+}
+
 function defaultTimelineEvents() {
   return [
     timelineEvent('closed', 'another-user'),
@@ -237,6 +251,40 @@ function normalizeWaitState(
   return {
     resolvedAt: wait?.resolvedAt == null ? null : 'RESOLVED_AT',
     acknowledgedAt: wait?.acknowledgedAt == null ? null : 'ACKNOWLEDGED_AT',
+  }
+}
+
+async function loadWaitState(waitId: string) {
+  const [wait] = await db
+    .select({
+      resolvedAt: taskWaits.resolvedAt,
+      acknowledgedAt: taskWaits.acknowledgedAt,
+    })
+    .from(taskWaits)
+    .where(eq(taskWaits.id, waitId))
+
+  return normalizeWaitState(wait)
+}
+
+function subjectWaitSyncOutcome(wait: ReturnType<typeof normalizeWaitState>) {
+  return {
+    wait,
+    notifications: sentNotifications(),
+  }
+}
+
+function subjectWaitRetryOutcome(
+  firstSyncFailed: boolean,
+  waitAfterFirstSync: ReturnType<typeof normalizeWaitState>,
+  secondSyncFailed: boolean,
+  waitAfterSecondSync: ReturnType<typeof normalizeWaitState>,
+) {
+  return {
+    firstSyncFailed,
+    waitAfterFirstSync,
+    secondSyncFailed,
+    waitAfterSecondSync,
+    notifications: sentNotifications(),
   }
 }
 
@@ -341,6 +389,32 @@ async function attachGithubWait(linkId: string, taskId: string) {
       })
       .returning(),
   )
+}
+
+async function createSubjectWait(
+  number: number,
+  state: 'open' | 'closed' | 'merged' = 'open',
+) {
+  await upsertGithubToken('valid-token')
+  const link = await createScheduledLink(
+    'subject',
+    number,
+    new Date('2024-08-17T00:00:00Z'),
+    state,
+    true,
+  )
+  const syncedLink = firstOrThrow(
+    await db
+      .update(taskGithubLinks)
+      .set({
+        etag: '"unchanged"',
+        githubUpdatedAt: new Date('2024-08-17T00:00:00Z'),
+      })
+      .where(eq(taskGithubLinks.id, link.id))
+      .returning(),
+  )
+  const wait = await attachGithubWait(syncedLink.id, syncedLink.taskId)
+  return { link: syncedLink, wait, task: await loadTask(link.taskId) }
 }
 
 async function addChecklistItemsForGithubLink(taskId: string, linkId: string) {
@@ -614,6 +688,236 @@ describe('syncLinkFromGithub', () => {
       acknowledgedAt: null,
     })
     expect(sentNotifications()).toEqual([])
+  })
+
+  it.each(['approved', 'changes_requested', 'commented'] as const)(
+    'resolves a subject PR wait after a submitted $state review when issue sync is unchanged',
+    async (state) => {
+      const { link, wait, task } = await createSubjectWait(42)
+      await registerPush('personal')
+
+      queueGithubNotModifiedResponse()
+      queueGithubTimelineResponse([
+        submittedReviewEvent(
+          'another-user',
+          state,
+          '2024-08-16T13:40:00Z',
+          '2024-08-17T13:40:00Z',
+        ),
+      ])
+      ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+        wait: { resolvedAt: 'RESOLVED_AT', acknowledgedAt: null },
+        notifications: expectedNotification(
+          `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
+          task,
+        ),
+      })
+    },
+  )
+
+  it('resolves a bodyless comment when the issue update has no notification candidate', async () => {
+    const { link, wait, task } = await createSubjectWait(42)
+    await registerPush('personal')
+
+    queueGithubIssueResponse({
+      updated_at: '2024-08-17T00:00:00Z',
+      pull_request: {},
+    })
+    queueGithubTimelineResponse([
+      timelineEvent('commented', 'another-user', '2024-08-16T13:40:00Z'),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+      wait: { resolvedAt: 'RESOLVED_AT', acknowledgedAt: null },
+      notifications: expectedNotification(
+        `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
+        task,
+      ),
+    })
+  })
+
+  it.each([
+    {
+      event: 'closed',
+      linkState: 'closed',
+      login: AUTHENTICATED_GITHUB_LOGIN,
+      actorType: undefined,
+    },
+    {
+      event: 'merged',
+      linkState: 'merged',
+      login: 'automation-bot',
+      actorType: 'Bot',
+    },
+  ] as const)(
+    'resolves a subject PR wait after $event even when the actor is $login',
+    async ({ event, linkState, login, actorType }) => {
+      const { link, wait, task } = await createSubjectWait(42, linkState)
+      await registerPush('personal')
+
+      if (linkState !== 'merged') {
+        queueGithubNotModifiedResponse()
+      }
+      queueGithubTimelineResponse([
+        timelineEvent(event, login, '2024-08-16T13:40:00Z', actorType),
+      ])
+      ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+        wait: { resolvedAt: 'RESOLVED_AT', acknowledgedAt: null },
+        notifications: expectedNotification(
+          `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
+          task,
+        ),
+      })
+    },
+  )
+
+  it.each([
+    {
+      event: 'reviewed',
+      login: AUTHENTICATED_GITHUB_LOGIN,
+      actorType: undefined,
+      state: 'approved',
+    },
+    {
+      event: 'reviewed',
+      login: 'automation-bot',
+      actorType: 'Bot',
+      state: 'commented',
+    },
+    {
+      event: 'commented',
+      login: AUTHENTICATED_GITHUB_LOGIN,
+      actorType: undefined,
+      state: null,
+    },
+    {
+      event: 'commented',
+      login: 'automation-bot',
+      actorType: 'Bot',
+      state: null,
+    },
+  ] as const)(
+    'keeps a subject PR wait open after $event activity by $login',
+    async ({ event, login, actorType, state }) => {
+      const { link, wait } = await createSubjectWait(42)
+
+      queueGithubNotModifiedResponse()
+      queueGithubTimelineResponse([
+        event === 'reviewed'
+          ? submittedReviewEvent(
+              login,
+              state,
+              '2024-08-16T13:40:00Z',
+              '2024-08-16T13:40:00Z',
+              actorType,
+            )
+          : timelineEvent(event, login, '2024-08-16T13:40:00Z', actorType),
+      ])
+      ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+        wait: { resolvedAt: null, acknowledgedAt: null },
+        notifications: [],
+      })
+    },
+  )
+
+  it.each(['pending', 'dismissed'] as const)(
+    'keeps a subject PR wait open after a $state review event',
+    async (state) => {
+      const { link, wait } = await createSubjectWait(42)
+
+      queueGithubNotModifiedResponse()
+      queueGithubTimelineResponse([
+        submittedReviewEvent('another-user', state, '2024-08-16T13:40:00Z'),
+      ])
+      ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+        wait: { resolvedAt: null, acknowledgedAt: null },
+        notifications: [],
+      })
+    },
+  )
+
+  it('keeps a subject PR wait open after a push', async () => {
+    const { link, wait } = await createSubjectWait(42)
+
+    queueGithubNotModifiedResponse()
+    queueGithubTimelineResponse([
+      timelineEvent(
+        'head_ref_force_pushed',
+        'another-user',
+        '2024-08-16T13:40:00Z',
+      ),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+      wait: { resolvedAt: null, acknowledgedAt: null },
+      notifications: [],
+    })
+  })
+
+  it('uses submitted_at instead of a later review event timestamp', async () => {
+    const { link, wait } = await createSubjectWait(42)
+
+    queueGithubNotModifiedResponse()
+    queueGithubTimelineResponse([
+      submittedReviewEvent(
+        'another-user',
+        'commented',
+        '2024-08-14T13:40:00Z',
+        '2024-08-16T13:40:00Z',
+      ),
+    ])
+    ;(await syncLinkFromGithub(link))._unsafeUnwrap()
+
+    expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
+      wait: { resolvedAt: null, acknowledgedAt: null },
+      notifications: [],
+    })
+  })
+
+  it('retries subject PR activity after a failed timeline request', async () => {
+    const { link, wait, task } = await createSubjectWait(42)
+    await registerPush('personal')
+    queueGithubTimelineResponse([], ref, { status: 503 })
+    const firstSync = await syncLinkFromGithub(link)
+    const waitAfterFirstSync = await loadWaitState(wait.id)
+
+    queueGithubNotModifiedResponse()
+    queueGithubTimelineResponse([
+      submittedReviewEvent('another-user', 'approved', '2024-08-16T13:40:00Z'),
+    ])
+    const secondSync = await syncLinkFromGithub(link)
+    const waitAfterSecondSync = await loadWaitState(wait.id)
+
+    expect(
+      subjectWaitRetryOutcome(
+        firstSync.isErr(),
+        waitAfterFirstSync,
+        secondSync.isErr(),
+        waitAfterSecondSync,
+      ),
+    ).toEqual({
+      firstSyncFailed: true,
+      waitAfterFirstSync: { resolvedAt: null, acknowledgedAt: null },
+      secondSyncFailed: false,
+      waitAfterSecondSync: {
+        resolvedAt: 'RESOLVED_AT',
+        acknowledgedAt: null,
+      },
+      notifications: expectedNotification(
+        `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
+        task,
+      ),
+    })
   })
 
   it.each([

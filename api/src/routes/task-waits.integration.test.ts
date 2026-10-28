@@ -79,6 +79,7 @@ async function createGithubBlocker(
   role: 'subject' | 'blocker' = 'blocker',
   state: 'open' | 'closed' = 'open',
   number = 42,
+  kind: 'issue' | 'pull_request' = 'pull_request',
 ) {
   return firstOrThrow(
     await db
@@ -93,13 +94,22 @@ async function createGithubBlocker(
           role === 'subject'
             ? ['closed', 'reopened', 'comments', 'other']
             : ['closed'],
-        kind: 'pull_request',
-        url: `https://github.com/example-org/example-repo/pull/${String(number)}`,
+        kind,
+        url: `https://github.com/example-org/example-repo/${kind === 'issue' ? 'issues' : 'pull'}/${String(number)}`,
         state,
         title: 'Example pull request',
       })
       .returning(),
   )
+}
+
+function subjectWaitRegistrationOutcome(
+  statuses: number[],
+  subjectLinks: Array<Pick<typeof taskGithubLinks.$inferSelect, 'id' | 'role'>>,
+  subjectWaits: Array<Pick<typeof taskWaits.$inferSelect, 'githubLinkId'>>,
+  issueSubjectWaits: (typeof taskWaits.$inferSelect)[],
+) {
+  return { statuses, subjectLinks, subjectWaits, issueSubjectWaits }
 }
 
 function normalizeWait(wait: TaskWaitResponse) {
@@ -243,7 +253,7 @@ describe('task waits API', () => {
     })
   })
 
-  it('rejects a second unresolved wait for the same GitHub blocker', async () => {
+  it('rejects a second unresolved wait for the same GitHub link', async () => {
     const task = await createTask('Waiting for a pull request')
     const link = await createGithubBlocker(task.id)
     await addGithubWait(task.id, link.url, '2036-04-05')
@@ -256,7 +266,25 @@ describe('task waits API', () => {
 
     expect(actual).toEqual({
       status: 409,
-      body: { error: 'Wait already exists for this GitHub blocker' },
+      body: { error: 'Wait already exists for this GitHub link' },
+    })
+  })
+
+  it('rejects a second unresolved wait for the same subject pull request', async () => {
+    const task = await createTask('Waiting for a subject pull request')
+    const link = await createGithubBlocker(task.id, 'subject')
+    await addGithubWait(task.id, link.url, '2036-04-05')
+
+    const duplicate = await addGithubWait(task.id, link.url, '2036-04-05')
+
+    expect(
+      bodyResponseSnapshot(
+        duplicate.status,
+        await jsonBody<{ error: string }>(duplicate),
+      ),
+    ).toEqual({
+      status: 409,
+      body: { error: 'Wait already exists for this GitHub link' },
     })
   })
 
@@ -350,7 +378,7 @@ describe('task waits API', () => {
     })
   })
 
-  it('only attaches waits to an open GitHub blocker on the same task', async () => {
+  it('attaches waits to blockers and subject pull requests on the same task', async () => {
     const task = await createTask('Task with no matching blocker')
     const otherTask = await createTask('Another task')
     const otherLink = await createGithubBlocker(
@@ -361,7 +389,26 @@ describe('task waits API', () => {
     )
     const closedLink = await createGithubBlocker(task.id, 'blocker', 'closed')
     const subjectTask = await createTask('Task with a GitHub subject')
-    const subjectLink = await createGithubBlocker(subjectTask.id, 'subject')
+    const subjectLink = await createGithubBlocker(
+      subjectTask.id,
+      'subject',
+      'open',
+      44,
+    )
+    const closedSubjectLink = await createGithubBlocker(
+      subjectTask.id,
+      'subject',
+      'closed',
+      45,
+    )
+    const issueSubjectTask = await createTask('Task with an issue subject')
+    const issueSubjectLink = await createGithubBlocker(
+      issueSubjectTask.id,
+      'subject',
+      'open',
+      46,
+      'issue',
+    )
     const statuses = await Promise.all([
       (async () =>
         (await addGithubWait(task.id, otherLink.url, '2036-04-05')).status)(),
@@ -370,9 +417,59 @@ describe('task waits API', () => {
       (async () =>
         (await addGithubWait(subjectTask.id, subjectLink.url, '2036-04-05'))
           .status)(),
+      (async () =>
+        (
+          await addGithubWait(
+            subjectTask.id,
+            closedSubjectLink.url,
+            '2036-04-05',
+          )
+        ).status)(),
+      (async () =>
+        (
+          await addGithubWait(
+            issueSubjectTask.id,
+            issueSubjectLink.url,
+            '2036-04-05',
+          )
+        ).status)(),
     ])
 
-    expect(statuses).toEqual([404, 409, 404])
+    const [subjectLinks, subjectWaits, issueSubjectWaits] = await Promise.all([
+      db
+        .select({ id: taskGithubLinks.id, role: taskGithubLinks.role })
+        .from(taskGithubLinks)
+        .where(eq(taskGithubLinks.taskId, subjectTask.id))
+        .orderBy(taskGithubLinks.number),
+      db
+        .select({ githubLinkId: taskWaits.githubLinkId })
+        .from(taskWaits)
+        .where(eq(taskWaits.taskId, subjectTask.id))
+        .orderBy(taskWaits.githubLinkId),
+      db
+        .select()
+        .from(taskWaits)
+        .where(eq(taskWaits.taskId, issueSubjectTask.id)),
+    ])
+
+    expect(
+      subjectWaitRegistrationOutcome(
+        statuses,
+        subjectLinks,
+        subjectWaits,
+        issueSubjectWaits,
+      ),
+    ).toEqual({
+      statuses: [404, 409, 201, 201, 404],
+      subjectLinks: [
+        { id: subjectLink.id, role: 'subject' },
+        { id: closedSubjectLink.id, role: 'subject' },
+      ],
+      subjectWaits: [subjectLink.id, closedSubjectLink.id]
+        .sort()
+        .map((githubLinkId) => ({ githubLinkId })),
+      issueSubjectWaits: [],
+    })
   })
 
   it('deletes a linked wait when its GitHub blocker is deleted', async () => {

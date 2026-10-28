@@ -136,6 +136,7 @@ export function TaskMainContent({
         blockedBy={task.blockedBy}
         blocking={task.blocking}
         githubBlockers={task.githubBlockers}
+        githubSubjects={task.githubLinks}
         waits={task.waits ?? []}
       />
 

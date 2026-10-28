@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 
 import { GithubBlockerRowAppearance } from '#components/task/github-blocker-row-appearance'
 import { GithubBlockerUpdateError } from '#components/task/github-blocker-update-error'
+import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { GithubWaitModeSelect } from '#components/task/github-wait-mode-select'
 import { PanelAddRow } from '#components/task/panel-add-row'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
@@ -13,7 +14,7 @@ import { TaskWaitEntry } from '#components/task/task-wait-entry'
 import { TaskWaitFormDialog } from '#components/task/task-wait-form-dialog'
 import { TaskWaitMutationError } from '#components/task/task-wait-mutation-error'
 import { SectionHeading } from '#components/ui/section-heading'
-import type { GithubBlocker } from '#hooks/use-github-link'
+import type { GithubBlocker, GithubLink } from '#hooks/use-github-link'
 import { useUpdateGithubLinkNotifyEvents } from '#hooks/use-github-link'
 import type { SearchResult } from '#hooks/use-search'
 import { useCreateTaskWait, useDeleteTaskWait } from '#hooks/use-task-waits'
@@ -27,14 +28,24 @@ export function TaskDependenciesSection({
   blockedBy,
   blocking,
   githubBlockers,
+  githubSubjects = [],
   waits,
 }: {
   taskId: string
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
   githubBlockers: GithubBlocker[]
+  githubSubjects?: GithubLink[]
   waits: TaskWait[]
 }) {
+  const subjectPullRequestWaits = githubSubjects
+    .filter((link) => link.role === 'subject' && link.kind === 'pull_request')
+    .map((pullRequest) => ({
+      pullRequest,
+      waits: waits.filter((wait) => wait.githubLinkId === pullRequest.id),
+    }))
+    .filter(({ waits: linkedWaits }) => linkedWaits.length > 0)
+
   return (
     <div className="flex flex-col gap-2.5">
       <SectionHeading level={3}>dependencies</SectionHeading>
@@ -46,6 +57,48 @@ export function TaskDependenciesSection({
           githubBlockers={githubBlockers}
           waits={waits}
         />
+
+        {subjectPullRequestWaits.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="font-mono text-2xs text-muted-foreground-faint">
+              subject PR waits
+            </span>
+            <Panel padding="none">
+              {subjectPullRequestWaits.flatMap(({ pullRequest, waits }) => {
+                const ref = `${pullRequest.owner}/${pullRequest.repo}#${String(pullRequest.number)}`
+
+                return waits.map((wait) => (
+                  <div
+                    key={`${wait.id}:${wait.resolvedAt ?? ''}`}
+                    role="group"
+                    aria-label={`GitHub subject PR ${ref}`}
+                    className="flex flex-col gap-1 border-b border-border px-3 py-2 last:border-b-0"
+                  >
+                    <a
+                      href={pullRequest.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-w-0 items-center gap-2 text-sm hover:underline"
+                      title={ref}
+                    >
+                      <GithubRefSummary
+                        kind={pullRequest.kind}
+                        state={pullRequest.state}
+                        owner={pullRequest.owner}
+                        repo={pullRequest.repo}
+                        number={pullRequest.number}
+                        title={pullRequest.title}
+                        refClassName="min-w-0 shrink truncate"
+                        titleClassName="min-w-0 flex-1"
+                      />
+                    </a>
+                    <TaskWaitEntry taskId={taskId} wait={wait} />
+                  </div>
+                ))
+              })}
+            </Panel>
+          </div>
+        )}
 
         {blocking.length > 0 && (
           <div className="flex flex-col gap-1.5">
