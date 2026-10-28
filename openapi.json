@@ -453,7 +453,7 @@
           "linkSync": {
             "type": "object",
             "properties": {
-              "outgoing": {
+              "added": {
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -666,7 +666,7 @@
               }
             },
             "required": [
-              "outgoing",
+              "added",
               "unresolvedRefs"
             ]
           }

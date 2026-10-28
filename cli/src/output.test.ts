@@ -112,24 +112,24 @@ describe('printOperationJsonWithLinkSync', () => {
     expect(write.mock.calls).toEqual([])
   })
 
-  it('writes nothing when both outgoing and unresolvedRefs are empty', () => {
+  it('writes nothing when added and unresolvedRefs are empty', () => {
     const write = vi
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
-    printOperationResponse({ linkSync: { outgoing: [], unresolvedRefs: [] } })
+    printOperationResponse({ linkSync: { added: [], unresolvedRefs: [] } })
 
     expect(write.mock.calls).toEqual([])
   })
 
-  it('writes only the linked-tasks block when only outgoing is non-empty', () => {
+  it('writes only the linked-tasks block when only added is non-empty', () => {
     const write = vi
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
     printOperationResponse({
       linkSync: {
-        outgoing: [
+        added: [
           { number: 76, title: 'Fix bug' },
           { number: 12, title: 'Add feature' },
         ],
@@ -149,7 +149,7 @@ describe('printOperationJsonWithLinkSync', () => {
 
     printOperationResponse({
       linkSync: {
-        outgoing: [],
+        added: [],
         unresolvedRefs: [
           { kind: 'number', value: 465, sources: [{ kind: 'description' }] },
           {
@@ -173,14 +173,14 @@ describe('printOperationJsonWithLinkSync', () => {
     ])
   })
 
-  it('writes both blocks when outgoing and unresolvedRefs are both non-empty', () => {
+  it('writes both blocks when added and unresolvedRefs are both non-empty', () => {
     const write = vi
       .spyOn(process.stderr, 'write')
       .mockImplementation(() => true)
 
     printOperationResponse({
       linkSync: {
-        outgoing: [{ number: 76, title: 'Fix bug' }],
+        added: [{ number: 76, title: 'Fix bug' }],
         unresolvedRefs: [
           {
             kind: 'number',
@@ -209,7 +209,7 @@ describe('printOperationJsonWithLinkSync', () => {
 
     printOperationResponse({
       linkSync: {
-        outgoing: [],
+        added: [],
         unresolvedRefs: [
           {
             kind: 'number',

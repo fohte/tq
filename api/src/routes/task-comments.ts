@@ -101,7 +101,16 @@ export const taskCommentsApp = new Hono<TaskEnv>()
         ),
       )
 
-      return c.json({ ...commentToResponse(comment, author), linkSync }, 201)
+      return c.json(
+        {
+          ...commentToResponse(comment, author),
+          linkSync: {
+            added: linkSync.added,
+            unresolvedRefs: linkSync.unresolvedRefs,
+          },
+        },
+        201,
+      )
     },
   )
   .patch(
@@ -163,7 +172,10 @@ export const taskCommentsApp = new Hono<TaskEnv>()
       return c.json(
         {
           ...commentToResponse(updated, authors.get(commentId) ?? null),
-          linkSync,
+          linkSync: {
+            added: linkSync.added,
+            unresolvedRefs: linkSync.unresolvedRefs,
+          },
         },
         200,
       )

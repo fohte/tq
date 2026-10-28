@@ -47,7 +47,7 @@ type RefSourceResponse =
   | { kind: 'comment'; id: string }
 
 export interface LinkSyncResponse {
-  outgoing: LinkedTaskResponse[]
+  added: LinkedTaskResponse[]
   unresolvedRefs: ((
     { kind: 'number'; value: number } | { kind: 'id'; value: string }
   ) & { sources: RefSourceResponse[] })[]
@@ -309,7 +309,7 @@ const refSourceResponseSchema = z.union([
 ])
 
 const linkSyncResponseSchema = z.object({
-  outgoing: z.array(linkedTaskResponseSchema),
+  added: z.array(linkedTaskResponseSchema),
   unresolvedRefs: z.array(
     z.union([
       z.object({

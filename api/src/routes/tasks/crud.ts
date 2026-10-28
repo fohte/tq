@@ -199,7 +199,10 @@ export const tasksCrudApp = new Hono()
 
     const body = {
       ...taskToResponse(task, createdRule, [], labelNames),
-      linkSync,
+      linkSync: {
+        added: linkSync.added,
+        unresolvedRefs: linkSync.unresolvedRefs,
+      },
     }
     // Keep the published schema and the handler response shape in sync.
     const schemaTypedBody: CreateTaskResponse = body
@@ -486,7 +489,14 @@ export const tasksCrudApp = new Hono()
             githubLinksByTaskId.get(id) ?? [],
             labelsByTaskId.get(id) ?? [],
           ),
-          ...(linkSync ? { linkSync } : {}),
+          ...(linkSync
+            ? {
+                linkSync: {
+                  added: linkSync.added,
+                  unresolvedRefs: linkSync.unresolvedRefs,
+                },
+              }
+            : {}),
         },
         200,
       )

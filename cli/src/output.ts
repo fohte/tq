@@ -37,7 +37,7 @@ const unresolvedRefSchema = z
   .and(z.object({ sources: z.array(refSourceSchema) }))
 
 const linkSyncSummarySchema = z.object({
-  outgoing: z.array(z.object({ number: z.number(), title: z.string() })),
+  added: z.array(z.object({ number: z.number(), title: z.string() })),
   unresolvedRefs: z.array(unresolvedRefSchema),
 })
 
@@ -66,17 +66,16 @@ function formatRefSource(source: RefSource): string {
   }
 }
 
-// Surfaces the task_links a write just created, since the write itself gives
-// no other sign that e.g. a GitHub PR number like `#76` in the body was
-// parsed as a tq task reference. Written to stderr so stdout stays clean
-// JSON for `| jq`.
+// Surfaces newly added task_links, since the write itself gives no other sign
+// that e.g. a GitHub PR number like `#76` in the body was parsed as a tq task
+// reference. Written to stderr so stdout stays clean JSON for `| jq`.
 function printLinkSync(linkSync: LinkSyncSummary | undefined): void {
   if (linkSync == null) return
 
   const lines: string[] = []
-  if (linkSync.outgoing.length > 0) {
+  if (linkSync.added.length > 0) {
     lines.push('Linked tasks:')
-    for (const task of linkSync.outgoing) {
+    for (const task of linkSync.added) {
       lines.push(`  #${String(task.number)} ${stripControlChars(task.title)}`)
     }
   }

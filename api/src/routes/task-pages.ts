@@ -197,7 +197,16 @@ export const taskPagesApp = new Hono<TaskEnv>()
       ),
     )
 
-    return c.json({ ...pageToResponse(page, author), linkSync }, 201)
+    return c.json(
+      {
+        ...pageToResponse(page, author),
+        linkSync: {
+          added: linkSync.added,
+          unresolvedRefs: linkSync.unresolvedRefs,
+        },
+      },
+      201,
+    )
   })
   .get('/:pageId', async (c) => {
     const taskId = c.get('task').id
@@ -283,7 +292,14 @@ export const taskPagesApp = new Hono<TaskEnv>()
     return c.json(
       {
         ...pageToResponse(updated, authors.get(pageId) ?? null),
-        ...(linkSync ? { linkSync } : {}),
+        ...(linkSync
+          ? {
+              linkSync: {
+                added: linkSync.added,
+                unresolvedRefs: linkSync.unresolvedRefs,
+              },
+            }
+          : {}),
       },
       200,
     )

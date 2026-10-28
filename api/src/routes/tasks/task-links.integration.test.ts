@@ -688,12 +688,60 @@ describe('linkSync on write responses', () => {
     })
 
     expect(body.linkSync).toEqual({
-      outgoing: [linkSummary(target)],
+      added: [linkSummary(target)],
       unresolvedRefs: [
         {
           kind: 'number',
           value: 999999999,
           sources: [{ kind: 'description' }],
+        },
+      ],
+    })
+  })
+
+  it('does not report existing links when a page adds no mention', async () => {
+    const target = await createTask('Target')
+    const source = await createTask('Source', {
+      description: `See #${String(target.number)}`,
+    })
+    const events: ChangeEvent[] = []
+    stopWatchingChanges = subscribeToChangeEvents((event) => events.push(event))
+
+    const response = await app.request(`/api/tasks/${source.id}/pages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Notes', content: 'No task references' }),
+    })
+    const body = await jsonBody<{ id: string; linkSync: LinkSyncResponse }>(
+      response,
+    )
+
+    const getActual = async () => ({
+      status: response.status,
+      linkSync: body.linkSync,
+      links: await getLinks(source.id),
+      events: normalizeChangeEvents(
+        events,
+        new Map([
+          [source.id, 'SOURCE_ID'],
+          [target.id, 'TARGET_ID'],
+        ]),
+      ),
+    })
+
+    expect(await getActual()).toEqual({
+      status: 201,
+      linkSync: { added: [], unresolvedRefs: [] },
+      links: {
+        outgoing: [linkedTaskDetail(target)],
+        incoming: [],
+      },
+      events: [
+        {
+          resource: 'task',
+          id: 'SOURCE_ID',
+          origin: null,
+          taskIds: ['SOURCE_ID'],
         },
       ],
     })
@@ -711,7 +759,7 @@ describe('linkSync on write responses', () => {
     const body = await jsonBody<{ id: string; linkSync: LinkSyncResponse }>(res)
 
     expect(body.linkSync).toEqual({
-      outgoing: [],
+      added: [],
       unresolvedRefs: [
         {
           kind: 'number',
@@ -731,7 +779,7 @@ describe('linkSync on write responses', () => {
     })
 
     expect(body.linkSync).toEqual({
-      outgoing: [],
+      added: [],
       unresolvedRefs: [
         {
           kind: 'number',
@@ -758,7 +806,7 @@ describe('linkSync on write responses', () => {
     const body = await jsonBody<{ linkSync: LinkSyncResponse }>(res)
 
     expect(body.linkSync).toEqual({
-      outgoing: [linkSummary(target)],
+      added: [linkSummary(target)],
       unresolvedRefs: [],
     })
   })

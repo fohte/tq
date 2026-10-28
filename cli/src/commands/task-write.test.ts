@@ -88,7 +88,7 @@ describe('task create', () => {
       number: 1,
       title: 'New task',
       linkSync: {
-        outgoing: [{ number: 76, title: 'Fix bug' }],
+        added: [{ number: 76, title: 'Fix bug' }],
         unresolvedRefs: [],
       },
     }
@@ -413,7 +413,7 @@ describe('task update', () => {
       number: 1,
       title: 'Updated title',
       linkSync: {
-        outgoing: [{ number: 76, title: 'Fix bug' }],
+        added: [{ number: 76, title: 'Fix bug' }],
         unresolvedRefs: [],
       },
     }

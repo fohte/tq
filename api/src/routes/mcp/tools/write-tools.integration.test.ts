@@ -149,7 +149,7 @@ describe('comment_create tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -169,7 +169,7 @@ describe('comment_create tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -309,7 +309,7 @@ describe('comment_update tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -331,7 +331,7 @@ describe('comment_update tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
