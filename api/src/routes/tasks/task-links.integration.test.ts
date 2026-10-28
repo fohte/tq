@@ -747,6 +747,42 @@ describe('linkSync on write responses', () => {
     })
   })
 
+  it('reports only new links when a page adds another mention', async () => {
+    const existingTarget = await createTask('Existing target')
+    const newTarget = await createTask('New target')
+    const source = await createTask('Source', {
+      description: `See #${String(existingTarget.number)}`,
+    })
+
+    const response = await app.request(`/api/tasks/${source.id}/pages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Notes',
+        content: `See #${String(newTarget.number)}`,
+      }),
+    })
+    const body = await jsonBody<{ linkSync: LinkSyncResponse }>(response)
+
+    const getActual = async () => ({
+      status: response.status,
+      linkSync: body.linkSync,
+      links: await getLinks(source.id),
+    })
+
+    expect(await getActual()).toEqual({
+      status: 201,
+      linkSync: { added: [linkSummary(newTarget)], unresolvedRefs: [] },
+      links: {
+        outgoing: [
+          linkedTaskDetail(existingTarget),
+          linkedTaskDetail(newTarget),
+        ],
+        incoming: [],
+      },
+    })
+  })
+
   it('reports the page as the source of an unresolved ref found in a page', async () => {
     const source = await createTask('Source')
 
