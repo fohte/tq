@@ -4,7 +4,6 @@ import type { TaskContext } from '#hooks/use-tasks'
 
 interface QueueSnapshot<T> {
   context: TaskContext
-  date: string
   scope: string
   value: T
 }
@@ -30,7 +29,6 @@ export function useDayViewQueueTransition<T>({
     previousSnapshot != null &&
     previousSnapshot.context === context &&
     previousSnapshot.scope === scope &&
-    previousSnapshot.date !== date &&
     !isReady &&
     !hasError
 
@@ -45,7 +43,7 @@ export function useDayViewQueueTransition<T>({
     }
 
     if (isReady && !hasError) {
-      snapshotRef.current = { context, date, scope, value }
+      snapshotRef.current = { context, scope, value }
     }
   }, [context, date, hasError, isReady, scope, value])
 
