@@ -238,6 +238,10 @@ const compactWeekTask = makeTask({
   id: 'compact-week-task',
   title: "Review next week's milestones",
 })
+const compactWeekDayTask = makeTask({
+  id: 'compact-week-day-task',
+  title: 'Prepare the midweek notes',
+})
 const compactQueueSections = [
   {
     key: DUE_TODAY_SECTION_KEY,
@@ -257,7 +261,14 @@ const compactQueueSections = [
     key: 'week',
     title: 'this week',
     items: [compactWeekTask],
-    dateRangeLabel: '09-01 - 09-07',
+    dayGroups: [
+      {
+        date: '2026-09-03',
+        label: 'Thu 09-03',
+        items: [compactWeekDayTask],
+      },
+    ],
+    dateRangeLabel: '08-31 – 09-06',
     emptyMessage: "No tasks in this week's queue",
   },
 ]
@@ -468,7 +479,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the compact day planner shows current work, due tasks, and its work memo',
+  name: "the compact day planner shows current work, due tasks, this week's queue, and its work memo",
   tags: ['mobile-only'],
   decorators: [
     (Story) => (

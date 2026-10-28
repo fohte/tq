@@ -36,7 +36,7 @@
 | [public.schedule_overrides](public.schedule_overrides.md)                           | 6       | One-day moves, time changes, and skipped schedule occurrences.                                     | BASE TABLE |
 | [public.task_checklist_items](public.task_checklist_items.md)                       | 11      | Nested checklist items with completion state and optional Markdown detail.                         | BASE TABLE |
 | [public.task_checklists](public.task_checklists.md)                                 | 6       | Named or unnamed checklists associated with tasks.                                                 | BASE TABLE |
-| [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker links.                               | BASE TABLE |
+| [public.task_waits](public.task_waits.md)                                           | 8       | Response waits attached to tasks with optional GitHub blocker or subject pull request links.       | BASE TABLE |
 | [public.webhook_subscriptions](public.webhook_subscriptions.md)                     | 4       | Endpoints subscribed to task status events.                                                        | BASE TABLE |
 | [public.schedule_revisions](public.schedule_revisions.md)                           | 7       | Date-effective local time and recurrence settings for a calendar schedule.                         | BASE TABLE |
 | [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md)       | 4       | Claimed push reminders for individual schedule occurrences.                                        | BASE TABLE |

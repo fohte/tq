@@ -50,7 +50,7 @@ export const MonthView: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the compact calendar header keeps date navigation in a narrow window',
+  name: 'the compact calendar header shows an inactive week toggle in day view',
   tags: ['mobile-only'],
   decorators: [
     (Story) => (
@@ -61,6 +61,22 @@ export const Compact: Story = {
   ],
   args: {
     activeView: 'day',
-    showViewSwitcher: false,
+    viewControl: 'week-toggle',
+  },
+}
+
+export const CompactWeek: Story = {
+  name: 'the compact calendar header shows an active week toggle in week view',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    activeView: 'week',
+    viewControl: 'week-toggle',
   },
 }

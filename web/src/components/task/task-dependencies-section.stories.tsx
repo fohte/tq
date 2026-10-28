@@ -2,10 +2,14 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import { makeGithubBlocker } from '#components/task/github-link-test-fixtures'
+import {
+  makeGithubBlocker,
+  makeGithubLink,
+} from '#components/task/github-link-test-fixtures'
 import { TaskDependenciesSection } from '#components/task/task-dependencies-section'
 import { makeTaskWithDescription } from '#components/task/task-row-test-fixtures'
 import { makeTaskWait } from '#components/task/task-wait-test-fixtures'
+import type { GithubLink } from '#hooks/use-github-link'
 import type { LinkedTaskSummary, TaskWait } from '#hooks/use-tasks'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -73,6 +77,17 @@ const githubResolvedReplyBlocker = makeGithubBlocker({
   title: 'Review the follow-up change',
 })
 
+const githubSubjectPullRequest = makeGithubLink({
+  id: 'github-subject-pr',
+  owner: 'example-org',
+  repo: 'sample-repo',
+  number: 73,
+  kind: 'pull_request',
+  role: 'subject',
+  title: 'Add request validation',
+  url: 'https://github.com/example-org/sample-repo/pull/73',
+})
+
 const waits: TaskWait[] = [
   makeTaskWait({
     body: 'Review the proposal\n\nPlease confirm the updated timeline.',
@@ -103,6 +118,13 @@ const githubReplyWait = makeTaskWait({
   githubLinkId: githubReplyBlocker.id,
 })
 
+const githubSubjectReviewWait = makeTaskWait({
+  id: 'wait-example-005',
+  body: 'Please review the validation changes.',
+  label: 'Please review the validation changes.',
+  githubLinkId: githubSubjectPullRequest.id,
+})
+
 function Providers({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -122,11 +144,13 @@ function SectionStory({
   blockedBy,
   blocking,
   githubBlockers: currentGithubBlockers,
+  githubSubjects = [],
   waits: currentWaits,
 }: {
   blockedBy: LinkedTaskSummary[]
   blocking: LinkedTaskSummary[]
   githubBlockers: typeof githubBlockers
+  githubSubjects?: GithubLink[]
   waits: TaskWait[]
 }) {
   return (
@@ -137,6 +161,7 @@ function SectionStory({
           blockedBy={blockedBy}
           blocking={blocking}
           githubBlockers={currentGithubBlockers}
+          githubSubjects={githubSubjects}
           waits={currentWaits}
         />
       </div>
@@ -192,6 +217,17 @@ export const WithGithubReplyWait: Story = {
     blocking: [],
     githubBlockers: [githubReplyBlocker],
     waits: [githubReplyWait],
+  },
+}
+
+export const WithSubjectReviewWait: Story = {
+  name: 'the subject pull request shows its review wait',
+  args: {
+    blockedBy: [],
+    blocking: [],
+    githubBlockers: [],
+    githubSubjects: [githubSubjectPullRequest],
+    waits: [githubSubjectReviewWait],
   },
 }
 

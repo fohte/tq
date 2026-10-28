@@ -267,7 +267,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
-        linkSync: { outgoing: [], unresolvedRefs: [] },
+        linkSync: { added: [], unresolvedRefs: [] },
       })
     })
 
@@ -312,7 +312,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
-        linkSync: { outgoing: [], unresolvedRefs: [] },
+        linkSync: { added: [], unresolvedRefs: [] },
       })
     })
 
@@ -372,7 +372,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
-        linkSync: { outgoing: [], unresolvedRefs: [] },
+        linkSync: { added: [], unresolvedRefs: [] },
       })
     })
 
@@ -503,7 +503,7 @@ describe('task pages API', () => {
         createdAt: 'DATE',
         updatedAt: 'DATE',
         author: { kind: 'human', agent: null },
-        linkSync: { outgoing: [], unresolvedRefs: [] },
+        linkSync: { added: [], unresolvedRefs: [] },
       })
     })
 

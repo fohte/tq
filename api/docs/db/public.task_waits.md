@@ -2,20 +2,20 @@
 
 ## Description
 
-Response waits attached to tasks with optional GitHub blocker links.
+Response waits attached to tasks with optional GitHub blocker or subject pull request links.
 
 ## Columns
 
-| Name            | Type                     | Default           | Nullable | Children | Parents                                                 | Comment                                                                                        |
-| --------------- | ------------------------ | ----------------- | -------- | -------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| id              | uuid                     | gen_random_uuid() | false    |          |                                                         |                                                                                                |
-| task_id         | text                     |                   | false    |          | [public.tasks](public.tasks.md)                         | Task waiting for a response.                                                                   |
-| body            | text                     |                   | true     |          |                                                         | Optional Markdown describing the response or action the task is waiting for.                   |
-| follow_up_date  | date                     |                   | false    |          |                                                         | Date to follow up when no response has arrived.                                                |
-| resolved_at     | timestamp with time zone |                   | true     |          |                                                         | Time when the response wait was resolved; null while it blocks the task.                       |
-| acknowledged_at | timestamp with time zone |                   | true     |          |                                                         | Time when the resolution was acknowledged by the user.                                         |
-| created_at      | timestamp with time zone | now()             | false    |          |                                                         |                                                                                                |
-| github_link_id  | text                     |                   | true     |          | [public.task_github_links](public.task_github_links.md) | GitHub blocker associated with this response wait; deleting the blocker also deletes the wait. |
+| Name            | Type                     | Default           | Nullable | Children | Parents                                                 | Comment                                                                                                             |
+| --------------- | ------------------------ | ----------------- | -------- | -------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| id              | uuid                     | gen_random_uuid() | false    |          |                                                         |                                                                                                                     |
+| task_id         | text                     |                   | false    |          | [public.tasks](public.tasks.md)                         | Task waiting for a response.                                                                                        |
+| body            | text                     |                   | true     |          |                                                         | Optional Markdown describing the response or action the task is waiting for.                                        |
+| follow_up_date  | date                     |                   | false    |          |                                                         | Date to follow up when no response has arrived.                                                                     |
+| resolved_at     | timestamp with time zone |                   | true     |          |                                                         | Time when the response wait was resolved; null while awaiting a response.                                           |
+| acknowledged_at | timestamp with time zone |                   | true     |          |                                                         | Time when the resolution was acknowledged by the user.                                                              |
+| created_at      | timestamp with time zone | now()             | false    |          |                                                         |                                                                                                                     |
+| github_link_id  | text                     |                   | true     |          | [public.task_github_links](public.task_github_links.md) | GitHub blocker or subject pull request associated with this response wait; deleting the link also deletes the wait. |
 
 ## Constraints
 

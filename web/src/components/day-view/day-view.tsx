@@ -36,7 +36,7 @@ import { ResizablePaneSeparator } from '#components/ui/resizable-pane-separator'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import type { Memo, MemoContext, SaveMemoInput } from '#hooks/use-memos'
-import { DAY_QUEUE_KEY } from '#hooks/use-queues'
+import { DAY_QUEUE_KEY, WEEK_QUEUE_KEY } from '#hooks/use-queues'
 import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
@@ -212,6 +212,7 @@ export function DayViewPresentation({
     ? queueSections.filter(
         (section) =>
           section.key === DAY_QUEUE_KEY ||
+          section.key === WEEK_QUEUE_KEY ||
           section.key === DUE_TODAY_SECTION_KEY,
       )
     : queueSections
@@ -439,7 +440,7 @@ export function DayViewPresentation({
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}
-              showViewSwitcher={!isCompactLayout}
+              viewControl={isCompactLayout ? 'week-toggle' : 'segmented'}
               onScheduleClick={handleScheduleClick}
               onTaskClick={handleTaskClick}
               onSelectRange={openCreateModal}

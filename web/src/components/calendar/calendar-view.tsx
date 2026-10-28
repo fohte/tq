@@ -8,6 +8,7 @@ import {
 } from '#components/calendar/calendar-grid'
 import {
   CalendarHeader,
+  type CalendarViewControl,
   type CalendarViewType,
   resolveFullCalendarView,
 } from '#components/calendar/calendar-header'
@@ -76,7 +77,7 @@ interface CalendarViewProps {
   externalDragContainerRef?: React.RefObject<HTMLElement | null> | undefined
   initialView?: CalendarViewType
   initialScrollTime?: string | undefined
-  showViewSwitcher?: boolean
+  viewControl?: CalendarViewControl
   selectedDate: Date
   onDateChange: (date: Date) => void
   onVisibleRangeChange?:
@@ -94,7 +95,7 @@ export function CalendarView({
   externalDragContainerRef,
   initialView = 'day',
   initialScrollTime,
-  showViewSwitcher = true,
+  viewControl = 'segmented',
   selectedDate,
   onDateChange,
   onVisibleRangeChange,
@@ -207,7 +208,7 @@ export function CalendarView({
         onNext={handleNext}
         onToday={handleToday}
         onViewChange={handleViewChange}
-        showViewSwitcher={showViewSwitcher}
+        viewControl={viewControl}
       />
       {/* overscroll-x-contain stops a horizontal trackpad scroll here from
           chaining into the browser's own back/forward gesture

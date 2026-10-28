@@ -17,11 +17,48 @@ function waitCommandSnapshot<TRequests, TOutput>(
   return { exitCodes, requests, output }
 }
 
+function waitHelpSnapshot(exitCode: number, stdout: string) {
+  return { exitCode, stdout }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
 
 describe('wait commands', () => {
+  it('describes subject pull request URLs in add help', async () => {
+    const stdout = spyStdout()
+    const exitCode = await runCli(
+      ['wait', 'add', '--help'],
+      fetch,
+      fakeStdin(true),
+    )
+
+    expect(
+      waitHelpSnapshot(
+        exitCode,
+        stdout.mock.calls.map(([chunk]) => String(chunk)).join(''),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      stdout: [
+        'Usage: tq wait add [options] <taskId>',
+        '',
+        'Add a wait for a response to a task.',
+        '',
+        'Options:',
+        '  --body <markdown>        Markdown describing what response the task is waiting',
+        '                           for',
+        '  --github-url <url>       GitHub issue or pull request blocker URL, or subject',
+        '                           pull request URL',
+        '  --follow-up-date <date>  Date to follow up if there is no response',
+        '                           (YYYY-MM-DD)',
+        '  -h, --help               display help for command',
+        '',
+      ].join('\n'),
+    })
+  })
+
   it('maps add, update, resolve, and remove to their API routes', async () => {
     const responses = [
       { id: 'wait-id', body: 'Initial request' },

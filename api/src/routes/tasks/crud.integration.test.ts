@@ -383,7 +383,7 @@ function createdTaskResponse(
     githubLinks: [],
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
-    linkSync: { outgoing: [], unresolvedRefs: [] },
+    linkSync: { added: [], unresolvedRefs: [] },
   })
 }
 
@@ -698,7 +698,7 @@ describe('tasks CRUD API', () => {
         githubLinks: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
-        linkSync: { outgoing: [], unresolvedRefs: [] },
+        linkSync: { added: [], unresolvedRefs: [] },
       }
       expect(normalizeTaskResponsePair(rawBody, body)).toEqual({
         raw: normalizedExpectedResponse,
@@ -1187,7 +1187,7 @@ describe('tasks CRUD API', () => {
         githubLinks: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
-        linkSync: { outgoing: [], unresolvedRefs: [] },
+        linkSync: { added: [], unresolvedRefs: [] },
       })
     })
 
@@ -4770,7 +4770,7 @@ describe('tasks CRUD API', () => {
           githubLinks: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
-          linkSync: { outgoing: [], unresolvedRefs: [] },
+          linkSync: { added: [], unresolvedRefs: [] },
         })
 
         assertDefined(body.recurrenceRule)
