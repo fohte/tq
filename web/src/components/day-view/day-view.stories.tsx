@@ -268,7 +268,7 @@ const compactQueueSections = [
         items: [compactWeekDayTask],
       },
     ],
-    dateRangeLabel: '09-01 - 09-07',
+    dateRangeLabel: '08-31 – 09-06',
     emptyMessage: "No tasks in this week's queue",
   },
 ]
@@ -479,7 +479,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the compact day planner shows current work, due tasks, and its work memo',
+  name: "the compact day planner shows due-today tasks and this week's queue beside its work memo",
   tags: ['mobile-only'],
   decorators: [
     (Story) => (

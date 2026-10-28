@@ -295,7 +295,7 @@ describe('DayViewPresentation', () => {
     expect(screen.getByText('Board')).toBeInTheDocument()
   })
 
-  it('shows only the today queue and calendar in compact layout', async () => {
+  it('shows today and this week queues with the calendar in compact layout', async () => {
     const todayTask = makeTask({
       id: 'compact-today-task',
       title: 'Review the launch checklist',
@@ -352,8 +352,8 @@ describe('DayViewPresentation', () => {
       verticalLayout: true,
       todayQueueVisible: true,
       todayTaskVisible: true,
-      weekQueueVisible: false,
-      weekTaskVisible: false,
+      weekQueueVisible: true,
+      weekTaskVisible: true,
       candidateVisible: false,
       calendarVisible: true,
       calendarViewSwitcherVisible: false,

@@ -407,6 +407,11 @@ describe('compact queue sections', () => {
                 label: 'Tue 04-14',
                 items: [dueTask, scheduledTask],
               },
+              {
+                date: '2026-04-15',
+                label: 'Wed 04-15',
+                items: [dueTask],
+              },
             ],
             dateRangeLabel: '04-13 – 04-19',
             emptyMessage: "No tasks in this week's queue",
