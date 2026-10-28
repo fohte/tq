@@ -30,11 +30,14 @@ import {
   pushTaskNotification,
 } from '#services/github-sync-notifications'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
+import {
+  syncSubjectWaitAndIssue,
+  type UnresolvedWait,
+} from '#services/github-sync-subject-waits'
 import { checkChecklistItemsForGithubLink } from '#services/task-checklist-progress'
 
 type LinkRow = typeof taskGithubLinks.$inferSelect
 type NotifyEvent = LinkRow['notifyEvents'][number]
-type UnresolvedWait = { id: string; createdAt: Date }
 
 type SyncLinkError =
   | GithubApiError
@@ -256,12 +259,14 @@ function syncChangedIssue(
   lastSyncedAt: Date,
   activeWait: UnresolvedWait | null,
   onWrite?: (taskId: string) => void,
+  prefetchedActivity: GithubIssueActivity | null = null,
 ): ResultAsync<void, SyncLinkError> {
   const candidates = candidateEvents(link, issue)
   const selectedCandidates = candidates.filter((event) =>
     link.notifyEvents.includes(event),
   )
-  const shouldInspectWait = activeWait != null && candidates.length > 0
+  const shouldInspectWait =
+    link.role === 'blocker' && activeWait != null && candidates.length > 0
   const inspectActivity = (isTodo: boolean) => {
     if (!shouldInspectWait && !isTodo) {
       return updateLinkAndNotify(
@@ -275,11 +280,15 @@ function syncChangedIssue(
         onWrite,
       )
     }
-    return fetchGithubIssueActivity({
-      owner: link.owner,
-      repo: link.repo,
-      number: link.number,
-    }).andThen((activity) => {
+    const activityResult =
+      prefetchedActivity == null
+        ? fetchGithubIssueActivity({
+            owner: link.owner,
+            repo: link.repo,
+            number: link.number,
+          })
+        : okAsync(prefetchedActivity)
+    return activityResult.andThen((activity) => {
       const notification =
         isTodo && selectedCandidates.length > 0
           ? changedEvent(link, issue, selectedCandidates, activity)
@@ -329,7 +338,9 @@ export function syncLinkFromGithub(
   onWrite?: (taskId: string) => void,
   unresolvedWait?: UnresolvedWait | null,
 ): ResultAsync<void, SyncLinkError> {
-  if (link.state === 'merged') {
+  const mayHaveSubjectWait =
+    link.role === 'subject' && link.kind === 'pull_request'
+  if (link.state === 'merged' && !mayHaveSubjectWait) {
     return okAsync(undefined)
   }
 
@@ -337,6 +348,30 @@ export function syncLinkFromGithub(
     syncStartedAt.getTime() < link.lastSyncedAt.getTime()
       ? link.lastSyncedAt
       : syncStartedAt
+
+  if (mayHaveSubjectWait) {
+    const activeWaitResult =
+      unresolvedWait != null
+        ? okAsync(unresolvedWait)
+        : findUnresolvedWait(link.id)
+
+    return syncSubjectWaitAndIssue(
+      link,
+      activeWaitResult,
+      onWrite,
+      () => updateUnchangedLink(link, lastSyncedAt),
+      (activity, issue, etag) =>
+        syncChangedIssue(
+          link,
+          issue,
+          etag,
+          lastSyncedAt,
+          null,
+          onWrite,
+          activity,
+        ),
+    )
+  }
 
   return fetchGithubIssueIfChanged(
     { owner: link.owner, repo: link.repo, number: link.number },

@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, eq, isNotNull, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -55,13 +55,16 @@ export const taskWaitsApp = new Hono<TaskEnv>()
           eq(taskGithubLinks.owner, parsedUrl.value.owner),
           eq(taskGithubLinks.repo, parsedUrl.value.repo),
           eq(taskGithubLinks.number, parsedUrl.value.number),
-          eq(taskGithubLinks.role, 'blocker'),
+          inArray(taskGithubLinks.role, ['blocker', 'subject']),
         ),
       })
       if (githubLink == null) {
-        return c.json({ error: 'GitHub blocker not found' }, 404)
+        return c.json({ error: 'GitHub link not found' }, 404)
       }
-      if (githubLink.state !== 'open') {
+      if (githubLink.role === 'subject' && githubLink.kind !== 'pull_request') {
+        return c.json({ error: 'GitHub pull request not found' }, 404)
+      }
+      if (githubLink.role === 'blocker' && githubLink.state !== 'open') {
         return c.json({ error: 'GitHub blocker is not open' }, 409)
       }
       githubLinkId = githubLink.id
@@ -84,10 +87,7 @@ export const taskWaitsApp = new Hono<TaskEnv>()
       .returning()
 
     if (wait == null) {
-      return c.json(
-        { error: 'Wait already exists for this GitHub blocker' },
-        409,
-      )
+      return c.json({ error: 'Wait already exists for this GitHub link' }, 409)
     }
 
     return c.json(taskWaitToResponse(wait), 201)

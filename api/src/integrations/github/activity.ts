@@ -29,6 +29,7 @@ const githubTimelineEventSchema = z
     user: githubTimelineActorSchema,
     created_at: z.string().optional(),
     submitted_at: z.string().optional(),
+    state: z.string().optional(),
     updated_at: z.string().optional(),
     committed_at: z.string().optional(),
   })
@@ -41,6 +42,8 @@ export interface GithubIssueActivityEvent {
   login: string | null
   actorType: string | null
   occurredAt: Date | null
+  submittedAt: Date | null
+  reviewState: string | null
 }
 
 export interface GithubIssueActivity {
@@ -146,6 +149,8 @@ function toActivityEvent(
     event.updated_at ??
     event.committed_at
   const occurredAt = timestamp == null ? null : new Date(timestamp)
+  const submittedAt =
+    event.submitted_at == null ? null : new Date(event.submitted_at)
 
   return {
     event: event.event,
@@ -155,6 +160,11 @@ function toActivityEvent(
       occurredAt != null && !Number.isNaN(occurredAt.getTime())
         ? occurredAt
         : null,
+    submittedAt:
+      submittedAt != null && !Number.isNaN(submittedAt.getTime())
+        ? submittedAt
+        : null,
+    reviewState: event.state ?? null,
   }
 }
 
