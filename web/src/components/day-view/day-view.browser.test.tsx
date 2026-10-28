@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { page } from '@vitest/browser/context'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { CalendarViewControl } from '#components/calendar/calendar-header'
 import {
   DayViewPresentation,
   type DayViewPresentationProps,
@@ -30,7 +31,7 @@ let capturedOnTaskClick: ((taskId: string) => void) | undefined
 let capturedOnScheduleClick:
   | ((scheduleId: string, occurrenceDate: string, start: string) => void)
   | undefined
-let capturedShowViewSwitcher: boolean | undefined
+let capturedViewControl: CalendarViewControl | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
@@ -46,12 +47,12 @@ vi.mock('#components/calendar/calendar-view', () => ({
       occurrenceDate: string,
       start: string,
     ) => void
-    showViewSwitcher?: boolean
+    viewControl?: CalendarViewControl
   }) => {
     capturedOnSelectRange = props.onSelectRange
     capturedOnTaskClick = props.onTaskClick
     capturedOnScheduleClick = props.onScheduleClick
-    capturedShowViewSwitcher = props.showViewSwitcher
+    capturedViewControl = props.viewControl
     return <div data-testid="calendar-view" />
   },
 }))
@@ -342,7 +343,7 @@ describe('DayViewPresentation', () => {
       weekTaskVisible: screen.queryByText(weekTask.title) != null,
       candidateVisible: screen.queryByText(candidate.task.title) != null,
       calendarVisible: screen.queryByTestId('calendar-view') != null,
-      calendarViewSwitcherVisible: capturedShowViewSwitcher !== false,
+      calendarViewControl: capturedViewControl,
       calendarTabVisible:
         screen.queryByRole('button', { name: 'calendar' }) != null,
       tasksTabVisible: screen.queryByRole('button', { name: 'tasks' }) != null,
@@ -356,7 +357,7 @@ describe('DayViewPresentation', () => {
       weekTaskVisible: true,
       candidateVisible: false,
       calendarVisible: true,
-      calendarViewSwitcherVisible: false,
+      calendarViewControl: 'week-toggle',
       calendarTabVisible: false,
       tasksTabVisible: false,
       kanbanFilterVisible: false,
