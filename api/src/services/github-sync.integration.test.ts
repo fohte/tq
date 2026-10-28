@@ -254,26 +254,36 @@ function normalizeWaitState(
   }
 }
 
-function subjectWaitSyncOutcome(
-  wait: Parameters<typeof normalizeWaitState>[0],
-) {
+async function loadWaitState(waitId: string) {
+  const [wait] = await db
+    .select({
+      resolvedAt: taskWaits.resolvedAt,
+      acknowledgedAt: taskWaits.acknowledgedAt,
+    })
+    .from(taskWaits)
+    .where(eq(taskWaits.id, waitId))
+
+  return normalizeWaitState(wait)
+}
+
+function subjectWaitSyncOutcome(wait: ReturnType<typeof normalizeWaitState>) {
   return {
-    wait: normalizeWaitState(wait),
+    wait,
     notifications: sentNotifications(),
   }
 }
 
 function subjectWaitRetryOutcome(
   firstSyncFailed: boolean,
-  waitAfterFirstSync: Parameters<typeof normalizeWaitState>[0],
+  waitAfterFirstSync: ReturnType<typeof normalizeWaitState>,
   secondSyncFailed: boolean,
-  waitAfterSecondSync: Parameters<typeof normalizeWaitState>[0],
+  waitAfterSecondSync: ReturnType<typeof normalizeWaitState>,
 ) {
   return {
     firstSyncFailed,
-    waitAfterFirstSync: normalizeWaitState(waitAfterFirstSync),
+    waitAfterFirstSync,
     secondSyncFailed,
-    waitAfterSecondSync: normalizeWaitState(waitAfterSecondSync),
+    waitAfterSecondSync,
     notifications: sentNotifications(),
   }
 }
@@ -697,15 +707,7 @@ describe('syncLinkFromGithub', () => {
       ])
       ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-      const [storedWait] = await db
-        .select({
-          resolvedAt: taskWaits.resolvedAt,
-          acknowledgedAt: taskWaits.acknowledgedAt,
-        })
-        .from(taskWaits)
-        .where(eq(taskWaits.id, wait.id))
-
-      expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
         wait: { resolvedAt: 'RESOLVED_AT', acknowledgedAt: null },
         notifications: expectedNotification(
           `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
@@ -728,15 +730,7 @@ describe('syncLinkFromGithub', () => {
     ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-    const [storedWait] = await db
-      .select({
-        resolvedAt: taskWaits.resolvedAt,
-        acknowledgedAt: taskWaits.acknowledgedAt,
-      })
-      .from(taskWaits)
-      .where(eq(taskWaits.id, wait.id))
-
-    expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+    expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
       wait: { resolvedAt: 'RESOLVED_AT', acknowledgedAt: null },
       notifications: expectedNotification(
         `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
@@ -772,15 +766,7 @@ describe('syncLinkFromGithub', () => {
       ])
       ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-      const [storedWait] = await db
-        .select({
-          resolvedAt: taskWaits.resolvedAt,
-          acknowledgedAt: taskWaits.acknowledgedAt,
-        })
-        .from(taskWaits)
-        .where(eq(taskWaits.id, wait.id))
-
-      expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
         wait: { resolvedAt: 'RESOLVED_AT', acknowledgedAt: null },
         notifications: expectedNotification(
           `${ref.owner}/${ref.repo}#${String(ref.number)} received a reply`,
@@ -834,15 +820,7 @@ describe('syncLinkFromGithub', () => {
       ])
       ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-      const [storedWait] = await db
-        .select({
-          resolvedAt: taskWaits.resolvedAt,
-          acknowledgedAt: taskWaits.acknowledgedAt,
-        })
-        .from(taskWaits)
-        .where(eq(taskWaits.id, wait.id))
-
-      expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
         wait: { resolvedAt: null, acknowledgedAt: null },
         notifications: [],
       })
@@ -860,15 +838,7 @@ describe('syncLinkFromGithub', () => {
       ])
       ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-      const [storedWait] = await db
-        .select({
-          resolvedAt: taskWaits.resolvedAt,
-          acknowledgedAt: taskWaits.acknowledgedAt,
-        })
-        .from(taskWaits)
-        .where(eq(taskWaits.id, wait.id))
-
-      expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+      expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
         wait: { resolvedAt: null, acknowledgedAt: null },
         notifications: [],
       })
@@ -888,15 +858,7 @@ describe('syncLinkFromGithub', () => {
     ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-    const [storedWait] = await db
-      .select({
-        resolvedAt: taskWaits.resolvedAt,
-        acknowledgedAt: taskWaits.acknowledgedAt,
-      })
-      .from(taskWaits)
-      .where(eq(taskWaits.id, wait.id))
-
-    expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+    expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
       wait: { resolvedAt: null, acknowledgedAt: null },
       notifications: [],
     })
@@ -916,15 +878,7 @@ describe('syncLinkFromGithub', () => {
     ])
     ;(await syncLinkFromGithub(link))._unsafeUnwrap()
 
-    const [storedWait] = await db
-      .select({
-        resolvedAt: taskWaits.resolvedAt,
-        acknowledgedAt: taskWaits.acknowledgedAt,
-      })
-      .from(taskWaits)
-      .where(eq(taskWaits.id, wait.id))
-
-    expect(subjectWaitSyncOutcome(storedWait)).toEqual({
+    expect(subjectWaitSyncOutcome(await loadWaitState(wait.id))).toEqual({
       wait: { resolvedAt: null, acknowledgedAt: null },
       notifications: [],
     })
@@ -935,26 +889,14 @@ describe('syncLinkFromGithub', () => {
     await registerPush('personal')
     queueGithubTimelineResponse([], ref, { status: 503 })
     const firstSync = await syncLinkFromGithub(link)
-    const [waitAfterFirstSync] = await db
-      .select({
-        resolvedAt: taskWaits.resolvedAt,
-        acknowledgedAt: taskWaits.acknowledgedAt,
-      })
-      .from(taskWaits)
-      .where(eq(taskWaits.id, wait.id))
+    const waitAfterFirstSync = await loadWaitState(wait.id)
 
     queueGithubNotModifiedResponse()
     queueGithubTimelineResponse([
       submittedReviewEvent('another-user', 'approved', '2024-08-16T13:40:00Z'),
     ])
     const secondSync = await syncLinkFromGithub(link)
-    const [waitAfterSecondSync] = await db
-      .select({
-        resolvedAt: taskWaits.resolvedAt,
-        acknowledgedAt: taskWaits.acknowledgedAt,
-      })
-      .from(taskWaits)
-      .where(eq(taskWaits.id, wait.id))
+    const waitAfterSecondSync = await loadWaitState(wait.id)
 
     expect(
       subjectWaitRetryOutcome(

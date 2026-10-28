@@ -15,10 +15,6 @@ import type {
 import { fetchGithubIssueActivity } from '#integrations/github/activity'
 import { GithubApiError } from '#integrations/github/index'
 import {
-  fetchGithubIssueIfChanged,
-  type GithubIssueData,
-} from '#integrations/github/issues'
-import {
   GithubLinkNotifyError,
   pushTaskNotification,
 } from '#services/github-sync-notifications'
@@ -108,38 +104,14 @@ function syncSubjectWait(
   })
 }
 
-export function syncSubjectWaitAndIssue<TError>(
+export function syncSubjectWaitIfNeeded(
   link: LinkRow,
   activeWait: ResultAsync<UnresolvedWait | null, never>,
   onWrite: ((taskId: string) => void) | undefined,
-  syncUnchanged: () => ResultAsync<void, TError>,
-  syncChanged: (
-    activity: GithubIssueActivity | null,
-    issue: GithubIssueData,
-    etag: string | null,
-  ) => ResultAsync<void, TError>,
-): ResultAsync<void, TError | SubjectWaitSyncError> {
+): ResultAsync<GithubIssueActivity | null, SubjectWaitSyncError> {
   return activeWait.andThen((wait) => {
-    const activityResult =
-      wait == null
-        ? okAsync<GithubIssueActivity | null, SubjectWaitSyncError>(null)
-        : syncSubjectWait(link, wait, onWrite).map((activity) => activity)
-
-    return activityResult.andThen((activity) => {
-      if (link.state === 'merged') {
-        return okAsync(undefined)
-      }
-
-      return fetchGithubIssueIfChanged(
-        { owner: link.owner, repo: link.repo, number: link.number },
-        link.etag,
-      ).andThen((result) => {
-        if (result.notModified) {
-          return syncUnchanged()
-        }
-
-        return syncChanged(activity, result.issue, result.etag)
-      })
-    })
+    return wait == null
+      ? okAsync<GithubIssueActivity | null, SubjectWaitSyncError>(null)
+      : syncSubjectWait(link, wait, onWrite)
   })
 }

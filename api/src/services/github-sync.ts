@@ -17,7 +17,7 @@ import {
 } from '#services/github-sync-issue'
 import { syncGithubAssignedIssues } from '#services/github-sync-rules'
 import {
-  syncSubjectWaitAndIssue,
+  syncSubjectWaitIfNeeded,
   type UnresolvedWait,
 } from '#services/github-sync-subject-waits'
 
@@ -41,54 +41,58 @@ export function syncLinkFromGithub(
       ? link.lastSyncedAt
       : syncStartedAt
 
-  if (mayHaveSubjectWait) {
-    const activeWaitResult =
-      unresolvedWait != null
-        ? okAsync(unresolvedWait)
-        : findUnresolvedWait(link.id)
+  const subjectWaitActivityResult = mayHaveSubjectWait
+    ? syncSubjectWaitIfNeeded(
+        link,
+        unresolvedWait != null
+          ? okAsync(unresolvedWait)
+          : findUnresolvedWait(link.id),
+        onWrite,
+      )
+    : okAsync(null)
 
-    return syncSubjectWaitAndIssue(
-      link,
-      activeWaitResult,
-      onWrite,
-      () => updateUnchangedLink(link, lastSyncedAt),
-      (activity, issue, etag) =>
-        syncChangedIssue(
+  return subjectWaitActivityResult.andThen((subjectWaitActivity) => {
+    if (link.state === 'merged') {
+      return okAsync(undefined)
+    }
+
+    return fetchGithubIssueIfChanged(
+      { owner: link.owner, repo: link.repo, number: link.number },
+      link.etag,
+    ).andThen((result) => {
+      if (result.notModified) {
+        return updateUnchangedLink(link, lastSyncedAt)
+      }
+
+      if (mayHaveSubjectWait) {
+        return syncChangedIssue(
           link,
-          issue,
-          etag,
+          result.issue,
+          result.etag,
           lastSyncedAt,
           null,
           onWrite,
-          activity,
+          subjectWaitActivity,
+        )
+      }
+
+      // A wait can be created after the batch prefetch while this fetch runs.
+      const activeWaitResult =
+        unresolvedWait != null
+          ? okAsync(unresolvedWait)
+          : findUnresolvedWait(link.id)
+
+      return activeWaitResult.andThen((activeWait) =>
+        syncChangedIssue(
+          link,
+          result.issue,
+          result.etag,
+          lastSyncedAt,
+          activeWait,
+          onWrite,
         ),
-    )
-  }
-
-  return fetchGithubIssueIfChanged(
-    { owner: link.owner, repo: link.repo, number: link.number },
-    link.etag,
-  ).andThen((result) => {
-    if (result.notModified) {
-      return updateUnchangedLink(link, lastSyncedAt)
-    }
-
-    // A wait can be created after the batch prefetch while this fetch runs.
-    const activeWaitResult =
-      unresolvedWait != null
-        ? okAsync(unresolvedWait)
-        : findUnresolvedWait(link.id)
-
-    return activeWaitResult.andThen((activeWait) =>
-      syncChangedIssue(
-        link,
-        result.issue,
-        result.etag,
-        lastSyncedAt,
-        activeWait,
-        onWrite,
-      ),
-    )
+      )
+    })
   })
 }
 
