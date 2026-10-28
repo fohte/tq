@@ -319,7 +319,7 @@ describe('page create', () => {
       title: 'Notes',
       content: '# From file',
       linkSync: {
-        outgoing: [],
+        added: [],
         unresolvedRefs: [
           {
             kind: 'number',
@@ -437,7 +437,7 @@ describe('page update', () => {
       id: 'p1',
       title: 'New title',
       linkSync: {
-        outgoing: [{ number: 76, title: 'Fix bug' }],
+        added: [{ number: 76, title: 'Fix bug' }],
         unresolvedRefs: [],
       },
     }

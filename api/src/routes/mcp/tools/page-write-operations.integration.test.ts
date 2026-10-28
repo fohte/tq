@@ -79,7 +79,7 @@ describe('page_create', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -102,7 +102,7 @@ describe('page_create', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -126,7 +126,7 @@ describe('page_create', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'mcp' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -188,7 +188,7 @@ describe('page_update', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       author: { kind: 'llm', agent: 'test-agent' },
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 

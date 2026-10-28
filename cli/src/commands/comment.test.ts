@@ -197,7 +197,7 @@ describe('comment create', () => {
       id: 'c1',
       content: '# From file',
       linkSync: {
-        outgoing: [{ number: 76, title: 'Fix bug' }],
+        added: [{ number: 76, title: 'Fix bug' }],
         unresolvedRefs: [
           {
             kind: 'id',
@@ -241,7 +241,7 @@ describe('comment create', () => {
           JSON.stringify({
             id: 'example-comment',
             linkSync: {
-              outgoing: [{ number: 'invalid', title: 'Example' }],
+              added: [{ number: 'invalid', title: 'Example' }],
               unresolvedRefs: [],
             },
           }),
@@ -261,7 +261,7 @@ describe('comment create', () => {
       exitCode: 1,
       stderr: [
         [
-          'Error: Invalid API response: linkSync.outgoing.0.number: Invalid input: expected number, received string\n',
+          'Error: Invalid API response: linkSync.added.0.number: Invalid input: expected number, received string\n',
         ],
       ],
       stdout: [],
@@ -387,7 +387,7 @@ describe('comment update', () => {
       id: 'c1',
       content: '# Updated',
       linkSync: {
-        outgoing: [{ number: 76, title: 'Fix bug' }],
+        added: [{ number: 76, title: 'Fix bug' }],
         unresolvedRefs: [
           {
             kind: 'id',

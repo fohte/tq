@@ -44,7 +44,7 @@ const refSourceResponseSchema = z.union([
 ])
 
 const linkSyncResponseSchema = z.object({
-  outgoing: z.array(linkedTaskResponseSchema),
+  added: z.array(linkedTaskResponseSchema),
   unresolvedRefs: z.array(
     z.union([
       z.object({

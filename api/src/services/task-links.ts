@@ -34,7 +34,10 @@ type RefSource =
 type UnresolvedRef = NumericOrId & { sources: RefSource[] }
 
 export interface TaskLinkSyncResult {
+  // All current links are needed by callers that publish link-change events.
   outgoing: LinkedTaskSummary[]
+  // Links that did not exist before this sync.
+  added: LinkedTaskSummary[]
   // Refs extracted from the synced text that didn't match any existing task.
   unresolvedRefs: UnresolvedRef[]
 }
@@ -75,7 +78,7 @@ export async function syncTaskLinks(
 
     // The task may already be gone (e.g. deleted concurrently); its links
     // were removed by the FK cascade, so there's nothing left to sync.
-    if (!task) return { outgoing: [], unresolvedRefs: [] }
+    if (!task) return { outgoing: [], added: [], unresolvedRefs: [] }
 
     // HTML pages are excluded: their markup can contain numeric character
     // references (e.g. `&#47;`) that MENTION_PATTERN would misread as a task
@@ -119,6 +122,15 @@ export async function syncTaskLinks(
             .where(matchByIdOrNumber(tasks, refs))
         : []
 
+    const existingTargetIds = new Set(
+      (
+        await tx
+          .select({ targetTaskId: taskLinks.targetTaskId })
+          .from(taskLinks)
+          .where(eq(taskLinks.sourceTaskId, sourceTaskId))
+      ).map(({ targetTaskId }) => targetTaskId),
+    )
+
     await tx.delete(taskLinks).where(eq(taskLinks.sourceTaskId, sourceTaskId))
     if (targets.length > 0) {
       await tx
@@ -145,6 +157,9 @@ export async function syncTaskLinks(
 
     return {
       outgoing: [...targets].sort((a, b) => a.number - b.number),
+      added: targets
+        .filter((target) => !existingTargetIds.has(target.id))
+        .sort((a, b) => a.number - b.number),
       unresolvedRefs,
     }
   })

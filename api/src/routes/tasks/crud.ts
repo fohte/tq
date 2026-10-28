@@ -19,6 +19,7 @@ import {
 } from '#routes/tasks/blocked-by'
 import { getTaskChangeEventIds } from '#routes/tasks/change-event-task-ids'
 import { tasksDeleteApp } from '#routes/tasks/delete'
+import { toTaskLinkSyncResponse } from '#routes/tasks/link-sync-response'
 import { tasksListApp } from '#routes/tasks/list'
 import {
   getGithubLinksByTaskId,
@@ -199,7 +200,7 @@ export const tasksCrudApp = new Hono()
 
     const body = {
       ...taskToResponse(task, createdRule, [], labelNames),
-      linkSync,
+      linkSync: toTaskLinkSyncResponse(linkSync),
     }
     // Keep the published schema and the handler response shape in sync.
     const schemaTypedBody: CreateTaskResponse = body
@@ -486,7 +487,11 @@ export const tasksCrudApp = new Hono()
             githubLinksByTaskId.get(id) ?? [],
             labelsByTaskId.get(id) ?? [],
           ),
-          ...(linkSync ? { linkSync } : {}),
+          ...(linkSync
+            ? {
+                linkSync: toTaskLinkSyncResponse(linkSync),
+              }
+            : {}),
         },
         200,
       )

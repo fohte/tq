@@ -342,7 +342,7 @@ describe('task_create tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -416,7 +416,7 @@ describe('task_create tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
@@ -539,7 +539,7 @@ describe('task_update tool', () => {
       githubLinks: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
-      linkSync: { outgoing: [], unresolvedRefs: [] },
+      linkSync: { added: [], unresolvedRefs: [] },
     })
   })
 
