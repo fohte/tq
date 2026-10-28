@@ -381,9 +381,11 @@ describe('compact queue sections', () => {
     expect(findWritableQueueSection([section], dueTask.id)).toEqual(undefined)
   })
 
-  it('shows due tasks first and removes their duplicates from the day queue', () => {
+  it('shows due tasks first, then today and this week without duplicates', () => {
     const dueTask = makeTask({ id: 'due' })
     const dayTask = makeTask({ id: 'day' })
+    const weekTask = makeTask({ id: 'week' })
+    const scheduledTask = makeTask({ id: 'scheduled' })
 
     expect(
       buildCompactQueueSections(
@@ -396,9 +398,22 @@ describe('compact queue sections', () => {
             emptyMessage: "No tasks in today's queue",
           },
           {
-            key: 'week',
+            key: WEEK_QUEUE_KEY,
             title: 'this week',
-            items: [],
+            items: [dueTask, weekTask],
+            dayGroups: [
+              {
+                date: '2026-04-14',
+                label: 'Tue 04-14',
+                items: [dueTask, scheduledTask],
+              },
+              {
+                date: '2026-04-15',
+                label: 'Wed 04-15',
+                items: [dueTask],
+              },
+            ],
+            dateRangeLabel: '04-13 – 04-19',
             emptyMessage: "No tasks in this week's queue",
           },
         ],
@@ -418,6 +433,20 @@ describe('compact queue sections', () => {
         items: [dayTask],
         dateRangeLabel: '07-30',
         emptyMessage: "No tasks in today's queue",
+      },
+      {
+        key: WEEK_QUEUE_KEY,
+        title: 'this week',
+        items: [weekTask],
+        dayGroups: [
+          {
+            date: '2026-04-14',
+            label: 'Tue 04-14',
+            items: [scheduledTask],
+          },
+        ],
+        dateRangeLabel: '04-13 – 04-19',
+        emptyMessage: "No tasks in this week's queue",
       },
     ])
   })
