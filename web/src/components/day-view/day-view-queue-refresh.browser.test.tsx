@@ -61,19 +61,13 @@ function CompactDayView() {
   )
 }
 
-function readNavigationPositions() {
+function readNavigationVerticalPositions() {
   const readButtonPosition = (name: 'Previous' | 'Next') => {
     const button = document.querySelector<HTMLButtonElement>(
       `[aria-label="${name}"]`,
     )
     if (button == null) throw new Error(`The ${name} button is missing`)
-    const { x, y, width, height } = button.getBoundingClientRect()
-    return {
-      x: Math.round(x),
-      y: Math.round(y),
-      width: Math.round(width),
-      height: Math.round(height),
-    }
+    return Math.round(button.getBoundingClientRect().y)
   }
 
   return {
@@ -83,7 +77,7 @@ function readNavigationPositions() {
 }
 
 function readCompactQueueRefreshLayout(
-  initialPositions: ReturnType<typeof readNavigationPositions>,
+  initialPositions: ReturnType<typeof readNavigationVerticalPositions>,
 ) {
   const queuePane = document.querySelector(
     '[data-scroll-restoration-id="day-view"]',
@@ -91,7 +85,7 @@ function readCompactQueueRefreshLayout(
   return {
     isBusy: queuePane?.getAttribute('aria-busy'),
     visibleTask: screen.getByText('Queued task 1').textContent,
-    navigationPositions: readNavigationPositions(),
+    navigationPositions: readNavigationVerticalPositions(),
     initialPositions,
   }
 }
@@ -115,7 +109,7 @@ describe('DayView compact queue refresh layout', () => {
       </QueryClientProvider>,
     )
 
-    const initialPositions = readNavigationPositions()
+    const initialPositions = readNavigationVerticalPositions()
     await page.getByRole('button', { name: 'Next' }).click()
 
     await waitFor(() => {

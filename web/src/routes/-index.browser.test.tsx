@@ -366,18 +366,13 @@ function makeExpectedQueueTransitionOutput({
       dateRangeLabel,
       emptyMessage: "No tasks in Today's queue",
     }),
-    ...(!compact
-      ? [
-          makeQueueSectionData({
-            key: 'week',
-            title: 'This week',
-            dayGroups: [],
-            dateRangeLabel:
-              date === '2026-07-20' ? '07-20 – 07-26' : '07-27 – 08-02',
-            emptyMessage: "No tasks in This week's queue",
-          }),
-        ]
-      : []),
+    makeQueueSectionData({
+      key: 'week',
+      title: 'This week',
+      dayGroups: [],
+      dateRangeLabel: date === '2026-07-20' ? '07-20 – 07-26' : '07-27 – 08-02',
+      emptyMessage: "No tasks in This week's queue",
+    }),
   ]
 
   return {
