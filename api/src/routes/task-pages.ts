@@ -20,6 +20,7 @@ import {
   getOutgoingTaskLinkIds,
   getTaskLinkChangeEventIds,
 } from '#routes/tasks/change-event-task-ids'
+import { toTaskLinkSyncResponse } from '#routes/tasks/link-sync-response'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createPageSchema, updatePageSchema } from '#schemas/task-page'
 import { syncTaskLinks } from '#services/task-links'
@@ -200,10 +201,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
     return c.json(
       {
         ...pageToResponse(page, author),
-        linkSync: {
-          added: linkSync.added,
-          unresolvedRefs: linkSync.unresolvedRefs,
-        },
+        linkSync: toTaskLinkSyncResponse(linkSync),
       },
       201,
     )
@@ -294,10 +292,7 @@ export const taskPagesApp = new Hono<TaskEnv>()
         ...pageToResponse(updated, authors.get(pageId) ?? null),
         ...(linkSync
           ? {
-              linkSync: {
-                added: linkSync.added,
-                unresolvedRefs: linkSync.unresolvedRefs,
-              },
+              linkSync: toTaskLinkSyncResponse(linkSync),
             }
           : {}),
       },

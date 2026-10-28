@@ -12,6 +12,7 @@ import {
   getOutgoingTaskLinkIds,
   getTaskLinkChangeEventIds,
 } from '#routes/tasks/change-event-task-ids'
+import { toTaskLinkSyncResponse } from '#routes/tasks/link-sync-response'
 import { findTaskByIdOrNumber, type TaskEnv } from '#routes/tasks/shared'
 import { createCommentSchema, updateCommentSchema } from '#schemas/task-comment'
 import { syncTaskLinks } from '#services/task-links'
@@ -104,10 +105,7 @@ export const taskCommentsApp = new Hono<TaskEnv>()
       return c.json(
         {
           ...commentToResponse(comment, author),
-          linkSync: {
-            added: linkSync.added,
-            unresolvedRefs: linkSync.unresolvedRefs,
-          },
+          linkSync: toTaskLinkSyncResponse(linkSync),
         },
         201,
       )
@@ -172,10 +170,7 @@ export const taskCommentsApp = new Hono<TaskEnv>()
       return c.json(
         {
           ...commentToResponse(updated, authors.get(commentId) ?? null),
-          linkSync: {
-            added: linkSync.added,
-            unresolvedRefs: linkSync.unresolvedRefs,
-          },
+          linkSync: toTaskLinkSyncResponse(linkSync),
         },
         200,
       )
