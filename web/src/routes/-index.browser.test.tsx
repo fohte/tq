@@ -11,8 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
+import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeQueueCandidate,
+  makeTask,
+} from '#components/task/task-row-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import { makeQueue } from '#hooks/queue-test-fixtures'
 import type { QueueItem } from '#hooks/use-queues'
@@ -64,7 +68,27 @@ type QueueRangeMock = (
   error: unknown
   errorUpdatedAt: number
 }
-type TaskMapMock = () => ReadonlyMap<string, Task>
+type QueueTransitionTaskData = {
+  candidateTasks: Task[] | undefined
+  dateTasks: Task[] | undefined
+  referencedTasks: {
+    data: Task[] | undefined
+    isPlaceholderData: boolean
+    error: unknown
+  }
+  candidateError?: unknown
+  dateError?: unknown
+}
+type QueueTransitionQueueResult = {
+  data: QueueItem[] | undefined
+  error: unknown
+}
+type QueueTransitionRangeResult = {
+  data: QueueItem[] | undefined
+  error: unknown
+  errorUpdatedAt: number
+}
+type TaskMapMock = (tasks: Task[]) => ReadonlyMap<string, Task>
 type QueueMutationVariables = {
   key: string
   date: string
@@ -77,11 +101,17 @@ type QueueMutationOptions = {
 type DayViewMockProps = {
   layout?: string
   isLoading?: boolean
+  isQueueRefreshing?: boolean
   calendarEvents?: TimeBlockEvent[]
+  dayQueueTasks?: Task[]
+  nowPanel?: { isLoading?: boolean }
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
   queueSections?: QueueSectionData[]
   queueCandidates?: QueueCandidate<Task>[]
+  onAddCandidate?: (taskId: string) => void
+  onInsertCandidate?: (queueKey: string, taskId: string) => void
+  onRemoveFromQueue?: (queueKey: string, taskId: string) => void
   onMoveTask?: (
     taskId: string,
     fromQueueKey: string,
@@ -99,7 +129,10 @@ type MemosMock = (
   isError: boolean
 }
 
-function isTaskListFilterWith(filter: unknown, field: string): boolean {
+function isTaskListFilterWith(
+  filter: unknown,
+  field: string,
+): filter is Record<string, unknown> {
   return typeof filter === 'object' && filter !== null && field in filter
 }
 
@@ -142,29 +175,223 @@ function taskListQuerySnapshot(
   }
 }
 
-const mocks = vi.hoisted(() => ({
-  useTaskList: vi.fn<TaskListMock>(),
-  useTimeBlocks: vi.fn<DateRangeQueryMock>(),
-  useScheduleList: vi.fn<DateRangeQueryMock>(),
-  useGcalEvents: vi.fn<GcalQueryMock>(),
-  useMemos: vi.fn<MemosMock>(),
-  useQueues: vi.fn<QueueListMock>(),
-  useQueueItemsForQueues: vi.fn<QueueItemsMock>(),
-  useQueueCarryOver: vi.fn<QueueCarryOverMock>(),
-  selectedDate: null as Date | null,
-  useQueueItemsForRange: vi.fn<QueueRangeMock>(),
-  useTaskMap: vi.fn<TaskMapMock>(),
-  fetchQueueItems: vi.fn<(key: string, date: string) => Promise<QueueItem[]>>(),
-  setQueueItems:
-    vi.fn<
-      (
-        variables: QueueMutationVariables,
-        options?: QueueMutationOptions,
-      ) => void
-    >(),
-  createTimeBlock: vi.fn<(input: unknown) => void>(),
-  dayViewProps: vi.fn<(props: DayViewMockProps) => void>(),
-}))
+const mocks = vi.hoisted(() => {
+  let context: 'work' | 'personal' = 'work'
+
+  return {
+    useTaskList: vi.fn<TaskListMock>(),
+    useTimeBlocks: vi.fn<DateRangeQueryMock>(),
+    useScheduleList: vi.fn<DateRangeQueryMock>(),
+    useGcalEvents: vi.fn<GcalQueryMock>(),
+    useMemos: vi.fn<MemosMock>(),
+    useQueues: vi.fn<QueueListMock>(),
+    useQueueItemsForQueues: vi.fn<QueueItemsMock>(),
+    useQueueCarryOver: vi.fn<QueueCarryOverMock>(),
+    selectedDate: null as Date | null,
+    get context() {
+      return context
+    },
+    set context(value: 'work' | 'personal') {
+      context = value
+    },
+    revision: 0,
+    listeners: new Set<() => void>(),
+    queueTransitionTaskData: new Map<string, QueueTransitionTaskData>(),
+    queueTransitionItems: new Map<string, QueueTransitionQueueResult[]>(),
+    queueTransitionRanges: new Map<string, QueueTransitionRangeResult>(),
+    useQueueItemsForRange: vi.fn<QueueRangeMock>(),
+    useTaskMap: vi.fn<TaskMapMock>(),
+    fetchQueueItems:
+      vi.fn<(key: string, date: string) => Promise<QueueItem[]>>(),
+    setQueueItems:
+      vi.fn<
+        (
+          variables: QueueMutationVariables,
+          options?: QueueMutationOptions,
+        ) => void
+      >(),
+    createTimeBlock: vi.fn<(input: unknown) => void>(),
+    dayViewProps: vi.fn<(props: DayViewMockProps) => void>(),
+  }
+})
+
+function notifyRouteMockChanges() {
+  mocks.revision += 1
+  mocks.listeners.forEach((listener) => {
+    listener()
+  })
+}
+
+function queueTransitionScopeKey(
+  date: string,
+  context: 'work' | 'personal' = mocks.context,
+) {
+  return `${context}:${date}`
+}
+
+function configureQueueTransitionMocks() {
+  mocks.useTaskList.mockImplementation((filter, options) => {
+    const date = formatLocalDate(
+      mocks.selectedDate ?? new Date('2026-07-20T00:00:00'),
+    )
+    const taskData = mocks.queueTransitionTaskData.get(
+      queueTransitionScopeKey(date),
+    )
+
+    if (isTaskListFilterWith(filter, 'candidatesOn')) {
+      const queryDate = filter['candidatesOn']
+      const state =
+        typeof queryDate === 'string'
+          ? mocks.queueTransitionTaskData.get(
+              queueTransitionScopeKey(queryDate),
+            )
+          : undefined
+      const error = state?.candidateError ?? null
+      return {
+        data: state?.candidateTasks,
+        isLoading:
+          options?.enabled !== false &&
+          state?.candidateTasks === undefined &&
+          error == null,
+        error,
+      }
+    }
+
+    if (isTaskListFilterWith(filter, 'dateFrom')) {
+      const queryDate = filter['dateFrom']
+      const state =
+        typeof queryDate === 'string'
+          ? mocks.queueTransitionTaskData.get(
+              queueTransitionScopeKey(queryDate),
+            )
+          : undefined
+      const error = state?.dateError ?? null
+      return {
+        data: state?.dateTasks,
+        isLoading:
+          options?.enabled !== false &&
+          state?.dateTasks === undefined &&
+          error == null,
+        error,
+      }
+    }
+
+    if (isTaskListFilterWith(filter, 'ids')) {
+      const referencedTasks = taskData?.referencedTasks
+      const error = referencedTasks?.error ?? null
+      return {
+        data: referencedTasks?.data,
+        isLoading:
+          options?.enabled !== false &&
+          referencedTasks?.data === undefined &&
+          error == null,
+        isPlaceholderData: referencedTasks?.isPlaceholderData ?? false,
+        error,
+      }
+    }
+
+    if (isTaskListFilterWith(filter, 'dueTo')) {
+      return { data: [], isLoading: false, error: null }
+    }
+
+    return { data: [], isLoading: false, error: null }
+  })
+  mocks.useQueueItemsForQueues.mockImplementation(
+    (_queues, date) => mocks.queueTransitionItems.get(date) ?? [],
+  )
+  mocks.useQueueItemsForRange.mockImplementation(
+    (_key, from, to) =>
+      mocks.queueTransitionRanges.get(`${from}:${to}`) ?? {
+        data: [],
+        error: null,
+        errorUpdatedAt: 0,
+      },
+  )
+}
+
+function readQueueTransitionOutput() {
+  const props = assertDefined(mocks.dayViewProps.mock.lastCall?.[0])
+  return {
+    isLoading: props.isLoading ?? false,
+    isQueueRefreshing: props.isQueueRefreshing ?? false,
+    nowPanelLoading: props.nowPanel?.isLoading ?? false,
+    queueSections: props.queueSections,
+    dayQueueTasks: props.dayQueueTasks,
+    queueCandidates: props.queueCandidates,
+  }
+}
+
+function readQueueTransitionInteractionResult(revertCalendarQueueDrop: {
+  mock: { calls: unknown[][] }
+}) {
+  return {
+    mutationCalls: mocks.setQueueItems.mock.calls,
+    calendarQueueDropReverted: revertCalendarQueueDrop.mock.calls,
+  }
+}
+
+function makeExpectedQueueTransitionOutput({
+  date,
+  dayQueueTask,
+  candidate,
+  isLoading = false,
+  isQueueRefreshing = false,
+  nowPanelLoading = false,
+  compact = true,
+}: {
+  date: string
+  dayQueueTask?: Task
+  candidate?: Task
+  isLoading?: boolean
+  isQueueRefreshing?: boolean
+  nowPanelLoading?: boolean
+  compact?: boolean
+}) {
+  const dateRangeLabel = date.slice(5)
+  const queueSections = [
+    ...(compact
+      ? [
+          makeQueueSectionData({
+            key: 'due-today',
+            title: 'due today',
+            emptyMessage: 'No tasks due today',
+            isReadOnly: true,
+          }),
+        ]
+      : []),
+    makeQueueSectionData({
+      key: 'day',
+      title: 'Today',
+      items: dayQueueTask == null ? [] : [dayQueueTask],
+      dateRangeLabel,
+      emptyMessage: "No tasks in Today's queue",
+    }),
+    makeQueueSectionData({
+      key: 'week',
+      title: 'This week',
+      dayGroups: [],
+      dateRangeLabel: date === '2026-07-20' ? '07-20 – 07-26' : '07-27 – 08-02',
+      emptyMessage: "No tasks in This week's queue",
+    }),
+  ]
+
+  return {
+    isLoading,
+    isQueueRefreshing,
+    nowPanelLoading,
+    queueSections,
+    dayQueueTasks: dayQueueTask == null ? [] : [dayQueueTask],
+    queueCandidates:
+      candidate == null
+        ? []
+        : [
+            makeQueueCandidate({
+              task: candidate,
+              reason: { kind: 'active' },
+            }),
+          ],
+  }
+}
 
 vi.mock('#components/calendar/calendar-change-feedback-popup', () => ({
   CalendarChangeFeedbackPopup: () => null,
@@ -202,9 +429,20 @@ vi.mock('#hooks/use-calendar-change-feedback', () => ({
   }),
 }))
 
-vi.mock('#hooks/use-current-context', () => ({
-  useCurrentContext: () => 'work',
-}))
+vi.mock('#hooks/use-current-context', async () => {
+  const { useSyncExternalStore } = await import('react')
+  const subscribe = (listener: () => void) => {
+    mocks.listeners.add(listener)
+    return () => mocks.listeners.delete(listener)
+  }
+
+  return {
+    useCurrentContext: () => {
+      useSyncExternalStore(subscribe, () => mocks.revision)
+      return mocks.context
+    },
+  }
+})
 
 vi.mock('#hooks/use-filtered-tasks', () => ({
   useBaseFilter: () => ({}),
@@ -304,12 +542,26 @@ vi.mock('#hooks/use-schedules', () => ({
     mocks.useScheduleList(...args),
 }))
 
-vi.mock('#hooks/use-selected-date', () => ({
-  useSelectedDate: () => ({
-    selectedDate: mocks.selectedDate ?? new Date('2026-07-20T00:00:00'),
-    setSelectedDate: vi.fn(),
-  }),
-}))
+vi.mock('#hooks/use-selected-date', async () => {
+  const { useSyncExternalStore } = await import('react')
+  const subscribe = (listener: () => void) => {
+    mocks.listeners.add(listener)
+    return () => mocks.listeners.delete(listener)
+  }
+
+  return {
+    useSelectedDate: () => {
+      useSyncExternalStore(subscribe, () => mocks.revision)
+      return {
+        selectedDate: mocks.selectedDate ?? new Date('2026-07-20T00:00:00'),
+        setSelectedDate: (date: Date) => {
+          mocks.selectedDate = date
+          notifyRouteMockChanges()
+        },
+      }
+    },
+  }
+})
 
 vi.mock('#hooks/use-service-worker-update', () => ({
   useServiceWorkerUpdate: () => {},
@@ -318,7 +570,7 @@ vi.mock('#hooks/use-service-worker-update', () => ({
 vi.mock('#hooks/use-tasks', () => ({
   useTaskList: (...args: Parameters<TaskListMock>) =>
     mocks.useTaskList(...args),
-  useTaskMap: () => mocks.useTaskMap(),
+  useTaskMap: (...args: Parameters<TaskMapMock>) => mocks.useTaskMap(...args),
 }))
 
 vi.mock('#hooks/use-time-blocks', () => ({
@@ -349,12 +601,21 @@ async function renderDayRoute(initialEntry: string) {
   })
   await router.load()
 
-  const rendered = render(
+  const routeTree = () => (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
-  return { ...rendered, queryClient, router }
+  const rendered = render(routeTree())
+  return {
+    ...rendered,
+    queryClient,
+    router,
+    rerenderRoute: () => {
+      notifyRouteMockChanges()
+      rendered.rerender(routeTree())
+    },
+  }
 }
 
 beforeEach(() => {
@@ -384,6 +645,12 @@ beforeEach(() => {
     canReadQueueItems: true,
   }))
   mocks.selectedDate = null
+  mocks.context = 'work'
+  mocks.revision = 0
+  mocks.listeners.clear()
+  mocks.queueTransitionTaskData.clear()
+  mocks.queueTransitionItems.clear()
+  mocks.queueTransitionRanges.clear()
   mocks.useQueueItemsForRange.mockReturnValue({
     data: [],
     error: null,
@@ -647,6 +914,670 @@ describe('day-view route task queries', () => {
     })
 
     queryClient.clear()
+  })
+})
+
+describe('day-view route queue date transition', () => {
+  it('keeps the last settled queue until the latest date queries are ready', async () => {
+    const initialDate = '2026-07-20'
+    const intermediateDate = '2026-07-27'
+    const latestDate = '2026-07-28'
+    const oldQueueTask = makeTask({
+      id: 'old-queue-task',
+      title: 'Old queued task',
+      context: 'work',
+    })
+    const intermediateQueueTask = makeTask({
+      id: 'intermediate-queue-task',
+      title: 'Intermediate queued task',
+      context: 'work',
+    })
+    const latestQueueTask = makeTask({
+      id: 'latest-queue-task',
+      title: 'Latest queued task',
+      context: 'work',
+    })
+    const oldCandidate = makeTask({
+      id: 'old-candidate',
+      title: 'Old candidate',
+      context: 'work',
+      candidateReason: { kind: 'active' },
+    })
+    const intermediateCandidate = makeTask({
+      id: 'intermediate-candidate',
+      title: 'Intermediate candidate',
+      context: 'work',
+      candidateReason: { kind: 'active' },
+    })
+    const latestCandidate = makeTask({
+      id: 'latest-candidate',
+      title: 'Latest candidate',
+      context: 'work',
+      candidateReason: { kind: 'active' },
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    mocks.selectedDate = new Date(`${initialDate}T00:00:00`)
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useTaskMap.mockImplementation(
+      (tasks) => new Map(tasks.map((task) => [task.id, task] as const)),
+    )
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(initialDate), {
+      candidateTasks: [oldCandidate],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(initialDate, [
+      {
+        data: [
+          makeQueueItem({ taskId: oldQueueTask.id, periodStart: initialDate }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-20:2026-07-26', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    configureQueueTransitionMocks()
+
+    const route = await renderDayRoute('/?layout=compact')
+    const oldQueue = makeExpectedQueueTransitionOutput({
+      date: initialDate,
+      dayQueueTask: oldQueueTask,
+      candidate: oldCandidate,
+    })
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(oldQueue)
+    })
+
+    mocks.selectedDate = new Date(`${intermediateDate}T00:00:00`)
+    mocks.queueTransitionTaskData.set(
+      queueTransitionScopeKey(intermediateDate),
+      {
+        candidateTasks: [intermediateCandidate],
+        dateTasks: undefined,
+        referencedTasks: {
+          data: [oldQueueTask],
+          isPlaceholderData: true,
+          error: null,
+        },
+      },
+    )
+    mocks.queueTransitionItems.set(intermediateDate, [
+      {
+        data: [
+          makeQueueItem({
+            taskId: intermediateQueueTask.id,
+            periodStart: intermediateDate,
+          }),
+        ],
+        error: null,
+      },
+      { data: undefined, error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-27:2026-08-02', {
+      data: undefined,
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual({
+        ...oldQueue,
+        isQueueRefreshing: true,
+      })
+    })
+
+    const transitioningProps = assertDefined(
+      mocks.dayViewProps.mock.lastCall?.[0],
+    )
+    act(() => {
+      transitioningProps.onAddCandidate?.(oldCandidate.id)
+      transitioningProps.onInsertCandidate?.('week', oldCandidate.id)
+      transitioningProps.onRemoveFromQueue?.('day', oldQueueTask.id)
+      transitioningProps.onMoveTask?.(oldQueueTask.id, 'day', 'week')
+      transitioningProps.onMoveScheduledTaskToWeek?.(
+        oldQueueTask.id,
+        intermediateDate,
+      )
+    })
+
+    const dndCallbacks = assertDefined(transitioningProps.dndCallbacks)
+    const revertCalendarQueueDrop = vi.fn()
+    act(() => {
+      dndCallbacks.onEventDrop?.({
+        eventId: 'queued-event',
+        eventType: 'day-queue',
+        taskId: oldQueueTask.id,
+        isAllDay: true,
+        wasAllDay: true,
+        newStart: new Date(`${intermediateDate}T00:00:00`),
+        newEnd: new Date(`${intermediateDate}T00:00:00`),
+        oldStart: new Date(`${initialDate}T00:00:00`),
+        oldEnd: new Date(`${initialDate}T00:00:00`),
+        el: document.createElement('div'),
+        revert: revertCalendarQueueDrop,
+      })
+      dndCallbacks.onExternalDrop?.({
+        taskId: oldQueueTask.id,
+        taskTitle: oldQueueTask.title,
+        start: new Date(`${intermediateDate}T00:00:00`),
+        end: new Date(`${intermediateDate}T00:00:00`),
+        allDay: true,
+        sourceQueueKey: 'day',
+        sourceDate: initialDate,
+      })
+    })
+    expect(
+      readQueueTransitionInteractionResult(revertCalendarQueueDrop),
+    ).toEqual({
+      mutationCalls: [],
+      calendarQueueDropReverted: [[]],
+    })
+
+    mocks.selectedDate = new Date(`${latestDate}T00:00:00`)
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(latestDate), {
+      candidateTasks: undefined,
+      dateTasks: undefined,
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: true,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(latestDate, [
+      {
+        data: [
+          makeQueueItem({
+            taskId: latestQueueTask.id,
+            periodStart: latestDate,
+          }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    act(() => {
+      route.rerenderRoute()
+    })
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual({
+        ...oldQueue,
+        isQueueRefreshing: true,
+      })
+    })
+
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(latestDate), {
+      candidateTasks: [latestCandidate],
+      dateTasks: undefined,
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: true,
+        error: null,
+      },
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+    expect(readQueueTransitionOutput()).toEqual({
+      ...oldQueue,
+      isQueueRefreshing: true,
+    })
+
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(latestDate), {
+      candidateTasks: [latestCandidate],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: true,
+        error: null,
+      },
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+    expect(readQueueTransitionOutput()).toEqual({
+      ...oldQueue,
+      isQueueRefreshing: true,
+    })
+
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(latestDate), {
+      candidateTasks: [latestCandidate],
+      dateTasks: [latestQueueTask],
+      referencedTasks: {
+        data: [latestQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+    expect(readQueueTransitionOutput()).toEqual({
+      ...oldQueue,
+      isQueueRefreshing: true,
+    })
+
+    mocks.queueTransitionRanges.set('2026-07-27:2026-08-02', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 1,
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+    expect(readQueueTransitionOutput()).toEqual(
+      makeExpectedQueueTransitionOutput({
+        date: latestDate,
+        dayQueueTask: latestQueueTask,
+        candidate: latestCandidate,
+      }),
+    )
+
+    route.queryClient.clear()
+  })
+
+  it('does not wait for calendar-only task references to settle the queue', async () => {
+    const initialDate = '2026-07-20'
+    const targetDate = '2026-07-27'
+    const oldQueueTask = makeTask({
+      id: 'old-queue-task',
+      title: 'Old queued task',
+      context: 'work',
+    })
+    const targetQueueTask = makeTask({
+      id: 'target-queue-task',
+      title: 'Target queued task',
+      context: 'work',
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    const nowPanelStartDate = getNowPanelQueryDateRange(new Date()).startDate
+    mocks.useTimeBlocks.mockImplementation((startDate) => ({
+      data:
+        startDate === nowPanelStartDate
+          ? []
+          : [makeTimeBlock({ taskId: 'calendar-only-task' })],
+      error: null,
+    }))
+    mocks.selectedDate = new Date(`${initialDate}T00:00:00`)
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useTaskMap.mockImplementation(
+      (tasks) => new Map(tasks.map((task) => [task.id, task] as const)),
+    )
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(initialDate), {
+      candidateTasks: [],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(initialDate, [
+      {
+        data: [
+          makeQueueItem({ taskId: oldQueueTask.id, periodStart: initialDate }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-20:2026-07-26', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    configureQueueTransitionMocks()
+    const route = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: initialDate,
+          dayQueueTask: oldQueueTask,
+        }),
+      )
+    })
+
+    mocks.selectedDate = new Date(`${targetDate}T00:00:00`)
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(targetDate), {
+      candidateTasks: [],
+      dateTasks: [targetQueueTask],
+      referencedTasks: {
+        data: undefined,
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(targetDate, [
+      {
+        data: [
+          makeQueueItem({
+            taskId: targetQueueTask.id,
+            periodStart: targetDate,
+          }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-27:2026-08-02', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: targetDate,
+          dayQueueTask: targetQueueTask,
+        }),
+      )
+    })
+
+    route.queryClient.clear()
+  })
+
+  it('releases the previous queue when a settled reference query excludes a task', async () => {
+    const initialDate = '2026-07-20'
+    const targetDate = '2026-07-27'
+    const oldQueueTask = makeTask({
+      id: 'old-queue-task',
+      title: 'Old queued task',
+      context: 'work',
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    mocks.selectedDate = new Date(`${initialDate}T00:00:00`)
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useTaskMap.mockImplementation(
+      (tasks) => new Map(tasks.map((task) => [task.id, task] as const)),
+    )
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(initialDate), {
+      candidateTasks: [],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(initialDate, [
+      {
+        data: [
+          makeQueueItem({ taskId: oldQueueTask.id, periodStart: initialDate }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-20:2026-07-26', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    configureQueueTransitionMocks()
+    const route = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: initialDate,
+          dayQueueTask: oldQueueTask,
+        }),
+      )
+    })
+
+    mocks.selectedDate = new Date(`${targetDate}T00:00:00`)
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(targetDate), {
+      candidateTasks: [],
+      dateTasks: [],
+      referencedTasks: {
+        data: [],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(targetDate, [
+      {
+        data: [
+          makeQueueItem({
+            taskId: 'other-context-task',
+            periodStart: targetDate,
+          }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-27:2026-08-02', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 1,
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({ date: targetDate }),
+      )
+    })
+
+    route.queryClient.clear()
+  })
+
+  it('releases the previous queue when a required query fails', async () => {
+    const initialDate = '2026-07-20'
+    const targetDate = '2026-07-27'
+    const oldQueueTask = makeTask({
+      id: 'old-queue-task',
+      title: 'Old queued task',
+      context: 'work',
+    })
+    const targetCandidate = makeTask({
+      id: 'target-candidate',
+      title: 'Target candidate',
+      context: 'work',
+      candidateReason: { kind: 'active' },
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    const queryError = new Error('queue items unavailable')
+    mocks.selectedDate = new Date(`${initialDate}T00:00:00`)
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useTaskMap.mockReturnValue(new Map([[oldQueueTask.id, oldQueueTask]]))
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(initialDate), {
+      candidateTasks: [],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(initialDate, [
+      {
+        data: [
+          makeQueueItem({ taskId: oldQueueTask.id, periodStart: initialDate }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-20:2026-07-26', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    configureQueueTransitionMocks()
+    const route = await renderDayRoute('/')
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: initialDate,
+          dayQueueTask: oldQueueTask,
+          compact: false,
+        }),
+      )
+    })
+
+    mocks.selectedDate = new Date(`${targetDate}T00:00:00`)
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(targetDate), {
+      candidateTasks: [targetCandidate],
+      dateTasks: [],
+      referencedTasks: {
+        data: undefined,
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(targetDate, [
+      { data: undefined, error: queryError },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-27:2026-08-02', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: targetDate,
+          candidate: targetCandidate,
+          compact: false,
+        }),
+      )
+    })
+
+    route.queryClient.clear()
+  })
+
+  it('does not retain a queue when task context changes', async () => {
+    const initialDate = '2026-07-20'
+    const oldQueueTask = makeTask({
+      id: 'old-queue-task',
+      title: 'Old queued task',
+      context: 'work',
+    })
+    const oldCandidate = makeTask({
+      id: 'old-candidate',
+      title: 'Old candidate',
+      context: 'work',
+      candidateReason: { kind: 'active' },
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    mocks.selectedDate = new Date(`${initialDate}T00:00:00`)
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useTaskMap.mockReturnValue(new Map([[oldQueueTask.id, oldQueueTask]]))
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(initialDate), {
+      candidateTasks: [oldCandidate],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(initialDate, [
+      {
+        data: [
+          makeQueueItem({ taskId: oldQueueTask.id, periodStart: initialDate }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-20:2026-07-26', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    configureQueueTransitionMocks()
+    const route = await renderDayRoute('/')
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: initialDate,
+          dayQueueTask: oldQueueTask,
+          candidate: oldCandidate,
+          compact: false,
+        }),
+      )
+    })
+
+    mocks.context = 'personal'
+    mocks.useTaskMap.mockReturnValue(new Map())
+    act(() => {
+      route.rerenderRoute()
+    })
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: initialDate,
+          isLoading: true,
+          nowPanelLoading: false,
+          compact: false,
+        }),
+      )
+    })
+
+    route.queryClient.clear()
   })
 })
 

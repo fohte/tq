@@ -105,6 +105,7 @@ export interface DayViewPresentationProps {
   kanbanFilterRow?: ReactNode
   /** Mounts with the mobile calendar/tasks pane switcher already on this tab. */
   initialMobileTab?: MobileTab
+  isQueueRefreshing?: boolean
   layout?: 'default' | 'compact'
   nowPanel?: NowPanelProps
   taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
@@ -141,6 +142,7 @@ export function DayViewPresentation({
   onViewModeChange,
   kanbanFilterRow,
   initialMobileTab,
+  isQueueRefreshing = false,
   layout = 'default',
   nowPanel,
   taskRowStates,
@@ -374,6 +376,7 @@ export function DayViewPresentation({
           ) : (
             <QueuePane
               isLoading={isLoading}
+              isRefreshing={isQueueRefreshing}
               queueSections={visibleQueueSections}
               queueDate={formatLocalDate(selectedDate)}
               queueCandidates={isCompactLayout ? [] : queueCandidates}
