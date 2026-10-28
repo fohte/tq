@@ -128,6 +128,9 @@ export function buildCompactQueueSections(
   const daySection = queueSections.find(
     (section) => section.key === DAY_QUEUE_KEY,
   )
+  const weekSection = queueSections.find(
+    (section) => section.key === WEEK_QUEUE_KEY,
+  )
 
   return [
     {
@@ -143,6 +146,26 @@ export function buildCompactQueueSections(
           {
             ...daySection,
             items: daySection.items.filter((task) => !dueTaskIds.has(task.id)),
+          },
+        ]),
+    ...(weekSection == null
+      ? []
+      : [
+          {
+            ...weekSection,
+            items: weekSection.items.filter((task) => !dueTaskIds.has(task.id)),
+            ...(weekSection.dayGroups == null
+              ? {}
+              : {
+                  dayGroups: weekSection.dayGroups
+                    .map((group) => ({
+                      ...group,
+                      items: group.items.filter(
+                        (task) => !dueTaskIds.has(task.id),
+                      ),
+                    }))
+                    .filter((group) => group.items.length > 0),
+                }),
           },
         ]),
   ]
