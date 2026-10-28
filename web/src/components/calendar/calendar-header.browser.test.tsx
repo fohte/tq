@@ -115,4 +115,66 @@ describe('CalendarHeader', () => {
 
     expect(onViewChange).toHaveBeenCalledWith('month')
   })
+
+  it.each([
+    { activeView: 'day' as const, requestedView: 'week' as const },
+    { activeView: 'month' as const, requestedView: 'week' as const },
+    { activeView: 'week' as const, requestedView: 'day' as const },
+  ])(
+    'requests $requestedView when the compact week toggle is pressed from $activeView view',
+    async ({ activeView, requestedView }) => {
+      const onViewChange = vi.fn()
+      const user = userEvent.setup()
+      render(
+        <CalendarHeader
+          currentDate={currentDate}
+          activeView={activeView}
+          onPrev={vi.fn()}
+          onNext={vi.fn()}
+          onToday={vi.fn()}
+          onViewChange={onViewChange}
+          showViewSwitcher={false}
+          showWeekToggle
+        />,
+      )
+
+      await user.click(screen.getByRole('button', { name: 'week' }))
+
+      expect(onViewChange.mock.calls).toEqual([[requestedView]])
+    },
+  )
+
+  it('marks the compact week toggle pressed only in week view', () => {
+    const onViewChange = vi.fn()
+    const { rerender } = render(
+      <CalendarHeader
+        currentDate={currentDate}
+        activeView="week"
+        onPrev={vi.fn()}
+        onNext={vi.fn()}
+        onToday={vi.fn()}
+        onViewChange={onViewChange}
+        showViewSwitcher={false}
+        showWeekToggle
+      />,
+    )
+    const toggle = screen.getByRole('button', { name: 'week' })
+    const pressedStates = [toggle.getAttribute('aria-pressed')]
+
+    rerender(
+      <CalendarHeader
+        currentDate={currentDate}
+        activeView="day"
+        onPrev={vi.fn()}
+        onNext={vi.fn()}
+        onToday={vi.fn()}
+        onViewChange={onViewChange}
+        showViewSwitcher={false}
+        showWeekToggle
+      />,
+    )
+    pressedStates.push(toggle.getAttribute('aria-pressed'))
+
+    expect(pressedStates).toEqual(['true', 'false'])
+  })
 })

@@ -31,6 +31,7 @@ let capturedOnScheduleClick:
   | ((scheduleId: string, occurrenceDate: string, start: string) => void)
   | undefined
 let capturedShowViewSwitcher: boolean | undefined
+let capturedShowWeekToggle: boolean | undefined
 let capturedModalProps: {
   open: boolean
   defaultStartDate?: string
@@ -47,11 +48,13 @@ vi.mock('#components/calendar/calendar-view', () => ({
       start: string,
     ) => void
     showViewSwitcher?: boolean
+    showWeekToggle?: boolean
   }) => {
     capturedOnSelectRange = props.onSelectRange
     capturedOnTaskClick = props.onTaskClick
     capturedOnScheduleClick = props.onScheduleClick
     capturedShowViewSwitcher = props.showViewSwitcher
+    capturedShowWeekToggle = props.showWeekToggle
     return <div data-testid="calendar-view" />
   },
 }))
@@ -343,6 +346,7 @@ describe('DayViewPresentation', () => {
       candidateVisible: screen.queryByText(candidate.task.title) != null,
       calendarVisible: screen.queryByTestId('calendar-view') != null,
       calendarViewSwitcherVisible: capturedShowViewSwitcher !== false,
+      calendarWeekToggleVisible: capturedShowWeekToggle === true,
       calendarTabVisible:
         screen.queryByRole('button', { name: 'calendar' }) != null,
       tasksTabVisible: screen.queryByRole('button', { name: 'tasks' }) != null,
@@ -357,6 +361,7 @@ describe('DayViewPresentation', () => {
       candidateVisible: false,
       calendarVisible: true,
       calendarViewSwitcherVisible: false,
+      calendarWeekToggleVisible: true,
       calendarTabVisible: false,
       tasksTabVisible: false,
       kanbanFilterVisible: false,

@@ -77,6 +77,7 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   initialScrollTime?: string | undefined
   showViewSwitcher?: boolean
+  showWeekToggle?: boolean
   selectedDate: Date
   onDateChange: (date: Date) => void
   onVisibleRangeChange?:
@@ -95,6 +96,7 @@ export function CalendarView({
   initialView = 'day',
   initialScrollTime,
   showViewSwitcher = true,
+  showWeekToggle = false,
   selectedDate,
   onDateChange,
   onVisibleRangeChange,
@@ -208,6 +210,7 @@ export function CalendarView({
         onToday={handleToday}
         onViewChange={handleViewChange}
         showViewSwitcher={showViewSwitcher}
+        showWeekToggle={showWeekToggle}
       />
       {/* overscroll-x-contain stops a horizontal trackpad scroll here from
           chaining into the browser's own back/forward gesture

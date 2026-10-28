@@ -250,7 +250,7 @@ export const WithEvents: Story = {
 }
 
 export const CompactDay: Story = {
-  name: 'the compact calendar keeps a daily timeline without a view switcher',
+  name: 'the compact calendar shows a daily timeline with a week toggle',
   tags: ['mobile-only'],
   decorators: [
     (Story) => (
@@ -262,6 +262,25 @@ export const CompactDay: Story = {
   args: {
     events: sampleEvents,
     showViewSwitcher: false,
+    showWeekToggle: true,
+  },
+}
+
+export const CompactWeek: Story = {
+  name: 'the compact calendar shows a weekly timeline with an active week toggle',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-screen w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    events: sampleEvents,
+    initialView: 'week',
+    showViewSwitcher: false,
+    showWeekToggle: true,
   },
 }
 

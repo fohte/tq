@@ -44,6 +44,7 @@ interface CalendarHeaderProps {
   onToday: () => void
   onViewChange: (view: CalendarViewType) => void
   showViewSwitcher?: boolean
+  showWeekToggle?: boolean
 }
 
 function formatWeekday(date: Date): string {
@@ -58,7 +59,10 @@ export function CalendarHeader({
   onToday,
   onViewChange,
   showViewSwitcher = true,
+  showWeekToggle = false,
 }: CalendarHeaderProps) {
+  const isWeekView = activeView === 'week'
+
   return (
     <ScreenHeaderBar>
       <span className="font-mono text-sm font-bold">
@@ -97,6 +101,20 @@ export function CalendarHeader({
             options={VIEW_OPTIONS}
             onValueChange={onViewChange}
           />
+        </div>
+      )}
+      {!showViewSwitcher && showWeekToggle && (
+        <div className="ml-auto">
+          <Button
+            variant={isWeekView ? 'default' : 'outline'}
+            size="xs"
+            aria-pressed={isWeekView}
+            onClick={() => {
+              onViewChange(isWeekView ? 'day' : 'week')
+            }}
+          >
+            week
+          </Button>
         </div>
       )}
     </ScreenHeaderBar>
