@@ -347,8 +347,7 @@ function makeExpectedQueueTransitionOutput({
   nowPanelLoading?: boolean
   compact?: boolean
 }) {
-  const dateRangeLabel =
-    date === '2026-07-20' ? '07-20' : date === '2026-07-27' ? '07-27' : '07-28'
+  const dateRangeLabel = date.slice(5)
   const queueSections = [
     ...(compact
       ? [
@@ -1306,6 +1305,103 @@ describe('day-view route queue date transition', () => {
           date: targetDate,
           dayQueueTask: targetQueueTask,
         }),
+      )
+    })
+
+    route.queryClient.clear()
+  })
+
+  it('releases the previous queue when a settled reference query excludes a task', async () => {
+    const initialDate = '2026-07-20'
+    const targetDate = '2026-07-27'
+    const oldQueueTask = makeTask({
+      id: 'old-queue-task',
+      title: 'Old queued task',
+      context: 'work',
+    })
+    const queues = [
+      makeQueue({ key: 'day', name: 'Today' }),
+      makeQueue({
+        key: 'week',
+        name: 'This week',
+        periodUnit: 'week',
+        position: 1,
+      }),
+    ]
+    mocks.selectedDate = new Date(`${initialDate}T00:00:00`)
+    mocks.useQueues.mockReturnValue({ data: queues })
+    mocks.useTaskMap.mockImplementation(
+      (tasks) => new Map(tasks.map((task) => [task.id, task] as const)),
+    )
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(initialDate), {
+      candidateTasks: [],
+      dateTasks: [],
+      referencedTasks: {
+        data: [oldQueueTask],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(initialDate, [
+      {
+        data: [
+          makeQueueItem({ taskId: oldQueueTask.id, periodStart: initialDate }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-20:2026-07-26', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 0,
+    })
+    configureQueueTransitionMocks()
+    const route = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({
+          date: initialDate,
+          dayQueueTask: oldQueueTask,
+        }),
+      )
+    })
+
+    mocks.selectedDate = new Date(`${targetDate}T00:00:00`)
+    mocks.queueTransitionTaskData.set(queueTransitionScopeKey(targetDate), {
+      candidateTasks: [],
+      dateTasks: [],
+      referencedTasks: {
+        data: [],
+        isPlaceholderData: false,
+        error: null,
+      },
+    })
+    mocks.queueTransitionItems.set(targetDate, [
+      {
+        data: [
+          makeQueueItem({
+            taskId: 'other-context-task',
+            periodStart: targetDate,
+          }),
+        ],
+        error: null,
+      },
+      { data: [], error: null },
+    ])
+    mocks.queueTransitionRanges.set('2026-07-27:2026-08-02', {
+      data: [],
+      error: null,
+      errorUpdatedAt: 1,
+    })
+    act(() => {
+      route.rerenderRoute()
+    })
+
+    await waitFor(() => {
+      expect(readQueueTransitionOutput()).toEqual(
+        makeExpectedQueueTransitionOutput({ date: targetDate }),
       )
     })
 

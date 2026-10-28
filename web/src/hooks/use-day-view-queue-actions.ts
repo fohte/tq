@@ -1,5 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
+import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
   DAY_QUEUE_KEY,
   type Queue,
@@ -17,6 +19,7 @@ interface UseDayViewQueueActionsOptions {
   selectedDate: string
   setQueueItems: ReturnType<typeof useSetQueueItems>
   isQueueTransitioning: boolean
+  dndCallbacks: CalendarDndCallbacks
 }
 
 export function useDayViewQueueActions({
@@ -26,6 +29,7 @@ export function useDayViewQueueActions({
   selectedDate,
   setQueueItems,
   isQueueTransitioning,
+  dndCallbacks,
 }: UseDayViewQueueActionsOptions) {
   const queryClient = useQueryClient()
 
@@ -134,7 +138,31 @@ export function useDayViewQueueActions({
     )
   }
 
+  const transitionDndCallbacks = useMemo<CalendarDndCallbacks>(
+    () => ({
+      ...dndCallbacks,
+      onEventDrop: (info) => {
+        if (
+          isQueueTransitioning &&
+          info.eventType === 'day-queue' &&
+          info.wasAllDay &&
+          info.isAllDay
+        ) {
+          info.revert()
+          return
+        }
+        dndCallbacks.onEventDrop?.(info)
+      },
+      onExternalDrop: (info) => {
+        if (isQueueTransitioning && info.allDay) return
+        dndCallbacks.onExternalDrop?.(info)
+      },
+    }),
+    [dndCallbacks, isQueueTransitioning],
+  )
+
   return {
+    dndCallbacks: transitionDndCallbacks,
     handleAddCandidate,
     handleInsertCandidate,
     handleMoveScheduledTaskToWeek,

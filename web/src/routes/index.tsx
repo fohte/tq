@@ -2,7 +2,6 @@ import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { CalendarChangeFeedbackPopup } from '#components/calendar/calendar-change-feedback-popup'
-import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import {
   type DayViewMode,
   DayViewPresentation,
@@ -399,29 +398,6 @@ function DayView() {
   const displayNowPanelProps = isRetainingPreviousQueue
     ? { ...nowPanelProps, isLoading: nowPanelQueryData.isPending }
     : nowPanelProps
-  const transitionDndCallbacks = useMemo<CalendarDndCallbacks>(
-    () => ({
-      ...dndCallbacks,
-      onEventDrop: (info) => {
-        if (
-          isRetainingPreviousQueue &&
-          info.eventType === 'day-queue' &&
-          info.wasAllDay &&
-          info.isAllDay
-        ) {
-          info.revert()
-          return
-        }
-        dndCallbacks.onEventDrop?.(info)
-      },
-      onExternalDrop: (info) => {
-        if (isRetainingPreviousQueue && info.allDay) return
-        dndCallbacks.onExternalDrop?.(info)
-      },
-    }),
-    [dndCallbacks, isRetainingPreviousQueue],
-  )
-
   const calendarEvents = useDayViewCalendarEvents({
     timeBlocksData,
     schedulesData,
@@ -439,6 +415,7 @@ function DayView() {
     handleMoveScheduledTaskToWeek,
     handleMoveTask,
     handleRemoveFromQueue,
+    dndCallbacks: transitionDndCallbacks,
   } = useDayViewQueueActions({
     queues: queuesData,
     queueItemsResults,
@@ -446,6 +423,7 @@ function DayView() {
     selectedDate: selectedDateStr,
     setQueueItems,
     isQueueTransitioning: isRetainingPreviousQueue,
+    dndCallbacks,
   })
 
   return (

@@ -189,7 +189,9 @@ export function useDayViewTaskData({
       candidateTasksQuery.data !== undefined &&
       taskDateTasksQuery.data !== undefined &&
       (!shouldFetchDueTasks || dueTasksQuery.data !== undefined) &&
-      queueTaskIds.every((taskId) => taskMap.has(taskId)),
+      (queueTaskIds.every((taskId) => taskMap.has(taskId)) ||
+        (referencedTasksQuery.data !== undefined &&
+          !referencedTasksQuery.isPlaceholderData)),
     hasRequiredDataError:
       candidateTasksQuery.error != null ||
       taskDateTasksQuery.error != null ||
