@@ -81,6 +81,7 @@ export function useCreateTask() {
         checklistCompletionCount: { completed: 0, total: 0 },
         blockedByNumbers: [],
         blockedByGithubRefs: [],
+        hasUnresolvedWait: false,
       }
 
       // Only insert into lists filtered by the same parentId — otherwise a

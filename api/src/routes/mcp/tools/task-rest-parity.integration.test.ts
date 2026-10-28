@@ -109,6 +109,7 @@ describe('REST/MCP parity', () => {
     expect(await jsonBody<unknown[]>(res)).toEqual([
       {
         ...withoutLinkSync(data),
+        hasUnresolvedWait: false,
         parentNumber: null,
         duplicateOfNumber: null,
         blockedByNumbers: [],

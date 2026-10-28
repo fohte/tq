@@ -365,4 +365,118 @@ describe('useDayViewCalendarEvents', () => {
       },
     ])
   })
+
+  it('carries wait markers on visible task events and omits them on redacted events', () => {
+    const visibleTimeTask = makeTask({
+      id: 'visible-time-task',
+      title: 'Review a sample outline',
+      context: 'work',
+      hasUnresolvedWait: true,
+    })
+    const hiddenTimeTask = makeTask({
+      id: 'hidden-time-task',
+      title: 'Prepare a private note',
+      context: 'personal',
+      hasUnresolvedWait: true,
+    })
+    const visibleQueueTask = makeTask({
+      id: 'visible-queue-task',
+      title: 'Draft a sample plan',
+      context: 'work',
+      hasUnresolvedWait: true,
+    })
+    const hiddenQueueTask = makeTask({
+      id: 'hidden-queue-task',
+      title: 'Review a private plan',
+      context: 'personal',
+      hasUnresolvedWait: true,
+    })
+
+    const { result } = renderHook(() =>
+      useDayViewCalendarEvents({
+        timeBlocksData: [
+          makeTimeBlock({
+            id: 'visible-time-block',
+            taskId: visibleTimeTask.id,
+            startTime: '2031-04-09T10:00:00.000Z',
+            endTime: '2031-04-09T11:30:00.000Z',
+          }),
+          makeTimeBlock({
+            id: 'hidden-time-block',
+            taskId: hiddenTimeTask.id,
+            startTime: '2031-04-09T10:00:00.000Z',
+            endTime: '2031-04-09T11:30:00.000Z',
+          }),
+        ],
+        schedulesData: undefined,
+        gcalEventsData: undefined,
+        dayQueueItems: [
+          {
+            date: '2031-04-09',
+            item: makeQueueItem({ taskId: visibleQueueTask.id }),
+            queuePosition: 0,
+          },
+          {
+            date: '2031-04-09',
+            item: makeQueueItem({ taskId: hiddenQueueTask.id }),
+            queuePosition: 1,
+          },
+        ],
+        taskMap: new Map([
+          [visibleTimeTask.id, visibleTimeTask],
+          [hiddenTimeTask.id, hiddenTimeTask],
+          [visibleQueueTask.id, visibleQueueTask],
+          [hiddenQueueTask.id, hiddenQueueTask],
+        ]),
+        context: 'work',
+      }),
+    )
+
+    expect(result.current).toEqual([
+      {
+        id: 'day-queue-2031-04-09-visible-queue-task',
+        title: 'Draft a sample plan',
+        start: '2031-04-09',
+        end: '2031-04-10',
+        type: 'day-queue',
+        taskId: 'visible-queue-task',
+        allDay: true,
+        queuePosition: 0,
+        redacted: false,
+        hasUnresolvedWait: true,
+      },
+      {
+        id: 'day-queue-2031-04-09-hidden-queue-task',
+        title: 'Review a private plan',
+        start: '2031-04-09',
+        end: '2031-04-10',
+        type: 'day-queue',
+        taskId: 'hidden-queue-task',
+        allDay: true,
+        queuePosition: 1,
+        redacted: true,
+      },
+      {
+        id: 'visible-time-block',
+        title: 'Review a sample outline',
+        start: '2031-04-09T10:00:00.000Z',
+        end: '2031-04-09T11:30:00.000Z',
+        type: 'manual',
+        taskId: 'visible-time-task',
+        isAutoScheduled: false,
+        hasUnresolvedWait: true,
+        redacted: false,
+      },
+      {
+        id: 'hidden-time-block',
+        title: 'Prepare a private note',
+        start: '2031-04-09T10:00:00.000Z',
+        end: '2031-04-09T11:30:00.000Z',
+        type: 'manual',
+        taskId: 'hidden-time-task',
+        isAutoScheduled: false,
+        redacted: true,
+      },
+    ])
+  })
 })

@@ -371,6 +371,61 @@ export const MonthViewWithTaskDates: Story = {
   },
 }
 
+export const MonthViewWithWaitMarkers: Story = {
+  name: 'the monthly calendar marks waiting tasks across event types',
+  args: {
+    initialView: 'month',
+    events: [
+      makeTimeBlockEvent({
+        id: 'sample-waiting-task-date',
+        title: 'Review a sample outline',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 8),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 9),
+        ),
+        type: 'task-date',
+        taskId: 'sample-waiting-task-date',
+        allDay: true,
+        dateTaskKind: 'due',
+        hasUnresolvedWait: true,
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-waiting-queue-task',
+        title: 'Prepare a sample outline',
+        start: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 12),
+        ),
+        end: formatLocalDate(
+          new Date(today.getFullYear(), today.getMonth(), 13),
+        ),
+        type: 'day-queue',
+        taskId: 'sample-waiting-queue-task',
+        allDay: true,
+        queuePosition: 0,
+        hasUnresolvedWait: true,
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-waiting-time-block',
+        title: 'Revise a sample note',
+        start: `${dateStr}T09:00:00`,
+        end: `${dateStr}T10:00:00`,
+        type: 'manual',
+        taskId: 'sample-waiting-time-block',
+        hasUnresolvedWait: true,
+      }),
+      makeTimeBlockEvent({
+        id: 'sample-calendar-meeting',
+        title: 'Sample calendar meeting',
+        start: `${dateStr}T14:00:00`,
+        end: `${dateStr}T15:00:00`,
+        type: 'gcal-meeting',
+      }),
+    ],
+  },
+}
+
 export const OverdueReminderPriority: Story = {
   name: 'the overdue reminder appears before other all-day events',
   args: {

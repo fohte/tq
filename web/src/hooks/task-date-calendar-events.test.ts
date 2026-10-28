@@ -4,6 +4,50 @@ import { makeTask } from '#components/task/task-row-test-fixtures'
 import { mapTaskDateCalendarEvents } from '#hooks/task-date-calendar-events'
 
 describe('mapTaskDateCalendarEvents', () => {
+  it('carries the wait marker through due and overdue date events', () => {
+    const task = makeTask({
+      id: 'waiting-task',
+      title: 'Review a sample outline',
+      dueDate: '2031-04-09',
+      hasUnresolvedWait: true,
+    })
+
+    expect(
+      mapTaskDateCalendarEvents(
+        [task],
+        { startDate: '2031-04-09', endDate: '2031-04-12' },
+        new Date(2031, 3, 12, 12),
+      ),
+    ).toEqual([
+      {
+        id: 'task-date-waiting-task-due',
+        title: 'Review a sample outline',
+        start: '2031-04-09',
+        end: '2031-04-10',
+        type: 'task-date',
+        taskId: 'waiting-task',
+        allDay: true,
+        dateTaskKind: 'due',
+        dateTaskOverdue: true,
+        hasUnresolvedWait: true,
+      },
+      {
+        id: 'task-date-waiting-task-overdue-today',
+        title: 'Review a sample outline',
+        start: '2031-04-12',
+        end: '2031-04-13',
+        type: 'task-date',
+        taskId: 'waiting-task',
+        allDay: true,
+        dateTaskKind: 'overdue-today',
+        dateTaskOverdue: true,
+        dateTaskDueDateLabel: 'Apr 9',
+        displayPriority: 1,
+        hasUnresolvedWait: true,
+      },
+    ])
+  })
+
   it('maps intersecting task dates to all-day events and excludes unrelated tasks', () => {
     const tasks = [
       makeTask({

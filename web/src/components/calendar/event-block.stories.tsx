@@ -16,6 +16,7 @@ function EventBlockPreview({
   responseStatus,
   gcalEventType,
   scheduleOverridden,
+  hasUnresolvedWait = false,
   redacted = false,
   allDay = false,
   isStart = true,
@@ -33,6 +34,7 @@ function EventBlockPreview({
   responseStatus?: TimeBlockEvent['responseStatus']
   gcalEventType?: string
   scheduleOverridden?: TimeBlockEvent['scheduleOverridden']
+  hasUnresolvedWait?: boolean
   redacted?: boolean
   allDay?: boolean
   isStart?: boolean
@@ -55,6 +57,7 @@ function EventBlockPreview({
         responseStatus,
         gcalEventType,
         scheduleOverridden,
+        hasUnresolvedWait,
         redacted,
       },
     },
@@ -146,6 +149,36 @@ export const DayQueue: Story = {
     title: 'Prepare a sample outline',
     timeText: '',
     allDay: true,
+  },
+}
+
+export const WaitingTimedTask: Story = {
+  name: 'a timed task waiting for a reply shows an hourglass',
+  args: {
+    type: 'manual',
+    title: 'Review a sample outline',
+    hasUnresolvedWait: true,
+  },
+}
+
+export const WaitingDayQueueTask: Story = {
+  name: 'a queued task waiting for a reply shows an hourglass',
+  args: {
+    type: 'day-queue',
+    title: 'Prepare a sample outline',
+    timeText: '',
+    allDay: true,
+    hasUnresolvedWait: true,
+  },
+}
+
+export const RedactedWaitingTask: Story = {
+  name: 'a hidden task does not reveal its wait status',
+  args: {
+    type: 'manual',
+    title: 'A hidden task',
+    hasUnresolvedWait: true,
+    redacted: true,
   },
 }
 

@@ -82,6 +82,7 @@ function makeTaskDateEvent(
     taskId: task.id,
     allDay: true,
     dateTaskKind,
+    ...(task.hasUnresolvedWait ? { hasUnresolvedWait: true } : {}),
     ...(options.overdue === true ? { dateTaskOverdue: true } : {}),
     ...(options.dueDateLabel == null
       ? {}

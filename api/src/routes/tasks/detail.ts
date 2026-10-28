@@ -151,6 +151,9 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       blockedBy: relatedTasks.blockedBy,
       blocking: relatedTasks.blocking,
       githubBlockers: githubBlockers.map(githubLinkToResponse),
+      ...(waits.some((wait) => wait.resolvedAt == null)
+        ? { hasUnresolvedWait: true }
+        : {}),
       ...(waits.length > 0 ? { waits: waits.map(taskWaitToResponse) } : {}),
       ...checklistData,
     },

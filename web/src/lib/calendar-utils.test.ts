@@ -5,6 +5,7 @@ import {
   isClickableEvent,
   isGcalEventType,
   isPendingGcalResponse,
+  shouldShowWaitingIcon,
 } from '#lib/calendar-utils'
 
 describe('classifyGcalEvent', () => {
@@ -92,6 +93,36 @@ describe('isGcalEventType', () => {
     expect(
       (['manual', 'auto', 'schedule', undefined] as const).map(isGcalEventType),
     ).toEqual([false, false, false, false])
+  })
+})
+
+describe('shouldShowWaitingIcon', () => {
+  it('shows only for unresolved visible task events', () => {
+    const readActual = () => [
+      shouldShowWaitingIcon({ type: 'manual', hasUnresolvedWait: true }),
+      shouldShowWaitingIcon({ type: 'auto', hasUnresolvedWait: true }),
+      shouldShowWaitingIcon({ type: 'day-queue', hasUnresolvedWait: true }),
+      shouldShowWaitingIcon({ type: 'task-date', hasUnresolvedWait: true }),
+      shouldShowWaitingIcon({ type: 'schedule', hasUnresolvedWait: true }),
+      shouldShowWaitingIcon({ type: 'gcal-meeting', hasUnresolvedWait: true }),
+      shouldShowWaitingIcon({
+        type: 'manual',
+        hasUnresolvedWait: true,
+        redacted: true,
+      }),
+      shouldShowWaitingIcon({ type: 'manual', hasUnresolvedWait: false }),
+    ]
+
+    expect(readActual()).toEqual([
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ])
   })
 })
 

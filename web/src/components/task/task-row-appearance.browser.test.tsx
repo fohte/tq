@@ -114,6 +114,64 @@ describe('TaskRowAppearance', () => {
     expect(screen.queryByTestId('checklist-completion')).toEqual(null)
   })
 
+  it('shows a waiting glyph for a todo task with an unresolved wait', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({ hasUnresolvedWait: true }),
+    )
+
+    const readActual = () =>
+      Array.from(container.querySelectorAll('[role="img"]')).map((icon) =>
+        icon.getAttribute('aria-label'),
+      )
+
+    expect(readActual()).toEqual(['返事待ち'])
+  })
+
+  it('keeps the close reason beside the waiting glyph for a completed task', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        status: 'completed',
+        statusReason: 'not_planned',
+        hasUnresolvedWait: true,
+      }),
+    )
+
+    const readActual = () =>
+      Array.from(container.querySelectorAll('[role="img"]')).map((icon) =>
+        icon.getAttribute('aria-label'),
+      )
+
+    expect(readActual()).toEqual(['not planned', '返事待ち'])
+  })
+
+  it('keeps the resolved-wait label without a waiting status glyph', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        hasUnresolvedWait: false,
+        waits: [
+          makeTaskWaitSummary({
+            label: 'Review feedback',
+            resolvedAt: '2099-10-12T00:00:00.000Z',
+            acknowledgedAt: null,
+          }),
+        ],
+      }),
+    )
+
+    const readActual = () => ({
+      statusGlyphs: Array.from(container.querySelectorAll('[role="img"]')).map(
+        (icon) => icon.getAttribute('aria-label'),
+      ),
+      resolvedWaitLabel:
+        screen.getByText('wait resolved:').parentElement?.textContent,
+    })
+
+    expect(readActual()).toEqual({
+      statusGlyphs: [],
+      resolvedWaitLabel: 'wait resolved:Review feedback',
+    })
+  })
+
   it('opens a sole GitHub blocker without navigating away from the task row', async () => {
     const blockerRef = makeBlockedByGithubRef()
     const blockedTask = makeTask({ blockedByGithubRefs: [blockerRef] })

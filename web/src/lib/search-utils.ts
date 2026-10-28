@@ -49,6 +49,7 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
     templateId: task.templateId,
     occurrenceDate: task.occurrenceDate,
     githubLinks: task.githubLinks,
+    hasUnresolvedWait: task.hasUnresolvedWait ?? false,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     childCompletionCount: task.childCompletionCount,

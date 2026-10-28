@@ -152,14 +152,26 @@ function bodyResponseSnapshot<T>(status: number, body: T) {
   return { status, body }
 }
 
-function waitCollectionsSnapshot<TResolved, TDetail, TSummary>(
-  resolved: TResolved,
-  detail: TDetail,
-  list: TSummary,
-  resolvedOnlyList: unknown,
-  pendingReplyList: unknown,
-) {
-  return { resolved, detail, list, resolvedOnlyList, pendingReplyList }
+function waitCollectionsSnapshot(snapshot: {
+  resolved: unknown
+  detail: unknown
+  detailHasUnresolvedWait: boolean | undefined
+  list: unknown
+  resolvedOnlyList: unknown
+  pendingReplyList: unknown
+  unresolvedWaitFlags: {
+    mixed: boolean | undefined
+    resolvedOnly: boolean | undefined
+    pendingReply: boolean | undefined
+    completed:
+      | {
+          status: TaskListItemResponse['status']
+          hasUnresolvedWait: boolean
+        }
+      | undefined
+  }
+}) {
+  return snapshot
 }
 
 function waitUpdatesSnapshot<T>(
@@ -466,6 +478,10 @@ describe('task waits API', () => {
     )
     const wait = await jsonBody<TaskWaitResponse>(created)
     await addWait(task.id, 'B response is pending', '2036-04-06')
+    const unacknowledgedWait = await jsonBody<TaskWaitResponse>(
+      await addWait(task.id, 'C response needs review', '2036-04-10'),
+    )
+    await resolveWithoutAcknowledging(unacknowledgedWait.id)
     const resolved = await app.request(
       `/api/tasks/${task.id}/waits/${wait.id}/resolve`,
       { method: 'POST' },
@@ -488,10 +504,17 @@ describe('task waits API', () => {
       await addWait(pendingReplyTask.id, 'Review the response', '2036-04-08'),
     )
     await resolveWithoutAcknowledging(pendingReplyWait.id)
+    const completedTask = await createTask('Completed task with a later wait')
+    await app.request(`/api/tasks/${completedTask.id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+    await addWait(completedTask.id, 'A reply is still pending', '2036-04-09')
     const [detailRes, listRes] = await Promise.all([
       app.request(`/api/tasks/${task.id}`),
       app.request(
-        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id},${resolvedOnlyTask.id},${pendingReplyTask.id}`,
+        `/api/tasks?view=full&context=all&status=all&limit=unlimited&ids=${task.id},${resolvedOnlyTask.id},${pendingReplyTask.id},${completedTask.id}`,
       ),
     ])
     const detail = await jsonBody<TaskResponse>(detailRes)
@@ -503,19 +526,36 @@ describe('task waits API', () => {
     const pendingReplyListItem = listItems.find(
       (item) => item.id === pendingReplyTask.id,
     )
+    const completedListItem = listItems.find(
+      (item) => item.id === completedTask.id,
+    )
 
     expect(
-      waitCollectionsSnapshot(
-        normalizeWait(resolvedWait),
-        detail.waits
+      waitCollectionsSnapshot({
+        resolved: normalizeWait(resolvedWait),
+        detail: detail.waits
           ?.map(normalizeWait)
           .sort((left, right) => left.label.localeCompare(right.label)),
-        listItem?.waits
+        detailHasUnresolvedWait: detail.hasUnresolvedWait,
+        list: listItem?.waits
           ?.map(normalizeSummary)
           .sort((left, right) => left.label.localeCompare(right.label)),
-        resolvedOnlyListItem?.waits ?? null,
-        pendingReplyListItem?.waits?.map(normalizeSummary) ?? null,
-      ),
+        resolvedOnlyList: resolvedOnlyListItem?.waits ?? null,
+        pendingReplyList:
+          pendingReplyListItem?.waits?.map(normalizeSummary) ?? null,
+        unresolvedWaitFlags: {
+          mixed: listItem?.hasUnresolvedWait,
+          resolvedOnly: resolvedOnlyListItem?.hasUnresolvedWait,
+          pendingReply: pendingReplyListItem?.hasUnresolvedWait,
+          completed:
+            completedListItem == null
+              ? undefined
+              : {
+                  status: completedListItem.status,
+                  hasUnresolvedWait: completedListItem.hasUnresolvedWait,
+                },
+        },
+      }),
     ).toEqual({
       resolved: {
         id: 'WAIT_ID',
@@ -551,7 +591,19 @@ describe('task waits API', () => {
           acknowledgedAt: null,
           createdAt: 'CREATED_AT',
         },
+        {
+          id: 'WAIT_ID',
+          taskId: task.id,
+          body: 'C response needs review',
+          label: 'C response needs review',
+          followUpDate: '2036-04-10',
+          githubLinkId: null,
+          resolvedAt: 'RESOLVED_AT',
+          acknowledgedAt: null,
+          createdAt: 'CREATED_AT',
+        },
       ],
+      detailHasUnresolvedWait: true,
       list: [
         {
           id: 'WAIT_ID',
@@ -559,6 +611,14 @@ describe('task waits API', () => {
           followUpDate: '2036-04-06',
           githubLinkId: null,
           resolvedAt: null,
+          acknowledgedAt: null,
+        },
+        {
+          id: 'WAIT_ID',
+          label: 'C response needs review',
+          followUpDate: '2036-04-10',
+          githubLinkId: null,
+          resolvedAt: 'RESOLVED_AT',
           acknowledgedAt: null,
         },
       ],
@@ -573,6 +633,15 @@ describe('task waits API', () => {
           acknowledgedAt: null,
         },
       ],
+      unresolvedWaitFlags: {
+        mixed: true,
+        resolvedOnly: false,
+        pendingReply: false,
+        completed: {
+          status: 'completed',
+          hasUnresolvedWait: true,
+        },
+      },
     })
   })
 
