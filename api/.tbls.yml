@@ -126,7 +126,7 @@ comments:
   - table: recurring_task_templates
     tableComment: 'Definitions used by the scheduler to create recurring task instances.'
     columnComments:
-      title: 'Title copied to each generated task.'
+      title: 'Title copied to each generated task with `{date}` replaced by its occurrence date.'
       description: 'Optional task details copied to generated tasks.'
       project_id: 'Project associated with generated tasks.'
       parent_id: 'Task under which each generated task is nested.'
