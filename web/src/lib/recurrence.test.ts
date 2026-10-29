@@ -262,6 +262,16 @@ describe('anchorDateForFirstOccurrence', () => {
     )
   })
 
+  it('rejects a monthly date that differs from the configured day', () => {
+    expect(
+      anchorDateForFirstOccurrence('2026-03-21', {
+        type: 'monthly',
+        interval: 1,
+        dayOfMonth: 20,
+      }),
+    ).toEqual(err('The first date does not match the recurrence rule.'))
+  })
+
   it('computes a large daily interval without searching each day', () => {
     expect(convert('2026-03-20', { type: 'daily', interval: 100_000 })).toEqual(
       ok({
