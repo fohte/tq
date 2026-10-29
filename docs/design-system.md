@@ -141,22 +141,21 @@ completion accents use its foreground colors below.
 
 ### Status-completed accent
 
-| Token                | Value     | Tailwind utility                                | Usage                                        |
-| -------------------- | --------- | ----------------------------------------------- | -------------------------------------------- |
-| `--status-completed` | `#c792ea` | `bg-status-completed` / `text-status-completed` | `StatusIcon`'s `completed` close-reason fill |
+| Tailwind token             | Shared source token         | Tailwind utility                                | Usage                                        |
+| -------------------------- | --------------------------- | ----------------------------------------------- | -------------------------------------------- |
+| `--color-status-completed` | `--tint-magenta-foreground` | `bg-status-completed` / `text-status-completed` | `StatusIcon`'s `completed` close-reason fill |
 
 A narrowly-scoped accent — see [Status convention](#status-convention)
-below for its task-completion meaning. It uses the same shared palette color as
-`--github-merged` below, but the tokens remain separate: each is reserved for
-its own task-completion or GitHub-state meaning.
+below for its task-completion meaning. It shares its source token with
+`--color-github-merged` below, while each Tailwind token keeps its own meaning.
 
 ### GitHub status colors
 
-| Token             | Value     | Tailwind utility     | Usage                               |
-| ----------------- | --------- | -------------------- | ----------------------------------- |
-| `--github-open`   | `#c3e88d` | `text-github-open`   | GitHub PR/issue "open" state icon   |
-| `--github-closed` | `#f07178` | `text-github-closed` | GitHub PR/issue "closed" state icon |
-| `--github-merged` | `#c792ea` | `text-github-merged` | GitHub PR "merged" state icon       |
+| Tailwind token          | Shared source token         | Tailwind utility     | Usage                               |
+| ----------------------- | --------------------------- | -------------------- | ----------------------------------- |
+| `--color-github-open`   | `--tint-green-foreground`   | `text-github-open`   | GitHub PR/issue "open" state icon   |
+| `--color-github-closed` | `--tint-red-foreground`     | `text-github-closed` | GitHub PR/issue "closed" state icon |
+| `--color-github-merged` | `--tint-magenta-foreground` | `text-github-merged` | GitHub PR "merged" state icon       |
 
 These use `@fohte/ui` tint foreground colors, keeping status accents aligned
 with the shared palette while preserving tq's semantic token names.
@@ -528,9 +527,9 @@ text. For `status === 'completed'`, the icon further branches on
 | `completed` (reason `not_planned`) | filled circle + `X` (lucide-react)     | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 | `completed` (reason `duplicate`)   | filled circle + `Equal` (lucide-react) | `bg-muted-foreground-faint` fill, `text-background` glyph | Same title styling as above                                           |
 
-`--status-completed` marks tasks closed as actually done so they stand out
+`--color-status-completed` marks tasks closed as actually done so they stand out
 when scanning a list. `not_planned` and `duplicate` use the neutral
-`bg-muted-foreground-faint` gray fill. `--status-completed` is the only
+`bg-muted-foreground-faint` gray fill. `--color-status-completed` is the only
 non-neutral status color in this convention and applies to the implicit
 `completed` reason only.
 
