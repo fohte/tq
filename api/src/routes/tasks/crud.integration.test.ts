@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import {
+  edits,
   recurrenceRules,
   recurringTaskTemplates,
   taskDescriptionTemplates,
@@ -477,6 +478,26 @@ function normalizeTemplate(
     id: 'ID',
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
+  }
+}
+
+async function titleSnapshot(
+  status: number,
+  task: Pick<TaskResponse, 'id' | 'title' | 'occurrenceDate' | 'templateId'>,
+  templateTitle: string | null,
+) {
+  const titleEdits = await db
+    .select({ id: edits.id })
+    .from(edits)
+    .where(and(eq(edits.taskId, task.id), eq(edits.field, 'title')))
+
+  return {
+    status,
+    title: task.title,
+    occurrenceDate: task.occurrenceDate,
+    hasTemplate: task.templateId !== null,
+    templateTitle,
+    titleEditCount: titleEdits.length,
   }
 }
 
@@ -4801,6 +4822,53 @@ describe('tasks CRUD API', () => {
         })
       })
 
+      it('replaces every date placeholder and keeps the template title unchanged', async () => {
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Digest {date} / {date}',
+            dueDate: '2031-04-07',
+            recurrenceRule: { type: 'daily', interval: 1 },
+          }),
+        })
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+        const template = firstOrThrow(
+          await db
+            .select({ title: recurringTaskTemplates.title })
+            .from(recurringTaskTemplates)
+            .where(eq(recurringTaskTemplates.id, body.templateId)),
+        )
+
+        expect(await titleSnapshot(res.status, body, template.title)).toEqual({
+          status: 201,
+          title: 'Digest 2031-04-07 / 2031-04-07',
+          occurrenceDate: '2031-04-07',
+          hasTemplate: true,
+          templateTitle: 'Digest {date} / {date}',
+          titleEditCount: 0,
+        })
+      })
+
+      it('leaves the date placeholder on non-recurring task titles', async () => {
+        const res = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Manual {date}' }),
+        })
+        const body = await jsonBody<TaskResponse>(res)
+
+        expect(await titleSnapshot(res.status, body, null)).toEqual({
+          status: 201,
+          title: 'Manual {date}',
+          occurrenceDate: null,
+          hasTemplate: false,
+          templateTitle: null,
+          titleEditCount: 0,
+        })
+      })
+
       it('creates a task without recurrence rule (backward compat)', async () => {
         const res = await app.request('/api/tasks', {
           method: 'POST',
@@ -4818,6 +4886,66 @@ describe('tasks CRUD API', () => {
     })
 
     describe('PATCH /api/tasks/:id with recurrenceRule', () => {
+      it('replaces the first title without a title edit and keeps the template title unchanged', async () => {
+        const task = await createTask('Digest {date} / {date}', {
+          dueDate: '2031-04-07',
+        })
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recurrenceRule: { type: 'daily', interval: 1 },
+          }),
+        })
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+        const template = firstOrThrow(
+          await db
+            .select({ title: recurringTaskTemplates.title })
+            .from(recurringTaskTemplates)
+            .where(eq(recurringTaskTemplates.id, body.templateId)),
+        )
+
+        expect(await titleSnapshot(res.status, body, template.title)).toEqual({
+          status: 200,
+          title: 'Digest 2031-04-07 / 2031-04-07',
+          occurrenceDate: '2031-04-07',
+          hasTemplate: true,
+          templateTitle: 'Digest {date} / {date}',
+          titleEditCount: 0,
+        })
+      })
+
+      it('replaces a title updated in the same PATCH and keeps the template title unchanged', async () => {
+        const task = await createTask('Original')
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Digest {date} / {date}',
+            dueDate: '2031-04-07',
+            recurrenceRule: { type: 'daily', interval: 1 },
+          }),
+        })
+        const body = await jsonBody<TaskResponse>(res)
+        assertDefined(body.templateId)
+        const template = firstOrThrow(
+          await db
+            .select({ title: recurringTaskTemplates.title })
+            .from(recurringTaskTemplates)
+            .where(eq(recurringTaskTemplates.id, body.templateId)),
+        )
+
+        expect(await titleSnapshot(res.status, body, template.title)).toEqual({
+          status: 200,
+          title: 'Digest 2031-04-07 / 2031-04-07',
+          occurrenceDate: '2031-04-07',
+          hasTemplate: true,
+          templateTitle: 'Digest {date} / {date}',
+          titleEditCount: 1,
+        })
+      })
+
       it('creates a template from a plain task and links it as the first occurrence, keeping the same id/number', async () => {
         const task = await createTask('Task')
 

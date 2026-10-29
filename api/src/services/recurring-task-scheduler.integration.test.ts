@@ -123,6 +123,17 @@ async function outcome(templateId: string) {
   }
 }
 
+async function outcomeWithTemplateTitle(templateId: string) {
+  const template = firstOrThrow(
+    await db
+      .select({ title: recurringTaskTemplates.title })
+      .from(recurringTaskTemplates)
+      .where(eq(recurringTaskTemplates.id, templateId)),
+  )
+
+  return { ...(await outcome(templateId)), templateTitle: template.title }
+}
+
 async function taskLabelNames(taskId: string) {
   const rows = await db
     .select({ name: labels.name })
@@ -197,35 +208,44 @@ describe('generateDueRecurringTasks', () => {
     })
   })
 
-  it('catches up every missed occurrence in a single call', async () => {
-    fakeToday('2026-03-26')
+  it('catches up every missed occurrence and replaces each date placeholder', async () => {
+    fakeToday('2031-04-10')
     const template = await createTemplate(
       { type: 'daily', interval: 1 },
-      { anchorDate: '2026-03-01', lastGeneratedDate: '2026-03-22' },
+      {
+        title: 'Digest {date} / {date}',
+        anchorDate: '2031-04-01',
+        lastGeneratedDate: '2031-04-06',
+      },
     )
 
     await generateDueRecurringTasks()
 
-    expect(await outcome(template.id)).toEqual({
+    expect(await outcomeWithTemplateTitle(template.id)).toEqual({
       tasks: [
         expectedTask(template, {
-          dueDate: '2026-03-23',
-          occurrenceDate: '2026-03-23',
+          title: 'Digest 2031-04-07 / 2031-04-07',
+          dueDate: '2031-04-07',
+          occurrenceDate: '2031-04-07',
         }),
         expectedTask(template, {
-          dueDate: '2026-03-24',
-          occurrenceDate: '2026-03-24',
+          title: 'Digest 2031-04-08 / 2031-04-08',
+          dueDate: '2031-04-08',
+          occurrenceDate: '2031-04-08',
         }),
         expectedTask(template, {
-          dueDate: '2026-03-25',
-          occurrenceDate: '2026-03-25',
+          title: 'Digest 2031-04-09 / 2031-04-09',
+          dueDate: '2031-04-09',
+          occurrenceDate: '2031-04-09',
         }),
         expectedTask(template, {
-          dueDate: '2026-03-26',
-          occurrenceDate: '2026-03-26',
+          title: 'Digest 2031-04-10 / 2031-04-10',
+          dueDate: '2031-04-10',
+          occurrenceDate: '2031-04-10',
         }),
       ],
-      lastGeneratedDate: '2026-03-26',
+      lastGeneratedDate: '2031-04-10',
+      templateTitle: 'Digest {date} / {date}',
     })
   })
 
