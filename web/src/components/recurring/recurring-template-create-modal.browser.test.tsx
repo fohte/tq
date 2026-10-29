@@ -187,7 +187,88 @@ describe('RecurringTemplateCreateModal', () => {
     })
   })
 
-  it('blocks a first date that does not match the weekly rule', async () => {
+  it('keeps the first-date weekday selected when another weekly day is added', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.type(
+      assertDefined(
+        findVisible(screen.getAllByPlaceholderText('Template title')),
+      ),
+      'Weekly review',
+    )
+    fireEvent.change(
+      assertDefined(findVisible(screen.getAllByLabelText('First task date'))),
+      { target: { value: '2026-03-23' } },
+    )
+
+    await user.click(
+      assertDefined(findVisible(screen.getAllByRole('combobox'))),
+    )
+    await user.click(await screen.findByRole('option', { name: 'Weekly' }))
+    await user.click(visibleButton('W'))
+    await user.click(visibleButton('Create Template'))
+
+    await waitFor(() => {
+      expect(successfulCreateState()).toEqual({
+        requestBodies: [
+          {
+            title: 'Weekly review',
+            context: 'personal',
+            recurrenceRule: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1, 3],
+            },
+            anchorDate: '2026-03-22',
+          },
+        ],
+        modalOpen: false,
+      })
+    })
+  })
+
+  it('allows a daily rule after entering an invalid monthly day', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.type(
+      assertDefined(
+        findVisible(screen.getAllByPlaceholderText('Template title')),
+      ),
+      'Daily follow-up',
+    )
+
+    await user.click(
+      assertDefined(findVisible(screen.getAllByRole('combobox'))),
+    )
+    await user.click(await screen.findByRole('option', { name: 'Monthly' }))
+    fireEvent.change(
+      assertDefined(
+        findVisible(screen.getAllByPlaceholderText('Day of month (1-31)')),
+      ),
+      { target: { value: '40' } },
+    )
+    await user.click(
+      assertDefined(findVisible(screen.getAllByRole('combobox'))),
+    )
+    await user.click(await screen.findByRole('option', { name: 'Daily' }))
+    await user.click(visibleButton('Create Template'))
+
+    await waitFor(() => {
+      expect(successfulCreateState()).toEqual({
+        requestBodies: [
+          {
+            title: 'Daily follow-up',
+            context: 'personal',
+            recurrenceRule: { type: 'daily', interval: 1 },
+            anchorDate: '2026-03-19',
+          },
+        ],
+        modalOpen: false,
+      })
+    })
+  })
+
+  it('blocks a first date that differs from the selected weekly weekday', async () => {
     const user = userEvent.setup()
     renderModal()
     fireEvent.change(
@@ -199,7 +280,10 @@ describe('RecurringTemplateCreateModal', () => {
       assertDefined(findVisible(screen.getAllByRole('combobox'))),
     )
     await user.click(await screen.findByRole('option', { name: 'Weekly' }))
-    await user.click(visibleButton('T'))
+    fireEvent.change(
+      assertDefined(findVisible(screen.getAllByLabelText('First task date'))),
+      { target: { value: '2026-03-24' } },
+    )
 
     expect(unmatchedRuleState()).toEqual({
       createDisabled: true,

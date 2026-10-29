@@ -5,7 +5,7 @@ import {
   dayLabels,
   type RecurrenceType,
 } from '#components/schedule/create-schedule-modal'
-import { addLocalDays } from '#lib/date-range'
+import { addLocalDays, formatLocalDate } from '#lib/date-range'
 import { ordinal } from '#lib/format'
 
 export interface RecurrenceRule {
@@ -129,23 +129,44 @@ export function anchorDateForFirstOccurrence(
       : {}),
   }
 
-  const searchDays =
-    recurrenceRule.type === 'daily' || recurrenceRule.type === 'custom'
-      ? recurrenceRule.interval
-      : recurrenceRule.type === 'weekly'
-        ? 7 * recurrenceRule.interval
-        : 31 * recurrenceRule.interval
+  const firstDateValue = new Date(`${firstDate}T00:00:00`)
+  let anchorDate: string
 
-  for (let daysBefore = 1; daysBefore <= searchDays; daysBefore += 1) {
-    const candidate = addLocalDays(firstDate, -daysBefore)
-    if (
-      computeNextDate(candidate, recurrenceRule).unwrapOr(null) === firstDate
-    ) {
-      return ok({ anchorDate: candidate, recurrenceRule })
+  switch (recurrenceRule.type) {
+    case 'daily':
+    case 'custom':
+      anchorDate = addLocalDays(firstDate, -recurrenceRule.interval)
+      break
+    case 'weekly': {
+      const firstWeekday = firstDateValue.getDay()
+      if (recurrenceRule.daysOfWeek?.includes(firstWeekday) !== true) {
+        return err('The first date does not match the recurrence rule.')
+      }
+      const daysBefore =
+        firstWeekday === 0 && recurrenceRule.interval > 1
+          ? 7 * recurrenceRule.interval - 6
+          : 1
+      anchorDate = addLocalDays(firstDate, -daysBefore)
+      break
+    }
+    case 'monthly': {
+      const anchorMonthEnd = new Date(
+        firstDateValue.getFullYear(),
+        firstDateValue.getMonth() - recurrenceRule.interval + 1,
+        0,
+      )
+      anchorDate = formatLocalDate(anchorMonthEnd)
+      break
     }
   }
 
-  return err('The first date does not match the recurrence rule.')
+  if (
+    computeNextDate(anchorDate, recurrenceRule).unwrapOr(null) !== firstDate
+  ) {
+    return err('The first date does not match the recurrence rule.')
+  }
+
+  return ok({ anchorDate, recurrenceRule })
 }
 
 /**

@@ -210,6 +210,22 @@ describe('anchorDateForFirstOccurrence', () => {
     )
   })
 
+  it('anchors an interval-2 Sunday recurrence on the preceding Saturday', () => {
+    expect(
+      convert('2026-03-29', {
+        type: 'weekly',
+        interval: 2,
+        daysOfWeek: [0],
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '2026-03-21',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [0] },
+        nextDate: '2026-03-29',
+      }),
+    )
+  })
+
   it('fills an omitted weekly weekday from the first date', () => {
     expect(convert('2026-03-30', { type: 'weekly', interval: 2 })).toEqual(
       ok({
@@ -242,6 +258,48 @@ describe('anchorDateForFirstOccurrence', () => {
         anchorDate: '2026-02-28',
         recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 30 },
         nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('computes a large daily interval without searching each day', () => {
+    expect(convert('2026-03-20', { type: 'daily', interval: 100_000 })).toEqual(
+      ok({
+        anchorDate: '1752-06-04',
+        recurrenceRule: { type: 'daily', interval: 100_000 },
+        nextDate: '2026-03-20',
+      }),
+    )
+  })
+
+  it('computes a large weekly interval without searching each day', () => {
+    expect(
+      convert('2026-03-29', {
+        type: 'weekly',
+        interval: 10_000,
+        daysOfWeek: [0],
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '1834-08-09',
+        recurrenceRule: { type: 'weekly', interval: 10_000, daysOfWeek: [0] },
+        nextDate: '2026-03-29',
+      }),
+    )
+  })
+
+  it('computes a large monthly interval without searching each day', () => {
+    expect(
+      convert('2026-03-20', {
+        type: 'monthly',
+        interval: 10_000,
+        dayOfMonth: 20,
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '1192-11-30',
+        recurrenceRule: { type: 'monthly', interval: 10_000, dayOfMonth: 20 },
+        nextDate: '2026-03-20',
       }),
     )
   })

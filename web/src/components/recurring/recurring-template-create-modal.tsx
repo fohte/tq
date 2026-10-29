@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { RecurrenceRuleFields } from '#components/recurring/recurrence-rule-fields'
 import { useRecurrenceRuleDraft } from '#components/recurring/use-recurrence-rule-draft'
+import { toggleWeekday } from '#components/schedule/create-schedule-modal'
 import {
   contextLabels,
   type ContextValue,
@@ -67,7 +68,7 @@ export function RecurringTemplateCreateModal({
     setIntervalInput,
     intervalValue,
     daysOfWeek,
-    toggleDay,
+    setDaysOfWeek,
     dayOfMonth,
     setDayOfMonth,
   } = recurrenceDraft
@@ -90,6 +91,7 @@ export function RecurringTemplateCreateModal({
 
   const parsedDayOfMonth = Number(dayOfMonth)
   const validDayOfMonth =
+    type !== 'monthly' ||
     dayOfMonth === '' ||
     (Number.isInteger(parsedDayOfMonth) &&
       parsedDayOfMonth >= 1 &&
@@ -99,10 +101,6 @@ export function RecurringTemplateCreateModal({
     () => (validDayOfMonth ? recurrenceDraft.recurrenceRule : null),
     [recurrenceDraft.recurrenceRule, validDayOfMonth],
   )
-  const displayedDaysOfWeek =
-    type === 'weekly' && daysOfWeek.length === 0 && firstDate
-      ? [new Date(`${firstDate}T00:00:00`).getDay()]
-      : daysOfWeek
   const anchorResult = useMemo(
     () =>
       firstDate && recurrenceRule != null
@@ -112,6 +110,28 @@ export function RecurringTemplateCreateModal({
   )
 
   const isPastDate = firstDate !== '' && firstDate < today
+
+  const handleTypeChange = (nextType: typeof type) => {
+    setType(nextType)
+    if (nextType === 'weekly' && daysOfWeek.length === 0 && firstDate) {
+      setDaysOfWeek([new Date(`${firstDate}T00:00:00`).getDay()])
+    }
+  }
+
+  const handleFirstDateChange = (nextDate: string) => {
+    setFirstDate(nextDate)
+    if (type === 'weekly' && daysOfWeek.length === 0 && nextDate) {
+      setDaysOfWeek([new Date(`${nextDate}T00:00:00`).getDay()])
+    }
+  }
+
+  const handleToggleDay = (day: number) => {
+    setDaysOfWeek((previous) => {
+      const next = toggleWeekday(previous, day)
+      return next.length === 0 ? previous : next
+    })
+  }
+
   const canSubmit =
     title.trim() !== '' &&
     !isPending &&
@@ -201,12 +221,12 @@ export function RecurringTemplateCreateModal({
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             <RecurrenceRuleFields
               type={type}
-              onTypeChange={setType}
+              onTypeChange={handleTypeChange}
               intervalInput={intervalInput}
               intervalValue={intervalValue}
               onIntervalInputChange={setIntervalInput}
-              daysOfWeek={displayedDaysOfWeek}
-              onToggleDay={toggleDay}
+              daysOfWeek={daysOfWeek}
+              onToggleDay={handleToggleDay}
               dayOfMonth={dayOfMonth}
               onDayOfMonthChange={setDayOfMonth}
             />
@@ -221,7 +241,7 @@ export function RecurringTemplateCreateModal({
             value={firstDate}
             min={today}
             onChange={(event) => {
-              setFirstDate(event.target.value)
+              handleFirstDateChange(event.target.value)
             }}
             className="w-auto min-w-0"
           />
