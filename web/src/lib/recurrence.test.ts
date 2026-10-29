@@ -5,6 +5,7 @@ import {
   anchorDateForFirstOccurrence,
   computeNextOccurrence,
   formatRecurrenceSummary,
+  parseRecurrenceInterval,
 } from '#lib/recurrence'
 
 describe('formatRecurrenceSummary', () => {
@@ -130,6 +131,18 @@ describe('formatRecurrenceSummary', () => {
         'Custom · every 3 days',
       )
     })
+  })
+})
+
+describe('parseRecurrenceInterval', () => {
+  it.each([
+    ['1', 1],
+    ['12', 12],
+    ['1.5', null],
+    ['1x', null],
+    ['9007199254740992', null],
+  ])('parses %s as %s', (input, expected) => {
+    expect(parseRecurrenceInterval(input)).toEqual(expected)
   })
 })
 

@@ -15,6 +15,11 @@ export interface RecurrenceRule {
   dayOfMonth?: number | null
 }
 
+export function parseRecurrenceInterval(input: string): number | null {
+  const value = Number(input)
+  return Number.isSafeInteger(value) && value > 0 ? value : null
+}
+
 // The subset of RecurrenceType a recurrence-editing popup's Select offers —
 // 'custom' is only reachable via the API/MCP, never chosen through this UI.
 export type RecurrenceTypeOption = '' | 'daily' | 'weekly' | 'monthly'

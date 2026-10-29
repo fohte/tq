@@ -15,13 +15,10 @@ import {
   SelectValue,
 } from '@fohte/ui/select'
 import { ChevronLeft, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  RecurrenceRuleFields,
-  type TemplateRecurrenceType,
-} from '#components/recurring/recurrence-rule-fields'
-import { toggleWeekday } from '#components/schedule/create-schedule-modal'
+import { RecurrenceRuleFields } from '#components/recurring/recurrence-rule-fields'
+import { useRecurrenceRuleDraft } from '#components/recurring/use-recurrence-rule-draft'
 import {
   contextLabels,
   type ContextValue,
@@ -37,10 +34,7 @@ import {
 } from '#hooks/use-recurring-templates'
 import { formatLocalDate } from '#lib/date-range'
 import { selectValueHandler } from '#lib/form-utils'
-import {
-  anchorDateForFirstOccurrence,
-  buildRecurrenceRule,
-} from '#lib/recurrence'
+import { anchorDateForFirstOccurrence } from '#lib/recurrence'
 
 interface RecurringTemplateCreateModalProps {
   open: boolean
@@ -62,28 +56,39 @@ export function RecurringTemplateCreateModal({
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState<TemplateRecurrenceType>('daily')
-  const [intervalInput, setIntervalInput] = useState('1')
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([])
-  const [dayOfMonth, setDayOfMonth] = useState('')
+  const recurrenceDraft = useRecurrenceRuleDraft({
+    type: 'daily',
+    intervalInput: '1',
+  })
+  const {
+    type,
+    setType,
+    intervalInput,
+    setIntervalInput,
+    intervalValue,
+    daysOfWeek,
+    toggleDay,
+    dayOfMonth,
+    setDayOfMonth,
+  } = recurrenceDraft
   const [firstDate, setFirstDate] = useState(today)
   const [context, setContext] = useState<ContextValue>(currentContext)
   const [labels, setLabels] = useState<string[]>([])
+  const wasOpen = useRef(false)
 
   useEffect(() => {
     if (!open) setContext(currentContext)
   }, [currentContext, open])
 
+  useEffect(() => {
+    if (open && !wasOpen.current) setFirstDate(today)
+    wasOpen.current = open
+  }, [open, today])
+
   const createTemplate = useCreateRecurringTemplate()
   const isPending = createTemplate.isPending
 
-  const parsedInterval = Number(intervalInput)
-  const intervalValue =
-    Number.isSafeInteger(parsedInterval) && parsedInterval > 0
-      ? parsedInterval
-      : null
   const parsedDayOfMonth = Number(dayOfMonth)
-  const normalizedDayOfMonth = dayOfMonth === '' ? '' : String(parsedDayOfMonth)
   const validDayOfMonth =
     dayOfMonth === '' ||
     (Number.isInteger(parsedDayOfMonth) &&
@@ -91,16 +96,8 @@ export function RecurringTemplateCreateModal({
       parsedDayOfMonth <= 31)
 
   const recurrenceRule = useMemo(
-    () =>
-      validDayOfMonth
-        ? buildRecurrenceRule(
-            type,
-            intervalValue,
-            daysOfWeek,
-            normalizedDayOfMonth,
-          )
-        : null,
-    [daysOfWeek, intervalValue, normalizedDayOfMonth, type, validDayOfMonth],
+    () => (validDayOfMonth ? recurrenceDraft.recurrenceRule : null),
+    [recurrenceDraft.recurrenceRule, validDayOfMonth],
   )
   const displayedDaysOfWeek =
     type === 'weekly' && daysOfWeek.length === 0 && firstDate
@@ -125,14 +122,11 @@ export function RecurringTemplateCreateModal({
   const resetForm = useCallback(() => {
     setTitle('')
     setDescription('')
-    setType('daily')
-    setIntervalInput('1')
-    setDaysOfWeek([])
-    setDayOfMonth('')
+    recurrenceDraft.reset()
     setFirstDate(today)
     setContext(currentContext)
     setLabels([])
-  }, [currentContext, today])
+  }, [currentContext, recurrenceDraft.reset, today])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -212,9 +206,7 @@ export function RecurringTemplateCreateModal({
               intervalValue={intervalValue}
               onIntervalInputChange={setIntervalInput}
               daysOfWeek={displayedDaysOfWeek}
-              onToggleDay={(day) => {
-                setDaysOfWeek((previous) => toggleWeekday(previous, day))
-              }}
+              onToggleDay={toggleDay}
               dayOfMonth={dayOfMonth}
               onDayOfMonthChange={setDayOfMonth}
             />

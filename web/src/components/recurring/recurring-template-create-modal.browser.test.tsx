@@ -1,5 +1,5 @@
-import { QueryClient } from '@tanstack/react-query'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -83,7 +83,7 @@ function pastDateState() {
       ),
     ).value,
     createDisabled: visibleButton('Create Template').hasAttribute('disabled'),
-    error: screen.getByRole('alert').textContent,
+    error: screen.queryByRole('alert')?.textContent ?? null,
   }
 }
 
@@ -160,6 +160,30 @@ describe('RecurringTemplateCreateModal', () => {
       date: '2026-03-19',
       createDisabled: true,
       error: 'First task date must be today or later.',
+    })
+  })
+
+  it('defaults the first task date to today when reopened', () => {
+    const queryClient = createQueryClient()
+    const renderAt = (open: boolean) => (
+      <QueryClientProvider client={queryClient}>
+        <RecurringTemplateCreateModal open={open} onOpenChange={() => {}} />
+      </QueryClientProvider>
+    )
+    const { rerender } = render(renderAt(true))
+
+    fireEvent.change(
+      assertDefined(findVisible(screen.getAllByLabelText('First task date'))),
+      { target: { value: '2026-03-20' } },
+    )
+    rerender(renderAt(false))
+    vi.setSystemTime(new Date('2026-03-21T12:00:00'))
+    rerender(renderAt(true))
+
+    expect(pastDateState()).toEqual({
+      date: '2026-03-21',
+      createDisabled: true,
+      error: null,
     })
   })
 
