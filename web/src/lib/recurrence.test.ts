@@ -1,6 +1,11 @@
+import { err, ok } from 'neverthrow'
 import { describe, expect, it } from 'vitest'
 
-import { computeNextOccurrence, formatRecurrenceSummary } from '#lib/recurrence'
+import {
+  anchorDateForFirstOccurrence,
+  computeNextOccurrence,
+  formatRecurrenceSummary,
+} from '#lib/recurrence'
 
 describe('formatRecurrenceSummary', () => {
   describe('daily', () => {
@@ -149,5 +154,92 @@ describe('computeNextOccurrence', () => {
         dayOfMonth: 31,
       }),
     ).toBe('2026-02-28')
+  })
+})
+
+describe('anchorDateForFirstOccurrence', () => {
+  function convert(
+    firstDate: string,
+    rule: Parameters<typeof anchorDateForFirstOccurrence>[1],
+  ) {
+    return anchorDateForFirstOccurrence(firstDate, rule).map(
+      ({ anchorDate, recurrenceRule }) => ({
+        anchorDate,
+        recurrenceRule,
+        nextDate: computeNextOccurrence(anchorDate, recurrenceRule),
+      }),
+    )
+  }
+
+  it('finds the previous interval for a daily rule with interval greater than one', () => {
+    expect(convert('2026-03-25', { type: 'daily', interval: 2 })).toEqual(
+      ok({
+        anchorDate: '2026-03-23',
+        recurrenceRule: { type: 'daily', interval: 2 },
+        nextDate: '2026-03-25',
+      }),
+    )
+  })
+
+  it('anchors a biweekly Monday recurrence on the preceding Sunday', () => {
+    expect(
+      convert('2026-03-30', {
+        type: 'weekly',
+        interval: 2,
+        daysOfWeek: [1],
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '2026-03-29',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1] },
+        nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('fills an omitted weekly weekday from the first date', () => {
+    expect(convert('2026-03-30', { type: 'weekly', interval: 2 })).toEqual(
+      ok({
+        anchorDate: '2026-03-29',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1] },
+        nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('finds the previous monthly anchor for a 31st rule clamped to February', () => {
+    expect(
+      convert('2026-02-28', {
+        type: 'monthly',
+        interval: 1,
+        dayOfMonth: 31,
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '2026-01-31',
+        recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 31 },
+        nextDate: '2026-02-28',
+      }),
+    )
+  })
+
+  it('fills an omitted monthly day from the first date', () => {
+    expect(convert('2026-03-30', { type: 'monthly', interval: 1 })).toEqual(
+      ok({
+        anchorDate: '2026-02-28',
+        recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 30 },
+        nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('rejects a first date that does not match the selected weekday', () => {
+    expect(
+      anchorDateForFirstOccurrence('2026-03-23', {
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [2],
+      }),
+    ).toEqual(err('The first date does not match the recurrence rule.'))
   })
 })

@@ -1,9 +1,11 @@
 import { computeNextDate } from 'api/services/recurrence'
+import { err, ok, type Result } from 'neverthrow'
 
 import {
   dayLabels,
   type RecurrenceType,
 } from '#components/schedule/create-schedule-modal'
+import { addLocalDays } from '#lib/date-range'
 import { ordinal } from '#lib/format'
 
 export interface RecurrenceRule {
@@ -101,6 +103,44 @@ export function computeNextOccurrence(
   rule: RecurrenceRule,
 ): string | null {
   return computeNextDate(baseDate, rule).unwrapOr(null)
+}
+
+/**
+ * Find the API anchor date that makes `firstDate` the next occurrence. Weekly
+ * and monthly rules inherit their missing date selector from the first date.
+ */
+export function anchorDateForFirstOccurrence(
+  firstDate: string,
+  rule: RecurrenceRule,
+): Result<{ anchorDate: string; recurrenceRule: RecurrenceRule }, string> {
+  const recurrenceRule: RecurrenceRule = {
+    ...rule,
+    ...(rule.type === 'weekly' &&
+    (rule.daysOfWeek == null || rule.daysOfWeek.length === 0)
+      ? { daysOfWeek: [new Date(`${firstDate}T00:00:00`).getDay()] }
+      : {}),
+    ...(rule.type === 'monthly' && rule.dayOfMonth == null
+      ? { dayOfMonth: Number(firstDate.slice(8, 10)) }
+      : {}),
+  }
+
+  const searchDays =
+    recurrenceRule.type === 'daily' || recurrenceRule.type === 'custom'
+      ? recurrenceRule.interval
+      : recurrenceRule.type === 'weekly'
+        ? 7 * recurrenceRule.interval
+        : 31 * recurrenceRule.interval
+
+  for (let daysBefore = 1; daysBefore <= searchDays; daysBefore += 1) {
+    const candidate = addLocalDays(firstDate, -daysBefore)
+    if (
+      computeNextDate(candidate, recurrenceRule).unwrapOr(null) === firstDate
+    ) {
+      return ok({ anchorDate: candidate, recurrenceRule })
+    }
+  }
+
+  return err('The first date does not match the recurrence rule.')
 }
 
 /**
