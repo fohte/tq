@@ -2,9 +2,9 @@
 
 Contract reference for tq's web UI design system: a near-monochrome dark
 palette with a red accent used as punctuation, blue reserved for task-filter
-values, zero border-radius, 1px borders, and monospace UI chrome — plus
-GitHub's own brand colors for PR/issue state. Modeled on the
-[fohte.net](https://fohte.net) design system.
+values, zero border-radius, 1px borders, and monospace UI chrome — plus shared
+tint-palette accents for GitHub PR/issue state and task completion. Modeled on
+the [fohte.net](https://fohte.net) design system.
 
 Source of truth for every value in this doc:
 
@@ -123,8 +123,8 @@ introduce a new gray value; use the nearest existing tier.
 | `--tint-blue`            | `color-mix(in srgb, #82aaff 12%, #0a0a0a)` | `bg-tint-blue`              | Value background in task-filter `key:value` conditions |
 | `--tint-blue-foreground` | `#82aaff`                                  | `text-tint-blue-foreground` | Value text in task-filter `key:value` conditions       |
 
-The tint palette is shared through `@fohte/ui`. GitHub status display keeps
-its dedicated brand colors below.
+The tint palette is shared through `@fohte/ui`. GitHub status and task
+completion accents use its foreground colors below.
 
 ### Sidebar
 
@@ -143,25 +143,23 @@ its dedicated brand colors below.
 
 | Token                | Value     | Tailwind utility                                | Usage                                        |
 | -------------------- | --------- | ----------------------------------------------- | -------------------------------------------- |
-| `--status-completed` | `#a371f7` | `bg-status-completed` / `text-status-completed` | `StatusIcon`'s `completed` close-reason fill |
+| `--status-completed` | `#c792ea` | `bg-status-completed` / `text-status-completed` | `StatusIcon`'s `completed` close-reason fill |
 
 A narrowly-scoped accent — see [Status convention](#status-convention)
-below for its task-completion meaning. Same hex as
-`--github-merged` below, but a separate token: `--github-merged` is reserved
-for GitHub state display only, never substitute it here or vice versa.
+below for its task-completion meaning. It uses the same shared palette color as
+`--github-merged` below, but the tokens remain separate: each is reserved for
+its own task-completion or GitHub-state meaning.
 
 ### GitHub status colors
 
 | Token             | Value     | Tailwind utility     | Usage                               |
 | ----------------- | --------- | -------------------- | ----------------------------------- |
-| `--github-open`   | `#3fb950` | `text-github-open`   | GitHub PR/issue "open" state icon   |
-| `--github-closed` | `#f85149` | `text-github-closed` | GitHub PR/issue "closed" state icon |
-| `--github-merged` | `#a371f7` | `text-github-merged` | GitHub PR "merged" state icon       |
+| `--github-open`   | `#c3e88d` | `text-github-open`   | GitHub PR/issue "open" state icon   |
+| `--github-closed` | `#f07178` | `text-github-closed` | GitHub PR/issue "closed" state icon |
+| `--github-merged` | `#c792ea` | `text-github-merged` | GitHub PR "merged" state icon       |
 
-These are GitHub's own brand colors for PR/issue state, not app status
-colors — kept separate from `--primary` and the gray-tier text ladder above.
-Do not substitute an app status token here; the two systems mean different
-things even where a value might coincidentally look close.
+These use `@fohte/ui` tint foreground colors, keeping status accents aligned
+with the shared palette while preserving tq's semantic token names.
 
 ### Radius
 
