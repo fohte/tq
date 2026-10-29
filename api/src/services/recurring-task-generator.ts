@@ -9,6 +9,7 @@ import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
 import { computeDueOccurrences, formatDate } from '#services/recurrence'
 import { getTemplateLabelNames } from '#services/recurring-task-template-labels'
+import { replaceOccurrenceDateInTitle } from '#services/recurring-task-templates'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
 
@@ -87,7 +88,7 @@ async function generateForTemplate(
         await tx
           .insert(tasks)
           .values({
-            title: template.title,
+            title: replaceOccurrenceDateInTitle(template.title, occurrenceDate),
             description: template.description,
             status: 'todo',
             startDate:

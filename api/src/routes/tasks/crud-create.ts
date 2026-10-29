@@ -19,7 +19,10 @@ import { toTaskLinkSyncResponse } from '#routes/tasks/link-sync-response'
 import { resolveParentId, taskToResponse } from '#routes/tasks/shared'
 import { createTaskSchema } from '#schemas/task'
 import type { CreateTaskResponse } from '#schemas/task-response'
-import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
+import {
+  createTemplateFromTaskFields,
+  replaceOccurrenceDateInTitle,
+} from '#services/recurring-task-templates'
 import {
   checkTaskCreate,
   resolveTaskCreateTemplate,
@@ -129,7 +132,13 @@ export const tasksCreateApp = new Hono().post(
           await tx
             .insert(tasks)
             .values({
-              title: input.title,
+              title:
+                templateFields != null
+                  ? replaceOccurrenceDateInTitle(
+                      input.title,
+                      templateFields.occurrenceDate,
+                    )
+                  : input.title,
               description: input.description ?? null,
               descriptionTemplateId,
               startDate: input.startDate ?? null,

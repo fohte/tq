@@ -20,7 +20,10 @@ import {
 } from '#routes/tasks/shared'
 import { updateTaskSchema } from '#schemas/task'
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
-import { createTemplateFromTaskFields } from '#services/recurring-task-templates'
+import {
+  createTemplateFromTaskFields,
+  replaceOccurrenceDateInTitle,
+} from '#services/recurring-task-templates'
 import {
   checkTaskUpdate,
   taskConventionViolationBody,
@@ -116,11 +119,6 @@ export const tasksUpdateApp = new Hono().patch(
         )
       }
     }
-
-    const changedFields = diffFields(existing, taskFields, [
-      'title',
-      'description',
-    ])
 
     const existingLabelNames =
       recurrenceRuleInput != null
@@ -229,11 +227,32 @@ export const tasksUpdateApp = new Hono().patch(
         }
       }
 
+      const firstOccurrenceTitle =
+        templateFields != null
+          ? replaceOccurrenceDateInTitle(
+              taskFields.title ?? existing.title,
+              templateFields.occurrenceDate,
+            )
+          : undefined
+      const changedFields = diffFields(
+        existing,
+        {
+          ...taskFields,
+          ...(firstOccurrenceTitle !== undefined
+            ? { title: firstOccurrenceTitle }
+            : {}),
+        },
+        ['title', 'description'],
+      )
+
       const updatedTask = firstOrThrow(
         await tx
           .update(tasks)
           .set({
             ...taskFields,
+            ...(firstOccurrenceTitle !== undefined
+              ? { title: firstOccurrenceTitle }
+              : {}),
             ...remindAtUpdate,
             ...(recurrenceRuleId !== undefined ? { recurrenceRuleId } : {}),
             ...(templateFields != null

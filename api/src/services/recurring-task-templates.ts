@@ -13,6 +13,13 @@ export interface TemplateSourceFields {
   labels: string[]
 }
 
+export function replaceOccurrenceDateInTitle(
+  title: string,
+  occurrenceDate: string,
+): string {
+  return title.replaceAll('{date}', occurrenceDate)
+}
+
 // Whole calendar days between two 'YYYY-MM-DD' dates, clamped to >= 0 to
 // satisfy the DB's `start_offset_days >= 0` check (a start date after the
 // due date has no valid offset).
