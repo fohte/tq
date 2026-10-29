@@ -147,7 +147,8 @@ completion accents use its foreground colors below.
 
 A narrowly-scoped accent — see [Status convention](#status-convention)
 below for its task-completion meaning. It shares its source token with
-`--color-github-merged` below, while each Tailwind token keeps its own meaning.
+`--color-github-merged` below, but `--color-github-merged` is reserved for
+GitHub state display only; never substitute either token for the other.
 
 ### GitHub status colors
 
