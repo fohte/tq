@@ -24,6 +24,7 @@ export function RecurrenceRuleFields({
   type,
   onTypeChange,
   intervalInput,
+  intervalValue,
   onIntervalInputChange,
   daysOfWeek,
   onToggleDay,
@@ -33,18 +34,13 @@ export function RecurrenceRuleFields({
   type: TemplateRecurrenceType
   onTypeChange: (type: TemplateRecurrenceType) => void
   intervalInput: string
+  intervalValue: number | null
   onIntervalInputChange: (value: string) => void
   daysOfWeek: number[]
   onToggleDay: (day: number) => void
   dayOfMonth: string
   onDayOfMonthChange: (value: string) => void
 }) {
-  const parsedInterval = Number.parseInt(intervalInput, 10)
-  const intervalValue =
-    Number.isInteger(parsedInterval) && parsedInterval > 0
-      ? parsedInterval
-      : null
-
   return (
     <>
       <Select

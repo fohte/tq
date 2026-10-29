@@ -95,6 +95,7 @@ export function TemplateRepeatFieldAppearance({
                 type={type}
                 onTypeChange={onTypeChange}
                 intervalInput={intervalInput}
+                intervalValue={intervalValue}
                 onIntervalInputChange={onIntervalInputChange}
                 daysOfWeek={daysOfWeek}
                 onToggleDay={onToggleDay}

@@ -19,6 +19,7 @@ const meta = {
     type: 'daily',
     onTypeChange: fn(),
     intervalInput: '1',
+    intervalValue: 1,
     onIntervalInputChange: fn(),
     daysOfWeek: [],
     onToggleDay: fn(),
