@@ -227,6 +227,44 @@ describe('RecurringTemplateCreateModal', () => {
     })
   })
 
+  it('follows the first date until a weekly weekday is selected', async () => {
+    const user = userEvent.setup()
+    renderModal()
+    await user.type(
+      assertDefined(
+        findVisible(screen.getAllByPlaceholderText('Template title')),
+      ),
+      'Weekly review',
+    )
+    await user.click(
+      assertDefined(findVisible(screen.getAllByRole('combobox'))),
+    )
+    await user.click(await screen.findByRole('option', { name: 'Weekly' }))
+    fireEvent.change(
+      assertDefined(findVisible(screen.getAllByLabelText('First task date'))),
+      { target: { value: '2026-03-23' } },
+    )
+    await user.click(visibleButton('Create Template'))
+
+    await waitFor(() => {
+      expect(successfulCreateState()).toEqual({
+        requestBodies: [
+          {
+            title: 'Weekly review',
+            context: 'personal',
+            recurrenceRule: {
+              type: 'weekly',
+              interval: 1,
+              daysOfWeek: [1],
+            },
+            anchorDate: '2026-03-22',
+          },
+        ],
+        modalOpen: false,
+      })
+    })
+  })
+
   it('allows a daily rule after entering an invalid monthly day', async () => {
     const user = userEvent.setup()
     renderModal()
@@ -268,7 +306,7 @@ describe('RecurringTemplateCreateModal', () => {
     })
   })
 
-  it('blocks a first date that differs from the selected weekly weekday', async () => {
+  it('blocks a first date that differs from a manually selected weekly rule', async () => {
     const user = userEvent.setup()
     renderModal()
     fireEvent.change(
@@ -280,6 +318,7 @@ describe('RecurringTemplateCreateModal', () => {
       assertDefined(findVisible(screen.getAllByRole('combobox'))),
     )
     await user.click(await screen.findByRole('option', { name: 'Weekly' }))
+    await user.click(visibleButton('W'))
     fireEvent.change(
       assertDefined(findVisible(screen.getAllByLabelText('First task date'))),
       { target: { value: '2026-03-24' } },

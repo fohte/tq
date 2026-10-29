@@ -20,6 +20,16 @@ export function parseRecurrenceInterval(input: string): number | null {
   return Number.isSafeInteger(value) && value > 0 ? value : null
 }
 
+export function defaultWeeklyDaysOfWeek(
+  type: RecurrenceType | '',
+  daysOfWeek: number[],
+  firstDate: string,
+): number[] {
+  return type === 'weekly' && daysOfWeek.length === 0 && firstDate
+    ? [new Date(`${firstDate}T00:00:00`).getDay()]
+    : daysOfWeek
+}
+
 // The subset of RecurrenceType a recurrence-editing popup's Select offers —
 // 'custom' is only reachable via the API/MCP, never chosen through this UI.
 export type RecurrenceTypeOption = '' | 'daily' | 'weekly' | 'monthly'
@@ -120,9 +130,14 @@ export function anchorDateForFirstOccurrence(
 ): Result<{ anchorDate: string; recurrenceRule: RecurrenceRule }, string> {
   const recurrenceRule: RecurrenceRule = {
     ...rule,
-    ...(rule.type === 'weekly' &&
-    (rule.daysOfWeek == null || rule.daysOfWeek.length === 0)
-      ? { daysOfWeek: [new Date(`${firstDate}T00:00:00`).getDay()] }
+    ...(rule.type === 'weekly'
+      ? {
+          daysOfWeek: defaultWeeklyDaysOfWeek(
+            rule.type,
+            rule.daysOfWeek ?? [],
+            firstDate,
+          ),
+        }
       : {}),
     ...(rule.type === 'monthly' && rule.dayOfMonth == null
       ? { dayOfMonth: Number(firstDate.slice(8, 10)) }

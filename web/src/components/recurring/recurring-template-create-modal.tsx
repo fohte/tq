@@ -35,7 +35,10 @@ import {
 } from '#hooks/use-recurring-templates'
 import { formatLocalDate } from '#lib/date-range'
 import { selectValueHandler } from '#lib/form-utils'
-import { anchorDateForFirstOccurrence } from '#lib/recurrence'
+import {
+  anchorDateForFirstOccurrence,
+  defaultWeeklyDaysOfWeek,
+} from '#lib/recurrence'
 
 interface RecurringTemplateCreateModalProps {
   open: boolean
@@ -111,23 +114,16 @@ export function RecurringTemplateCreateModal({
 
   const isPastDate = firstDate !== '' && firstDate < today
 
-  const handleTypeChange = (nextType: typeof type) => {
-    setType(nextType)
-    if (nextType === 'weekly' && daysOfWeek.length === 0 && firstDate) {
-      setDaysOfWeek([new Date(`${firstDate}T00:00:00`).getDay()])
-    }
-  }
-
-  const handleFirstDateChange = (nextDate: string) => {
-    setFirstDate(nextDate)
-    if (type === 'weekly' && daysOfWeek.length === 0 && nextDate) {
-      setDaysOfWeek([new Date(`${nextDate}T00:00:00`).getDay()])
-    }
-  }
+  const displayedDaysOfWeek = defaultWeeklyDaysOfWeek(
+    type,
+    daysOfWeek,
+    firstDate,
+  )
 
   const handleToggleDay = (day: number) => {
     setDaysOfWeek((previous) => {
-      const next = toggleWeekday(previous, day)
+      const current = defaultWeeklyDaysOfWeek(type, previous, firstDate)
+      const next = toggleWeekday(current, day)
       return next.length === 0 ? previous : next
     })
   }
@@ -221,11 +217,11 @@ export function RecurringTemplateCreateModal({
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             <RecurrenceRuleFields
               type={type}
-              onTypeChange={handleTypeChange}
+              onTypeChange={setType}
               intervalInput={intervalInput}
               intervalValue={intervalValue}
               onIntervalInputChange={setIntervalInput}
-              daysOfWeek={daysOfWeek}
+              daysOfWeek={displayedDaysOfWeek}
               onToggleDay={handleToggleDay}
               dayOfMonth={dayOfMonth}
               onDayOfMonthChange={setDayOfMonth}
@@ -241,7 +237,7 @@ export function RecurringTemplateCreateModal({
             value={firstDate}
             min={today}
             onChange={(event) => {
-              handleFirstDateChange(event.target.value)
+              setFirstDate(event.target.value)
             }}
             className="w-auto min-w-0"
           />
