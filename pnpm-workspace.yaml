@@ -39,4 +39,4 @@ minimumReleaseAgeExclude:
   # Renovate security update: electron@44.5.0 || 44.9.1
   - electron@44.5.0 || 44.9.1
   # Renovate security update: @modelcontextprotocol/server@2.3.0
-  - "@modelcontextprotocol/server@2.3.0"
+  - '@modelcontextprotocol/server@2.3.0'
