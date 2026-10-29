@@ -15,6 +15,20 @@ export interface RecurringTemplateFilter {
   enabled?: boolean
 }
 
+export interface CreateRecurringTemplateInput {
+  title: string
+  description?: string
+  context: 'work' | 'personal'
+  labels?: string[]
+  recurrenceRule: {
+    type: 'daily' | 'weekly' | 'monthly' | 'custom'
+    interval: number
+    daysOfWeek?: number[]
+    dayOfMonth?: number
+  }
+  anchorDate: string
+}
+
 export function useRecurringTemplates(filter?: RecurringTemplateFilter) {
   return useQuery({
     queryKey: recurringTemplateKeys.list(filter),
@@ -31,6 +45,24 @@ export function useRecurringTemplates(filter?: RecurringTemplateFilter) {
         },
       })
       return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useCreateRecurringTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: CreateRecurringTemplateInput) => {
+      const res = await api.api['recurring-task-templates'].$post({
+        json: input,
+      })
+      return unwrapOrThrow(assertOk(res)).json()
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({
+        queryKey: recurringTemplateKeys.lists,
+      })
     },
   })
 }

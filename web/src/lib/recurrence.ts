@@ -1,9 +1,11 @@
 import { computeNextDate } from 'api/services/recurrence'
+import { err, ok, type Result } from 'neverthrow'
 
 import {
   dayLabels,
   type RecurrenceType,
 } from '#components/schedule/create-schedule-modal'
+import { addLocalDays, formatLocalDate } from '#lib/date-range'
 import { ordinal } from '#lib/format'
 
 export interface RecurrenceRule {
@@ -11,6 +13,21 @@ export interface RecurrenceRule {
   interval: number
   daysOfWeek?: number[] | null
   dayOfMonth?: number | null
+}
+
+export function parseRecurrenceInterval(input: string): number | null {
+  const value = Number(input)
+  return Number.isSafeInteger(value) && value > 0 ? value : null
+}
+
+export function defaultWeeklyDaysOfWeek(
+  type: RecurrenceType | '',
+  daysOfWeek: number[],
+  firstDate: string,
+): number[] {
+  return type === 'weekly' && daysOfWeek.length === 0 && firstDate
+    ? [new Date(`${firstDate}T00:00:00`).getDay()]
+    : daysOfWeek
 }
 
 // The subset of RecurrenceType a recurrence-editing popup's Select offers —
@@ -101,6 +118,70 @@ export function computeNextOccurrence(
   rule: RecurrenceRule,
 ): string | null {
   return computeNextDate(baseDate, rule).unwrapOr(null)
+}
+
+/**
+ * Find the API anchor date that makes `firstDate` the next occurrence. Weekly
+ * and monthly rules inherit their missing date selector from the first date.
+ */
+export function anchorDateForFirstOccurrence(
+  firstDate: string,
+  rule: RecurrenceRule,
+): Result<{ anchorDate: string; recurrenceRule: RecurrenceRule }, string> {
+  const recurrenceRule: RecurrenceRule = {
+    ...rule,
+    ...(rule.type === 'weekly'
+      ? {
+          daysOfWeek: defaultWeeklyDaysOfWeek(
+            rule.type,
+            rule.daysOfWeek ?? [],
+            firstDate,
+          ),
+        }
+      : {}),
+    ...(rule.type === 'monthly' && rule.dayOfMonth == null
+      ? { dayOfMonth: Number(firstDate.slice(8, 10)) }
+      : {}),
+  }
+
+  const firstDateValue = new Date(`${firstDate}T00:00:00`)
+  let anchorDate: string
+
+  switch (recurrenceRule.type) {
+    case 'daily':
+    case 'custom':
+      anchorDate = addLocalDays(firstDate, -recurrenceRule.interval)
+      break
+    case 'weekly': {
+      const firstWeekday = firstDateValue.getDay()
+      if (recurrenceRule.daysOfWeek?.includes(firstWeekday) !== true) {
+        return err('The first date does not match the recurrence rule.')
+      }
+      const daysBefore =
+        firstWeekday === 0 && recurrenceRule.interval > 1
+          ? 7 * recurrenceRule.interval - 6
+          : 1
+      anchorDate = addLocalDays(firstDate, -daysBefore)
+      break
+    }
+    case 'monthly': {
+      const anchorMonthEnd = new Date(
+        firstDateValue.getFullYear(),
+        firstDateValue.getMonth() - recurrenceRule.interval + 1,
+        0,
+      )
+      anchorDate = formatLocalDate(anchorMonthEnd)
+      break
+    }
+  }
+
+  if (
+    computeNextDate(anchorDate, recurrenceRule).unwrapOr(null) !== firstDate
+  ) {
+    return err('The first date does not match the recurrence rule.')
+  }
+
+  return ok({ anchorDate, recurrenceRule })
 }
 
 /**

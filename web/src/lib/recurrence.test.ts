@@ -1,6 +1,12 @@
+import { err, ok } from 'neverthrow'
 import { describe, expect, it } from 'vitest'
 
-import { computeNextOccurrence, formatRecurrenceSummary } from '#lib/recurrence'
+import {
+  anchorDateForFirstOccurrence,
+  computeNextOccurrence,
+  formatRecurrenceSummary,
+  parseRecurrenceInterval,
+} from '#lib/recurrence'
 
 describe('formatRecurrenceSummary', () => {
   describe('daily', () => {
@@ -128,6 +134,18 @@ describe('formatRecurrenceSummary', () => {
   })
 })
 
+describe('parseRecurrenceInterval', () => {
+  it.each([
+    ['1', 1],
+    ['12', 12],
+    ['1.5', null],
+    ['1x', null],
+    ['9007199254740992', null],
+  ])('parses %s as %s', (input, expected) => {
+    expect(parseRecurrenceInterval(input)).toEqual(expected)
+  })
+})
+
 // computeNextOccurrence is a thin `computeNextDate(...).unwrapOr(null)`
 // wrapper (web/src/lib/recurrence.ts) — the date-math branch matrix itself
 // (weekly wrap/skip, monthly end-of-month clamping, ...) is already covered
@@ -149,5 +167,160 @@ describe('computeNextOccurrence', () => {
         dayOfMonth: 31,
       }),
     ).toBe('2026-02-28')
+  })
+})
+
+describe('anchorDateForFirstOccurrence', () => {
+  function convert(
+    firstDate: string,
+    rule: Parameters<typeof anchorDateForFirstOccurrence>[1],
+  ) {
+    return anchorDateForFirstOccurrence(firstDate, rule).map(
+      ({ anchorDate, recurrenceRule }) => ({
+        anchorDate,
+        recurrenceRule,
+        nextDate: computeNextOccurrence(anchorDate, recurrenceRule),
+      }),
+    )
+  }
+
+  it('finds the previous interval for a daily rule with interval greater than one', () => {
+    expect(convert('2026-03-25', { type: 'daily', interval: 2 })).toEqual(
+      ok({
+        anchorDate: '2026-03-23',
+        recurrenceRule: { type: 'daily', interval: 2 },
+        nextDate: '2026-03-25',
+      }),
+    )
+  })
+
+  it('anchors a biweekly Monday recurrence on the preceding Sunday', () => {
+    expect(
+      convert('2026-03-30', {
+        type: 'weekly',
+        interval: 2,
+        daysOfWeek: [1],
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '2026-03-29',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1] },
+        nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('anchors an interval-2 Sunday recurrence on the preceding Saturday', () => {
+    expect(
+      convert('2026-03-29', {
+        type: 'weekly',
+        interval: 2,
+        daysOfWeek: [0],
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '2026-03-21',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [0] },
+        nextDate: '2026-03-29',
+      }),
+    )
+  })
+
+  it('fills an omitted weekly weekday from the first date', () => {
+    expect(convert('2026-03-30', { type: 'weekly', interval: 2 })).toEqual(
+      ok({
+        anchorDate: '2026-03-29',
+        recurrenceRule: { type: 'weekly', interval: 2, daysOfWeek: [1] },
+        nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('finds the previous monthly anchor for a 31st rule clamped to February', () => {
+    expect(
+      convert('2026-02-28', {
+        type: 'monthly',
+        interval: 1,
+        dayOfMonth: 31,
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '2026-01-31',
+        recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 31 },
+        nextDate: '2026-02-28',
+      }),
+    )
+  })
+
+  it('fills an omitted monthly day from the first date', () => {
+    expect(convert('2026-03-30', { type: 'monthly', interval: 1 })).toEqual(
+      ok({
+        anchorDate: '2026-02-28',
+        recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 30 },
+        nextDate: '2026-03-30',
+      }),
+    )
+  })
+
+  it('rejects a monthly date that differs from the configured day', () => {
+    expect(
+      anchorDateForFirstOccurrence('2026-03-21', {
+        type: 'monthly',
+        interval: 1,
+        dayOfMonth: 20,
+      }),
+    ).toEqual(err('The first date does not match the recurrence rule.'))
+  })
+
+  it('computes a large daily interval without searching each day', () => {
+    expect(convert('2026-03-20', { type: 'daily', interval: 100_000 })).toEqual(
+      ok({
+        anchorDate: '1752-06-04',
+        recurrenceRule: { type: 'daily', interval: 100_000 },
+        nextDate: '2026-03-20',
+      }),
+    )
+  })
+
+  it('computes a large weekly interval without searching each day', () => {
+    expect(
+      convert('2026-03-29', {
+        type: 'weekly',
+        interval: 10_000,
+        daysOfWeek: [0],
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '1834-08-09',
+        recurrenceRule: { type: 'weekly', interval: 10_000, daysOfWeek: [0] },
+        nextDate: '2026-03-29',
+      }),
+    )
+  })
+
+  it('computes a large monthly interval without searching each day', () => {
+    expect(
+      convert('2026-03-20', {
+        type: 'monthly',
+        interval: 10_000,
+        dayOfMonth: 20,
+      }),
+    ).toEqual(
+      ok({
+        anchorDate: '1192-11-30',
+        recurrenceRule: { type: 'monthly', interval: 10_000, dayOfMonth: 20 },
+        nextDate: '2026-03-20',
+      }),
+    )
+  })
+
+  it('rejects a first date that does not match the selected weekday', () => {
+    expect(
+      anchorDateForFirstOccurrence('2026-03-23', {
+        type: 'weekly',
+        interval: 1,
+        daysOfWeek: [2],
+      }),
+    ).toEqual(err('The first date does not match the recurrence rule.'))
   })
 })
