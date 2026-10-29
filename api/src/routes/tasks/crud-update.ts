@@ -120,6 +120,11 @@ export const tasksUpdateApp = new Hono().patch(
       }
     }
 
+    const changedFields = diffFields(existing, taskFields, [
+      'title',
+      'description',
+    ])
+
     const existingLabelNames =
       recurrenceRuleInput != null
         ? ((await getLabelNamesByTaskId([id])).get(id) ?? [])
@@ -130,6 +135,7 @@ export const tasksUpdateApp = new Hono().patch(
       let updatedRule: typeof recurrenceRules.$inferSelect | null = null
       let templateFields:
         { templateId: string; occurrenceDate: string } | undefined = undefined
+      let firstOccurrenceTitle: string | undefined
 
       if (recurrenceRuleInput === null) {
         // Remove: check shared references before deleting
@@ -214,6 +220,10 @@ export const tasksUpdateApp = new Hono().patch(
           templateId: created.template.id,
           occurrenceDate: created.occurrenceDate,
         }
+        firstOccurrenceTitle = replaceOccurrenceDateInTitle(
+          effectiveTitle,
+          created.occurrenceDate,
+        )
 
         // A task migrated from before the template model may still own a
         // legacy rule directly; redirecting it into a template must not
@@ -226,24 +236,6 @@ export const tasksUpdateApp = new Hono().patch(
           )
         }
       }
-
-      const firstOccurrenceTitle =
-        templateFields != null
-          ? replaceOccurrenceDateInTitle(
-              taskFields.title ?? existing.title,
-              templateFields.occurrenceDate,
-            )
-          : undefined
-      const changedFields = diffFields(
-        existing,
-        {
-          ...taskFields,
-          ...(firstOccurrenceTitle !== undefined
-            ? { title: firstOccurrenceTitle }
-            : {}),
-        },
-        ['title', 'description'],
-      )
 
       const updatedTask = firstOrThrow(
         await tx
