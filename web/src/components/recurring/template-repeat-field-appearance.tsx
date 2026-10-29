@@ -1,37 +1,21 @@
 import { Button } from '@fohte/ui/button'
-import { Input } from '@fohte/ui/input'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@fohte/ui/select'
 import { useRef } from 'react'
 
-import { WeekdayToggleRow } from '#components/schedule/create-schedule-modal'
+import {
+  RecurrenceRuleFields,
+  type TemplateRecurrenceType,
+} from '#components/recurring/recurrence-rule-fields'
 import { FieldTriggerWithChevron } from '#components/ui/field-trigger-with-chevron'
-import { selectValueHandler } from '#lib/form-utils'
 import {
   buildRecurrenceRule,
   computeNextOccurrence,
   formatRecurrenceSummary,
-  intervalUnitLabel,
   type RecurrenceRule,
 } from '#lib/recurrence'
 import { formatShortDate } from '#lib/task-due-date'
 
-// The subset of RecurrenceType a template's REPEAT popup offers. Unlike a
-// task's recurrence editor, a template's rule can never be cleared to "None"
-// (see UpdateRecurringTemplateInput), so this omits the '' option.
-export type TemplateRecurrenceType = 'daily' | 'weekly' | 'monthly'
-
-const recurrenceTypeOptions: readonly TemplateRecurrenceType[] = [
-  'daily',
-  'weekly',
-  'monthly',
-]
+export type { TemplateRecurrenceType }
 
 export function TemplateRepeatFieldAppearance({
   recurrenceRule,
@@ -107,63 +91,17 @@ export function TemplateRepeatFieldAppearance({
         >
           <PopoverContent padding="md" className="w-72">
             <div className="flex flex-col gap-3">
-              <Select
-                value={type}
-                onValueChange={selectValueHandler(
-                  onTypeChange,
-                  recurrenceTypeOptions,
-                )}
-              >
-                <SelectTrigger
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex items-center gap-1.5 text-xs text-foreground">
-                Every
-                <Input
-                  type="number"
-                  variant="ghost"
-                  min="1"
-                  value={intervalInput}
-                  onChange={(e) => {
-                    onIntervalInputChange(e.target.value)
-                  }}
-                  className="w-12"
-                />
-                {intervalUnitLabel(type, intervalValue ?? 1)}
-              </div>
-
-              {type === 'weekly' && (
-                <WeekdayToggleRow
-                  daysOfWeek={daysOfWeek}
-                  toggleDay={onToggleDay}
-                />
-              )}
-
-              {type === 'monthly' && (
-                <Input
-                  type="number"
-                  variant="ghost"
-                  min="1"
-                  max="31"
-                  value={dayOfMonth}
-                  onChange={(e) => {
-                    onDayOfMonthChange(e.target.value)
-                  }}
-                  placeholder="Day of month (1-31)"
-                  className="w-full"
-                />
-              )}
+              <RecurrenceRuleFields
+                type={type}
+                onTypeChange={onTypeChange}
+                intervalInput={intervalInput}
+                intervalValue={intervalValue}
+                onIntervalInputChange={onIntervalInputChange}
+                daysOfWeek={daysOfWeek}
+                onToggleDay={onToggleDay}
+                dayOfMonth={dayOfMonth}
+                onDayOfMonthChange={onDayOfMonthChange}
+              />
 
               {nextOccurrence != null && (
                 <p className="text-2xs text-muted-foreground">
