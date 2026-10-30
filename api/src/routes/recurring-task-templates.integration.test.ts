@@ -483,7 +483,7 @@ describe('recurring task templates CRUD API', () => {
   })
 
   describe('DELETE /api/recurring-task-templates/:id', () => {
-    it('detaches generated tasks before deleting the template', async () => {
+    it('detaches generated tasks when deleting the template', async () => {
       const created = await createTemplate(
         'To delete',
         { type: 'daily', interval: 1 },
@@ -513,16 +513,6 @@ describe('recurring task templates CRUD API', () => {
       expect(taskRows).toEqual([
         { ...generatedTask, templateId: null, occurrenceDate: null },
       ])
-      const templateRows = await db
-        .select()
-        .from(recurringTaskTemplates)
-        .where(eq(recurringTaskTemplates.id, created.id))
-      const ruleRows = await db
-        .select()
-        .from(recurrenceRules)
-        .where(eq(recurrenceRules.id, created.recurrenceRuleId))
-      expect(templateRows).toEqual([])
-      expect(ruleRows).toEqual([])
     })
 
     it('deletes the template and its exclusively-owned recurrence rule', async () => {
