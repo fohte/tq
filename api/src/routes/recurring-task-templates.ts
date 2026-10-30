@@ -264,9 +264,13 @@ export const recurringTaskTemplatesApp = new Hono()
         .select()
         .from(recurringTaskTemplates)
         .where(eq(recurringTaskTemplates.id, id))
+        // Serialize with the generator's claim UPDATE to prevent it from creating
+        // tasks after they are detached.
         .for('update')
       if (!existing) return null
 
+      // ON DELETE SET NULL clears only template_id, leaving occurrence_date set,
+      // which violates tasks_template_occurrence_paired_check.
       await tx
         .update(tasks)
         .set({ templateId: null, occurrenceDate: null })
