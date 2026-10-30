@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { projects, recurrenceRules, recurringTaskTemplates } from '#db/schema'
+import {
+  projects,
+  recurrenceRules,
+  recurringTaskTemplates,
+  tasks,
+} from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { createTask, TEST_UUID } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
@@ -478,6 +483,38 @@ describe('recurring task templates CRUD API', () => {
   })
 
   describe('DELETE /api/recurring-task-templates/:id', () => {
+    it('detaches generated tasks when deleting the template', async () => {
+      const created = await createTemplate(
+        'To delete',
+        { type: 'daily', interval: 1 },
+        '2026-04-01',
+      )
+      const generatedTask = firstOrThrow(
+        await db
+          .insert(tasks)
+          .values({
+            title: 'Generated task',
+            templateId: created.id,
+            occurrenceDate: '2026-04-01',
+          })
+          .returning(),
+      )
+
+      const res = await app.request(
+        `/api/recurring-task-templates/${created.id}`,
+        { method: 'DELETE' },
+      )
+
+      expect(res.status).toBe(204)
+      const taskRows = await db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, generatedTask.id))
+      expect(taskRows).toEqual([
+        { ...generatedTask, templateId: null, occurrenceDate: null },
+      ])
+    })
+
     it('deletes the template and its exclusively-owned recurrence rule', async () => {
       const created = await createTemplate(
         'To delete',
