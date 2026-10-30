@@ -1,12 +1,15 @@
 import { Chip } from '@fohte/ui/chip'
+import { FieldTrigger } from '@fohte/ui/field-trigger'
+import { Input } from '@fohte/ui/input'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { DeleteRecurringTemplateDialog } from '#components/recurring/delete-recurring-template-dialog'
 import { GeneratedTasksList } from '#components/recurring/generated-tasks-list'
 import { ActionsMenu } from '#components/ui/actions-menu'
 import type { RecurringTemplate } from '#hooks/use-recurring-templates'
+import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'
 
 export function RecurringTemplateMainContent({
   template,
@@ -17,7 +20,12 @@ export function RecurringTemplateMainContent({
     <div className="flex max-w-3xl flex-col gap-5">
       <RecurringTemplateBreadcrumb template={template} />
 
-      <h1 className="text-2xl font-bold text-foreground">{template.title}</h1>
+      <h1 className="min-w-0 break-words text-2xl font-bold text-foreground">
+        <EditableRecurringTemplateTitle
+          templateId={template.id}
+          defaultValue={template.title}
+        />
+      </h1>
 
       <div className="flex flex-wrap gap-2">
         {template.labels.map((label) => (
@@ -36,6 +44,73 @@ export function RecurringTemplateMainContent({
 
       <GeneratedTasksList templateId={template.id} />
     </div>
+  )
+}
+
+function EditableRecurringTemplateTitle({
+  templateId,
+  defaultValue,
+}: {
+  templateId: string
+  defaultValue: string
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [value, setValue] = useState(defaultValue)
+  const updateTemplate = useUpdateRecurringTemplate()
+  const savingRef = useRef(false)
+
+  useEffect(() => {
+    if (!isEditing) setValue(defaultValue)
+  }, [defaultValue, isEditing])
+
+  const save = useCallback(() => {
+    if (savingRef.current) {
+      savingRef.current = false
+      return
+    }
+    const trimmed = value.trim()
+    if (trimmed && trimmed !== defaultValue) {
+      updateTemplate.mutate({ id: templateId, input: { title: trimmed } })
+    } else {
+      setValue(defaultValue)
+    }
+    setIsEditing(false)
+  }, [value, defaultValue, templateId, updateTemplate])
+
+  if (isEditing) {
+    return (
+      <Input
+        type="text"
+        variant="ghost"
+        value={value}
+        onChange={(event) => {
+          setValue(event.target.value)
+        }}
+        onBlur={save}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur()
+          if (event.key === 'Escape') {
+            savingRef.current = true
+            setValue(defaultValue)
+            setIsEditing(false)
+          }
+        }}
+        autoFocus
+        className="w-full"
+      />
+    )
+  }
+
+  return (
+    <FieldTrigger
+      onClick={() => {
+        savingRef.current = false
+        setIsEditing(true)
+      }}
+      className="w-full min-w-0 whitespace-normal text-left"
+    >
+      {value}
+    </FieldTrigger>
   )
 }
 

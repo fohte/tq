@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { app } from '#app'
 import { db } from '#db/connection'
 import {
   labels,
@@ -134,6 +135,10 @@ async function outcomeWithTemplateTitle(templateId: string) {
   return { ...(await outcome(templateId)), templateTitle: template.title }
 }
 
+function responseWithStatus<T>(status: number, body: T) {
+  return { status, body }
+}
+
 async function taskLabelNames(taskId: string) {
   const rows = await db
     .select({ name: labels.name })
@@ -246,6 +251,47 @@ describe('generateDueRecurringTasks', () => {
       ],
       lastGeneratedDate: '2031-04-10',
       templateTitle: 'Digest {date} / {date}',
+    })
+  })
+
+  it('uses the title saved through the API for the next generated task', async () => {
+    fakeToday('2031-04-10')
+    const template = await createTemplate(
+      { type: 'daily', interval: 1 },
+      {
+        title: 'Old digest {date}',
+        anchorDate: '2031-04-09',
+      },
+    )
+
+    const response = await app.request(
+      `/api/recurring-task-templates/${template.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated digest {date}' }),
+      },
+    )
+    await generateDueRecurringTasks()
+
+    expect(
+      responseWithStatus(
+        response.status,
+        await outcomeWithTemplateTitle(template.id),
+      ),
+    ).toEqual({
+      status: 200,
+      body: {
+        tasks: [
+          expectedTask(template, {
+            title: 'Updated digest 2031-04-10',
+            dueDate: '2031-04-10',
+            occurrenceDate: '2031-04-10',
+          }),
+        ],
+        lastGeneratedDate: '2031-04-10',
+        templateTitle: 'Updated digest {date}',
+      },
     })
   })
 
