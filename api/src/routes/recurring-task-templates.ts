@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { recurrenceRules, recurringTaskTemplates } from '#db/schema'
+import { recurrenceRules, recurringTaskTemplates, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recurrenceRuleToResponse, resolveParentId } from '#routes/tasks/shared'
 import {
@@ -259,14 +259,18 @@ export const recurringTaskTemplatesApp = new Hono()
   )
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
-    const existing = await db.query.recurringTaskTemplates.findFirst({
-      where: eq(recurringTaskTemplates.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Recurring task template not found' }, 404)
-    }
+    const existing = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(recurringTaskTemplates)
+        .where(eq(recurringTaskTemplates.id, id))
+        .for('update')
+      if (!existing) return null
 
-    await db.transaction(async (tx) => {
+      await tx
+        .update(tasks)
+        .set({ templateId: null, occurrenceDate: null })
+        .where(eq(tasks.templateId, id))
       await tx
         .delete(recurringTaskTemplates)
         .where(eq(recurringTaskTemplates.id, id))
@@ -274,7 +278,12 @@ export const recurringTaskTemplatesApp = new Hono()
       await tx
         .delete(recurrenceRules)
         .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+
+      return existing
     })
+    if (!existing) {
+      return c.json({ error: 'Recurring task template not found' }, 404)
+    }
 
     return c.body(null, 204)
   })
