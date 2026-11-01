@@ -50,6 +50,7 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
         onAddTask={() => {
           setOccurrenceDate(formatLocalDate(new Date()))
           setConflictDate(null)
+          createOccurrence.reset()
           setIsAddDialogOpen(true)
         }}
         onRetry={() => {
@@ -60,18 +61,24 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
         open={isAddDialogOpen}
         onOpenChange={(open) => {
           setIsAddDialogOpen(open)
-          if (!open) setConflictDate(null)
+          if (!open) {
+            setConflictDate(null)
+            createOccurrence.reset()
+          }
         }}
         occurrenceDate={occurrenceDate}
         onOccurrenceDateChange={(date) => {
           setOccurrenceDate(date)
           setConflictDate(null)
+          createOccurrence.reset()
         }}
         isPending={createOccurrence.isPending}
         error={
-          conflictDate == null
-            ? null
-            : `A task for ${conflictDate} already exists.`
+          conflictDate != null
+            ? `A task for ${conflictDate} already exists.`
+            : createOccurrence.isError
+              ? 'Failed to add the task.'
+              : null
         }
         onSubmit={() => {
           createOccurrence.mutate(

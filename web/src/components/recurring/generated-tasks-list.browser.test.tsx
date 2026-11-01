@@ -123,6 +123,13 @@ function occurrenceConflictSnapshot(
   }
 }
 
+function occurrenceFailureSnapshot() {
+  return {
+    requestBodies: occurrenceRequestBodies(),
+    dialog: addOccurrenceDialogSnapshot(),
+  }
+}
+
 describe('GeneratedTasksList', () => {
   it('requests due-date-descending rows and preserves the API response order', async () => {
     const olderTask = makeTask({
@@ -393,6 +400,26 @@ describe('GeneratedTasksList', () => {
         error: 'A task for 2026-03-20 already exists.',
       },
       retry: { open: true, date: '2026-03-21', error: null },
+    })
+  })
+
+  it('shows an error when occurrence creation fails for another reason', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+    mockCreateOccurrence.mockRejectedValue(new Error('network unavailable'))
+
+    const user = userEvent.setup()
+    await renderGeneratedTasksList()
+    await user.click(screen.getByRole('button', { name: 'Add task' }))
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    await screen.findByRole('alert')
+
+    expect(occurrenceFailureSnapshot()).toEqual({
+      requestBodies: [{ occurrenceDate: '2026-03-20' }],
+      dialog: {
+        open: true,
+        date: '2026-03-20',
+        error: 'Failed to add the task.',
+      },
     })
   })
 })

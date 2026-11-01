@@ -33,3 +33,10 @@ export const DateAlreadyExists: Story = {
     error: 'A task for 2026-03-20 already exists.',
   },
 }
+
+export const CreationFailed: Story = {
+  name: 'the dialog explains that the occurrence could not be created',
+  args: {
+    error: 'Failed to add the task.',
+  },
+}
