@@ -60,6 +60,7 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
       <AddRecurringOccurrenceDialog
         open={isAddDialogOpen}
         onOpenChange={(open) => {
+          if (!open && createOccurrence.isPending) return
           setIsAddDialogOpen(open)
           if (!open && !createOccurrence.isPending) {
             setConflictDate(null)

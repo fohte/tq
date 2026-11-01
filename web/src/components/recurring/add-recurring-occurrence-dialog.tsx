@@ -43,6 +43,7 @@ export function AddRecurringOccurrenceDialog({
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  disabled={isPending}
                   onClick={() => {
                     onOpenChange(false)
                   }}
@@ -88,6 +89,7 @@ export function AddRecurringOccurrenceDialog({
                   <Button
                     type="button"
                     variant="outline"
+                    disabled={isPending}
                     onClick={() => {
                       onOpenChange(false)
                     }}

@@ -42,7 +42,7 @@ export const CreationFailed: Story = {
 }
 
 export const Submitting: Story = {
-  name: 'the dialog disables date changes while creating an occurrence',
+  name: 'the dialog prevents changes while creating an occurrence',
   args: {
     isPending: true,
   },

@@ -138,6 +138,12 @@ function occurrencePendingSnapshot() {
     addDisabled: screen
       .getByRole('button', { name: /^Add$/ })
       .hasAttribute('disabled'),
+    cancelDisabled: screen
+      .getByRole('button', { name: 'Cancel' })
+      .hasAttribute('disabled'),
+    closeDisabled: screen
+      .getByRole('button', { name: 'Close' })
+      .hasAttribute('disabled'),
     dialog: addOccurrenceDialogSnapshot(),
   }
 }
@@ -444,7 +450,7 @@ describe('GeneratedTasksList', () => {
     })
   })
 
-  it('locks the selected date while an occurrence is being created', async () => {
+  it('keeps the dialog locked and closes it after creation finishes', async () => {
     mockGet.mockResolvedValue(jsonResponse([]))
     let resolveCreate: ((response: unknown) => void) | undefined
     mockCreateOccurrence.mockReturnValue(
@@ -457,6 +463,7 @@ describe('GeneratedTasksList', () => {
     await renderGeneratedTasksList()
     await user.click(screen.getByRole('button', { name: 'Add task' }))
     await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    await user.keyboard('{Escape}')
     const pending = occurrencePendingSnapshot()
 
     if (resolveCreate == null) {
@@ -478,6 +485,8 @@ describe('GeneratedTasksList', () => {
         requestBodies: [{ occurrenceDate: '2026-03-20' }],
         dateDisabled: true,
         addDisabled: true,
+        cancelDisabled: true,
+        closeDisabled: true,
         dialog: { open: true, date: '2026-03-20', error: null },
       },
       closed: { open: false, date: undefined, error: null },
