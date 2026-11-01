@@ -1,5 +1,6 @@
 import type FullCalendarType from '@fullcalendar/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import type { CalendarGcalEventDetails } from '#components/calendar/calendar-gcal-event-detail'
 import {
@@ -79,6 +80,9 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   initialScrollTime?: string | undefined
   viewControl?: CalendarViewControl
+  compactHeader?: boolean
+  /** `undefined` renders the header inline; `null` waits for a portal target. */
+  headerContainer?: HTMLElement | null | undefined
   selectedDate: Date
   onDateChange: (date: Date) => void
   onVisibleRangeChange?:
@@ -97,6 +101,8 @@ export function CalendarView({
   initialView = 'day',
   initialScrollTime,
   viewControl = 'segmented',
+  compactHeader = false,
+  headerContainer,
   selectedDate,
   onDateChange,
   onVisibleRangeChange,
@@ -200,17 +206,30 @@ export function CalendarView({
     }
   }, [selectedDate])
 
+  const header = (
+    <CalendarHeader
+      currentDate={selectedDate}
+      activeView={activeView}
+      onPrev={handlePrev}
+      onNext={handleNext}
+      onToday={handleToday}
+      onViewChange={handleViewChange}
+      viewControl={viewControl}
+      compactHeader={compactHeader}
+    />
+  )
+  let renderedHeader: React.ReactNode
+  if (headerContainer === undefined) {
+    renderedHeader = header
+  } else if (headerContainer === null) {
+    renderedHeader = null
+  } else {
+    renderedHeader = createPortal(header, headerContainer)
+  }
+
   return (
     <div className="flex h-full flex-col">
-      <CalendarHeader
-        currentDate={selectedDate}
-        activeView={activeView}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        onToday={handleToday}
-        onViewChange={handleViewChange}
-        viewControl={viewControl}
-      />
+      {renderedHeader}
       {/* overscroll-x-contain stops a horizontal trackpad scroll here from
           chaining into the browser's own back/forward gesture
           (https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior) —

@@ -63,6 +63,8 @@ interface NowPanelStoryProps {
   taskMap: Map<string, Task>
   isLoading?: boolean
   desktopWindowControls?: boolean | undefined
+  compact?: boolean | undefined
+  scrollableContentMaxHeight?: number | undefined
 }
 
 function NowPanelStory({
@@ -72,6 +74,8 @@ function NowPanelStory({
   taskMap,
   isLoading,
   desktopWindowControls,
+  compact,
+  scrollableContentMaxHeight,
 }: NowPanelStoryProps) {
   const model = useMemo(
     () =>
@@ -87,6 +91,10 @@ function NowPanelStory({
         {...(desktopWindowControls === undefined
           ? {}
           : { desktopWindowControls })}
+        {...(compact === undefined ? {} : { compact })}
+        {...(scrollableContentMaxHeight === undefined
+          ? {}
+          : { scrollableContentMaxHeight })}
       />
     </Providers>
   )
@@ -152,6 +160,32 @@ export const ParallelTasks: Story = {
       blockEvent(activeA, taskA.title),
     ],
     taskMap: taskMap(taskA, taskB, taskC),
+  },
+}
+
+export const Compact: Story = {
+  name: 'the compact panel keeps overlapping activities and upcoming work in its scroll area',
+  args: {
+    now: new Date(2031, 3, 9, 9, 14, 45),
+    timeBlocks: [activeA, activeB],
+    calendarEvents: [
+      blockEvent(activeA, taskA.title),
+      blockEvent(activeB, taskB.title),
+      blockEvent(nextC, taskC.title),
+    ],
+    taskMap: taskMap(taskA, taskB, taskC),
+    desktopWindowControls: false,
+    compact: true,
+    scrollableContentMaxHeight: 320,
+  },
+}
+
+export const CompactDesktopWindowControls: Story = {
+  name: 'the compact Now panel aligns its desktop title bar with the top edge',
+  tags: ['desktop-only'],
+  args: {
+    ...Compact.args,
+    desktopWindowControls: true,
   },
 }
 

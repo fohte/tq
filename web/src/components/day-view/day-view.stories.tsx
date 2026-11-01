@@ -479,8 +479,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: "the compact day planner shows current work, due tasks, this week's queue, and its work memo",
-  tags: ['mobile-only'],
+  name: 'the compact day planner keeps date controls below current work and above the queue',
   decorators: [
     (Story) => (
       <div className="mx-auto h-screen w-80 max-w-full">
@@ -537,6 +536,21 @@ export const Compact: Story = {
     queueSections: compactQueueSections,
     dayQueueTasks: compactTasks,
     queueCandidates: compactQueueCandidates,
+  },
+}
+
+export const CompactShortWindow: Story = {
+  name: 'the compact planner keeps its queue reachable in a short window',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-64 w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    ...Compact.args,
   },
 }
 

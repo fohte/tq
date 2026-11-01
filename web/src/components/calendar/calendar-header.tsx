@@ -45,6 +45,7 @@ interface CalendarHeaderProps {
   onToday: () => void
   onViewChange: (view: CalendarViewType) => void
   viewControl?: CalendarViewControl
+  compactHeader?: boolean
 }
 
 function formatWeekday(date: Date): string {
@@ -59,11 +60,12 @@ export function CalendarHeader({
   onToday,
   onViewChange,
   viewControl = 'segmented',
+  compactHeader = false,
 }: CalendarHeaderProps) {
   const isWeekView = activeView === 'week'
 
   return (
-    <ScreenHeaderBar>
+    <ScreenHeaderBar className={compactHeader ? 'h-7' : ''}>
       <span className="font-mono text-sm font-bold">
         {formatLocalDate(currentDate)}
       </span>

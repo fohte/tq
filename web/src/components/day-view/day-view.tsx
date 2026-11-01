@@ -7,7 +7,6 @@ import {
   type ReactNode,
   useCallback,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 
@@ -23,6 +22,10 @@ import {
   type QueueSectionData,
 } from '#components/day-view/queue-pane'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
+import {
+  COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO,
+  useCompactUpperPaneLayout,
+} from '#components/day-view/use-compact-upper-pane-layout'
 import {
   TaskKanban,
   type TaskKanbanColumn,
@@ -58,6 +61,10 @@ type MobileTab = 'calendar' | 'tasks'
 interface QueuePaneStyle extends CSSProperties {
   '--queue-width': string
   '--queue-max-height': string | undefined
+}
+
+interface CompactQueueContentStyle extends CSSProperties {
+  '--compact-queue-content-max-height': string
 }
 
 const MOBILE_TAB_OPTIONS = [
@@ -149,6 +156,21 @@ export function DayViewPresentation({
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
+  const [compactCalendarHeaderContainer, setCompactCalendarHeaderContainer] =
+    useState<HTMLDivElement | null>(null)
+  const {
+    paneRef: compactQueuePaneRef,
+    nowPanelRef: compactNowPanelRef,
+    nowContentRef: compactNowContentRef,
+    dateHeaderRef: compactDateHeaderRef,
+    queueContentRef: compactQueueContentRef,
+    nowContentMaxHeight: compactNowContentMaxHeight,
+    queueContentMaxHeight: compactQueueContentMaxHeight,
+  } = useCompactUpperPaneLayout(
+    isCompactLayout,
+    nowPanel != null,
+    compactCalendarHeaderContainer != null,
+  )
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
@@ -159,6 +181,13 @@ export function DayViewPresentation({
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
+  )
+  const setCompactCalendarHeaderRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      compactDateHeaderRef.current = node
+      setCompactCalendarHeaderContainer(node)
+    },
+    [compactDateHeaderRef],
   )
   const {
     width: queueWidth,
@@ -177,15 +206,15 @@ export function DayViewPresentation({
   })
   const queuePaneStyle: QueuePaneStyle = {
     '--queue-width': `${String(queueWidth)}px`,
-    '--queue-max-height': isCompactLayout ? '40%' : undefined,
+    '--queue-max-height': isCompactLayout
+      ? `${String(COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO * 100)}%`
+      : undefined,
   }
 
   const openCreateModal = useCallback((range: SelectedRange | null) => {
     setPendingRange(range)
     setIsCreateModalOpen(true)
   }, [])
-  const taskListRef = useRef<HTMLDivElement>(null)
-
   const layoutItems: ActionsMenuItem[] = [
     {
       icon: <List className="h-4 w-4" />,
@@ -336,14 +365,12 @@ export function DayViewPresentation({
       <div className={cn('flex min-h-0 flex-1', isCompactLayout && 'flex-col')}>
         {/* Left panel: queue */}
         <div
-          ref={taskListRef}
+          ref={compactQueuePaneRef}
+          data-testid={isCompactLayout ? 'compact-upper-pane' : undefined}
           className={cn(
             'relative flex w-full flex-col',
             isCompactLayout
-              ? cn(
-                  'shrink-0 overflow-auto border-b border-border',
-                  'max-h-(--queue-max-height)',
-                )
+              ? 'shrink-0 overflow-hidden border-b border-border max-h-(--queue-max-height)'
               : 'md:flex-none',
             !isCompactLayout &&
               (activeViewMode === 'kanban'
@@ -356,42 +383,75 @@ export function DayViewPresentation({
         >
           {activeViewMode === 'kanban' && kanbanFilterRow}
 
-          {isCompactLayout && nowPanel != null && <NowPanel {...nowPanel} />}
-
-          {/* Summary header (today's queue only) */}
-          <div className="border-b border-border py-2.5">
-            <TaskListHeader tasks={dayQueueTasks} />
-          </div>
-
-          {activeViewMode === 'kanban' ? (
-            <div className="min-h-0 flex-1">
-              <TaskKanban
-                columns={kanbanColumns}
-                onDrop={handleKanbanDrop}
-                candidates={queueCandidates}
-                onAddCandidate={onAddCandidate}
-                onInsertCandidate={onInsertCandidate}
+          {isCompactLayout && (
+            <div className="shrink-0">
+              {nowPanel != null && (
+                <NowPanel
+                  {...nowPanel}
+                  compact
+                  panelRef={compactNowPanelRef}
+                  scrollableContentRef={compactNowContentRef}
+                  scrollableContentMaxHeight={compactNowContentMaxHeight}
+                />
+              )}
+              <div
+                data-testid="compact-date-header"
+                ref={setCompactCalendarHeaderRef}
               />
             </div>
-          ) : (
-            <QueuePane
-              isLoading={isLoading}
-              isRefreshing={isQueueRefreshing}
-              queueSections={visibleQueueSections}
-              queueDate={formatLocalDate(selectedDate)}
-              queueCandidates={isCompactLayout ? [] : queueCandidates}
-              onMoveTask={onMoveTask}
-              onInsertCandidate={onInsertCandidate}
-              onRemoveFromQueue={onRemoveFromQueue}
-              onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
-              {...(isCompactLayout && taskRowStates != null
-                ? { taskRowStates }
-                : {})}
-              {...(isCompactLayout
-                ? { className: 'flex-none overflow-visible' }
-                : {})}
-            />
           )}
+
+          <div
+            ref={compactQueueContentRef}
+            data-testid={isCompactLayout ? 'compact-queue-content' : undefined}
+            className={cn(
+              isCompactLayout
+                ? 'min-h-0 shrink-0 overflow-auto max-h-(--compact-queue-content-max-height)'
+                : 'contents',
+            )}
+            style={
+              isCompactLayout && compactQueueContentMaxHeight != null
+                ? ({
+                    '--compact-queue-content-max-height': `${String(compactQueueContentMaxHeight)}px`,
+                  } as CompactQueueContentStyle)
+                : undefined
+            }
+          >
+            {/* Summary header (today's queue only) */}
+            <div className="border-b border-border py-2.5">
+              <TaskListHeader tasks={dayQueueTasks} />
+            </div>
+
+            {activeViewMode === 'kanban' ? (
+              <div className="min-h-0 flex-1">
+                <TaskKanban
+                  columns={kanbanColumns}
+                  onDrop={handleKanbanDrop}
+                  candidates={queueCandidates}
+                  onAddCandidate={onAddCandidate}
+                  onInsertCandidate={onInsertCandidate}
+                />
+              </div>
+            ) : (
+              <QueuePane
+                isLoading={isLoading}
+                isRefreshing={isQueueRefreshing}
+                queueSections={visibleQueueSections}
+                queueDate={formatLocalDate(selectedDate)}
+                queueCandidates={isCompactLayout ? [] : queueCandidates}
+                onMoveTask={onMoveTask}
+                onInsertCandidate={onInsertCandidate}
+                onRemoveFromQueue={onRemoveFromQueue}
+                onMoveScheduledTaskToWeek={onMoveScheduledTaskToWeek}
+                {...(isCompactLayout && taskRowStates != null
+                  ? { taskRowStates }
+                  : {})}
+                {...(isCompactLayout
+                  ? { className: 'flex-none overflow-visible' }
+                  : {})}
+              />
+            )}
+          </div>
           {!isCompactLayout && activeViewMode === 'queue' && (
             <ResizablePaneSeparator
               label="Resize queue pane"
@@ -436,11 +496,15 @@ export function DayViewPresentation({
             <CalendarView
               events={calendarEvents}
               dndCallbacks={dndCallbacks}
-              externalDragContainerRef={taskListRef}
+              externalDragContainerRef={compactQueuePaneRef}
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}
               viewControl={isCompactLayout ? 'week-toggle' : 'segmented'}
+              compactHeader={isCompactLayout}
+              headerContainer={
+                isCompactLayout ? compactCalendarHeaderContainer : undefined
+              }
               onScheduleClick={handleScheduleClick}
               onTaskClick={handleTaskClick}
               onSelectRange={openCreateModal}
