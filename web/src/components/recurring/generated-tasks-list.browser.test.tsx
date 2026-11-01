@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -14,13 +14,22 @@ import { GeneratedTasksList } from '#components/recurring/generated-tasks-list'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { MockIntersectionObserver } from '#lib/mock-intersection-observer/test-utils'
 
-const { mockGet, mockCount } = vi.hoisted(() => ({
+const { mockGet, mockCount, mockCreateOccurrence } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockCount: vi.fn(),
+  mockCreateOccurrence:
+    vi.fn<(input: { json: { occurrenceDate: string } }) => Promise<unknown>>(),
 }))
 
 vi.mock('#lib/api', () => ({
-  api: { api: { tasks: { $get: mockGet, count: { $get: mockCount } } } },
+  api: {
+    api: {
+      tasks: { $get: mockGet, count: { $get: mockCount } },
+      'recurring-task-templates': {
+        ':id': { occurrences: { $post: mockCreateOccurrence } },
+      },
+    },
+  },
 }))
 
 function jsonResponse(tasks: unknown[]) {
@@ -61,10 +70,14 @@ beforeEach(() => {
   vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
   mockGet.mockReset()
   mockCount.mockReset()
+  mockCreateOccurrence.mockReset()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-03-20T12:00:00'))
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 function generatedTasksListSnapshot(container: HTMLElement) {
@@ -73,6 +86,40 @@ function generatedTasksListSnapshot(container: HTMLElement) {
     taskIds: [...container.querySelectorAll('a')].map((link) =>
       link.getAttribute('href')?.replace('/tasks/', ''),
     ),
+  }
+}
+
+function occurrenceRequestBodies() {
+  return mockCreateOccurrence.mock.calls.map(([input]) => input.json)
+}
+
+function addOccurrenceDialogSnapshot() {
+  return {
+    open: screen.queryByRole('dialog') != null,
+    date: screen.queryByLabelText<HTMLInputElement>('Occurrence date')?.value,
+    error: screen.queryByRole('alert')?.textContent ?? null,
+  }
+}
+
+function occurrenceCreationSnapshot(
+  container: HTMLElement,
+  defaultDate: string,
+) {
+  return {
+    requestBodies: occurrenceRequestBodies(),
+    defaultDate,
+    tasks: generatedTasksListSnapshot(container).taskIds,
+    dialog: addOccurrenceDialogSnapshot(),
+  }
+}
+
+function occurrenceConflictSnapshot(
+  conflict: ReturnType<typeof addOccurrenceDialogSnapshot>,
+) {
+  return {
+    requestBodies: occurrenceRequestBodies(),
+    conflict,
+    retry: addOccurrenceDialogSnapshot(),
   }
 }
 
@@ -269,6 +316,83 @@ describe('GeneratedTasksList', () => {
         ],
       ],
       taskIds: [...firstPage, ...nextPage].map((task) => task.id),
+    })
+  })
+
+  it('creates an occurrence and refreshes the generated task list', async () => {
+    const existingTask = makeTask({
+      id: 'task-existing',
+      title: 'Existing generated task',
+      templateId,
+    })
+    const addedTask = makeTask({
+      id: 'task-manual',
+      title: 'Manually added task',
+      dueDate: '2026-03-21',
+      templateId,
+    })
+    mockGet.mockImplementation(() =>
+      Promise.resolve(
+        jsonResponse(
+          mockGet.mock.calls.length === 1
+            ? [existingTask]
+            : [addedTask, existingTask],
+        ),
+      ),
+    )
+    mockCreateOccurrence.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve(addedTask),
+    })
+
+    const user = userEvent.setup()
+    const { container } = await renderGeneratedTasksList()
+    await screen.findByText('Existing generated task')
+    await user.click(screen.getByRole('button', { name: 'Add task' }))
+    const dateInput = screen.getByLabelText<HTMLInputElement>('Occurrence date')
+    const defaultDate = dateInput.value
+    fireEvent.change(dateInput, {
+      target: { value: '2026-03-21' },
+    })
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    await screen.findByText('Manually added task')
+    await waitFor(() => {
+      if (screen.queryByRole('dialog') != null) {
+        throw new Error('The add occurrence dialog is still open')
+      }
+    })
+
+    expect(occurrenceCreationSnapshot(container, defaultDate)).toEqual({
+      requestBodies: [{ occurrenceDate: '2026-03-21' }],
+      defaultDate: '2026-03-20',
+      tasks: ['task-manual', 'task-existing'],
+      dialog: { open: false, date: undefined, error: null },
+    })
+  })
+
+  it('keeps the dialog open and allows another date after a conflict', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+    mockCreateOccurrence.mockResolvedValue({ ok: false, status: 409 })
+
+    const user = userEvent.setup()
+    await renderGeneratedTasksList()
+    await user.click(screen.getByRole('button', { name: 'Add task' }))
+    const dateInput = screen.getByLabelText<HTMLInputElement>('Occurrence date')
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    await screen.findByRole('alert')
+    const conflict = addOccurrenceDialogSnapshot()
+
+    fireEvent.change(dateInput, { target: { value: '2026-03-21' } })
+
+    expect(occurrenceConflictSnapshot(conflict)).toEqual({
+      requestBodies: [{ occurrenceDate: '2026-03-20' }],
+      conflict: {
+        open: true,
+        date: '2026-03-20',
+        error: 'A task for 2026-03-20 already exists.',
+      },
+      retry: { open: true, date: '2026-03-21', error: null },
     })
   })
 })

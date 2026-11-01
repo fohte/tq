@@ -1,8 +1,18 @@
+import { useState } from 'react'
+
+import { AddRecurringOccurrenceDialog } from '#components/recurring/add-recurring-occurrence-dialog'
 import { GeneratedTasksListAppearance } from '#components/recurring/generated-tasks-list-appearance'
 import { useInfiniteScrollSentinel } from '#hooks/use-infinite-scroll-sentinel'
+import { useCreateRecurringTaskOccurrence } from '#hooks/use-recurring-templates'
 import { useInfiniteTaskList } from '#hooks/use-tasks'
+import { formatLocalDate } from '#lib/date-range'
 
 export function GeneratedTasksList({ templateId }: { templateId: string }) {
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [occurrenceDate, setOccurrenceDate] = useState('')
+  const [conflictDate, setConflictDate] = useState<string | null>(null)
+  const createOccurrence = useCreateRecurringTaskOccurrence()
+
   const {
     tasks,
     isLoading,
@@ -28,17 +38,56 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
   })
 
   return (
-    <GeneratedTasksListAppearance
-      tasks={tasks}
-      isLoading={isLoading}
-      isError={isError}
-      hasNextPage={hasNextPage}
-      isFetchingNextPage={isFetchingNextPage}
-      isFetchNextPageError={isFetchNextPageError}
-      sentinelRef={sentinelRef}
-      onRetry={() => {
-        void fetchNextPage()
-      }}
-    />
+    <>
+      <GeneratedTasksListAppearance
+        tasks={tasks}
+        isLoading={isLoading}
+        isError={isError}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        isFetchNextPageError={isFetchNextPageError}
+        sentinelRef={sentinelRef}
+        onAddTask={() => {
+          setOccurrenceDate(formatLocalDate(new Date()))
+          setConflictDate(null)
+          setIsAddDialogOpen(true)
+        }}
+        onRetry={() => {
+          void fetchNextPage()
+        }}
+      />
+      <AddRecurringOccurrenceDialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open)
+          if (!open) setConflictDate(null)
+        }}
+        occurrenceDate={occurrenceDate}
+        onOccurrenceDateChange={(date) => {
+          setOccurrenceDate(date)
+          setConflictDate(null)
+        }}
+        isPending={createOccurrence.isPending}
+        error={
+          conflictDate == null
+            ? null
+            : `A task for ${conflictDate} already exists.`
+        }
+        onSubmit={() => {
+          createOccurrence.mutate(
+            { templateId, occurrenceDate },
+            {
+              onSuccess: (result) => {
+                if (result.kind === 'conflict') {
+                  setConflictDate(occurrenceDate)
+                  return
+                }
+                setIsAddDialogOpen(false)
+              },
+            },
+          )
+        }}
+      />
+    </>
   )
 }
