@@ -479,7 +479,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: "the compact day planner shows current work, due tasks, this week's queue, and its work memo",
+  name: 'the compact day planner keeps date controls below current work and above the queue',
   tags: ['mobile-only'],
   decorators: [
     (Story) => (
