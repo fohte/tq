@@ -1,5 +1,6 @@
 import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
 import type { Ref } from 'react'
 
 import { DateRangeBadge } from '#components/task/task-row-shared'
@@ -21,6 +22,7 @@ interface GeneratedTasksListAppearanceProps {
   isFetchNextPageError: boolean
   sentinelRef?: Ref<HTMLDivElement> | undefined
   onRetry?: (() => void) | undefined
+  onAddTask: () => void
 }
 
 export function GeneratedTasksListAppearance({
@@ -32,10 +34,17 @@ export function GeneratedTasksListAppearance({
   isFetchNextPageError,
   sentinelRef,
   onRetry,
+  onAddTask,
 }: GeneratedTasksListAppearanceProps) {
   return (
     <div className="flex flex-col gap-2.5">
-      <SectionHeading level={3}>Generated tasks</SectionHeading>
+      <div className="flex items-center justify-between gap-2">
+        <SectionHeading level={3}>Generated tasks</SectionHeading>
+        <Button onClick={onAddTask} size="sm" variant="outline">
+          <Plus data-icon="inline-start" />
+          Add task
+        </Button>
+      </div>
       {isLoading ? (
         <ListAreaMessage>Loading...</ListAreaMessage>
       ) : isError && tasks.length === 0 ? (

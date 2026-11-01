@@ -3,7 +3,7 @@ import type { InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, assertOkOrThrow, unwrapOrThrow } from '#lib/assert-response'
-import { recurringTemplateKeys } from '#lib/query-keys'
+import { projectKeys, recurringTemplateKeys, taskKeys } from '#lib/query-keys'
 
 export type RecurringTemplate = InferResponseType<
   (typeof api.api)['recurring-task-templates'][':id']['$get'],
@@ -75,6 +75,36 @@ export function useRecurringTemplate(id: string) {
         param: { id },
       })
       return unwrapOrThrow(assertOk(res)).json()
+    },
+  })
+}
+
+export function useCreateRecurringTaskOccurrence() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      templateId,
+      occurrenceDate,
+    }: {
+      templateId: string
+      occurrenceDate: string
+    }) => {
+      const res = await api.api['recurring-task-templates'][
+        ':id'
+      ].occurrences.$post({
+        param: { id: templateId },
+        json: { occurrenceDate },
+      })
+      if (res.status === 409) return { kind: 'conflict' as const }
+      assertOkOrThrow(res)
+      return { kind: 'created' as const }
+    },
+    onSuccess: (result) => {
+      if (result.kind === 'created') {
+        void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+        void queryClient.invalidateQueries({ queryKey: projectKeys.all })
+      }
     },
   })
 }
