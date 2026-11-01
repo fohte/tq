@@ -719,6 +719,9 @@ describe('operation tool input schemas', () => {
       project_list: false,
       project_tasks: false,
       project_update: false,
+      recurring_template_get: false,
+      recurring_template_list: false,
+      recurring_template_update: false,
       task_complete: true,
       task_create: true,
       task_delete: false,
@@ -844,6 +847,12 @@ describe('operation tool annotations', () => {
       },
       memo_get: { readOnlyHint: true },
       memo_update: { readOnlyHint: false, destructiveHint: false },
+      recurring_template_get: { readOnlyHint: true },
+      recurring_template_list: { readOnlyHint: true },
+      recurring_template_update: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
     }
     const annotations = Object.fromEntries(
       tools.tools
