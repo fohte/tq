@@ -85,6 +85,11 @@ export function NowPanel({
         )}
       </div>
     )
+  const titleBarClassName = desktopWindowControls
+    ? cn('electron-titlebar-bar -mx-3', !compact && '-mt-2')
+    : compact
+      ? 'flex h-5 items-center'
+      : 'mb-1'
 
   return (
     <section
@@ -95,17 +100,7 @@ export function NowPanel({
         compact ? 'py-0' : 'py-2',
       )}
     >
-      <div
-        className={cn(
-          compact
-            ? desktopWindowControls
-              ? undefined
-              : 'flex h-5 items-center'
-            : 'mb-1',
-          desktopWindowControls && 'electron-titlebar-bar -mx-3',
-          desktopWindowControls && !compact && '-mt-2',
-        )}
-      >
+      <div className={titleBarClassName}>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Now
         </h2>
