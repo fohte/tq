@@ -50,7 +50,7 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
         onAddTask={() => {
           setOccurrenceDate(formatLocalDate(new Date()))
           setConflictDate(null)
-          if (!createOccurrence.isPending) createOccurrence.reset()
+          createOccurrence.reset()
           setIsAddDialogOpen(true)
         }}
         onRetry={() => {
@@ -62,14 +62,13 @@ export function GeneratedTasksList({ templateId }: { templateId: string }) {
         onOpenChange={(open) => {
           if (!open && createOccurrence.isPending) return
           setIsAddDialogOpen(open)
-          if (!open && !createOccurrence.isPending) {
+          if (!open) {
             setConflictDate(null)
             createOccurrence.reset()
           }
         }}
         occurrenceDate={occurrenceDate}
         onOccurrenceDateChange={(date) => {
-          if (createOccurrence.isPending) return
           setOccurrenceDate(date)
           setConflictDate(null)
           createOccurrence.reset()
