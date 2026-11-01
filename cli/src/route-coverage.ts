@@ -35,11 +35,10 @@ export const EXCLUDED_ROUTES = {
   'GET /api/github/sync-rules': 'settings covered by the web UI',
   'PATCH /api/github/sync-rules/:id': 'settings covered by the web UI',
   'DELETE /api/github/sync-rules/:id': 'settings covered by the web UI',
-  'POST /api/recurring-task-templates': 'settings covered by the web UI',
-  'GET /api/recurring-task-templates': 'settings covered by the web UI',
-  'GET /api/recurring-task-templates/:id': 'settings covered by the web UI',
-  'PATCH /api/recurring-task-templates/:id': 'settings covered by the web UI',
-  'DELETE /api/recurring-task-templates/:id': 'settings covered by the web UI',
+  'POST /api/recurring-task-templates':
+    'creating a recurring task also creates its template',
+  'DELETE /api/recurring-task-templates/:id':
+    'template deletion is outside CLI scope and available in the web UI',
   'POST /api/description-templates': 'template management is a web UI action',
   'PATCH /api/description-templates/:name':
     'template management is a web UI action',
