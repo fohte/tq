@@ -540,6 +540,21 @@ export const Compact: Story = {
   },
 }
 
+export const CompactShortWindow: Story = {
+  name: 'the compact planner keeps its queue reachable in a short window',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-64 w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    ...Compact.args,
+  },
+}
+
 export const Kanban: Story = {
   name: 'the day planner groups queued tasks into kanban columns',
   // On mobile the initial tab is calendar, so the queue pane's kanban

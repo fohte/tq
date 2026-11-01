@@ -23,6 +23,7 @@ import {
   type QueueSectionData,
 } from '#components/day-view/queue-pane'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
+import { useCompactQueuePinning } from '#components/day-view/use-compact-queue-pinning'
 import {
   TaskKanban,
   type TaskKanbanColumn,
@@ -149,6 +150,11 @@ export function DayViewPresentation({
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
+  const {
+    paneRef: compactQueuePaneRef,
+    headerRef: compactPinnedHeaderRef,
+    isPinned: isCompactHeaderPinned,
+  } = useCompactQueuePinning(isCompactLayout)
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
@@ -187,6 +193,13 @@ export function DayViewPresentation({
     setIsCreateModalOpen(true)
   }, [])
   const taskListRef = useRef<HTMLDivElement>(null)
+  const setTaskListRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      taskListRef.current = node
+      compactQueuePaneRef.current = node
+    },
+    [compactQueuePaneRef],
+  )
 
   const layoutItems: ActionsMenuItem[] = [
     {
@@ -338,13 +351,14 @@ export function DayViewPresentation({
       <div className={cn('flex min-h-0 flex-1', isCompactLayout && 'flex-col')}>
         {/* Left panel: queue */}
         <div
-          ref={taskListRef}
+          ref={setTaskListRef}
           className={cn(
             'relative flex w-full flex-col',
             isCompactLayout
               ? cn(
-                  'shrink-0 overflow-hidden border-b border-border',
+                  'shrink-0 border-b border-border',
                   'max-h-(--queue-max-height)',
+                  isCompactHeaderPinned ? 'overflow-hidden' : 'overflow-auto',
                 )
               : 'md:flex-none',
             !isCompactLayout &&
@@ -359,7 +373,7 @@ export function DayViewPresentation({
           {activeViewMode === 'kanban' && kanbanFilterRow}
 
           {isCompactLayout && (
-            <div className="shrink-0">
+            <div ref={compactPinnedHeaderRef} className="shrink-0">
               {nowPanel != null && <NowPanel {...nowPanel} />}
               <div ref={setCompactCalendarHeaderContainer} />
             </div>
@@ -367,7 +381,11 @@ export function DayViewPresentation({
 
           <div
             className={cn(
-              isCompactLayout ? 'min-h-0 flex-1 overflow-auto' : 'contents',
+              isCompactLayout
+                ? isCompactHeaderPinned
+                  ? 'min-h-0 flex-1 overflow-auto'
+                  : 'flex-none'
+                : 'contents',
             )}
           >
             {/* Summary header (today's queue only) */}

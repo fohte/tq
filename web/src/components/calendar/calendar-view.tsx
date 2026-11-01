@@ -217,7 +217,11 @@ export function CalendarView({
 
   return (
     <div className="flex h-full flex-col">
-      {headerContainer == null ? header : createPortal(header, headerContainer)}
+      {headerContainer === undefined
+        ? header
+        : headerContainer == null
+          ? null
+          : createPortal(header, headerContainer)}
       {/* overscroll-x-contain stops a horizontal trackpad scroll here from
           chaining into the browser's own back/forward gesture
           (https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior) —

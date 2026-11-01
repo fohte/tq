@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { DayViewPresentation } from '#components/day-view/day-view'
+import type { NowPanelProps } from '#components/day-view/now-panel'
 import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 
@@ -33,15 +34,35 @@ function tasksForDate(date: Date) {
   return queueTasks.slice(0, count)
 }
 
+function makeNowPanelProps(activityCount: number): NowPanelProps {
+  return {
+    model: {
+      activities: Array.from({ length: activityCount }, (_, index) => ({
+        kind: 'event' as const,
+        key: `activity-${String(index + 1)}`,
+        title: `Current activity ${String(index + 1)}`,
+        statusLabel: 'in progress',
+        isOverrun: false,
+      })),
+      emptyState: activityCount === 0 ? 'no-time-blocks-today' : null,
+      nextEvent: null,
+    },
+  }
+}
+
 interface QueueRefreshController {
   finish: (() => void) | undefined
 }
 
 function CompactDayView({
   initialDate,
+  windowHeight,
+  nowActivityCount,
   registerRefreshCompletion,
 }: {
   initialDate: Date
+  windowHeight: number
+  nowActivityCount: number
   registerRefreshCompletion: (finish: () => void) => void
 }) {
   const [selectedDate, setSelectedDate] = useState(initialDate)
@@ -55,20 +76,14 @@ function CompactDayView({
   })
 
   return (
-    <div style={{ height: 820 }}>
+    <div style={{ height: windowHeight }}>
       <DayViewPresentation
         isLoading={false}
         isQueueRefreshing={isQueueRefreshing}
         layout="compact"
         calendarEvents={[]}
         schedules={[]}
-        nowPanel={{
-          model: {
-            activities: [],
-            emptyState: 'no-time-blocks-today',
-            nextEvent: null,
-          },
-        }}
+        nowPanel={makeNowPanelProps(nowActivityCount)}
         onCreateTimeBlock={() => {}}
         queueSections={[
           makeQueueSectionData({
@@ -99,12 +114,18 @@ function CompactDayView({
 
 async function renderCompactDayView({
   initialDate = new Date('2026-07-20T00:00:00'),
+  windowHeight = 820,
+  viewportHeight = windowHeight,
+  nowActivityCount = 0,
   registerRefreshCompletion = () => {},
 }: {
   initialDate?: Date
+  windowHeight?: number
+  viewportHeight?: number
+  nowActivityCount?: number
   registerRefreshCompletion?: (finish: () => void) => void
 } = {}) {
-  await page.viewport(760, 820)
+  await page.viewport(760, viewportHeight)
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -112,6 +133,8 @@ async function renderCompactDayView({
     component: () => (
       <CompactDayView
         initialDate={initialDate}
+        windowHeight={windowHeight}
+        nowActivityCount={nowActivityCount}
         registerRefreshCompletion={registerRefreshCompletion}
       />
     ),
@@ -184,6 +207,35 @@ async function scrollQueueWhileHeaderStaysPinned() {
   return readQueueScrollLayout(scrollPane)
 }
 
+function getCompactUpperPane() {
+  const nowPanel = document.querySelector('[aria-label="Now"]')
+  const pane = nowPanel?.parentElement?.parentElement
+  if (!(pane instanceof HTMLElement)) {
+    throw new Error('The compact upper pane is missing')
+  }
+  return pane
+}
+
+async function scrollUpperPaneToQueueTask() {
+  const pane = getCompactUpperPane()
+  await page.getByRole('region', { name: 'Now' }).wheel({ delta: { y: 500 } })
+
+  await waitFor(() => {
+    if (pane.scrollTop === 0) {
+      throw new Error('The compact upper pane did not scroll')
+    }
+  })
+
+  const paneBounds = pane.getBoundingClientRect()
+  const taskBounds = screen.getByText('Queued task 1').getBoundingClientRect()
+  return {
+    outerPaneScrolled: pane.scrollTop > 0,
+    queueTaskVisible:
+      taskBounds.top >= paneBounds.top &&
+      taskBounds.bottom <= paneBounds.bottom,
+  }
+}
+
 function readCompactQueueRefreshLayout(
   initialPositions: ReturnType<typeof readNavigationVerticalPositions>,
 ) {
@@ -247,6 +299,28 @@ describe('DayView compact queue refresh layout', () => {
     const pinnedPositions = readPinnedHeaderPositions()
     const actual = await scrollQueueWhileHeaderStaysPinned()
     const expected = { scrolled: true, pinnedPositions }
+    expect(actual).toEqual(expected)
+  })
+
+  it('keeps the queue reachable in a short window', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-21T00:00:00'),
+      windowHeight: 320,
+    })
+
+    const actual = await scrollUpperPaneToQueueTask()
+    const expected = { outerPaneScrolled: true, queueTaskVisible: true }
+    expect(actual).toEqual(expected)
+  })
+
+  it('keeps the queue reachable when Now fills the upper-pane limit', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-21T00:00:00'),
+      nowActivityCount: 10,
+    })
+
+    const actual = await scrollUpperPaneToQueueTask()
+    const expected = { outerPaneScrolled: true, queueTaskVisible: true }
     expect(actual).toEqual(expected)
   })
 })
