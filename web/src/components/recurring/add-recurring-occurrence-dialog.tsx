@@ -36,8 +36,8 @@ export function AddRecurringOccurrenceDialog({
       <DialogPortal>
         <DialogOverlay />
         <DialogPopup>
-          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-8 max-md:p-0">
-            <ModalPanel className="max-w-lg max-md:h-full max-md:max-w-none">
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+            <ModalPanel className="max-w-lg">
               <DialogHeaderBar>
                 <DialogTitle>Add a task from this template</DialogTitle>
                 <Button
