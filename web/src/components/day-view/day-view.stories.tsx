@@ -480,7 +480,6 @@ export const Default: Story = {
 
 export const Compact: Story = {
   name: 'the compact day planner keeps date controls below current work and above the queue',
-  tags: ['mobile-only'],
   decorators: [
     (Story) => (
       <div className="mx-auto h-screen w-80 max-w-full">

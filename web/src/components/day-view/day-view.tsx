@@ -60,6 +60,10 @@ interface QueuePaneStyle extends CSSProperties {
   '--queue-max-height': string | undefined
 }
 
+interface CompactQueueContentStyle extends CSSProperties {
+  '--compact-queue-content-max-height': string
+}
+
 const MOBILE_TAB_OPTIONS = [
   { value: 'calendar', label: 'calendar' },
   { value: 'tasks', label: 'tasks' },
@@ -151,15 +155,13 @@ export function DayViewPresentation({
   const isCompactLayout = layout === 'compact'
   const {
     paneRef: compactQueuePaneRef,
-    headerRef: compactPinnedHeaderRef,
-    isPinned: isCompactHeaderPinned,
+    nowPanelRef: compactNowPanelRef,
+    nowContentRef: compactNowContentRef,
+    dateHeaderRef: compactDateHeaderRef,
+    queueContentRef: compactQueueContentRef,
+    nowContentMaxHeight: compactNowContentMaxHeight,
+    queueContentMaxHeight: compactQueueContentMaxHeight,
   } = useCompactQueuePinning(isCompactLayout)
-  const compactQueuePaneOverflowClassName = isCompactHeaderPinned
-    ? 'overflow-hidden'
-    : 'overflow-auto'
-  const compactQueueContentClassName = isCompactHeaderPinned
-    ? 'min-h-0 flex-1 overflow-auto'
-    : 'flex-none'
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
@@ -173,6 +175,13 @@ export function DayViewPresentation({
   )
   const [compactCalendarHeaderContainer, setCompactCalendarHeaderContainer] =
     useState<HTMLDivElement | null>(null)
+  const setCompactCalendarHeaderRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      compactDateHeaderRef.current = node
+      setCompactCalendarHeaderContainer(node)
+    },
+    [compactDateHeaderRef],
+  )
   const {
     width: queueWidth,
     maxWidth: maxQueueWidth,
@@ -352,11 +361,7 @@ export function DayViewPresentation({
           className={cn(
             'relative flex w-full flex-col',
             isCompactLayout
-              ? cn(
-                  'shrink-0 border-b border-border',
-                  'max-h-(--queue-max-height)',
-                  compactQueuePaneOverflowClassName,
-                )
+              ? 'shrink-0 overflow-hidden border-b border-border max-h-(--queue-max-height)'
               : 'md:flex-none',
             !isCompactLayout &&
               (activeViewMode === 'kanban'
@@ -370,16 +375,37 @@ export function DayViewPresentation({
           {activeViewMode === 'kanban' && kanbanFilterRow}
 
           {isCompactLayout && (
-            <div ref={compactPinnedHeaderRef} className="shrink-0">
-              {nowPanel != null && <NowPanel {...nowPanel} />}
-              <div ref={setCompactCalendarHeaderContainer} />
+            <div className="shrink-0">
+              {nowPanel != null && (
+                <NowPanel
+                  {...nowPanel}
+                  panelRef={compactNowPanelRef}
+                  scrollableContentRef={compactNowContentRef}
+                  scrollableContentMaxHeight={compactNowContentMaxHeight}
+                />
+              )}
+              <div
+                data-testid="compact-date-header"
+                ref={setCompactCalendarHeaderRef}
+              />
             </div>
           )}
 
           <div
+            ref={compactQueueContentRef}
+            data-testid={isCompactLayout ? 'compact-queue-content' : undefined}
             className={cn(
-              isCompactLayout ? compactQueueContentClassName : 'contents',
+              isCompactLayout
+                ? 'min-h-0 shrink-0 overflow-auto max-h-(--compact-queue-content-max-height)'
+                : 'contents',
             )}
+            style={
+              isCompactLayout && compactQueueContentMaxHeight != null
+                ? ({
+                    '--compact-queue-content-max-height': `${String(compactQueueContentMaxHeight)}px`,
+                  } as CompactQueueContentStyle)
+                : undefined
+            }
           >
             {/* Summary header (today's queue only) */}
             <div className="border-b border-border py-2.5">
