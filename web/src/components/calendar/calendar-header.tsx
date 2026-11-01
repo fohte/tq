@@ -63,7 +63,9 @@ export function CalendarHeader({
   const isWeekView = activeView === 'week'
 
   return (
-    <ScreenHeaderBar>
+    <ScreenHeaderBar
+      {...(viewControl === 'week-toggle' ? { className: 'h-7' } : {})}
+    >
       <span className="font-mono text-sm font-bold">
         {formatLocalDate(currentDate)}
       </span>

@@ -2,10 +2,12 @@ import { useLayoutEffect, useRef, useState } from 'react'
 
 export const COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO = 0.4
 const MIN_QUEUE_VIEWPORT_HEIGHT = 16
+const NOW_CONTENT_VIEWPORT_TARGET_HEIGHT = 90
 
 export function useCompactUpperPaneLayout(
   enabled: boolean,
   hasNowPanel: boolean,
+  headerContainerReady: boolean,
 ) {
   const paneRef = useRef<HTMLDivElement>(null)
   const nowPanelRef = useRef<HTMLElement>(null)
@@ -35,12 +37,21 @@ export function useCompactUpperPaneLayout(
         nowPanel != null && nowContent != null
           ? nowPanel.clientHeight - nowContent.clientHeight
           : nowPanelHeight
+      const availableContentHeight = Math.max(
+        0,
+        paneMaxHeight - nowChromeHeight - (dateHeader?.clientHeight ?? 0),
+      )
+      const nowContentReservation = Math.min(
+        NOW_CONTENT_VIEWPORT_TARGET_HEIGHT,
+        availableContentHeight,
+      )
+      const queueReservation = Math.max(
+        MIN_QUEUE_VIEWPORT_HEIGHT,
+        availableContentHeight - nowContentReservation,
+      )
       const nextContentMaxHeight = Math.max(
         0,
-        paneMaxHeight -
-          nowChromeHeight -
-          (dateHeader?.clientHeight ?? 0) -
-          MIN_QUEUE_VIEWPORT_HEIGHT,
+        availableContentHeight - queueReservation,
       )
       setNowContentMaxHeight((current) => {
         if (nowPanel == null || nowContent == null) return undefined
@@ -69,7 +80,7 @@ export function useCompactUpperPaneLayout(
     return () => {
       resizeObserver.disconnect()
     }
-  }, [enabled, hasNowPanel])
+  }, [enabled, hasNowPanel, headerContainerReady])
 
   return {
     paneRef,

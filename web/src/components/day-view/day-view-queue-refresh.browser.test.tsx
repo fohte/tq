@@ -8,14 +8,19 @@ import {
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { page } from '@vitest/browser/context'
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { makeTimeBlockEvent } from '#components/calendar/time-block-event-test-fixtures'
 import { DayViewPresentation } from '#components/day-view/day-view'
 import type { NowPanelProps } from '#components/day-view/now-panel'
 import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { makeMemo } from '#hooks/memo-test-fixtures'
 import { formatLocalDate } from '#lib/date-range'
+
+vi.mock('#components/ui/markdown-editor', () => ({
+  MarkdownEditor: () => <div className="compact-memo-editor" />,
+}))
 
 const queueTasks = Array.from({ length: 5 }, (_, index) =>
   makeTask({
@@ -36,18 +41,32 @@ function tasksForDate(date: Date) {
   return queueTasks.slice(0, count)
 }
 
-function makeNowPanelProps(activityCount: number): NowPanelProps {
+function makeNowPanelProps(
+  activityCount: number,
+  includeNextEvent: boolean,
+): NowPanelProps {
   return {
     model: {
       activities: Array.from({ length: activityCount }, (_, index) => ({
-        kind: 'event' as const,
+        kind: 'task' as const,
         key: `activity-${String(index + 1)}`,
-        title: `Current activity ${String(index + 1)}`,
+        task: makeTask({
+          id: `current-activity-${String(index + 1)}`,
+          title:
+            index === 0
+              ? 'Confirm supplier pricing'
+              : index === 1
+                ? 'Review the launch checklist'
+                : `Current activity ${String(index + 1)}`,
+        }),
+        blockEnd: '2026-07-22T10:00:00.000Z',
         statusLabel: 'in progress',
         isOverrun: false,
       })),
       emptyState: activityCount === 0 ? 'no-time-blocks-today' : null,
-      nextEvent: null,
+      nextEvent: includeNextEvent
+        ? { title: 'Upcoming activity', minutesUntil: 45, isWarning: false }
+        : null,
     },
   }
 }
@@ -59,15 +78,21 @@ interface QueueRefreshController {
 function CompactDayView({
   initialDate,
   windowHeight,
+  windowWidth,
   nowActivityCount,
+  includeNextEvent,
   includeNowPanel,
+  includeCompactMemo,
   includeAllDayEvent,
   registerRefreshCompletion,
 }: {
   initialDate: Date
   windowHeight: number
+  windowWidth?: number
   nowActivityCount: number
+  includeNextEvent: boolean
   includeNowPanel: boolean
+  includeCompactMemo: boolean
   includeAllDayEvent: boolean
   registerRefreshCompletion: (finish: () => void) => void
 }) {
@@ -84,7 +109,16 @@ function CompactDayView({
   allDayEventEnd.setDate(allDayEventEnd.getDate() + 1)
 
   return (
-    <div data-testid="compact-window" style={{ height: windowHeight }}>
+    <div
+      data-testid="compact-window"
+      className={windowWidth == null ? undefined : 'mx-auto'}
+      style={{
+        height: windowHeight,
+        ...(windowWidth == null
+          ? {}
+          : { width: windowWidth, maxWidth: '100%' }),
+      }}
+    >
       <DayViewPresentation
         isLoading={false}
         isQueueRefreshing={isQueueRefreshing}
@@ -105,7 +139,7 @@ function CompactDayView({
         }
         schedules={[]}
         {...(includeNowPanel
-          ? { nowPanel: makeNowPanelProps(nowActivityCount) }
+          ? { nowPanel: makeNowPanelProps(nowActivityCount, includeNextEvent) }
           : {})}
         onCreateTimeBlock={() => {}}
         queueSections={[
@@ -130,6 +164,17 @@ function CompactDayView({
         }}
         viewMode="queue"
         onViewModeChange={() => {}}
+        {...(includeCompactMemo
+          ? {
+              compactMemo: {
+                context: 'work' as const,
+                memo: makeMemo({ content: '- A note for the compact window' }),
+                isLoading: false,
+                loadError: false,
+                onSave: () => Promise.resolve(makeMemo()),
+              },
+            }
+          : {})}
       />
     </div>
   )
@@ -140,8 +185,11 @@ async function renderCompactDayView({
   windowHeight = 820,
   viewportHeight = windowHeight,
   viewportWidth = 760,
+  windowWidth,
   nowActivityCount = 0,
+  includeNextEvent = false,
   includeNowPanel = true,
+  includeCompactMemo = false,
   includeAllDayEvent = false,
   registerRefreshCompletion = () => {},
 }: {
@@ -149,8 +197,11 @@ async function renderCompactDayView({
   windowHeight?: number
   viewportHeight?: number
   viewportWidth?: number
+  windowWidth?: number
   nowActivityCount?: number
+  includeNextEvent?: boolean
   includeNowPanel?: boolean
+  includeCompactMemo?: boolean
   includeAllDayEvent?: boolean
   registerRefreshCompletion?: (finish: () => void) => void
 } = {}) {
@@ -164,8 +215,11 @@ async function renderCompactDayView({
         initialDate={initialDate}
         windowHeight={windowHeight}
         nowActivityCount={nowActivityCount}
+        includeNextEvent={includeNextEvent}
         includeNowPanel={includeNowPanel}
+        includeCompactMemo={includeCompactMemo}
         includeAllDayEvent={includeAllDayEvent}
+        {...(windowWidth == null ? {} : { windowWidth })}
         registerRefreshCompletion={registerRefreshCompletion}
       />
     ),
@@ -314,7 +368,6 @@ function readShortWindowLayout(
     throw new Error('The Previous button is missing')
   }
   const navigationBounds = navigationButton.getBoundingClientRect()
-
   return {
     queueContentScrolled: queueContent.queueContentScrolled,
     queueTaskVisible: queueContent.queueTaskVisible,
@@ -325,6 +378,48 @@ function readShortWindowLayout(
     allDayRowDoesNotOverlapNow:
       allDayBounds.bottom <= nowBounds.top ||
       allDayBounds.top >= nowBounds.bottom,
+  }
+}
+
+function isFullyVisibleWithin(element: HTMLElement, container: HTMLElement) {
+  const elementBounds = element.getBoundingClientRect()
+  const containerBounds = container.getBoundingClientRect()
+  return (
+    elementBounds.height > 0 &&
+    elementBounds.top >= containerBounds.top &&
+    elementBounds.bottom <= containerBounds.bottom
+  )
+}
+
+function readCompactReadableLayout() {
+  const pane = getCompactUpperPane()
+  const nowContent = screen.getByTestId('now-panel-content')
+  const queueContent = screen.getByTestId('compact-queue-content')
+  const secondNowTask = screen.getByText('Review the launch checklist')
+  const progress = queueContent.firstElementChild
+  if (!(progress instanceof HTMLElement)) {
+    throw new Error('The compact progress row is missing')
+  }
+  const firstQueueTask = screen.getByText('Queued task 1')
+  const navigation = document.querySelector<HTMLButtonElement>(
+    '[aria-label="Previous"]',
+  )
+  if (navigation == null) throw new Error('The Previous button is missing')
+
+  return {
+    dateNavigationVisible: isFullyVisibleWithin(navigation, pane),
+    secondNowTaskVisible: isFullyVisibleWithin(secondNowTask, nowContent),
+    progressVisible: isFullyVisibleWithin(progress, queueContent),
+    firstQueueTaskVisible: isFullyVisibleWithin(firstQueueTask, queueContent),
+  }
+}
+
+function readMobileCompactLayout() {
+  const readableLayout = readCompactReadableLayout()
+  return {
+    dateNavigationVisible: readableLayout.dateNavigationVisible,
+    secondNowTaskVisible: readableLayout.secondNowTaskVisible,
+    progressVisible: readableLayout.progressVisible,
   }
 }
 
@@ -431,6 +526,10 @@ describe('DayView compact queue refresh layout', () => {
       windowHeight: 256,
       viewportHeight: 667,
       viewportWidth: 375,
+      windowWidth: 320,
+      nowActivityCount: 3,
+      includeNextEvent: true,
+      includeCompactMemo: true,
       includeAllDayEvent: true,
     })
 
@@ -441,6 +540,45 @@ describe('DayView compact queue refresh layout', () => {
       dateNavigationVisible: true,
       allDayRowBelowUpperPane: true,
       allDayRowDoesNotOverlapNow: true,
+    })
+  })
+
+  it('keeps progress and a queue task readable in a regular-height compact window', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-22T00:00:00'),
+      windowHeight: 800,
+      viewportHeight: 800,
+      viewportWidth: 1280,
+      windowWidth: 320,
+      nowActivityCount: 2,
+      includeNextEvent: true,
+      includeCompactMemo: true,
+    })
+
+    expect(readCompactReadableLayout()).toEqual({
+      dateNavigationVisible: true,
+      secondNowTaskVisible: true,
+      progressVisible: true,
+      firstQueueTaskVisible: true,
+    })
+  })
+
+  it('keeps the second Now task visible in a mobile-height compact window', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-22T00:00:00'),
+      windowHeight: 667,
+      viewportHeight: 667,
+      viewportWidth: 375,
+      windowWidth: 320,
+      nowActivityCount: 2,
+      includeNextEvent: true,
+      includeCompactMemo: true,
+    })
+
+    expect(readMobileCompactLayout()).toEqual({
+      dateNavigationVisible: true,
+      secondNowTaskVisible: true,
+      progressVisible: true,
     })
   })
 

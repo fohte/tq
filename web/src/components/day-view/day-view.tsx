@@ -156,6 +156,8 @@ export function DayViewPresentation({
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
+  const [compactCalendarHeaderContainer, setCompactCalendarHeaderContainer] =
+    useState<HTMLDivElement | null>(null)
   const {
     paneRef: compactQueuePaneRef,
     nowPanelRef: compactNowPanelRef,
@@ -164,7 +166,11 @@ export function DayViewPresentation({
     queueContentRef: compactQueueContentRef,
     nowContentMaxHeight: compactNowContentMaxHeight,
     queueContentMaxHeight: compactQueueContentMaxHeight,
-  } = useCompactUpperPaneLayout(isCompactLayout, nowPanel != null)
+  } = useCompactUpperPaneLayout(
+    isCompactLayout,
+    nowPanel != null,
+    compactCalendarHeaderContainer != null,
+  )
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
@@ -176,8 +182,6 @@ export function DayViewPresentation({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
   )
-  const [compactCalendarHeaderContainer, setCompactCalendarHeaderContainer] =
-    useState<HTMLDivElement | null>(null)
   const setCompactCalendarHeaderRef = useCallback(
     (node: HTMLDivElement | null) => {
       compactDateHeaderRef.current = node
@@ -384,6 +388,7 @@ export function DayViewPresentation({
               {nowPanel != null && (
                 <NowPanel
                   {...nowPanel}
+                  compact
                   panelRef={compactNowPanelRef}
                   scrollableContentRef={compactNowContentRef}
                   scrollableContentMaxHeight={compactNowContentMaxHeight}

@@ -10,6 +10,7 @@ export interface NowPanelProps {
   model: NowPanelModel
   isLoading?: boolean
   desktopWindowControls?: boolean | undefined
+  compact?: boolean | undefined
   panelRef?: Ref<HTMLElement> | undefined
   scrollableContentRef?: Ref<HTMLDivElement> | undefined
   scrollableContentMaxHeight?: number | undefined
@@ -50,20 +51,55 @@ export function NowPanel({
   model,
   isLoading = false,
   desktopWindowControls = hasTqDesktopWindowControls(),
+  compact = false,
   panelRef,
   scrollableContentRef,
   scrollableContentMaxHeight,
 }: NowPanelProps) {
+  const nextEventBanner =
+    model.nextEvent == null ? null : (
+      <div
+        className={
+          model.nextEvent.isWarning
+            ? 'mt-2 -mx-3 flex items-center justify-between gap-3 border-t border-destructive/30 bg-destructive/10 px-3 py-1.5 text-sm text-destructive'
+            : 'mt-2 -mx-3 flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-sm'
+        }
+      >
+        <div className="min-w-0">
+          <span className="font-medium">Next: {model.nextEvent.title}</span>{' '}
+          <span
+            className={
+              model.nextEvent.isWarning
+                ? 'font-semibold'
+                : 'text-muted-foreground'
+            }
+          >
+            in {String(model.nextEvent.minutesUntil)} min
+          </span>
+        </div>
+        {model.nextEvent.meetingUrl != null && (
+          <JoinMeetingButton
+            title={model.nextEvent.title}
+            meetingUrl={model.nextEvent.meetingUrl}
+          />
+        )}
+      </div>
+    )
+
   return (
     <section
       ref={panelRef}
       aria-label="Now"
-      className="shrink-0 border-b border-border bg-background px-3 py-2"
+      className={cn(
+        'shrink-0 border-b border-border bg-background px-3',
+        compact ? 'py-0' : 'py-2',
+      )}
     >
       <div
         className={cn(
-          'mb-1',
+          compact ? 'flex h-5 items-center' : 'mb-1',
           desktopWindowControls && 'electron-titlebar-bar -mx-3 -mt-2',
+          compact && desktopWindowControls && 'h-10',
         )}
       >
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -78,6 +114,7 @@ export function NowPanel({
         }
         className={cn(
           'min-w-0',
+          compact && scrollableContentMaxHeight != null && '-mx-3 px-3',
           scrollableContentMaxHeight == null
             ? undefined
             : 'max-h-(--now-panel-content-max-height) overflow-y-auto',
@@ -100,15 +137,28 @@ export function NowPanel({
                   <TaskRowAppearance
                     key={activity.key}
                     task={activity.task}
-                    size="large"
+                    size={compact ? 'default' : 'large'}
+                    metadataLeading={
+                      compact ? (
+                        <span
+                          className={getActivityStatusClassName(
+                            activity.isOverrun,
+                          )}
+                        >
+                          {activity.statusLabel}
+                        </span>
+                      ) : undefined
+                    }
                     belowMetadata={
-                      <div
-                        className={getActivityStatusClassName(
-                          activity.isOverrun,
-                        )}
-                      >
-                        {activity.statusLabel}
-                      </div>
+                      compact ? undefined : (
+                        <div
+                          className={getActivityStatusClassName(
+                            activity.isOverrun,
+                          )}
+                        >
+                          {activity.statusLabel}
+                        </div>
+                      )
                     }
                   />
                 ) : (
@@ -156,38 +206,12 @@ export function NowPanel({
                   : 'No block now'}
               </div>
             )}
+
+            {compact && nextEventBanner}
           </>
         )}
       </div>
-
-      {!isLoading && model.nextEvent != null && (
-        <div
-          className={
-            model.nextEvent.isWarning
-              ? 'mt-2 -mx-3 flex items-center justify-between gap-3 border-t border-destructive/30 bg-destructive/10 px-3 py-1.5 text-sm text-destructive'
-              : 'mt-2 -mx-3 flex items-center justify-between gap-3 border-t border-border px-3 py-1.5 text-sm'
-          }
-        >
-          <div className="min-w-0">
-            <span className="font-medium">Next: {model.nextEvent.title}</span>{' '}
-            <span
-              className={
-                model.nextEvent.isWarning
-                  ? 'font-semibold'
-                  : 'text-muted-foreground'
-              }
-            >
-              in {String(model.nextEvent.minutesUntil)} min
-            </span>
-          </div>
-          {model.nextEvent.meetingUrl != null && (
-            <JoinMeetingButton
-              title={model.nextEvent.title}
-              meetingUrl={model.nextEvent.meetingUrl}
-            />
-          )}
-        </div>
-      )}
+      {!compact && !isLoading && nextEventBanner}
     </section>
   )
 }
