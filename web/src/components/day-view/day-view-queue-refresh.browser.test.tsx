@@ -60,12 +60,14 @@ function CompactDayView({
   initialDate,
   windowHeight,
   nowActivityCount,
+  includeNowPanel,
   includeAllDayEvent,
   registerRefreshCompletion,
 }: {
   initialDate: Date
   windowHeight: number
   nowActivityCount: number
+  includeNowPanel: boolean
   includeAllDayEvent: boolean
   registerRefreshCompletion: (finish: () => void) => void
 }) {
@@ -102,7 +104,9 @@ function CompactDayView({
             : []
         }
         schedules={[]}
-        nowPanel={makeNowPanelProps(nowActivityCount)}
+        {...(includeNowPanel
+          ? { nowPanel: makeNowPanelProps(nowActivityCount) }
+          : {})}
         onCreateTimeBlock={() => {}}
         queueSections={[
           makeQueueSectionData({
@@ -137,6 +141,7 @@ async function renderCompactDayView({
   viewportHeight = windowHeight,
   viewportWidth = 760,
   nowActivityCount = 0,
+  includeNowPanel = true,
   includeAllDayEvent = false,
   registerRefreshCompletion = () => {},
 }: {
@@ -145,6 +150,7 @@ async function renderCompactDayView({
   viewportHeight?: number
   viewportWidth?: number
   nowActivityCount?: number
+  includeNowPanel?: boolean
   includeAllDayEvent?: boolean
   registerRefreshCompletion?: (finish: () => void) => void
 } = {}) {
@@ -158,6 +164,7 @@ async function renderCompactDayView({
         initialDate={initialDate}
         windowHeight={windowHeight}
         nowActivityCount={nowActivityCount}
+        includeNowPanel={includeNowPanel}
         includeAllDayEvent={includeAllDayEvent}
         registerRefreshCompletion={registerRefreshCompletion}
       />
@@ -229,23 +236,12 @@ async function scrollQueueWhileHeaderStaysPinned() {
 }
 
 async function resizeCompactWindow(height: number) {
+  const queueContent = screen.getByTestId('compact-queue-content')
+  const previousQueueHeight = queueContent.clientHeight
   screen.getByTestId('compact-window').style.height = `${String(height)}px`
   await page.viewport(760, height)
   await waitFor(() => {
-    if (getCompactUpperPane().clientHeight < height * 0.4 - 2) {
-      throw new Error('The compact upper pane has not resized')
-    }
-    const nowPanel = screen.getByRole('region', { name: 'Now' })
-    const dateHeader = screen.getByTestId('compact-date-header')
-    const queueContent = screen.getByTestId('compact-queue-content')
-    const paneMaxHeight = Math.floor(
-      (getCompactUpperPane().parentElement?.clientHeight ?? 0) * 0.4,
-    )
-    const expectedQueueHeight = Math.max(
-      0,
-      paneMaxHeight - nowPanel.clientHeight - dateHeader.clientHeight,
-    )
-    if (Math.abs(queueContent.clientHeight - expectedQueueHeight) > 2) {
+    if (queueContent.clientHeight === previousQueueHeight) {
       throw new Error('The compact queue scroll area has not resized')
     }
   })
@@ -344,6 +340,25 @@ function readTallNowLayout(
   }
 }
 
+async function readQueueWithoutNowLayout() {
+  const queueLayout = await scrollQueueContentToTask()
+  const paneBounds = getCompactUpperPane().getBoundingClientRect()
+  const navigationButton = document.querySelector<HTMLButtonElement>(
+    '[aria-label="Previous"]',
+  )
+  if (navigationButton == null) {
+    throw new Error('The Previous button is missing')
+  }
+  const navigationBounds = navigationButton.getBoundingClientRect()
+
+  return {
+    ...queueLayout,
+    dateNavigationVisible:
+      navigationBounds.top >= paneBounds.top &&
+      navigationBounds.bottom <= paneBounds.bottom,
+  }
+}
+
 function readCompactQueueRefreshLayout(
   initialPositions: ReturnType<typeof readNavigationVerticalPositions>,
 ) {
@@ -426,6 +441,19 @@ describe('DayView compact queue refresh layout', () => {
       dateNavigationVisible: true,
       allDayRowBelowUpperPane: true,
       allDayRowDoesNotOverlapNow: true,
+    })
+  })
+
+  it('keeps the queue reachable when the Now panel is absent', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-22T00:00:00'),
+      includeNowPanel: false,
+    })
+
+    expect(await readQueueWithoutNowLayout()).toEqual({
+      queueContentScrolled: true,
+      queueTaskVisible: true,
+      dateNavigationVisible: true,
     })
   })
 

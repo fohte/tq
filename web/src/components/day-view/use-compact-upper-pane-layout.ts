@@ -1,8 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
+export const COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO = 0.4
 const MIN_QUEUE_VIEWPORT_HEIGHT = 16
 
-export function useCompactQueuePinning(enabled: boolean) {
+export function useCompactUpperPaneLayout(
+  enabled: boolean,
+  hasNowPanel: boolean,
+) {
   const paneRef = useRef<HTMLDivElement>(null)
   const nowPanelRef = useRef<HTMLElement>(null)
   const nowContentRef = useRef<HTMLDivElement>(null)
@@ -19,20 +23,18 @@ export function useCompactQueuePinning(enabled: boolean) {
     const nowContent = nowContentRef.current
     const dateHeader = dateHeaderRef.current
     const queueContent = queueContentRef.current
-    if (
-      pane == null ||
-      nowPanel == null ||
-      nowContent == null ||
-      queueContent == null
-    ) {
-      return
-    }
+    if (pane == null || queueContent == null) return
 
     const updateContentHeight = () => {
       const paneMaxHeight = Math.floor(
-        (pane.parentElement?.clientHeight ?? pane.clientHeight) * 0.4,
+        (pane.parentElement?.clientHeight ?? pane.clientHeight) *
+          COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO,
       )
-      const nowChromeHeight = nowPanel.clientHeight - nowContent.clientHeight
+      const nowPanelHeight = nowPanel?.clientHeight ?? 0
+      const nowChromeHeight =
+        nowPanel != null && nowContent != null
+          ? nowPanel.clientHeight - nowContent.clientHeight
+          : nowPanelHeight
       const nextContentMaxHeight = Math.max(
         0,
         paneMaxHeight -
@@ -40,12 +42,13 @@ export function useCompactQueuePinning(enabled: boolean) {
           (dateHeader?.clientHeight ?? 0) -
           MIN_QUEUE_VIEWPORT_HEIGHT,
       )
-      setNowContentMaxHeight((current) =>
-        current === nextContentMaxHeight ? current : nextContentMaxHeight,
-      )
+      setNowContentMaxHeight((current) => {
+        if (nowPanel == null || nowContent == null) return undefined
+        return current === nextContentMaxHeight ? current : nextContentMaxHeight
+      })
       const nextQueueContentMaxHeight = Math.max(
         MIN_QUEUE_VIEWPORT_HEIGHT,
-        paneMaxHeight - nowPanel.clientHeight - (dateHeader?.clientHeight ?? 0),
+        paneMaxHeight - nowPanelHeight - (dateHeader?.clientHeight ?? 0),
       )
       setQueueContentMaxHeight((current) =>
         current === nextQueueContentMaxHeight
@@ -57,8 +60,8 @@ export function useCompactQueuePinning(enabled: boolean) {
     const resizeObserver = new ResizeObserver(updateContentHeight)
     resizeObserver.observe(pane)
     if (pane.parentElement != null) resizeObserver.observe(pane.parentElement)
-    resizeObserver.observe(nowPanel)
-    resizeObserver.observe(nowContent)
+    if (nowPanel != null) resizeObserver.observe(nowPanel)
+    if (nowContent != null) resizeObserver.observe(nowContent)
     resizeObserver.observe(queueContent)
     if (dateHeader != null) resizeObserver.observe(dateHeader)
     updateContentHeight()
@@ -66,7 +69,7 @@ export function useCompactQueuePinning(enabled: boolean) {
     return () => {
       resizeObserver.disconnect()
     }
-  }, [enabled])
+  }, [enabled, hasNowPanel])
 
   return {
     paneRef,

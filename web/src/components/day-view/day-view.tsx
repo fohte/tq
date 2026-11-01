@@ -22,7 +22,10 @@ import {
   type QueueSectionData,
 } from '#components/day-view/queue-pane'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
-import { useCompactQueuePinning } from '#components/day-view/use-compact-queue-pinning'
+import {
+  COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO,
+  useCompactUpperPaneLayout,
+} from '#components/day-view/use-compact-upper-pane-layout'
 import {
   TaskKanban,
   type TaskKanbanColumn,
@@ -161,7 +164,7 @@ export function DayViewPresentation({
     queueContentRef: compactQueueContentRef,
     nowContentMaxHeight: compactNowContentMaxHeight,
     queueContentMaxHeight: compactQueueContentMaxHeight,
-  } = useCompactQueuePinning(isCompactLayout)
+  } = useCompactUpperPaneLayout(isCompactLayout, nowPanel != null)
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
@@ -199,7 +202,9 @@ export function DayViewPresentation({
   })
   const queuePaneStyle: QueuePaneStyle = {
     '--queue-width': `${String(queueWidth)}px`,
-    '--queue-max-height': isCompactLayout ? '40%' : undefined,
+    '--queue-max-height': isCompactLayout
+      ? `${String(COMPACT_UPPER_PANE_MAX_HEIGHT_RATIO * 100)}%`
+      : undefined,
   }
 
   const openCreateModal = useCallback((range: SelectedRange | null) => {
