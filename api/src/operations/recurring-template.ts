@@ -131,7 +131,6 @@ export const recurringTemplateOperations = [
     attribution: 'agent',
     routes: ['POST /api/recurring-task-templates/:id/occurrences'],
     cli: {
-      group: { description: 'Manage recurring task templates', order: 18 },
       output: { kind: 'json' },
     },
     run: (client, { templateId, occurrenceDate }) =>
