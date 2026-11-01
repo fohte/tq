@@ -80,6 +80,7 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   initialScrollTime?: string | undefined
   viewControl?: CalendarViewControl
+  /** `undefined` renders the header inline; `null` waits for a portal target. */
   headerContainer?: HTMLElement | null | undefined
   selectedDate: Date
   onDateChange: (date: Date) => void
@@ -214,14 +215,18 @@ export function CalendarView({
       viewControl={viewControl}
     />
   )
+  let renderedHeader: React.ReactNode
+  if (headerContainer === undefined) {
+    renderedHeader = header
+  } else if (headerContainer === null) {
+    renderedHeader = null
+  } else {
+    renderedHeader = createPortal(header, headerContainer)
+  }
 
   return (
     <div className="flex h-full flex-col">
-      {headerContainer === undefined
-        ? header
-        : headerContainer == null
-          ? null
-          : createPortal(header, headerContainer)}
+      {renderedHeader}
       {/* overscroll-x-contain stops a horizontal trackpad scroll here from
           chaining into the browser's own back/forward gesture
           (https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior) —

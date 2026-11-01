@@ -7,7 +7,6 @@ import {
   type ReactNode,
   useCallback,
   useMemo,
-  useRef,
   useState,
 } from 'react'
 
@@ -155,6 +154,12 @@ export function DayViewPresentation({
     headerRef: compactPinnedHeaderRef,
     isPinned: isCompactHeaderPinned,
   } = useCompactQueuePinning(isCompactLayout)
+  const compactQueuePaneOverflowClassName = isCompactHeaderPinned
+    ? 'overflow-hidden'
+    : 'overflow-auto'
+  const compactQueueContentClassName = isCompactHeaderPinned
+    ? 'min-h-0 flex-1 overflow-auto'
+    : 'flex-none'
   const activeViewMode = isCompactLayout ? 'queue' : viewMode
   const navigate = useNavigate()
   const [mobileTab, setMobileTab] = useState<MobileTab>(
@@ -192,15 +197,6 @@ export function DayViewPresentation({
     setPendingRange(range)
     setIsCreateModalOpen(true)
   }, [])
-  const taskListRef = useRef<HTMLDivElement>(null)
-  const setTaskListRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      taskListRef.current = node
-      compactQueuePaneRef.current = node
-    },
-    [compactQueuePaneRef],
-  )
-
   const layoutItems: ActionsMenuItem[] = [
     {
       icon: <List className="h-4 w-4" />,
@@ -351,14 +347,15 @@ export function DayViewPresentation({
       <div className={cn('flex min-h-0 flex-1', isCompactLayout && 'flex-col')}>
         {/* Left panel: queue */}
         <div
-          ref={setTaskListRef}
+          ref={compactQueuePaneRef}
+          data-testid={isCompactLayout ? 'compact-upper-pane' : undefined}
           className={cn(
             'relative flex w-full flex-col',
             isCompactLayout
               ? cn(
                   'shrink-0 border-b border-border',
                   'max-h-(--queue-max-height)',
-                  isCompactHeaderPinned ? 'overflow-hidden' : 'overflow-auto',
+                  compactQueuePaneOverflowClassName,
                 )
               : 'md:flex-none',
             !isCompactLayout &&
@@ -381,11 +378,7 @@ export function DayViewPresentation({
 
           <div
             className={cn(
-              isCompactLayout
-                ? isCompactHeaderPinned
-                  ? 'min-h-0 flex-1 overflow-auto'
-                  : 'flex-none'
-                : 'contents',
+              isCompactLayout ? compactQueueContentClassName : 'contents',
             )}
           >
             {/* Summary header (today's queue only) */}
@@ -467,7 +460,7 @@ export function DayViewPresentation({
             <CalendarView
               events={calendarEvents}
               dndCallbacks={dndCallbacks}
-              externalDragContainerRef={taskListRef}
+              externalDragContainerRef={compactQueuePaneRef}
               selectedDate={selectedDate}
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}

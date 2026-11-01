@@ -10,22 +10,16 @@ export function useCompactQueuePinning(enabled: boolean) {
   useLayoutEffect(() => {
     if (!enabled) return
 
-    const updatePinning = () => {
-      const pane = paneRef.current
-      const header = headerRef.current
-      if (pane == null || header == null) return
-
-      const hasQueueViewport =
-        pane.clientHeight - header.clientHeight >=
-        MIN_PINNED_QUEUE_VIEWPORT_HEIGHT
-      setIsPinned((current) =>
-        current === hasQueueViewport ? current : hasQueueViewport,
-      )
-    }
-
     const pane = paneRef.current
     const header = headerRef.current
     if (pane == null || header == null) return
+
+    const updatePinning = () => {
+      const hasQueueViewport =
+        pane.clientHeight - header.clientHeight >=
+        MIN_PINNED_QUEUE_VIEWPORT_HEIGHT
+      setIsPinned(hasQueueViewport)
+    }
 
     const resizeObserver = new ResizeObserver(updatePinning)
     resizeObserver.observe(pane)

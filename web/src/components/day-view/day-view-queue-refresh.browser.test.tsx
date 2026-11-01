@@ -76,7 +76,7 @@ function CompactDayView({
   })
 
   return (
-    <div style={{ height: windowHeight }}>
+    <div data-testid="compact-window" style={{ height: windowHeight }}>
       <DayViewPresentation
         isLoading={false}
         isQueueRefreshing={isQueueRefreshing}
@@ -207,16 +207,20 @@ async function scrollQueueWhileHeaderStaysPinned() {
   return readQueueScrollLayout(scrollPane)
 }
 
+async function resizeCompactWindow(height: number) {
+  screen.getByTestId('compact-window').style.height = `${String(height)}px`
+  await page.viewport(760, height)
+}
+
 function getCompactUpperPane() {
-  const nowPanel = document.querySelector('[aria-label="Now"]')
-  const pane = nowPanel?.parentElement?.parentElement
+  const pane = screen.getByTestId('compact-upper-pane')
   if (!(pane instanceof HTMLElement)) {
     throw new Error('The compact upper pane is missing')
   }
   return pane
 }
 
-async function scrollUpperPaneToQueueTask() {
+async function scrollUpperPaneToQueueTask(taskTitle = 'Queued task 1') {
   const pane = getCompactUpperPane()
   await page.getByRole('region', { name: 'Now' }).wheel({ delta: { y: 500 } })
 
@@ -227,13 +231,20 @@ async function scrollUpperPaneToQueueTask() {
   })
 
   const paneBounds = pane.getBoundingClientRect()
-  const taskBounds = screen.getByText('Queued task 1').getBoundingClientRect()
+  const taskBounds = screen.getByText(taskTitle).getBoundingClientRect()
   return {
     outerPaneScrolled: pane.scrollTop > 0,
     queueTaskVisible:
       taskBounds.top >= paneBounds.top &&
       taskBounds.bottom <= paneBounds.bottom,
   }
+}
+
+function readWindowResizeLayout(
+  expandedWindow: ReturnType<typeof readQueueScrollLayout>,
+  shortWindow: Awaited<ReturnType<typeof scrollUpperPaneToQueueTask>>,
+) {
+  return { expandedWindow, shortWindow }
 }
 
 function readCompactQueueRefreshLayout(
@@ -321,6 +332,39 @@ describe('DayView compact queue refresh layout', () => {
 
     const actual = await scrollUpperPaneToQueueTask()
     const expected = { outerPaneScrolled: true, queueTaskVisible: true }
+    expect(actual).toEqual(expected)
+  })
+
+  it('updates the queue scroll area when the window resizes', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-22T00:00:00'),
+      windowHeight: 320,
+    })
+
+    const pane = getCompactUpperPane()
+    await resizeCompactWindow(820)
+    await waitFor(() => {
+      if (!pane.classList.contains('overflow-hidden')) {
+        throw new Error('The compact header did not become pinned')
+      }
+    })
+
+    const pinnedPositions = readPinnedHeaderPositions()
+    const expandedWindow = await scrollQueueWhileHeaderStaysPinned()
+
+    await resizeCompactWindow(320)
+    await waitFor(() => {
+      if (!pane.classList.contains('overflow-auto')) {
+        throw new Error('The compact header did not become scrollable')
+      }
+    })
+
+    const shortWindow = await scrollUpperPaneToQueueTask('Queued task 5')
+    const actual = readWindowResizeLayout(expandedWindow, shortWindow)
+    const expected = {
+      expandedWindow: { scrolled: true, pinnedPositions },
+      shortWindow: { outerPaneScrolled: true, queueTaskVisible: true },
+    }
     expect(actual).toEqual(expected)
   })
 })
