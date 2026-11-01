@@ -130,6 +130,27 @@ function occurrenceFailureSnapshot() {
   }
 }
 
+function occurrencePendingSnapshot() {
+  return {
+    requestBodies: occurrenceRequestBodies(),
+    dateDisabled:
+      screen.getByLabelText<HTMLInputElement>('Occurrence date').disabled,
+    addDisabled: screen
+      .getByRole('button', { name: /^Add$/ })
+      .hasAttribute('disabled'),
+    dialog: addOccurrenceDialogSnapshot(),
+  }
+}
+
+function occurrencePendingCompletionSnapshot(
+  pending: ReturnType<typeof occurrencePendingSnapshot>,
+) {
+  return {
+    pending,
+    closed: addOccurrenceDialogSnapshot(),
+  }
+}
+
 describe('GeneratedTasksList', () => {
   it('requests due-date-descending rows and preserves the API response order', async () => {
     const olderTask = makeTask({
@@ -420,6 +441,46 @@ describe('GeneratedTasksList', () => {
         date: '2026-03-20',
         error: 'Failed to add the task.',
       },
+    })
+  })
+
+  it('locks the selected date while an occurrence is being created', async () => {
+    mockGet.mockResolvedValue(jsonResponse([]))
+    let resolveCreate: ((response: unknown) => void) | undefined
+    mockCreateOccurrence.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+
+    const user = userEvent.setup()
+    await renderGeneratedTasksList()
+    await user.click(screen.getByRole('button', { name: 'Add task' }))
+    await user.click(screen.getByRole('button', { name: /^Add$/ }))
+    const pending = occurrencePendingSnapshot()
+
+    if (resolveCreate == null) {
+      throw new Error('The occurrence request has not started')
+    }
+    resolveCreate({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve(makeTask({ id: 'task-created', templateId })),
+    })
+    await waitFor(() => {
+      if (screen.queryByRole('dialog') != null) {
+        throw new Error('The add occurrence dialog is still open')
+      }
+    })
+
+    expect(occurrencePendingCompletionSnapshot(pending)).toEqual({
+      pending: {
+        requestBodies: [{ occurrenceDate: '2026-03-20' }],
+        dateDisabled: true,
+        addDisabled: true,
+        dialog: { open: true, date: '2026-03-20', error: null },
+      },
+      closed: { open: false, date: undefined, error: null },
     })
   })
 })

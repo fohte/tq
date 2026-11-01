@@ -40,3 +40,17 @@ export const CreationFailed: Story = {
     error: 'Failed to add the task.',
   },
 }
+
+export const Submitting: Story = {
+  name: 'the dialog disables date changes while creating an occurrence',
+  args: {
+    isPending: true,
+  },
+}
+
+export const MissingDate: Story = {
+  name: 'the dialog disables adding when no occurrence date is selected',
+  args: {
+    occurrenceDate: '',
+  },
+}
