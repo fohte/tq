@@ -5,12 +5,21 @@ import { Hono } from 'hono'
 import { db } from '#db/connection'
 import { recurrenceRules, recurringTaskTemplates, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { recurrenceRuleToResponse, resolveParentId } from '#routes/tasks/shared'
 import {
+  recurrenceRuleToResponse,
+  resolveParentId,
+  taskToResponse,
+} from '#routes/tasks/shared'
+import {
+  createRecurringTaskOccurrenceSchema,
   createRecurringTaskTemplateSchema,
   listRecurringTaskTemplatesQuerySchema,
   updateRecurringTaskTemplateSchema,
 } from '#schemas/recurring-task-template'
+import {
+  afterRecurringTaskOccurrenceCreated,
+  createRecurringTaskOccurrence,
+} from '#services/recurring-task-occurrences'
 import {
   getTemplateLabelNames,
   getTemplateLabelNamesByTemplateIds,
@@ -152,6 +161,54 @@ export const recurringTaskTemplatesApp = new Hono()
           ),
         ),
         200,
+      )
+    },
+  )
+  .post(
+    '/:id/occurrences',
+    zValidator('json', createRecurringTaskOccurrenceSchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const { occurrenceDate } = c.req.valid('json')
+      const result = await db.transaction(async (tx) => {
+        const [template] = await tx
+          .select()
+          .from(recurringTaskTemplates)
+          .where(eq(recurringTaskTemplates.id, id))
+          .for('key share')
+        if (!template) return { kind: 'not-found' as const }
+
+        const labelNames = await getTemplateLabelNames(template.id, tx)
+        const task = await createRecurringTaskOccurrence(
+          tx,
+          template,
+          occurrenceDate,
+          labelNames,
+          c.get('author'),
+        )
+        if (task == null) return { kind: 'conflict' as const }
+        return { kind: 'created' as const, task, labelNames }
+      })
+
+      if (result.kind === 'not-found') {
+        return c.json({ error: 'Recurring task template not found' }, 404)
+      }
+      if (result.kind === 'conflict') {
+        return c.json(
+          { error: 'Recurring task occurrence already exists' },
+          409,
+        )
+      }
+
+      await afterRecurringTaskOccurrenceCreated(
+        result.task.id,
+        result.task.parentId,
+        c.get('origin'),
+      )
+
+      return c.json(
+        taskToResponse(result.task, null, [], result.labelNames),
+        201,
       )
     },
   )

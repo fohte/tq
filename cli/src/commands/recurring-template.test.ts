@@ -296,3 +296,35 @@ describe('recurring-template update', () => {
     })
   })
 })
+
+describe('recurring-template occurrence create', () => {
+  it('posts the template ID and occurrence date', async () => {
+    const templateId = '11111111-1111-4111-8111-111111111111'
+    const responseBody = { id: 'created-task', occurrenceDate: '2031-04-11' }
+
+    expect(
+      await runRecurringTemplateCli(
+        [
+          'recurring-template',
+          'occurrence',
+          'create',
+          templateId,
+          '2031-04-11',
+        ],
+        new Response(JSON.stringify(responseBody), { status: 201 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'POST',
+          pathname: `/api/recurring-task-templates/${templateId}/occurrences`,
+          query: {},
+          body: { occurrenceDate: '2031-04-11' },
+        },
+      ],
+      stdout: [[`${JSON.stringify(responseBody, null, 2)}\n`]],
+      stderr: [],
+    })
+  })
+})

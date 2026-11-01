@@ -7,7 +7,10 @@ import {
   recurrenceRuleFromCli,
 } from '#operations/recurrence-cli'
 import { defineOperation, requestJson } from '#operations/types'
-import { updateRecurringTaskTemplateSchema } from '#schemas/recurring-task-template'
+import {
+  createRecurringTaskOccurrenceSchema,
+  updateRecurringTaskTemplateSchema,
+} from '#schemas/recurring-task-template'
 
 const recurringTemplateIdSchema = pathSegmentSchema(
   'Recurring task template ID',
@@ -20,6 +23,9 @@ const updateRecurringTemplateInputSchema =
 const listRecurringTemplateInputSchema = z.object({
   context: z.enum(['work', 'personal']).optional(),
   enabled: z.enum(['true', 'false']).optional(),
+})
+const createOccurrenceInputSchema = createRecurringTaskOccurrenceSchema.extend({
+  templateId: pathSegmentSchema('Recurring task template ID'),
 })
 
 function mapUpdateCliInput(
@@ -113,6 +119,26 @@ export const recurringTemplateOperations = [
         client.api['recurring-task-templates'][':id'].$patch({
           param: { id: encodePathSegment(id) },
           json,
+        }),
+      ),
+  }),
+  defineOperation(createOccurrenceInputSchema, {
+    path: ['recurring-template', 'occurrence', 'create'],
+    description:
+      'Create one task occurrence from a recurring task template for any date.',
+    positionalArgs: ['templateId', 'occurrenceDate'],
+    kind: 'write',
+    attribution: 'agent',
+    routes: ['POST /api/recurring-task-templates/:id/occurrences'],
+    cli: {
+      group: { description: 'Manage recurring task templates', order: 18 },
+      output: { kind: 'json' },
+    },
+    run: (client, { templateId, occurrenceDate }) =>
+      requestJson(
+        client.api['recurring-task-templates'][':id'].occurrences.$post({
+          param: { id: encodePathSegment(templateId) },
+          json: { occurrenceDate },
         }),
       ),
   }),
