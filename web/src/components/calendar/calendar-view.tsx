@@ -203,32 +203,21 @@ export function CalendarView({
     }
   }, [selectedDate])
 
+  const header = (
+    <CalendarHeader
+      currentDate={selectedDate}
+      activeView={activeView}
+      onPrev={handlePrev}
+      onNext={handleNext}
+      onToday={handleToday}
+      onViewChange={handleViewChange}
+      viewControl={viewControl}
+    />
+  )
+
   return (
     <div className="flex h-full flex-col">
-      {headerContainer == null ? (
-        <CalendarHeader
-          currentDate={selectedDate}
-          activeView={activeView}
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onToday={handleToday}
-          onViewChange={handleViewChange}
-          viewControl={viewControl}
-        />
-      ) : (
-        createPortal(
-          <CalendarHeader
-            currentDate={selectedDate}
-            activeView={activeView}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onToday={handleToday}
-            onViewChange={handleViewChange}
-            viewControl={viewControl}
-          />,
-          headerContainer,
-        )
-      )}
+      {headerContainer == null ? header : createPortal(header, headerContainer)}
       {/* overscroll-x-contain stops a horizontal trackpad scroll here from
           chaining into the browser's own back/forward gesture
           (https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior) —

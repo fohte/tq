@@ -21,25 +21,38 @@ const queueTasks = Array.from({ length: 5 }, (_, index) =>
   }),
 )
 
+const queueTaskCountsByDate = new Map([
+  [20, 0],
+  [21, 1],
+  [22, 5],
+  [23, 0],
+])
+
 function tasksForDate(date: Date) {
-  const count = date.getDate() === 21 ? 1 : date.getDate() === 22 ? 5 : 0
+  const count = queueTaskCountsByDate.get(date.getDate()) ?? 0
   return queueTasks.slice(0, count)
 }
 
-let finishQueueRefresh: (() => void) | undefined
+interface QueueRefreshController {
+  finish: (() => void) | undefined
+}
 
-function CompactDayView() {
-  const [selectedDate, setSelectedDate] = useState(
-    new Date('2026-07-20T00:00:00'),
-  )
+function CompactDayView({
+  initialDate,
+  registerRefreshCompletion,
+}: {
+  initialDate: Date
+  registerRefreshCompletion: (finish: () => void) => void
+}) {
+  const [selectedDate, setSelectedDate] = useState(initialDate)
   const [visibleQueueTasks, setVisibleQueueTasks] = useState(() =>
-    tasksForDate(new Date('2026-07-20T00:00:00')),
+    tasksForDate(initialDate),
   )
   const [isQueueRefreshing, setIsQueueRefreshing] = useState(false)
-  finishQueueRefresh = () => {
+  registerRefreshCompletion(() => {
     setVisibleQueueTasks(tasksForDate(selectedDate))
     setIsQueueRefreshing(false)
-  }
+  })
 
   return (
     <div style={{ height: 820 }}>
@@ -84,6 +97,46 @@ function CompactDayView() {
   )
 }
 
+async function renderCompactDayView({
+  initialDate = new Date('2026-07-20T00:00:00'),
+  registerRefreshCompletion = () => {},
+}: {
+  initialDate?: Date
+  registerRefreshCompletion?: (finish: () => void) => void
+} = {}) {
+  await page.viewport(760, 820)
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const rootRoute = createRootRoute({
+    component: () => (
+      <CompactDayView
+        initialDate={initialDate}
+        registerRefreshCompletion={registerRefreshCompletion}
+      />
+    ),
+  })
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+  await router.load()
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
+}
+
+function finishQueueRefresh(controller: QueueRefreshController) {
+  const finish = controller.finish
+  if (finish == null) {
+    throw new Error('The queue refresh completion is missing')
+  }
+  act(finish)
+}
+
 function readNavigationVerticalPositions() {
   const readButtonPosition = (name: 'Previous' | 'Next') => {
     const button = document.querySelector<HTMLButtonElement>(
@@ -120,13 +173,15 @@ async function scrollQueueWhileHeaderStaysPinned() {
     '[data-scroll-restoration-id="day-view"]',
   )?.parentElement
   if (scrollPane == null) throw new Error('The queue scroll pane is missing')
-  const pinnedPositions = readPinnedHeaderPositions()
   scrollPane.scrollTop = scrollPane.scrollHeight
 
   await waitFor(() => {
-    const expected = { scrolled: true, pinnedPositions }
-    expect(readQueueScrollLayout(scrollPane)).toEqual(expected)
+    if (scrollPane.scrollTop === 0) {
+      throw new Error('The queue did not scroll')
+    }
   })
+
+  return readQueueScrollLayout(scrollPane)
 }
 
 function readCompactQueueRefreshLayout(
@@ -145,52 +200,53 @@ function readCompactQueueRefreshLayout(
 
 describe('DayView compact queue refresh layout', () => {
   it('keeps calendar navigation in place for empty, short, and long queues', async () => {
-    await page.viewport(760, 820)
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
+    const refreshController: QueueRefreshController = { finish: undefined }
+    await renderCompactDayView({
+      registerRefreshCompletion: (finish) => {
+        refreshController.finish = finish
+      },
     })
-    const rootRoute = createRootRoute({ component: CompactDayView })
-    const router = createRouter({
-      routeTree: rootRoute,
-      history: createMemoryHistory({ initialEntries: ['/'] }),
-    })
-    await router.load()
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>,
-    )
 
     const initialPositions = readNavigationVerticalPositions()
+    const transitions = [
+      { previousCount: 0, nextCount: 1 },
+      { previousCount: 1, nextCount: 5 },
+      { previousCount: 5, nextCount: 0 },
+    ]
 
-    for (const expectedCount of [1, 5, 0]) {
+    for (const { previousCount, nextCount } of transitions) {
       await page.getByRole('button', { name: 'Next' }).click()
 
       await waitFor(() => {
         expect(readCompactQueueRefreshLayout(initialPositions)).toEqual({
           isBusy: 'true',
-          visibleQueueTaskCount:
-            expectedCount === 1 ? 0 : expectedCount === 5 ? 1 : 5,
+          visibleQueueTaskCount: previousCount,
           navigationPositions: initialPositions,
           initialPositions,
         })
       })
 
-      act(() => finishQueueRefresh?.())
+      finishQueueRefresh(refreshController)
 
       await waitFor(() => {
         expect(readCompactQueueRefreshLayout(initialPositions)).toEqual({
           isBusy: 'false',
-          visibleQueueTaskCount: expectedCount,
+          visibleQueueTaskCount: nextCount,
           navigationPositions: initialPositions,
           initialPositions,
         })
       })
-
-      if (expectedCount === 5) {
-        await scrollQueueWhileHeaderStaysPinned()
-      }
     }
+  })
+
+  it('keeps Now and date navigation pinned while the five-task queue scrolls', async () => {
+    await renderCompactDayView({
+      initialDate: new Date('2026-07-22T00:00:00'),
+    })
+
+    const pinnedPositions = readPinnedHeaderPositions()
+    const actual = await scrollQueueWhileHeaderStaysPinned()
+    const expected = { scrolled: true, pinnedPositions }
+    expect(actual).toEqual(expected)
   })
 })
