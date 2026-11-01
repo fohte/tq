@@ -8,7 +8,7 @@ import { makeRecurringTemplate } from '#components/recurring/recurring-template-
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import { labelKeys } from '#lib/query-keys'
 import { renderControlledModal } from '#lib/render-controlled-modal'
-import { assertDefined, findVisible } from '#lib/test-utils'
+import { assertDefined, clickSelectOption, findVisible } from '#lib/test-utils'
 
 const { postRecurringTemplate } = vi.hoisted(() => ({
   postRecurringTemplate:
@@ -278,17 +278,26 @@ describe('RecurringTemplateCreateModal', () => {
     await user.click(
       assertDefined(findVisible(screen.getAllByRole('combobox'))),
     )
-    await user.click(await screen.findByRole('option', { name: 'Monthly' }))
+    await clickSelectOption(
+      user,
+      await screen.findByRole('option', { name: 'Monthly' }),
+    )
     fireEvent.change(
       assertDefined(
         findVisible(screen.getAllByPlaceholderText('Day of month (1-31)')),
       ),
       { target: { value: '40' } },
     )
+    await waitFor(() => {
+      expect(screen.queryAllByRole('option')).toEqual([])
+    })
     await user.click(
       assertDefined(findVisible(screen.getAllByRole('combobox'))),
     )
-    await user.click(await screen.findByRole('option', { name: 'Daily' }))
+    await clickSelectOption(
+      user,
+      await screen.findByRole('option', { name: 'Daily' }),
+    )
     await user.click(visibleButton('Create Template'))
 
     await waitFor(() => {
