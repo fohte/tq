@@ -80,6 +80,7 @@ interface CalendarViewProps {
   initialView?: CalendarViewType
   initialScrollTime?: string | undefined
   viewControl?: CalendarViewControl
+  compactHeader?: boolean
   /** `undefined` renders the header inline; `null` waits for a portal target. */
   headerContainer?: HTMLElement | null | undefined
   selectedDate: Date
@@ -100,6 +101,7 @@ export function CalendarView({
   initialView = 'day',
   initialScrollTime,
   viewControl = 'segmented',
+  compactHeader = false,
   headerContainer,
   selectedDate,
   onDateChange,
@@ -213,6 +215,7 @@ export function CalendarView({
       onToday={handleToday}
       onViewChange={handleViewChange}
       viewControl={viewControl}
+      compactHeader={compactHeader}
     />
   )
   let renderedHeader: React.ReactNode

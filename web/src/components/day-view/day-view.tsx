@@ -501,6 +501,7 @@ export function DayViewPresentation({
               onDateChange={onDateChange}
               onVisibleRangeChange={onVisibleRangeChange}
               viewControl={isCompactLayout ? 'week-toggle' : 'segmented'}
+              compactHeader={isCompactLayout}
               headerContainer={
                 isCompactLayout ? compactCalendarHeaderContainer : undefined
               }

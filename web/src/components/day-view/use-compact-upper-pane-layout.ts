@@ -41,26 +41,25 @@ export function useCompactUpperPaneLayout(
         0,
         paneMaxHeight - nowChromeHeight - (dateHeader?.clientHeight ?? 0),
       )
-      const nowContentReservation = Math.min(
-        NOW_CONTENT_VIEWPORT_TARGET_HEIGHT,
+      const queueReservation = Math.min(
+        MIN_QUEUE_VIEWPORT_HEIGHT,
         availableContentHeight,
       )
-      const queueReservation = Math.max(
-        MIN_QUEUE_VIEWPORT_HEIGHT,
-        availableContentHeight - nowContentReservation,
-      )
-      const nextContentMaxHeight = Math.max(
-        0,
+      const nowContentReservation = Math.min(
+        NOW_CONTENT_VIEWPORT_TARGET_HEIGHT,
         availableContentHeight - queueReservation,
+      )
+      const nextNowContentMaxHeight = Math.max(0, nowContentReservation)
+      const nextQueueContentMaxHeight = Math.max(
+        0,
+        availableContentHeight - nextNowContentMaxHeight,
       )
       setNowContentMaxHeight((current) => {
         if (nowPanel == null || nowContent == null) return undefined
-        return current === nextContentMaxHeight ? current : nextContentMaxHeight
+        return current === nextNowContentMaxHeight
+          ? current
+          : nextNowContentMaxHeight
       })
-      const nextQueueContentMaxHeight = Math.max(
-        MIN_QUEUE_VIEWPORT_HEIGHT,
-        paneMaxHeight - nowPanelHeight - (dateHeader?.clientHeight ?? 0),
-      )
       setQueueContentMaxHeight((current) =>
         current === nextQueueContentMaxHeight
           ? current

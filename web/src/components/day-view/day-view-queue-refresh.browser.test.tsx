@@ -75,27 +75,38 @@ interface QueueRefreshController {
   finish: (() => void) | undefined
 }
 
-function CompactDayView({
-  initialDate,
-  windowHeight,
-  windowWidth,
-  nowActivityCount,
-  includeNextEvent,
-  includeNowPanel,
-  includeCompactMemo,
-  includeAllDayEvent,
-  registerRefreshCompletion,
-}: {
+interface CompactScenario {
   initialDate: Date
   windowHeight: number
-  windowWidth?: number
+  windowWidth: number | undefined
   nowActivityCount: number
   includeNextEvent: boolean
   includeNowPanel: boolean
   includeCompactMemo: boolean
   includeAllDayEvent: boolean
   registerRefreshCompletion: (finish: () => void) => void
-}) {
+}
+
+type CompactRenderOptions = Partial<
+  Omit<CompactScenario, 'registerRefreshCompletion'>
+> & {
+  viewportHeight?: number
+  viewportWidth?: number
+  registerRefreshCompletion?: (finish: () => void) => void
+}
+
+function CompactDayView({ scenario }: { scenario: CompactScenario }) {
+  const {
+    initialDate,
+    windowHeight,
+    windowWidth,
+    nowActivityCount,
+    includeNextEvent,
+    includeNowPanel,
+    includeCompactMemo,
+    includeAllDayEvent,
+    registerRefreshCompletion,
+  } = scenario
   const [selectedDate, setSelectedDate] = useState(initialDate)
   const [visibleQueueTasks, setVisibleQueueTasks] = useState(() =>
     tasksForDate(initialDate),
@@ -180,49 +191,34 @@ function CompactDayView({
   )
 }
 
-async function renderCompactDayView({
-  initialDate = new Date('2026-07-20T00:00:00'),
-  windowHeight = 820,
-  viewportHeight = windowHeight,
-  viewportWidth = 760,
-  windowWidth,
-  nowActivityCount = 0,
-  includeNextEvent = false,
-  includeNowPanel = true,
-  includeCompactMemo = false,
-  includeAllDayEvent = false,
-  registerRefreshCompletion = () => {},
-}: {
-  initialDate?: Date
-  windowHeight?: number
-  viewportHeight?: number
-  viewportWidth?: number
-  windowWidth?: number
-  nowActivityCount?: number
-  includeNextEvent?: boolean
-  includeNowPanel?: boolean
-  includeCompactMemo?: boolean
-  includeAllDayEvent?: boolean
-  registerRefreshCompletion?: (finish: () => void) => void
-} = {}) {
-  await page.viewport(viewportWidth, viewportHeight)
+async function renderCompactDayView(options: CompactRenderOptions = {}) {
+  const {
+    viewportHeight,
+    viewportWidth,
+    registerRefreshCompletion,
+    ...scenarioOverrides
+  } = options
+  const scenario: CompactScenario = {
+    initialDate: new Date('2026-07-20T00:00:00'),
+    windowHeight: 820,
+    windowWidth: undefined,
+    nowActivityCount: 0,
+    includeNextEvent: false,
+    includeNowPanel: true,
+    includeCompactMemo: false,
+    includeAllDayEvent: false,
+    ...scenarioOverrides,
+    registerRefreshCompletion: registerRefreshCompletion ?? (() => {}),
+  }
+  const height = viewportHeight ?? scenario.windowHeight
+  const width = viewportWidth ?? 760
+
+  await page.viewport(width, height)
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   const rootRoute = createRootRoute({
-    component: () => (
-      <CompactDayView
-        initialDate={initialDate}
-        windowHeight={windowHeight}
-        nowActivityCount={nowActivityCount}
-        includeNextEvent={includeNextEvent}
-        includeNowPanel={includeNowPanel}
-        includeCompactMemo={includeCompactMemo}
-        includeAllDayEvent={includeAllDayEvent}
-        {...(windowWidth == null ? {} : { windowWidth })}
-        registerRefreshCompletion={registerRefreshCompletion}
-      />
-    ),
+    component: () => <CompactDayView scenario={scenario} />,
   })
   const router = createRouter({
     routeTree: rootRoute,
@@ -414,15 +410,6 @@ function readCompactReadableLayout() {
   }
 }
 
-function readMobileCompactLayout() {
-  const readableLayout = readCompactReadableLayout()
-  return {
-    dateNavigationVisible: readableLayout.dateNavigationVisible,
-    secondNowTaskVisible: readableLayout.secondNowTaskVisible,
-    progressVisible: readableLayout.progressVisible,
-  }
-}
-
 function readTallNowLayout(
   content: HTMLElement,
   initialPositions: ReturnType<typeof readNavigationVerticalPositions>,
@@ -543,44 +530,48 @@ describe('DayView compact queue refresh layout', () => {
     })
   })
 
-  it('keeps progress and a queue task readable in a regular-height compact window', async () => {
-    await renderCompactDayView({
-      initialDate: new Date('2026-07-22T00:00:00'),
+  it.each([
+    {
+      viewport: 'desktop compact',
       windowHeight: 800,
       viewportHeight: 800,
       viewportWidth: 1280,
-      windowWidth: 320,
-      nowActivityCount: 2,
-      includeNextEvent: true,
-      includeCompactMemo: true,
-    })
-
-    expect(readCompactReadableLayout()).toEqual({
-      dateNavigationVisible: true,
-      secondNowTaskVisible: true,
-      progressVisible: true,
-      firstQueueTaskVisible: true,
-    })
-  })
-
-  it('keeps the second Now task visible in a mobile-height compact window', async () => {
-    await renderCompactDayView({
-      initialDate: new Date('2026-07-22T00:00:00'),
+      expected: {
+        dateNavigationVisible: true,
+        secondNowTaskVisible: true,
+        progressVisible: true,
+        firstQueueTaskVisible: true,
+      },
+    },
+    {
+      viewport: 'mobile-height compact',
       windowHeight: 667,
       viewportHeight: 667,
       viewportWidth: 375,
-      windowWidth: 320,
-      nowActivityCount: 2,
-      includeNextEvent: true,
-      includeCompactMemo: true,
-    })
+      expected: {
+        dateNavigationVisible: true,
+        secondNowTaskVisible: true,
+        progressVisible: true,
+        firstQueueTaskVisible: false,
+      },
+    },
+  ])(
+    'keeps navigation, Now, and progress readable in a $viewport window',
+    async ({ windowHeight, viewportHeight, viewportWidth, expected }) => {
+      await renderCompactDayView({
+        initialDate: new Date('2026-07-22T00:00:00'),
+        windowHeight,
+        viewportHeight,
+        viewportWidth,
+        windowWidth: 320,
+        nowActivityCount: 2,
+        includeNextEvent: true,
+        includeCompactMemo: true,
+      })
 
-    expect(readMobileCompactLayout()).toEqual({
-      dateNavigationVisible: true,
-      secondNowTaskVisible: true,
-      progressVisible: true,
-    })
-  })
+      expect(readCompactReadableLayout()).toEqual(expected)
+    },
+  )
 
   it('keeps the queue reachable when the Now panel is absent', async () => {
     await renderCompactDayView({
