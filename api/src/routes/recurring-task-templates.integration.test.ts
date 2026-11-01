@@ -91,26 +91,45 @@ function normalizeOccurrenceResponse(response: Record<string, unknown>) {
   }
 }
 
+function expectedOccurrenceResponse(overrides: Record<string, unknown>) {
+  return {
+    id: 'ID',
+    number: 0,
+    title: 'Occurrence title',
+    description: null,
+    status: 'todo',
+    statusReason: null,
+    context: 'personal',
+    commitment: 'inbox',
+    labels: [],
+    startDate: null,
+    dueDate: '2031-04-11',
+    remindAt: null,
+    parentId: null,
+    projectId: null,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    templateId: 'TEMPLATE_ID',
+    occurrenceDate: '2031-04-11',
+    githubLinks: [],
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+    ...overrides,
+  }
+}
+
 function responseWithStatus<T>(status: number, body: T) {
   return { status, body }
 }
 
-function createdOccurrenceOutcome(
+function occurrenceResponseWithEvents(
   status: number,
   body: Record<string, unknown>,
-  history: {
-    action: string
-    authorKind: string
-    authorAgent: string | null
-  }[],
-  lastGeneratedDate: string | null | undefined,
   events: ChangeEvent[],
 ) {
   return {
     status,
     body: normalizeOccurrenceResponse(body),
-    history,
-    lastGeneratedDate,
     events,
   }
 }
@@ -391,7 +410,7 @@ describe('recurring task templates CRUD API', () => {
   })
 
   describe('POST /api/recurring-task-templates/:id/occurrences', () => {
-    it('creates a fully populated task and records the request author', async () => {
+    it('creates a task from the template for a date outside its recurrence rule', async () => {
       const template = await createTemplate(
         'Catch-up {date}',
         { type: 'monthly', interval: 1, dayOfMonth: 1 },
@@ -403,22 +422,40 @@ describe('recurring task templates CRUD API', () => {
           startOffsetDays: 3,
         },
       )
-      await db
-        .update(recurringTaskTemplates)
-        .set({ lastGeneratedDate: '2031-04-08' })
-        .where(eq(recurringTaskTemplates.id, template.id))
 
-      const events: ChangeEvent[] = []
-      stopWatchingChanges = subscribeToChangeEvents((event) =>
-        events.push(event),
+      const res = await postOccurrence(template.id, '2031-04-11')
+      const body = await jsonBody<Record<string, unknown>>(res)
+
+      expect(
+        responseWithStatus(res.status, normalizeOccurrenceResponse(body)),
+      ).toEqual({
+        status: 201,
+        body: expectedOccurrenceResponse({
+          title: 'Catch-up 2031-04-11',
+          description: 'Review the previous cycle',
+          context: 'work',
+          labels: ['release'],
+          startDate: '2031-04-08',
+          dueDate: '2031-04-11',
+          templateId: template.id,
+          occurrenceDate: '2031-04-11',
+        }),
+      })
+    })
+
+    it('records the author of the request in the edit history', async () => {
+      const template = await createTemplate(
+        'Authored occurrence',
+        { type: 'daily', interval: 1 },
+        '2031-04-01',
       )
       const res = await postOccurrence(
         template.id,
         '2031-04-11',
         'llm:occurrence-test-agent',
       )
-      const rawBody = await jsonBody<Record<string, unknown>>(res)
-      const taskId = String(rawBody['id'])
+      const body = await jsonBody<Record<string, unknown>>(res)
+      const taskId = String(body['id'])
       const history = await db
         .select({
           action: edits.action,
@@ -427,58 +464,78 @@ describe('recurring task templates CRUD API', () => {
         })
         .from(edits)
         .where(eq(edits.taskId, taskId))
-      const [storedTemplate] = await db
-        .select({ lastGeneratedDate: recurringTaskTemplates.lastGeneratedDate })
-        .from(recurringTaskTemplates)
-        .where(eq(recurringTaskTemplates.id, template.id))
 
-      expect(
-        createdOccurrenceOutcome(
-          res.status,
-          rawBody,
-          history,
-          storedTemplate?.lastGeneratedDate,
-          events,
-        ),
-      ).toEqual({
+      expect(responseWithStatus(res.status, history)).toEqual({
         status: 201,
-        body: {
-          id: 'ID',
-          number: 0,
-          title: 'Catch-up 2031-04-11',
-          description: 'Review the previous cycle',
-          status: 'todo',
-          statusReason: null,
-          context: 'work',
-          commitment: 'inbox',
-          labels: ['release'],
-          startDate: '2031-04-08',
-          dueDate: '2031-04-11',
-          remindAt: null,
-          parentId: null,
-          projectId: null,
-          recurrenceRuleId: null,
-          recurrenceRule: null,
-          templateId: template.id,
-          occurrenceDate: '2031-04-11',
-          githubLinks: [],
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
-        history: [
+        body: [
           {
             action: 'create',
             authorKind: 'llm',
             authorAgent: 'occurrence-test-agent',
           },
         ],
-        lastGeneratedDate: '2031-04-08',
+      })
+    })
+
+    it('does not advance lastGeneratedDate', async () => {
+      const template = await createTemplate(
+        'Cursor occurrence',
+        { type: 'daily', interval: 1 },
+        '2031-04-01',
+      )
+      await db
+        .update(recurringTaskTemplates)
+        .set({ lastGeneratedDate: '2031-04-08' })
+        .where(eq(recurringTaskTemplates.id, template.id))
+
+      const res = await postOccurrence(template.id, '2031-04-11')
+      const [storedTemplate] = await db
+        .select({ lastGeneratedDate: recurringTaskTemplates.lastGeneratedDate })
+        .from(recurringTaskTemplates)
+        .where(eq(recurringTaskTemplates.id, template.id))
+
+      expect(
+        responseWithStatus(res.status, storedTemplate?.lastGeneratedDate),
+      ).toEqual({
+        status: 201,
+        body: '2031-04-08',
+      })
+    })
+
+    it('includes a parent task in the change event', async () => {
+      const project = await createProject('Occurrence project')
+      const parent = await createTask('Parent task')
+      const template = await createTemplate(
+        'Child occurrence',
+        { type: 'daily', interval: 1 },
+        '2031-04-01',
+        { parentId: parent.id, projectId: project.id },
+      )
+      const events: ChangeEvent[] = []
+      stopWatchingChanges = subscribeToChangeEvents((event) =>
+        events.push(event),
+      )
+
+      const res = await postOccurrence(template.id, '2031-04-11')
+      const body = await jsonBody<Record<string, unknown>>(res)
+      const taskId = String(body['id'])
+
+      expect(occurrenceResponseWithEvents(res.status, body, events)).toEqual({
+        status: 201,
+        body: expectedOccurrenceResponse({
+          title: 'Child occurrence',
+          dueDate: '2031-04-11',
+          parentId: parent.id,
+          projectId: project.id,
+          templateId: template.id,
+          occurrenceDate: '2031-04-11',
+        }),
         events: [
           {
             resource: 'task',
             id: taskId,
             origin: null,
-            taskIds: [taskId],
+            taskIds: [taskId, parent.id],
           },
           {
             resource: 'recurring_task_template',
@@ -504,29 +561,12 @@ describe('recurring task templates CRUD API', () => {
         responseWithStatus(res.status, normalizeOccurrenceResponse(body)),
       ).toEqual({
         status: 201,
-        body: {
-          id: 'ID',
-          number: 0,
+        body: expectedOccurrenceResponse({
           title: 'Disabled occurrence',
-          description: null,
-          status: 'todo',
-          statusReason: null,
-          context: 'personal',
-          commitment: 'inbox',
-          labels: [],
-          startDate: null,
           dueDate: '2025-01-03',
-          remindAt: null,
-          parentId: null,
-          projectId: null,
-          recurrenceRuleId: null,
-          recurrenceRule: null,
           templateId: template.id,
           occurrenceDate: '2025-01-03',
-          githubLinks: [],
-          createdAt: 'TIMESTAMP',
-          updatedAt: 'TIMESTAMP',
-        },
+        }),
       })
     })
 
@@ -537,8 +577,15 @@ describe('recurring task templates CRUD API', () => {
         '2031-04-01',
       )
       const res = await postOccurrence(template.id, '2031-02-30')
+      const existingTasks = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.templateId, template.id))
 
-      expect(res.status).toEqual(400)
+      expect(responseWithStatus(res.status, existingTasks)).toEqual({
+        status: 400,
+        body: [],
+      })
     })
 
     it('returns 404 when the template does not exist', async () => {

@@ -4,12 +4,13 @@ import { ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
 import { recurrenceRules, recurringTaskTemplates } from '#db/schema'
-import { publishChangeEvent } from '#lib/change-events'
 import { SYSTEM_AUTHOR } from '#lib/edits'
 import { computeDueOccurrences, formatDate } from '#services/recurrence'
-import { createRecurringTaskOccurrence } from '#services/recurring-task-occurrences'
+import {
+  afterRecurringTaskOccurrenceCreated,
+  createRecurringTaskOccurrence,
+} from '#services/recurring-task-occurrences'
 import { getTemplateLabelNames } from '#services/recurring-task-template-labels'
-import { syncTaskLinks } from '#services/task-links'
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
@@ -22,7 +23,6 @@ function toError(error: unknown): Error {
 async function generateForTemplate(
   template: typeof recurringTaskTemplates.$inferSelect,
   today: string,
-  onTaskCreated: (taskId: string) => void,
 ): Promise<void> {
   const rule = await db.query.recurrenceRules.findFirst({
     where: eq(recurrenceRules.id, template.recurrenceRuleId),
@@ -89,10 +89,7 @@ async function generateForTemplate(
   })
 
   for (const id of createdTaskIds) {
-    // Must run after the task's transaction commits: syncTaskLinks opens its
-    // own transaction and needs the row to already exist.
-    await syncTaskLinks(id)
-    onTaskCreated(id)
+    await afterRecurringTaskOccurrenceCreated(id, template.parentId, null)
   }
 }
 
@@ -110,14 +107,7 @@ export async function generateDueRecurringTasks(): Promise<void> {
 
   for (const template of templates) {
     const result = await ResultAsync.fromPromise(
-      generateForTemplate(template, today, (id) => {
-        publishChangeEvent({
-          resource: 'task',
-          id,
-          origin: null,
-          taskIds: template.parentId == null ? [id] : [id, template.parentId],
-        })
-      }),
+      generateForTemplate(template, today),
       toError,
     )
     if (result.isErr()) {

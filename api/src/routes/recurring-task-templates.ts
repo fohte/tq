@@ -4,7 +4,6 @@ import { Hono } from 'hono'
 
 import { db } from '#db/connection'
 import { recurrenceRules, recurringTaskTemplates, tasks } from '#db/schema'
-import { publishChangeEvent } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import {
   recurrenceRuleToResponse,
@@ -17,13 +16,15 @@ import {
   listRecurringTaskTemplatesQuerySchema,
   updateRecurringTaskTemplateSchema,
 } from '#schemas/recurring-task-template'
-import { createRecurringTaskOccurrence } from '#services/recurring-task-occurrences'
+import {
+  afterRecurringTaskOccurrenceCreated,
+  createRecurringTaskOccurrence,
+} from '#services/recurring-task-occurrences'
 import {
   getTemplateLabelNames,
   getTemplateLabelNamesByTemplateIds,
   syncTemplateLabels,
 } from '#services/recurring-task-template-labels'
-import { syncTaskLinks } from '#services/task-links'
 
 function templateToResponse(
   template: typeof recurringTaskTemplates.$inferSelect,
@@ -199,16 +200,11 @@ export const recurringTaskTemplatesApp = new Hono()
         )
       }
 
-      await syncTaskLinks(result.task.id)
-      publishChangeEvent({
-        resource: 'task',
-        id: result.task.id,
-        origin: c.get('origin'),
-        taskIds:
-          result.task.parentId == null
-            ? [result.task.id]
-            : [result.task.id, result.task.parentId],
-      })
+      await afterRecurringTaskOccurrenceCreated(
+        result.task.id,
+        result.task.parentId,
+        c.get('origin'),
+      )
 
       return c.json(
         taskToResponse(result.task, null, [], result.labelNames),

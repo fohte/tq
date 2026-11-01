@@ -2,10 +2,12 @@ import { sql } from 'drizzle-orm'
 
 import type { DbTransaction } from '#db/connection'
 import { tasks } from '#db/schema'
+import { publishChangeEvent } from '#lib/change-events'
 import { type EditAuthor, recordEdit } from '#lib/edits'
 import { formatDate } from '#services/recurrence'
 import { replaceOccurrenceDateInTitle } from '#services/recurring-task-templates'
 import { syncTaskLabels } from '#services/task-labels'
+import { syncTaskLinks } from '#services/task-links'
 
 function subtractDays(dateStr: string, days: number): string {
   const date = new Date(`${dateStr}T00:00:00`)
@@ -56,4 +58,19 @@ export async function createRecurringTaskOccurrence(
   await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
   await syncTaskLabels(tx, task.id, labelNames, task.context)
   return task
+}
+
+export async function afterRecurringTaskOccurrenceCreated(
+  taskId: string,
+  parentId: string | null,
+  origin: string | null,
+): Promise<void> {
+  // Link sync opens its own transaction, so the occurrence row must be committed first.
+  await syncTaskLinks(taskId)
+  publishChangeEvent({
+    resource: 'task',
+    id: taskId,
+    origin,
+    taskIds: parentId == null ? [taskId] : [taskId, parentId],
+  })
 }
