@@ -43,3 +43,7 @@ export const listRecurringTaskTemplatesQuerySchema = z.object({
     .transform((v) => v === 'true')
     .optional(),
 })
+
+export const createRecurringTaskOccurrenceSchema = z.object({
+  occurrenceDate: z.iso.date(),
+})

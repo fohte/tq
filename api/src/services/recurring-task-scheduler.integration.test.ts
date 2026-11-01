@@ -254,6 +254,58 @@ describe('generateDueRecurringTasks', () => {
     })
   })
 
+  it('skips an existing occurrence and advances the generated date', async () => {
+    fakeToday('2031-04-10')
+    const template = await createTemplate(
+      { type: 'daily', interval: 1 },
+      {
+        title: 'Digest {date}',
+        anchorDate: '2031-04-01',
+        lastGeneratedDate: '2031-04-06',
+      },
+    )
+    const existingTask = firstOrThrow(
+      await db
+        .insert(tasks)
+        .values({
+          title: 'Manually created occurrence',
+          dueDate: '2031-04-08',
+          templateId: template.id,
+          occurrenceDate: '2031-04-08',
+        })
+        .returning(),
+    )
+
+    await generateDueRecurringTasks()
+
+    expect(await outcomeWithTemplateTitle(template.id)).toEqual({
+      tasks: [
+        expectedTask(template, {
+          title: 'Digest 2031-04-07',
+          dueDate: '2031-04-07',
+          occurrenceDate: '2031-04-07',
+        }),
+        expectedTask(template, {
+          title: existingTask.title,
+          dueDate: '2031-04-08',
+          occurrenceDate: '2031-04-08',
+        }),
+        expectedTask(template, {
+          title: 'Digest 2031-04-09',
+          dueDate: '2031-04-09',
+          occurrenceDate: '2031-04-09',
+        }),
+        expectedTask(template, {
+          title: 'Digest 2031-04-10',
+          dueDate: '2031-04-10',
+          occurrenceDate: '2031-04-10',
+        }),
+      ],
+      lastGeneratedDate: '2031-04-10',
+      templateTitle: 'Digest {date}',
+    })
+  })
+
   it('uses the title saved through the API for the next generated task', async () => {
     fakeToday('2031-04-10')
     const template = await createTemplate(

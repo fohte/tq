@@ -3,24 +3,17 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { ResultAsync } from 'neverthrow'
 
 import { db } from '#db/connection'
-import { recurrenceRules, recurringTaskTemplates, tasks } from '#db/schema'
-import { publishChangeEvent } from '#lib/change-events'
-import { firstOrThrow } from '#lib/drizzle-utils'
-import { recordEdit, SYSTEM_AUTHOR } from '#lib/edits'
+import { recurrenceRules, recurringTaskTemplates } from '#db/schema'
+import { SYSTEM_AUTHOR } from '#lib/edits'
 import { computeDueOccurrences, formatDate } from '#services/recurrence'
+import {
+  afterRecurringTaskOccurrenceCreated,
+  createRecurringTaskOccurrence,
+} from '#services/recurring-task-occurrences'
 import { getTemplateLabelNames } from '#services/recurring-task-template-labels'
-import { replaceOccurrenceDateInTitle } from '#services/recurring-task-templates'
-import { syncTaskLabels } from '#services/task-labels'
-import { syncTaskLinks } from '#services/task-links'
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
-}
-
-function subtractDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() - days)
-  return formatDate(d)
 }
 
 /**
@@ -30,7 +23,6 @@ function subtractDays(dateStr: string, days: number): string {
 async function generateForTemplate(
   template: typeof recurringTaskTemplates.$inferSelect,
   today: string,
-  onTaskCreated: (taskId: string) => void,
 ): Promise<void> {
   const rule = await db.query.recurrenceRules.findFirst({
     where: eq(recurrenceRules.id, template.recurrenceRuleId),
@@ -84,43 +76,20 @@ async function generateForTemplate(
 
     const ids: string[] = []
     for (const occurrenceDate of occurrenceDates) {
-      const created = firstOrThrow(
-        await tx
-          .insert(tasks)
-          .values({
-            title: replaceOccurrenceDateInTitle(template.title, occurrenceDate),
-            description: template.description,
-            status: 'todo',
-            startDate:
-              template.startOffsetDays != null
-                ? subtractDays(occurrenceDate, template.startOffsetDays)
-                : null,
-            dueDate: occurrenceDate,
-            parentId: template.parentId,
-            projectId: template.projectId,
-            context: template.context,
-            templateId: template.id,
-            occurrenceDate,
-          })
-          .returning(),
-      )
-      await recordEdit(
+      const created = await createRecurringTaskOccurrence(
         tx,
-        { taskId: created.id },
-        { action: 'create' },
+        template,
+        occurrenceDate,
+        labelNames,
         SYSTEM_AUTHOR,
       )
-      await syncTaskLabels(tx, created.id, labelNames, created.context)
-      ids.push(created.id)
+      if (created != null) ids.push(created.id)
     }
     return ids
   })
 
   for (const id of createdTaskIds) {
-    // Must run after the task's transaction commits: syncTaskLinks opens its
-    // own transaction and needs the row to already exist.
-    await syncTaskLinks(id)
-    onTaskCreated(id)
+    await afterRecurringTaskOccurrenceCreated(id, template.parentId, null)
   }
 }
 
@@ -138,14 +107,7 @@ export async function generateDueRecurringTasks(): Promise<void> {
 
   for (const template of templates) {
     const result = await ResultAsync.fromPromise(
-      generateForTemplate(template, today, (id) => {
-        publishChangeEvent({
-          resource: 'task',
-          id,
-          origin: null,
-          taskIds: template.parentId == null ? [id] : [id, template.parentId],
-        })
-      }),
+      generateForTemplate(template, today),
       toError,
     )
     if (result.isErr()) {

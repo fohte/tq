@@ -726,6 +726,7 @@ describe('operation tool input schemas', () => {
       queue_get: false,
       queue_list: false,
       queue_set: false,
+      recurring_template_occurrence_create: true,
       saved_view_create: false,
       saved_view_delete: false,
       saved_view_get: false,
