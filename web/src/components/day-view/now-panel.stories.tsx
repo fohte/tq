@@ -180,6 +180,15 @@ export const Compact: Story = {
   },
 }
 
+export const CompactDesktopWindowControls: Story = {
+  name: 'the compact Now panel aligns its desktop title bar with the top edge',
+  tags: ['desktop-only'],
+  args: {
+    ...Compact.args,
+    desktopWindowControls: true,
+  },
+}
+
 const endedBlock = block(
   'block-ended',
   taskA.id,

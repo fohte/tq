@@ -97,9 +97,13 @@ export function NowPanel({
     >
       <div
         className={cn(
-          compact ? 'flex h-5 items-center' : 'mb-1',
-          desktopWindowControls && 'electron-titlebar-bar -mx-3 -mt-2',
-          compact && desktopWindowControls && 'h-10',
+          compact
+            ? desktopWindowControls
+              ? undefined
+              : 'flex h-5 items-center'
+            : 'mb-1',
+          desktopWindowControls && 'electron-titlebar-bar -mx-3',
+          desktopWindowControls && !compact && '-mt-2',
         )}
       >
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
