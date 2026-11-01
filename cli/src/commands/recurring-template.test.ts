@@ -177,6 +177,45 @@ describe('recurring-template update', () => {
     })
   })
 
+  it('sends a parent task number and monthly recurrence day to PATCH', async () => {
+    const id = '11111111-2222-4333-8444-555555555555'
+    const updated = { id, parentId: '42' }
+
+    expect(
+      await runRecurringTemplateCli(
+        [
+          'recurring-template',
+          'update',
+          id,
+          '--parent-id',
+          '42',
+          '--recurrence-type',
+          'monthly',
+          '--recurrence-interval',
+          '1',
+          '--recurrence-day-of-month',
+          '15',
+        ],
+        new Response(JSON.stringify(updated), { status: 200 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'PATCH',
+          pathname: `/api/recurring-task-templates/${id}`,
+          query: {},
+          body: {
+            parentId: '42',
+            recurrenceRule: { type: 'monthly', interval: 1, dayOfMonth: 15 },
+          },
+        },
+      ],
+      stdout: [[`${JSON.stringify(updated, null, 2)}\n`]],
+      stderr: [],
+    })
+  })
+
   it('rejects --enable and --disable together', async () => {
     expect(
       await runRecurringTemplateCli(

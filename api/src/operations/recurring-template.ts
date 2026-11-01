@@ -83,7 +83,12 @@ export const recurringTemplateOperations = [
   }),
   defineOperation(updateRecurringTemplateInputSchema, {
     path: ['recurring-template', 'update'],
-    description: 'Update a recurring task template.',
+    description:
+      'Partially update a recurring task template. Only specified fields change; ' +
+      'omit a field to leave it as-is. Nullable fields can be cleared with ' +
+      'null. `labels` replaces the full set; an empty array clears it. ' +
+      '`recurrenceRule` replaces the full rule. The `{date}` placeholder in ' +
+      '`title` is replaced with the occurrence date when a task is generated.',
     positionalArgs: ['id'],
     kind: 'write',
     routes: ['PATCH /api/recurring-task-templates/:id'],
@@ -92,7 +97,7 @@ export const recurringTemplateOperations = [
       commaSeparatedOptions: ['labels'],
       optionDescriptions: {
         labels:
-          'Comma-separated label names to set (replaces the full set; unknown names are created)',
+          'Comma-separated label names to set (replaces the full set; unknown names are created; pass an empty string to clear)',
       },
       optionMetavars: { labels: 'names' },
       customOptions: [
