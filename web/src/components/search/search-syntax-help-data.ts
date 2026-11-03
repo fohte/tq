@@ -36,6 +36,9 @@ export function getSearchSyntaxHelpSections({
             !(disableSortFilter && token.key === 'sort'),
         )
       : queryTokens
+  const documentedTokens = filterTokens.map((token) =>
+    token.key === 'priority' ? { ...token, values: [] } : token,
+  )
 
   const sections: SearchSyntaxHelpSection[] = []
   if (audience === 'search') {
@@ -51,6 +54,6 @@ export function getSearchSyntaxHelpSections({
       ),
     })
   }
-  sections.push({ title: 'Filters', entries: filterTokens })
+  sections.push({ title: 'Filters', entries: documentedTokens })
   return sections
 }

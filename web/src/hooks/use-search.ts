@@ -3,6 +3,7 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
 
 import { useDebounce } from '#hooks/use-debounce'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
 import {
   fetchTaskList,
   type Task,
@@ -147,8 +148,11 @@ export function applySuggestionToQuery(
 
 export function useSearchSuggestions(prefix: string) {
   const debouncedPrefix = useDebounce(prefix, 150)
+  const prioritySettings = usePrioritySettings({
+    enabled: prefix.toLowerCase().startsWith('priority'),
+  })
 
-  return useQuery({
+  const query = useQuery({
     queryKey: searchKeys.suggestions(debouncedPrefix),
     queryFn: async () => {
       const res = await api.api.tasks.search.suggest.$get({
@@ -158,4 +162,38 @@ export function useSearchSuggestions(prefix: string) {
     },
     enabled: debouncedPrefix.length > 0,
   })
+  const prioritySettingsByToken = new Map(
+    prioritySettings.data?.map((setting) => [
+      `priority:${setting.priority === null ? 'none' : String(setting.priority)}`,
+      setting,
+    ]),
+  )
+
+  const suggestions = query.data?.map((suggestion) => {
+    if (suggestion.category !== 'priority') return suggestion
+
+    return {
+      ...suggestion,
+      display:
+        prioritySettingsByToken.get(suggestion.value)?.name ??
+        (suggestion.value === 'priority:none' ? 'Inbox' : 'Priority'),
+    }
+  })
+  const sortedPrioritySuggestions = (suggestions ?? [])
+    .filter((suggestion) => suggestion.category === 'priority')
+    .sort(
+      (left, right) =>
+        (prioritySettingsByToken.get(left.value)?.sortOrder ?? Infinity) -
+        (prioritySettingsByToken.get(right.value)?.sortOrder ?? Infinity),
+    )
+  let nextPrioritySuggestion = 0
+
+  return {
+    ...query,
+    data: suggestions?.map((suggestion) =>
+      suggestion.category === 'priority'
+        ? (sortedPrioritySuggestions[nextPrioritySuggestion++] ?? suggestion)
+        : suggestion,
+    ),
+  }
 }

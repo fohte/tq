@@ -7,11 +7,13 @@ import {
   makeProject,
   makeProjectDetail,
 } from '#components/project/project-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import type { Project } from '#hooks/use-projects'
 import { ALL_PROJECTS_FILTER, projectKeys } from '#hooks/use-projects'
 import { taskKeys } from '#hooks/use-task-queries'
+import { prioritySettingsKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -24,6 +26,7 @@ queryClient.setQueryData(taskKeys.detail('parent-wrap'), {
   id: 'parent-wrap',
   title: 'Review accessibility across compact task views',
 })
+queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
 
 const emptySuggestHandler = http.get('/api/tasks/search/suggest', () =>
   HttpResponse.json([]),
@@ -104,6 +107,14 @@ export const SortByCreated: Story = {
   },
 }
 
+export const SortByPriority: Story = {
+  name: 'the row sorts tasks by configured priority',
+  args: {
+    defaultSort: 'priority',
+    parsed: { ...defaultParsed, sortBy: 'priority' },
+  },
+}
+
 export const ProjectSelected: Story = {
   name: 'the row shows a selected project filter',
   args: {
@@ -122,6 +133,13 @@ export const LabelSelected: Story = {
   name: 'the row shows a selected label filter',
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
+  },
+}
+
+export const PrioritySelected: Story = {
+  name: 'the row shows a priority filter by its configured name',
+  args: {
+    parsed: { ...defaultParsed, priority: 0 },
   },
 }
 
@@ -178,6 +196,15 @@ export const OpenLabelMenu: Story = {
   args: {
     parsed: { ...defaultParsed, label: 'dev:tq' },
     defaultOpenFilter: 'label',
+  },
+}
+
+export const OpenPriorityMenu: Story = {
+  name: 'the priority filter menu shows configured names in priority order',
+  tags: ['desktop-only'],
+  args: {
+    parsed: { ...defaultParsed, priority: 0 },
+    defaultOpenFilter: 'priority',
   },
 }
 

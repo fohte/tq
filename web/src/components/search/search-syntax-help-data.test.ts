@@ -21,4 +21,20 @@ describe('getSearchSyntaxHelpSections', () => {
       ],
     })
   })
+
+  it('documents priority filtering without exposing numeric labels', () => {
+    const priorityEntry = getSearchSyntaxHelpSections({
+      audience: 'task-filter',
+    })
+      .find(({ title }) => title === 'Filters')
+      ?.entries.find(({ syntax }) => syntax === 'priority:')
+
+    expect(priorityEntry).toEqual({
+      key: 'priority',
+      syntax: 'priority:',
+      description: 'Limit tasks by priority value.',
+      taskFilter: true,
+      values: [],
+    })
+  })
 })

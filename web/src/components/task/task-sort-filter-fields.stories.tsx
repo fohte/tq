@@ -35,3 +35,10 @@ export const SortByDue: Story = {
     sortBy: 'due',
   },
 }
+
+export const SortByPriority: Story = {
+  name: 'tasks are sorted by configured priority',
+  args: {
+    sortBy: 'priority',
+  },
+}

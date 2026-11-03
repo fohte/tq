@@ -32,7 +32,7 @@ type TaskStatus = 'todo' | 'completed'
 export type TaskContext = 'work' | 'personal'
 type TaskListContext = TaskContext | 'all'
 
-export type TaskSortBy = 'created' | 'updated' | 'due'
+export type TaskSortBy = 'created' | 'updated' | 'due' | 'priority'
 type TaskListSortBy = TaskSortBy | 'follow-up'
 type TaskSortOrder = 'asc' | 'desc'
 

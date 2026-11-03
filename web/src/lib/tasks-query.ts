@@ -7,9 +7,11 @@ export const sortOptionValues = [
   'updated',
   'due',
   'created',
+  'priority',
 ] as const satisfies readonly TaskSortBy[]
 
 export const defaultTaskSort = 'updated' as const
+export const defaultTaskListSort = 'priority' as const
 
 export const tasksSearchDefaultQuery = buildSearchQuery({
   freeText: '',
@@ -17,10 +19,19 @@ export const tasksSearchDefaultQuery = buildSearchQuery({
   sortBy: defaultTaskSort,
 })
 
-export function withDefaultSort(parsed: ParsedQuery): ParsedQuery {
+export const taskListSearchDefaultQuery = buildSearchQuery({
+  freeText: '',
+  status: ['todo'],
+  sortBy: defaultTaskListSort,
+})
+
+export function withDefaultSort(
+  parsed: ParsedQuery,
+  defaultSort: TaskSortBy = defaultTaskSort,
+): ParsedQuery {
   return {
     ...parsed,
-    sortBy: parsed.sortBy ?? defaultTaskSort,
+    sortBy: parsed.sortBy ?? defaultSort,
   }
 }
 
@@ -30,6 +41,7 @@ export const sortLabels: Partial<
   updated: 'Updated',
   due: 'Due',
   created: 'Created',
+  priority: 'Priority',
 }
 
 // Compact terms for the `is` chip's value (e.g. "is todo, done").
@@ -74,6 +86,16 @@ export function withLabel(
   return next
 }
 
+export function withPriority(
+  parsed: ParsedQuery,
+  priority: NonNullable<ParsedQuery['priority']> | null | undefined,
+): ParsedQuery {
+  const next = { ...parsed }
+  if (priority === undefined) delete next.priority
+  else next.priority = priority
+  return next
+}
+
 export function withHasPages(
   parsed: ParsedQuery,
   hasPages: boolean,
@@ -103,7 +125,7 @@ export function tagFilterSearch(tag: string): { q: string } {
       freeText: '',
       status: ['todo'],
       label: tag,
-      sortBy: defaultTaskSort,
+      sortBy: defaultTaskListSort,
     }),
   }
 }
