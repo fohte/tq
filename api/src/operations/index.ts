@@ -10,6 +10,7 @@ import { labelOperations } from '#operations/label'
 import { linkOperations } from '#operations/link'
 import { memoOperations } from '#operations/memo'
 import { pageOperations } from '#operations/page'
+import { prioritySettingsOperations } from '#operations/priority-settings'
 import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
 import { recurringTemplateOperations } from '#operations/recurring-template'
@@ -36,6 +37,7 @@ export {
   linkOperations,
   memoOperations,
   pageOperations,
+  prioritySettingsOperations,
   projectOperations,
   queueOperations,
   recurringTemplateOperations,
@@ -62,6 +64,7 @@ export const operations = [
   ...linkOperations,
   ...memoOperations,
   ...pageOperations,
+  ...prioritySettingsOperations,
   ...projectOperations,
   ...queueOperations,
   ...recurringTemplateOperations,

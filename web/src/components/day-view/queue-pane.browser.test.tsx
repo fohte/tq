@@ -29,7 +29,7 @@ const scheduledTask = makeTask({
 const candidateTask = makeTask({
   id: 'candidate-task',
   title: 'Candidate task',
-  candidateReason: { kind: 'active' },
+  candidateReason: { kind: 'priority', label: 'Routine' },
 })
 
 function Providers({ children }: { children: ReactNode }) {

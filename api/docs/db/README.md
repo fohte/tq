@@ -42,6 +42,7 @@
 | [public.schedule_reminder_deliveries](public.schedule_reminder_deliveries.md)       | 4       | Claimed push reminders for individual schedule occurrences.                                        | BASE TABLE |
 | [public.schedule_constraint_weekdays](public.schedule_constraint_weekdays.md)       | 3       | Per-weekday scheduling preferences for a schedule constraint; weekdays without rows are preferred. | BASE TABLE |
 | [public.schedule_constraints](public.schedule_constraints.md)                       | 9       | Optional weekly frequency, consecutive-day, and time-window constraints for a calendar schedule.   | BASE TABLE |
+| [public.priority_settings](public.priority_settings.md)                             | 5       | Display names, descriptions, and ordering for the fixed task priorities.                           | BASE TABLE |
 
 ## Stored procedures and functions
 

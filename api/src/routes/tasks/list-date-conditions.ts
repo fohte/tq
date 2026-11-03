@@ -16,11 +16,13 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { db } from '#db/connection'
 import { taskQueueItems, taskQueues, tasks } from '#db/schema'
 import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
+import type { PrioritySetting } from '#schemas/priority-settings'
 import type { ListTasksQuery } from '#schemas/task'
 import {
   hasNoBlockingStateCondition,
   hasUnacknowledgedResolvedTaskWaitCondition,
 } from '#services/task-blockers'
+import { resolveTaskCandidateStageSql } from '#services/task-candidate-stages'
 import { resolvePeriodStart } from '#services/task-queues'
 
 type TaskDateFilters = Pick<
@@ -82,7 +84,10 @@ function taskIsNotQueuedOn(date: string) {
   )
 }
 
-export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
+export function buildTaskDateConditions(
+  query: TaskDateFilters,
+  settings: PrioritySetting[],
+): SQL[] {
   const conditions: SQL[] = []
 
   if (query.dateFrom != null || query.dateTo != null) {
@@ -107,14 +112,12 @@ export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
   if (query.candidatesOn != null) {
     const followUpDue = exists(followUpDueTaskWaitSubquery(query.candidatesOn))
     const waitResolved = hasUnacknowledgedResolvedTaskWaitCondition()
+    const candidateStage = resolveTaskCandidateStageSql(
+      query.candidatesOn,
+      settings,
+    )
     const candidateCondition = and(
-      or(
-        lte(tasks.dueDate, query.candidatesOn),
-        lte(tasks.startDate, query.candidatesOn),
-        gte(tasks.priority, 0),
-        followUpDue,
-        waitResolved,
-      ),
+      or(sql`${candidateStage} IS NOT NULL`),
       taskIsNotQueuedOn(query.candidatesOn),
       or(hasNoBlockingStateCondition(), followUpDue, waitResolved),
     )

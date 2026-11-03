@@ -387,7 +387,7 @@ function makeExpectedQueueTransitionOutput({
         : [
             makeQueueCandidate({
               task: candidate,
-              reason: { kind: 'active' },
+              reason: { kind: 'priority', label: 'Routine' },
             }),
           ],
   }
@@ -941,19 +941,19 @@ describe('day-view route queue date transition', () => {
       id: 'old-candidate',
       title: 'Old candidate',
       context: 'work',
-      candidateReason: { kind: 'active' },
+      candidateReason: { kind: 'priority', label: 'Routine' },
     })
     const intermediateCandidate = makeTask({
       id: 'intermediate-candidate',
       title: 'Intermediate candidate',
       context: 'work',
-      candidateReason: { kind: 'active' },
+      candidateReason: { kind: 'priority', label: 'Routine' },
     })
     const latestCandidate = makeTask({
       id: 'latest-candidate',
       title: 'Latest candidate',
       context: 'work',
-      candidateReason: { kind: 'active' },
+      candidateReason: { kind: 'priority', label: 'Routine' },
     })
     const queues = [
       makeQueue({ key: 'day', name: 'Today' }),
@@ -1415,7 +1415,7 @@ describe('day-view route queue date transition', () => {
       id: 'target-candidate',
       title: 'Target candidate',
       context: 'work',
-      candidateReason: { kind: 'active' },
+      candidateReason: { kind: 'priority', label: 'Routine' },
     })
     const queues = [
       makeQueue({ key: 'day', name: 'Today' }),
@@ -1511,7 +1511,7 @@ describe('day-view route queue date transition', () => {
       id: 'old-candidate',
       title: 'Old candidate',
       context: 'work',
-      candidateReason: { kind: 'active' },
+      candidateReason: { kind: 'priority', label: 'Routine' },
     })
     const queues = [
       makeQueue({ key: 'day', name: 'Today' }),

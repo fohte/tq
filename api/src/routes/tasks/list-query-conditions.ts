@@ -28,8 +28,10 @@ import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
+import type { PrioritySetting } from '#schemas/priority-settings'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
+import { getPrioritySettings } from '#services/priority-settings'
 import {
   hasBlockingStateCondition,
   hasNoBlockingStateCondition,
@@ -96,6 +98,7 @@ function buildConditions(
   ids: string[] | undefined,
   parsed: ReturnType<typeof parseSearchQuery> | null,
   resolvedFilters: ResolvedTaskFilters,
+  prioritySettings: PrioritySetting[],
 ) {
   const conditions = []
 
@@ -289,7 +292,7 @@ function buildConditions(
     conditions.push(isNull(tasks.dueDate))
   }
 
-  conditions.push(...buildTaskDateConditions(query))
+  conditions.push(...buildTaskDateConditions(query, prioritySettings))
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
@@ -333,12 +336,18 @@ function buildConditions(
     sortBy: parsed?.sortBy ?? query.sortBy,
     order: query.order,
     freeTextWords: freeTextWords(parsed?.freeText),
+    prioritySettings,
   }
 }
 
 export async function buildTaskFilterConditions(query: TaskConditionsQuery) {
   const { ids: rawIds, ...filters } = query
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
+  const sortBy = parsed?.sortBy ?? filters.sortBy
+  const prioritySettings =
+    sortBy === 'priority' || filters.candidatesOn != null
+      ? await getPrioritySettings()
+      : []
   const parentIdentifier = parsed?.parentId ?? filters.parentId
   const parentIdentifierString =
     parentIdentifier == null || parentIdentifier === 'root'
@@ -369,5 +378,11 @@ export async function buildTaskFilterConditions(query: TaskConditionsQuery) {
       ? undefined
       : (await resolveTasksByIdsOrNumbers(rawIds.map(String))).ids
 
-  return buildConditions(filters, ids, parsed, resolvedFilters)
+  return buildConditions(
+    filters,
+    ids,
+    parsed,
+    resolvedFilters,
+    prioritySettings,
+  )
 }

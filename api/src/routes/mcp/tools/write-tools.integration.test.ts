@@ -713,6 +713,8 @@ describe('operation tool input schemas', () => {
       page_list: false,
       page_search: false,
       page_update: true,
+      priority_settings_get: false,
+      priority_settings_update: false,
       project_create: false,
       project_delete: false,
       project_get: false,

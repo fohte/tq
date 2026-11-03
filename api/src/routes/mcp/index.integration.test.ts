@@ -46,6 +46,8 @@ const REGISTERED_TOOL_NAMES = [
   'page_list',
   'page_search',
   'page_update',
+  'priority_settings_get',
+  'priority_settings_update',
   'project_create',
   'project_delete',
   'project_get',

@@ -1089,10 +1089,13 @@ describe('task waits API', () => {
         { title: 'Due today task', reason: { kind: 'due-today' } },
         { title: 'Due later task', reason: { kind: 'due-later', days: 2 } },
         { title: 'Starting task', reason: { kind: 'starts', days: 0 } },
-        { title: 'Active task', reason: { kind: 'active' } },
+        {
+          title: 'Active task',
+          reason: { kind: 'priority', label: 'やりたい' },
+        },
         {
           title: 'Priority task with future start',
-          reason: { kind: 'active' },
+          reason: { kind: 'priority', label: 'やりたい' },
         },
       ],
     })
@@ -1153,7 +1156,7 @@ describe('task waits API', () => {
     })
   })
 
-  it('prefers a follow-up reason when the task also has an overdue due date', async () => {
+  it('prefers an overdue reason when the task also has a follow-up due', async () => {
     const now = new Date()
     const tzOffset = offsetWithDifferentUtcDate(now)
     const today = dateAtOffset(now, tzOffset)
@@ -1172,7 +1175,7 @@ describe('task waits API', () => {
       bodyResponseSnapshot(response.status, body[0]?.candidateReason ?? null),
     ).toEqual({
       status: 200,
-      body: { kind: 'follow-up', days: 1 },
+      body: { kind: 'overdue', days: 2 },
     })
   })
 

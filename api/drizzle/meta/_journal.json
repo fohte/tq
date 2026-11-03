@@ -477,6 +477,13 @@
       "when": 1793697944800,
       "tag": "0067_fixed_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793701117023,
+      "tag": "0068_oval_obadiah_stane",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,6 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { tasks } from '#db/schema'
-import { resolveTaskCandidateOrderBy } from '#routes/tasks/list-query-candidate-order'
 import { buildTaskFilterConditions } from '#routes/tasks/list-query-conditions'
 import {
   selectTaskListRows,
@@ -18,7 +17,9 @@ import {
   resolveTaskListOrderBy,
   type TaskSearchMatch,
 } from '#routes/tasks/shared'
+import type { PrioritySetting } from '#schemas/priority-settings'
 import type { CountTasksQuery, ListTasksQuery } from '#schemas/task'
+import { resolveTaskCandidateOrderBy } from '#services/task-candidate-stages'
 
 export { selectTaskListRows } from '#routes/tasks/list-query-rows'
 
@@ -46,12 +47,14 @@ type TaskListQueryResult =
       rows: TaskListRow[]
       ancestorOnlyIds: Set<string>
       matchByTaskId: Map<string, TaskSearchMatch> | undefined
+      prioritySettings: PrioritySetting[]
     }
   | {
       view: 'row'
       rows: TaskListRowWithoutDescription[]
       ancestorOnlyIds: Set<string>
       matchByTaskId: Map<string, TaskSearchMatch> | undefined
+      prioritySettings: PrioritySetting[]
     }
 
 type TaskListQueryRows =
@@ -62,11 +65,13 @@ function makeTaskListQueryResult(
   rows: TaskListQueryRows,
   ancestorOnlyIds: Set<string>,
   matchByTaskId: Map<string, TaskSearchMatch> | undefined,
+  prioritySettings: PrioritySetting[],
 ): TaskListQueryResult {
   return {
     ...rows,
     ancestorOnlyIds,
     matchByTaskId,
+    prioritySettings,
   }
 }
 
@@ -100,6 +105,7 @@ export async function queryTaskList(
     sortBy,
     order,
     freeTextWords: words,
+    prioritySettings,
   } = await buildTaskFilterConditions(query)
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
@@ -110,14 +116,14 @@ export async function queryTaskList(
   const where = conditions.length > 0 ? and(...conditions) : undefined
   const orderBy =
     query.candidatesOn != null
-      ? resolveTaskCandidateOrderBy(query.candidatesOn)
+      ? resolveTaskCandidateOrderBy(query.candidatesOn, prioritySettings)
       : prioritizeTitleMatches
         ? [
             desc(buildTitleMatchCondition(words)),
             desc(tasks.updatedAt),
             desc(tasks.number),
           ]
-        : resolveTaskListOrderBy(sortBy, order)
+        : resolveTaskListOrderBy(sortBy, order, prioritySettings)
   const fullRowsQuery = selectTaskListRows()
     .where(where)
     .orderBy(...orderBy)
@@ -150,7 +156,12 @@ export async function queryTaskList(
       ? await queryTaskSearchMatches(matched, words)
       : undefined
   if (query.includeAncestors !== true || matched.length === 0) {
-    return makeTaskListQueryResult(selectedRows, new Set(), matchByTaskId)
+    return makeTaskListQueryResult(
+      selectedRows,
+      new Set(),
+      matchByTaskId,
+      prioritySettings,
+    )
   }
 
   const matchedIds = matched.map((r) => r.task.id)
@@ -172,7 +183,12 @@ export async function queryTaskList(
     .filter((id) => !matchedIdSet.has(id))
 
   if (newAncestorIds.length === 0) {
-    return makeTaskListQueryResult(selectedRows, new Set(), matchByTaskId)
+    return makeTaskListQueryResult(
+      selectedRows,
+      new Set(),
+      matchByTaskId,
+      prioritySettings,
+    )
   }
 
   if (selectedRows.view === 'full') {
@@ -183,6 +199,7 @@ export async function queryTaskList(
       { view: 'full', rows: [...selectedRows.rows, ...ancestorRows] },
       new Set(newAncestorIds),
       matchByTaskId,
+      prioritySettings,
     )
   }
 
@@ -193,5 +210,6 @@ export async function queryTaskList(
     { view: 'row', rows: [...selectedRows.rows, ...ancestorRows] },
     new Set(newAncestorIds),
     matchByTaskId,
+    prioritySettings,
   )
 }
