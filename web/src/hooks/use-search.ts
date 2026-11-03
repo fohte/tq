@@ -150,7 +150,8 @@ export function applySuggestionToQuery(
 
 export function useSearchSuggestions(prefix: string) {
   const debouncedPrefix = useDebounce(prefix, 150)
-  const isPriorityPrefix = prefix.toLowerCase().startsWith('priority')
+  const isPriorityPrefix =
+    prefix.length > 0 && 'priority:'.startsWith(prefix.toLowerCase())
   const prioritySettings = usePrioritySettings({
     enabled: isPriorityPrefix,
   })

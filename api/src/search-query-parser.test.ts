@@ -239,19 +239,19 @@ describe('getSearchQuerySuggestions', () => {
       { value: 'context:personal', display: 'Personal', category: 'context' },
       {
         value: 'priority:2',
-        display: 'Highest priority',
+        display: 'Priority 2',
         category: 'priority',
       },
-      { value: 'priority:1', display: 'High priority', category: 'priority' },
+      { value: 'priority:1', display: 'Priority 1', category: 'priority' },
       {
         value: 'priority:0',
-        display: 'Normal priority',
+        display: 'Priority 0',
         category: 'priority',
       },
       { value: 'priority:none', display: 'Inbox', category: 'priority' },
       {
         value: 'priority:-1',
-        display: 'Lowest priority',
+        display: 'Priority -1',
         category: 'priority',
       },
       { value: 'sort:due', display: 'Sort by due date', category: 'sort' },

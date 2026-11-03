@@ -5,7 +5,6 @@ import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
-import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { priorityName } from '#components/task/priority-select'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
@@ -419,12 +418,12 @@ export function TaskFilterChipRow({
           ]}
           placeholder="Filter…"
           autoFocus={autoFocus}
-          syntaxHelpSections={getSearchSyntaxHelpSections({
+          syntaxHelpOptions={{
             audience: 'task-filter',
             disableProjectFilter,
             disableStatusFilter,
             disableSortFilter,
-          })}
+          }}
         />
       </div>
 

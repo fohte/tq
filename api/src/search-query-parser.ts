@@ -96,11 +96,11 @@ const searchQueryTokenDefinitions = new Map(
     ),
     priority: defineFixedToken(
       [
-        ['2', 'Highest priority'],
-        ['1', 'High priority'],
-        ['0', 'Normal priority'],
+        ['2', 'Priority 2'],
+        ['1', 'Priority 1'],
+        ['0', 'Priority 0'],
         ['none', 'Inbox'],
-        ['-1', 'Lowest priority'],
+        ['-1', 'Priority -1'],
       ],
       'Limit tasks by priority value.',
       (result, value) => {

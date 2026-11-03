@@ -5,6 +5,7 @@ import { fn } from 'storybook/test'
 
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { makeSuggestion } from '#components/search/search-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { searchKeys } from '#lib/query-keys'
 
@@ -44,6 +45,7 @@ const meta = {
     onBackspaceEmpty: fn(),
     syntaxHelpSections: getSearchSyntaxHelpSections({
       audience: 'task-filter',
+      prioritySettings: makePrioritySettings(),
     }),
   },
 } satisfies Meta<typeof TaskFilterFreeTextInput>

@@ -15,6 +15,7 @@ import {
   makePageSearchResult,
   makeSuggestion,
 } from '#components/search/search-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixtures'
 import type { CurrentRoute } from '#hooks/use-current-route'
@@ -25,6 +26,7 @@ import {
   SEARCH_QUERY_DEBOUNCE_MS,
 } from '#hooks/use-search'
 import type { TaskDetail } from '#hooks/use-tasks'
+import { prioritySettingsKeys } from '#lib/query-keys'
 import { MOBILE_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
 interface MockTask {
@@ -272,6 +274,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )

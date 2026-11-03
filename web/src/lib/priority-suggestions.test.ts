@@ -15,17 +15,17 @@ describe('applyPrioritySettingsToSuggestions', () => {
     const suggestions = [
       makeSuggestion({
         value: 'priority:2',
-        display: 'Highest priority',
+        display: 'Priority 2',
         category: 'priority',
       }),
       makeSuggestion({
         value: 'priority:1',
-        display: 'High priority',
+        display: 'Priority 1',
         category: 'priority',
       }),
       makeSuggestion({
         value: 'priority:0',
-        display: 'Normal priority',
+        display: 'Priority 0',
         category: 'priority',
       }),
       makeSuggestion({
@@ -35,7 +35,7 @@ describe('applyPrioritySettingsToSuggestions', () => {
       }),
       makeSuggestion({
         value: 'priority:-1',
-        display: 'Lowest priority',
+        display: 'Priority -1',
         category: 'priority',
       }),
       makeSuggestion({
