@@ -3,15 +3,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { fn } from 'storybook/test'
 
-import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { makeSuggestion } from '#components/search/search-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
-import { searchKeys } from '#lib/query-keys'
+import { prioritySettingsKeys, searchKeys } from '#lib/query-keys'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
+queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
 
 const suggestionFixtures = [
   makeSuggestion(),
@@ -43,10 +43,7 @@ const meta = {
     freeText: 'hello',
     onCommit: fn(),
     onBackspaceEmpty: fn(),
-    syntaxHelpSections: getSearchSyntaxHelpSections({
-      audience: 'task-filter',
-      prioritySettings: makePrioritySettings(),
-    }),
+    syntaxHelpOptions: { audience: 'task-filter' },
   },
 } satisfies Meta<typeof TaskFilterFreeTextInput>
 

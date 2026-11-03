@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useRef } from 'react'
+
 import {
   getSearchSyntaxHelpSections,
   type SearchSyntaxHelpOptions,
@@ -9,13 +11,44 @@ export function useSearchSyntaxHelpSections(
     enabled: boolean
   },
 ) {
-  const { enabled, ...helpOptions } = options
+  const {
+    enabled,
+    audience = 'search',
+    disableProjectFilter = false,
+    disableStatusFilter = false,
+    disableSortFilter = false,
+  } = options
   const prioritySettings = usePrioritySettings({ enabled })
+  const loggedError = useRef<unknown>(undefined)
 
-  return getSearchSyntaxHelpSections({
-    ...helpOptions,
-    ...(prioritySettings.data == null
-      ? {}
-      : { prioritySettings: prioritySettings.data }),
-  })
+  useEffect(() => {
+    const error = prioritySettings.error
+    if (!enabled || error == null || loggedError.current === error) return
+
+    loggedError.current = error
+    console.error(
+      'Failed to load priority settings for search syntax help',
+      error,
+    )
+  }, [enabled, prioritySettings.error])
+
+  return useMemo(
+    () =>
+      getSearchSyntaxHelpSections({
+        audience,
+        disableProjectFilter,
+        disableStatusFilter,
+        disableSortFilter,
+        ...(prioritySettings.data == null
+          ? {}
+          : { prioritySettings: prioritySettings.data }),
+      }),
+    [
+      audience,
+      disableProjectFilter,
+      disableStatusFilter,
+      disableSortFilter,
+      prioritySettings.data,
+    ],
+  )
 }

@@ -1,5 +1,5 @@
 import type { PrioritySetting } from '#hooks/use-priority-settings'
-import { priorityName } from '#lib/priority-settings'
+import { priorityName, sortByPrioritySettings } from '#lib/priority-settings'
 
 interface SearchSuggestion {
   value: string
@@ -13,12 +13,6 @@ export function applyPrioritySettingsToSuggestions<T extends SearchSuggestion>(
 ): T[] | undefined {
   if (suggestions == null) return undefined
 
-  const settingsByToken = new Map(
-    settings?.map((setting) => [
-      `priority:${setting.priority === null ? 'none' : String(setting.priority)}`,
-      setting,
-    ]),
-  )
   const suggestionsWithNames = suggestions.map((suggestion) => {
     if (suggestion.category !== 'priority') return suggestion
 
@@ -29,13 +23,13 @@ export function applyPrioritySettingsToSuggestions<T extends SearchSuggestion>(
       display: priorityName(settings, priority),
     }
   })
-  const sortedPrioritySuggestions = suggestionsWithNames
-    .filter((suggestion) => suggestion.category === 'priority')
-    .sort(
-      (left, right) =>
-        (settingsByToken.get(left.value)?.sortOrder ?? Infinity) -
-        (settingsByToken.get(right.value)?.sortOrder ?? Infinity),
-    )
+  const sortedPrioritySuggestions = sortByPrioritySettings(
+    suggestionsWithNames.filter(
+      (suggestion) => suggestion.category === 'priority',
+    ),
+    settings,
+    (suggestion) => suggestion.value,
+  )
   const result = [...suggestionsWithNames]
   const prioritySlots = result.flatMap((suggestion, index) =>
     suggestion.category === 'priority' ? [index] : [],

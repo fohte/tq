@@ -4,10 +4,7 @@ import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
-import {
-  type SearchSyntaxHelpOptions,
-  type SearchSyntaxHelpSection,
-} from '#components/search/search-syntax-help-data'
+import { type SearchSyntaxHelpOptions } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import type { Suggestion } from '#hooks/use-search'
 import {
@@ -25,7 +22,6 @@ interface TaskFilterFreeTextInputProps {
   disabledSuggestionCategories?: readonly string[]
   placeholder?: string
   autoFocus?: boolean
-  syntaxHelpSections?: SearchSyntaxHelpSection[]
   syntaxHelpOptions?: Omit<SearchSyntaxHelpOptions, 'prioritySettings'>
 }
 
@@ -43,7 +39,6 @@ export function TaskFilterFreeTextInput({
   disabledSuggestionCategories = [],
   placeholder,
   autoFocus = false,
-  syntaxHelpSections: providedSyntaxHelpSections,
   syntaxHelpOptions,
 }: TaskFilterFreeTextInputProps) {
   const [value, setValue] = useState(freeText)
@@ -51,12 +46,10 @@ export function TaskFilterFreeTextInput({
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const isHelpOpen = isFocused && value.trim() === ''
-  const generatedSyntaxHelpSections = useSearchSyntaxHelpSections({
+  const syntaxHelpSections = useSearchSyntaxHelpSections({
     ...(syntaxHelpOptions ?? { audience: 'task-filter' }),
-    enabled: providedSyntaxHelpSections == null && isHelpOpen,
+    enabled: isHelpOpen,
   })
-  const syntaxHelpSections =
-    providedSyntaxHelpSections ?? generatedSyntaxHelpSections
 
   // Resync when freeText changes for a reason other than our own commit
   // below (e.g. a chip removed elsewhere in the row), but never while the

@@ -42,6 +42,28 @@ describe('getSearchSyntaxHelpSections', () => {
     })
   })
 
+  it('uses neutral priority labels before settings load', () => {
+    const priorityEntry = getSearchSyntaxHelpSections({
+      audience: 'task-filter',
+    })
+      .find(({ title }) => title === 'Filters')
+      ?.entries.find(({ syntax }) => syntax === 'priority:')
+
+    expect(priorityEntry).toEqual({
+      key: 'priority',
+      syntax: 'priority:',
+      description: 'Limit tasks by priority value.',
+      taskFilter: true,
+      values: [
+        { syntax: 'priority:2', display: 'Priority 2' },
+        { syntax: 'priority:1', display: 'Priority 1' },
+        { syntax: 'priority:0', display: 'Priority 0' },
+        { syntax: 'priority:none', display: 'Inbox' },
+        { syntax: 'priority:-1', display: 'Priority -1' },
+      ],
+    })
+  })
+
   it('documents priority DSL values with configured display names', () => {
     const names = ['Amber', 'Blue', 'Coral', 'Green', 'Silver']
     const settings = makePrioritySettings().map((setting, index) => ({

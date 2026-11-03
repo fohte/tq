@@ -2,6 +2,7 @@ import { getSearchQueryHelpTokens } from 'api/search-query-parser'
 
 import { SEARCH_MODE_DEFINITIONS } from '#components/search/search-modal-mode'
 import type { PrioritySetting } from '#hooks/use-priority-settings'
+import { priorityToken, sortByPrioritySettings } from '#lib/priority-settings'
 
 interface SearchSyntaxHelpEntry {
   syntax: string
@@ -46,36 +47,26 @@ export function getSearchSyntaxHelpSections({
 
     const settingsBySyntax = new Map(
       prioritySettings?.map((setting) => [
-        `priority:${setting.priority === null ? 'none' : String(setting.priority)}`,
+        priorityToken(setting.priority),
         setting,
       ]),
     )
-    const originalOrder = new Map(
-      token.values.map(({ syntax }, index) => [syntax, index]),
+    const valuesWithNames = token.values.map((value) => {
+      const setting = settingsBySyntax.get(value.syntax)
+      return setting == null ? value : { ...value, display: setting.name }
+    })
+    const values = sortByPrioritySettings(
+      valuesWithNames,
+      prioritySettings,
+      ({ syntax }) => syntax,
     )
-    const values = token.values
-      .map((value) => {
-        const setting = settingsBySyntax.get(value.syntax)
-        return setting == null ? value : { ...value, display: setting.name }
-      })
-      .sort((left, right) => {
-        const leftSetting = settingsBySyntax.get(left.syntax)
-        const rightSetting = settingsBySyntax.get(right.syntax)
-        if (leftSetting == null || rightSetting == null) {
-          if (leftSetting == null && rightSetting == null) {
-            return (
-              (originalOrder.get(left.syntax) ?? 0) -
-              (originalOrder.get(right.syntax) ?? 0)
-            )
-          }
-          return leftSetting == null ? 1 : -1
-        }
-        return leftSetting.sortOrder - rightSetting.sortOrder
-      })
 
     return {
       ...token,
-      description: `${token.description} Display names follow your priority settings.`,
+      description:
+        prioritySettings != null && prioritySettings.length > 0
+          ? `${token.description} Display names follow your priority settings.`
+          : token.description,
       values,
     }
   })
