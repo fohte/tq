@@ -50,12 +50,12 @@ export function createCommandItems(
 
 interface TaskCommandItemsOptions {
   query: string
-  currentTask: Pick<TaskDetail, 'id' | 'status'>
+  currentTask: Pick<TaskDetail, 'id' | 'number' | 'status'>
   parentTask: Pick<TaskDetail, 'id' | 'number' | 'title'> | undefined
   project: Pick<Project, 'id' | 'title'> | undefined
   openTask: (task: Pick<TaskDetail, 'id'>) => void
   openProject: (project: Pick<Project, 'id'>) => void
-  completeTask: (task: Pick<TaskDetail, 'id'>) => void
+  completeTask: (task: Pick<TaskDetail, 'id' | 'number'>) => void
   copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void
 }
 

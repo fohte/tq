@@ -1,6 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
+import {
+  assertTaskCompletionOk,
+  notifyTaskCompletionFailed,
+} from '#hooks/task-completion-failure'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
@@ -130,6 +134,7 @@ export function useUpdateTaskStatus() {
     }: {
       id: string
       status: 'todo' | 'completed'
+      taskNumber?: number
       statusReason?: 'completed' | 'not_planned' | 'duplicate'
       duplicateOfTaskId?: string
     }) => {
@@ -137,7 +142,8 @@ export function useUpdateTaskStatus() {
         param: { id },
         json: { status, statusReason, duplicateOfTaskId },
       })
-      return unwrapOrThrow(assertOk(res)).json()
+      await assertTaskCompletionOk(res)
+      return res.json()
     },
     onMutate: async ({ id, status, statusReason }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -177,7 +183,11 @@ export function useUpdateTaskStatus() {
 
       return { previousLists, previousDetail }
     },
-    onError: (_err, { id }, context) => {
+    onError: (
+      error,
+      { id, status, taskNumber, statusReason, duplicateOfTaskId },
+      context,
+    ) => {
       if (context?.previousLists) {
         for (const [key, data] of context.previousLists) {
           queryClient.setQueryData(key, data)
@@ -185,6 +195,18 @@ export function useUpdateTaskStatus() {
       }
       if (context?.previousDetail) {
         queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
+      }
+      if (status === 'completed') {
+        notifyTaskCompletionFailed(
+          {
+            kind: 'status',
+            id,
+            ...(taskNumber == null ? {} : { taskNumber }),
+            ...(statusReason == null ? {} : { statusReason }),
+            ...(duplicateOfTaskId == null ? {} : { duplicateOfTaskId }),
+          },
+          error,
+        )
       }
     },
     onSettled: () => {
@@ -369,6 +391,7 @@ export function useCompleteTask() {
       duplicateOfTaskId,
     }: {
       id: string
+      taskNumber?: number
       statusReason?: 'completed' | 'not_planned' | 'duplicate'
       duplicateOfTaskId?: string
     }) => {
@@ -376,7 +399,8 @@ export function useCompleteTask() {
         param: { id },
         json: { statusReason, duplicateOfTaskId },
       })
-      return unwrapOrThrow(assertOk(res)).json()
+      await assertTaskCompletionOk(res)
+      return res.json()
     },
     onMutate: async ({ id, statusReason }) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists })
@@ -420,7 +444,11 @@ export function useCompleteTask() {
 
       return { previousLists, previousDetail }
     },
-    onError: (_err, { id }, context) => {
+    onError: (
+      error,
+      { id, taskNumber, statusReason, duplicateOfTaskId },
+      context,
+    ) => {
       if (context?.previousLists) {
         for (const [key, data] of context.previousLists) {
           queryClient.setQueryData(key, data)
@@ -429,6 +457,16 @@ export function useCompleteTask() {
       if (context?.previousDetail) {
         queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
       }
+      notifyTaskCompletionFailed(
+        {
+          kind: 'complete',
+          id,
+          ...(taskNumber == null ? {} : { taskNumber }),
+          ...(statusReason == null ? {} : { statusReason }),
+          ...(duplicateOfTaskId == null ? {} : { duplicateOfTaskId }),
+        },
+        error,
+      )
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.all })

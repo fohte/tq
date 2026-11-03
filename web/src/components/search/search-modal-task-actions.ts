@@ -23,9 +23,9 @@ export function useSearchModalTaskActions(onOpenChangeRef: {
   const { mutate } = useCompleteTask()
 
   const completeTask = useCallback(
-    (task: Pick<TaskDetail, 'id'>) => {
+    (task: Pick<TaskDetail, 'id' | 'number'>) => {
       onOpenChangeRef.current(false)
-      mutate({ id: task.id })
+      mutate({ id: task.id, taskNumber: task.number })
     },
     [mutate, onOpenChangeRef],
   )
