@@ -217,7 +217,7 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getPanelOutput()).toEqual([
         "Couldn't complete #71",
         'Reply from a supplier',
-        'Blocked by 1 unresolved item.',
+        'Blocked by 1 item.',
         true,
       ])
     })
@@ -282,7 +282,7 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getPanelOutput()).toEqual([
         "Couldn't complete #71",
         'Reply from a supplier',
-        'Blocked by 1 unresolved item.',
+        'Blocked by 1 item.',
         true,
       ])
     })
@@ -296,7 +296,7 @@ describe('TaskCompletionFailurePanel', () => {
     expect(getPanelOutput()).toEqual([
       "Couldn't complete #71",
       'Reply from a supplier',
-      'Blocked by 1 unresolved item.',
+      'Blocked by 1 item.',
       true,
     ])
 
@@ -306,7 +306,7 @@ describe('TaskCompletionFailurePanel', () => {
     })
   })
 
-  it('shows only the server reason for a JSON error response', async () => {
+  it('shows the server reason and status restoration for a JSON error response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((...args: Parameters<typeof fetch>) => {
@@ -331,12 +331,15 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getGenericPanelOutput()).toEqual({
         label: "Couldn't complete #71",
         heading: "Couldn't complete #71",
-        messages: ['The task could not be completed.'],
+        messages: [
+          'The task could not be completed.',
+          'The status was changed back to todo.',
+        ],
       })
     })
   })
 
-  it('shows only the fallback reason for a non-JSON error response', async () => {
+  it('shows the fallback reason and status restoration for a non-JSON error response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((...args: Parameters<typeof fetch>) => {
@@ -358,7 +361,10 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getGenericPanelOutput()).toEqual({
         label: "Couldn't complete #71",
         heading: "Couldn't complete #71",
-        messages: ['The server returned an error (502).'],
+        messages: [
+          'The server returned an error (502).',
+          'The status was changed back to todo.',
+        ],
       })
     })
   })
@@ -391,7 +397,7 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getPanelOutput()).toEqual([
         "Couldn't complete #71",
         'Reply from a supplier',
-        'Blocked by 1 unresolved item.',
+        'Blocked by 1 item.',
         true,
       ])
     })
@@ -401,7 +407,7 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getPanelOutput()).toEqual([
         "Couldn't complete #72",
         'Review the release notes',
-        'Blocked by 1 unresolved item.',
+        'Blocked by 1 item.',
         true,
       ])
     })
@@ -431,7 +437,7 @@ describe('TaskCompletionFailurePanel', () => {
       expect(getPanelOutput()).toEqual([
         "Couldn't complete #71",
         'Reply from a supplier',
-        'Blocked by 1 unresolved item.',
+        'Blocked by 1 item.',
         true,
       ])
     })
@@ -490,6 +496,12 @@ describe('TaskCompletionFailurePanel', () => {
         )
       }
     })
+    expect(getPanelOutput()).toEqual([
+      "Couldn't complete #71",
+      'Reply from a supplier',
+      'Blocked by 1 item.',
+      false,
+    ])
     fireEvent.click(screen.getByRole('button', { name: 'Complete' }))
 
     await waitFor(() => {

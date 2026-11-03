@@ -1,3 +1,4 @@
+import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import { X } from 'lucide-react'
@@ -85,6 +86,7 @@ export function TaskCompletionBlockerPanelAppearance({
   const blockers = [...waits, ...taskBlockers, ...githubBlockers]
   const unresolvedCount = blockers.filter((blocker) => !blocker.resolved).length
   const hasBlockers = blockers.length > 0
+  const canComplete = unresolvedCount === 0 && !isRetryPending
 
   return (
     <section
@@ -123,7 +125,7 @@ export function TaskCompletionBlockerPanelAppearance({
         {hasBlockers ? (
           <>
             <p className="px-4 pb-2 text-xs text-muted-foreground">
-              {`Blocked by ${String(unresolvedCount)} unresolved ${unresolvedCount === 1 ? 'item' : 'items'}.`}
+              {`Blocked by ${String(blockers.length)} ${blockers.length === 1 ? 'item' : 'items'}.`}
             </p>
             <div className="border-t border-border">
               {waits.map((wait) => (
@@ -135,7 +137,7 @@ export function TaskCompletionBlockerPanelAppearance({
                   action={
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       disabled={resolvingWaitId === wait.id}
                       onClick={() => onResolveWait?.(wait.id)}
@@ -189,20 +191,26 @@ export function TaskCompletionBlockerPanelAppearance({
                   ? 'All items resolved.'
                   : 'Resolve every item to complete.'}
               </p>
-              <Button
+              <ButtonPrimitive
                 type="button"
-                variant="destructive"
-                size="sm"
-                disabled={unresolvedCount > 0 || isRetryPending}
+                disabled={!canComplete}
                 onClick={onComplete}
+                className={cn(
+                  'group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding font-mono text-xs font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px',
+                  'h-7 gap-1 rounded-(--btn-radius-sm) px-2.5',
+                  canComplete
+                    ? 'border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20'
+                    : 'border-border bg-background text-muted-foreground-strong hover:bg-muted hover:text-foreground focus-visible:ring-ring/50',
+                )}
               >
                 Complete
-              </Button>
+              </ButtonPrimitive>
             </div>
           </>
         ) : (
           <div className="px-4 pb-3 text-xs text-muted-foreground">
             <p>{message}</p>
+            <p className="mt-1">The status was changed back to todo.</p>
           </div>
         )}
       </div>
