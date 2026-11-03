@@ -1,16 +1,21 @@
 import { sql } from 'drizzle-orm'
 import {
+  bigint,
   check,
   integer,
   pgTable,
   text,
   timestamp,
+  unique,
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 export const prioritySettings = pgTable(
   'priority_settings',
   {
+    id: bigint('id', { mode: 'number' })
+      .generatedAlwaysAsIdentity()
+      .primaryKey(),
     priority: integer('priority'),
     name: text('name').notNull(),
     description: text('description').notNull(),
@@ -24,12 +29,10 @@ export const prioritySettings = pgTable(
       'priority_settings_priority_check',
       sql`${table.priority} IS NULL OR ${table.priority} BETWEEN -1 AND 2`,
     ),
-    uniqueIndex('priority_settings_priority_unique')
+    check('priority_settings_name_check', sql`${table.name} <> ''`),
+    unique('priority_settings_priority_unique')
       .on(table.priority)
-      .where(sql`${table.priority} IS NOT NULL`),
-    uniqueIndex('priority_settings_inbox_unique')
-      .on(table.priority)
-      .where(sql`${table.priority} IS NULL`),
+      .nullsNotDistinct(),
     uniqueIndex('priority_settings_sort_order_unique').on(table.sortOrder),
   ],
 )

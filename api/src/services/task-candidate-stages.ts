@@ -6,7 +6,10 @@ import {
   followUpDueTaskWaitSubquery,
 } from '#routes/tasks/list-query-waits'
 import type { PrioritySetting } from '#schemas/priority-settings'
-import { priorityOrderExpression } from '#services/priority-settings'
+import {
+  priorityOrderExpression,
+  prioritySortOrder,
+} from '#services/priority-settings'
 import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 import { isTaskWaitResolvedAndUnacknowledged } from '#services/task-waits'
 
@@ -42,25 +45,22 @@ function priorityIsBeforeInbox(
   priority: number | null,
   settings: PrioritySetting[],
 ) {
-  if (priority === null) return false
-  const inboxOrder = settings.find(
-    ({ priority }) => priority === null,
-  )?.sortOrder
-  const priorityOrder = settings.find(
-    (entry) => entry.priority === priority,
-  )?.sortOrder
   return (
-    inboxOrder != null && priorityOrder != null && priorityOrder < inboxOrder
+    priority !== null &&
+    prioritySortOrder(settings, priority) < prioritySortOrder(settings, null)
   )
 }
 
 function candidateStageRules(date: string, settings: PrioritySetting[]) {
   const hasFollowUp = exists(followUpDueTaskWaitSubquery(date))
+  const priorityBeforeInbox = sql`
+    ${priorityOrderExpression(settings)} < ${prioritySortOrder(settings, null)}
+  `
   const dueLater = sql`
     ${tasks.dueDate} > ${date}
     AND (
       ${tasks.startDate} <= ${date}
-      OR ${priorityOrderExpression(settings)} < ${settings.find(({ priority }) => priority === null)?.sortOrder ?? 5}
+      OR ${priorityBeforeInbox}
     )
   `
   const startable = sql`${tasks.startDate} <= ${date}`
@@ -107,7 +107,7 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
     },
     {
       stage: 'priority' as const,
-      condition: sql`${priorityOrderExpression(settings)} < ${settings.find(({ priority }) => priority === null)?.sortOrder ?? 5}`,
+      condition: priorityBeforeInbox,
       matches: (task: CandidateTask) =>
         priorityIsBeforeInbox(task.priority, settings),
     },
@@ -119,13 +119,14 @@ export function resolveTaskCandidateStageSql(
   settings: PrioritySetting[],
 ): SQL {
   const stages = candidateStageRules(date, settings)
+  const completedStage = stages.length
   const cases = stages.map(
     ({ condition }, index) => sql`WHEN ${condition} THEN ${index}`,
   )
   const completedCandidate = or(...stages.map(({ condition }) => condition))
   return sql`CASE
     WHEN ${tasks.status} = 'completed' THEN
-      CASE WHEN ${completedCandidate} THEN 7 ELSE NULL END
+      CASE WHEN ${completedCandidate} THEN ${completedStage} ELSE NULL END
     ${sql.join(cases, sql` `)}
     ELSE NULL
   END`

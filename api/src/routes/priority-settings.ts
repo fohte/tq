@@ -4,11 +4,17 @@ import { Hono } from 'hono'
 
 import { db } from '#db/connection'
 import { prioritySettings } from '#db/schema'
+import { throwPrioritySettingsError } from '#routes/priority-settings-error'
 import { updatePrioritySettingsSchema } from '#schemas/priority-settings'
 import { getPrioritySettings } from '#services/priority-settings'
 
 export const prioritySettingsApp = new Hono()
-  .get('/', async (c) => c.json(await getPrioritySettings(), 200))
+  .get('/', (c) =>
+    getPrioritySettings().match(
+      (settings) => c.json(settings, 200),
+      throwPrioritySettingsError,
+    ),
+  )
   .put('/', zValidator('json', updatePrioritySettingsSchema), async (c) => {
     const settings = c.req.valid('json')
     const now = new Date()
@@ -30,5 +36,8 @@ export const prioritySettingsApp = new Hono()
       }
     })
 
-    return c.json(await getPrioritySettings(), 200)
+    return getPrioritySettings().match(
+      (updatedSettings) => c.json(updatedSettings, 200),
+      throwPrioritySettingsError,
+    )
   })

@@ -8,6 +8,13 @@ import { jsonBody, setupTestDb } from '#testing'
 setupTestDb()
 
 const headers = { 'Content-Type': 'application/json' }
+const defaultPrioritySettings: PrioritySetting[] = [
+  { priority: 2, name: '最優先', description: '', sortOrder: 0 },
+  { priority: 1, name: '早めにやる', description: '', sortOrder: 1 },
+  { priority: 0, name: 'やりたい', description: '', sortOrder: 2 },
+  { priority: null, name: 'Inbox', description: '', sortOrder: 3 },
+  { priority: -1, name: '後回し', description: '', sortOrder: 4 },
+]
 
 async function updateSettings(settings: unknown) {
   return app.request('/api/priority-settings', {
@@ -19,7 +26,7 @@ async function updateSettings(settings: unknown) {
 
 async function getSettings() {
   const response = await app.request('/api/priority-settings')
-  return response.json()
+  return jsonBody<PrioritySetting[]>(response)
 }
 
 async function settingsResponseSnapshot(response: Response) {
@@ -29,15 +36,17 @@ async function settingsResponseSnapshot(response: Response) {
   }
 }
 
+function settingsStateSnapshot(status: number, settings: PrioritySetting[]) {
+  return { status, settings }
+}
+
+function priorityOrderSnapshot(ascending: string[], descending: string[]) {
+  return { ascending, descending }
+}
+
 describe('priority settings API', () => {
   it('returns fixed seeded priorities in their initial order', async () => {
-    expect(await getSettings()).toEqual([
-      { priority: 2, name: '最優先', description: '', sortOrder: 0 },
-      { priority: 1, name: '早めにやる', description: '', sortOrder: 1 },
-      { priority: 0, name: 'やりたい', description: '', sortOrder: 2 },
-      { priority: null, name: 'Inbox', description: '', sortOrder: 3 },
-      { priority: -1, name: '後回し', description: '', sortOrder: 4 },
-    ])
+    expect(await getSettings()).toEqual(defaultPrioritySettings)
   })
 
   it('replaces all fixed priority labels, descriptions, and order', async () => {
@@ -72,7 +81,21 @@ describe('priority settings API', () => {
     })
   })
 
-  it('sorts by configured order and due date within the same priority', async () => {
+  it('rejects invalid replacement lists without changing the saved settings', async () => {
+    const invalidSettings = defaultPrioritySettings.map((setting, index) =>
+      index === 4 ? { ...setting, priority: 2 } : setting,
+    )
+
+    const response = await updateSettings(invalidSettings)
+    expect(settingsStateSnapshot(response.status, await getSettings())).toEqual(
+      {
+        status: 400,
+        settings: defaultPrioritySettings,
+      },
+    )
+  })
+
+  it('sorts by configured order, direction, and due date within a priority', async () => {
     await updateSettings([
       { priority: null, name: 'Inbox', description: '', sortOrder: 0 },
       { priority: -1, name: 'Later', description: '', sortOrder: 1 },
@@ -96,14 +119,33 @@ describe('priority settings API', () => {
       '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority',
     )
     const tasks = await jsonBody<TaskListItemResponse[]>(response)
+    const descendingResponse = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority&order=desc',
+    )
+    const descendingTasks =
+      await jsonBody<TaskListItemResponse[]>(descendingResponse)
 
-    expect(tasks.map(({ title }) => title)).toEqual([
-      'Inbox task',
-      'Deferred task',
-      'Earlier due task',
-      'Later due task',
-      'Priority two task',
-    ])
+    expect(
+      priorityOrderSnapshot(
+        tasks.map(({ title }) => title),
+        descendingTasks.map(({ title }) => title),
+      ),
+    ).toEqual({
+      ascending: [
+        'Inbox task',
+        'Deferred task',
+        'Earlier due task',
+        'Later due task',
+        'Priority two task',
+      ],
+      descending: [
+        'Priority two task',
+        'Earlier due task',
+        'Later due task',
+        'Deferred task',
+        'Inbox task',
+      ],
+    })
   })
 
   it('sorts search results with the sort:priority token', async () => {
@@ -160,7 +202,7 @@ describe('priority settings API', () => {
     ])
   })
 
-  it('reorders candidate targets and labels when the Inbox position changes', async () => {
+  it('reorders candidate inclusion and labels when the Inbox position changes', async () => {
     await updateSettings([
       { priority: -1, name: 'Defer', description: '', sortOrder: 0 },
       { priority: 2, name: 'First', description: '', sortOrder: 1 },
@@ -183,6 +225,10 @@ describe('priority settings API', () => {
       priority: 0,
       dueDate: '2036-05-10',
     })
+    await createTask('Deferred due later', {
+      priority: -1,
+      dueDate: '2036-05-12',
+    })
 
     const response = await app.request(
       '/api/tasks?view=row&context=all&status=todo&limit=unlimited&candidatesOn=2036-05-10',
@@ -197,6 +243,10 @@ describe('priority settings API', () => {
     ).toEqual([
       { title: 'Deferred due today', candidateReason: { kind: 'due-today' } },
       { title: 'Routine due today', candidateReason: { kind: 'due-today' } },
+      {
+        title: 'Deferred due later',
+        candidateReason: { kind: 'due-later', days: 2 },
+      },
       {
         title: 'Deferred without dates',
         candidateReason: { kind: 'priority', label: 'Defer' },

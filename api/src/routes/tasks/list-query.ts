@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { db } from '#db/connection'
 import { tasks } from '#db/schema'
+import { throwPrioritySettingsError } from '#routes/priority-settings-error'
 import { buildTaskFilterConditions } from '#routes/tasks/list-query-conditions'
 import {
   selectTaskListRows,
@@ -29,7 +30,11 @@ type TaskListRowWithoutDescription = Awaited<
 >[number]
 
 export async function queryTaskCount(query: CountTasksQuery): Promise<number> {
-  const { conditions } = await buildTaskFilterConditions(query)
+  const conditionsResult = await buildTaskFilterConditions(query)
+  if (conditionsResult.isErr()) {
+    throwPrioritySettingsError(conditionsResult.error)
+  }
+  const { conditions } = conditionsResult.value
   const [result] = await db
     .select({ count: count() })
     .from(tasks)
@@ -100,13 +105,17 @@ export async function queryTaskList(
     prioritizeTitleMatches?: boolean
   } = {},
 ): Promise<TaskListQueryResult> {
+  const conditionsResult = await buildTaskFilterConditions(query)
+  if (conditionsResult.isErr()) {
+    throwPrioritySettingsError(conditionsResult.error)
+  }
   const {
     conditions,
     sortBy,
     order,
     freeTextWords: words,
     prioritySettings,
-  } = await buildTaskFilterConditions(query)
+  } = conditionsResult.value
   const prioritizeTitleMatches =
     options.prioritizeTitleMatches === true &&
     sortBy == null &&

@@ -117,7 +117,7 @@ export function buildTaskDateConditions(
       settings,
     )
     const candidateCondition = and(
-      or(sql`${candidateStage} IS NOT NULL`),
+      sql`${candidateStage} IS NOT NULL`,
       taskIsNotQueuedOn(query.candidatesOn),
       or(hasNoBlockingStateCondition(), followUpDue, waitResolved),
     )

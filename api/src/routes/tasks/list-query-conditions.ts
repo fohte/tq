@@ -12,6 +12,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core'
+import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -340,14 +341,21 @@ function buildConditions(
   }
 }
 
-export async function buildTaskFilterConditions(query: TaskConditionsQuery) {
+export type TaskFilterConditions = ReturnType<typeof buildConditions>
+
+export async function buildTaskFilterConditions(
+  query: TaskConditionsQuery,
+): Promise<Result<TaskFilterConditions, Error>> {
   const { ids: rawIds, ...filters } = query
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const sortBy = parsed?.sortBy ?? filters.sortBy
-  const prioritySettings =
+  const prioritySettingsResult =
     sortBy === 'priority' || filters.candidatesOn != null
       ? await getPrioritySettings()
-      : []
+      : ok([])
+  if (prioritySettingsResult.isErr()) {
+    return err(prioritySettingsResult.error)
+  }
   const parentIdentifier = parsed?.parentId ?? filters.parentId
   const parentIdentifierString =
     parentIdentifier == null || parentIdentifier === 'root'
@@ -378,11 +386,13 @@ export async function buildTaskFilterConditions(query: TaskConditionsQuery) {
       ? undefined
       : (await resolveTasksByIdsOrNumbers(rawIds.map(String))).ids
 
-  return buildConditions(
-    filters,
-    ids,
-    parsed,
-    resolvedFilters,
-    prioritySettings,
+  return ok(
+    buildConditions(
+      filters,
+      ids,
+      parsed,
+      resolvedFilters,
+      prioritySettingsResult.value,
+    ),
   )
 }
