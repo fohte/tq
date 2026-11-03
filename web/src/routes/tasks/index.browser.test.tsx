@@ -28,7 +28,7 @@ import {
 import { Route as TasksRoute } from '#routes/tasks/index'
 import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
 
-const mockUseFilteredTaskTree = vi.fn()
+const mockUseFilteredTaskTree = vi.fn<(options: { q: string }) => unknown>()
 const mockUseCreateTask = vi.fn()
 const mockUseProject = vi.fn<typeof useProject>()
 const mockUseProjects = vi.fn<typeof useProjects>()
@@ -43,8 +43,8 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 })
 
 vi.mock('#hooks/use-filtered-tasks', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useFilteredTaskTree: (...args: unknown[]) => mockUseFilteredTaskTree(...args),
+  useFilteredTaskTree: (options: { q: string }) =>
+    mockUseFilteredTaskTree(options),
 }))
 
 // The project filter select fetches the project list via useProjects. Stub
@@ -131,6 +131,13 @@ function renderTaskList(initialEntry = '/tasks') {
   }
 }
 
+function getTaskListSortSnapshot() {
+  return {
+    sortChip: screen.getByRole('button', { name: /Sort by/ }).textContent,
+    filteredQuery: mockUseFilteredTaskTree.mock.calls[0]?.[0],
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockUseCreateTask.mockReturnValue(
@@ -196,27 +203,23 @@ describe('TaskList sort selector', () => {
   it('defaults to priority and requests priority-sorted data on initial render', async () => {
     renderTaskList()
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Sort by/ }).textContent).toBe(
-        'sort:priority',
-      )
+    await screen.findByRole('button', { name: /Sort by/ })
+
+    expect(getTaskListSortSnapshot()).toEqual({
+      sortChip: 'sort:priority',
+      filteredQuery: { q: 'is:todo sort:priority' },
     })
-    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo sort:priority' },
-    ])
   })
 
   it('applies priority sorting to a q URL that has no sort token', async () => {
     renderTaskList('/tasks?q=is%3Atodo')
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Sort by/ }).textContent).toBe(
-        'sort:priority',
-      )
+    await screen.findByRole('button', { name: /Sort by/ })
+
+    expect(getTaskListSortSnapshot()).toEqual({
+      sortChip: 'sort:priority',
+      filteredQuery: { q: 'is:todo sort:priority' },
     })
-    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo sort:priority' },
-    ])
   })
 
   it('re-requests created-sorted data once "Created" is selected', async () => {
@@ -442,14 +445,12 @@ describe('TaskList URL query encoding', () => {
   it('uses priority when a legacy URL has no valid sort value', async () => {
     renderTaskList('/tasks?showCompleted=true')
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Sort by/ }).textContent).toBe(
-        'sort:priority',
-      )
+    await screen.findByRole('button', { name: /Sort by/ })
+
+    expect(getTaskListSortSnapshot()).toEqual({
+      sortChip: 'sort:priority',
+      filteredQuery: { q: 'sort:priority' },
     })
-    expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'sort:priority' },
-    ])
   })
 
   it('keeps a token none of the filter pickers understand when a known field changes', async () => {

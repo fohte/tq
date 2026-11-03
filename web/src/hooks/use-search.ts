@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
+import { useEffect } from 'react'
 
 import { useDebounce } from '#hooks/use-debounce'
 import { usePrioritySettings } from '#hooks/use-priority-settings'
@@ -11,6 +12,7 @@ import {
 } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { applyPrioritySettingsToSuggestions } from '#lib/priority-suggestions'
 import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
 import {
@@ -148,9 +150,18 @@ export function applySuggestionToQuery(
 
 export function useSearchSuggestions(prefix: string) {
   const debouncedPrefix = useDebounce(prefix, 150)
+  const isPriorityPrefix = prefix.toLowerCase().startsWith('priority')
   const prioritySettings = usePrioritySettings({
-    enabled: prefix.toLowerCase().startsWith('priority'),
+    enabled: isPriorityPrefix,
   })
+  useEffect(() => {
+    if (isPriorityPrefix && prioritySettings.error != null) {
+      console.error(
+        'Failed to load priority settings for search suggestions',
+        prioritySettings.error,
+      )
+    }
+  }, [isPriorityPrefix, prioritySettings.error])
 
   const query = useQuery({
     queryKey: searchKeys.suggestions(debouncedPrefix),
@@ -162,38 +173,9 @@ export function useSearchSuggestions(prefix: string) {
     },
     enabled: debouncedPrefix.length > 0,
   })
-  const prioritySettingsByToken = new Map(
-    prioritySettings.data?.map((setting) => [
-      `priority:${setting.priority === null ? 'none' : String(setting.priority)}`,
-      setting,
-    ]),
-  )
-
-  const suggestions = query.data?.map((suggestion) => {
-    if (suggestion.category !== 'priority') return suggestion
-
-    return {
-      ...suggestion,
-      display:
-        prioritySettingsByToken.get(suggestion.value)?.name ??
-        (suggestion.value === 'priority:none' ? 'Inbox' : 'Priority'),
-    }
-  })
-  const sortedPrioritySuggestions = (suggestions ?? [])
-    .filter((suggestion) => suggestion.category === 'priority')
-    .sort(
-      (left, right) =>
-        (prioritySettingsByToken.get(left.value)?.sortOrder ?? Infinity) -
-        (prioritySettingsByToken.get(right.value)?.sortOrder ?? Infinity),
-    )
-  let nextPrioritySuggestion = 0
 
   return {
     ...query,
-    data: suggestions?.map((suggestion) =>
-      suggestion.category === 'priority'
-        ? (sortedPrioritySuggestions[nextPrioritySuggestion++] ?? suggestion)
-        : suggestion,
-    ),
+    data: applyPrioritySettingsToSuggestions(query.data, prioritySettings.data),
   }
 }

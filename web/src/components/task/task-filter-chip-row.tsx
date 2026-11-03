@@ -28,6 +28,7 @@ import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
 import type { TaskSortBy } from '#hooks/use-tasks'
 import {
+  defaultTaskSearchQuery,
   defaultTaskSort,
   sortOptionValues,
   statusChipLabels,
@@ -223,11 +224,7 @@ export function TaskFilterChipRow({
   }
 
   const query = buildSearchQuery(withDefaultSort(parsed, defaultSort))
-  const defaultQuery = buildSearchQuery({
-    freeText: '',
-    status: ['todo'],
-    sortBy: defaultSort,
-  })
+  const defaultQuery = defaultTaskSearchQuery(defaultSort)
   const statusValue =
     parsed.status?.map((status) => statusChipLabels[status]).join(', ') ?? ''
   const parentValue = parentTaskQuery.isLoading

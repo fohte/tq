@@ -13,17 +13,18 @@ export const sortOptionValues = [
 export const defaultTaskSort = 'updated' as const
 export const defaultTaskListSort = 'priority' as const
 
-export const tasksSearchDefaultQuery = buildSearchQuery({
-  freeText: '',
-  status: ['todo'],
-  sortBy: defaultTaskSort,
-})
+export function defaultTaskSearchQuery(sortBy: TaskSortBy): string {
+  return buildSearchQuery({
+    freeText: '',
+    status: ['todo'],
+    sortBy,
+  })
+}
 
-export const taskListSearchDefaultQuery = buildSearchQuery({
-  freeText: '',
-  status: ['todo'],
-  sortBy: defaultTaskListSort,
-})
+export const tasksSearchDefaultQuery = defaultTaskSearchQuery(defaultTaskSort)
+
+export const taskListSearchDefaultQuery =
+  defaultTaskSearchQuery(defaultTaskListSort)
 
 export function withDefaultSort(
   parsed: ParsedQuery,

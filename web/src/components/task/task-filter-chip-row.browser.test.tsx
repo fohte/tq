@@ -151,11 +151,14 @@ function getUnavailableProjectSnapshot() {
   }
 }
 
-function getPriorityFilterSnapshot(queryChanges: unknown) {
+function getPriorityFilterSnapshot(
+  queryChanges: unknown,
+  selectedName: 'Inbox' | 'Later',
+) {
   return {
     queryChanges,
     selectedPriorityChip: screen
-      .getByRole('button', { name: 'priority Later' })
+      .getByRole('button', { name: `priority ${selectedName}` })
       .getAttribute('aria-label'),
   }
 }
@@ -225,9 +228,30 @@ describe('TaskFilterChipRow', () => {
     await user.click(await screen.findByText('Later'))
     rerenderWithParsed({ ...defaultParsed, priority: -1, sortBy: 'priority' })
 
-    expect(getPriorityFilterSnapshot(onQueryChange.mock.calls)).toEqual({
+    expect(
+      getPriorityFilterSnapshot(onQueryChange.mock.calls, 'Later'),
+    ).toEqual({
       queryChanges: [['is:todo priority:-1 sort:priority']],
       selectedPriorityChip: 'priority Later',
+    })
+  })
+
+  it('keeps the Inbox filter as priority:none in the query', async () => {
+    const { onQueryChange, rerenderWithParsed } = renderRow({
+      parsed: { ...defaultParsed, priority: -1, sortBy: 'priority' },
+      defaultSort: 'priority',
+    })
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'priority Later' }))
+    await user.click(await screen.findByText('Inbox'))
+    rerenderWithParsed({ ...defaultParsed, priority: null, sortBy: 'priority' })
+
+    expect(
+      getPriorityFilterSnapshot(onQueryChange.mock.calls, 'Inbox'),
+    ).toEqual({
+      queryChanges: [['is:todo priority:none sort:priority']],
+      selectedPriorityChip: 'priority Inbox',
     })
   })
 
