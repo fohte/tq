@@ -927,23 +927,28 @@ describe('CreateTaskModal', () => {
       ['desktop', DESKTOP_VIEWPORT],
       ['mobile', MOBILE_VIEWPORT],
     ] as const)(
-      '%s form selects the configured priority name and saves its value',
-      async (_viewportName, viewport) => {
+      '%s form preserves the selected priority when today is selected',
+      async (viewportName, viewport) => {
         await page.viewport(viewport.width, viewport.height)
         const user = userEvent.setup({
           pointerEventsCheck: PointerEventsCheckLevel.Never,
         })
+        const today = formatLocalDate(new Date())
+        const queryClient = new QueryClient({
+          defaultOptions: { queries: { retry: false } },
+        })
+        queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, today), [])
         const mutateCreateTask = mockCreateTaskSuccess(
           makeTask({ id: 'new-task-id', number: 2 }),
         )
-        renderControlledModal(CreateTaskModal, {})
+        renderControlledModal(CreateTaskModal, {}, { queryClient })
 
         const titleInput = atIndex(
           screen.getAllByPlaceholderText(titleInputPlaceholder),
           0,
         )
         await user.type(titleInput, 'Review notes')
-        if (_viewportName === 'mobile') {
+        if (viewportName === 'mobile') {
           await user.click(
             assertDefined(
               findVisible(screen.getAllByRole('button', { name: 'Inbox' })),
@@ -955,6 +960,7 @@ describe('CreateTaskModal', () => {
           document.querySelectorAll('[data-slot="select-item"]'),
         ).map((option) => option.textContent)
         await user.click(screen.getByText('Next'))
+        await user.click(atIndex(screen.getAllByText('today'), 0))
         await user.click(
           assertDefined(
             screen

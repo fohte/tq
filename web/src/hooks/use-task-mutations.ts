@@ -38,6 +38,27 @@ function listKeyParentId(key: readonly unknown[]): string | undefined {
   return typeof parentId === 'string' ? parentId : undefined
 }
 
+function priorityFromCommitment(
+  commitment: CreateTaskInput['commitment'],
+): TaskPriority {
+  switch (commitment) {
+    case undefined:
+    case 'inbox':
+      return null
+    case 'active':
+      return 0
+    case 'someday':
+      return -1
+  }
+}
+
+function commitmentFromPriority(
+  priority: TaskPriority,
+): NonNullable<CreateTaskInput['commitment']> {
+  if (priority === null) return 'inbox'
+  return priority === -1 ? 'someday' : 'active'
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient()
 
@@ -59,11 +80,7 @@ export function useCreateTask() {
       const optimisticPriority =
         input.priority !== undefined
           ? input.priority
-          : input.commitment === 'inbox' || input.commitment === undefined
-            ? null
-            : input.commitment === 'active'
-              ? 0
-              : -1
+          : priorityFromCommitment(input.commitment)
       const optimisticTask: Task = {
         id: `optimistic-${String(Date.now())}`,
         number: -1,
@@ -74,12 +91,7 @@ export function useCreateTask() {
         context: input.context ?? 'personal',
         priority: optimisticPriority,
         commitment:
-          input.commitment ??
-          (optimisticPriority === null
-            ? 'inbox'
-            : optimisticPriority === -1
-              ? 'someday'
-              : 'active'),
+          input.commitment ?? commitmentFromPriority(optimisticPriority),
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,

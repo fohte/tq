@@ -86,7 +86,7 @@ describe('TaskSubtasksList', () => {
     // UI's SelectValue only resolves "work" to its "Work" label once an item
     // has registered, which happens on first open — so open it here. The
     // Context trigger is the only select-trigger not showing its placeholder
-    // (Commitment has no default, so it still shows "Inbox").
+    // (priority is unset, so it shows its configured "Inbox" label).
     const contextTrigger = assertDefined(
       document.body.querySelector<HTMLElement>(
         '[data-slot="select-trigger"]:not([data-placeholder])',

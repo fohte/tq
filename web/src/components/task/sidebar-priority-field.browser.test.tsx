@@ -44,4 +44,31 @@ describe('SidebarPriorityField', () => {
       [{ id: taskId, input: { priority: -1 } }],
     ])
   })
+
+  it('clears a configured priority when Inbox is selected', async () => {
+    const mutate = vi.fn<ReturnType<typeof useUpdateTask>['mutate']>()
+    mockUseUpdateTask.mockReturnValue(
+      partialMutation<ReturnType<typeof useUpdateTask>>({ mutate }),
+    )
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SidebarPriorityField taskId={taskId} priority={-1} />
+      </QueryClientProvider>,
+    )
+
+    await user.click(screen.getByRole('combobox', { name: 'Priority' }))
+    await user.click(screen.getByText('Inbox'))
+
+    expect(mutate.mock.calls).toEqual([
+      [{ id: taskId, input: { priority: null } }],
+    ])
+  })
 })
