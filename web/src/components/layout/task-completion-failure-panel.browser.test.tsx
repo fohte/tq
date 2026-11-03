@@ -12,6 +12,9 @@ import { createStoryRouter } from '#storybook-config/story-router'
 const TASK_ID = '550e8400-e29b-41d4-a716-446655440000'
 const TASK_NUMBER = 71
 const WAIT_ID = '550e8400-e29b-41d4-a716-446655440099'
+const SECOND_TASK_ID = '550e8400-e29b-41d4-a716-446655440001'
+const SECOND_TASK_NUMBER = 72
+const SECOND_WAIT_ID = '550e8400-e29b-41d4-a716-446655440098'
 
 function CompletionAttempt() {
   const completeTask = useCompleteTask()
@@ -42,6 +45,33 @@ function StatusCompletionAttempt() {
     >
       Complete through status
     </button>
+  )
+}
+
+function MultiTaskCompletionAttempt() {
+  const completeTask = useCompleteTask()
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          completeTask.mutate({ id: TASK_ID, taskNumber: TASK_NUMBER })
+        }}
+      >
+        Complete task #71
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          completeTask.mutate({
+            id: SECOND_TASK_ID,
+            taskNumber: SECOND_TASK_NUMBER,
+          })
+        }}
+      >
+        Complete task #72
+      </button>
+    </>
   )
 }
 
@@ -77,10 +107,15 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-function taskWithWait(wait: typeof WAIT, resolvedAt: string | null) {
+function taskWithWaitFor(
+  id: string,
+  number: number,
+  wait: typeof WAIT,
+  resolvedAt: string | null,
+) {
   return makeTaskDetail({
-    id: TASK_ID,
-    number: TASK_NUMBER,
+    id,
+    number,
     waits: [
       {
         ...wait,
@@ -93,6 +128,10 @@ function taskWithWait(wait: typeof WAIT, resolvedAt: string | null) {
   })
 }
 
+function taskWithWait(wait: typeof WAIT, resolvedAt: string | null) {
+  return taskWithWaitFor(TASK_ID, TASK_NUMBER, wait, resolvedAt)
+}
+
 const WAIT = {
   id: WAIT_ID,
   label: 'Reply from a supplier',
@@ -100,6 +139,12 @@ const WAIT = {
   githubLinkId: null,
   resolvedAt: null,
   acknowledgedAt: null,
+}
+
+const SECOND_WAIT = {
+  ...WAIT,
+  id: SECOND_WAIT_ID,
+  label: 'Review the release notes',
 }
 
 function getPanelOutput() {
@@ -110,6 +155,17 @@ function getPanelOutput() {
     panel.querySelector('p')?.textContent,
     screen.getByRole('button', { name: 'Complete' }).hasAttribute('disabled'),
   ]
+}
+
+function getGenericPanelOutput() {
+  const panel = screen.getByRole('alert')
+  return {
+    label: panel.getAttribute('aria-label'),
+    heading: panel.querySelector('h2')?.textContent,
+    messages: [...panel.querySelectorAll('p')].map(
+      (paragraph) => paragraph.textContent,
+    ),
+  }
 }
 
 afterEach(() => {
@@ -158,6 +214,9 @@ describe('TaskCompletionFailurePanel', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Dismiss completion error' }),
     )
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toEqual(null)
+    })
   })
 
   it('shows the panel when a completed-status PATCH receives a 409 response', async () => {
@@ -194,6 +253,217 @@ describe('TaskCompletionFailurePanel', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Dismiss completion error' }),
     )
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toEqual(null)
+    })
+  })
+
+  it('closes on an unhandled Escape key and remains open when another UI prevents it', async () => {
+    const wait = WAIT
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((...args: Parameters<typeof fetch>) => {
+        const input = args[0]
+        const init = args[1]
+        if (init?.method === 'PATCH') {
+          return jsonResponse(
+            {
+              error:
+                'Task is blocked by unresolved blockers: wait Reply from a supplier',
+              blockedByNumbers: [],
+              blockedByGithubRefs: [],
+              blockedByWaits: [wait],
+            },
+            409,
+          )
+        }
+        const inputUrl = getRequestUrl(input)
+        if (inputUrl.includes(TASK_ID)) {
+          return jsonResponse(taskWithWait(wait, null))
+        }
+        return jsonResponse({})
+      }),
+    )
+    await createHarness(<StatusCompletionAttempt />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Complete through status' }),
+    )
+    await waitFor(() => {
+      expect(getPanelOutput()).toEqual([
+        "Couldn't complete #71",
+        'Reply from a supplier',
+        'Blocked by 1 unresolved item.',
+        true,
+      ])
+    })
+
+    const preventEscape = (event: KeyboardEvent) => {
+      event.preventDefault()
+    }
+    document.addEventListener('keydown', preventEscape)
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    document.removeEventListener('keydown', preventEscape)
+    expect(getPanelOutput()).toEqual([
+      "Couldn't complete #71",
+      'Reply from a supplier',
+      'Blocked by 1 unresolved item.',
+      true,
+    ])
+
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toEqual(null)
+    })
+  })
+
+  it('shows only the reason for JSON and non-JSON failures', async () => {
+    let failureCount = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((...args: Parameters<typeof fetch>) => {
+        const init = args[1]
+        if (init?.method === 'PATCH') {
+          failureCount += 1
+          return failureCount === 1
+            ? jsonResponse({ error: 'The task could not be completed.' }, 500)
+            : new Response('upstream unavailable', { status: 502 })
+        }
+        return jsonResponse(
+          makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
+        )
+      }),
+    )
+    await createHarness(<StatusCompletionAttempt />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Complete through status' }),
+    )
+    await waitFor(() => {
+      expect(getGenericPanelOutput()).toEqual({
+        label: "Couldn't complete #71",
+        heading: "Couldn't complete #71",
+        messages: ['The task could not be completed.'],
+      })
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Dismiss completion error' }),
+    )
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toEqual(null)
+    })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Complete through status' }),
+    )
+    await waitFor(() => {
+      expect(getGenericPanelOutput()).toEqual({
+        label: "Couldn't complete #71",
+        heading: "Couldn't complete #71",
+        messages: ['The server returned an error (502).'],
+      })
+    })
+  })
+
+  it('replaces the panel contents when a different task completion fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((...args: Parameters<typeof fetch>) => {
+        const input = args[0]
+        const init = args[1]
+        const inputUrl = getRequestUrl(input)
+        if (init?.method === 'POST') {
+          const wait = inputUrl.includes(SECOND_TASK_ID) ? SECOND_WAIT : WAIT
+          return jsonResponse(
+            {
+              error: `Task is blocked by unresolved blockers: wait ${wait.label}`,
+              blockedByNumbers: [],
+              blockedByGithubRefs: [],
+              blockedByWaits: [wait],
+            },
+            409,
+          )
+        }
+        if (inputUrl.includes(SECOND_TASK_ID)) {
+          return jsonResponse(
+            taskWithWaitFor(
+              SECOND_TASK_ID,
+              SECOND_TASK_NUMBER,
+              SECOND_WAIT,
+              null,
+            ),
+          )
+        }
+        if (inputUrl.includes(TASK_ID)) {
+          return jsonResponse(taskWithWait(WAIT, null))
+        }
+        return jsonResponse({})
+      }),
+    )
+    await createHarness(<MultiTaskCompletionAttempt />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complete task #71' }))
+    await waitFor(() => {
+      expect(getPanelOutput()).toEqual([
+        "Couldn't complete #71",
+        'Reply from a supplier',
+        'Blocked by 1 unresolved item.',
+        true,
+      ])
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complete task #72' }))
+    await waitFor(() => {
+      expect(getPanelOutput()).toEqual([
+        "Couldn't complete #72",
+        'Review the release notes',
+        'Blocked by 1 unresolved item.',
+        true,
+      ])
+    })
+  })
+
+  it('keeps a wait unresolved when refreshed task details omit waits', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((...args: Parameters<typeof fetch>) => {
+        const input = args[0]
+        const init = args[1]
+        if (init?.method === 'POST') {
+          return jsonResponse(
+            {
+              error:
+                'Task is blocked by unresolved blockers: wait Reply from a supplier',
+              blockedByNumbers: [],
+              blockedByGithubRefs: [],
+              blockedByWaits: [WAIT],
+            },
+            409,
+          )
+        }
+        const inputUrl = getRequestUrl(input)
+        if (inputUrl.includes(TASK_ID)) {
+          return jsonResponse({
+            ...makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
+            waits: undefined,
+          })
+        }
+        return jsonResponse({})
+      }),
+    )
+    await createHarness(<CompletionAttempt />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complete task' }))
+
+    await waitFor(() => {
+      expect(getPanelOutput()).toEqual([
+        "Couldn't complete #71",
+        'Reply from a supplier',
+        'Blocked by 1 unresolved item.',
+        true,
+      ])
+    })
   })
 
   it('resolves a wait, retries completion, and closes the panel after success', async () => {

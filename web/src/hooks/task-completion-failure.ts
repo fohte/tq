@@ -2,14 +2,14 @@ import { errAsync, ResultAsync } from 'neverthrow'
 
 import { unwrapOrThrow } from '#lib/assert-response'
 
-export interface TaskCompletionGithubBlocker {
+interface TaskCompletionGithubBlocker {
   owner: string
   repo: string
   number: number
   url: string
 }
 
-export interface TaskCompletionWaitBlocker {
+interface TaskCompletionWaitBlocker {
   id: string
   label: string
   followUpDate: string
@@ -18,7 +18,7 @@ export interface TaskCompletionWaitBlocker {
   acknowledgedAt: string | null
 }
 
-export interface TaskCompletionBlockers {
+interface TaskCompletionBlockers {
   blockedByNumbers: number[]
   blockedByGithubRefs: TaskCompletionGithubBlocker[]
   blockedByWaits: TaskCompletionWaitBlocker[]
@@ -39,14 +39,14 @@ type CompletionRequestMetadata = {
   duplicateOfTaskId?: string | undefined
 }
 
-export interface TaskCompletionFailure {
+interface TaskCompletionFailure {
   id: string
   request: TaskCompletionRequest
   message: string
   blockers: TaskCompletionBlockers | null
 }
 
-export class TaskCompletionError extends Error {
+class TaskCompletionError extends Error {
   constructor(
     message: string,
     readonly status: number,

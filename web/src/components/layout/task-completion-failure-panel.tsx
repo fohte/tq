@@ -16,6 +16,7 @@ export function TaskCompletionFailurePanel() {
   if (failure === null) return null
 
   const isFresh = taskQuery.isFetched && taskQuery.data !== undefined
+  const currentWaits = taskQuery.data?.waits
   const initialBlockers = failure.blockers
   const taskBlockers =
     initialBlockers === null
@@ -52,14 +53,13 @@ export function TaskCompletionFailurePanel() {
       : initialBlockers.blockedByWaits.map((wait) => ({
           id: wait.id,
           label: wait.label,
-          resolved: isFresh
-            ? !(
-                taskQuery.data.waits?.some(
-                  (current) =>
-                    current.id === wait.id && current.resolvedAt === null,
-                ) ?? false
-              )
-            : false,
+          resolved:
+            isFresh &&
+            currentWaits !== undefined &&
+            !currentWaits.some(
+              (current) =>
+                current.id === wait.id && current.resolvedAt === null,
+            ),
         }))
 
   const complete = () => {

@@ -203,7 +203,6 @@ export function TaskCompletionBlockerPanelAppearance({
         ) : (
           <div className="px-4 pb-3 text-xs text-muted-foreground">
             <p>{message}</p>
-            <p className="mt-1">The status was changed back to todo.</p>
           </div>
         )}
       </div>

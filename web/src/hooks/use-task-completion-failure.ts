@@ -15,7 +15,11 @@ export function useTaskCompletionFailure() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && failure !== null) {
+      if (
+        event.key === 'Escape' &&
+        !event.defaultPrevented &&
+        failure !== null
+      ) {
         dismissTaskCompletionFailure(failure.id)
       }
     }
