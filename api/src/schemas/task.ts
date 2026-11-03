@@ -28,7 +28,13 @@ export type TaskPriorityFilter = z.infer<typeof taskPriorityFilter>
 
 const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
-export const taskSortBy = z.enum(['created', 'updated', 'due', 'follow-up'])
+export const taskSortBy = z.enum([
+  'created',
+  'updated',
+  'due',
+  'follow-up',
+  'priority',
+])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 export const taskSortOrder = z.enum(['asc', 'desc'])
 export type TaskSortOrder = z.infer<typeof taskSortOrder>
@@ -175,7 +181,7 @@ export const listTasksQuerySchema = z.object({
   order: taskSortOrder
     .optional()
     .describe(
-      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created or sortBy=due.',
+      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created, sortBy=due, sortBy=follow-up, or sortBy=priority. For sortBy=priority, desc reverses the configured priority order while keeping the nearest due date first within each priority.',
     ),
   limit: z.union([
     z.coerce.number().int().min(1).max(100),

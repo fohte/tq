@@ -257,6 +257,7 @@ describe('getSearchQuerySuggestions', () => {
         display: 'Sort by update date',
         category: 'sort',
       },
+      { value: 'sort:priority', display: 'Sort by priority', category: 'sort' },
       { value: 'has:pages', display: 'Has pages', category: 'has' },
       { value: 'has:comments', display: 'Has comments', category: 'has' },
       {

@@ -88,11 +88,11 @@ export const ActiveOnly: Story = {
     candidates: [
       makeQueueCandidate({
         task: makeTask({ id: '1', title: 'Refactor the auth module' }),
-        reason: { kind: 'active' },
+        reason: { kind: 'priority', label: 'Routine' },
       }),
       makeQueueCandidate({
         task: makeTask({ id: '2', title: 'Write API documentation' }),
-        reason: { kind: 'active' },
+        reason: { kind: 'priority', label: 'Routine' },
       }),
     ] satisfies QueueCandidate<Task>[],
   },
@@ -144,7 +144,7 @@ export const MixedReasons: Story = {
       }),
       makeQueueCandidate({
         task: makeTask({ id: '6', title: 'Refactor the auth module' }),
-        reason: { kind: 'active' },
+        reason: { kind: 'priority', label: 'Routine' },
       }),
     ] satisfies QueueCandidate<Task>[],
   },

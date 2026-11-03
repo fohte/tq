@@ -83,7 +83,9 @@ describe('formatCandidateReason', () => {
     )
   })
 
-  it('formats active', () => {
-    expect(formatCandidateReason({ kind: 'active' })).toBe('active')
+  it('formats the configured priority label', () => {
+    expect(formatCandidateReason({ kind: 'priority', label: 'Routine' })).toBe(
+      'Routine',
+    )
   })
 })

@@ -11,7 +11,9 @@ import {
   getTaskChecklistOwnerIds,
 } from '#routes/tasks/change-event-task-ids'
 import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
+import type { PrioritySetting } from '#schemas/priority-settings'
 import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
+import { priorityOrderExpression } from '#services/priority-settings'
 import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 
 export {
@@ -31,6 +33,7 @@ export {
 function resolvePrimaryTaskListOrderBy(
   sortBy: TaskSortBy | undefined,
   order: TaskSortOrder,
+  prioritySettings: PrioritySetting[],
 ) {
   switch (sortBy) {
     case 'updated':
@@ -44,6 +47,10 @@ function resolvePrimaryTaskListOrderBy(
       const direction = order === 'desc' ? sql`DESC` : sql`ASC`
       return sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) ${direction} NULLS LAST`
     }
+    case 'priority': {
+      const direction = order === 'desc' ? sql`DESC` : sql`ASC`
+      return sql`${priorityOrderExpression(prioritySettings)} ${direction}, ${tasks.dueDate} ASC NULLS LAST`
+    }
     case 'created':
     default:
       return order === 'desc' ? desc(tasks.createdAt) : tasks.createdAt
@@ -56,12 +63,17 @@ function resolvePrimaryTaskListOrderBy(
 // transaction share one `now()`-derived `createdAt`), which limit/offset
 // paging requires to avoid duplicate or skipped rows across pages.
 export function resolveTaskListOrderBy(
-  sortBy?: TaskSortBy,
-  order?: TaskSortOrder,
+  sortBy: TaskSortBy | undefined,
+  order: TaskSortOrder | undefined,
+  prioritySettings: PrioritySetting[],
 ) {
   const defaultOrder = sortBy === 'updated' ? 'desc' : 'asc'
   return [
-    resolvePrimaryTaskListOrderBy(sortBy, order ?? defaultOrder),
+    resolvePrimaryTaskListOrderBy(
+      sortBy,
+      order ?? defaultOrder,
+      prioritySettings,
+    ),
     tasks.number,
   ]
 }

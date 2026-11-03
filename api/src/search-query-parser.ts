@@ -20,7 +20,7 @@ export interface ParsedQuery {
   hasResolvedWait?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated'
+  sortBy?: 'due' | 'created' | 'updated' | 'priority'
 }
 
 export interface SearchQueryTokenRange {
@@ -112,8 +112,9 @@ const searchQueryTokenDefinitions = new Map(
         ['due', 'Sort by due date'],
         ['created', 'Sort by creation date'],
         ['updated', 'Sort by update date'],
+        ['priority', 'Sort by priority'],
       ],
-      'Sort results by date.',
+      'Sort results by date or configured priority.',
       (result, value) => {
         result.sortBy = value
       },

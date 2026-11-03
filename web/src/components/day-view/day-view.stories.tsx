@@ -90,7 +90,7 @@ const noDateTasks: Task[] = [
     status: 'todo',
     startDate: null,
     context: 'personal',
-    candidateReason: { kind: 'active' },
+    candidateReason: { kind: 'priority', label: 'Routine' },
   },
   {
     ...baseTask,
@@ -99,7 +99,7 @@ const noDateTasks: Task[] = [
     status: 'todo',
     startDate: null,
     context: 'personal',
-    candidateReason: { kind: 'active' },
+    candidateReason: { kind: 'priority', label: 'Routine' },
   },
 ]
 
@@ -275,7 +275,7 @@ const compactQueueSections = [
 const compactCandidate = makeTask({
   id: 'compact-candidate',
   title: 'Add a follow-up check',
-  candidateReason: { kind: 'active' },
+  candidateReason: { kind: 'priority', label: 'Routine' },
 })
 const compactQueueCandidates = getQueueCandidates([compactCandidate])
 const compactTaskBlock = makeTimeBlock({

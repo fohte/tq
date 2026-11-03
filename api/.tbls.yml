@@ -84,6 +84,13 @@ comments:
       access_token: 'Credential sent to the provider when making authenticated API requests.'
       refresh_token: 'OAuth refresh token; null for providers whose access tokens do not expire.'
       expires_at: 'Access token expiration time; null when the provider supplies no expiration.'
+  - table: priority_settings
+    tableComment: 'Display names, descriptions, and ordering for the fixed task priorities.'
+    columnComments:
+      priority: 'Fixed task priority value; null represents Inbox.'
+      name: 'Display name used for the priority.'
+      description: 'Description shown for the priority.'
+      sort_order: 'Position of the priority in user-configured order.'
   - table: memos
     tableComment: 'Markdown scratchpads stored once per work or personal context.'
     columnComments:
