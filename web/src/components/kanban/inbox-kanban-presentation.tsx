@@ -1,4 +1,7 @@
-import { TaskKanban } from '#components/kanban/task-kanban'
+import {
+  TaskKanban,
+  type TaskKanbanColumn,
+} from '#components/kanban/task-kanban'
 import type {
   PrioritySetting,
   TaskPriority,
@@ -16,18 +19,22 @@ export function InboxKanbanPresentation({
   waitingTasks,
   waitingIsLoading,
   waitingHasError,
+  prioritySettingsIsLoading,
+  prioritySettingsHasError,
   onDrop,
 }: {
   priorityColumns: InboxPriorityColumn[]
   waitingTasks: Task[]
   waitingIsLoading: boolean
   waitingHasError: boolean
+  prioritySettingsIsLoading: boolean
+  prioritySettingsHasError: boolean
   onDrop: (taskId: string, priority: TaskPriority) => void
 }) {
   const sortedPriorityColumns = [...priorityColumns].sort(
     (left, right) => left.setting.sortOrder - right.setting.sortOrder,
   )
-  const columns = sortedPriorityColumns.map(
+  const columns: TaskKanbanColumn[] = sortedPriorityColumns.map(
     ({ setting, tasks, isLoading }) => ({
       id: priorityColumnId(setting.priority),
       title: setting.name,
@@ -35,6 +42,25 @@ export function InboxKanbanPresentation({
       isLoading,
     }),
   )
+  if (columns.length === 0 && prioritySettingsIsLoading) {
+    columns.push({
+      id: 'priority-settings',
+      title: 'Priorities',
+      tasks: [],
+      isLoading: true,
+      loadingMessage: 'Loading priority settings...',
+      allowsManualMoves: false,
+    })
+  } else if (columns.length === 0 && prioritySettingsHasError) {
+    columns.push({
+      id: 'priority-settings',
+      title: 'Priorities',
+      tasks: [],
+      hasError: true,
+      errorMessage: 'Failed to load priority settings.',
+      allowsManualMoves: false,
+    })
+  }
 
   return (
     <TaskKanban

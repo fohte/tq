@@ -5,19 +5,16 @@ import { useState } from 'react'
 import { fn } from 'storybook/test'
 
 import { InboxKanbanPresentation } from '#components/kanban/inbox-kanban-presentation'
-import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
+import {
+  makePrioritySettings,
+  makePrioritySettingsInOrder,
+} from '#components/task/priority-settings-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import type { PrioritySetting } from '#hooks/use-priority-settings'
 import { prioritySettingsKeys } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
 
-const priorityOrder = [1, null, 2, 0, -1] as const
-const prioritySettings = makePrioritySettings().map((setting) => ({
-  ...setting,
-  sortOrder: priorityOrder.findIndex(
-    (priority) => priority === setting.priority,
-  ),
-})) satisfies PrioritySetting[]
+const prioritySettings = makePrioritySettingsInOrder([1, null, 2, 0, -1])
 
 function settingFor(priority: PrioritySetting['priority']): PrioritySetting {
   return (
@@ -111,5 +108,31 @@ export const ConfiguredPriorities: Story = {
     waitingTasks: [makeTask({ id: 'waiting', title: 'Get an approval' })],
     waitingIsLoading: false,
     waitingHasError: false,
+    prioritySettingsIsLoading: false,
+    prioritySettingsHasError: false,
+  },
+}
+
+export const LoadingPrioritySettings: Story = {
+  name: 'the inbox explains that priority columns are loading',
+  args: {
+    priorityColumns: [],
+    waitingTasks: [],
+    waitingIsLoading: false,
+    waitingHasError: false,
+    prioritySettingsIsLoading: true,
+    prioritySettingsHasError: false,
+  },
+}
+
+export const PrioritySettingsError: Story = {
+  name: 'the inbox explains when priority settings fail to load',
+  args: {
+    priorityColumns: [],
+    waitingTasks: [makeTask({ id: 'waiting', title: 'Get an approval' })],
+    waitingIsLoading: false,
+    waitingHasError: false,
+    prioritySettingsIsLoading: false,
+    prioritySettingsHasError: true,
   },
 }

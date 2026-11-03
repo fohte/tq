@@ -15,18 +15,13 @@ import {
 } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
+import { makePrioritySettingsInOrder } from '#components/task/priority-settings-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import type { PrioritySetting } from '#hooks/use-priority-settings'
 import type { Task, TaskListFilter } from '#hooks/use-tasks'
 import { Route as InboxRoute } from '#routes/inbox'
 
-const priorityOrder = [-1, null, 0, 2, 1] as const
-const settings = makePrioritySettings().map((setting) => ({
-  ...setting,
-  sortOrder: priorityOrder.findIndex(
-    (priority) => priority === setting.priority,
-  ),
-}))
+const settings = makePrioritySettingsInOrder([-1, null, 0, 2, 1])
 const deferredTask = makeTask({
   id: 'deferred-task',
   title: 'Move to inbox',
@@ -38,6 +33,13 @@ const mocks = vi.hoisted(() => ({
   useTaskList: vi.fn<
     () => {
       categorized: { all: Task[] }
+      isLoading: boolean
+      isError: boolean
+    }
+  >(),
+  usePrioritySettings: vi.fn<
+    () => {
+      data: PrioritySetting[] | undefined
       isLoading: boolean
       isError: boolean
     }
@@ -56,7 +58,7 @@ vi.mock('#hooks/use-tasks', async (importOriginal) => {
 })
 
 vi.mock('#hooks/use-priority-settings', () => ({
-  usePrioritySettings: () => ({ data: settings }),
+  usePrioritySettings: () => mocks.usePrioritySettings(),
 }))
 
 vi.mock('#hooks/use-current-context', () => ({
@@ -96,17 +98,36 @@ async function renderInboxRoute() {
   )
 }
 
-function boardSnapshot() {
+function boardColumnNames() {
   const regions = screen.getAllByRole('region')
-  const taskNames = ['Move to inbox']
+  return regions.map((region) => region.getAttribute('aria-label'))
+}
+
+function taskMovementSnapshot() {
+  const regions = screen.getAllByRole('region')
   return {
-    columns: regions.map((region) => region.getAttribute('aria-label')),
-    taskColumns: taskNames.map((title) =>
-      regions
-        .find((region) => within(region).queryByText(title) != null)
-        ?.getAttribute('aria-label'),
-    ),
+    taskColumn: regions
+      .find((region) => within(region).queryByText('Move to inbox') != null)
+      ?.getAttribute('aria-label'),
     mutations: mocks.mutate.mock.calls,
+  }
+}
+
+function prioritySettingsLoadingSnapshot() {
+  return {
+    columns: boardColumnNames(),
+    message: screen.getByText('Loading priority settings...').textContent,
+  }
+}
+
+function prioritySettingsErrorSnapshot() {
+  return {
+    columns: boardColumnNames(),
+    message: screen.getByText('Failed to load priority settings.').textContent,
+    waitingTaskVisible:
+      within(screen.getByRole('region', { name: 'Waiting tasks' })).queryByText(
+        'Waiting',
+      ) != null,
   }
 }
 
@@ -147,10 +168,29 @@ beforeEach(() => {
     isLoading: false,
     isError: false,
   })
+  mocks.usePrioritySettings.mockReturnValue({
+    data: settings,
+    isLoading: false,
+    isError: false,
+  })
 })
 
 describe('InboxRoute', () => {
-  it('orders columns by settings and immediately moves a task to the dropped priority', async () => {
+  it('orders columns by priority settings', async () => {
+    await renderInboxRoute()
+    await screen.findByText('Move to inbox')
+
+    expect(boardColumnNames()).toEqual([
+      'Later tasks',
+      'Inbox tasks',
+      'Normal tasks',
+      'Now tasks',
+      'Next tasks',
+      'Waiting tasks',
+    ])
+  })
+
+  it('immediately moves a dropped task and updates its priority', async () => {
     await renderInboxRoute()
     await screen.findByText('Move to inbox')
 
@@ -158,18 +198,50 @@ describe('InboxRoute', () => {
     await dragTaskToRegion('Move to inbox', inboxRegion)
 
     await waitFor(() => {
-      expect(boardSnapshot()).toEqual({
-        columns: [
-          'Later tasks',
-          'Inbox tasks',
-          'Normal tasks',
-          'Now tasks',
-          'Next tasks',
-          'Waiting tasks',
-        ],
-        taskColumns: ['Inbox tasks'],
+      expect(taskMovementSnapshot()).toEqual({
+        taskColumn: 'Inbox tasks',
         mutations: [[{ id: 'deferred-task', input: { priority: null } }]],
       })
+    })
+  })
+
+  it('shows a loading state while priority settings load', async () => {
+    mocks.usePrioritySettings.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    })
+
+    await renderInboxRoute()
+    await screen.findByText('Loading priority settings...')
+
+    expect(prioritySettingsLoadingSnapshot()).toEqual({
+      columns: ['Priorities tasks', 'Waiting tasks'],
+      message: 'Loading priority settings...',
+    })
+  })
+
+  it('shows a priority settings error and keeps the waiting column', async () => {
+    mocks.usePrioritySettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+    mocks.useTaskList.mockReturnValue({
+      categorized: {
+        all: [makeTask({ id: 'waiting-task', title: 'Waiting' })],
+      },
+      isLoading: false,
+      isError: false,
+    })
+
+    await renderInboxRoute()
+    await screen.findByText('Failed to load priority settings.')
+
+    expect(prioritySettingsErrorSnapshot()).toEqual({
+      columns: ['Priorities tasks', 'Waiting tasks'],
+      message: 'Failed to load priority settings.',
+      waitingTaskVisible: true,
     })
   })
 })

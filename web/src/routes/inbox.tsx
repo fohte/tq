@@ -19,20 +19,21 @@ export const Route = createFileRoute('/inbox')({
   component: InboxKanban,
 })
 
-const priorityFilterByValue: Record<
-  Exclude<TaskPriority, null>,
-  TaskPriorityFilter
-> = {
-  [-1]: '-1',
-  0: '0',
-  1: '1',
-  2: '2',
-}
-
 function priorityFilter(priority: TaskPriority): TaskPriorityFilter {
-  return priority === null
-    ? 'none'
-    : (priorityFilterByValue[priority] ?? 'none')
+  switch (priority) {
+    case null:
+      return 'none'
+    case -1:
+      return '-1'
+    case 0:
+      return '0'
+    case 1:
+      return '1'
+    case 2:
+      return '2'
+    default:
+      return 'none'
+  }
 }
 
 function InboxKanban() {
@@ -123,6 +124,8 @@ function InboxKanban() {
           waitingTasks={waiting.categorized.all}
           waitingIsLoading={waiting.isLoading}
           waitingHasError={waiting.isError}
+          prioritySettingsIsLoading={prioritySettings.isLoading}
+          prioritySettingsHasError={prioritySettings.isError}
           onDrop={handleDrop}
         />
       </div>
