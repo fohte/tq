@@ -1156,15 +1156,23 @@ describe('task waits API', () => {
     })
   })
 
-  it('prefers a follow-up reason when the task also has an overdue due date', async () => {
+  it('keeps follow-up reason precedence separate from overdue queue order', async () => {
     const now = new Date()
     const tzOffset = offsetWithDifferentUtcDate(now)
     const today = dateAtOffset(now, tzOffset)
-    const task = await createTask('Overdue task with follow-up', {
+    const taskWithFollowUp = await createTask('Overdue task with follow-up', {
       dueDate: addDaysAtOffset(now, tzOffset, -2),
       commitment: 'inbox',
     })
-    await addWait(task.id, 'Check in', addDaysAtOffset(now, tzOffset, -1))
+    await createTask('Overdue task without follow-up', {
+      dueDate: addDaysAtOffset(now, tzOffset, -1),
+      commitment: 'inbox',
+    })
+    await addWait(
+      taskWithFollowUp.id,
+      'Check in',
+      addDaysAtOffset(now, tzOffset, -1),
+    )
 
     const response = await app.request(
       `/api/tasks?view=full&context=all&status=todo&limit=unlimited&candidatesOn=${today}`,
@@ -1172,10 +1180,22 @@ describe('task waits API', () => {
     const body = await jsonBody<TaskListItemResponse[]>(response)
 
     expect(
-      bodyResponseSnapshot(response.status, body[0]?.candidateReason ?? null),
+      bodyResponseSnapshot(
+        response.status,
+        body.map(({ title, candidateReason }) => ({ title, candidateReason })),
+      ),
     ).toEqual({
       status: 200,
-      body: { kind: 'follow-up', days: 1 },
+      body: [
+        {
+          title: 'Overdue task without follow-up',
+          candidateReason: { kind: 'overdue', days: 1 },
+        },
+        {
+          title: 'Overdue task with follow-up',
+          candidateReason: { kind: 'follow-up', days: 1 },
+        },
+      ],
     })
   })
 

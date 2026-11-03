@@ -23,6 +23,18 @@ export type TaskCandidateStage =
   | 'starts'
   | 'priority'
 
+type NonCompletedTaskCandidateStage = Exclude<TaskCandidateStage, 'completed'>
+
+const QUEUE_CANDIDATE_STAGE_RANK = {
+  'wait-resolved': -1,
+  overdue: 0,
+  'follow-up': 1,
+  'due-today': 2,
+  'due-later': 3,
+  starts: 4,
+  priority: 5,
+} as const satisfies Record<NonCompletedTaskCandidateStage, number>
+
 export interface CandidateTask {
   status: string
   dueDate: string | null
@@ -51,7 +63,10 @@ function priorityIsBeforeInbox(
   )
 }
 
-function candidateStageRules(date: string, settings: PrioritySetting[]) {
+function candidateStageRulesByReasonPrecedence(
+  date: string,
+  settings: PrioritySetting[],
+) {
   const hasFollowUp = exists(followUpDueTaskWaitSubquery(date))
   const priorityBeforeInbox = sql`
     ${priorityOrderExpression(settings)} < ${prioritySortOrder(settings, null)}
@@ -65,18 +80,15 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
   `
   const startable = sql`${tasks.startDate} <= ${date}`
 
-  // Follow-up keeps reason precedence even though overdue has the earlier queue rank.
   return [
     {
       stage: 'wait-resolved' as const,
-      stageRank: -1,
       condition: hasUnacknowledgedResolvedTaskWaitCondition(),
       matches: (task: CandidateTask) =>
         task.waits?.some(isTaskWaitResolvedAndUnacknowledged) === true,
     },
     {
       stage: 'follow-up' as const,
-      stageRank: 1,
       condition: hasFollowUp,
       matches: (task: CandidateTask) =>
         task.waits?.some(
@@ -85,20 +97,17 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
     },
     {
       stage: 'overdue' as const,
-      stageRank: 0,
       condition: sql`${tasks.dueDate} < ${date}`,
       matches: (task: CandidateTask) =>
         task.dueDate != null && task.dueDate < date,
     },
     {
       stage: 'due-today' as const,
-      stageRank: 2,
       condition: sql`${tasks.dueDate} = ${date}`,
       matches: (task: CandidateTask) => task.dueDate === date,
     },
     {
       stage: 'due-later' as const,
-      stageRank: 3,
       condition: dueLater,
       matches: (task: CandidateTask) =>
         task.dueDate != null &&
@@ -108,13 +117,11 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
     },
     {
       stage: 'starts' as const,
-      stageRank: 4,
       condition: startable,
       matches: (task: CandidateTask) => isStartable(task, date),
     },
     {
       stage: 'priority' as const,
-      stageRank: 5,
       condition: priorityBeforeInbox,
       matches: (task: CandidateTask) =>
         priorityIsBeforeInbox(task.priority, settings),
@@ -126,12 +133,12 @@ export function resolveTaskCandidateStageSql(
   date: string,
   settings: PrioritySetting[],
 ): SQL {
-  const stages = candidateStageRules(date, settings)
+  const stages = candidateStageRulesByReasonPrecedence(date, settings)
   const completedStage =
-    Math.max(...stages.map(({ stageRank }) => stageRank)) + 1
+    Math.max(...Object.values(QUEUE_CANDIDATE_STAGE_RANK)) + 1
   const cases = stages.map(
-    ({ condition, stageRank }) =>
-      sql`WHEN ${condition} THEN ${stageRank}::integer`,
+    ({ condition, stage }) =>
+      sql`WHEN ${condition} THEN ${QUEUE_CANDIDATE_STAGE_RANK[stage]}::integer`,
   )
   const completedCandidate = or(...stages.map(({ condition }) => condition))
   return sql`CASE
@@ -166,14 +173,15 @@ export function getTaskCandidateStage(
   settings: PrioritySetting[],
 ): TaskCandidateStage | null {
   if (task.status === 'completed') {
-    return candidateStageRules(date, settings).some(({ matches }) =>
-      matches(task),
+    return candidateStageRulesByReasonPrecedence(date, settings).some(
+      ({ matches }) => matches(task),
     )
       ? 'completed'
       : null
   }
   return (
-    candidateStageRules(date, settings).find(({ matches }) => matches(task))
-      ?.stage ?? null
+    candidateStageRulesByReasonPrecedence(date, settings).find(({ matches }) =>
+      matches(task),
+    )?.stage ?? null
   )
 }
