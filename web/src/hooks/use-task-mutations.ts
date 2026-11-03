@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
 import {
   assertTaskCompletionOk,
+  createTaskCompletionRequest,
   notifyTaskCompletionFailed,
 } from '#hooks/task-completion-failure'
 import { projectKeys } from '#hooks/use-projects'
@@ -198,13 +199,12 @@ export function useUpdateTaskStatus() {
       }
       if (status === 'completed') {
         notifyTaskCompletionFailed(
-          {
-            kind: 'status',
+          createTaskCompletionRequest('status', {
             id,
-            ...(taskNumber == null ? {} : { taskNumber }),
-            ...(statusReason == null ? {} : { statusReason }),
-            ...(duplicateOfTaskId == null ? {} : { duplicateOfTaskId }),
-          },
+            taskNumber,
+            statusReason,
+            duplicateOfTaskId,
+          }),
           error,
         )
       }
@@ -458,13 +458,12 @@ export function useCompleteTask() {
         queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
       }
       notifyTaskCompletionFailed(
-        {
-          kind: 'complete',
+        createTaskCompletionRequest('complete', {
           id,
-          ...(taskNumber == null ? {} : { taskNumber }),
-          ...(statusReason == null ? {} : { statusReason }),
-          ...(duplicateOfTaskId == null ? {} : { duplicateOfTaskId }),
-        },
+          taskNumber,
+          statusReason,
+          duplicateOfTaskId,
+        }),
         error,
       )
     },

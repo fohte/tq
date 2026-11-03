@@ -63,24 +63,14 @@ export function TaskCompletionFailurePanel() {
         }))
 
   const complete = () => {
-    const { request } = failure
-    const metadata = {
-      ...(request.taskNumber == null ? {} : { taskNumber: request.taskNumber }),
-      ...(request.statusReason == null
-        ? {}
-        : { statusReason: request.statusReason }),
-      ...(request.duplicateOfTaskId == null
-        ? {}
-        : { duplicateOfTaskId: request.duplicateOfTaskId }),
-    }
+    const { kind, ...metadata } = failure.request
     const result =
-      request.kind === 'status'
+      kind === 'status'
         ? updateStatus.mutateAsync({
-            id: request.id,
             status: 'completed',
             ...metadata,
           })
-        : completeTask.mutateAsync({ id: request.id, ...metadata })
+        : completeTask.mutateAsync(metadata)
     void result.then(
       () => {
         dismiss(failure.id)

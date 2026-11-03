@@ -1,9 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { TaskCompletionBlockerPanelAppearance } from '#components/layout/task-completion-blocker-panel-appearance'
+import { StoryRouter } from '#storybook-config/story-router'
+
+type Props = Parameters<typeof TaskCompletionBlockerPanelAppearance>[0]
+
+function TaskCompletionBlockerPanelStory(props: Props) {
+  return (
+    <StoryRouter
+      component={() => <TaskCompletionBlockerPanelAppearance {...props} />}
+      paths={['/tasks/$taskId']}
+    />
+  )
+}
 
 const meta = {
-  component: TaskCompletionBlockerPanelAppearance,
+  component: TaskCompletionBlockerPanelStory,
   args: {
     taskNumber: 71,
     onClose: () => {},

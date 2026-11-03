@@ -1,6 +1,7 @@
 import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import { X } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { cn } from '#lib/utils'
 
@@ -20,6 +21,42 @@ export interface TaskCompletionPanelGithubBlocker {
 export interface TaskCompletionPanelTaskBlocker {
   number: number
   resolved: boolean
+}
+
+function BlockerRow({
+  kind,
+  label,
+  resolved,
+  mono = false,
+  action,
+}: {
+  kind: 'WAIT' | 'TASK' | 'GITHUB'
+  label: string
+  resolved: boolean
+  mono?: boolean
+  action: ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs">
+      <span className="w-14 shrink-0 font-mono text-2xs text-muted-foreground">
+        {kind}
+      </span>
+      <span
+        className={cn(
+          'min-w-0 flex-1 truncate',
+          mono && 'font-mono',
+          resolved && 'text-muted-foreground line-through',
+        )}
+      >
+        {label}
+      </span>
+      {resolved ? (
+        <span className="text-muted-foreground">✓ resolved</span>
+      ) : (
+        action
+      )}
+    </div>
+  )
 }
 
 export function TaskCompletionBlockerPanelAppearance({
@@ -90,24 +127,12 @@ export function TaskCompletionBlockerPanelAppearance({
             </p>
             <div className="border-t border-border">
               {waits.map((wait) => (
-                <div
+                <BlockerRow
                   key={`wait-${wait.id}`}
-                  className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs"
-                >
-                  <span className="w-14 shrink-0 font-mono text-2xs text-muted-foreground">
-                    WAIT
-                  </span>
-                  <span
-                    className={cn(
-                      'min-w-0 flex-1 truncate',
-                      wait.resolved && 'text-muted-foreground line-through',
-                    )}
-                  >
-                    {wait.label}
-                  </span>
-                  {wait.resolved ? (
-                    <span className="text-muted-foreground">✓ resolved</span>
-                  ) : (
+                  kind="WAIT"
+                  label={wait.label}
+                  resolved={wait.resolved}
+                  action={
                     <Button
                       type="button"
                       variant="ghost"
@@ -117,28 +142,17 @@ export function TaskCompletionBlockerPanelAppearance({
                     >
                       Resolve
                     </Button>
-                  )}
-                </div>
+                  }
+                />
               ))}
               {taskBlockers.map((task) => (
-                <div
+                <BlockerRow
                   key={`task-${String(task.number)}`}
-                  className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs"
-                >
-                  <span className="w-14 shrink-0 font-mono text-2xs text-muted-foreground">
-                    TASK
-                  </span>
-                  <span
-                    className={cn(
-                      'min-w-0 flex-1 truncate font-mono',
-                      task.resolved && 'text-muted-foreground line-through',
-                    )}
-                  >
-                    {`#${String(task.number)}`}
-                  </span>
-                  {task.resolved ? (
-                    <span className="text-muted-foreground">✓ resolved</span>
-                  ) : (
+                  kind="TASK"
+                  label={`#${String(task.number)}`}
+                  resolved={task.resolved}
+                  mono
+                  action={
                     <Link
                       to="/tasks/$taskId"
                       params={{ taskId: String(task.number) }}
@@ -146,28 +160,17 @@ export function TaskCompletionBlockerPanelAppearance({
                     >
                       Open
                     </Link>
-                  )}
-                </div>
+                  }
+                />
               ))}
               {githubBlockers.map((github) => (
-                <div
+                <BlockerRow
                   key={github.key}
-                  className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs"
-                >
-                  <span className="w-14 shrink-0 font-mono text-2xs text-muted-foreground">
-                    GITHUB
-                  </span>
-                  <span
-                    className={cn(
-                      'min-w-0 flex-1 truncate font-mono',
-                      github.resolved && 'text-muted-foreground line-through',
-                    )}
-                  >
-                    {github.label}
-                  </span>
-                  {github.resolved ? (
-                    <span className="text-muted-foreground">✓ resolved</span>
-                  ) : (
+                  kind="GITHUB"
+                  label={github.label}
+                  resolved={github.resolved}
+                  mono
+                  action={
                     <a
                       href={github.url}
                       target="_blank"
@@ -176,8 +179,8 @@ export function TaskCompletionBlockerPanelAppearance({
                     >
                       Open ↗
                     </a>
-                  )}
-                </div>
+                  }
+                />
               ))}
             </div>
             <div className="flex items-center justify-between gap-3 px-4 py-3 text-xs">

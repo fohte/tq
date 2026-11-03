@@ -32,6 +32,13 @@ export interface TaskCompletionRequest {
   duplicateOfTaskId?: string
 }
 
+type CompletionRequestMetadata = {
+  id: string
+  taskNumber?: number | undefined
+  statusReason?: TaskCompletionRequest['statusReason'] | undefined
+  duplicateOfTaskId?: string | undefined
+}
+
 export interface TaskCompletionFailure {
   id: string
   request: TaskCompletionRequest
@@ -48,6 +55,44 @@ export class TaskCompletionError extends Error {
     super(message)
     this.name = 'TaskCompletionError'
   }
+}
+
+const taskCompletionFailureListeners = new Set<() => void>()
+let taskCompletionFailure: TaskCompletionFailure | null = null
+
+export function subscribeTaskCompletionFailure(listener: () => void) {
+  taskCompletionFailureListeners.add(listener)
+  return () => {
+    taskCompletionFailureListeners.delete(listener)
+  }
+}
+
+export function getTaskCompletionFailureSnapshot() {
+  return taskCompletionFailure
+}
+
+export function createTaskCompletionRequest(
+  kind: TaskCompletionRequest['kind'],
+  {
+    id,
+    taskNumber,
+    statusReason,
+    duplicateOfTaskId,
+  }: CompletionRequestMetadata,
+): TaskCompletionRequest {
+  return {
+    kind,
+    id,
+    ...(taskNumber == null ? {} : { taskNumber }),
+    ...(statusReason == null ? {} : { statusReason }),
+    ...(duplicateOfTaskId == null ? {} : { duplicateOfTaskId }),
+  }
+}
+
+export function dismissTaskCompletionFailure(failureId: string) {
+  if (taskCompletionFailure?.id !== failureId) return
+  taskCompletionFailure = null
+  for (const listener of taskCompletionFailureListeners) listener()
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -114,46 +159,6 @@ function parseBlockers(body: unknown): TaskCompletionBlockers | null {
   }
 }
 
-function isCompletionRequest(value: unknown): value is TaskCompletionRequest {
-  if (!isRecord(value)) return false
-  return (
-    (value['kind'] === 'status' || value['kind'] === 'complete') &&
-    typeof value['id'] === 'string' &&
-    (value['taskNumber'] === undefined ||
-      typeof value['taskNumber'] === 'number') &&
-    (value['statusReason'] === undefined ||
-      value['statusReason'] === 'completed' ||
-      value['statusReason'] === 'not_planned' ||
-      value['statusReason'] === 'duplicate') &&
-    (value['duplicateOfTaskId'] === undefined ||
-      typeof value['duplicateOfTaskId'] === 'string')
-  )
-}
-
-export function getTaskCompletionFailure(
-  event: Event,
-): TaskCompletionFailure | null {
-  if (!(event instanceof CustomEvent) || !isRecord(event.detail)) return null
-  const id = event.detail['id']
-  const request = event.detail['request']
-  const message = event.detail['message']
-  const blockers = event.detail['blockers']
-  if (
-    typeof id !== 'string' ||
-    !isCompletionRequest(request) ||
-    typeof message !== 'string' ||
-    (blockers !== null && parseBlockers(blockers) === null)
-  ) {
-    return null
-  }
-  return {
-    id,
-    request,
-    message,
-    blockers: blockers === null ? null : parseBlockers(blockers),
-  }
-}
-
 function getErrorMessage(body: unknown, status: number): string {
   if (isRecord(body) && typeof body['error'] === 'string') return body['error']
   return `The server returned an error (${String(status)}).`
@@ -193,11 +198,11 @@ export function notifyTaskCompletionFailed(
   error: unknown,
 ): void {
   const message = error instanceof Error ? error.message : 'Request failed.'
-  const detail = {
+  taskCompletionFailure = {
     id: crypto.randomUUID(),
     request,
     message,
     blockers: error instanceof TaskCompletionError ? error.blockers : null,
   }
-  window.dispatchEvent(new CustomEvent('tq:task-completion-failed', { detail }))
+  for (const listener of taskCompletionFailureListeners) listener()
 }
