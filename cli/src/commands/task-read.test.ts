@@ -672,6 +672,16 @@ describe('task search', () => {
     })
   })
 
+  it('sends the unset priority filter using the none value', async () => {
+    await expectTaskQuery(['task', 'search', '--priority', 'none'], {
+      view: 'row',
+      context: 'all',
+      status: 'all',
+      priority: 'none',
+      limit: '20',
+    })
+  })
+
   it.each(['todo', 'completed', 'all'])(
     'sends --status %s to the API',
     async (status) => {

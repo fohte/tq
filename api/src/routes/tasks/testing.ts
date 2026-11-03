@@ -11,8 +11,12 @@ import {
   taskEvents,
 } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import type { TaskStatusReason } from '#schemas/task'
-import { taskStatusReason } from '#schemas/task'
+import {
+  type TaskPriority,
+  taskPriority,
+  type TaskStatusReason,
+  taskStatusReason,
+} from '#schemas/task'
 import type { TaskQueueCandidateReason } from '#services/task-queue-candidates'
 import { jsonBody } from '#testing'
 
@@ -90,6 +94,7 @@ export interface TaskResponse {
   status: 'todo' | 'completed'
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
+  priority: TaskPriority | null
   commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
   startDate: string | null
@@ -137,6 +142,7 @@ export interface TaskListItemResponse {
   status: 'todo' | 'completed'
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
+  priority: TaskPriority | null
   commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
   startDate: string | null
@@ -217,6 +223,7 @@ export function toListItemResponse(
     | 'status'
     | 'statusReason'
     | 'context'
+    | 'priority'
     | 'commitment'
     | 'labels'
     | 'startDate'
@@ -248,6 +255,7 @@ export function toListItemResponse(
     status: task.status,
     statusReason: task.statusReason,
     context: task.context,
+    priority: task.priority,
     commitment: task.commitment,
     labels: task.labels,
     startDate: task.startDate,
@@ -367,6 +375,7 @@ const taskListItemResponseSchema = z.object({
   status: z.enum(['todo', 'completed']),
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
+  priority: taskPriority.nullable(),
   commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
@@ -411,6 +420,7 @@ const taskResponseSchema = z.object({
   status: z.enum(['todo', 'completed']),
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
+  priority: taskPriority.nullable(),
   commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
@@ -469,6 +479,7 @@ export async function createTask(
     startDate?: string
     dueDate?: string
     context?: string
+    priority?: TaskPriority | null
     commitment?: string
     labels?: string[]
   } = {},

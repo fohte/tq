@@ -20,6 +20,11 @@ export const taskStatusReason = z.enum([
 export type TaskStatusReason = z.infer<typeof taskStatusReason>
 export const contextEnum = z.enum(['work', 'personal'])
 export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
+export const taskPriority = z.number().int().min(-1).max(2)
+export type TaskPriority = z.infer<typeof taskPriority>
+
+const taskPriorityFilter = z.enum(['none', '-1', '0', '1', '2'])
+export type TaskPriorityFilter = z.infer<typeof taskPriorityFilter>
 
 const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
@@ -74,6 +79,7 @@ export const createTaskSchema = z.object({
   parentId: taskIdOrNumber.optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
+  priority: taskPriority.nullable().optional(),
   commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
@@ -94,6 +100,7 @@ export const updateTaskSchema = z.object({
   dueDate: z.string().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
+  priority: taskPriority.nullable().optional(),
   commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
@@ -151,6 +158,7 @@ export const listTasksQuerySchema = z.object({
     .describe('Only return tasks that can be added to a queue on this date.')
     .optional(),
   context: taskListContext,
+  priority: taskPriorityFilter.optional(),
   commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
   templateId: z.uuid().optional(),

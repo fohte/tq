@@ -1057,6 +1057,10 @@ describe('task waits API', () => {
     await createTask('Active task', {
       commitment: 'active',
     })
+    await createTask('Priority task with future start', {
+      startDate: addDaysAtOffset(now, tzOffset, 1),
+      priority: 0,
+    })
     await addWait(followUp.id, 'Check in', today)
     const resolvedReply = await jsonBody<TaskWaitResponse>(
       await addWait(waitResolved.id, 'Review received', today),
@@ -1086,6 +1090,10 @@ describe('task waits API', () => {
         { title: 'Due later task', reason: { kind: 'due-later', days: 2 } },
         { title: 'Starting task', reason: { kind: 'starts', days: 0 } },
         { title: 'Active task', reason: { kind: 'active' } },
+        {
+          title: 'Priority task with future start',
+          reason: { kind: 'active' },
+        },
       ],
     })
   })

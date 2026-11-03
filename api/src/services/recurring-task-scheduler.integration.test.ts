@@ -87,6 +87,7 @@ function expectedTask(
     templateId: template.id,
     occurrenceDate: null,
     context: template.context,
+    priority: null,
     commitment: 'inbox' as const,
     remindAt: null,
     createdAt: 'DATE',

@@ -1,4 +1,8 @@
-import { type TaskStatusReason, taskStatusReason } from '#schemas/task'
+import {
+  type TaskPriority,
+  type TaskStatusReason,
+  taskStatusReason,
+} from '#schemas/task'
 
 export interface ParsedQuery {
   freeText: string
@@ -6,7 +10,7 @@ export interface ParsedQuery {
   reason?: TaskStatusReason
   label?: string
   context?: 'work' | 'personal'
-  commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority | null
   hasPages?: boolean
   hasComments?: boolean
   hasNoChildren?: boolean
@@ -90,15 +94,17 @@ const searchQueryTokenDefinitions = new Map(
       },
       true,
     ),
-    commitment: defineFixedToken(
+    priority: defineFixedToken(
       [
-        ['inbox', 'Inbox'],
-        ['active', 'Active'],
-        ['someday', 'Someday'],
+        ['2', 'Priority 2'],
+        ['1', 'Priority 1'],
+        ['0', 'Priority 0'],
+        ['none', 'Inbox'],
+        ['-1', 'Priority -1'],
       ],
-      'Limit tasks by commitment level.',
+      'Limit tasks by priority value.',
       (result, value) => {
-        result.commitment = value
+        result.priority = value === 'none' ? null : Number(value)
       },
     ),
     sort: defineFixedToken(
@@ -302,8 +308,10 @@ export function buildSearchQuery(query: ParsedQuery): string {
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)
   }
-  if (query.commitment !== undefined) {
-    parts.push(`commitment:${query.commitment}`)
+  if (query.priority !== undefined) {
+    parts.push(
+      `priority:${query.priority === null ? 'none' : String(query.priority)}`,
+    )
   }
   if (query.reason !== undefined) {
     parts.push(`reason:${query.reason}`)

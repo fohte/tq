@@ -110,6 +110,7 @@ describe('taskDetailToSearchResult', () => {
       statusReason: task.statusReason,
       context: task.context,
       commitment: task.commitment,
+      priority: task.priority,
       labels: task.labels,
       startDate: task.startDate,
       dueDate: task.dueDate,
