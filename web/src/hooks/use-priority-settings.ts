@@ -3,7 +3,7 @@ import type { InferRequestType, InferResponseType } from 'hono/client'
 
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
-import { prioritySettingsKeys } from '#lib/query-keys'
+import { prioritySettingsKeys, queueKeys, taskKeys } from '#lib/query-keys'
 
 export type PrioritySetting = InferResponseType<
   (typeof api.api)['priority-settings']['$get'],
@@ -36,6 +36,8 @@ export function useUpdatePrioritySettings() {
     },
     onSuccess: (settings) => {
       queryClient.setQueryData(prioritySettingsKeys.all, settings)
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
+      void queryClient.invalidateQueries({ queryKey: queueKeys.all })
     },
   })
 }
