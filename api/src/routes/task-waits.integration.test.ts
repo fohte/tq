@@ -1156,7 +1156,7 @@ describe('task waits API', () => {
     })
   })
 
-  it('prefers an overdue reason when the task also has a follow-up due', async () => {
+  it('prefers a follow-up reason when the task also has an overdue due date', async () => {
     const now = new Date()
     const tzOffset = offsetWithDifferentUtcDate(now)
     const today = dateAtOffset(now, tzOffset)
@@ -1175,7 +1175,7 @@ describe('task waits API', () => {
       bodyResponseSnapshot(response.status, body[0]?.candidateReason ?? null),
     ).toEqual({
       status: 200,
-      body: { kind: 'overdue', days: 2 },
+      body: { kind: 'follow-up', days: 1 },
     })
   })
 

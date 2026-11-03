@@ -257,4 +257,75 @@ describe('priority settings API', () => {
       },
     ])
   })
+
+  it('orders overdue candidates by configured priority before their due dates', async () => {
+    await updateSettings([
+      { priority: 1, name: 'Soon', description: '', sortOrder: 0 },
+      { priority: 0, name: 'Routine', description: '', sortOrder: 1 },
+      { priority: null, name: 'Inbox', description: '', sortOrder: 2 },
+      { priority: 2, name: 'First', description: '', sortOrder: 3 },
+      { priority: -1, name: 'Later', description: '', sortOrder: 4 },
+    ])
+    await createTask('Routine with an earlier due date', {
+      priority: 0,
+      dueDate: '2036-05-08',
+    })
+    await createTask('Soon with a later due date', {
+      priority: 1,
+      dueDate: '2036-05-09',
+    })
+
+    const response = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&candidatesOn=2036-05-10',
+    )
+    const candidates = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      candidates.map(({ title, candidateReason }) => ({
+        title,
+        candidateReason,
+      })),
+    ).toEqual([
+      {
+        title: 'Soon with a later due date',
+        candidateReason: { kind: 'overdue', days: 1 },
+      },
+      {
+        title: 'Routine with an earlier due date',
+        candidateReason: { kind: 'overdue', days: 2 },
+      },
+    ])
+  })
+
+  it('orders deferred overdue candidates after higher priorities despite older due dates', async () => {
+    await createTask('Deferred with an earlier due date', {
+      priority: -1,
+      dueDate: '2036-05-08',
+    })
+    await createTask('Routine with a later due date', {
+      priority: 0,
+      dueDate: '2036-05-09',
+    })
+
+    const response = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&candidatesOn=2036-05-10',
+    )
+    const candidates = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(
+      candidates.map(({ title, candidateReason }) => ({
+        title,
+        candidateReason,
+      })),
+    ).toEqual([
+      {
+        title: 'Routine with a later due date',
+        candidateReason: { kind: 'overdue', days: 1 },
+      },
+      {
+        title: 'Deferred with an earlier due date',
+        candidateReason: { kind: 'overdue', days: 2 },
+      },
+    ])
+  })
 })

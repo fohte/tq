@@ -8,7 +8,7 @@ import {
   updatePrioritySettingsSchema,
 } from '#schemas/priority-settings'
 
-export const PRIORITY_FALLBACK_ORDER = 5
+const PRIORITY_FALLBACK_ORDER = 5
 
 function toError(cause: unknown) {
   return cause instanceof Error ? cause : new Error(String(cause))

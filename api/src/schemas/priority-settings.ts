@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const priorityValues = [-1, 0, 1, 2] as const
 
-export const prioritySettingSchema = z.object({
+const prioritySettingSchema = z.object({
   priority: z.union([
     z.literal(-1),
     z.literal(0),

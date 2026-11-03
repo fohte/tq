@@ -65,21 +65,18 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
   `
   const startable = sql`${tasks.startDate} <= ${date}`
 
+  // Follow-up keeps reason precedence even though overdue has the earlier queue rank.
   return [
     {
       stage: 'wait-resolved' as const,
+      stageRank: -1,
       condition: hasUnacknowledgedResolvedTaskWaitCondition(),
       matches: (task: CandidateTask) =>
         task.waits?.some(isTaskWaitResolvedAndUnacknowledged) === true,
     },
     {
-      stage: 'overdue' as const,
-      condition: sql`${tasks.dueDate} < ${date}`,
-      matches: (task: CandidateTask) =>
-        task.dueDate != null && task.dueDate < date,
-    },
-    {
       stage: 'follow-up' as const,
+      stageRank: 1,
       condition: hasFollowUp,
       matches: (task: CandidateTask) =>
         task.waits?.some(
@@ -87,12 +84,21 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
         ) === true,
     },
     {
+      stage: 'overdue' as const,
+      stageRank: 0,
+      condition: sql`${tasks.dueDate} < ${date}`,
+      matches: (task: CandidateTask) =>
+        task.dueDate != null && task.dueDate < date,
+    },
+    {
       stage: 'due-today' as const,
+      stageRank: 2,
       condition: sql`${tasks.dueDate} = ${date}`,
       matches: (task: CandidateTask) => task.dueDate === date,
     },
     {
       stage: 'due-later' as const,
+      stageRank: 3,
       condition: dueLater,
       matches: (task: CandidateTask) =>
         task.dueDate != null &&
@@ -102,11 +108,13 @@ function candidateStageRules(date: string, settings: PrioritySetting[]) {
     },
     {
       stage: 'starts' as const,
+      stageRank: 4,
       condition: startable,
       matches: (task: CandidateTask) => isStartable(task, date),
     },
     {
       stage: 'priority' as const,
+      stageRank: 5,
       condition: priorityBeforeInbox,
       matches: (task: CandidateTask) =>
         priorityIsBeforeInbox(task.priority, settings),
@@ -119,14 +127,16 @@ export function resolveTaskCandidateStageSql(
   settings: PrioritySetting[],
 ): SQL {
   const stages = candidateStageRules(date, settings)
-  const completedStage = stages.length
+  const completedStage =
+    Math.max(...stages.map(({ stageRank }) => stageRank)) + 1
   const cases = stages.map(
-    ({ condition }, index) => sql`WHEN ${condition} THEN ${index}`,
+    ({ condition, stageRank }) =>
+      sql`WHEN ${condition} THEN ${stageRank}::integer`,
   )
   const completedCandidate = or(...stages.map(({ condition }) => condition))
   return sql`CASE
     WHEN ${tasks.status} = 'completed' THEN
-      CASE WHEN ${completedCandidate} THEN ${completedStage} ELSE NULL END
+      CASE WHEN ${completedCandidate} THEN ${completedStage}::integer ELSE NULL END
     ${sql.join(cases, sql` `)}
     ELSE NULL
   END`
