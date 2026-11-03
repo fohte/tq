@@ -1108,7 +1108,9 @@ describe('SearchModal', () => {
     })
     expect(getOutput()).toEqual({
       onOpenChange: [[false]],
-      completeTask: [[{ id: currentTaskDetail.id }]],
+      completeTask: [
+        [{ id: currentTaskDetail.id, taskNumber: currentTaskDetail.number }],
+      ],
       navigate: [],
     })
   })
