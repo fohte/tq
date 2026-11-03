@@ -32,11 +32,13 @@ type TaskStatus = 'todo' | 'completed'
 export type TaskContext = 'work' | 'personal'
 type TaskListContext = TaskContext | 'all'
 
+export type TaskPriorityFilter = 'none' | '-1' | '0' | '1' | '2'
+
 export type TaskSortBy = 'created' | 'updated' | 'due'
 type TaskListSortBy = TaskSortBy | 'follow-up'
 type TaskSortOrder = 'asc' | 'desc'
 
-export type TaskCommitment = 'inbox' | 'active' | 'someday'
+type TaskCommitment = 'inbox' | 'active' | 'someday'
 
 type TaskListFilterOptions = {
   ids?: string[]
@@ -49,6 +51,7 @@ type TaskListFilterOptions = {
   dueTo?: string
   candidatesOn?: string
   context: TaskListContext
+  priority?: TaskPriorityFilter
   commitment?: TaskCommitment
   parentId?: string
   templateId?: string
@@ -83,6 +86,7 @@ export type InfiniteTaskListFilter<View extends TaskListView = TaskListView> =
 export interface TaskCountFilter {
   context: TaskListContext
   status: TaskStatus | 'all' | TaskStatus[]
+  priority?: TaskPriorityFilter
   commitment?: TaskCommitment
   q?: string
 }
