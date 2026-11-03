@@ -43,6 +43,7 @@ export function PrioritySettingsEditor({
     )
   })
   const hasInvalidName = draft.some((setting) => setting.name.trim() === '')
+  const inboxName = draft.find((setting) => setting.priority === null)?.name
 
   function updateSetting(
     priority: PrioritySetting['priority'],
@@ -71,10 +72,12 @@ export function PrioritySettingsEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        Inbox (未設定) より上にある段階は、日付がなくても queue candidates
-        に表示されます。
-      </p>
+      {inboxName != null && (
+        <p className="text-sm text-muted-foreground">
+          {inboxName} より上にある段階は、日付がなくても queue candidates
+          に表示されます。
+        </p>
+      )}
 
       <Panel padding="none">
         <div className="divide-y divide-border">

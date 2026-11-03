@@ -56,7 +56,7 @@ beforeEach(() => {
 })
 
 describe('PrioritySettingsPanel', () => {
-  it('saves edited names and descriptions in the selected order', async () => {
+  it('uses the configured Inbox name and saves edits in the selected order', async () => {
     const user = userEvent.setup()
     render(
       <Providers>
@@ -67,9 +67,14 @@ describe('PrioritySettingsPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Now を下へ' }))
     const nameInput = screen.getByRole('textbox', { name: 'Now の表示名' })
     const descriptionInput = screen.getByRole('textbox', { name: 'Now の説明' })
+    const inboxNameInput = screen.getByRole('textbox', {
+      name: 'Inbox の表示名',
+    })
     await user.clear(nameInput)
     await user.type(nameInput, 'Soon')
     await user.type(descriptionInput, 'Handle this after the next item.')
+    await user.clear(inboxNameInput)
+    await user.type(inboxNameInput, 'Unsorted')
     await user.click(screen.getByRole('button', { name: '保存' }))
 
     const original = makePrioritySettings()
@@ -82,10 +87,22 @@ describe('PrioritySettingsPanel', () => {
         ...setting,
         ...(priority === 2
           ? { name: 'Soon', description: 'Handle this after the next item.' }
-          : {}),
+          : priority === null
+            ? { name: 'Unsorted' }
+            : {}),
         sortOrder,
       }
     })
-    expect(mutate.mock.calls).toEqual([[expected]])
+    const result = () => ({
+      saveCalls: mutate.mock.calls,
+      queueCandidateNote: screen.getByText(
+        'Unsorted より上にある段階は、日付がなくても queue candidates に表示されます。',
+      ).textContent,
+    })
+    expect(result()).toEqual({
+      saveCalls: [[expected]],
+      queueCandidateNote:
+        'Unsorted より上にある段階は、日付がなくても queue candidates に表示されます。',
+    })
   })
 })
