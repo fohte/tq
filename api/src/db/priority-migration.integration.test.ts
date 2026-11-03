@@ -14,11 +14,14 @@ afterAll(async () => {
 it('migrates task priorities and saved view filters by value', async () => {
   const schemaName =
     'priority_migration_' + crypto.randomUUID().replaceAll('-', '')
-  const migrationSql = await readFile(
-    new URL('../../drizzle/0066_concerned_shinobi_shaw.sql', import.meta.url),
-    'utf8',
+  const migrationSql = await Promise.all(
+    ['0066_concerned_shinobi_shaw.sql', '0067_fixed_mandrill.sql'].map(
+      (fileName) =>
+        readFile(new URL('../../drizzle/' + fileName, import.meta.url), 'utf8'),
+    ),
   )
   const statements = migrationSql
+    .join('\n')
     .split('--> statement-breakpoint')
     .map((statement) => statement.trim())
     .filter((statement) => statement.length > 0)
@@ -29,7 +32,7 @@ it('migrates task priorities and saved view filters by value', async () => {
     await tx.unsafe(`
       CREATE TABLE tasks (
         id text PRIMARY KEY,
-        commitment text NOT NULL
+        commitment text NOT NULL DEFAULT 'inbox'
       )
     `)
     await tx.unsafe(`
@@ -56,8 +59,10 @@ it('migrates task priorities and saved view filters by value', async () => {
       await tx.unsafe(statement)
     }
 
+    await tx.unsafe("INSERT INTO tasks (id, priority) VALUES ('four', 1)")
+
     const tasks = await tx.unsafe<
-      { id: string; commitment: string; priority: number | null }[]
+      { id: string; commitment: string | null; priority: number | null }[]
     >('SELECT id, commitment, priority FROM tasks ORDER BY id')
     const savedViews = await tx.unsafe<{ id: string; query: string }[]>(
       'SELECT id, query FROM saved_views ORDER BY id',
@@ -70,6 +75,7 @@ it('migrates task priorities and saved view filters by value', async () => {
 
   expect(migratedRows).toEqual({
     tasks: [
+      { id: 'four', commitment: null, priority: 1 },
       { id: 'one', commitment: 'inbox', priority: null },
       { id: 'three', commitment: 'someday', priority: -1 },
       { id: 'two', commitment: 'active', priority: 0 },

@@ -128,13 +128,9 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('personal'),
-    // GTD-style commitment: `inbox` = not triaged, `someday` = deferred,
-    // `active` = committed.
     commitment: text('commitment', {
       enum: ['inbox', 'active', 'someday'],
-    })
-      .notNull()
-      .default('inbox'),
+    }),
     priority: integer('priority'),
     // When to push a reminder for this task. Cleared back to NULL once the
     // reminder has been claimed for delivery, so the column doubles as the

@@ -137,7 +137,7 @@ describe('syncGithubAssignedIssues', () => {
       occurrenceDate: null,
       context: 'personal',
       priority: null,
-      commitment: 'inbox',
+      commitment: null,
       createdAt: 'DATE',
       updatedAt: 'DATE',
     })

@@ -185,11 +185,13 @@ describe('parseSearchQuery', () => {
     const result = parseSearchQuery(
       'deploy is:todo label:dev context:work priority:0',
     )
-    expect(result.freeText).toBe('deploy')
-    expect(result.status).toEqual(['todo'])
-    expect(result.label).toBe('dev')
-    expect(result.context).toBe('work')
-    expect(result.priority).toBe(0)
+    expect(result).toEqual({
+      freeText: 'deploy',
+      status: ['todo'],
+      label: 'dev',
+      context: 'work',
+      priority: 0,
+    })
   })
 
   it('handles free text interspersed with prefixes', () => {

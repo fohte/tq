@@ -1258,9 +1258,9 @@ describe('tasks CRUD API', () => {
           updatedTaskResponse('Active legacy write', null, false, null),
         ],
         rows: [
-          { id: active.id, commitment: 'inbox', priority: null },
-          { id: deferred.id, commitment: 'inbox', priority: 2 },
-          { id: inbox.id, commitment: 'inbox', priority: 0 },
+          { id: active.id, commitment: null, priority: null },
+          { id: deferred.id, commitment: null, priority: 2 },
+          { id: inbox.id, commitment: null, priority: 0 },
         ].toSorted((a, b) => a.id.localeCompare(b.id)),
       })
     })

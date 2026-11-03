@@ -470,6 +470,13 @@
       "when": 1793695954260,
       "tag": "0066_concerned_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793697944800,
+      "tag": "0067_fixed_mandrill",
+      "breakpoints": true
     }
   ]
 }
