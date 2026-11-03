@@ -6,7 +6,6 @@ import type { ReactNode } from 'react'
 import { makeTaskAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { makeProject } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
-import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { makeNode } from '#components/task/task-row-test-fixtures'
 import type { TreeTaskGridRowProps } from '#components/task/tree-task-grid-row'
 import { TreeTaskGridRow } from '#components/task/tree-task-grid-row'
@@ -99,16 +98,7 @@ function StaticTreeTaskGridRow(
 const meta = {
   title: 'Task/TreeTaskGridRow',
   component: TreeTaskGridRowWithProviders,
-  parameters: {
-    layout: 'centered',
-    msw: {
-      handlers: [
-        http.get('/api/priority-settings', () =>
-          HttpResponse.json(makePrioritySettings()),
-        ),
-      ],
-    },
-  },
+  parameters: { layout: 'centered' },
 } satisfies Meta<typeof TreeTaskGridRowWithProviders>
 
 export default meta
@@ -201,9 +191,6 @@ export const WithProject: Story = {
   parameters: {
     msw: {
       handlers: [
-        http.get('/api/priority-settings', () =>
-          HttpResponse.json(makePrioritySettings()),
-        ),
         http.get('/api/projects/:id', () =>
           HttpResponse.json(
             makeProject({

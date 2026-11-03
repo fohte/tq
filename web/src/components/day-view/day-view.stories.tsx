@@ -11,7 +11,6 @@ import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { DUE_TODAY_SECTION_KEY } from '#components/day-view/queue-sections'
 import { makeSchedule } from '#components/schedule/schedule-test-fixtures'
-import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
@@ -393,9 +392,6 @@ const meta = {
     // CreateTaskModal's TagsInput fetches label suggestions.
     msw: {
       handlers: [
-        http.get('/api/priority-settings', () =>
-          HttpResponse.json(makePrioritySettings()),
-        ),
         http.get('/api/labels', () => HttpResponse.json([])),
         http.get('/api/tasks/search/suggest', () => HttpResponse.json([])),
       ],
