@@ -147,6 +147,40 @@ const SECOND_WAIT = {
   label: 'Review the release notes',
 }
 
+function blockedWaitResponse(wait: typeof WAIT) {
+  return jsonResponse(
+    {
+      error: `Task is blocked by unresolved blockers: wait ${wait.label}`,
+      blockedByNumbers: [],
+      blockedByGithubRefs: [],
+      blockedByWaits: [wait],
+    },
+    409,
+  )
+}
+
+function blockedWaitFetch({
+  method,
+  waitForRequest = () => WAIT,
+  taskResponses = [{ taskId: TASK_ID, body: taskWithWait(WAIT, null) }],
+}: {
+  method: 'POST' | 'PATCH'
+  waitForRequest?: (url: string) => typeof WAIT
+  taskResponses?: { taskId: string; body: unknown }[]
+}) {
+  return vi.fn((...args: Parameters<typeof fetch>) => {
+    const url = getRequestUrl(args[0])
+    if (args[1]?.method === method) {
+      return blockedWaitResponse(waitForRequest(url))
+    }
+    const taskResponse = taskResponses.find(({ taskId }) =>
+      url.includes(taskId),
+    )
+    if (taskResponse) return jsonResponse(taskResponse.body)
+    return jsonResponse({})
+  })
+}
+
 function getPanelOutput() {
   const panel = screen.getByRole('alert')
   return [
@@ -174,31 +208,7 @@ afterEach(() => {
 
 describe('TaskCompletionFailurePanel', () => {
   it('shows the blocker panel when a completion request receives a 409 response', async () => {
-    const wait = WAIT
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((...args: Parameters<typeof fetch>) => {
-        const input = args[0]
-        const init = args[1]
-        if (init?.method === 'POST') {
-          return jsonResponse(
-            {
-              error:
-                'Task is blocked by unresolved blockers: wait Reply from a supplier',
-              blockedByNumbers: [],
-              blockedByGithubRefs: [],
-              blockedByWaits: [wait],
-            },
-            409,
-          )
-        }
-        const inputUrl = getRequestUrl(input)
-        if (inputUrl.includes(TASK_ID)) {
-          return jsonResponse(taskWithWait(wait, null))
-        }
-        return jsonResponse({})
-      }),
-    )
+    vi.stubGlobal('fetch', blockedWaitFetch({ method: 'POST' }))
     await createHarness(<CompletionAttempt />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Complete task' }))
@@ -210,12 +220,6 @@ describe('TaskCompletionFailurePanel', () => {
         'Blocked by 1 unresolved item.',
         true,
       ])
-    })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Dismiss completion error' }),
-    )
-    await waitFor(() => {
-      expect(screen.queryByRole('alert')).toEqual(null)
     })
   })
 
@@ -250,40 +254,25 @@ describe('TaskCompletionFailurePanel', () => {
         "Couldn't complete #71",
       )
     })
+  })
+
+  it('closes the panel when its dismiss button is clicked', async () => {
+    vi.stubGlobal('fetch', blockedWaitFetch({ method: 'POST' }))
+    await createHarness(<CompletionAttempt />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Complete task' }))
+    await screen.findByRole('alert')
     fireEvent.click(
       screen.getByRole('button', { name: 'Dismiss completion error' }),
     )
+
     await waitFor(() => {
       expect(screen.queryByRole('alert')).toEqual(null)
     })
   })
 
   it('closes on an unhandled Escape key and remains open when another UI prevents it', async () => {
-    const wait = WAIT
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((...args: Parameters<typeof fetch>) => {
-        const input = args[0]
-        const init = args[1]
-        if (init?.method === 'PATCH') {
-          return jsonResponse(
-            {
-              error:
-                'Task is blocked by unresolved blockers: wait Reply from a supplier',
-              blockedByNumbers: [],
-              blockedByGithubRefs: [],
-              blockedByWaits: [wait],
-            },
-            409,
-          )
-        }
-        const inputUrl = getRequestUrl(input)
-        if (inputUrl.includes(TASK_ID)) {
-          return jsonResponse(taskWithWait(wait, null))
-        }
-        return jsonResponse({})
-      }),
-    )
+    vi.stubGlobal('fetch', blockedWaitFetch({ method: 'PATCH' }))
     await createHarness(<StatusCompletionAttempt />)
 
     fireEvent.click(
@@ -317,17 +306,16 @@ describe('TaskCompletionFailurePanel', () => {
     })
   })
 
-  it('shows only the reason for JSON and non-JSON failures', async () => {
-    let failureCount = 0
+  it('shows only the server reason for a JSON error response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((...args: Parameters<typeof fetch>) => {
         const init = args[1]
         if (init?.method === 'PATCH') {
-          failureCount += 1
-          return failureCount === 1
-            ? jsonResponse({ error: 'The task could not be completed.' }, 500)
-            : new Response('upstream unavailable', { status: 502 })
+          return jsonResponse(
+            { error: 'The task could not be completed.' },
+            500,
+          )
         }
         return jsonResponse(
           makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
@@ -346,13 +334,22 @@ describe('TaskCompletionFailurePanel', () => {
         messages: ['The task could not be completed.'],
       })
     })
+  })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Dismiss completion error' }),
+  it('shows only the fallback reason for a non-JSON error response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((...args: Parameters<typeof fetch>) => {
+        const init = args[1]
+        if (init?.method === 'PATCH') {
+          return new Response('upstream unavailable', { status: 502 })
+        }
+        return jsonResponse(
+          makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
+        )
+      }),
     )
-    await waitFor(() => {
-      expect(screen.queryByRole('alert')).toEqual(null)
-    })
+    await createHarness(<StatusCompletionAttempt />)
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Complete through status' }),
@@ -369,36 +366,22 @@ describe('TaskCompletionFailurePanel', () => {
   it('replaces the panel contents when a different task completion fails', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn((...args: Parameters<typeof fetch>) => {
-        const input = args[0]
-        const init = args[1]
-        const inputUrl = getRequestUrl(input)
-        if (init?.method === 'POST') {
-          const wait = inputUrl.includes(SECOND_TASK_ID) ? SECOND_WAIT : WAIT
-          return jsonResponse(
-            {
-              error: `Task is blocked by unresolved blockers: wait ${wait.label}`,
-              blockedByNumbers: [],
-              blockedByGithubRefs: [],
-              blockedByWaits: [wait],
-            },
-            409,
-          )
-        }
-        if (inputUrl.includes(SECOND_TASK_ID)) {
-          return jsonResponse(
-            taskWithWaitFor(
+      blockedWaitFetch({
+        method: 'POST',
+        waitForRequest: (url) =>
+          url.includes(SECOND_TASK_ID) ? SECOND_WAIT : WAIT,
+        taskResponses: [
+          {
+            taskId: SECOND_TASK_ID,
+            body: taskWithWaitFor(
               SECOND_TASK_ID,
               SECOND_TASK_NUMBER,
               SECOND_WAIT,
               null,
             ),
-          )
-        }
-        if (inputUrl.includes(TASK_ID)) {
-          return jsonResponse(taskWithWait(WAIT, null))
-        }
-        return jsonResponse({})
+          },
+          { taskId: TASK_ID, body: taskWithWait(WAIT, null) },
+        ],
       }),
     )
     await createHarness(<MultiTaskCompletionAttempt />)
@@ -427,29 +410,17 @@ describe('TaskCompletionFailurePanel', () => {
   it('keeps a wait unresolved when refreshed task details omit waits', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn((...args: Parameters<typeof fetch>) => {
-        const input = args[0]
-        const init = args[1]
-        if (init?.method === 'POST') {
-          return jsonResponse(
-            {
-              error:
-                'Task is blocked by unresolved blockers: wait Reply from a supplier',
-              blockedByNumbers: [],
-              blockedByGithubRefs: [],
-              blockedByWaits: [WAIT],
+      blockedWaitFetch({
+        method: 'POST',
+        taskResponses: [
+          {
+            taskId: TASK_ID,
+            body: {
+              ...makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
+              waits: undefined,
             },
-            409,
-          )
-        }
-        const inputUrl = getRequestUrl(input)
-        if (inputUrl.includes(TASK_ID)) {
-          return jsonResponse({
-            ...makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
-            waits: undefined,
-          })
-        }
-        return jsonResponse({})
+          },
+        ],
       }),
     )
     await createHarness(<CompletionAttempt />)
@@ -487,16 +458,7 @@ describe('TaskCompletionFailurePanel', () => {
         if (init?.method === 'POST' && url.endsWith('/complete')) {
           completeRequests += 1
           if (completeRequests === 1) {
-            return jsonResponse(
-              {
-                error:
-                  'Task is blocked by unresolved blockers: wait Reply from a supplier',
-                blockedByNumbers: [],
-                blockedByGithubRefs: [],
-                blockedByWaits: [wait],
-              },
-              409,
-            )
+            return blockedWaitResponse(wait)
           }
           return jsonResponse(
             makeTaskDetail({ id: TASK_ID, number: TASK_NUMBER }),
