@@ -24,7 +24,7 @@ export function commitmentForPriority(priority: number | null): TaskCommitment {
   return 'active'
 }
 
-export function priorityForCommitment(
+function priorityForCommitment(
   commitment: TaskCommitment,
   currentPriority: number | null = null,
 ): number | null {
