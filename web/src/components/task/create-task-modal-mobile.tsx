@@ -200,6 +200,7 @@ export function CreateTaskModalMobile({
                   settings={prioritySettings}
                   onValueChange={setPriority}
                   onValueChangeComplete={close}
+                  autoFocusTrigger
                 />
               )}
             />

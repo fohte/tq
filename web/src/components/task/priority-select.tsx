@@ -27,17 +27,24 @@ export function PrioritySelect({
   onValueChange,
   onValueChangeComplete,
   className,
+  autoFocusTrigger = false,
 }: {
   value: TaskPriority
   settings: PrioritySetting[] | undefined
   onValueChange: (priority: TaskPriority) => void
   onValueChangeComplete?: (() => void) | undefined
   className?: string | undefined
+  autoFocusTrigger?: boolean | undefined
 }) {
   const selectedValue = value === null ? 'inbox' : String(value)
+  const items = (settings ?? []).map((setting) => ({
+    value: setting.priority === null ? 'inbox' : String(setting.priority),
+    label: setting.name,
+  }))
 
   return (
     <Select
+      items={items}
       value={selectedValue}
       onValueChange={(nextValue) => {
         if (nextValue === 'inbox') {
@@ -61,8 +68,9 @@ export function PrioritySelect({
         variant="ghost"
         size="sm"
         className={className}
+        autoFocus={autoFocusTrigger}
       >
-        <SelectValue placeholder={priorityName(settings, value)} />
+        <SelectValue>{priorityName(settings, value)}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {[...(settings ?? [])]
