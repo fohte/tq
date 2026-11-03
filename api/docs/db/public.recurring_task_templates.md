@@ -98,6 +98,7 @@ erDiagram
   text template_id FK
   date occurrence_date
   uuid description_template_id FK
+  integer priority
 }
 "public.recurring_task_template_labels" {
   text template_id FK

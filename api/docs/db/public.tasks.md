@@ -64,13 +64,13 @@ Tasks with optional parent, project, recurrence, and template relationships.
 | idx_tasks_project_status                 | CREATE INDEX idx_tasks_project_status ON public.tasks USING btree (project_id, status)                                                                  |
 | tasks_number_unique                      | CREATE UNIQUE INDEX tasks_number_unique ON public.tasks USING btree (number)                                                                            |
 | idx_tasks_commitment                     | CREATE INDEX idx_tasks_commitment ON public.tasks USING btree (commitment)                                                                              |
-| idx_tasks_priority                       | CREATE INDEX idx_tasks_priority ON public.tasks USING btree (priority)                                                                                  |
 | idx_tasks_remind_at                      | CREATE INDEX idx_tasks_remind_at ON public.tasks USING btree (remind_at) WHERE (remind_at IS NOT NULL)                                                  |
 | idx_tasks_template_id                    | CREATE INDEX idx_tasks_template_id ON public.tasks USING btree (template_id)                                                                            |
 | tasks_template_id_occurrence_date_unique | CREATE UNIQUE INDEX tasks_template_id_occurrence_date_unique ON public.tasks USING btree (template_id, occurrence_date) WHERE (template_id IS NOT NULL) |
 | idx_tasks_title_trgm                     | CREATE INDEX idx_tasks_title_trgm ON public.tasks USING gin (title gin_trgm_ops)                                                                        |
 | idx_tasks_description_trgm               | CREATE INDEX idx_tasks_description_trgm ON public.tasks USING gin (description gin_trgm_ops)                                                            |
 | idx_tasks_description_template_id        | CREATE INDEX idx_tasks_description_template_id ON public.tasks USING btree (description_template_id) WHERE (description_template_id IS NOT NULL)        |
+| idx_tasks_priority                       | CREATE INDEX idx_tasks_priority ON public.tasks USING btree (priority)                                                                                  |
 
 ## Relations
 

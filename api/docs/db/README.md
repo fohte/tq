@@ -227,6 +227,7 @@ erDiagram
   text template_id FK
   date occurrence_date
   uuid description_template_id FK
+  integer priority
 }
 "public.time_blocks" {
   text id
