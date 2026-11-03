@@ -1,4 +1,7 @@
-import type { PrioritySetting } from '#hooks/use-priority-settings'
+import type {
+  PrioritySetting,
+  TaskPriority,
+} from '#hooks/use-priority-settings'
 
 export function makePrioritySettings(): PrioritySetting[] {
   return [
@@ -8,4 +11,15 @@ export function makePrioritySettings(): PrioritySetting[] {
     { priority: null, name: 'Inbox', description: '', sortOrder: 3 },
     { priority: -1, name: 'Later', description: '', sortOrder: 4 },
   ]
+}
+
+export function makePrioritySettingsInOrder(
+  priorities: TaskPriority[],
+): PrioritySetting[] {
+  return makePrioritySettings().map((setting) => ({
+    ...setting,
+    sortOrder: priorities.findIndex(
+      (priority) => priority === setting.priority,
+    ),
+  }))
 }
