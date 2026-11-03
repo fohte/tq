@@ -26,3 +26,8 @@ export const Inbox: Story = {
   name: 'the selector shows the configured name when priority is unset',
   args: { value: null },
 }
+
+export const Focused: Story = {
+  name: 'the selector focuses the selected priority',
+  args: { value: 1, autoFocusTrigger: true },
+}
