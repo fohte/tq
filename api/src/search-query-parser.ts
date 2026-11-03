@@ -106,6 +106,7 @@ const searchQueryTokenDefinitions = new Map(
       (result, value) => {
         result.priority = value === 'none' ? null : Number(value)
       },
+      true,
     ),
     sort: defineFixedToken(
       [

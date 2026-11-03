@@ -5,16 +5,18 @@ import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
-import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
+import { priorityName } from '#components/task/priority-select'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { taskFilterAxisIcons } from '#components/task/task-filter-icons'
 import { TaskLabelFilterFields } from '#components/task/task-label-filter-fields'
+import { TaskPriorityFilterFields } from '#components/task/task-priority-filter-fields'
 import { TaskProjectFilterFields } from '#components/task/task-project-filter-fields'
 import { TaskSortFilterFields } from '#components/task/task-sort-filter-fields'
 import { TaskStatusFilterFields } from '#components/task/task-status-filter-fields'
 import { Checkbox } from '#components/ui/checkbox'
 import { shouldIgnoreShortcut } from '#hooks/use-global-keybindings'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
 import type { Project } from '#hooks/use-projects'
 import {
   ALL_PROJECTS_FILTER,
@@ -23,21 +25,23 @@ import {
 } from '#hooks/use-projects'
 import { useSearchModalOpen } from '#hooks/use-search-modal-open'
 import { useTask } from '#hooks/use-task-queries'
+import type { TaskSortBy } from '#hooks/use-tasks'
 import {
+  defaultTaskSearchQuery,
   defaultTaskSort,
   sortOptionValues,
   statusChipLabels,
-  tasksSearchDefaultQuery,
   withDefaultSort,
   withHasPages,
   withLabel,
   withParentId,
+  withPriority,
   withProjectId,
   withStatus,
 } from '#lib/tasks-query'
 
 type TaskFilterKind =
-  'status' | 'project' | 'label' | 'pages' | 'parent' | 'sort'
+  'status' | 'project' | 'label' | 'priority' | 'pages' | 'parent' | 'sort'
 
 interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
@@ -55,6 +59,7 @@ interface TaskFilterChipRowProps {
   disableProjectFilter?: boolean
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
+  defaultSort?: TaskSortBy
   defaultOpenFilter?: TaskFilterKind
   autoFocus?: boolean
 }
@@ -66,6 +71,7 @@ export function TaskFilterChipRow({
   disableProjectFilter = false,
   disableStatusFilter = false,
   disableSortFilter = false,
+  defaultSort = defaultTaskSort,
   defaultOpenFilter,
   autoFocus = false,
 }: TaskFilterChipRowProps) {
@@ -104,10 +110,13 @@ export function TaskFilterChipRow({
     }
   }, [freeTextInputId, searchModalOpen])
 
-  const sortBy = withDefaultSort(parsed).sortBy ?? defaultTaskSort
+  const sortBy = withDefaultSort(parsed, defaultSort).sortBy ?? defaultSort
   // Keep the picker selection valid if an older URL contains a removed sort.
   const pickerSortBy =
-    sortOptionValues.find((value) => value === sortBy) ?? defaultTaskSort
+    sortOptionValues.find((value) => value === sortBy) ?? defaultSort
+  const prioritySettings = usePrioritySettings({
+    enabled: parsed.priority !== undefined,
+  })
   const selectedProjectQuery = useProject(parsed.projectId ?? '', {
     enabled:
       !disableProjectFilter &&
@@ -138,7 +147,7 @@ export function TaskFilterChipRow({
     if (disableSortFilter) delete filtered.sortBy
     onQueryChange(
       buildSearchQuery(
-        disableSortFilter ? filtered : withDefaultSort(filtered),
+        disableSortFilter ? filtered : withDefaultSort(filtered, defaultSort),
       ),
     )
   }
@@ -164,6 +173,9 @@ export function TaskFilterChipRow({
     }
     if (typed.label != null) next = withLabel(next, typed.label)
     if (typed.context != null) next.context = typed.context
+    if (typed.priority !== undefined) {
+      next = withPriority(next, typed.priority)
+    }
     if (typed.hasPages === true) next = withHasPages(next, true)
     if (typed.hasComments === true) next.hasComments = true
     if (typed.hasNoChildren === true) next.hasNoChildren = true
@@ -189,12 +201,14 @@ export function TaskFilterChipRow({
   // condition sits closest to it — i.e. the last chip rendered before the
   // input, in reverse of the render order below.
   const removeLastChip = () => {
-    if (!disableSortFilter && sortBy !== defaultTaskSort) {
-      setParsed({ ...parsed, sortBy: defaultTaskSort })
+    if (!disableSortFilter && sortBy !== defaultSort) {
+      setParsed({ ...parsed, sortBy: defaultSort })
     } else if (parsed.parentId != null) {
       setParsed(withParentId(parsed, undefined))
     } else if (parsed.hasPages === true) {
       setParsed(withHasPages(parsed, false))
+    } else if (parsed.priority !== undefined) {
+      setParsed(withPriority(parsed, undefined))
     } else if (parsed.label != null) {
       setParsed(withLabel(parsed, undefined))
     } else if (selectedProject != null) {
@@ -208,7 +222,8 @@ export function TaskFilterChipRow({
     }
   }
 
-  const query = buildSearchQuery(withDefaultSort(parsed))
+  const query = buildSearchQuery(withDefaultSort(parsed, defaultSort))
+  const defaultQuery = defaultTaskSearchQuery(defaultSort)
   const statusValue =
     parsed.status?.map((status) => statusChipLabels[status]).join(', ') ?? ''
   const parentValue = parentTaskQuery.isLoading
@@ -290,6 +305,28 @@ export function TaskFilterChipRow({
           </TaskFilterChip>
         )}
 
+        {parsed.priority !== undefined && (
+          <TaskFilterChip
+            icon={taskFilterAxisIcons.priority}
+            attribute="priority"
+            value={priorityName(prioritySettings.data, parsed.priority)}
+            menuTitle="Priority"
+            ariaLabel={`priority ${priorityName(prioritySettings.data, parsed.priority)}`}
+            defaultOpen={defaultOpenFilter === 'priority'}
+            onRemove={() => {
+              setParsed(withPriority(parsed, undefined))
+            }}
+          >
+            <TaskPriorityFilterFields
+              priority={parsed.priority}
+              settings={prioritySettings.data ?? []}
+              onPriorityChange={(priority) => {
+                setParsed(withPriority(parsed, priority))
+              }}
+            />
+          </TaskFilterChip>
+        )}
+
         {parsed.hasPages === true && (
           <TaskFilterChip
             icon={taskFilterAxisIcons.has}
@@ -352,12 +389,12 @@ export function TaskFilterChipRow({
             menuTitle="Sort"
             ariaLabel={`Sort by ${sortBy}`}
             defaultOpen={defaultOpenFilter === 'sort'}
-            isDefault={sortBy === defaultTaskSort}
+            isDefault={sortBy === defaultSort}
             onRemove={
-              sortBy === defaultTaskSort
+              sortBy === defaultSort
                 ? undefined
                 : () => {
-                    setParsed({ ...parsed, sortBy: defaultTaskSort })
+                    setParsed({ ...parsed, sortBy: defaultSort })
                   }
             }
           >
@@ -381,16 +418,16 @@ export function TaskFilterChipRow({
           ]}
           placeholder="Filter…"
           autoFocus={autoFocus}
-          syntaxHelpSections={getSearchSyntaxHelpSections({
+          syntaxHelpOptions={{
             audience: 'task-filter',
             disableProjectFilter,
             disableStatusFilter,
             disableSortFilter,
-          })}
+          }}
         />
       </div>
 
-      {!hideSaveView && query !== tasksSearchDefaultQuery && (
+      {!hideSaveView && query !== defaultQuery && (
         <SaveViewButton query={query} />
       )}
     </div>

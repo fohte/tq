@@ -237,9 +237,17 @@ describe('getSearchQuerySuggestions', () => {
       { value: 'is:completed', display: 'Completed', category: 'is' },
       { value: 'context:work', display: 'Work', category: 'context' },
       { value: 'context:personal', display: 'Personal', category: 'context' },
-      { value: 'priority:2', display: 'Priority 2', category: 'priority' },
+      {
+        value: 'priority:2',
+        display: 'Priority 2',
+        category: 'priority',
+      },
       { value: 'priority:1', display: 'Priority 1', category: 'priority' },
-      { value: 'priority:0', display: 'Priority 0', category: 'priority' },
+      {
+        value: 'priority:0',
+        display: 'Priority 0',
+        category: 'priority',
+      },
       { value: 'priority:none', display: 'Inbox', category: 'priority' },
       {
         value: 'priority:-1',

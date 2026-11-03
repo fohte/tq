@@ -2,12 +2,15 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 
 const meta = {
   title: 'Search/SearchSyntaxHelpPanel',
   component: SearchSyntaxHelpPanel,
   args: {
-    sections: getSearchSyntaxHelpSections(),
+    sections: getSearchSyntaxHelpSections({
+      prioritySettings: makePrioritySettings(),
+    }),
   },
   parameters: { layout: 'centered' },
   decorators: [
@@ -34,7 +37,10 @@ export const WithBackButton: Story = {
 export const TaskFilterHelp: Story = {
   name: 'the task filter syntax guide shows only supported filters',
   args: {
-    sections: getSearchSyntaxHelpSections({ audience: 'task-filter' }),
+    sections: getSearchSyntaxHelpSections({
+      audience: 'task-filter',
+      prioritySettings: makePrioritySettings(),
+    }),
     showFilterIcons: true,
   },
 }

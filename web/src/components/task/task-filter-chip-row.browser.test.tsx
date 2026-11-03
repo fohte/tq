@@ -9,6 +9,7 @@ import {
   makeProject,
   makeProjectDetail,
 } from '#components/project/project-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { makeParsedQuery } from '#components/task/task-filter-test-fixtures'
 import {
@@ -17,6 +18,7 @@ import {
   useProject,
   useProjects,
 } from '#hooks/use-projects'
+import { prioritySettingsKeys } from '#lib/query-keys'
 import { partialMutation, waitForFocus } from '#lib/test-utils'
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
@@ -90,6 +92,7 @@ function renderRow(
     defaultOptions: { queries: { retry: false } },
   })
   queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
+  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
   const rowProps = {
     onQueryChange,
     parsed: defaultParsed,
@@ -148,6 +151,18 @@ function getUnavailableProjectSnapshot() {
   }
 }
 
+function getPriorityFilterSnapshot(
+  queryChanges: unknown,
+  selectedName: 'Inbox' | 'Later',
+) {
+  return {
+    queryChanges,
+    selectedPriorityChip: screen
+      .getByRole('button', { name: `priority ${selectedName}` })
+      .getAttribute('aria-label'),
+  }
+}
+
 describe('TaskFilterChipRow', () => {
   it('does not commit status or sort tokens in the kanban filter row', async () => {
     const onQueryChange = vi.fn()
@@ -200,6 +215,44 @@ describe('TaskFilterChipRow', () => {
     await user.click(await screen.findByRole('checkbox', { name: 'Todo' }))
 
     expect(onQueryChange).toHaveBeenCalledWith('is:completed sort:updated')
+  })
+
+  it('selects a configured priority name and writes its numeric query value', async () => {
+    const { onQueryChange, rerenderWithParsed } = renderRow({
+      parsed: { ...defaultParsed, priority: null, sortBy: 'priority' },
+      defaultSort: 'priority',
+    })
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'priority Inbox' }))
+    await user.click(await screen.findByText('Later'))
+    rerenderWithParsed({ ...defaultParsed, priority: -1, sortBy: 'priority' })
+
+    expect(
+      getPriorityFilterSnapshot(onQueryChange.mock.calls, 'Later'),
+    ).toEqual({
+      queryChanges: [['is:todo priority:-1 sort:priority']],
+      selectedPriorityChip: 'priority Later',
+    })
+  })
+
+  it('keeps the Inbox filter as priority:none in the query', async () => {
+    const { onQueryChange, rerenderWithParsed } = renderRow({
+      parsed: { ...defaultParsed, priority: -1, sortBy: 'priority' },
+      defaultSort: 'priority',
+    })
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'priority Later' }))
+    await user.click(await screen.findByText('Inbox'))
+    rerenderWithParsed({ ...defaultParsed, priority: null, sortBy: 'priority' })
+
+    expect(
+      getPriorityFilterSnapshot(onQueryChange.mock.calls, 'Inbox'),
+    ).toEqual({
+      queryChanges: [['is:todo priority:none sort:priority']],
+      selectedPriorityChip: 'priority Inbox',
+    })
   })
 
   it('changing the project in its menu reports the updated query', async () => {

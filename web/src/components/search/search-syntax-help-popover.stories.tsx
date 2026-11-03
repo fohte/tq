@@ -4,6 +4,7 @@ import { useRef } from 'react'
 
 import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 
 function AnchoredPopoverExample({
   open,
@@ -40,7 +41,10 @@ const meta = {
   component: AnchoredPopoverExample,
   args: {
     open: false,
-    sections: getSearchSyntaxHelpSections({ audience: 'task-filter' }),
+    sections: getSearchSyntaxHelpSections({
+      audience: 'task-filter',
+      prioritySettings: makePrioritySettings(),
+    }),
   },
   parameters: { layout: 'centered' },
 } satisfies Meta<typeof AnchoredPopoverExample>

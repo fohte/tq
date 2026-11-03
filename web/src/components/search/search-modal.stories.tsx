@@ -14,11 +14,13 @@ import {
   makeRecentTask,
   makeSuggestion,
 } from '#components/search/search-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import {
   makeTask,
   makeTaskDetail,
 } from '#components/task/task-row-test-fixtures'
 import type { SearchResult } from '#hooks/use-search'
+import { prioritySettingsKeys } from '#lib/query-keys'
 import type { RecentSearchItem } from '#lib/recent-search-items'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -169,6 +171,7 @@ function Providers({
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
   return (
     <QueryClientProvider client={queryClient}>
       <StoryRouter

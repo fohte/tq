@@ -24,7 +24,6 @@ import {
   useSearchModalResultGroups,
 } from '#components/search/search-modal-result-groups'
 import { useSearchModalTaskActions } from '#components/search/search-modal-task-actions'
-import { getSearchSyntaxHelpSections } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPanel } from '#components/search/search-syntax-help-panel'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useCurrentRoute } from '#hooks/use-current-route'
@@ -44,6 +43,7 @@ import {
   useSearchTasks,
 } from '#hooks/use-search'
 import { useSearchScopeLabels } from '#hooks/use-search-scope-labels'
+import { useSearchSyntaxHelpSections } from '#hooks/use-search-syntax-help-sections'
 import { useTask } from '#hooks/use-tasks'
 import {
   getRecentSearchItems,
@@ -83,6 +83,9 @@ export function SearchModal({
     closeHelp,
     handleKeyDown: handleHelpKeyDown,
   } = useSearchModalHelp(open, inputRef, helpBackButtonRef, defaultHelpOpen)
+  const syntaxHelpSections = useSearchSyntaxHelpSections({
+    enabled: open && isHelpOpen,
+  })
   const onOpenChangeRef = useRef(onOpenChange)
   onOpenChangeRef.current = onOpenChange
   const {
@@ -372,7 +375,7 @@ export function SearchModal({
       body={
         isHelpOpen ? (
           <SearchSyntaxHelpPanel
-            sections={getSearchSyntaxHelpSections()}
+            sections={syntaxHelpSections}
             onBack={closeHelp}
             onKeyDown={handleHelpPanelKeyDown}
             className="flex-1"
