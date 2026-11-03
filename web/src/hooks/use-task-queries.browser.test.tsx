@@ -75,7 +75,7 @@ function taskListPlaceholderSnapshot(
 function useTaskCountConsumers() {
   const inbox = useTaskCount({
     context: 'work',
-    commitment: 'inbox',
+    priority: 'none',
     status: 'todo',
   })
   const todos = useTaskCount({ context: 'work', status: 'todo' })
@@ -552,11 +552,11 @@ describe('useTaskList', () => {
 describe('useTaskCount', () => {
   it('keeps filtered counts separate without fetching task rows', async () => {
     mockCount.mockImplementation(
-      ({ query }: { query: { commitment?: string } }) =>
+      ({ query }: { query: { priority?: string } }) =>
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({ count: query.commitment == null ? 9 : 4 }),
+            Promise.resolve({ count: query.priority == null ? 9 : 4 }),
         }),
     )
 
@@ -579,7 +579,7 @@ describe('useTaskCount', () => {
             {
               query: {
                 context: 'work',
-                commitment: 'inbox',
+                priority: 'none',
                 status: 'todo',
               },
             },

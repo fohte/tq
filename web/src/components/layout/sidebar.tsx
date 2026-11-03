@@ -115,7 +115,7 @@ function InboxNavLink() {
   const context = useCurrentContext()
   const { data: count = 0 } = useTaskCount({
     context,
-    commitment: 'inbox',
+    priority: 'none',
     status: 'todo',
     q: 'has:no-blockers',
   })

@@ -83,7 +83,7 @@ function SidebarStory({
   queryClient.setQueryData(
     taskKeys.count({
       context: 'personal',
-      commitment: 'inbox',
+      priority: 'none',
       status: 'todo',
       q: 'has:no-blockers',
     }),
