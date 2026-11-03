@@ -1409,18 +1409,19 @@ Commands:
                             context:work|personal, priority:-1|0|1|2|none,
                             has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
                             parent:<uuid|number>|root, project:<uuid|title>, and
-                            sort:due|created|updated. has:follow-up-due matches
-                            tasks with an unresolved wait whose follow-up date
-                            is today or earlier in the client timezone.
-                            has:resolved-wait matches tasks with a resolved wait
-                            that has not been acknowledged and is available
-                            through q. Search filters with corresponding fields
-                            in the task search schema can also be sent as
-                            explicit parameters. For example, q: "is:todo
-                            label:example context:work planning" finds matching
-                            todo tasks whose title, description, or pages
-                            mention planning. Task descriptions are omitted from
-                            results by default; set full to include them.
+                            sort:due|created|updated|priority. has:follow-up-due
+                            matches tasks with an unresolved wait whose
+                            follow-up date is today or earlier in the client
+                            timezone. has:resolved-wait matches tasks with a
+                            resolved wait that has not been acknowledged and is
+                            available through q. Search filters with
+                            corresponding fields in the task search schema can
+                            also be sent as explicit parameters. For example, q:
+                            "is:todo label:example context:work planning" finds
+                            matching todo tasks whose title, description, or
+                            pages mention planning. Task descriptions are
+                            omitted from results by default; set full to include
+                            them.
   activity <id>             Get the activity history of a task.
   sessions <id>             List agent sessions linked to a task.
   from-github <url>         Create a task from a GitHub issue or pull request
