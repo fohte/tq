@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 
 import { makeProject } from '#components/project/project-test-fixtures'
@@ -20,11 +20,19 @@ const baseTask: Task = makeTask({
   title: 'Implement task list UI',
 })
 
-function Providers({ children }: { children: ReactNode }) {
+function Providers({
+  children,
+  prioritySettingsAvailable = true,
+}: {
+  children: ReactNode
+  prioritySettingsAvailable?: boolean
+}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
+  if (prioritySettingsAvailable) {
+    queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -65,6 +73,16 @@ function TaskRowAppearanceNarrow({ task }: { task: Task }) {
   return (
     <Providers>
       <div className="w-full max-w-48">
+        <TaskRowAppearance task={task} />
+      </div>
+    </Providers>
+  )
+}
+
+function TaskRowAppearancePending({ task }: { task: Task }) {
+  return (
+    <Providers prioritySettingsAvailable={false}>
+      <div className="w-full max-w-3xl">
         <TaskRowAppearance task={task} />
       </div>
     </Providers>
@@ -118,6 +136,24 @@ export const Todo: Story = {
   args: {
     task: { ...baseTask },
   },
+}
+
+export const PrioritySettingsLoading: Story = {
+  name: 'the row hides its priority until configured names load',
+  args: {
+    task: { ...baseTask, priority: 0 },
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/priority-settings', async () => {
+          await delay('infinite')
+          return HttpResponse.json(makePrioritySettings())
+        }),
+      ],
+    },
+  },
+  render: ({ task }) => <TaskRowAppearancePending task={task} />,
 }
 
 export const WaitingForReply: Story = {

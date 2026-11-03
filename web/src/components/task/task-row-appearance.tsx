@@ -4,6 +4,7 @@ import { ListChecks } from 'lucide-react'
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
 import { PriorityBadge } from '#components/task/priority-badge'
+import { findPrioritySettingName } from '#components/task/priority-select'
 import { TaskStatusGlyph } from '#components/task/status-icon'
 import {
   BlockedByLabel,
@@ -86,9 +87,7 @@ export function TaskRowAppearance({
   const priorityLabel =
     task.priority === null
       ? null
-      : prioritySettings.data?.find(
-          (setting) => setting.priority === task.priority,
-        )?.name
+      : findPrioritySettingName(prioritySettings.data, task.priority)
   const waits = task.waits ?? []
   const blockerCount = countTaskBlockers({
     blockedByNumbers: task.blockedByNumbers,
