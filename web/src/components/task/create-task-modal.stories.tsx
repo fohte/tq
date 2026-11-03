@@ -7,6 +7,7 @@ import { fn } from 'storybook/test'
 
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 
 function CreateTaskModalStoryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -30,6 +31,9 @@ function createTaskModalHandlers(
 ) {
   return [
     http.get('/api/labels', () => HttpResponse.json([])),
+    http.get('/api/priority-settings', () =>
+      HttpResponse.json(makePrioritySettings()),
+    ),
     http.get('/api/description-templates', () => HttpResponse.json(templates)),
     http.get('/api/tasks/:id', () => new HttpResponse(null, { status: 404 })),
     http.post(

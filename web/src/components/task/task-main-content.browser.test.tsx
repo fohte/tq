@@ -12,6 +12,7 @@ import { page } from '@vitest/browser/context'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AppLayout } from '#components/layout/app-layout'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import {
   TaskMainContent,
   TaskSidebarMobile,
@@ -26,6 +27,7 @@ import {
   activityKeys,
   commentKeys,
   labelKeys,
+  prioritySettingsKeys,
   savedViewKeys,
 } from '#lib/query-keys'
 import { assertDefined, waitForEditorFocus } from '#lib/test-utils'
@@ -61,6 +63,7 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
     [],
   )
   queryClient.setQueryData(labelKeys.list({ context }), [])
+  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
   queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), [])
   queryClient.setQueryData(projectKeys.list({ context, status: 'all' }), [])
   queryClient.setQueryData(savedViewKeys.list({ context }), [])

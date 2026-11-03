@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
+import type { TaskPriority } from '#hooks/use-priority-settings'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
@@ -16,6 +17,7 @@ export interface CreateTaskInput {
   dueDate?: string
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority
   labels?: string[]
   projectId?: string
   parentId?: string
@@ -54,6 +56,14 @@ export function useCreateTask() {
       })
 
       const now = new Date().toISOString()
+      const optimisticPriority =
+        input.priority !== undefined
+          ? input.priority
+          : input.commitment === 'inbox' || input.commitment === undefined
+            ? null
+            : input.commitment === 'active'
+              ? 0
+              : -1
       const optimisticTask: Task = {
         id: `optimistic-${String(Date.now())}`,
         number: -1,
@@ -62,13 +72,14 @@ export function useCreateTask() {
         statusReason: null,
         duplicateOfNumber: null,
         context: input.context ?? 'personal',
-        priority:
-          input.commitment === 'inbox' || input.commitment === undefined
-            ? null
-            : input.commitment === 'active'
-              ? 0
-              : -1,
-        commitment: input.commitment ?? 'inbox',
+        priority: optimisticPriority,
+        commitment:
+          input.commitment ??
+          (optimisticPriority === null
+            ? 'inbox'
+            : optimisticPriority === -1
+              ? 'someday'
+              : 'active'),
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
@@ -203,6 +214,7 @@ export interface UpdateTaskInput {
   projectId?: string | null
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority
   labels?: string[]
 }
 

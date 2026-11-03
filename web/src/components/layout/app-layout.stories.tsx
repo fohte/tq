@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 
 import { AppLayout } from '#components/layout/app-layout'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
 function AppLayoutStory() {
@@ -32,6 +33,9 @@ const meta = {
     layout: 'fullscreen',
     msw: {
       handlers: [
+        http.get('/api/priority-settings', () =>
+          HttpResponse.json(makePrioritySettings()),
+        ),
         http.get('/api/tasks', () => HttpResponse.json([])),
         http.get('/api/tasks/count', () => HttpResponse.json({ count: 0 })),
         http.get('/api/projects', () => HttpResponse.json([])),

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { makeAgentSession } from '#components/agent-session/task-agent-session-test-fixtures'
 import { makeProjectDetail } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { makeAuthorInfo } from '#components/task/task-author-test-fixtures'
 import {
   makeTaskChecklist,
@@ -33,6 +34,7 @@ import {
   activityKeys,
   commentKeys,
   labelKeys,
+  prioritySettingsKeys,
   taskChecklistKeys,
 } from '#lib/query-keys'
 import { StoryRouter } from '#storybook-config/story-router'
@@ -133,6 +135,7 @@ function Providers({
   queryClient.setQueryData(taskChecklistKeys.all(baseTask.id), checklists)
   queryClient.setQueryData(taskKeys.list(allTasksFilter), [])
   queryClient.setQueryData(labelKeys.list({ context: 'personal' }), [])
+  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
   queryClient.setQueryData(
     projectKeys.list(ALL_PROJECTS_FILTER),
     project ? [project] : [],

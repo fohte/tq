@@ -13,7 +13,6 @@ import { CreateTaskModalDescriptionTemplateSelector } from '#components/task/cre
 import { useCreateTaskModalDescriptionTemplate } from '#components/task/create-task-modal-description-template-state'
 import { CreateTaskModalDesktop } from '#components/task/create-task-modal-desktop'
 import type {
-  CommitmentValue,
   ContextValue,
   PlanValue,
 } from '#components/task/create-task-modal-fields'
@@ -26,6 +25,8 @@ import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { useCurrentContext } from '#hooks/use-current-context'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { useGithubUrlPreview } from '#hooks/use-github-url-preview'
+import type { TaskPriority } from '#hooks/use-priority-settings'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
 import {
   DAY_QUEUE_KEY,
   queueKeyForPlan,
@@ -87,8 +88,9 @@ export function CreateTaskModal({
   const [context, setContext] = useState<ContextValue | ''>(
     effectiveDefaultContext,
   )
-  const [commitment, setCommitment] = useState<CommitmentValue | ''>('')
+  const [priority, setPriority] = useState<TaskPriority>(null)
   const [plan, setPlan] = useState<PlanValue | ''>('')
+  const prioritySettings = usePrioritySettings()
   const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
   // Set when the user types a `^N` shorthand token, overriding the
   // parent passed in via props (e.g. from "Add subtask").
@@ -175,7 +177,7 @@ export function CreateTaskModal({
     setStartDate(defaultStartDate ?? '')
     setDueDate('')
     setContext(effectiveDefaultContext)
-    setCommitment('')
+    setPriority(null)
     setPlan('')
     setLabels(defaultLabels ?? [])
     setParentOverrideNumber(undefined)
@@ -238,10 +240,7 @@ export function CreateTaskModal({
     !githubUnresolvable &&
     !githubAlreadyLinked
 
-  // Choosing today/this week already means triage is done, so it implies
-  // commitment: active unless the user picked one explicitly.
-  const effectiveCommitment: CommitmentValue | '' =
-    commitment || (plan !== '' ? 'active' : '')
+  const effectivePriority = priority ?? (plan !== '' ? 0 : null)
 
   const handleSubmit = () => {
     if (!canSubmit) return
@@ -253,7 +252,7 @@ export function CreateTaskModal({
       ...(startDate ? { startDate } : {}),
       ...(dueDate ? { dueDate } : {}),
       ...(context ? { context } : {}),
-      ...(effectiveCommitment ? { commitment: effectiveCommitment } : {}),
+      ...(effectivePriority === null ? {} : { priority: effectivePriority }),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
       ...(effectiveParentId != null ? { parentId: effectiveParentId } : {}),
@@ -405,8 +404,9 @@ export function CreateTaskModal({
             setDueDate={setDueDate}
             context={context}
             setContext={setContext}
-            commitment={commitment}
-            setCommitment={setCommitment}
+            priority={priority}
+            prioritySettings={prioritySettings.data}
+            setPriority={setPriority}
             plan={plan}
             setPlan={setPlan}
             labels={labels}
@@ -428,8 +428,9 @@ export function CreateTaskModal({
             setDueDate={setDueDate}
             context={context}
             setContext={setContext}
-            commitment={commitment}
-            setCommitment={setCommitment}
+            priority={priority}
+            prioritySettings={prioritySettings.data}
+            setPriority={setPriority}
             plan={plan}
             setPlan={setPlan}
             labels={labels}

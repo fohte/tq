@@ -3,6 +3,8 @@ import { ListChecks } from 'lucide-react'
 
 import { SessionIndicator } from '#components/agent-session/session-indicator'
 import { GithubLinksChipGroup } from '#components/task/github-links-chip-group'
+import { PriorityBadge } from '#components/task/priority-badge'
+import { priorityName } from '#components/task/priority-select'
 import { TaskStatusGlyph } from '#components/task/status-icon'
 import {
   BlockedByLabel,
@@ -23,6 +25,7 @@ import {
 } from '#components/task/task-row-shared'
 import { TaskWaitingIcon } from '#components/task/task-waiting-icon'
 import { DotSeparatedList } from '#components/ui/dot-separated-list'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { Task } from '#hooks/use-tasks'
 import { cn } from '#lib/utils'
@@ -78,6 +81,13 @@ export function TaskRowAppearance({
       ? completedReason
       : null
   const checklistProgress = task.checklistCompletionCount
+  const prioritySettings = usePrioritySettings({
+    enabled: task.priority !== null,
+  })
+  const priorityLabel =
+    task.priority === null
+      ? null
+      : priorityName(prioritySettings.data, task.priority)
   const waits = task.waits ?? []
   const blockerCount = countTaskBlockers({
     blockedByNumbers: task.blockedByNumbers,
@@ -189,6 +199,9 @@ export function TaskRowAppearance({
                 )}
               >
                 {titleContent ?? task.title}
+                {priorityLabel != null && (
+                  <PriorityBadge name={priorityLabel} />
+                )}
               </span>
               {showChildCompletionCount &&
                 task.childCompletionCount.total > 0 && (

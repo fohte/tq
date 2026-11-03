@@ -13,6 +13,7 @@ import {
 import { SidebarField } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
+import { SidebarPriorityField } from '#components/task/sidebar-priority-field'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { SidebarRecurrenceField } from '#components/task/sidebar-recurrence-field'
 import { SidebarRemindField } from '#components/task/sidebar-remind-field'
@@ -55,7 +56,7 @@ export function TaskSidebar({
           {checklistProgress.completed}/{checklistProgress.total}
         </SidebarField>
       )}
-      <SidebarPlanField taskId={task.id} commitment={task.commitment} />
+      <SidebarPlanField taskId={task.id} priority={task.priority} />
       <SidebarDateField
         taskId={task.id}
         field="startDate"
@@ -81,7 +82,7 @@ export function TaskSidebar({
         parentTitle={task.parentTitle}
       />
       <SidebarContextField taskId={task.id} context={task.context} />
-      <SidebarCommitmentField taskId={task.id} commitment={task.commitment} />
+      <SidebarPriorityField taskId={task.id} priority={task.priority} />
       <SidebarProjectField taskId={task.id} projectId={task.projectId} />
       <SidebarTagsField
         taskId={task.id}
@@ -134,7 +135,7 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
           </MobileFieldCell>
         )}
         <MobileFieldCell className="col-span-2">
-          <SidebarPlanField taskId={task.id} commitment={task.commitment} />
+          <SidebarPlanField taskId={task.id} priority={task.priority} />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarDateField
@@ -174,10 +175,7 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
           <SidebarContextField taskId={task.id} context={task.context} />
         </MobileFieldCell>
         <MobileFieldCell>
-          <SidebarCommitmentField
-            taskId={task.id}
-            commitment={task.commitment}
-          />
+          <SidebarPriorityField taskId={task.id} priority={task.priority} />
         </MobileFieldCell>
         <MobileFieldCell>
           <SidebarProjectField taskId={task.id} projectId={task.projectId} />
@@ -334,45 +332,6 @@ function SidebarContextField({
           <SelectContent>
             <SelectItem value="work">work</SelectItem>
             <SelectItem value="personal">personal</SelectItem>
-          </SelectContent>
-        </div>
-      </Select>
-    </SidebarField>
-  )
-}
-
-function SidebarCommitmentField({
-  taskId,
-  commitment,
-}: {
-  taskId: string
-  commitment: TaskDetail['commitment']
-}) {
-  const updateTask = useUpdateTask()
-
-  return (
-    <SidebarField label="COMMITMENT">
-      <Select
-        value={commitment}
-        onValueChange={selectValueHandler(
-          (value: TaskDetail['commitment']) => {
-            updateTask.mutate({ id: taskId, input: { commitment: value } })
-          },
-          ['inbox', 'active', 'someday'],
-        )}
-      >
-        <div className="px-1">
-          <SelectTrigger
-            size="sm"
-            variant="ghost"
-            className={fieldValueClassName}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="inbox">inbox</SelectItem>
-            <SelectItem value="active">active</SelectItem>
-            <SelectItem value="someday">someday</SelectItem>
           </SelectContent>
         </div>
       </Select>
