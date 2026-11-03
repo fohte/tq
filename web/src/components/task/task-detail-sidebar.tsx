@@ -46,6 +46,7 @@ export function TaskSidebar({
       <SectionLabel>DETAILS</SectionLabel>
       <SidebarStatusField
         taskId={task.id}
+        taskNumber={task.number}
         status={task.status}
         statusReason={task.statusReason}
         defaultOpen={defaultOpen}
@@ -122,6 +123,7 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
         <MobileFieldCell>
           <SidebarStatusField
             taskId={task.id}
+            taskNumber={task.number}
             status={task.status}
             statusReason={task.statusReason}
           />
@@ -202,17 +204,20 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
 
 function SidebarStatusField({
   taskId,
+  taskNumber,
   status,
   statusReason,
   defaultOpen,
 }: {
   taskId: string
+  taskNumber: number
   status: TaskDetail['status']
   statusReason: TaskDetail['statusReason']
   defaultOpen?: boolean | undefined
 }) {
   const { handleValueChange, duplicatePicker } = useHandleStatusChange(
     taskId,
+    taskNumber,
     status,
     statusReason,
   )
