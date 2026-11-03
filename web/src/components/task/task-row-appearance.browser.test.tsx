@@ -35,11 +35,13 @@ const recurringTask: Task = makeTask({
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderTaskRow(task: Task) {
+async function renderTaskRow(task: Task, settingsAvailable = true) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
-  queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
+  if (settingsAvailable) {
+    queryClient.setQueryData(prioritySettingsKeys.all, makePrioritySettings())
+  }
   const rootRoute = createRootRoute({
     component: () => <TaskRowAppearance task={task} />,
   })
@@ -73,6 +75,13 @@ async function renderTaskRow(task: Task) {
   }
 }
 
+function readPriorityBadgeState() {
+  return {
+    badge: screen.queryByTestId('priority-badge')?.textContent ?? null,
+    title: screen.getByText('Task title').textContent,
+  }
+}
+
 describe('TaskRowAppearance', () => {
   it('shows the configured name for a set priority', async () => {
     await renderTaskRow(makeTask({ priority: -1 }))
@@ -84,6 +93,15 @@ describe('TaskRowAppearance', () => {
     await renderTaskRow(makeTask({ priority: null, commitment: 'inbox' }))
 
     expect(screen.queryByTestId('priority-badge')).toEqual(null)
+  })
+
+  it('omits the priority badge until settings are available', async () => {
+    await renderTaskRow(makeTask({ priority: 0 }), false)
+
+    expect(readPriorityBadgeState()).toEqual({
+      badge: null,
+      title: 'Task title',
+    })
   })
 
   it('navigates to the task detail page when the row is clicked', async () => {
