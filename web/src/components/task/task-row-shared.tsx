@@ -51,6 +51,7 @@ export function useHandleStatusChange(
         id,
         taskNumber,
         status: 'completed',
+        previousStatus: status,
         statusReason: reason,
         ...duplicateOfTaskIdField,
       })
@@ -58,6 +59,7 @@ export function useHandleStatusChange(
       completeTask.mutate({
         id,
         taskNumber,
+        previousStatus: status,
         statusReason: reason,
         ...duplicateOfTaskIdField,
       })

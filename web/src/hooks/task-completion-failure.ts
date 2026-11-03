@@ -28,6 +28,7 @@ export interface TaskCompletionRequest {
   kind: 'status' | 'complete'
   id: string
   taskNumber?: number
+  previousStatus?: 'todo' | 'completed'
   statusReason?: 'completed' | 'not_planned' | 'duplicate'
   duplicateOfTaskId?: string
 }
@@ -35,6 +36,7 @@ export interface TaskCompletionRequest {
 type CompletionRequestMetadata = {
   id: string
   taskNumber?: number | undefined
+  previousStatus?: TaskCompletionRequest['previousStatus'] | undefined
   statusReason?: TaskCompletionRequest['statusReason'] | undefined
   duplicateOfTaskId?: string | undefined
 }
@@ -76,6 +78,7 @@ export function createTaskCompletionRequest(
   {
     id,
     taskNumber,
+    previousStatus,
     statusReason,
     duplicateOfTaskId,
   }: CompletionRequestMetadata,
@@ -84,6 +87,7 @@ export function createTaskCompletionRequest(
     kind,
     id,
     ...(taskNumber == null ? {} : { taskNumber }),
+    ...(previousStatus == null ? {} : { previousStatus }),
     ...(statusReason == null ? {} : { statusReason }),
     ...(duplicateOfTaskId == null ? {} : { duplicateOfTaskId }),
   }

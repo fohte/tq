@@ -93,6 +93,7 @@ function FocusCard({
             completeTask.mutate({
               id: task.id,
               taskNumber: task.number,
+              previousStatus: task.status,
               statusReason: 'completed',
             })
           }}

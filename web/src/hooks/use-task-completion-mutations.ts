@@ -23,6 +23,7 @@ export function useUpdateTaskStatus() {
       id: string
       status: 'todo' | 'completed'
       taskNumber?: number
+      previousStatus?: Task['status']
       statusReason?: 'completed' | 'not_planned' | 'duplicate'
       duplicateOfTaskId?: string
     }) => {
@@ -73,7 +74,14 @@ export function useUpdateTaskStatus() {
     },
     onError: (
       error,
-      { id, status, taskNumber, statusReason, duplicateOfTaskId },
+      {
+        id,
+        status,
+        taskNumber,
+        previousStatus,
+        statusReason,
+        duplicateOfTaskId,
+      },
       context,
     ) => {
       if (context?.previousLists) {
@@ -89,6 +97,7 @@ export function useUpdateTaskStatus() {
           createTaskCompletionRequest('status', {
             id,
             taskNumber,
+            previousStatus,
             statusReason,
             duplicateOfTaskId,
           }),
@@ -114,6 +123,7 @@ export function useCompleteTask() {
     }: {
       id: string
       taskNumber?: number
+      previousStatus?: Task['status']
       statusReason?: 'completed' | 'not_planned' | 'duplicate'
       duplicateOfTaskId?: string
     }) => {
@@ -168,7 +178,7 @@ export function useCompleteTask() {
     },
     onError: (
       error,
-      { id, taskNumber, statusReason, duplicateOfTaskId },
+      { id, taskNumber, previousStatus, statusReason, duplicateOfTaskId },
       context,
     ) => {
       if (context?.previousLists) {
@@ -183,6 +193,7 @@ export function useCompleteTask() {
         createTaskCompletionRequest('complete', {
           id,
           taskNumber,
+          previousStatus,
           statusReason,
           duplicateOfTaskId,
         }),

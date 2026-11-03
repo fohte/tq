@@ -53,7 +53,7 @@ interface SearchModalResultGroupsOptions {
   currentProject: Pick<Project, 'id' | 'title'> | undefined
   onNewTask: (() => void) | undefined
   openRoute: (to: NavKeybinding['to']) => void
-  completeTask: (task: Pick<TaskDetail, 'id' | 'number'>) => void
+  completeTask: (task: Pick<TaskDetail, 'id' | 'number' | 'status'>) => void
   copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void
   suggestions: Suggestion[] | undefined
   tasks: SearchResult[] | undefined

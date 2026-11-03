@@ -55,7 +55,7 @@ interface TaskCommandItemsOptions {
   project: Pick<Project, 'id' | 'title'> | undefined
   openTask: (task: Pick<TaskDetail, 'id'>) => void
   openProject: (project: Pick<Project, 'id'>) => void
-  completeTask: (task: Pick<TaskDetail, 'id' | 'number'>) => void
+  completeTask: (task: Pick<TaskDetail, 'id' | 'number' | 'status'>) => void
   copyTaskUrl: (task: Pick<TaskDetail, 'id'>) => void
 }
 

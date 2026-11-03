@@ -1,9 +1,9 @@
-import { Button as ButtonPrimitive } from '@base-ui/react/button'
 import { Button } from '@fohte/ui/button'
 import { Link } from '@tanstack/react-router'
 import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { DestructivePrimaryButton } from '#components/ui/destructive-primary-button'
 import { cn } from '#lib/utils'
 
 export interface TaskCompletionPanelWait {
@@ -66,6 +66,7 @@ export function TaskCompletionBlockerPanelAppearance({
   taskBlockers = [],
   githubBlockers = [],
   message,
+  restoredStatus,
   isRetryPending = false,
   resolvingWaitId,
   onResolveWait,
@@ -77,6 +78,7 @@ export function TaskCompletionBlockerPanelAppearance({
   taskBlockers?: TaskCompletionPanelTaskBlocker[]
   githubBlockers?: TaskCompletionPanelGithubBlocker[]
   message?: string
+  restoredStatus?: 'todo' | 'completed'
   isRetryPending?: boolean
   resolvingWaitId?: string | null
   onResolveWait?: (waitId: string) => void
@@ -137,7 +139,7 @@ export function TaskCompletionBlockerPanelAppearance({
                   action={
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       disabled={resolvingWaitId === wait.id}
                       onClick={() => onResolveWait?.(wait.id)}
@@ -191,26 +193,32 @@ export function TaskCompletionBlockerPanelAppearance({
                   ? 'All items resolved.'
                   : 'Resolve every item to complete.'}
               </p>
-              <ButtonPrimitive
-                type="button"
-                disabled={!canComplete}
-                onClick={onComplete}
-                className={cn(
-                  'group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding font-mono text-xs font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 active:translate-y-px',
-                  'h-7 gap-1 rounded-(--btn-radius-sm) px-2.5',
-                  canComplete
-                    ? 'border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20'
-                    : 'border-border bg-background text-muted-foreground-strong hover:bg-muted hover:text-foreground focus-visible:ring-ring/50',
-                )}
-              >
-                Complete
-              </ButtonPrimitive>
+              {canComplete ? (
+                <DestructivePrimaryButton
+                  type="button"
+                  size="sm"
+                  onClick={onComplete}
+                >
+                  Complete
+                </DestructivePrimaryButton>
+              ) : (
+                <Button type="button" variant="secondary" size="sm" disabled>
+                  Complete
+                </Button>
+              )}
             </div>
           </>
         ) : (
           <div className="px-4 pb-3 text-xs text-muted-foreground">
             <p>{message}</p>
-            <p className="mt-1">The status was changed back to todo.</p>
+            {restoredStatus === 'todo' && (
+              <p className="mt-1">The status was changed back to todo.</p>
+            )}
+            {restoredStatus === 'completed' && (
+              <p className="mt-1">
+                The previous status was restored to completed.
+              </p>
+            )}
           </div>
         )}
       </div>

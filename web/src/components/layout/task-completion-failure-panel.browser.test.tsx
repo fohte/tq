@@ -22,7 +22,11 @@ function CompletionAttempt() {
     <button
       type="button"
       onClick={() => {
-        completeTask.mutate({ id: TASK_ID, taskNumber: TASK_NUMBER })
+        completeTask.mutate({
+          id: TASK_ID,
+          taskNumber: TASK_NUMBER,
+          previousStatus: 'todo',
+        })
       }}
     >
       Complete task
@@ -30,7 +34,11 @@ function CompletionAttempt() {
   )
 }
 
-function StatusCompletionAttempt() {
+function StatusCompletionAttempt({
+  previousStatus = 'todo',
+}: {
+  previousStatus?: 'todo' | 'completed'
+}) {
   const updateStatus = useUpdateTaskStatus()
   return (
     <button
@@ -40,6 +48,7 @@ function StatusCompletionAttempt() {
           id: TASK_ID,
           taskNumber: TASK_NUMBER,
           status: 'completed',
+          previousStatus,
         })
       }}
     >
@@ -55,7 +64,11 @@ function MultiTaskCompletionAttempt() {
       <button
         type="button"
         onClick={() => {
-          completeTask.mutate({ id: TASK_ID, taskNumber: TASK_NUMBER })
+          completeTask.mutate({
+            id: TASK_ID,
+            taskNumber: TASK_NUMBER,
+            previousStatus: 'todo',
+          })
         }}
       >
         Complete task #71
@@ -66,6 +79,7 @@ function MultiTaskCompletionAttempt() {
           completeTask.mutate({
             id: SECOND_TASK_ID,
             taskNumber: SECOND_TASK_NUMBER,
+            previousStatus: 'todo',
           })
         }}
       >
@@ -364,6 +378,44 @@ describe('TaskCompletionFailurePanel', () => {
         messages: [
           'The server returned an error (502).',
           'The status was changed back to todo.',
+        ],
+      })
+    })
+  })
+
+  it('shows the restored completed status after a failure to change the close reason', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((...args: Parameters<typeof fetch>) => {
+        const init = args[1]
+        if (init?.method === 'PATCH') {
+          return jsonResponse(
+            { error: 'The task could not be completed.' },
+            500,
+          )
+        }
+        return jsonResponse(
+          makeTaskDetail({
+            id: TASK_ID,
+            number: TASK_NUMBER,
+            status: 'completed',
+            statusReason: 'completed',
+          }),
+        )
+      }),
+    )
+    await createHarness(<StatusCompletionAttempt previousStatus="completed" />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Complete through status' }),
+    )
+    await waitFor(() => {
+      expect(getGenericPanelOutput()).toEqual({
+        label: "Couldn't complete #71",
+        heading: "Couldn't complete #71",
+        messages: [
+          'The task could not be completed.',
+          'The previous status was restored to completed.',
         ],
       })
     })

@@ -88,6 +88,9 @@ export function TaskCompletionFailurePanel() {
       taskBlockers={taskBlockers}
       githubBlockers={githubBlockers}
       message={failure.message}
+      {...(failure.request.previousStatus == null
+        ? {}
+        : { restoredStatus: failure.request.previousStatus })}
       isRetryPending={updateStatus.isPending || completeTask.isPending}
       resolvingWaitId={resolveWait.isPending ? resolveWait.variables : null}
       onResolveWait={(waitId) => {

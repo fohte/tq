@@ -52,5 +52,14 @@ export const OtherFailure: Story = {
   name: 'the panel shows an error message when the failure has no blockers',
   args: {
     message: 'The server returned an error (503).',
+    restoredStatus: 'todo',
+  },
+}
+
+export const CompletedStatusRestored: Story = {
+  name: 'the panel reports when a completed status was restored',
+  args: {
+    message: 'The server returned an error (503).',
+    restoredStatus: 'completed',
   },
 }

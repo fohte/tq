@@ -252,6 +252,7 @@ function TaskStatusToggle({
       id: taskId,
       status: nextStatus,
       taskNumber,
+      previousStatus: status,
     })
   }
 
