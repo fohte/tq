@@ -128,13 +128,10 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('personal'),
-    // GTD-style commitment: `inbox` = not triaged, `someday` = deferred,
-    // `active` = committed.
     commitment: text('commitment', {
       enum: ['inbox', 'active', 'someday'],
-    })
-      .notNull()
-      .default('inbox'),
+    }),
+    priority: integer('priority'),
     // When to push a reminder for this task. Cleared back to NULL once the
     // reminder has been claimed for delivery, so the column doubles as the
     // "not sent yet" marker.
@@ -159,6 +156,7 @@ export const tasks = pgTable(
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
     index('idx_tasks_commitment').on(table.commitment),
+    index('idx_tasks_priority').on(table.priority),
     index('idx_tasks_template_id').on(table.templateId),
     // Only LLM tasks with a validated template reference this column, so a
     // partial index avoids entries for the majority of task rows.
@@ -178,6 +176,10 @@ export const tasks = pgTable(
     check(
       'tasks_status_reason_check',
       sql`${table.status} = 'completed' OR ${table.statusReason} IS NULL`,
+    ),
+    check(
+      'tasks_priority_check',
+      sql`${table.priority} IS NULL OR ${table.priority} BETWEEN -1 AND 2`,
     ),
     check(
       'tasks_template_occurrence_paired_check',

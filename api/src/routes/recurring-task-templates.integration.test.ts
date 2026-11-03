@@ -100,6 +100,7 @@ function expectedOccurrenceResponse(overrides: Record<string, unknown>) {
     status: 'todo',
     statusReason: null,
     context: 'personal',
+    priority: null,
     commitment: 'inbox',
     labels: [],
     startDate: null,

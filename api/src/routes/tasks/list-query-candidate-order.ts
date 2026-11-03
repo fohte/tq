@@ -1,4 +1,4 @@
-import { asc, exists, type SQL, sql } from 'drizzle-orm'
+import { asc, exists, gte, type SQL, sql } from 'drizzle-orm'
 
 import { tasks } from '#db/schema'
 import {
@@ -21,7 +21,7 @@ export function resolveTaskCandidateOrderBy(candidateDate: string): SQL[] {
     AND ${tasks.dueDate} > ${candidateDate}
     AND (
       ${tasks.startDate} <= ${candidateDate}
-      OR ${tasks.commitment} = 'active'
+      OR ${gte(tasks.priority, 0)}
     )
   `
   const isStarts = sql`
@@ -39,7 +39,7 @@ export function resolveTaskCandidateOrderBy(candidateDate: string): SQL[] {
       WHEN ${tasks.dueDate} = ${candidateDate} THEN 2
       WHEN ${isDueLater} THEN 3
       WHEN ${isStarts} THEN 4
-      WHEN ${tasks.commitment} = 'active' THEN 5
+      WHEN ${gte(tasks.priority, 0)} THEN 5
       ELSE 6
     END`,
     sql`CASE WHEN ${isOverdue} THEN ${tasks.dueDate} END`,

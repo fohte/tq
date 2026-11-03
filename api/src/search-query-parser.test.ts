@@ -63,14 +63,24 @@ describe('parseSearchQuery', () => {
     expect(result.freeText).toBe('context:invalid')
   })
 
-  it('parses commitment: prefix', () => {
-    expect(parseSearchQuery('commitment:active').commitment).toBe('active')
+  it('parses priority: prefix', () => {
+    expect(parseSearchQuery('priority:0')).toEqual({
+      freeText: '',
+      priority: 0,
+    })
   })
 
-  it('treats invalid commitment: value as free text', () => {
-    const result = parseSearchQuery('commitment:invalid')
-    expect(result.commitment).toBeUndefined()
-    expect(result.freeText).toBe('commitment:invalid')
+  it('treats commitment: tokens as free text', () => {
+    expect(parseSearchQuery('commitment:active')).toEqual({
+      freeText: 'commitment:active',
+    })
+  })
+
+  it('parses priority:none as an unset priority filter', () => {
+    expect(parseSearchQuery('priority:none')).toEqual({
+      freeText: '',
+      priority: null,
+    })
   })
 
   it('parses reason:not_planned', () => {
@@ -173,13 +183,15 @@ describe('parseSearchQuery', () => {
 
   it('combines free text with multiple prefixes', () => {
     const result = parseSearchQuery(
-      'deploy is:todo label:dev context:work commitment:active',
+      'deploy is:todo label:dev context:work priority:0',
     )
-    expect(result.freeText).toBe('deploy')
-    expect(result.status).toEqual(['todo'])
-    expect(result.label).toBe('dev')
-    expect(result.context).toBe('work')
-    expect(result.commitment).toBe('active')
+    expect(result).toEqual({
+      freeText: 'deploy',
+      status: ['todo'],
+      label: 'dev',
+      context: 'work',
+      priority: 0,
+    })
   })
 
   it('handles free text interspersed with prefixes', () => {
@@ -225,16 +237,14 @@ describe('getSearchQuerySuggestions', () => {
       { value: 'is:completed', display: 'Completed', category: 'is' },
       { value: 'context:work', display: 'Work', category: 'context' },
       { value: 'context:personal', display: 'Personal', category: 'context' },
-      { value: 'commitment:inbox', display: 'Inbox', category: 'commitment' },
+      { value: 'priority:2', display: 'Priority 2', category: 'priority' },
+      { value: 'priority:1', display: 'Priority 1', category: 'priority' },
+      { value: 'priority:0', display: 'Priority 0', category: 'priority' },
+      { value: 'priority:none', display: 'Inbox', category: 'priority' },
       {
-        value: 'commitment:active',
-        display: 'Active',
-        category: 'commitment',
-      },
-      {
-        value: 'commitment:someday',
-        display: 'Someday',
-        category: 'commitment',
+        value: 'priority:-1',
+        display: 'Priority -1',
+        category: 'priority',
       },
       { value: 'sort:due', display: 'Sort by due date', category: 'sort' },
       {
@@ -302,7 +312,7 @@ describe('buildSearchQuery', () => {
         status: ['todo'],
         label: 'dev',
         context: 'work',
-        commitment: 'active',
+        priority: 0,
         hasPages: true,
         hasComments: true,
         hasNoChildren: true,
@@ -315,7 +325,7 @@ describe('buildSearchQuery', () => {
         sortBy: 'due',
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work commitment:active has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work priority:0 has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due',
     )
   })
 
@@ -354,11 +364,11 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     })
   })
 
-  it('round-trips a commitment value', () => {
-    const q = 'commitment:someday'
+  it('round-trips a priority value', () => {
+    const q = 'priority:-1'
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
       freeText: '',
-      commitment: 'someday',
+      priority: -1,
     })
   })
 

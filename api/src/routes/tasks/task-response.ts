@@ -1,4 +1,5 @@
 import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
+import { commitmentForPriority } from '#lib/task-priority'
 
 export function recurrenceRuleToResponse(
   rule: typeof recurrenceRules.$inferSelect,
@@ -43,7 +44,8 @@ function taskCoreFieldsToResponse(
     status: task.status,
     statusReason: task.statusReason,
     context: task.context,
-    commitment: task.commitment,
+    priority: task.priority,
+    commitment: commitmentForPriority(task.priority),
     labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,

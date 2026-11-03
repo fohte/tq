@@ -62,6 +62,12 @@ export function useCreateTask() {
         statusReason: null,
         duplicateOfNumber: null,
         context: input.context ?? 'personal',
+        priority:
+          input.commitment === 'inbox' || input.commitment === undefined
+            ? null
+            : input.commitment === 'active'
+              ? 0
+              : -1,
         commitment: input.commitment ?? 'inbox',
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,

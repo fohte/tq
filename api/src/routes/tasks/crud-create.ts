@@ -12,6 +12,7 @@ import {
 import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { recordEdit } from '#lib/edits'
+import { resolvePriorityInput } from '#lib/task-priority'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import { resolveCreateBlockedByInputs } from '#routes/tasks/blocked-by'
 import { getTaskChangeEventIds } from '#routes/tasks/change-event-task-ids'
@@ -146,7 +147,10 @@ export const tasksCreateApp = new Hono().post(
               parentId,
               projectId: input.projectId ?? null,
               context: input.context,
-              commitment: input.commitment,
+              priority: resolvePriorityInput({
+                priority: input.priority,
+                commitment: input.commitment,
+              }),
               templateId: templateFields?.templateId,
               occurrenceDate: templateFields?.occurrenceDate,
             })

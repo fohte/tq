@@ -111,7 +111,7 @@ export function buildTaskDateConditions(query: TaskDateFilters): SQL[] {
       or(
         lte(tasks.dueDate, query.candidatesOn),
         lte(tasks.startDate, query.candidatesOn),
-        eq(tasks.commitment, 'active'),
+        gte(tasks.priority, 0),
         followUpDue,
         waitResolved,
       ),

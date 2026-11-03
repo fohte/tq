@@ -82,6 +82,31 @@ describe('task create', () => {
     ])
   })
 
+  it('parses a numeric priority flag', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'create', 'New task', '--priority', '2'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const snapshot = () => [exitCode, request(calls[0])] as const
+
+    expect(snapshot()).toEqual([
+      0,
+      {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: { title: 'New task', priority: 2 },
+      },
+    ])
+  })
+
   it('prints the linkSync summary to stderr when the response includes one', async () => {
     const created = {
       id: 't1',
@@ -405,6 +430,31 @@ describe('task update', () => {
       query: {},
       body: { title: 'Updated title' },
     })
+  })
+
+  it('parses a numeric priority flag', async () => {
+    const updated = { id: 't1', number: 1, title: 'Updated title' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--priority', '-1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const snapshot = () => [exitCode, request(calls[0])] as const
+
+    expect(snapshot()).toEqual([
+      0,
+      {
+        method: 'PATCH',
+        pathname: '/api/tasks/42',
+        query: {},
+        body: { priority: -1 },
+      },
+    ])
   })
 
   it('prints the linkSync summary to stderr when the response includes one', async () => {
@@ -1356,8 +1406,7 @@ Commands:
                             multiple statuses),
                             reason:completed|not_planned|duplicate, label:<name>
                             (also matches descendants under a /-separated path),
-                            context:work|personal,
-                            commitment:inbox|active|someday,
+                            context:work|personal, priority:-1|0|1|2|none,
                             has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
                             parent:<uuid|number>|root, project:<uuid|title>, and
                             sort:due|created|updated. has:follow-up-due matches

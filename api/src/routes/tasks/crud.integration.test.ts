@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
@@ -360,8 +360,11 @@ async function taskResponseSnapshot(res: Response) {
 
 function createdTaskResponse(
   title: string,
-  description: string,
+  description: string | null,
+  priority: -1 | 0 | 1 | 2 | null = null,
 ): { status: number; body: TaskResponse } {
+  const commitment =
+    priority === null ? 'inbox' : priority === -1 ? 'someday' : 'active'
   return responseSnapshot(201, {
     id: 'ID',
     number: -1,
@@ -370,7 +373,8 @@ function createdTaskResponse(
     status: 'todo',
     statusReason: null,
     context: 'personal',
-    commitment: 'inbox',
+    priority,
+    commitment,
     labels: [],
     startDate: null,
     dueDate: null,
@@ -390,10 +394,11 @@ function createdTaskResponse(
 
 function updatedTaskResponse(
   title: string,
-  description: string,
+  description: string | null,
   includeLinkSync = true,
+  priority: -1 | 0 | 1 | 2 | null = null,
 ) {
-  const createdResponse = createdTaskResponse(title, description)
+  const createdResponse = createdTaskResponse(title, description, priority)
   return responseSnapshot(
     200,
     includeLinkSync
@@ -705,6 +710,7 @@ describe('tasks CRUD API', () => {
         status: 'todo',
         statusReason: null,
         context: 'personal',
+        priority: null,
         commitment: 'inbox',
         labels: [],
         startDate: null,
@@ -1177,6 +1183,88 @@ describe('tasks CRUD API', () => {
       expect(body.commitment).toBe('inbox')
     })
 
+    it('creates and updates a task priority', async () => {
+      const created = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Priority task', priority: 2 }),
+      })
+      const createdBody = await jsonBody<TaskResponse>(created.clone())
+      const updated = await app.request(`/api/tasks/${createdBody.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority: -1 }),
+      })
+
+      expect(
+        await Promise.all([
+          taskResponseSnapshot(created),
+          taskResponseSnapshot(updated),
+        ]),
+      ).toEqual([
+        createdTaskResponse('Priority task', null, 2),
+        updatedTaskResponse('Priority task', null, false, -1),
+      ])
+    })
+
+    it('maps legacy commitment writes onto priority without changing the legacy column', async () => {
+      const inbox = await createTask('Inbox legacy write')
+      const deferred = await createTask('Deferred legacy write', {
+        priority: 2,
+      })
+      const active = await createTask('Active legacy write', { priority: -1 })
+      const inputs = [
+        [inbox.id, 'active'],
+        [deferred.id, 'active'],
+        [active.id, 'someday'],
+        [active.id, 'inbox'],
+      ] as const
+
+      const responses = []
+      for (const [id, commitment] of inputs) {
+        responses.push(
+          await app.request(`/api/tasks/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ commitment }),
+          }),
+        )
+      }
+
+      const rows = await db
+        .select({
+          id: tasks.id,
+          commitment: tasks.commitment,
+          priority: tasks.priority,
+        })
+        .from(tasks)
+        .where(inArray(tasks.id, [inbox.id, deferred.id, active.id]))
+      const responseSnapshots = await Promise.all(
+        responses.map(taskResponseSnapshot),
+      )
+
+      const snapshot = () => ({
+        responses: responseSnapshots,
+        rows: rows
+          .map(({ id, commitment, priority }) => ({ id, commitment, priority }))
+          .toSorted((a, b) => a.id.localeCompare(b.id)),
+      })
+
+      expect(snapshot()).toEqual({
+        responses: [
+          updatedTaskResponse('Inbox legacy write', null, false, 0),
+          updatedTaskResponse('Deferred legacy write', null, false, 2),
+          updatedTaskResponse('Active legacy write', null, false, -1),
+          updatedTaskResponse('Active legacy write', null, false, null),
+        ],
+        rows: [
+          { id: active.id, commitment: null, priority: null },
+          { id: deferred.id, commitment: null, priority: 2 },
+          { id: inbox.id, commitment: null, priority: 0 },
+        ].toSorted((a, b) => a.id.localeCompare(b.id)),
+      })
+    })
+
     it('defaults commitment to inbox when unspecified', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
@@ -1194,6 +1282,7 @@ describe('tasks CRUD API', () => {
         status: 'todo',
         statusReason: null,
         context: 'personal',
+        priority: null,
         commitment: 'inbox',
         labels: [],
         startDate: null,
@@ -1917,6 +2006,10 @@ describe('tasks CRUD API', () => {
       const activeCandidate = await createTask('Active candidate', {
         commitment: 'active',
       })
+      const priorityCandidate = await createTask('Priority candidate', {
+        startDate: '2026-03-19',
+        priority: 0,
+      })
       const dueOnCandidateDate = await createTask('Due on candidate date', {
         dueDate: '2026-03-18',
       })
@@ -2021,6 +2114,7 @@ describe('tasks CRUD API', () => {
         dueCandidate.id,
         startCandidate.id,
         activeCandidate.id,
+        priorityCandidate.id,
         dueOnCandidateDate.id,
         completedCandidate.id,
         otherWeekQueued.id,
@@ -2030,6 +2124,7 @@ describe('tasks CRUD API', () => {
         dueCandidate.id,
         startCandidate.id,
         activeCandidate.id,
+        priorityCandidate.id,
         dueOnCandidateDate.id,
         otherWeekQueued.id,
       ]
@@ -2284,20 +2379,64 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Work task')
     })
 
-    it('filters by commitment: prefix in q parameter', async () => {
-      await createTask('Someday task', { commitment: 'someday' })
+    it('filters by priority: prefix in q parameter', async () => {
+      const someday = await createTask('Someday task', { priority: -1 })
       await createTask('Active task')
 
       const res = await app.request(
         '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
-          encodeURIComponent('commitment:someday'),
+          encodeURIComponent('priority:-1'),
       )
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].title).toBe('Someday task')
+      expect(normalizeTaskListItems(body)).toEqual([
+        expectedTaskListItem(someday, null),
+      ])
+    })
+
+    it('treats commitment: tokens as free text in q parameter', async () => {
+      await createTask('Active task')
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
+          encodeURIComponent('commitment:active'),
+      )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+
+      expect(
+        responseSnapshot(res.status, normalizeTaskListItems(body)),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('filters tasks by priority query parameter', async () => {
+      const inbox = await createTask('Inbox task')
+      const priorityTwo = await createTask('Priority two task', {
+        priority: 2,
+      })
+      const response = await Promise.all([
+        app.request(
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&priority=none',
+        ),
+        app.request(
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&priority=2',
+        ),
+      ])
+      const bodies = await Promise.all(
+        response.map((item) => jsonBody<TaskListItemResponse[]>(item)),
+      )
+
+      expect(
+        response.map((item, index) =>
+          responseSnapshot(
+            item.status,
+            normalizeTaskListItems(bodies[index] ?? []),
+          ),
+        ),
+      ).toEqual([
+        responseSnapshot(200, [expectedTaskListItem(inbox, null)]),
+        responseSnapshot(200, [expectedTaskListItem(priorityTwo, null)]),
+      ])
     })
 
     it('filters by reason:not_planned in q parameter', async () => {
@@ -4776,6 +4915,7 @@ describe('tasks CRUD API', () => {
           status: 'todo',
           statusReason: null,
           context: 'personal',
+          priority: null,
           commitment: 'inbox',
           labels: [],
           startDate: null,

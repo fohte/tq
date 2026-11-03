@@ -89,4 +89,25 @@ describe('GET /api/tasks/count', () => {
       body: { count: 1 },
     })
   })
+
+  it('filters by priority values and legacy commitment ranges', async () => {
+    await createTask('Inbox task')
+    await createTask('Deferred task', { priority: -1 })
+    await createTask('Routine task', { priority: 0 })
+    await createTask('Urgent task', { priority: 2 })
+
+    const responses = await Promise.all([
+      app.request('/api/tasks/count?context=all&status=all&priority=none'),
+      app.request('/api/tasks/count?context=all&status=all&priority=-1'),
+      app.request('/api/tasks/count?context=all&status=all&priority=2'),
+      app.request('/api/tasks/count?context=all&status=all&commitment=active'),
+    ])
+
+    expect(await Promise.all(responses.map(normalizeCountResponse))).toEqual([
+      { status: 200, body: { count: 1 } },
+      { status: 200, body: { count: 1 } },
+      { status: 200, body: { count: 1 } },
+      { status: 200, body: { count: 2 } },
+    ])
+  })
 })

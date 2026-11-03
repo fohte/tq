@@ -123,6 +123,12 @@
               "personal"
             ]
           },
+          "priority": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 2
+          },
           "commitment": {
             "type": "string",
             "enum": [
@@ -251,6 +257,12 @@
               "work",
               "personal"
             ]
+          },
+          "priority": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 2
           },
           "commitment": {
             "type": "string",
@@ -679,6 +691,7 @@
           "status",
           "statusReason",
           "context",
+          "priority",
           "commitment",
           "labels",
           "startDate",
@@ -738,6 +751,12 @@
               "work",
               "personal"
             ]
+          },
+          "priority": {
+            "nullable": true,
+            "type": "integer",
+            "minimum": -1,
+            "maximum": 2
           },
           "commitment": {
             "type": "string",
@@ -946,6 +965,7 @@
           "status",
           "statusReason",
           "context",
+          "priority",
           "commitment",
           "labels",
           "startDate",

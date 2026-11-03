@@ -7,6 +7,7 @@ import { recurrenceRules, tasks } from '#db/schema'
 import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
+import { resolvePriorityInput } from '#lib/task-priority'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import { resolveUpdateBlockedByInputs } from '#routes/tasks/blocked-by'
 import { getTaskChangeEventIds } from '#routes/tasks/change-event-task-ids'
@@ -46,8 +47,19 @@ export const tasksUpdateApp = new Hono().patch(
       labels: labelsInput,
       blockedBy: blockedByInput,
       remindAt: remindAtInput,
-      ...taskFields
+      commitment: commitmentInput,
+      priority: priorityInput,
+      ...taskFieldsWithoutPriority
     } = c.req.valid('json')
+    const priority = resolvePriorityInput({
+      priority: priorityInput,
+      commitment: commitmentInput,
+      currentPriority: existing.priority,
+    })
+    const taskFields = {
+      ...taskFieldsWithoutPriority,
+      ...(priority === undefined ? {} : { priority }),
+    }
     const affectedTaskIdsBefore = await getTaskChangeEventIds([id])
 
     if (recurrenceRuleInput !== undefined && existing.templateId != null) {

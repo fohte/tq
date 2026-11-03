@@ -136,7 +136,8 @@ describe('syncGithubAssignedIssues', () => {
       templateId: null,
       occurrenceDate: null,
       context: 'personal',
-      commitment: 'inbox',
+      priority: null,
+      commitment: null,
       createdAt: 'DATE',
       updatedAt: 'DATE',
     })

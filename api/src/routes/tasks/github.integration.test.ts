@@ -77,6 +77,7 @@ describe('POST /api/tasks/from-github', () => {
         status: 'todo',
         statusReason: null,
         context: 'personal',
+        priority: null,
         commitment: 'inbox',
         labels: [],
         startDate: null,

@@ -13,7 +13,7 @@ interface CandidateTask {
   status: string
   dueDate: string | null
   startDate: string | null
-  commitment: string
+  priority: number | null
   waits?:
     | {
         followUpDate: string
@@ -67,7 +67,7 @@ export function getTaskQueueCandidateReason(
   if (
     task.dueDate != null &&
     task.dueDate > candidateDate &&
-    (startableDate != null || task.commitment === 'active')
+    (startableDate != null || (task.priority != null && task.priority >= 0))
   ) {
     return {
       kind: 'due-later',
@@ -80,6 +80,6 @@ export function getTaskQueueCandidateReason(
       days: daysBetween(startableDate, candidateDate),
     }
   }
-  if (task.commitment === 'active') return { kind: 'active' }
+  if (task.priority != null && task.priority >= 0) return { kind: 'active' }
   return null
 }
