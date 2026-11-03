@@ -38,7 +38,7 @@ export type TaskSortBy = 'created' | 'updated' | 'due'
 type TaskListSortBy = TaskSortBy | 'follow-up'
 type TaskSortOrder = 'asc' | 'desc'
 
-export type TaskCommitment = 'inbox' | 'active' | 'someday'
+type TaskCommitment = 'inbox' | 'active' | 'someday'
 
 type TaskListFilterOptions = {
   ids?: string[]
