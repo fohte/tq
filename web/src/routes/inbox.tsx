@@ -5,7 +5,10 @@ import { InboxKanbanPresentation } from '#components/kanban/inbox-kanban-present
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useCurrentContext } from '#hooks/use-current-context'
-import type { TaskPriority } from '#hooks/use-priority-settings'
+import type {
+  PrioritySetting,
+  TaskPriority,
+} from '#hooks/use-priority-settings'
 import { usePrioritySettings } from '#hooks/use-priority-settings'
 import type { Task, TaskListFilter, TaskPriorityFilter } from '#hooks/use-tasks'
 import {
@@ -19,7 +22,9 @@ export const Route = createFileRoute('/inbox')({
   component: InboxKanban,
 })
 
-function priorityFilter(priority: TaskPriority): TaskPriorityFilter {
+function priorityFilter(
+  priority: PrioritySetting['priority'],
+): TaskPriorityFilter {
   switch (priority) {
     case null:
       return 'none'
@@ -31,8 +36,6 @@ function priorityFilter(priority: TaskPriority): TaskPriorityFilter {
       return '1'
     case 2:
       return '2'
-    default:
-      return 'none'
   }
 }
 
@@ -95,6 +98,9 @@ function InboxKanban() {
         ({ setting }) => setting.priority === nextPriority,
       )
       if (destination != null) {
+        // useUpdateTask patches a task in whichever cached list contains it,
+        // but doesn't move it between priority filters. Move it here so the
+        // card reaches its destination before the refetch.
         queryClient.setQueryData<Task[]>(taskKeys.list(source.filter), (old) =>
           old?.filter((candidate) => candidate.id !== taskId),
         )
