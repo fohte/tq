@@ -11,10 +11,12 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { makeBlockedByGithubRef } from '#components/task/github-link-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
 import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
+import { prioritySettingsKeys } from '#lib/query-keys'
 
 const task: Task = makeTask()
 
@@ -33,10 +35,11 @@ const recurringTask: Task = makeTask({
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderTaskRow(task: Task) {
+async function renderTaskRow(task: Task, settings = makePrioritySettings()) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   })
+  queryClient.setQueryData(prioritySettingsKeys.all, settings)
   const rootRoute = createRootRoute({
     component: () => <TaskRowAppearance task={task} />,
   })
@@ -70,7 +73,35 @@ async function renderTaskRow(task: Task) {
   }
 }
 
+function readPriorityBadgeState() {
+  return {
+    badge: screen.queryByTestId('priority-badge')?.textContent ?? null,
+    title: screen.getByText('Task title').textContent,
+  }
+}
+
 describe('TaskRowAppearance', () => {
+  it('shows the configured name for a set priority', async () => {
+    await renderTaskRow(makeTask({ priority: -1 }))
+
+    expect(screen.getByTestId('priority-badge').textContent).toEqual('Later')
+  })
+
+  it('omits the priority badge for an unset priority', async () => {
+    await renderTaskRow(makeTask({ priority: null, commitment: 'inbox' }))
+
+    expect(screen.queryByTestId('priority-badge')).toEqual(null)
+  })
+
+  it('omits the priority badge when no setting matches the priority', async () => {
+    await renderTaskRow(makeTask({ priority: 0 }), [])
+
+    expect(readPriorityBadgeState()).toEqual({
+      badge: null,
+      title: 'Task title',
+    })
+  })
+
   it('navigates to the task detail page when the row is clicked', async () => {
     const user = userEvent.setup()
     const { router } = await renderTaskRow(task)

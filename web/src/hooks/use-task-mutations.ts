@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
+import type { TaskPriority } from '#hooks/use-priority-settings'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
@@ -16,6 +17,7 @@ export interface CreateTaskInput {
   dueDate?: string
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority
   labels?: string[]
   projectId?: string
   parentId?: string
@@ -36,6 +38,27 @@ function listKeyParentId(key: readonly unknown[]): string | undefined {
   return typeof parentId === 'string' ? parentId : undefined
 }
 
+function priorityFromCommitment(
+  commitment: CreateTaskInput['commitment'],
+): TaskPriority {
+  switch (commitment) {
+    case undefined:
+    case 'inbox':
+      return null
+    case 'active':
+      return 0
+    case 'someday':
+      return -1
+  }
+}
+
+function commitmentFromPriority(
+  priority: TaskPriority,
+): NonNullable<CreateTaskInput['commitment']> {
+  if (priority === null) return 'inbox'
+  return priority === -1 ? 'someday' : 'active'
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient()
 
@@ -54,6 +77,10 @@ export function useCreateTask() {
       })
 
       const now = new Date().toISOString()
+      const optimisticPriority =
+        input.priority !== undefined
+          ? input.priority
+          : priorityFromCommitment(input.commitment)
       const optimisticTask: Task = {
         id: `optimistic-${String(Date.now())}`,
         number: -1,
@@ -62,13 +89,9 @@ export function useCreateTask() {
         statusReason: null,
         duplicateOfNumber: null,
         context: input.context ?? 'personal',
-        priority:
-          input.commitment === 'inbox' || input.commitment === undefined
-            ? null
-            : input.commitment === 'active'
-              ? 0
-              : -1,
-        commitment: input.commitment ?? 'inbox',
+        priority: optimisticPriority,
+        commitment:
+          input.commitment ?? commitmentFromPriority(optimisticPriority),
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
@@ -127,6 +150,7 @@ export interface UpdateTaskInput {
   projectId?: string | null
   context?: 'work' | 'personal'
   commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority
   labels?: string[]
 }
 
@@ -159,12 +183,18 @@ export function useUpdateTask() {
       })
 
       const optimisticTimestamp = new Date().toISOString()
-      const listInput = omitTaskDescription(input)
+      const optimisticInput = {
+        ...input,
+        ...(input.priority === undefined
+          ? {}
+          : { commitment: commitmentFromPriority(input.priority) }),
+      }
+      const listInput = omitTaskDescription(optimisticInput)
 
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
-          ...input,
+          ...optimisticInput,
           updatedAt: optimisticTimestamp,
         })
       }

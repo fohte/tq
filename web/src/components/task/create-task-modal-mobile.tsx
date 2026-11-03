@@ -11,22 +11,20 @@ import {
   Calendar,
   CalendarClock,
   CalendarPlus,
-  Inbox,
+  Flag,
   Layers,
   X,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import {
-  commitmentLabels,
-  type CommitmentValue,
-  commitmentValues,
   contextLabels,
   type ContextValue,
   contextValues,
   type PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { PlanTabStrip } from '#components/task/plan-tab-strip'
+import { priorityName, PrioritySelect } from '#components/task/priority-select'
 import { TagsInput } from '#components/task/tags-input'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import {
@@ -35,6 +33,10 @@ import {
   BottomSheetPanel,
 } from '#components/ui/bottom-sheet'
 import { ExpandableFieldChip } from '#components/ui/modal-field'
+import type {
+  PrioritySetting,
+  TaskPriority,
+} from '#hooks/use-priority-settings'
 import { selectValueHandler } from '#lib/form-utils'
 
 export function CreateTaskModalMobile({
@@ -50,8 +52,9 @@ export function CreateTaskModalMobile({
   setDueDate,
   context,
   setContext,
-  commitment,
-  setCommitment,
+  priority,
+  prioritySettings,
+  setPriority,
   plan,
   setPlan,
   labels,
@@ -72,8 +75,9 @@ export function CreateTaskModalMobile({
   setDueDate: (value: string) => void
   context: ContextValue | ''
   setContext: (value: ContextValue | '') => void
-  commitment: CommitmentValue | ''
-  setCommitment: (value: CommitmentValue | '') => void
+  priority: TaskPriority
+  prioritySettings: PrioritySetting[] | undefined
+  setPriority: (value: TaskPriority) => void
   plan: PlanValue | ''
   setPlan: (value: PlanValue | '') => void
   labels: string[]
@@ -187,26 +191,17 @@ export function CreateTaskModalMobile({
               )}
             />
             <ExpandableFieldChip
-              icon={<Inbox className="size-3.5" />}
-              label={commitment ? commitmentLabels[commitment] : 'Inbox'}
-              active={!!commitment}
+              icon={<Flag className="size-3.5" />}
+              label={priorityName(prioritySettings, priority)}
+              active={priority !== null}
               expanded={(close) => (
-                <Select
-                  value={commitment}
-                  onValueChange={(value) => {
-                    selectValueHandler(setCommitment, commitmentValues)(value)
-                    close()
-                  }}
-                >
-                  <SelectTrigger variant="ghost" autoFocus size="sm">
-                    <SelectValue placeholder="Inbox" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Inbox</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="someday">Someday</SelectItem>
-                  </SelectContent>
-                </Select>
+                <PrioritySelect
+                  value={priority}
+                  settings={prioritySettings}
+                  onValueChange={setPriority}
+                  onValueChangeComplete={close}
+                  autoFocusTrigger
+                />
               )}
             />
             <div className="flex shrink-0 items-center gap-1.5">

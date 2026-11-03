@@ -103,6 +103,10 @@ export const labelKeys = {
   list: (filter?: LabelFilter) => [...labelKeys.all, filter] as const,
 }
 
+export const prioritySettingsKeys = {
+  all: ['priority-settings'] as const,
+}
+
 // A null result must not share the non-null project detail cache.
 const projectUrlPreviewKeyPrefix = [
   ...projectKeys.all,

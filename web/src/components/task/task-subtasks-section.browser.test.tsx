@@ -82,18 +82,14 @@ describe('TaskSubtasksList', () => {
       body.getAllByText(/subtask of #1 Design the new dashboard/).length,
     ).toBeGreaterThan(0)
 
-    // Inherited context lands as the Context select's initial value. Base
-    // UI's SelectValue only resolves "work" to its "Work" label once an item
-    // has registered, which happens on first open — so open it here. The
-    // Context trigger is the only select-trigger not showing its placeholder
-    // (Commitment has no default, so it still shows "Inbox").
-    const contextTrigger = assertDefined(
-      document.body.querySelector<HTMLElement>(
-        '[data-slot="select-trigger"]:not([data-placeholder])',
-      ),
+    // Opening registers the inherited option, so verify that Work is selected.
+    const contextField = assertDefined(
+      body.getByText('Context', { exact: true }).parentElement,
     )
+    const contextTrigger = within(contextField).getByRole('combobox')
     await user.click(contextTrigger)
-    expect((await body.findAllByText('Work')).length).toBeGreaterThan(0)
+    const workOption = await body.findByRole('option', { name: 'Work' })
+    expect(workOption.getAttribute('aria-selected')).toEqual('true')
 
     // Inherited label lands as a tag chip.
     expect(body.getAllByText(/dev:tq/).length).toBeGreaterThan(0)

@@ -8,6 +8,7 @@ import { fn } from 'storybook/test'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModalDescriptionTemplateSelector } from '#components/task/create-task-modal-description-template-selector'
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 
 const featureTemplate = makeDescriptionTemplate({
@@ -96,8 +97,9 @@ const meta = {
     setDueDate: fn(),
     context: '',
     setContext: fn(),
-    commitment: '',
-    setCommitment: fn(),
+    priority: 0,
+    prioritySettings: makePrioritySettings(),
+    setPriority: fn(),
     plan: '',
     setPlan: fn(),
     labels: [],
