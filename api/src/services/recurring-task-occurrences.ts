@@ -4,16 +4,10 @@ import type { DbTransaction } from '#db/connection'
 import { tasks } from '#db/schema'
 import { publishChangeEvent } from '#lib/change-events'
 import { type EditAuthor, recordEdit } from '#lib/edits'
-import { formatDate } from '#services/recurrence'
+import { addDays } from '#services/recurrence'
 import { replaceOccurrenceDateInTitle } from '#services/recurring-task-templates'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
-
-function subtractDays(dateStr: string, days: number): string {
-  const date = new Date(`${dateStr}T00:00:00`)
-  date.setDate(date.getDate() - days)
-  return formatDate(date)
-}
 
 export async function createRecurringTaskOccurrence(
   tx: DbTransaction,
@@ -38,7 +32,7 @@ export async function createRecurringTaskOccurrence(
       status: 'todo',
       startDate:
         template.startOffsetDays != null
-          ? subtractDays(occurrenceDate, template.startOffsetDays)
+          ? addDays(occurrenceDate, -template.startOffsetDays)
           : null,
       dueDate: occurrenceDate,
       parentId: template.parentId,
