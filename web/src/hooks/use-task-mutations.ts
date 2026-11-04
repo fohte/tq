@@ -154,13 +154,12 @@ export function useUpdateTask() {
       })
 
       const optimisticTimestamp = new Date().toISOString()
-      const optimisticInput = input
-      const listInput = omitTaskDescription(optimisticInput)
+      const listInput = omitTaskDescription(input)
 
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
-          ...optimisticInput,
+          ...input,
           updatedAt: optimisticTimestamp,
         })
       }
