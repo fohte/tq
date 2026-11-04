@@ -5,7 +5,11 @@ import { ResultAsync } from 'neverthrow'
 import { db } from '#db/connection'
 import { recurrenceRules, recurringTaskTemplates } from '#db/schema'
 import { SYSTEM_AUTHOR } from '#lib/edits'
-import { computeDueOccurrences, formatDate } from '#services/recurrence'
+import {
+  addDays,
+  computeDueOccurrences,
+  formatDate,
+} from '#services/recurrence'
 import {
   afterRecurringTaskOccurrenceCreated,
   createRecurringTaskOccurrence,
@@ -30,10 +34,12 @@ async function generateForTemplate(
   // Defensive guard against a missing recurrence rule row.
   if (!rule) return
 
+  // An occurrence is generated once its start date arrives, so look ahead by
+  // the start offset.
   const dueResult = computeDueOccurrences(
     template.lastGeneratedDate ?? template.anchorDate,
     rule,
-    today,
+    addDays(today, template.startOffsetDays ?? 0),
   )
   if (dueResult.isErr()) {
     captureWithFingerprint(
