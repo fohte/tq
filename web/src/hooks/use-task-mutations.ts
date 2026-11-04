@@ -16,7 +16,6 @@ export interface CreateTaskInput {
   startDate?: string
   dueDate?: string
   context?: 'work' | 'personal'
-  commitment?: 'inbox' | 'active' | 'someday'
   priority?: TaskPriority
   labels?: string[]
   projectId?: string
@@ -38,27 +37,6 @@ function listKeyParentId(key: readonly unknown[]): string | undefined {
   return typeof parentId === 'string' ? parentId : undefined
 }
 
-function priorityFromCommitment(
-  commitment: CreateTaskInput['commitment'],
-): TaskPriority {
-  switch (commitment) {
-    case undefined:
-    case 'inbox':
-      return null
-    case 'active':
-      return 0
-    case 'someday':
-      return -1
-  }
-}
-
-function commitmentFromPriority(
-  priority: TaskPriority,
-): NonNullable<CreateTaskInput['commitment']> {
-  if (priority === null) return 'inbox'
-  return priority === -1 ? 'someday' : 'active'
-}
-
 export function useCreateTask() {
   const queryClient = useQueryClient()
 
@@ -77,10 +55,6 @@ export function useCreateTask() {
       })
 
       const now = new Date().toISOString()
-      const optimisticPriority =
-        input.priority !== undefined
-          ? input.priority
-          : priorityFromCommitment(input.commitment)
       const optimisticTask: Task = {
         id: `optimistic-${String(Date.now())}`,
         number: -1,
@@ -89,9 +63,7 @@ export function useCreateTask() {
         statusReason: null,
         duplicateOfNumber: null,
         context: input.context ?? 'personal',
-        priority: optimisticPriority,
-        commitment:
-          input.commitment ?? commitmentFromPriority(optimisticPriority),
+        priority: input.priority ?? null,
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
@@ -149,7 +121,6 @@ export interface UpdateTaskInput {
   remindAt?: string | null
   projectId?: string | null
   context?: 'work' | 'personal'
-  commitment?: 'inbox' | 'active' | 'someday'
   priority?: TaskPriority
   labels?: string[]
 }
@@ -183,12 +154,7 @@ export function useUpdateTask() {
       })
 
       const optimisticTimestamp = new Date().toISOString()
-      const optimisticInput = {
-        ...input,
-        ...(input.priority === undefined
-          ? {}
-          : { commitment: commitmentFromPriority(input.priority) }),
-      }
+      const optimisticInput = input
       const listInput = omitTaskDescription(optimisticInput)
 
       if (previousDetail) {

@@ -27,7 +27,7 @@ describe('saved views API', () => {
       const res = await app.request('/api/saved-views', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'Now', query: 'commitment:active' }),
+        body: JSON.stringify({ name: 'Now', query: 'priority:0' }),
       })
 
       expect(res.status).toBe(201)
@@ -35,7 +35,7 @@ describe('saved views API', () => {
       expect(normalizeSavedView(body)).toEqual({
         id: 'ID',
         name: 'Now',
-        query: 'commitment:active',
+        query: 'priority:0',
         position: 0,
         context: 'personal',
         createdAt: 'DATE',
@@ -49,7 +49,7 @@ describe('saved views API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'Someday',
-          query: 'commitment:someday',
+          query: 'priority:-1',
           position: 3,
           context: 'work',
         }),
@@ -60,7 +60,7 @@ describe('saved views API', () => {
       expect(normalizeSavedView(body)).toEqual({
         id: 'ID',
         name: 'Someday',
-        query: 'commitment:someday',
+        query: 'priority:-1',
         position: 3,
         context: 'work',
         createdAt: 'DATE',
@@ -72,7 +72,7 @@ describe('saved views API', () => {
       const res = await app.request('/api/saved-views', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '', query: 'commitment:active' }),
+        body: JSON.stringify({ name: '', query: 'priority:0' }),
       })
 
       expect(res.status).toBe(400)
@@ -159,7 +159,7 @@ describe('saved views API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'Updated',
-          query: 'commitment:someday',
+          query: 'priority:-1',
           position: 2,
         }),
       })
@@ -169,7 +169,7 @@ describe('saved views API', () => {
       expect(normalizeSavedView(body)).toEqual({
         ...normalizeSavedView(savedView),
         name: 'Updated',
-        query: 'commitment:someday',
+        query: 'priority:-1',
         position: 2,
       })
     })
@@ -216,7 +216,7 @@ async function createSavedView(
   const res = await app.request('/api/saved-views', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, query: 'commitment:active', ...opts }),
+    body: JSON.stringify({ name, query: 'priority:0', ...opts }),
   })
   if (res.status !== 201) {
     throw new Error(

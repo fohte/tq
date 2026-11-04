@@ -56,7 +56,6 @@ function seedAppLayoutQueries(queryClient: QueryClient, task: TaskDetail) {
     taskKeys.list({
       view: 'row',
       context,
-      commitment: 'inbox',
       status: 'todo',
       limit: 'unlimited',
     }),

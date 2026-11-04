@@ -128,9 +128,6 @@ export const tasks = pgTable(
     })
       .notNull()
       .default('personal'),
-    commitment: text('commitment', {
-      enum: ['inbox', 'active', 'someday'],
-    }),
     priority: integer('priority'),
     // When to push a reminder for this task. Cleared back to NULL once the
     // reminder has been claimed for delivery, so the column doubles as the
@@ -155,7 +152,6 @@ export const tasks = pgTable(
     index('idx_tasks_due_date').on(table.dueDate),
     index('idx_tasks_project_id').on(table.projectId),
     index('idx_tasks_project_status').on(table.projectId, table.status),
-    index('idx_tasks_commitment').on(table.commitment),
     index('idx_tasks_priority').on(table.priority),
     index('idx_tasks_template_id').on(table.templateId),
     // Only LLM tasks with a validated template reference this column, so a

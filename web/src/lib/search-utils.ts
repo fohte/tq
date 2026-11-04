@@ -37,7 +37,6 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
     statusReason: task.statusReason,
     context: task.context,
     priority: task.priority,
-    commitment: task.commitment,
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,

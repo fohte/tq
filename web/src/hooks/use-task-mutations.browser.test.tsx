@@ -66,22 +66,19 @@ function readPriorityState() {
   return {
     list: queryClient
       .getQueryData<Task[]>(taskKeys.list(allTasksFilter))
-      ?.map(({ priority, commitment }) => ({ priority, commitment })),
-    detail:
-      detail == null
-        ? null
-        : { priority: detail.priority, commitment: detail.commitment },
+      ?.map(({ priority }) => ({ priority })),
+    detail: detail == null ? null : { priority: detail.priority },
   }
 }
 
 async function optimisticallyUpdateTask(
   input: { priority: number | null } | { title: string },
 ) {
-  const task = makeTask({ id: taskId, priority: 0, commitment: 'active' })
+  const task = makeTask({ id: taskId, priority: 0 })
   queryClient.setQueryData(taskKeys.list(allTasksFilter), [task])
   queryClient.setQueryData(
     taskKeys.detail(taskId),
-    makeTaskDetail({ id: taskId, priority: 0, commitment: 'active' }),
+    makeTaskDetail({ id: taskId, priority: 0 }),
   )
 
   let resolvePatch: ((response: Response) => void) | undefined
@@ -129,29 +126,26 @@ async function optimisticallyUpdateTask(
 
 describe('useUpdateTask priority optimism', () => {
   it.each([
-    { name: 'unset', priority: null, commitment: 'inbox' },
-    { name: 'negative', priority: -1, commitment: 'someday' },
-    { name: 'zero', priority: 0, commitment: 'active' },
-    { name: 'positive one', priority: 1, commitment: 'active' },
-    { name: 'positive two', priority: 2, commitment: 'active' },
-  ] as const)(
-    '$name priority updates priority and commitment optimistically',
-    async ({ priority, commitment }) => {
-      const state = await optimisticallyUpdateTask({ priority })
+    { name: 'unset', priority: null },
+    { name: 'negative', priority: -1 },
+    { name: 'zero', priority: 0 },
+    { name: 'positive one', priority: 1 },
+    { name: 'positive two', priority: 2 },
+  ] as const)('$name priority updates optimistically', async ({ priority }) => {
+    const state = await optimisticallyUpdateTask({ priority })
 
-      expect(state).toEqual({
-        list: [{ priority, commitment }],
-        detail: { priority, commitment },
-      })
-    },
-  )
+    expect(state).toEqual({
+      list: [{ priority }],
+      detail: { priority },
+    })
+  })
 
-  it('keeps commitment when another field changes', async () => {
+  it('keeps priority when another field changes', async () => {
     const state = await optimisticallyUpdateTask({ title: 'Updated task' })
 
     expect(state).toEqual({
-      list: [{ priority: 0, commitment: 'active' }],
-      detail: { priority: 0, commitment: 'active' },
+      list: [{ priority: 0 }],
+      detail: { priority: 0 },
     })
   })
 })

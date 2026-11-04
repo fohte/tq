@@ -78,7 +78,6 @@ describe('POST /api/tasks/from-github', () => {
         statusReason: null,
         context: 'personal',
         priority: null,
-        commitment: 'inbox',
         labels: [],
         startDate: null,
         dueDate: null,

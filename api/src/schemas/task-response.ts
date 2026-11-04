@@ -2,7 +2,6 @@ import { z } from 'zod'
 
 import { GITHUB_LINK_ROLES, GITHUB_NOTIFY_EVENTS } from '#db/schema'
 import {
-  commitmentEnum,
   contextEnum,
   taskPriority,
   taskStatus,
@@ -71,7 +70,6 @@ export const createTaskResponseSchema = z.object({
   statusReason: taskStatusReason.nullable(),
   context: contextEnum,
   priority: taskPriority.nullable(),
-  commitment: commitmentEnum,
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),

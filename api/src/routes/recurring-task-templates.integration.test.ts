@@ -101,7 +101,6 @@ function expectedOccurrenceResponse(overrides: Record<string, unknown>) {
     statusReason: null,
     context: 'personal',
     priority: null,
-    commitment: 'inbox',
     labels: [],
     startDate: null,
     dueDate: '2031-04-11',

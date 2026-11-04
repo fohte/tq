@@ -19,7 +19,6 @@ export const taskStatusReason = z.enum([
 ])
 export type TaskStatusReason = z.infer<typeof taskStatusReason>
 export const contextEnum = z.enum(['work', 'personal'])
-export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
 export const taskPriority = z.number().int().min(-1).max(2)
 export type TaskPriority = z.infer<typeof taskPriority>
 
@@ -86,7 +85,6 @@ export const createTaskSchema = z.object({
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
   priority: taskPriority.nullable().optional(),
-  commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
   blockedBy: z
@@ -107,7 +105,6 @@ export const updateTaskSchema = z.object({
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
   priority: taskPriority.nullable().optional(),
-  commitment: commitmentEnum.optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
   remindAt: z.iso
@@ -165,7 +162,6 @@ export const listTasksQuerySchema = z.object({
     .optional(),
   context: taskListContext,
   priority: taskPriorityFilter.optional(),
-  commitment: commitmentEnum.optional(),
   projectId: z.uuid().optional(),
   templateId: z.uuid().optional(),
   parentId: z

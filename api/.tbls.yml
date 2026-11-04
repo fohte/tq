@@ -331,7 +331,6 @@ comments:
       template_id: 'Recurring task template that generated this task; null for tasks created independently.'
       occurrence_date: 'Date represented by this generated task occurrence; set together with template_id.'
       context: 'Whether the task belongs to the work or personal context.'
-      commitment: 'Legacy triage value retained for backfill recovery.'
       priority: 'Task priority from -1 through 2; null represents Inbox.'
       remind_at: 'Time when a reminder is due; cleared when claimed for delivery.'
   - table: time_blocks

@@ -38,8 +38,6 @@ export type TaskSortBy = 'created' | 'updated' | 'due' | 'priority'
 type TaskListSortBy = TaskSortBy | 'follow-up'
 type TaskSortOrder = 'asc' | 'desc'
 
-type TaskCommitment = 'inbox' | 'active' | 'someday'
-
 type TaskListFilterOptions = {
   ids?: string[]
   q?: string
@@ -52,7 +50,6 @@ type TaskListFilterOptions = {
   candidatesOn?: string
   context: TaskListContext
   priority?: TaskPriorityFilter
-  commitment?: TaskCommitment
   parentId?: string
   templateId?: string
   descendantOf?: string
@@ -87,7 +84,6 @@ export interface TaskCountFilter {
   context: TaskListContext
   status: TaskStatus | 'all' | TaskStatus[]
   priority?: TaskPriorityFilter
-  commitment?: TaskCommitment
   q?: string
 }
 
