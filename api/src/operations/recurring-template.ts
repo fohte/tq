@@ -93,8 +93,9 @@ export const recurringTemplateOperations = [
       'Partially update a recurring task template. Only specified fields change; ' +
       'omit a field to leave it as-is. Nullable fields can be cleared with ' +
       'null. `labels` replaces the full set; an empty array clears it. ' +
-      '`recurrenceRule` replaces the full rule. The `{date}` placeholder in ' +
-      '`title` is replaced with the occurrence date when a task is generated.',
+      '`recurrenceRule` replaces the full rule. In `title`, `{date}` is replaced ' +
+      'with the occurrence date and `{next-mon}`..`{next-sun}` with that ' +
+      'weekday in the Monday-start week after it when a task is generated.',
     positionalArgs: ['id'],
     kind: 'write',
     routes: ['PATCH /api/recurring-task-templates/:id'],

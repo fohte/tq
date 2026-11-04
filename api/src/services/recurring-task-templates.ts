@@ -1,6 +1,7 @@
 import type { DbTransaction } from '#db/connection'
 import { recurrenceRules, recurringTaskTemplates } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
+import { addCalendarDays, mondayWeekStart } from '#lib/timezone'
 import { formatDate, type RecurrenceRuleInput } from '#services/recurrence'
 import { syncTemplateLabels } from '#services/recurring-task-template-labels'
 
@@ -13,11 +14,18 @@ export interface TemplateSourceFields {
   labels: string[]
 }
 
+const WEEKDAYS_FROM_MONDAY = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
 export function replaceOccurrenceDateInTitle(
   title: string,
   occurrenceDate: string,
 ): string {
-  return title.replaceAll('{date}', occurrenceDate)
+  const nextWeekMonday = addCalendarDays(mondayWeekStart(occurrenceDate), 7)
+  return title
+    .replaceAll('{date}', occurrenceDate)
+    .replace(/\{next-(mon|tue|wed|thu|fri|sat|sun)\}/g, (_, weekday: string) =>
+      addCalendarDays(nextWeekMonday, WEEKDAYS_FROM_MONDAY.indexOf(weekday)),
+    )
 }
 
 // Whole calendar days between two 'YYYY-MM-DD' dates, clamped to >= 0 to
