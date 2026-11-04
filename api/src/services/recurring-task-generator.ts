@@ -30,10 +30,15 @@ async function generateForTemplate(
   // Defensive guard against a missing recurrence rule row.
   if (!rule) return
 
+  // An occurrence is generated once its start date arrives, so look ahead by
+  // the start offset.
+  const horizon = new Date(`${today}T00:00:00`)
+  horizon.setDate(horizon.getDate() + (template.startOffsetDays ?? 0))
+
   const dueResult = computeDueOccurrences(
     template.lastGeneratedDate ?? template.anchorDate,
     rule,
-    today,
+    formatDate(horizon),
   )
   if (dueResult.isErr()) {
     captureWithFingerprint(
