@@ -2,7 +2,6 @@ import {
   and,
   eq,
   exists,
-  gte,
   inArray,
   isNotNull,
   isNull,
@@ -130,18 +129,6 @@ function buildConditions(
     conditions.push(
       priority === null ? isNull(tasks.priority) : eq(tasks.priority, priority),
     )
-  } else if (query.commitment != null) {
-    switch (query.commitment) {
-      case 'inbox':
-        conditions.push(isNull(tasks.priority))
-        break
-      case 'active':
-        conditions.push(gte(tasks.priority, 0))
-        break
-      case 'someday':
-        conditions.push(eq(tasks.priority, -1))
-        break
-    }
   }
 
   const reason = parsed?.reason ?? query.statusReason?.[0]

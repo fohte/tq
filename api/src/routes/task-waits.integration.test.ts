@@ -1034,29 +1034,20 @@ describe('task waits API', () => {
     const today = dateAtOffset(now, tzOffset)
     await createTask('Overdue task', {
       dueDate: addDaysAtOffset(now, tzOffset, -2),
-      commitment: 'inbox',
     })
-    const followUp = await createTask('Follow-up task', {
-      commitment: 'inbox',
-    })
-    const waitResolved = await createTask('Reply received task', {
-      commitment: 'inbox',
-    })
+    const followUp = await createTask('Follow-up task')
+    const waitResolved = await createTask('Reply received task')
     await createTask('Due today task', {
       dueDate: today,
-      commitment: 'inbox',
     })
     await createTask('Due later task', {
       dueDate: addDaysAtOffset(now, tzOffset, 2),
-      commitment: 'active',
+      priority: 0,
     })
     await createTask('Starting task', {
       startDate: today,
-      commitment: 'inbox',
     })
-    await createTask('Active task', {
-      commitment: 'active',
-    })
+    await createTask('Active task', { priority: 0 })
     await createTask('Priority task with future start', {
       startDate: addDaysAtOffset(now, tzOffset, 1),
       priority: 0,
@@ -1162,11 +1153,9 @@ describe('task waits API', () => {
     const today = dateAtOffset(now, tzOffset)
     const taskWithFollowUp = await createTask('Overdue task with follow-up', {
       dueDate: addDaysAtOffset(now, tzOffset, -2),
-      commitment: 'inbox',
     })
     await createTask('Overdue task without follow-up', {
       dueDate: addDaysAtOffset(now, tzOffset, -1),
-      commitment: 'inbox',
     })
     await addWait(
       taskWithFollowUp.id,
@@ -1280,12 +1269,8 @@ describe('task waits API', () => {
   })
 
   it('counts inbox tasks without unresolved blockers', async () => {
-    await createTask('Clear inbox task', {
-      commitment: 'inbox',
-    })
-    const blockedTask = await createTask('Waiting inbox task', {
-      commitment: 'inbox',
-    })
+    await createTask('Clear inbox task')
+    const blockedTask = await createTask('Waiting inbox task')
     await addWait(
       blockedTask.id,
       'Awaiting response',
@@ -1293,7 +1278,7 @@ describe('task waits API', () => {
     )
 
     const response = await app.request(
-      '/api/tasks/count?context=all&status=todo&commitment=inbox&q=has%3Ano-blockers',
+      '/api/tasks/count?context=all&status=todo&priority=none&q=has%3Ano-blockers',
     )
     const body = await jsonBody<{ count: number }>(response)
 

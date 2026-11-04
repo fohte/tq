@@ -88,7 +88,7 @@ describe('TaskRowAppearance', () => {
   })
 
   it('omits the priority badge for an unset priority', async () => {
-    await renderTaskRow(makeTask({ priority: null, commitment: 'inbox' }))
+    await renderTaskRow(makeTask({ priority: null }))
 
     expect(screen.queryByTestId('priority-badge')).toEqual(null)
   })

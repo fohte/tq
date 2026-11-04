@@ -234,15 +234,15 @@ export const WithProjects: Story = {
 }
 
 const fewSavedViews: SavedView[] = [
-  makeSavedView({ id: '1', name: 'Now', query: 'commitment:active' }),
-  makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
+  makeSavedView({ id: '1', name: 'Now', query: 'priority:0' }),
+  makeSavedView({ id: '2', name: 'Someday', query: 'priority:-1' }),
 ]
 
 const manySavedViews: SavedView[] = Array.from({ length: 7 }, (_, i) =>
   makeSavedView({
     id: String(i + 1),
     name: `View ${String(i + 1)}`,
-    query: `commitment:active label:view-${String(i + 1)}`,
+    query: `priority:0 label:view-${String(i + 1)}`,
   }),
 )
 
@@ -257,7 +257,7 @@ export const WithViews: Story = {
 export const WithActiveView: Story = {
   name: 'the sidebar highlights the saved view matching the current query',
   args: {
-    currentPath: '/tasks?q=commitment:active',
+    currentPath: '/tasks?q=priority:0',
     savedViews: fewSavedViews,
   },
 }

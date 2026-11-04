@@ -70,9 +70,9 @@ describe('parseSearchQuery', () => {
     })
   })
 
-  it('treats commitment: tokens as free text', () => {
-    expect(parseSearchQuery('commitment:active')).toEqual({
-      freeText: 'commitment:active',
+  it('treats unknown property tokens as free text', () => {
+    expect(parseSearchQuery('retired:active')).toEqual({
+      freeText: 'retired:active',
     })
   })
 

@@ -1888,7 +1888,6 @@ describe('day-view route scheduled week tasks', () => {
     const scheduledTask = makeTask({
       id: 'scheduled-task',
       title: 'Review the release notes',
-      commitment: 'active',
     })
     const queues = [
       makeQueue({ key: 'day', name: 'Today' }),

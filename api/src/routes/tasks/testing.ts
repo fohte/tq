@@ -95,7 +95,6 @@ export interface TaskResponse {
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
   priority: TaskPriority | null
-  commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
   startDate: string | null
   dueDate: string | null
@@ -143,7 +142,6 @@ export interface TaskListItemResponse {
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
   priority: TaskPriority | null
-  commitment: 'inbox' | 'active' | 'someday'
   labels: string[]
   startDate: string | null
   dueDate: string | null
@@ -224,7 +222,6 @@ export function toListItemResponse(
     | 'statusReason'
     | 'context'
     | 'priority'
-    | 'commitment'
     | 'labels'
     | 'startDate'
     | 'dueDate'
@@ -256,7 +253,6 @@ export function toListItemResponse(
     statusReason: task.statusReason,
     context: task.context,
     priority: task.priority,
-    commitment: task.commitment,
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,
@@ -376,7 +372,6 @@ const taskListItemResponseSchema = z.object({
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
   priority: taskPriority.nullable(),
-  commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -421,7 +416,6 @@ const taskResponseSchema = z.object({
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
   priority: taskPriority.nullable(),
-  commitment: z.enum(['inbox', 'active', 'someday']),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -480,7 +474,6 @@ export async function createTask(
     dueDate?: string
     context?: string
     priority?: TaskPriority | null
-    commitment?: string
     labels?: string[]
   } = {},
 ) {
