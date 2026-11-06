@@ -19,6 +19,10 @@ describe('getSearchSyntaxHelpSections', () => {
         { syntax: 'sort:created', display: 'Sort by creation date' },
         { syntax: 'sort:updated', display: 'Sort by update date' },
         { syntax: 'sort:priority', display: 'Sort by priority' },
+        {
+          syntax: 'sort:priority-updated',
+          display: 'Sort by priority, then update date',
+        },
       ],
     })
   })
@@ -38,6 +42,10 @@ describe('getSearchSyntaxHelpSections', () => {
         { syntax: 'sort:created', display: 'Sort by creation date' },
         { syntax: 'sort:updated', display: 'Sort by update date' },
         { syntax: 'sort:priority', display: 'Sort by priority' },
+        {
+          syntax: 'sort:priority-updated',
+          display: 'Sort by priority, then update date',
+        },
       ],
     })
   })

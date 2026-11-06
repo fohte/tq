@@ -401,7 +401,7 @@ describe('Sidebar', () => {
       expect(devTqLink).toHaveAttribute('href', '/tasks')
       expect(devTqLink.dataset['search']).toBe(
         JSON.stringify({
-          q: 'is:todo label:dev:tq sort:priority',
+          q: 'is:todo label:dev:tq sort:priority-updated',
         }),
       )
     })
@@ -493,7 +493,7 @@ describe('Sidebar', () => {
         const devLink = screen.getByRole('link', { name: /dev/ })
         expect(devLink).toHaveAttribute('href', '/tasks')
         expect(devLink.dataset['search']).toBe(
-          JSON.stringify({ q: 'is:todo label:dev sort:priority' }),
+          JSON.stringify({ q: 'is:todo label:dev sort:priority-updated' }),
         )
       })
 

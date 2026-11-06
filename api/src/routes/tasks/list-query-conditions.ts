@@ -337,7 +337,9 @@ export async function buildTaskFilterConditions(
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
   const sortBy = parsed?.sortBy ?? filters.sortBy
   const prioritySettingsResult =
-    sortBy === 'priority' || filters.candidatesOn != null
+    sortBy === 'priority' ||
+    sortBy === 'priority-updated' ||
+    filters.candidatesOn != null
       ? await getPrioritySettings()
       : ok([])
   if (prioritySettingsResult.isErr()) {

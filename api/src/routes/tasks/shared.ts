@@ -51,6 +51,10 @@ function resolvePrimaryTaskListOrderBy(
       const direction = order === 'desc' ? sql`DESC` : sql`ASC`
       return sql`${priorityOrderExpression(prioritySettings)} ${direction}, ${tasks.dueDate} ASC NULLS LAST`
     }
+    case 'priority-updated': {
+      const direction = order === 'desc' ? sql`DESC` : sql`ASC`
+      return sql`${priorityOrderExpression(prioritySettings)} ${direction}, ${tasks.updatedAt} DESC`
+    }
     case 'created':
     default:
       return order === 'desc' ? desc(tasks.createdAt) : tasks.createdAt

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { createTask, type TaskListItemResponse } from '#routes/tasks/testing'
@@ -42,6 +42,20 @@ function settingsStateSnapshot(status: number, settings: PrioritySetting[]) {
 
 function priorityOrderSnapshot(ascending: string[], descending: string[]) {
   return { ascending, descending }
+}
+
+// `updatedAt` defaults to `now()`, which is frozen at the test's transaction
+// start, while PATCH sets it from the application clock.
+async function updateTaskAt(task: { id: string }, time: string) {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(time))
+  const response = await app.request(`/api/tasks/${task.id}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ description: 'Updated' }),
+  })
+  vi.useRealTimers()
+  expect(response.status).toBe(200)
 }
 
 describe('priority settings API', () => {
@@ -159,6 +173,89 @@ describe('priority settings API', () => {
 
     expect(tasks.map(({ title }) => title)).toEqual([
       'Priority zero task',
+      'Inbox task',
+    ])
+  })
+
+  it('sorts by configured order, direction, and most recent update within a priority', async () => {
+    await updateSettings([
+      { priority: null, name: 'Inbox', description: '', sortOrder: 0 },
+      { priority: -1, name: 'Later', description: '', sortOrder: 1 },
+      { priority: 0, name: 'Routine', description: '', sortOrder: 2 },
+      { priority: 2, name: 'First', description: '', sortOrder: 3 },
+      { priority: 1, name: 'Soon', description: '', sortOrder: 4 },
+    ])
+    await createTask('Priority two task', { priority: 2 })
+    await createTask('Deferred task', { priority: -1 })
+    await createTask('Inbox task', { priority: null })
+    // The update order differs from the creation and due date orders, and from
+    // their reverses, so only `updatedAt DESC` can produce the expected order.
+    const middleUpdate = await createTask('Middle update', {
+      priority: 0,
+      dueDate: '2036-05-11',
+    })
+    const oldestUpdate = await createTask('Oldest update', {
+      priority: 0,
+      dueDate: '2036-05-13',
+    })
+    const newestUpdate = await createTask('Newest update', {
+      priority: 0,
+      dueDate: '2036-05-12',
+    })
+    await updateTaskAt(oldestUpdate, '2030-01-01T00:00:00.000Z')
+    await updateTaskAt(middleUpdate, '2030-01-02T00:00:00.000Z')
+    await updateTaskAt(newestUpdate, '2030-01-03T00:00:00.000Z')
+
+    const response = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority-updated',
+    )
+    const tasks = await jsonBody<TaskListItemResponse[]>(response)
+    const descendingResponse = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority-updated&order=desc',
+    )
+    const descendingTasks =
+      await jsonBody<TaskListItemResponse[]>(descendingResponse)
+
+    expect(
+      priorityOrderSnapshot(
+        tasks.map(({ title }) => title),
+        descendingTasks.map(({ title }) => title),
+      ),
+    ).toEqual({
+      ascending: [
+        'Inbox task',
+        'Deferred task',
+        'Newest update',
+        'Middle update',
+        'Oldest update',
+        'Priority two task',
+      ],
+      descending: [
+        'Priority two task',
+        'Newest update',
+        'Middle update',
+        'Oldest update',
+        'Deferred task',
+        'Inbox task',
+      ],
+    })
+  })
+
+  it('sorts search results with the sort:priority-updated token', async () => {
+    await createTask('Inbox task', { priority: null })
+    const olderUpdate = await createTask('Older update', { priority: 0 })
+    const newerUpdate = await createTask('Newer update', { priority: 0 })
+    await updateTaskAt(olderUpdate, '2030-01-01T00:00:00.000Z')
+    await updateTaskAt(newerUpdate, '2030-01-02T00:00:00.000Z')
+
+    const response = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&q=sort%3Apriority-updated',
+    )
+    const tasks = await jsonBody<TaskListItemResponse[]>(response)
+
+    expect(tasks.map(({ title }) => title)).toEqual([
+      'Newer update',
+      'Older update',
       'Inbox task',
     ])
   })

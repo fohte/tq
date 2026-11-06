@@ -8,10 +8,11 @@ export const sortOptionValues = [
   'due',
   'created',
   'priority',
+  'priority-updated',
 ] as const satisfies readonly TaskSortBy[]
 
 export const defaultTaskSort = 'updated' as const
-export const defaultTaskListSort = 'priority' as const
+export const defaultTaskListSort = 'priority-updated' as const
 
 export function defaultTaskSearchQuery(sortBy: TaskSortBy): string {
   return buildSearchQuery({
@@ -43,6 +44,7 @@ export const sortLabels: Partial<
   due: 'Due',
   created: 'Created',
   priority: 'Priority',
+  'priority-updated': 'Priority > Updated',
 }
 
 // Compact terms for the `is` chip's value (e.g. "is todo, done").

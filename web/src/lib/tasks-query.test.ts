@@ -19,23 +19,29 @@ function getTaskSortDefaults() {
 }
 
 describe('tagFilterSearch', () => {
-  it('builds a not-completed, tag-scoped, priority-sorted search', () => {
+  it('builds a not-completed, tag-scoped, priority-updated-sorted search', () => {
     expect(tagFilterSearch('dev:tq')).toEqual({
-      q: 'is:todo label:dev:tq sort:priority',
+      q: 'is:todo label:dev:tq sort:priority-updated',
     })
   })
 })
 
 describe('sortOptionValues', () => {
   it('exposes the dropdown/tab-strip sort choices', () => {
-    expect(sortOptionValues).toEqual(['updated', 'due', 'created', 'priority'])
+    expect(sortOptionValues).toEqual([
+      'updated',
+      'due',
+      'created',
+      'priority',
+      'priority-updated',
+    ])
   })
 
-  it('keeps the project default separate from the task-list priority default', () => {
+  it('keeps the project default separate from the task-list priority-updated default', () => {
     expect(getTaskSortDefaults()).toEqual({
       projectSort: 'updated',
-      taskListSort: 'priority',
-      taskListQuery: 'is:todo sort:priority',
+      taskListSort: 'priority-updated',
+      taskListQuery: 'is:todo sort:priority-updated',
     })
   })
 })

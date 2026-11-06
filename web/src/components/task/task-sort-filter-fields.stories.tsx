@@ -42,3 +42,10 @@ export const SortByPriority: Story = {
     sortBy: 'priority',
   },
 }
+
+export const SortByPriorityUpdated: Story = {
+  name: 'tasks are sorted by configured priority, then their last update',
+  args: {
+    sortBy: 'priority-updated',
+  },
+}

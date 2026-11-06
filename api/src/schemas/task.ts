@@ -33,6 +33,7 @@ export const taskSortBy = z.enum([
   'due',
   'follow-up',
   'priority',
+  'priority-updated',
 ])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 export const taskSortOrder = z.enum(['asc', 'desc'])
@@ -177,7 +178,7 @@ export const listTasksQuerySchema = z.object({
   order: taskSortOrder
     .optional()
     .describe(
-      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created, sortBy=due, sortBy=follow-up, or sortBy=priority. For sortBy=priority, desc reverses the configured priority order while keeping the nearest due date first within each priority.',
+      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created, sortBy=due, sortBy=follow-up, sortBy=priority, or sortBy=priority-updated. For sortBy=priority, desc reverses the configured priority order while keeping the nearest due date first within each priority. For sortBy=priority-updated, desc reverses the configured priority order while keeping the most recently updated task first within each priority.',
     ),
   limit: z.union([
     z.coerce.number().int().min(1).max(100),
