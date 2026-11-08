@@ -6,7 +6,7 @@ export function makeParsedQuery(
   return {
     freeText: '',
     status: ['todo'],
-    sortBy: 'updated',
+    sortBy: ['updated'],
     ...overrides,
   }
 }

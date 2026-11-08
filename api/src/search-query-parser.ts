@@ -20,7 +20,7 @@ export interface ParsedQuery {
   hasResolvedWait?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated' | 'priority' | 'priority-updated'
+  sortBy?: ('due' | 'created' | 'updated' | 'priority')[]
 }
 
 export interface SearchQueryTokenRange {
@@ -114,11 +114,10 @@ const searchQueryTokenDefinitions = new Map(
         ['created', 'Sort by creation date'],
         ['updated', 'Sort by update date'],
         ['priority', 'Sort by priority'],
-        ['priority-updated', 'Sort by priority, then update date'],
       ],
-      'Sort results by date or configured priority.',
+      'Sort results by date or configured priority. Repeat sort: to break ties with later keys.',
       (result, value) => {
-        result.sortBy = value
+        result.sortBy = [...new Set([...(result.sortBy ?? []), value])]
       },
       true,
     ),
@@ -346,8 +345,8 @@ export function buildSearchQuery(query: ParsedQuery): string {
   if (query.projectId !== undefined) {
     parts.push(`project:${quoteIfNeeded(query.projectId)}`)
   }
-  if (query.sortBy !== undefined) {
-    parts.push(`sort:${query.sortBy}`)
+  for (const key of query.sortBy ?? []) {
+    parts.push(`sort:${key}`)
   }
 
   return parts.join(' ')

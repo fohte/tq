@@ -12,17 +12,14 @@ describe('getSearchSyntaxHelpSections', () => {
     expect(sortEntry).toEqual({
       key: 'sort',
       syntax: 'sort:',
-      description: 'Sort results by date or configured priority.',
+      description:
+        'Sort results by date or configured priority. Repeat sort: to break ties with later keys.',
       taskFilter: true,
       values: [
         { syntax: 'sort:due', display: 'Sort by due date' },
         { syntax: 'sort:created', display: 'Sort by creation date' },
         { syntax: 'sort:updated', display: 'Sort by update date' },
         { syntax: 'sort:priority', display: 'Sort by priority' },
-        {
-          syntax: 'sort:priority-updated',
-          display: 'Sort by priority, then update date',
-        },
       ],
     })
   })
@@ -35,17 +32,14 @@ describe('getSearchSyntaxHelpSections', () => {
     expect(sortEntry).toEqual({
       key: 'sort',
       syntax: 'sort:',
-      description: 'Sort results by date or configured priority.',
+      description:
+        'Sort results by date or configured priority. Repeat sort: to break ties with later keys.',
       taskFilter: true,
       values: [
         { syntax: 'sort:due', display: 'Sort by due date' },
         { syntax: 'sort:created', display: 'Sort by creation date' },
         { syntax: 'sort:updated', display: 'Sort by update date' },
         { syntax: 'sort:priority', display: 'Sort by priority' },
-        {
-          syntax: 'sort:priority-updated',
-          display: 'Sort by priority, then update date',
-        },
       ],
     })
   })

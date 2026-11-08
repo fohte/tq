@@ -10,7 +10,7 @@ const meta = {
     layout: 'centered',
   },
   args: {
-    sortBy: 'updated',
+    sortBy: ['updated'],
     onSortByChange: fn(),
   },
 } satisfies Meta<typeof TaskSortFilterFields>
@@ -25,27 +25,34 @@ export const Default: Story = {
 export const SortByCreated: Story = {
   name: 'tasks are sorted by creation time',
   args: {
-    sortBy: 'created',
+    sortBy: ['created'],
   },
 }
 
 export const SortByDue: Story = {
   name: 'tasks are sorted by due date',
   args: {
-    sortBy: 'due',
+    sortBy: ['due'],
   },
 }
 
 export const SortByPriority: Story = {
   name: 'tasks are sorted by configured priority',
   args: {
-    sortBy: 'priority',
+    sortBy: ['priority'],
   },
 }
 
 export const SortByPriorityUpdated: Story = {
   name: 'tasks are sorted by configured priority, then their last update',
   args: {
-    sortBy: 'priority-updated',
+    sortBy: ['priority', 'updated'],
+  },
+}
+
+export const SortByThreeKeys: Story = {
+  name: 'tasks are sorted by configured priority, then last update, then due date',
+  args: {
+    sortBy: ['priority', 'updated', 'due'],
   },
 }

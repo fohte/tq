@@ -39,7 +39,10 @@ function cliErrorOutcome(
   }
 }
 
-async function expectTaskQuery(args: string[], query: Record<string, string>) {
+async function expectTaskQuery(
+  args: string[],
+  query: Record<string, string | string[]>,
+) {
   const { fetchStub, calls } = captureFetch(
     () => new Response('[]', { status: 200 }),
   )
@@ -678,6 +681,16 @@ describe('task search', () => {
       context: 'all',
       status: 'all',
       priority: 'none',
+      limit: '20',
+    })
+  })
+
+  it('sends comma-separated --sort-by keys in order', async () => {
+    await expectTaskQuery(['task', 'search', '--sort-by', 'priority,updated'], {
+      view: 'row',
+      context: 'all',
+      status: 'all',
+      sortBy: ['priority', 'updated'],
       limit: '20',
     })
   })

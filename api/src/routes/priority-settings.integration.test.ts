@@ -177,7 +177,7 @@ describe('priority settings API', () => {
     ])
   })
 
-  it('sorts by configured order, direction, and most recent update within a priority', async () => {
+  it('sorts by priority then most recent update, with order reversing only the first key', async () => {
     await updateSettings([
       { priority: null, name: 'Inbox', description: '', sortOrder: 0 },
       { priority: -1, name: 'Later', description: '', sortOrder: 1 },
@@ -207,11 +207,11 @@ describe('priority settings API', () => {
     await updateTaskAt(newestUpdate, '2030-01-03T00:00:00.000Z')
 
     const response = await app.request(
-      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority-updated',
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority,updated',
     )
     const tasks = await jsonBody<TaskListItemResponse[]>(response)
     const descendingResponse = await app.request(
-      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority-updated&order=desc',
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority,updated&order=desc',
     )
     const descendingTasks =
       await jsonBody<TaskListItemResponse[]>(descendingResponse)
@@ -241,7 +241,7 @@ describe('priority settings API', () => {
     })
   })
 
-  it('sorts search results with the sort:priority-updated token', async () => {
+  it('sorts search results by repeated sort tokens in written order', async () => {
     await createTask('Inbox task', { priority: null })
     const olderUpdate = await createTask('Older update', { priority: 0 })
     const newerUpdate = await createTask('Newer update', { priority: 0 })
@@ -249,7 +249,7 @@ describe('priority settings API', () => {
     await updateTaskAt(newerUpdate, '2030-01-02T00:00:00.000Z')
 
     const response = await app.request(
-      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&q=sort%3Apriority-updated',
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&q=sort%3Apriority%20sort%3Aupdated',
     )
     const tasks = await jsonBody<TaskListItemResponse[]>(response)
 
@@ -258,6 +258,70 @@ describe('priority settings API', () => {
       'Older update',
       'Inbox task',
     ])
+  })
+
+  const sortedTitles = async (query: string) => {
+    const response = await app.request(
+      `/api/tasks?view=row&context=all&status=todo&limit=unlimited&${query}`,
+    )
+    const tasks = await jsonBody<TaskListItemResponse[]>(response)
+    return tasks.map(({ title }) => title)
+  }
+
+  it('applies sort keys in the order they are listed', async () => {
+    await createTask('Same due, routine', {
+      priority: 0,
+      dueDate: '2036-05-01',
+    })
+    await createTask('Same due, first', { priority: 2, dueDate: '2036-05-01' })
+    await createTask('Later due, first', { priority: 2, dueDate: '2036-05-02' })
+
+    expect(await sortedTitles('sortBy=due,priority')).toEqual([
+      'Same due, first',
+      'Same due, routine',
+      'Later due, first',
+    ])
+  })
+
+  it('accepts sort keys as repeated query parameters', async () => {
+    await createTask('Inbox task', { priority: null })
+    const olderUpdate = await createTask('Older update', { priority: 0 })
+    const newerUpdate = await createTask('Newer update', { priority: 0 })
+    await updateTaskAt(olderUpdate, '2030-01-01T00:00:00.000Z')
+    await updateTaskAt(newerUpdate, '2030-01-02T00:00:00.000Z')
+
+    expect(await sortedTitles('sortBy=priority&sortBy=updated')).toEqual([
+      'Newer update',
+      'Older update',
+      'Inbox task',
+    ])
+  })
+
+  it('treats a repeated sort key as one key', async () => {
+    await createTask('Later due', { priority: 0, dueDate: '2036-05-02' })
+    await createTask('Earlier due', { priority: 0, dueDate: '2036-05-01' })
+
+    expect(await sortedTitles('sortBy=priority,priority')).toEqual([
+      'Earlier due',
+      'Later due',
+    ])
+  })
+
+  it('prefers sort tokens in q over the sortBy parameter', async () => {
+    await createTask('Inbox task', { priority: null })
+    await createTask('Routine task', { priority: 0 })
+
+    expect(
+      await sortedTitles('sortBy=created&q=sort%3Apriority%20sort%3Aupdated'),
+    ).toEqual(['Routine task', 'Inbox task'])
+  })
+
+  it('rejects an unknown sort key', async () => {
+    const response = await app.request(
+      '/api/tasks?view=row&context=all&status=todo&limit=unlimited&sortBy=priority,unknown',
+    )
+
+    expect(response.status).toEqual(400)
   })
 
   it('keeps a priority zero task with a future start date as a default candidate', async () => {

@@ -154,7 +154,7 @@ const taskSearchInputSchema = listTasksQuerySchema
         'Only return tasks that have (true) or lack (false) a due date.',
       ),
     sortBy: listTasksQuerySchema.shape.sortBy.describe(
-      'Sort order for results. Defaults to creation date.',
+      'Sort keys for results, most significant first. Defaults to creation date.',
     ),
     limit: listTasksQuerySchema.shape.limit
       .optional()
@@ -295,7 +295,7 @@ export const taskReadOperations = [
   defineOperation(taskSearchInputSchema, {
     path: ['task', 'search'],
     description:
-      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, priority:-1|0|1|2|none, has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|priority|priority-updated. has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. has:resolved-wait matches tasks with a resolved wait that has not been acknowledged and is available through q. Search filters with corresponding fields in the task search schema can also be sent as explicit parameters. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. Task descriptions are omitted from results by default; set full to include them.',
+      'Search tasks using the TQ search bar query syntax. The q string matches title, description, and page content, and accepts filter tokens that combine with free text: is:todo|completed (repeat is: to match multiple statuses), reason:completed|not_planned|duplicate, label:<name> (also matches descendants under a /-separated path), context:work|personal, priority:-1|0|1|2|none, has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait, parent:<uuid|number>|root, project:<uuid|title>, and sort:due|created|updated|priority (repeat sort: to break ties with later keys). has:follow-up-due matches tasks with an unresolved wait whose follow-up date is today or earlier in the client timezone. has:resolved-wait matches tasks with a resolved wait that has not been acknowledged and is available through q. Search filters with corresponding fields in the task search schema can also be sent as explicit parameters. For example, q: "is:todo label:example context:work planning" finds matching todo tasks whose title, description, or pages mention planning. Task descriptions are omitted from results by default; set full to include them.',
     positionalArgs: [{ name: 'query', field: 'q', optional: true }],
     kind: 'read',
     routes: ['GET /api/tasks'],

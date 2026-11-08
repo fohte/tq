@@ -1409,12 +1409,13 @@ Commands:
                             context:work|personal, priority:-1|0|1|2|none,
                             has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
                             parent:<uuid|number>|root, project:<uuid|title>, and
-                            sort:due|created|updated|priority|priority-updated.
-                            has:follow-up-due matches tasks with an unresolved
-                            wait whose follow-up date is today or earlier in the
-                            client timezone. has:resolved-wait matches tasks
-                            with a resolved wait that has not been acknowledged
-                            and is available through q. Search filters with
+                            sort:due|created|updated|priority (repeat sort: to
+                            break ties with later keys). has:follow-up-due
+                            matches tasks with an unresolved wait whose
+                            follow-up date is today or earlier in the client
+                            timezone. has:resolved-wait matches tasks with a
+                            resolved wait that has not been acknowledged and is
+                            available through q. Search filters with
                             corresponding fields in the task search schema can
                             also be sent as explicit parameters. For example, q:
                             "is:todo label:example context:work planning" finds

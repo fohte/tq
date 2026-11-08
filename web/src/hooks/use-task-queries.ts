@@ -34,8 +34,7 @@ type TaskListContext = TaskContext | 'all'
 
 export type TaskPriorityFilter = 'none' | '-1' | '0' | '1' | '2'
 
-export type TaskSortBy =
-  'created' | 'updated' | 'due' | 'priority' | 'priority-updated'
+export type TaskSortBy = 'created' | 'updated' | 'due' | 'priority'
 type TaskListSortBy = TaskSortBy | 'follow-up'
 type TaskSortOrder = 'asc' | 'desc'
 

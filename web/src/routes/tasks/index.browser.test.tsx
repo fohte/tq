@@ -200,29 +200,29 @@ describe('TaskList task creation', () => {
 })
 
 describe('TaskList sort selector', () => {
-  it('defaults to priority-updated and requests that order on initial render', async () => {
+  it('defaults to priority, then updated and requests that order on initial render', async () => {
     renderTaskList()
 
     await screen.findByRole('button', { name: /Sort by/ })
 
     expect(getTaskListSortSnapshot()).toEqual({
-      sortChip: 'sort:priority-updated',
-      filteredQuery: { q: 'is:todo sort:priority-updated' },
+      sortChip: 'sort:priority > updated',
+      filteredQuery: { q: 'is:todo sort:priority sort:updated' },
     })
   })
 
-  it('applies priority-updated sorting to a q URL that has no sort token', async () => {
+  it('applies the priority, then updated sort to a q URL that has no sort token', async () => {
     renderTaskList('/tasks?q=is%3Atodo')
 
     await screen.findByRole('button', { name: /Sort by/ })
 
     expect(getTaskListSortSnapshot()).toEqual({
-      sortChip: 'sort:priority-updated',
-      filteredQuery: { q: 'is:todo sort:priority-updated' },
+      sortChip: 'sort:priority > updated',
+      filteredQuery: { q: 'is:todo sort:priority sort:updated' },
     })
   })
 
-  it('re-requests created-sorted data once "Created" is selected', async () => {
+  it('re-requests data with "Created" as the last sort key once it is pressed', async () => {
     const user = userEvent.setup()
     renderTaskList()
 
@@ -230,23 +230,23 @@ describe('TaskList sort selector', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(screen.getByRole('button', { name: /Sort by/ }).textContent).toBe(
-      'sort:created',
+      'sort:priority > updated > created',
     )
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo sort:created' },
+      { q: 'is:todo sort:priority sort:updated sort:created' },
     ])
   })
 
-  it('re-requests priority-sorted data once "Priority" is selected', async () => {
+  it('re-requests updated-sorted data once "Priority" is unpressed', async () => {
     const user = userEvent.setup()
     renderTaskList()
 
     await user.click(await screen.findByRole('button', { name: /Sort by/ }))
-    await user.click(await screen.findByRole('button', { name: 'Priority' }))
+    await user.click(await screen.findByRole('button', { name: 'Priority 1' }))
 
     expect(getTaskListSortSnapshot(-1)).toEqual({
-      sortChip: 'sort:priority',
-      filteredQuery: { q: 'is:todo sort:priority' },
+      sortChip: 'sort:updated',
+      filteredQuery: { q: 'is:todo sort:updated' },
     })
   })
 })
@@ -272,7 +272,7 @@ describe('TaskList status filter', () => {
     await user.click(await screen.findByRole('checkbox', { name: 'Completed' }))
 
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo is:completed sort:priority-updated' },
+      { q: 'is:todo is:completed sort:priority sort:updated' },
     ])
   })
 })
@@ -306,7 +306,7 @@ describe('TaskList project filter selector', () => {
       ),
     ).toEqual([])
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo sort:priority-updated' },
+      { q: 'is:todo sort:priority sort:updated' },
     ])
   })
 
@@ -322,7 +322,7 @@ describe('TaskList project filter selector', () => {
       screen.getByRole('button', { name: 'project Website Redesign' }),
     ).toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo project:proj-1 sort:priority-updated' },
+      { q: 'is:todo project:proj-1 sort:priority sort:updated' },
     ])
   })
 })
@@ -340,7 +340,7 @@ describe('TaskList tag filter', () => {
       screen.queryByRole('button', { name: /^label / }),
     ).not.toBeInTheDocument()
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo sort:priority-updated' },
+      { q: 'is:todo sort:priority sort:updated' },
     ])
   })
 
@@ -367,7 +367,7 @@ describe('TaskList tag filter', () => {
     await user.click(await screen.findByRole('button', { name: 'No label' }))
 
     // Removing the label brings q back to the exact default
-    // (is:todo sort:priority-updated), which stripSearchParams
+    // (is:todo sort:priority sort:updated), which stripSearchParams
     // drops from the URL entirely.
     expect(router.state.location.search).toEqual({})
   })
@@ -393,7 +393,7 @@ describe('TaskList URL query encoding', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo sort:created',
+      q: 'is:todo sort:priority sort:updated sort:created',
     })
   })
 
@@ -405,7 +405,7 @@ describe('TaskList URL query encoding', () => {
     await user.click(await screen.findByRole('checkbox', { name: 'Completed' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo is:completed sort:priority-updated',
+      q: 'is:todo is:completed sort:priority sort:updated',
     })
   })
 
@@ -423,7 +423,7 @@ describe('TaskList URL query encoding', () => {
     await user.keyboard('{Enter}')
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo project:proj-1 sort:priority-updated',
+      q: 'is:todo project:proj-1 sort:priority sort:updated',
     })
   })
 
@@ -455,14 +455,14 @@ describe('TaskList URL query encoding', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('uses priority-updated when a legacy URL has no valid sort value', async () => {
+  it('uses priority, then updated when a legacy URL has no valid sort value', async () => {
     renderTaskList('/tasks?showCompleted=true')
 
     await screen.findByRole('button', { name: /Sort by/ })
 
     expect(getTaskListSortSnapshot()).toEqual({
-      sortChip: 'sort:priority-updated',
-      filteredQuery: { q: 'sort:priority-updated' },
+      sortChip: 'sort:priority > updated',
+      filteredQuery: { q: 'sort:priority sort:updated' },
     })
   })
 
@@ -476,7 +476,7 @@ describe('TaskList URL query encoding', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo has:pages sort:created',
+      q: 'is:todo has:pages sort:updated sort:created',
     })
   })
 
@@ -489,7 +489,7 @@ describe('TaskList URL query encoding', () => {
       ).toBeInTheDocument()
     })
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo label:urgent sort:priority-updated' },
+      { q: 'is:todo label:urgent sort:priority sort:updated' },
     ])
   })
 })

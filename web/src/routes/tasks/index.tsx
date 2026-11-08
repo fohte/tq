@@ -38,9 +38,10 @@ function validateSearch(search: Record<string, unknown>): TasksSearch {
     'projectId' in search ||
     'tag' in search
   ) {
-    const sortBy =
-      sortOptionValues.find((value) => value === search['sortBy']) ??
-      defaultTaskListSort
+    const legacySort = sortOptionValues.find(
+      (value) => value === search['sortBy'],
+    )
+    const sortBy = legacySort != null ? [legacySort] : defaultTaskListSort
     const showCompleted = search['showCompleted'] === true
     const projectId =
       typeof search['projectId'] === 'string' ? search['projectId'] : undefined
