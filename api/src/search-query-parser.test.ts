@@ -172,9 +172,21 @@ describe('parseSearchQuery', () => {
   })
 
   it('parses sort: prefix', () => {
-    expect(parseSearchQuery('sort:due').sortBy).toBe('due')
-    expect(parseSearchQuery('sort:created').sortBy).toBe('created')
-    expect(parseSearchQuery('sort:updated').sortBy).toBe('updated')
+    expect(
+      ['sort:due', 'sort:created', 'sort:updated'].map((query) =>
+        parseSearchQuery(query),
+      ),
+    ).toEqual([
+      { freeText: '', sortBy: ['due'] },
+      { freeText: '', sortBy: ['created'] },
+      { freeText: '', sortBy: ['updated'] },
+    ])
+  })
+
+  it('collects repeated sort: tokens in written order without duplicates', () => {
+    expect(
+      parseSearchQuery('sort:priority sort:updated sort:priority'),
+    ).toEqual({ freeText: '', sortBy: ['priority', 'updated'] })
   })
 
   it('ignores unsupported sort values in stored queries', () => {
@@ -331,10 +343,10 @@ describe('buildSearchQuery', () => {
         hasResolvedWait: true,
         parentId: 'parent-1',
         projectId: 'proj-1',
-        sortBy: 'due',
+        sortBy: ['due', 'updated'],
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work priority:0 has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due',
+      'deploy is:todo label:dev context:work priority:0 has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due sort:updated',
     )
   })
 

@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { splitCommaList } from '#lib/split-comma-list'
 import { labelNameSchema } from '#schemas/label-name'
 import { queueDateSchema } from '#schemas/queue-date'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
@@ -37,6 +38,33 @@ export const taskSortBy = z.enum([
 export type TaskSortBy = z.infer<typeof taskSortBy>
 export const taskSortOrder = z.enum(['asc', 'desc'])
 export type TaskSortOrder = z.infer<typeof taskSortOrder>
+
+const taskSortKeysQuerySchema = z
+  .union([
+    z
+      .string()
+      .describe(
+        'Comma-separated sort keys, most significant first. Keys: created, updated, due, follow-up, priority.',
+      ),
+    z.array(z.string()),
+  ])
+  .transform((values, ctx) => {
+    const result = z
+      .array(taskSortBy)
+      .min(1)
+      .safeParse(
+        (Array.isArray(values) ? values : [values]).flatMap(splitCommaList),
+      )
+    if (!result.success) {
+      ctx.addIssue({
+        code: 'custom',
+        message: result.error.issues[0]?.message ?? 'Invalid value',
+      })
+      return z.NEVER
+    }
+    return [...new Set(result.data)]
+  })
+  .optional()
 
 const hasFlagSchema = z
   .string()
@@ -173,11 +201,11 @@ export const listTasksQuerySchema = z.object({
     .optional(),
   includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
-  sortBy: taskSortBy.optional(),
+  sortBy: taskSortKeysQuerySchema,
   order: taskSortOrder
     .optional()
     .describe(
-      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created, sortBy=due, sortBy=follow-up, or sortBy=priority. For sortBy=priority, desc reverses the configured priority order while keeping the nearest due date first within each priority.',
+      'Sort direction of the first sort key. Defaults to desc when the first key is updated and asc otherwise. Later keys keep their own direction: updated is newest first, and the others are ascending. When priority is the only key, the nearest due date comes first within each priority regardless of this direction.',
     ),
   limit: z.union([
     z.coerce.number().int().min(1).max(100),

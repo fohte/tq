@@ -10,10 +10,14 @@ export const sortOptionValues = [
   'priority',
 ] as const satisfies readonly TaskSortBy[]
 
-export const defaultTaskSort = 'updated' as const
-export const defaultTaskListSort = 'priority' as const
+export const defaultTaskSort: TaskSortBy[] = ['updated']
+export const defaultTaskListSort: TaskSortBy[] = ['priority', 'updated']
 
-export function defaultTaskSearchQuery(sortBy: TaskSortBy): string {
+export function isSameSort(a: TaskSortBy[], b: TaskSortBy[]): boolean {
+  return a.join() === b.join()
+}
+
+export function defaultTaskSearchQuery(sortBy: TaskSortBy[]): string {
   return buildSearchQuery({
     freeText: '',
     status: ['todo'],
@@ -28,7 +32,7 @@ export const taskListSearchDefaultQuery =
 
 export function withDefaultSort(
   parsed: ParsedQuery,
-  defaultSort: TaskSortBy = defaultTaskSort,
+  defaultSort: TaskSortBy[] = defaultTaskSort,
 ): ParsedQuery {
   return {
     ...parsed,
@@ -36,9 +40,7 @@ export function withDefaultSort(
   }
 }
 
-export const sortLabels: Partial<
-  Record<NonNullable<ParsedQuery['sortBy']>, string>
-> = {
+export const sortLabels: Record<TaskSortBy, string> = {
   updated: 'Updated',
   due: 'Due',
   created: 'Created',

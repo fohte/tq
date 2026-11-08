@@ -29,7 +29,7 @@ import type { TaskSortBy } from '#hooks/use-tasks'
 import {
   defaultTaskSearchQuery,
   defaultTaskSort,
-  sortOptionValues,
+  isSameSort,
   statusChipLabels,
   withDefaultSort,
   withHasPages,
@@ -59,7 +59,7 @@ interface TaskFilterChipRowProps {
   disableProjectFilter?: boolean
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
-  defaultSort?: TaskSortBy
+  defaultSort?: TaskSortBy[]
   defaultOpenFilter?: TaskFilterKind
   autoFocus?: boolean
 }
@@ -111,9 +111,6 @@ export function TaskFilterChipRow({
   }, [freeTextInputId, searchModalOpen])
 
   const sortBy = withDefaultSort(parsed, defaultSort).sortBy ?? defaultSort
-  // Keep the picker selection valid if an older URL contains a removed sort.
-  const pickerSortBy =
-    sortOptionValues.find((value) => value === sortBy) ?? defaultSort
   const prioritySettings = usePrioritySettings({
     enabled: parsed.priority !== undefined,
   })
@@ -201,7 +198,7 @@ export function TaskFilterChipRow({
   // condition sits closest to it — i.e. the last chip rendered before the
   // input, in reverse of the render order below.
   const removeLastChip = () => {
-    if (!disableSortFilter && sortBy !== defaultSort) {
+    if (!disableSortFilter && !isSameSort(sortBy, defaultSort)) {
       setParsed({ ...parsed, sortBy: defaultSort })
     } else if (parsed.parentId != null) {
       setParsed(withParentId(parsed, undefined))
@@ -385,13 +382,13 @@ export function TaskFilterChipRow({
           <TaskFilterChip
             icon={taskFilterAxisIcons.sort}
             attribute="sort"
-            value={sortBy}
+            value={sortBy.join(' > ')}
             menuTitle="Sort"
-            ariaLabel={`Sort by ${sortBy}`}
+            ariaLabel={`Sort by ${sortBy.join(', then ')}`}
             defaultOpen={defaultOpenFilter === 'sort'}
-            isDefault={sortBy === defaultSort}
+            isDefault={isSameSort(sortBy, defaultSort)}
             onRemove={
-              sortBy === defaultSort
+              isSameSort(sortBy, defaultSort)
                 ? undefined
                 : () => {
                     setParsed({ ...parsed, sortBy: defaultSort })
@@ -399,7 +396,7 @@ export function TaskFilterChipRow({
             }
           >
             <TaskSortFilterFields
-              sortBy={pickerSortBy}
+              sortBy={sortBy}
               onSortByChange={(sort) => {
                 setParsed({ ...parsed, sortBy: sort })
               }}

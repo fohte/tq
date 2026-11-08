@@ -71,7 +71,7 @@ const sampleTasks: ProjectTask[] = [
 const defaultParsedQuery: ParsedQuery = {
   freeText: '',
   status: ['todo'],
-  sortBy: 'updated',
+  sortBy: ['updated'],
 }
 
 function Providers({

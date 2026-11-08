@@ -219,14 +219,14 @@ describe('TaskFilterChipRow', () => {
 
   it('selects a configured priority name and writes its numeric query value', async () => {
     const { onQueryChange, rerenderWithParsed } = renderRow({
-      parsed: { ...defaultParsed, priority: null, sortBy: 'priority' },
-      defaultSort: 'priority',
+      parsed: { ...defaultParsed, priority: null, sortBy: ['priority'] },
+      defaultSort: ['priority'],
     })
     const user = userEvent.setup()
 
     await user.click(screen.getByRole('button', { name: 'priority Inbox' }))
     await user.click(await screen.findByText('Later'))
-    rerenderWithParsed({ ...defaultParsed, priority: -1, sortBy: 'priority' })
+    rerenderWithParsed({ ...defaultParsed, priority: -1, sortBy: ['priority'] })
 
     expect(
       getPriorityFilterSnapshot(onQueryChange.mock.calls, 'Later'),
@@ -238,14 +238,18 @@ describe('TaskFilterChipRow', () => {
 
   it('keeps the Inbox filter as priority:none in the query', async () => {
     const { onQueryChange, rerenderWithParsed } = renderRow({
-      parsed: { ...defaultParsed, priority: -1, sortBy: 'priority' },
-      defaultSort: 'priority',
+      parsed: { ...defaultParsed, priority: -1, sortBy: ['priority'] },
+      defaultSort: ['priority'],
     })
     const user = userEvent.setup()
 
     await user.click(screen.getByRole('button', { name: 'priority Later' }))
     await user.click(await screen.findByText('Inbox'))
-    rerenderWithParsed({ ...defaultParsed, priority: null, sortBy: 'priority' })
+    rerenderWithParsed({
+      ...defaultParsed,
+      priority: null,
+      sortBy: ['priority'],
+    })
 
     expect(
       getPriorityFilterSnapshot(onQueryChange.mock.calls, 'Inbox'),
@@ -361,7 +365,24 @@ describe('TaskFilterChipRow', () => {
     await waitForFocus(await screen.findByRole('button', { name: 'Updated' }))
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
-    expect(onQueryChange).toHaveBeenCalledWith('is:todo sort:created')
+    expect(onQueryChange.mock.calls).toEqual([
+      ['is:todo sort:updated sort:created'],
+    ])
+  })
+
+  it('removing a key from a multi-key sort reports the remaining keys', async () => {
+    const { onQueryChange } = renderRow({
+      parsed: { ...defaultParsed, sortBy: ['priority', 'updated'] },
+      defaultSort: ['priority', 'updated'],
+    })
+    const user = userEvent.setup()
+
+    await user.click(
+      screen.getByRole('button', { name: /Sort by priority, then updated/ }),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Updated 2' }))
+
+    expect(onQueryChange.mock.calls).toEqual([['is:todo sort:priority']])
   })
 
   it('commits an edited free-text value merged with the applied query', async () => {
@@ -382,7 +403,7 @@ describe('TaskFilterChipRow', () => {
 
   it('lifts a typed structured token out of free text into its own chip', async () => {
     const { onQueryChange } = renderRow({
-      parsed: { freeText: '', sortBy: 'updated' },
+      parsed: { freeText: '', sortBy: ['updated'] },
     })
     const user = userEvent.setup()
 

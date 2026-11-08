@@ -12,7 +12,8 @@ describe('getSearchSyntaxHelpSections', () => {
     expect(sortEntry).toEqual({
       key: 'sort',
       syntax: 'sort:',
-      description: 'Sort results by date or configured priority.',
+      description:
+        'Sort results by date or configured priority. Repeat sort: to break ties with later keys.',
       taskFilter: true,
       values: [
         { syntax: 'sort:due', display: 'Sort by due date' },
@@ -31,7 +32,8 @@ describe('getSearchSyntaxHelpSections', () => {
     expect(sortEntry).toEqual({
       key: 'sort',
       syntax: 'sort:',
-      description: 'Sort results by date or configured priority.',
+      description:
+        'Sort results by date or configured priority. Repeat sort: to break ties with later keys.',
       taskFilter: true,
       values: [
         { syntax: 'sort:due', display: 'Sort by due date' },

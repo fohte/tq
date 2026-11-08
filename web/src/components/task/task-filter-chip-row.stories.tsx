@@ -89,29 +89,37 @@ export const SaveViewHidden: Story = {
   name: 'the row hides the save-view action',
   args: {
     hideSaveView: true,
-    parsed: makeParsedQuery({ sortBy: 'created' }),
+    parsed: makeParsedQuery({ sortBy: ['created'] }),
   },
 }
 
 export const NoFilters: Story = {
   name: 'the row shows no conditions beside the default sort control',
   args: {
-    parsed: { freeText: '', sortBy: 'updated' },
+    parsed: { freeText: '', sortBy: ['updated'] },
   },
 }
 
 export const SortByCreated: Story = {
   name: 'the row sorts tasks by creation date',
   args: {
-    parsed: { ...defaultParsed, sortBy: 'created' },
+    parsed: { ...defaultParsed, sortBy: ['created'] },
   },
 }
 
 export const SortByPriority: Story = {
   name: 'the row sorts tasks by configured priority',
   args: {
-    defaultSort: 'priority',
-    parsed: { ...defaultParsed, sortBy: 'priority' },
+    defaultSort: ['priority'],
+    parsed: { ...defaultParsed, sortBy: ['priority'] },
+  },
+}
+
+export const SortByPriorityThenUpdated: Story = {
+  name: 'the row sorts tasks by configured priority, then their last update',
+  args: {
+    defaultSort: ['priority', 'updated'],
+    parsed: { ...defaultParsed, sortBy: ['priority', 'updated'] },
   },
 }
 
@@ -246,7 +254,7 @@ export const ChangedFilters: Story = {
       status: ['todo', 'completed'],
       projectId: 'proj-1',
       label: 'research',
-      sortBy: 'created',
+      sortBy: ['created'],
     }),
   },
 }
@@ -267,7 +275,7 @@ export const ManyFiltersWrap: Story = {
       label: 'research',
       hasPages: true,
       parentId: 'parent-wrap',
-      sortBy: 'created',
+      sortBy: ['created'],
     }),
   },
 }
