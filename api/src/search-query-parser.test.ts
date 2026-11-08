@@ -172,9 +172,15 @@ describe('parseSearchQuery', () => {
   })
 
   it('parses sort: prefix', () => {
-    expect(parseSearchQuery('sort:due').sortBy).toEqual(['due'])
-    expect(parseSearchQuery('sort:created').sortBy).toEqual(['created'])
-    expect(parseSearchQuery('sort:updated').sortBy).toEqual(['updated'])
+    expect(
+      ['sort:due', 'sort:created', 'sort:updated'].map((query) =>
+        parseSearchQuery(query),
+      ),
+    ).toEqual([
+      { freeText: '', sortBy: ['due'] },
+      { freeText: '', sortBy: ['created'] },
+      { freeText: '', sortBy: ['updated'] },
+    ])
   })
 
   it('collects repeated sort: tokens in written order without duplicates', () => {

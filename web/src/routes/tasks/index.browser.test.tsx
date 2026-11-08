@@ -229,12 +229,10 @@ describe('TaskList sort selector', () => {
     await user.click(await screen.findByRole('button', { name: /Sort by/ }))
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
-    expect(screen.getByRole('button', { name: /Sort by/ }).textContent).toBe(
-      'sort:priority > updated > created',
-    )
-    expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo sort:priority sort:updated sort:created' },
-    ])
+    expect(getTaskListSortSnapshot(-1)).toEqual({
+      sortChip: 'sort:priority > updated > created',
+      filteredQuery: { q: 'is:todo sort:priority sort:updated sort:created' },
+    })
   })
 
   it('re-requests updated-sorted data once "Priority" is unpressed', async () => {

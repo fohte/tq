@@ -365,9 +365,9 @@ describe('TaskFilterChipRow', () => {
     await waitForFocus(await screen.findByRole('button', { name: 'Updated' }))
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
-    expect(onQueryChange).toHaveBeenCalledWith(
-      'is:todo sort:updated sort:created',
-    )
+    expect(onQueryChange.mock.calls).toEqual([
+      ['is:todo sort:updated sort:created'],
+    ])
   })
 
   it('removing a key from a multi-key sort reports the remaining keys', async () => {
@@ -382,7 +382,7 @@ describe('TaskFilterChipRow', () => {
     )
     await user.click(await screen.findByRole('button', { name: 'Updated 2' }))
 
-    expect(onQueryChange).toHaveBeenCalledWith('is:todo sort:priority')
+    expect(onQueryChange.mock.calls).toEqual([['is:todo sort:priority']])
   })
 
   it('commits an edited free-text value merged with the applied query', async () => {
