@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import type { NowPanelProps } from '#components/day-view/now-panel'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
@@ -104,7 +105,7 @@ type DayViewMockProps = {
   isQueueRefreshing?: boolean
   calendarEvents?: TimeBlockEvent[]
   dayQueueTasks?: Task[]
-  nowPanel?: { isLoading?: boolean }
+  nowPanel?: { isLoading?: boolean; model?: NowPanelProps['model'] }
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
   queueSections?: QueueSectionData[]
@@ -319,6 +320,28 @@ function readQueueTransitionOutput() {
     dayQueueTasks: props.dayQueueTasks,
     queueCandidates: props.queueCandidates,
   }
+}
+
+function readNowPanelOutput() {
+  const nowPanel = assertDefined(mocks.dayViewProps.mock.lastCall?.[0].nowPanel)
+  return {
+    isLoading: nowPanel.isLoading ?? false,
+    activities: (nowPanel.model?.activities ?? []).map((activity) =>
+      activity.kind === 'event'
+        ? { kind: activity.kind, title: activity.title }
+        : { kind: activity.kind, title: activity.task.title },
+    ),
+  }
+}
+
+function mockActiveNowPanelTimeBlock(taskId: string) {
+  const startTime = new Date(Date.now() - 5 * 60_000).toISOString()
+  const endTime = new Date(Date.now() + 55 * 60_000).toISOString()
+  mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
+    data:
+      enabled === true ? [makeTimeBlock({ taskId, startTime, endTime })] : [],
+    error: null,
+  }))
 }
 
 function readQueueTransitionInteractionResult(revertCalendarQueueDrop: {
@@ -685,6 +708,178 @@ describe('day-view route task queries', () => {
         status: 'all',
         limit: 'unlimited',
         includeAncestors: true,
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it.each([
+    {
+      scenario: 'a block belongs to another context',
+      queryResult: {
+        data: [],
+        isLoading: false,
+        isPending: false,
+        isFetching: false,
+        isPlaceholderData: false,
+        error: null,
+      },
+    },
+    {
+      scenario: 'the referenced-task query fails',
+      queryResult: {
+        data: undefined,
+        isLoading: false,
+        isPending: false,
+        isFetching: false,
+        isPlaceholderData: false,
+        error: new Error('request failed'),
+      },
+    },
+  ])('shows a Busy activity when $scenario', async ({ queryResult }) => {
+    const taskId = 'now-panel-task'
+    mockActiveNowPanelTimeBlock(taskId)
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? queryResult
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: false,
+        activities: [{ kind: 'event', title: 'Busy' }],
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it.each([
+    {
+      scenario: 'a missing Now task is in its initial query',
+      context: 'work' as const,
+      queryResult: {
+        data: undefined,
+        isLoading: true,
+        isPending: true,
+        isFetching: true,
+        isPlaceholderData: false,
+        error: null,
+      },
+      isLoading: true,
+    },
+    {
+      scenario: 'another-context blocks are present during an ID refetch',
+      context: 'work' as const,
+      queryResult: {
+        data: [],
+        isLoading: false,
+        isPending: false,
+        isFetching: true,
+        isPlaceholderData: true,
+        error: null,
+      },
+      isLoading: false,
+    },
+    {
+      scenario: 'a new personal task is missing from placeholder data',
+      context: 'personal' as const,
+      queryResult: {
+        data: [],
+        isLoading: false,
+        isPending: false,
+        isFetching: true,
+        isPlaceholderData: true,
+        error: null,
+      },
+      isLoading: false,
+    },
+  ])(
+    'shows the expected Now panel state when $scenario',
+    async ({ context, queryResult, isLoading }) => {
+      const taskId = 'now-panel-task'
+      mocks.context = context
+      mockActiveNowPanelTimeBlock(taskId)
+      mocks.useTaskList.mockImplementation((filter) =>
+        isTaskListFilterWith(filter, 'ids')
+          ? queryResult
+          : { data: [], isLoading: false, isFetching: false, error: null },
+      )
+
+      const { queryClient } = await renderDayRoute('/?layout=compact')
+
+      await waitFor(() => {
+        expect(readNowPanelOutput()).toEqual({
+          isLoading,
+          activities: [{ kind: 'event', title: 'Busy' }],
+        })
+      })
+
+      queryClient.clear()
+    },
+  )
+
+  it('keeps a Now panel task visible while its referenced-task query has placeholder data', async () => {
+    const task = makeTask({
+      id: 'now-panel-task',
+      title: 'Available task',
+      context: 'work',
+    })
+    mockActiveNowPanelTimeBlock(task.id)
+    mocks.useTaskMap.mockImplementation(
+      (tasks) => new Map(tasks.map((candidate) => [candidate.id, candidate])),
+    )
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? {
+            data: [task],
+            isLoading: false,
+            isPending: false,
+            isFetching: true,
+            isPlaceholderData: true,
+            error: null,
+          }
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: false,
+        activities: [{ kind: 'task', title: 'Available task' }],
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it('keeps Busy activity visible during a referenced-task background refetch', async () => {
+    const taskId = 'now-panel-task'
+    mockActiveNowPanelTimeBlock(taskId)
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? {
+            data: [],
+            isLoading: false,
+            isPending: false,
+            isFetching: true,
+            isPlaceholderData: false,
+            error: null,
+          }
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: false,
+        activities: [{ kind: 'event', title: 'Busy' }],
       })
     })
 

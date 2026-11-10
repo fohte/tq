@@ -144,6 +144,23 @@ export const CurrentTask: Story = {
   },
 }
 
+const unresolvedTaskBlock = block(
+  'block-unresolved-task',
+  'unresolved-task',
+  localTime(9, 14),
+  localTime(9, 15),
+)
+
+export const MissingTask: Story = {
+  name: 'a block without task details appears as Busy',
+  args: {
+    now: new Date(2031, 3, 9, 14, 14, 30),
+    timeBlocks: [unresolvedTaskBlock],
+    calendarEvents: [blockEvent(unresolvedTaskBlock, 'Unknown task')],
+    taskMap: taskMap(),
+  },
+}
+
 export const ParallelTasks: Story = {
   name: 'overlapping time blocks show every task in start order',
   args: {
