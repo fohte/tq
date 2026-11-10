@@ -490,10 +490,10 @@ export const Compact: Story = {
   args: {
     ...Default.args,
     layout: 'compact',
+    desktopWindowControls: false,
     calendarEvents: compactEvents,
     schedules: compactSchedules,
     nowPanel: {
-      desktopWindowControls: false,
       model: compactNowPanelModel,
     },
     taskRowStates: new Map([
@@ -546,10 +546,7 @@ export const CompactDesktopWindowControls: Story = {
   tags: ['desktop-only'],
   args: {
     ...Compact.args,
-    nowPanel: {
-      desktopWindowControls: true,
-      model: compactNowPanelModel,
-    },
+    desktopWindowControls: true,
   },
 }
 
@@ -565,10 +562,6 @@ export const CompactShortWindow: Story = {
   ],
   args: {
     ...Compact.args,
-    nowPanel: {
-      desktopWindowControls: false,
-      model: compactNowPanelModel,
-    },
   },
 }
 

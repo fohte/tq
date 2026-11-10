@@ -3,13 +3,11 @@ import type { CSSProperties, Ref } from 'react'
 
 import type { NowPanelModel } from '#components/day-view/now-panel-model'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import { cn } from '#lib/utils'
 
 export interface NowPanelProps {
   model: NowPanelModel
   isLoading?: boolean
-  desktopWindowControls?: boolean | undefined
   compact?: boolean | undefined
   panelRef?: Ref<HTMLElement> | undefined
   scrollableContentRef?: Ref<HTMLDivElement> | undefined
@@ -50,7 +48,6 @@ function getActivityStatusClassName(isOverrun: boolean): string {
 export function NowPanel({
   model,
   isLoading = false,
-  desktopWindowControls = hasTqDesktopWindowControls(),
   compact = false,
   panelRef,
   scrollableContentRef,
@@ -94,12 +91,6 @@ export function NowPanel({
         compact ? 'py-0' : 'py-2',
       )}
     >
-      {desktopWindowControls && (
-        <div
-          className={cn('electron-titlebar-bar -mx-3', !compact && '-mt-2')}
-        />
-      )}
-
       <div
         ref={scrollableContentRef}
         data-testid={

@@ -7,12 +7,6 @@ import { NowPanel } from '#components/day-view/now-panel'
 import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 
 const now = new Date(2031, 3, 9, 14, 52)
-const emptyNowPanelModel = buildNowPanelModel({
-  now,
-  timeBlocks: [],
-  calendarEvents: [],
-  tasks: new Map(),
-})
 
 function localTime(day: number, hour: number, minute = 0): string {
   return `2031-04-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`
@@ -27,45 +21,11 @@ function getObservedJoinState(openedUrls: unknown[][]) {
   }
 }
 
-function getObservedHeaderState(container: HTMLElement) {
-  return {
-    heading: screen.queryByRole('heading')?.textContent ?? null,
-    titleBar:
-      container.querySelector('.electron-titlebar-bar')?.className ?? null,
-  }
-}
-
 afterEach(() => {
   vi.restoreAllMocks()
 })
 
 describe('NowPanel', () => {
-  it.each([
-    {
-      state: 'a compact panel without desktop controls',
-      desktopWindowControls: false,
-      titleBar: null,
-    },
-    {
-      state: 'a compact desktop panel with an empty drag bar',
-      desktopWindowControls: true,
-      titleBar: 'electron-titlebar-bar -mx-3',
-    },
-  ])('$state has no heading', ({ desktopWindowControls, titleBar }) => {
-    const { container } = render(
-      <NowPanel
-        model={emptyNowPanelModel}
-        compact
-        desktopWindowControls={desktopWindowControls}
-      />,
-    )
-
-    expect(getObservedHeaderState(container)).toEqual({
-      heading: null,
-      titleBar,
-    })
-  })
-
   it('opens the active and next meeting URLs and hides Join for events without a visible URL', async () => {
     const user = userEvent.setup()
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)

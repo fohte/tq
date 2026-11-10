@@ -115,6 +115,7 @@ export interface DayViewPresentationProps {
   initialMobileTab?: MobileTab
   isQueueRefreshing?: boolean
   layout?: 'default' | 'compact'
+  desktopWindowControls?: boolean | undefined
   nowPanel?: NowPanelProps
   taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   compactMemo?:
@@ -152,13 +153,12 @@ export function DayViewPresentation({
   initialMobileTab,
   isQueueRefreshing = false,
   layout = 'default',
+  desktopWindowControls = hasTqDesktopWindowControls(),
   nowPanel,
   taskRowStates,
   compactMemo,
 }: DayViewPresentationProps) {
   const isCompactLayout = layout === 'compact'
-  const desktopWindowControls =
-    nowPanel?.desktopWindowControls ?? hasTqDesktopWindowControls()
   const [compactCalendarHeaderContainer, setCompactCalendarHeaderContainer] =
     useState<HTMLDivElement | null>(null)
   const {
@@ -405,7 +405,6 @@ export function DayViewPresentation({
                 <NowPanel
                   {...nowPanel}
                   compact
-                  desktopWindowControls={false}
                   panelRef={compactNowPanelRef}
                   scrollableContentRef={compactNowContentRef}
                   scrollableContentMaxHeight={compactNowContentMaxHeight}

@@ -44,10 +44,8 @@ function tasksForDate(date: Date) {
 function makeNowPanelProps(
   activityCount: number,
   includeNextEvent: boolean,
-  desktopWindowControls: boolean,
 ): NowPanelProps {
   return {
-    desktopWindowControls,
     model: {
       activities: Array.from({ length: activityCount }, (_, index) => ({
         kind: 'task' as const,
@@ -138,6 +136,7 @@ function CompactDayView({ scenario }: { scenario: CompactScenario }) {
         isLoading={false}
         isQueueRefreshing={isQueueRefreshing}
         layout="compact"
+        desktopWindowControls={desktopWindowControls}
         calendarEvents={
           includeAllDayEvent
             ? [
@@ -155,11 +154,7 @@ function CompactDayView({ scenario }: { scenario: CompactScenario }) {
         schedules={[]}
         {...(includeNowPanel
           ? {
-              nowPanel: makeNowPanelProps(
-                nowActivityCount,
-                includeNextEvent,
-                desktopWindowControls,
-              ),
+              nowPanel: makeNowPanelProps(nowActivityCount, includeNextEvent),
             }
           : {})}
         onCreateTimeBlock={() => {}}
@@ -276,58 +271,45 @@ function readPinnedHeaderPositions() {
   }
 }
 
-function readDesktopCompactHeaderOrder() {
-  const titlebar = screen.getByTestId('compact-titlebar-bar')
-  const navigation = document.querySelector<HTMLButtonElement>(
-    '[aria-label="Previous"]',
+function readCompactUpperPaneOrder() {
+  const titlebars = Array.from(
+    document.querySelectorAll<HTMLElement>('.electron-titlebar-bar'),
   )
+  const dateHeader = screen.getByTestId('compact-date-header')
   const nowPanel = screen.queryByRole('region', { name: 'Now' })
-  if (navigation == null) throw new Error('The Previous button is missing')
   if (nowPanel == null) throw new Error('The Now panel is missing')
 
-  const titlebarBounds = titlebar.getBoundingClientRect()
-  const navigationBounds = navigation.getBoundingClientRect()
-  const nowBounds = nowPanel.getBoundingClientRect()
-  return {
-    titlebarAboveDate: titlebarBounds.bottom <= navigationBounds.top,
-    dateAboveNow: navigationBounds.bottom <= nowBounds.top,
-  }
+  return [
+    ...titlebars.map((element) => ({ name: 'titlebar-band', element })),
+    { name: 'date-row', element: dateHeader },
+    { name: 'Now-panel', element: nowPanel },
+  ]
+    .sort(
+      (left, right) =>
+        left.element.getBoundingClientRect().top -
+        right.element.getBoundingClientRect().top,
+    )
+    .map(({ name }) => name)
 }
 
 function readDesktopCompactHeaderOrderWithoutNow() {
-  const titlebar = screen.getByTestId('compact-titlebar-bar')
-  const navigation = document.querySelector<HTMLButtonElement>(
-    '[aria-label="Previous"]',
+  const titlebars = Array.from(
+    document.querySelectorAll<HTMLElement>('.electron-titlebar-bar'),
   )
+  const dateHeader = screen.getByTestId('compact-date-header')
   const queueContent = screen.getByTestId('compact-queue-content')
-  if (navigation == null) throw new Error('The Previous button is missing')
 
-  const titlebarBounds = titlebar.getBoundingClientRect()
-  const navigationBounds = navigation.getBoundingClientRect()
-  const queueBounds = queueContent.getBoundingClientRect()
-  return {
-    titlebarAboveDate: titlebarBounds.bottom <= navigationBounds.top,
-    dateAboveQueue: navigationBounds.bottom <= queueBounds.top,
-  }
-}
-
-function mockDesktopUserAgent() {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    window.navigator,
-    'userAgent',
-  )
-  Object.defineProperty(window.navigator, 'userAgent', {
-    configurable: true,
-    value: 'TQDesktop',
-  })
-
-  return () => {
-    if (descriptor == null) {
-      Reflect.deleteProperty(window.navigator, 'userAgent')
-    } else {
-      Object.defineProperty(window.navigator, 'userAgent', descriptor)
-    }
-  }
+  return [
+    ...titlebars.map((element) => ({ name: 'titlebar-band', element })),
+    { name: 'date-row', element: dateHeader },
+    { name: 'queue', element: queueContent },
+  ]
+    .sort(
+      (left, right) =>
+        left.element.getBoundingClientRect().top -
+        right.element.getBoundingClientRect().top,
+    )
+    .map(({ name }) => name)
 }
 
 function readQueueScrollLayout(scrollPane: HTMLElement) {
@@ -521,37 +503,41 @@ function readCompactQueueRefreshLayout(
 }
 
 describe('DayView compact queue refresh layout', () => {
-  it('places desktop window controls and date navigation above Now', async () => {
-    await renderCompactDayView({ desktopWindowControls: true })
-
-    await waitFor(() => {
-      expect(readDesktopCompactHeaderOrder()).toEqual({
-        titlebarAboveDate: true,
-        dateAboveNow: true,
-      })
-    })
-  })
-
-  it('omits the desktop titlebar when desktop controls are disabled', async () => {
-    await renderCompactDayView({ desktopWindowControls: false })
-
-    expect(screen.queryByTestId('compact-titlebar-bar')).toBeNull()
-  })
-
-  it('keeps the desktop titlebar above date navigation when Now is absent', async () => {
-    const restoreUserAgent = mockDesktopUserAgent()
-    try {
-      await renderCompactDayView({ includeNowPanel: false })
+  it.each([
+    {
+      viewport: 'desktop',
+      desktopWindowControls: true,
+      expected: ['titlebar-band', 'date-row', 'Now-panel'],
+    },
+    {
+      viewport: 'browser',
+      desktopWindowControls: false,
+      expected: ['date-row', 'Now-panel'],
+    },
+  ])(
+    'keeps the compact header order in a $viewport viewport',
+    async ({ desktopWindowControls, expected }) => {
+      await renderCompactDayView({ desktopWindowControls })
 
       await waitFor(() => {
-        expect(readDesktopCompactHeaderOrderWithoutNow()).toEqual({
-          titlebarAboveDate: true,
-          dateAboveQueue: true,
-        })
+        expect(readCompactUpperPaneOrder()).toEqual(expected)
       })
-    } finally {
-      restoreUserAgent()
-    }
+    },
+  )
+
+  it('keeps the desktop titlebar above date navigation when Now is absent', async () => {
+    await renderCompactDayView({
+      desktopWindowControls: true,
+      includeNowPanel: false,
+    })
+
+    await waitFor(() => {
+      expect(readDesktopCompactHeaderOrderWithoutNow()).toEqual([
+        'titlebar-band',
+        'date-row',
+        'queue',
+      ])
+    })
   })
 
   it('keeps calendar navigation in place for empty, short, and long queues', async () => {
