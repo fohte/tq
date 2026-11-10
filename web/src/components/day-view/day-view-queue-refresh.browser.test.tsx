@@ -82,7 +82,7 @@ interface CompactScenario {
   nowActivityCount: number
   includeNextEvent: boolean
   includeNowPanel: boolean
-  desktopWindowControls: boolean
+  desktopWindowControls: boolean | undefined
   includeCompactMemo: boolean
   includeAllDayEvent: boolean
   registerRefreshCompletion: (finish: () => void) => void
@@ -271,45 +271,66 @@ function readPinnedHeaderPositions() {
   }
 }
 
-function readCompactUpperPaneOrder() {
+function readCompactHeaderOrder(finalName: string, finalElement: HTMLElement) {
   const titlebars = Array.from(
     document.querySelectorAll<HTMLElement>('.electron-titlebar-bar'),
   )
-  const dateHeader = screen.getByTestId('compact-date-header')
-  const nowPanel = screen.queryByRole('region', { name: 'Now' })
-  if (nowPanel == null) throw new Error('The Now panel is missing')
+  const navigation = screen.getByRole('button', { name: 'Previous' })
 
-  return [
+  const ordered = [
     ...titlebars.map((element) => ({ name: 'titlebar-band', element })),
-    { name: 'date-row', element: dateHeader },
-    { name: 'Now-panel', element: nowPanel },
-  ]
-    .sort(
-      (left, right) =>
-        left.element.getBoundingClientRect().top -
-        right.element.getBoundingClientRect().top,
-    )
-    .map(({ name }) => name)
+    { name: 'date-row', element: navigation },
+    { name: finalName, element: finalElement },
+  ].sort(
+    (left, right) =>
+      left.element.getBoundingClientRect().top -
+      right.element.getBoundingClientRect().top,
+  )
+
+  return {
+    order: ordered.map(({ name }) => name),
+    noOverlap: ordered.every((current, index) => {
+      const next = ordered[index + 1]
+      return (
+        next == null ||
+        current.element.getBoundingClientRect().bottom <=
+          next.element.getBoundingClientRect().top
+      )
+    }),
+  }
+}
+
+function readCompactUpperPaneOrder() {
+  return readCompactHeaderOrder(
+    'Now-panel',
+    screen.getByRole('region', { name: 'Now' }),
+  )
 }
 
 function readDesktopCompactHeaderOrderWithoutNow() {
-  const titlebars = Array.from(
-    document.querySelectorAll<HTMLElement>('.electron-titlebar-bar'),
+  return readCompactHeaderOrder(
+    'queue',
+    screen.getByTestId('compact-queue-content'),
   )
-  const dateHeader = screen.getByTestId('compact-date-header')
-  const queueContent = screen.getByTestId('compact-queue-content')
+}
 
-  return [
-    ...titlebars.map((element) => ({ name: 'titlebar-band', element })),
-    { name: 'date-row', element: dateHeader },
-    { name: 'queue', element: queueContent },
-  ]
-    .sort(
-      (left, right) =>
-        left.element.getBoundingClientRect().top -
-        right.element.getBoundingClientRect().top,
-    )
-    .map(({ name }) => name)
+function mockDesktopUserAgent() {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    window.navigator,
+    'userAgent',
+  )
+  Object.defineProperty(window.navigator, 'userAgent', {
+    configurable: true,
+    value: 'TQDesktop',
+  })
+
+  return () => {
+    if (descriptor == null) {
+      Reflect.deleteProperty(window.navigator, 'userAgent')
+    } else {
+      Object.defineProperty(window.navigator, 'userAgent', descriptor)
+    }
+  }
 }
 
 function readQueueScrollLayout(scrollPane: HTMLElement) {
@@ -520,10 +541,29 @@ describe('DayView compact queue refresh layout', () => {
       await renderCompactDayView({ desktopWindowControls })
 
       await waitFor(() => {
-        expect(readCompactUpperPaneOrder()).toEqual(expected)
+        expect(readCompactUpperPaneOrder()).toEqual({
+          order: expected,
+          noOverlap: true,
+        })
       })
     },
   )
+
+  it('uses the desktop default when the compact host is detected', async () => {
+    const restoreUserAgent = mockDesktopUserAgent()
+    try {
+      await renderCompactDayView({ desktopWindowControls: undefined })
+
+      await waitFor(() => {
+        expect(readCompactUpperPaneOrder()).toEqual({
+          order: ['titlebar-band', 'date-row', 'Now-panel'],
+          noOverlap: true,
+        })
+      })
+    } finally {
+      restoreUserAgent()
+    }
+  })
 
   it('keeps the desktop titlebar above date navigation when Now is absent', async () => {
     await renderCompactDayView({
@@ -532,11 +572,10 @@ describe('DayView compact queue refresh layout', () => {
     })
 
     await waitFor(() => {
-      expect(readDesktopCompactHeaderOrderWithoutNow()).toEqual([
-        'titlebar-band',
-        'date-row',
-        'queue',
-      ])
+      expect(readDesktopCompactHeaderOrderWithoutNow()).toEqual({
+        order: ['titlebar-band', 'date-row', 'queue'],
+        noOverlap: true,
+      })
     })
   })
 
