@@ -21,11 +21,53 @@ function getObservedJoinState(openedUrls: unknown[][]) {
   }
 }
 
+function getObservedHeaderState(container: HTMLElement) {
+  return {
+    heading: screen.queryByRole('heading')?.textContent ?? null,
+    titleBar:
+      container.querySelector('.electron-titlebar-bar')?.className ?? null,
+  }
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
 
 describe('NowPanel', () => {
+  it('omits the heading and title bar in the compact panel without desktop controls', () => {
+    const model = buildNowPanelModel({
+      now,
+      timeBlocks: [],
+      calendarEvents: [],
+      tasks: new Map(),
+    })
+    const { container } = render(
+      <NowPanel model={model} compact desktopWindowControls={false} />,
+    )
+
+    expect(getObservedHeaderState(container)).toEqual({
+      heading: null,
+      titleBar: null,
+    })
+  })
+
+  it('keeps the empty draggable bar for desktop window controls', () => {
+    const model = buildNowPanelModel({
+      now,
+      timeBlocks: [],
+      calendarEvents: [],
+      tasks: new Map(),
+    })
+    const { container } = render(
+      <NowPanel model={model} compact desktopWindowControls />,
+    )
+
+    expect(getObservedHeaderState(container)).toEqual({
+      heading: null,
+      titleBar: 'electron-titlebar-bar -mx-3',
+    })
+  })
+
   it('opens the active and next meeting URLs and hides Join for events without a visible URL', async () => {
     const user = userEvent.setup()
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
