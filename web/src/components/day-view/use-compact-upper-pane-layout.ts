@@ -12,7 +12,7 @@ export function useCompactUpperPaneLayout(
   const paneRef = useRef<HTMLDivElement>(null)
   const nowPanelRef = useRef<HTMLElement>(null)
   const nowContentRef = useRef<HTMLDivElement>(null)
-  const dateHeaderRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
   const queueContentRef = useRef<HTMLDivElement>(null)
   const [nowContentMaxHeight, setNowContentMaxHeight] = useState<number>()
   const [queueContentMaxHeight, setQueueContentMaxHeight] = useState<number>()
@@ -23,7 +23,7 @@ export function useCompactUpperPaneLayout(
     const pane = paneRef.current
     const nowPanel = nowPanelRef.current
     const nowContent = nowContentRef.current
-    const dateHeader = dateHeaderRef.current
+    const header = headerRef.current
     const queueContent = queueContentRef.current
     if (pane == null || queueContent == null) return
 
@@ -39,7 +39,7 @@ export function useCompactUpperPaneLayout(
           : nowPanelHeight
       const availableContentHeight = Math.max(
         0,
-        paneMaxHeight - nowChromeHeight - (dateHeader?.clientHeight ?? 0),
+        paneMaxHeight - nowChromeHeight - (header?.clientHeight ?? 0),
       )
       const queueReservation = Math.min(
         MIN_QUEUE_VIEWPORT_HEIGHT,
@@ -73,7 +73,7 @@ export function useCompactUpperPaneLayout(
     if (nowPanel != null) resizeObserver.observe(nowPanel)
     if (nowContent != null) resizeObserver.observe(nowContent)
     resizeObserver.observe(queueContent)
-    if (dateHeader != null) resizeObserver.observe(dateHeader)
+    if (header != null) resizeObserver.observe(header)
     updateContentHeight()
 
     return () => {
@@ -85,7 +85,7 @@ export function useCompactUpperPaneLayout(
     paneRef,
     nowPanelRef,
     nowContentRef,
-    dateHeaderRef,
+    headerRef,
     queueContentRef,
     nowContentMaxHeight,
     queueContentMaxHeight,
