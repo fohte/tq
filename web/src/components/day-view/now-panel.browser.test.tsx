@@ -38,7 +38,7 @@ afterEach(() => {
 })
 
 describe('NowPanel', () => {
-  it.each([{ state: 'a compact panel' }])('$state has no heading', () => {
+  it('a compact panel has no heading', () => {
     render(<NowPanel model={emptyNowPanelModel} compact />)
 
     expect(getObservedHeaderState()).toEqual({ heading: null })
