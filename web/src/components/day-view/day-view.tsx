@@ -185,12 +185,6 @@ export function DayViewPresentation({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
   )
-  const setCompactCalendarHeaderRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      setCompactCalendarHeaderContainer(node)
-    },
-    [],
-  )
   const {
     width: queueWidth,
     maxWidth: maxQueueWidth,
@@ -389,16 +383,11 @@ export function DayViewPresentation({
             <>
               <div ref={compactHeaderRef} className="shrink-0">
                 {desktopWindowControls && (
-                  <div className="px-3">
-                    <div
-                      data-testid="compact-titlebar-bar"
-                      className="electron-titlebar-bar -mx-3"
-                    />
-                  </div>
+                  <div className="electron-titlebar-bar" />
                 )}
                 <div
                   data-testid="compact-date-header"
-                  ref={setCompactCalendarHeaderRef}
+                  ref={setCompactCalendarHeaderContainer}
                 />
               </div>
               {nowPanel != null && (

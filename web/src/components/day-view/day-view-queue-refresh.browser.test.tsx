@@ -153,9 +153,7 @@ function CompactDayView({ scenario }: { scenario: CompactScenario }) {
         }
         schedules={[]}
         {...(includeNowPanel
-          ? {
-              nowPanel: makeNowPanelProps(nowActivityCount, includeNextEvent),
-            }
+          ? { nowPanel: makeNowPanelProps(nowActivityCount, includeNextEvent) }
           : {})}
         onCreateTimeBlock={() => {}}
         queueSections={[
@@ -271,16 +269,32 @@ function readPinnedHeaderPositions() {
   }
 }
 
-function readCompactHeaderOrder(finalName: string, finalElement: HTMLElement) {
+function readCompactLayoutOrder() {
+  const compactQueueContent = screen.getByTestId('compact-queue-content')
+  const progress = compactQueueContent.firstElementChild
+  const queue = compactQueueContent.querySelector<HTMLElement>(
+    '[data-scroll-restoration-id="day-view"]',
+  )
+  const calendar = document.querySelector<HTMLElement>('.fc')
+  if (!(progress instanceof HTMLElement)) {
+    throw new Error('The compact progress row is missing')
+  }
+  if (queue == null) throw new Error('The compact queue is missing')
+  if (calendar == null) throw new Error('The compact calendar is missing')
+
   const titlebars = Array.from(
     document.querySelectorAll<HTMLElement>('.electron-titlebar-bar'),
   )
   const navigation = screen.getByRole('button', { name: 'Previous' })
+  const nowPanel = screen.queryByRole('region', { name: 'Now' })
 
   const ordered = [
     ...titlebars.map((element) => ({ name: 'titlebar-band', element })),
     { name: 'date-row', element: navigation },
-    { name: finalName, element: finalElement },
+    ...(nowPanel == null ? [] : [{ name: 'Now-panel', element: nowPanel }]),
+    { name: 'progress', element: progress },
+    { name: 'queue', element: queue },
+    { name: 'calendar', element: calendar },
   ].sort(
     (left, right) =>
       left.element.getBoundingClientRect().top -
@@ -297,39 +311,6 @@ function readCompactHeaderOrder(finalName: string, finalElement: HTMLElement) {
           next.element.getBoundingClientRect().top
       )
     }),
-  }
-}
-
-function readCompactUpperPaneOrder() {
-  return readCompactHeaderOrder(
-    'Now-panel',
-    screen.getByRole('region', { name: 'Now' }),
-  )
-}
-
-function readDesktopCompactHeaderOrderWithoutNow() {
-  return readCompactHeaderOrder(
-    'queue',
-    screen.getByTestId('compact-queue-content'),
-  )
-}
-
-function mockDesktopUserAgent() {
-  const descriptor = Object.getOwnPropertyDescriptor(
-    window.navigator,
-    'userAgent',
-  )
-  Object.defineProperty(window.navigator, 'userAgent', {
-    configurable: true,
-    value: 'TQDesktop',
-  })
-
-  return () => {
-    if (descriptor == null) {
-      Reflect.deleteProperty(window.navigator, 'userAgent')
-    } else {
-      Object.defineProperty(window.navigator, 'userAgent', descriptor)
-    }
   }
 }
 
@@ -526,22 +507,47 @@ function readCompactQueueRefreshLayout(
 describe('DayView compact queue refresh layout', () => {
   it.each([
     {
-      viewport: 'desktop',
+      host: 'desktop',
+      nowState: 'with Now',
       desktopWindowControls: true,
-      expected: ['titlebar-band', 'date-row', 'Now-panel'],
+      includeNowPanel: true,
+      expected: [
+        'titlebar-band',
+        'date-row',
+        'Now-panel',
+        'progress',
+        'queue',
+        'calendar',
+      ],
     },
     {
-      viewport: 'browser',
+      host: 'desktop',
+      nowState: 'without Now',
+      desktopWindowControls: true,
+      includeNowPanel: false,
+      expected: ['titlebar-band', 'date-row', 'progress', 'queue', 'calendar'],
+    },
+    {
+      host: 'browser',
+      nowState: 'with Now',
       desktopWindowControls: false,
-      expected: ['date-row', 'Now-panel'],
+      includeNowPanel: true,
+      expected: ['date-row', 'Now-panel', 'progress', 'queue', 'calendar'],
+    },
+    {
+      host: 'browser',
+      nowState: 'without Now',
+      desktopWindowControls: false,
+      includeNowPanel: false,
+      expected: ['date-row', 'progress', 'queue', 'calendar'],
     },
   ])(
-    'keeps the compact header order in a $viewport viewport',
-    async ({ desktopWindowControls, expected }) => {
-      await renderCompactDayView({ desktopWindowControls })
+    'keeps the full compact order on the $host host $nowState',
+    async ({ desktopWindowControls, includeNowPanel, expected }) => {
+      await renderCompactDayView({ desktopWindowControls, includeNowPanel })
 
       await waitFor(() => {
-        expect(readCompactUpperPaneOrder()).toEqual({
+        expect(readCompactLayoutOrder()).toEqual({
           order: expected,
           noOverlap: true,
         })
@@ -550,33 +556,28 @@ describe('DayView compact queue refresh layout', () => {
   )
 
   it('uses the desktop default when the compact host is detected', async () => {
-    const restoreUserAgent = mockDesktopUserAgent()
+    const userAgentSpy = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue('TQDesktop')
     try {
       await renderCompactDayView({ desktopWindowControls: undefined })
 
       await waitFor(() => {
-        expect(readCompactUpperPaneOrder()).toEqual({
-          order: ['titlebar-band', 'date-row', 'Now-panel'],
+        expect(readCompactLayoutOrder()).toEqual({
+          order: [
+            'titlebar-band',
+            'date-row',
+            'Now-panel',
+            'progress',
+            'queue',
+            'calendar',
+          ],
           noOverlap: true,
         })
       })
     } finally {
-      restoreUserAgent()
+      userAgentSpy.mockRestore()
     }
-  })
-
-  it('keeps the desktop titlebar above date navigation when Now is absent', async () => {
-    await renderCompactDayView({
-      desktopWindowControls: true,
-      includeNowPanel: false,
-    })
-
-    await waitFor(() => {
-      expect(readDesktopCompactHeaderOrderWithoutNow()).toEqual({
-        order: ['titlebar-band', 'date-row', 'queue'],
-        noOverlap: true,
-      })
-    })
   })
 
   it('keeps calendar navigation in place for empty, short, and long queues', async () => {
