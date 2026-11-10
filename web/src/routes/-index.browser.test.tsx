@@ -334,6 +334,16 @@ function readNowPanelOutput() {
   }
 }
 
+function mockActiveNowPanelTimeBlock(taskId: string) {
+  const startTime = new Date(Date.now() - 5 * 60_000).toISOString()
+  const endTime = new Date(Date.now() + 55 * 60_000).toISOString()
+  mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
+    data:
+      enabled === true ? [makeTimeBlock({ taskId, startTime, endTime })] : [],
+    error: null,
+  }))
+}
+
 function readQueueTransitionInteractionResult(revertCalendarQueueDrop: {
   mock: { calls: unknown[][] }
 }) {
@@ -704,18 +714,35 @@ describe('day-view route task queries', () => {
     queryClient.clear()
   })
 
-  it('shows a Busy activity when a Now panel block belongs to another context', async () => {
+  it.each([
+    {
+      scenario: 'a block belongs to another context',
+      queryResult: {
+        data: [],
+        isLoading: false,
+        isPending: false,
+        isFetching: false,
+        isPlaceholderData: false,
+        error: null,
+      },
+    },
+    {
+      scenario: 'the referenced-task query fails',
+      queryResult: {
+        data: undefined,
+        isLoading: false,
+        isPending: false,
+        isFetching: false,
+        isPlaceholderData: false,
+        error: new Error('request failed'),
+      },
+    },
+  ])('shows a Busy activity when $scenario', async ({ queryResult }) => {
     const taskId = 'now-panel-task'
-    const startTime = new Date(Date.now() - 5 * 60_000).toISOString()
-    const endTime = new Date(Date.now() + 55 * 60_000).toISOString()
-    mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
-      data:
-        enabled === true ? [makeTimeBlock({ taskId, startTime, endTime })] : [],
-      error: null,
-    }))
+    mockActiveNowPanelTimeBlock(taskId)
     mocks.useTaskList.mockImplementation((filter) =>
       isTaskListFilterWith(filter, 'ids')
-        ? { data: [], isFetching: false, error: null }
+        ? queryResult
         : { data: [], isLoading: false, isFetching: false, error: null },
     )
 
@@ -731,22 +758,47 @@ describe('day-view route task queries', () => {
     queryClient.clear()
   })
 
-  it('stops waiting for referenced tasks after their query fails', async () => {
+  it('waits while the current referenced-task query only has placeholder data', async () => {
     const taskId = 'now-panel-task'
-    const startTime = new Date(Date.now() - 5 * 60_000).toISOString()
-    const endTime = new Date(Date.now() + 55 * 60_000).toISOString()
-    mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
-      data:
-        enabled === true ? [makeTimeBlock({ taskId, startTime, endTime })] : [],
+    mockActiveNowPanelTimeBlock(taskId)
+    const queryResult = {
+      data: [],
+      isLoading: false,
+      isPending: false,
+      isFetching: true,
+      isPlaceholderData: true,
       error: null,
-    }))
+    }
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? queryResult
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const route = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: true,
+        activities: [{ kind: 'event', title: 'Busy' }],
+      })
+    })
+
+    route.queryClient.clear()
+  })
+
+  it('keeps Busy activity visible during a referenced-task background refetch', async () => {
+    const taskId = 'now-panel-task'
+    mockActiveNowPanelTimeBlock(taskId)
     mocks.useTaskList.mockImplementation((filter) =>
       isTaskListFilterWith(filter, 'ids')
         ? {
-            data: undefined,
+            data: [],
             isLoading: false,
-            isFetching: false,
-            error: new Error('request failed'),
+            isPending: false,
+            isFetching: true,
+            isPlaceholderData: false,
+            error: null,
           }
         : { data: [], isLoading: false, isFetching: false, error: null },
     )

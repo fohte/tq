@@ -136,6 +136,13 @@ export function useDayViewTaskData({
     )
   }, [taskDateTasksQuery.error])
   useEffect(() => {
+    if (taskIds.length === 0 || referencedTasksQuery.error == null) return
+    console.error(
+      'Failed to fetch day-view referenced tasks',
+      referencedTasksQuery.error,
+    )
+  }, [referencedTasksQuery.error, taskIds.length])
+  useEffect(() => {
     if (isCompactLayout || !todayIsVisible || dueTasksQuery.error == null) {
       return
     }
@@ -187,7 +194,8 @@ export function useDayViewTaskData({
       dueTasksQuery.isLoading,
     isReferencedTasksLoading:
       taskIds.length > 0 &&
-      (referencedTasksQuery.isPending || referencedTasksQuery.isFetching),
+      (referencedTasksQuery.isPending ||
+        referencedTasksQuery.isPlaceholderData),
     hasRequiredData:
       candidateTasksQuery.data !== undefined &&
       taskDateTasksQuery.data !== undefined &&
