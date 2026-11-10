@@ -7,6 +7,12 @@ import { NowPanel } from '#components/day-view/now-panel'
 import { buildNowPanelModel } from '#components/day-view/now-panel-model'
 
 const now = new Date(2031, 3, 9, 14, 52)
+const emptyNowPanelModel = buildNowPanelModel({
+  now,
+  timeBlocks: [],
+  calendarEvents: [],
+  tasks: new Map(),
+})
 
 function localTime(day: number, hour: number, minute = 0): string {
   return `2031-04-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`
@@ -34,37 +40,29 @@ afterEach(() => {
 })
 
 describe('NowPanel', () => {
-  it('omits the heading and title bar in the compact panel without desktop controls', () => {
-    const model = buildNowPanelModel({
-      now,
-      timeBlocks: [],
-      calendarEvents: [],
-      tasks: new Map(),
-    })
-    const { container } = render(
-      <NowPanel model={model} compact desktopWindowControls={false} />,
-    )
-
-    expect(getObservedHeaderState(container)).toEqual({
-      heading: null,
+  it.each([
+    {
+      state: 'a compact panel without desktop controls',
+      desktopWindowControls: false,
       titleBar: null,
-    })
-  })
-
-  it('keeps the empty draggable bar for desktop window controls', () => {
-    const model = buildNowPanelModel({
-      now,
-      timeBlocks: [],
-      calendarEvents: [],
-      tasks: new Map(),
-    })
+    },
+    {
+      state: 'a compact desktop panel with an empty drag bar',
+      desktopWindowControls: true,
+      titleBar: 'electron-titlebar-bar -mx-3',
+    },
+  ])('$state has no heading', ({ desktopWindowControls, titleBar }) => {
     const { container } = render(
-      <NowPanel model={model} compact desktopWindowControls />,
+      <NowPanel
+        model={emptyNowPanelModel}
+        compact
+        desktopWindowControls={desktopWindowControls}
+      />,
     )
 
     expect(getObservedHeaderState(container)).toEqual({
       heading: null,
-      titleBar: 'electron-titlebar-bar -mx-3',
+      titleBar,
     })
   })
 
