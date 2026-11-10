@@ -246,6 +246,7 @@ function DayView() {
   })
   const {
     isLoading,
+    isReferencedTasksLoading,
     hasRequiredData: hasRequiredTaskData,
     hasRequiredDataError: hasRequiredTaskDataError,
     taskMap,
@@ -265,10 +266,7 @@ function DayView() {
   } = useNowPanelData({
     queryData: nowPanelQueryData,
     taskMap,
-    isTasksLoading:
-      nowPanelQueryData.timeBlocksData?.some(
-        (timeBlock) => !taskMap.has(timeBlock.taskId),
-      ) ?? false,
+    isTasksLoading: isReferencedTasksLoading,
   })
   const compactMemoProps = useCompactMemoData({
     enabled: isCompactLayout,

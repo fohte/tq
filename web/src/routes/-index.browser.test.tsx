@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { CalendarDndCallbacks } from '#components/calendar/calendar-grid'
 import type { TimeBlockEvent } from '#components/calendar/calendar-view'
+import type { NowPanelProps } from '#components/day-view/now-panel'
 import type { QueueSectionData } from '#components/day-view/queue-pane'
 import { makeQueueSectionData } from '#components/day-view/queue-pane-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
@@ -104,7 +105,7 @@ type DayViewMockProps = {
   isQueueRefreshing?: boolean
   calendarEvents?: TimeBlockEvent[]
   dayQueueTasks?: Task[]
-  nowPanel?: { isLoading?: boolean }
+  nowPanel?: { isLoading?: boolean; model?: NowPanelProps['model'] }
   onVisibleRangeChange?: (range: { start: Date; end: Date }) => void
   dndCallbacks?: CalendarDndCallbacks
   queueSections?: QueueSectionData[]
@@ -318,6 +319,18 @@ function readQueueTransitionOutput() {
     queueSections: props.queueSections,
     dayQueueTasks: props.dayQueueTasks,
     queueCandidates: props.queueCandidates,
+  }
+}
+
+function readNowPanelOutput() {
+  const nowPanel = assertDefined(mocks.dayViewProps.mock.lastCall?.[0].nowPanel)
+  return {
+    isLoading: nowPanel.isLoading ?? false,
+    activities: (nowPanel.model?.activities ?? []).map((activity) =>
+      activity.kind === 'event'
+        ? { kind: activity.kind, title: activity.title }
+        : { kind: activity.kind, title: activity.task.title },
+    ),
   }
 }
 
@@ -685,6 +698,65 @@ describe('day-view route task queries', () => {
         status: 'all',
         limit: 'unlimited',
         includeAncestors: true,
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it('shows a Busy activity when a Now panel block belongs to another context', async () => {
+    const taskId = 'now-panel-task'
+    const startTime = new Date(Date.now() - 5 * 60_000).toISOString()
+    const endTime = new Date(Date.now() + 55 * 60_000).toISOString()
+    mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
+      data:
+        enabled === true ? [makeTimeBlock({ taskId, startTime, endTime })] : [],
+      error: null,
+    }))
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? { data: [], isFetching: false, error: null }
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: false,
+        activities: [{ kind: 'event', title: 'Busy' }],
+      })
+    })
+
+    queryClient.clear()
+  })
+
+  it('stops waiting for referenced tasks after their query fails', async () => {
+    const taskId = 'now-panel-task'
+    const startTime = new Date(Date.now() - 5 * 60_000).toISOString()
+    const endTime = new Date(Date.now() + 55 * 60_000).toISOString()
+    mocks.useTimeBlocks.mockImplementation((_startDate, _endDate, enabled) => ({
+      data:
+        enabled === true ? [makeTimeBlock({ taskId, startTime, endTime })] : [],
+      error: null,
+    }))
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? {
+            data: undefined,
+            isLoading: false,
+            isFetching: false,
+            error: new Error('request failed'),
+          }
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: false,
+        activities: [{ kind: 'event', title: 'Busy' }],
       })
     })
 

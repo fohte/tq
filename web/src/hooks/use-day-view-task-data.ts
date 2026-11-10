@@ -185,6 +185,9 @@ export function useDayViewTaskData({
       candidateTasksQuery.isLoading ||
       taskDateTasksQuery.isLoading ||
       dueTasksQuery.isLoading,
+    isReferencedTasksLoading:
+      taskIds.length > 0 &&
+      (referencedTasksQuery.isPending || referencedTasksQuery.isFetching),
     hasRequiredData:
       candidateTasksQuery.data !== undefined &&
       taskDateTasksQuery.data !== undefined &&
