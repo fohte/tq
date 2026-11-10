@@ -787,6 +787,41 @@ describe('day-view route task queries', () => {
     route.queryClient.clear()
   })
 
+  it('keeps a Now panel task visible while its referenced-task query has placeholder data', async () => {
+    const task = makeTask({
+      id: 'now-panel-task',
+      title: 'Available task',
+      context: 'work',
+    })
+    mockActiveNowPanelTimeBlock(task.id)
+    mocks.useTaskMap.mockImplementation(
+      (tasks) => new Map(tasks.map((candidate) => [candidate.id, candidate])),
+    )
+    mocks.useTaskList.mockImplementation((filter) =>
+      isTaskListFilterWith(filter, 'ids')
+        ? {
+            data: [task],
+            isLoading: false,
+            isPending: false,
+            isFetching: true,
+            isPlaceholderData: true,
+            error: null,
+          }
+        : { data: [], isLoading: false, isFetching: false, error: null },
+    )
+
+    const { queryClient } = await renderDayRoute('/?layout=compact')
+
+    await waitFor(() => {
+      expect(readNowPanelOutput()).toEqual({
+        isLoading: false,
+        activities: [{ kind: 'task', title: 'Available task' }],
+      })
+    })
+
+    queryClient.clear()
+  })
+
   it('keeps Busy activity visible during a referenced-task background refetch', async () => {
     const taskId = 'now-panel-task'
     mockActiveNowPanelTimeBlock(taskId)
