@@ -542,7 +542,7 @@ export const Compact: Story = {
 
 export const CompactDesktopWindowControls: Story = {
   ...Compact,
-  name: 'the compact day planner keeps desktop window controls above date controls',
+  name: 'the compact day planner keeps an empty draggable strip for desktop window controls above date controls',
   tags: ['desktop-only'],
   args: {
     ...Compact.args,
