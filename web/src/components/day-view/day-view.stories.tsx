@@ -479,7 +479,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: 'the compact day planner shows window controls, date controls, and Now from top to bottom',
+  name: 'the compact day planner keeps date controls above Now and the queue',
   decorators: [
     (Story) => (
       <div className="mx-auto h-screen w-80 max-w-full">
@@ -493,7 +493,7 @@ export const Compact: Story = {
     calendarEvents: compactEvents,
     schedules: compactSchedules,
     nowPanel: {
-      desktopWindowControls: true,
+      desktopWindowControls: false,
       model: compactNowPanelModel,
     },
     taskRowStates: new Map([
@@ -540,6 +540,19 @@ export const Compact: Story = {
   },
 }
 
+export const CompactDesktopWindowControls: Story = {
+  ...Compact,
+  name: 'the compact day planner keeps desktop window controls above date controls',
+  tags: ['desktop-only'],
+  args: {
+    ...Compact.args,
+    nowPanel: {
+      desktopWindowControls: true,
+      model: compactNowPanelModel,
+    },
+  },
+}
+
 export const CompactShortWindow: Story = {
   name: 'the compact planner keeps its queue reachable in a short window',
   tags: ['mobile-only'],
@@ -552,6 +565,10 @@ export const CompactShortWindow: Story = {
   ],
   args: {
     ...Compact.args,
+    nowPanel: {
+      desktopWindowControls: false,
+      model: compactNowPanelModel,
+    },
   },
 }
 

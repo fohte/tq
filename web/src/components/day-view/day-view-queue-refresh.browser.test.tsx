@@ -532,6 +532,12 @@ describe('DayView compact queue refresh layout', () => {
     })
   })
 
+  it('omits the desktop titlebar when desktop controls are disabled', async () => {
+    await renderCompactDayView({ desktopWindowControls: false })
+
+    expect(screen.queryByTestId('compact-titlebar-bar')).toBeNull()
+  })
+
   it('keeps the desktop titlebar above date navigation when Now is absent', async () => {
     const restoreUserAgent = mockDesktopUserAgent()
     try {
