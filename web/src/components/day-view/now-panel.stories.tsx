@@ -159,7 +159,7 @@ const unresolvedTaskBlock = block(
 export const MissingTask: Story = {
   name: 'a block without task details appears as Busy',
   args: {
-    now: new Date(2031, 3, 9, 9, 14, 30),
+    now: new Date(2031, 3, 9, 14, 14, 30),
     timeBlocks: [unresolvedTaskBlock],
     calendarEvents: [blockEvent(unresolvedTaskBlock, 'Unknown task')],
     taskMap: taskMap(),

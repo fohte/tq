@@ -193,9 +193,7 @@ export function useDayViewTaskData({
       taskDateTasksQuery.isLoading ||
       dueTasksQuery.isLoading,
     isReferencedTasksLoading:
-      taskIds.length > 0 &&
-      (referencedTasksQuery.isPending ||
-        referencedTasksQuery.isPlaceholderData),
+      taskIds.length > 0 && referencedTasksQuery.isPending,
     hasRequiredData:
       candidateTasksQuery.data !== undefined &&
       taskDateTasksQuery.data !== undefined &&
