@@ -181,7 +181,7 @@ export const Compact: Story = {
 }
 
 export const CompactDesktopWindowControls: Story = {
-  name: 'the compact Now panel aligns its desktop title bar with the top edge',
+  name: 'the compact panel keeps an empty draggable area for desktop controls',
   tags: ['desktop-only'],
   args: {
     ...Compact.args,
@@ -294,7 +294,7 @@ export const Loading: Story = {
 }
 
 export const DesktopWindowControls: Story = {
-  name: 'the Now panel reserves space for the desktop window controls',
+  name: 'the desktop panel keeps space for window controls without a heading',
   tags: ['desktop-only'],
   args: {
     desktopWindowControls: true,
