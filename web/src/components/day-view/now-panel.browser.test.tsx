@@ -27,11 +27,9 @@ function getObservedJoinState(openedUrls: unknown[][]) {
   }
 }
 
-function getObservedHeaderState(container: HTMLElement) {
+function getObservedHeaderState() {
   return {
     heading: screen.queryByRole('heading')?.textContent ?? null,
-    titleBar:
-      container.querySelector('.electron-titlebar-bar')?.className ?? null,
   }
 }
 
@@ -40,30 +38,10 @@ afterEach(() => {
 })
 
 describe('NowPanel', () => {
-  it.each([
-    {
-      state: 'a compact panel without desktop controls',
-      desktopWindowControls: false,
-      titleBar: null,
-    },
-    {
-      state: 'a compact desktop panel with an empty drag bar',
-      desktopWindowControls: true,
-      titleBar: 'electron-titlebar-bar -mx-3',
-    },
-  ])('$state has no heading', ({ desktopWindowControls, titleBar }) => {
-    const { container } = render(
-      <NowPanel
-        model={emptyNowPanelModel}
-        compact
-        desktopWindowControls={desktopWindowControls}
-      />,
-    )
+  it('a compact panel has no heading', () => {
+    render(<NowPanel model={emptyNowPanelModel} compact />)
 
-    expect(getObservedHeaderState(container)).toEqual({
-      heading: null,
-      titleBar,
-    })
+    expect(getObservedHeaderState()).toEqual({ heading: null })
   })
 
   it('opens the active and next meeting URLs and hides Join for events without a visible URL', async () => {

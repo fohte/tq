@@ -44,6 +44,7 @@ import { useResizableWidth } from '#hooks/use-resizable-width'
 import type { Schedule } from '#hooks/use-schedules'
 import type { Task } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
+import { hasTqDesktopWindowControls } from '#lib/is-tq-desktop'
 import type { QueueCandidate } from '#lib/queue-candidates'
 import {
   getQueueMaxWidth,
@@ -114,6 +115,7 @@ export interface DayViewPresentationProps {
   initialMobileTab?: MobileTab
   isQueueRefreshing?: boolean
   layout?: 'default' | 'compact'
+  desktopWindowControls?: boolean | undefined
   nowPanel?: NowPanelProps
   taskRowStates?: ReadonlyMap<string, TaskRowTimeBlockState>
   compactMemo?:
@@ -151,6 +153,7 @@ export function DayViewPresentation({
   initialMobileTab,
   isQueueRefreshing = false,
   layout = 'default',
+  desktopWindowControls = hasTqDesktopWindowControls(),
   nowPanel,
   taskRowStates,
   compactMemo,
@@ -162,7 +165,7 @@ export function DayViewPresentation({
     paneRef: compactQueuePaneRef,
     nowPanelRef: compactNowPanelRef,
     nowContentRef: compactNowContentRef,
-    dateHeaderRef: compactDateHeaderRef,
+    headerRef: compactHeaderRef,
     queueContentRef: compactQueueContentRef,
     nowContentMaxHeight: compactNowContentMaxHeight,
     queueContentMaxHeight: compactQueueContentMaxHeight,
@@ -181,13 +184,6 @@ export function DayViewPresentation({
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<Schedule | undefined>(
     undefined,
-  )
-  const setCompactCalendarHeaderRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      compactDateHeaderRef.current = node
-      setCompactCalendarHeaderContainer(node)
-    },
-    [compactDateHeaderRef],
   )
   const {
     width: queueWidth,
@@ -384,7 +380,16 @@ export function DayViewPresentation({
           {activeViewMode === 'kanban' && kanbanFilterRow}
 
           {isCompactLayout && (
-            <div className="shrink-0">
+            <>
+              <div ref={compactHeaderRef} className="shrink-0">
+                {desktopWindowControls && (
+                  <div className="electron-titlebar-bar" />
+                )}
+                <div
+                  data-testid="compact-date-header"
+                  ref={setCompactCalendarHeaderContainer}
+                />
+              </div>
               {nowPanel != null && (
                 <NowPanel
                   {...nowPanel}
@@ -394,11 +399,7 @@ export function DayViewPresentation({
                   scrollableContentMaxHeight={compactNowContentMaxHeight}
                 />
               )}
-              <div
-                data-testid="compact-date-header"
-                ref={setCompactCalendarHeaderRef}
-              />
-            </div>
+            </>
           )}
 
           <div

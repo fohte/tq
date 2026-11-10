@@ -82,6 +82,7 @@ interface CompactScenario {
   nowActivityCount: number
   includeNextEvent: boolean
   includeNowPanel: boolean
+  desktopWindowControls: boolean | undefined
   includeCompactMemo: boolean
   includeAllDayEvent: boolean
   registerRefreshCompletion: (finish: () => void) => void
@@ -103,6 +104,7 @@ function CompactDayView({ scenario }: { scenario: CompactScenario }) {
     nowActivityCount,
     includeNextEvent,
     includeNowPanel,
+    desktopWindowControls,
     includeCompactMemo,
     includeAllDayEvent,
     registerRefreshCompletion,
@@ -134,6 +136,7 @@ function CompactDayView({ scenario }: { scenario: CompactScenario }) {
         isLoading={false}
         isQueueRefreshing={isQueueRefreshing}
         layout="compact"
+        desktopWindowControls={desktopWindowControls}
         calendarEvents={
           includeAllDayEvent
             ? [
@@ -205,6 +208,7 @@ async function renderCompactDayView(options: CompactRenderOptions = {}) {
     nowActivityCount: 0,
     includeNextEvent: false,
     includeNowPanel: true,
+    desktopWindowControls: false,
     includeCompactMemo: false,
     includeAllDayEvent: false,
     ...scenarioOverrides,
@@ -262,6 +266,51 @@ function readPinnedHeaderPositions() {
   return {
     now: Math.round(nowPanel.getBoundingClientRect().y),
     navigation: readNavigationVerticalPositions(),
+  }
+}
+
+function readCompactLayoutOrder() {
+  const compactQueueContent = screen.getByTestId('compact-queue-content')
+  const progress = compactQueueContent.firstElementChild
+  const queue = compactQueueContent.querySelector<HTMLElement>(
+    '[data-scroll-restoration-id="day-view"]',
+  )
+  const calendar = document.querySelector<HTMLElement>('.fc')
+  if (!(progress instanceof HTMLElement)) {
+    throw new Error('The compact progress row is missing')
+  }
+  if (queue == null) throw new Error('The compact queue is missing')
+  if (calendar == null) throw new Error('The compact calendar is missing')
+
+  const titlebars = Array.from(
+    document.querySelectorAll<HTMLElement>('.electron-titlebar-bar'),
+  )
+  const navigation = screen.getByRole('button', { name: 'Previous' })
+  const nowPanel = screen.queryByRole('region', { name: 'Now' })
+
+  const ordered = [
+    ...titlebars.map((element) => ({ name: 'titlebar-band', element })),
+    { name: 'date-row', element: navigation },
+    ...(nowPanel == null ? [] : [{ name: 'Now-panel', element: nowPanel }]),
+    { name: 'progress', element: progress },
+    { name: 'queue', element: queue },
+    { name: 'calendar', element: calendar },
+  ].sort(
+    (left, right) =>
+      left.element.getBoundingClientRect().top -
+      right.element.getBoundingClientRect().top,
+  )
+
+  return {
+    order: ordered.map(({ name }) => name),
+    noOverlap: ordered.every((current, index) => {
+      const next = ordered[index + 1]
+      return (
+        next == null ||
+        current.element.getBoundingClientRect().bottom <=
+          next.element.getBoundingClientRect().top
+      )
+    }),
   }
 }
 
@@ -456,6 +505,81 @@ function readCompactQueueRefreshLayout(
 }
 
 describe('DayView compact queue refresh layout', () => {
+  it.each([
+    {
+      host: 'desktop',
+      nowState: 'with Now',
+      desktopWindowControls: true,
+      includeNowPanel: true,
+      expected: [
+        'titlebar-band',
+        'date-row',
+        'Now-panel',
+        'progress',
+        'queue',
+        'calendar',
+      ],
+    },
+    {
+      host: 'desktop',
+      nowState: 'without Now',
+      desktopWindowControls: true,
+      includeNowPanel: false,
+      expected: ['titlebar-band', 'date-row', 'progress', 'queue', 'calendar'],
+    },
+    {
+      host: 'browser',
+      nowState: 'with Now',
+      desktopWindowControls: false,
+      includeNowPanel: true,
+      expected: ['date-row', 'Now-panel', 'progress', 'queue', 'calendar'],
+    },
+    {
+      host: 'browser',
+      nowState: 'without Now',
+      desktopWindowControls: false,
+      includeNowPanel: false,
+      expected: ['date-row', 'progress', 'queue', 'calendar'],
+    },
+  ])(
+    'keeps the full compact order on the $host host $nowState',
+    async ({ desktopWindowControls, includeNowPanel, expected }) => {
+      await renderCompactDayView({ desktopWindowControls, includeNowPanel })
+
+      await waitFor(() => {
+        expect(readCompactLayoutOrder()).toEqual({
+          order: expected,
+          noOverlap: true,
+        })
+      })
+    },
+  )
+
+  it('uses the desktop default when the compact host is detected', async () => {
+    const userAgentSpy = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue('TQDesktop')
+    try {
+      await renderCompactDayView({ desktopWindowControls: undefined })
+
+      await waitFor(() => {
+        expect(readCompactLayoutOrder()).toEqual({
+          order: [
+            'titlebar-band',
+            'date-row',
+            'Now-panel',
+            'progress',
+            'queue',
+            'calendar',
+          ],
+          noOverlap: true,
+        })
+      })
+    } finally {
+      userAgentSpy.mockRestore()
+    }
+  })
+
   it('keeps calendar navigation in place for empty, short, and long queues', async () => {
     const refreshController: QueueRefreshController = { finish: undefined }
     await renderCompactDayView({

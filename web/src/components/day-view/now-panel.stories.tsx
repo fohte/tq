@@ -62,7 +62,6 @@ interface NowPanelStoryProps {
   calendarEvents: TimeBlockEvent[]
   taskMap: Map<string, Task>
   isLoading?: boolean
-  desktopWindowControls?: boolean | undefined
   compact?: boolean | undefined
   scrollableContentMaxHeight?: number | undefined
 }
@@ -73,7 +72,6 @@ function NowPanelStory({
   calendarEvents,
   taskMap,
   isLoading,
-  desktopWindowControls,
   compact,
   scrollableContentMaxHeight,
 }: NowPanelStoryProps) {
@@ -88,9 +86,6 @@ function NowPanelStory({
       <NowPanel
         model={model}
         {...(isLoading === undefined ? {} : { isLoading })}
-        {...(desktopWindowControls === undefined
-          ? {}
-          : { desktopWindowControls })}
         {...(compact === undefined ? {} : { compact })}
         {...(scrollableContentMaxHeight === undefined
           ? {}
@@ -174,18 +169,8 @@ export const Compact: Story = {
       blockEvent(nextC, taskC.title),
     ],
     taskMap: taskMap(taskA, taskB, taskC),
-    desktopWindowControls: false,
     compact: true,
     scrollableContentMaxHeight: 320,
-  },
-}
-
-export const CompactDesktopWindowControls: Story = {
-  name: 'the compact panel keeps an empty draggable area for desktop controls',
-  tags: ['desktop-only'],
-  args: {
-    ...Compact.args,
-    desktopWindowControls: true,
   },
 }
 
@@ -290,18 +275,6 @@ export const Loading: Story = {
     calendarEvents: [],
     taskMap: taskMap(),
     isLoading: true,
-  },
-}
-
-export const DesktopWindowControls: Story = {
-  name: 'the desktop panel keeps space for window controls without a heading',
-  tags: ['desktop-only'],
-  args: {
-    desktopWindowControls: true,
-    now,
-    timeBlocks: [],
-    calendarEvents: [],
-    taskMap: taskMap(),
   },
 }
 
