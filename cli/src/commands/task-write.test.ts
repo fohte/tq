@@ -1408,7 +1408,9 @@ Commands:
                             (also matches descendants under a /-separated path),
                             context:work|personal, priority:-1|0|1|2|none,
                             has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
-                            parent:<uuid|number>|root, project:<uuid|title>, and
+                            parent:<uuid|number>|root (root includes tasks whose
+                            parent does not match the other filters),
+                            project:<uuid|title>, and
                             sort:due|created|updated|priority (repeat sort: to
                             break ties with later keys). has:follow-up-due
                             matches tasks with an unresolved wait whose
