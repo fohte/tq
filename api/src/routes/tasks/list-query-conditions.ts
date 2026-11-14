@@ -231,6 +231,7 @@ function buildConditions(
       or(
         isNull(tasks.parentId),
         notExists(
+          // The inner `tasks` scope evaluates the parent row; `parentTasks` comes from the caller's join.
           db
             .select({ _: sql`1` })
             .from(tasks)
