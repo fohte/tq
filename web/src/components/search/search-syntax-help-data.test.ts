@@ -44,6 +44,21 @@ describe('getSearchSyntaxHelpSections', () => {
     })
   })
 
+  it('documents filtered roots in parent syntax help', () => {
+    const parentEntry = getSearchSyntaxHelpSections()
+      .find(({ title }) => title === 'Filters')
+      ?.entries.find(({ syntax }) => syntax.startsWith('parent:'))
+
+    expect(parentEntry).toEqual({
+      key: 'parent',
+      syntax: 'parent:<task-id-or-number|root>',
+      description:
+        "Limit results to children of this task UUID or number, or use 'root' for tasks whose parent does not match the other filters.",
+      taskFilter: true,
+      values: [],
+    })
+  })
+
   it('uses neutral priority labels before settings load', () => {
     const priorityEntry = getSearchSyntaxHelpSections({
       audience: 'task-filter',
