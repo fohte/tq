@@ -1570,6 +1570,46 @@ describe('tasks CRUD API', () => {
       expect(body.map((t) => t.title)).toEqual(['Parent', 'Orphan'])
     })
 
+    it('returns tasks whose parent does not match the other filters as roots', async () => {
+      const completedParent = await createTask('Completed parent')
+      await setStatus(completedParent.id, 'completed')
+      await createTask('Todo under completed parent', {
+        parentId: completedParent.id,
+      })
+      const completedIntermediate = await createTask('Completed intermediate', {
+        parentId: completedParent.id,
+      })
+      await setStatus(completedIntermediate.id, 'completed')
+      await createTask('Todo under completed intermediate', {
+        parentId: completedIntermediate.id,
+      })
+
+      const matchingParent = await createTask('Todo parent')
+      await createTask('Todo under matching parent', {
+        parentId: matchingParent.id,
+      })
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=root&q=is%3Atodo',
+      )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          (await jsonBody<TaskListItemResponse[]>(res))
+            .map((task) => task.title)
+            .toSorted(),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          'Todo parent',
+          'Todo under completed intermediate',
+          'Todo under completed parent',
+        ],
+      })
+    })
+
     it('filters by status', async () => {
       const taskA = await createTask('Task A')
       await createTask('Task B')

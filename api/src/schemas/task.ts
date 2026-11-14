@@ -194,7 +194,9 @@ export const listTasksQuerySchema = z.object({
   templateId: z.uuid().optional(),
   parentId: z
     .union([z.literal('root'), taskIdOrNumber])
-    .describe("Parent task UUID or number, or 'root' for tasks with no parent.")
+    .describe(
+      "Parent task UUID or number, or 'root' for tasks whose parent does not match the other filters.",
+    )
     .optional(),
   descendantOf: taskIdOrNumber
     .describe('Return descendants of this task UUID or number.')

@@ -8,9 +8,10 @@ import {
   ne,
   notExists,
   or,
+  type SQL,
   sql,
 } from 'drizzle-orm'
-import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core'
+import { alias } from 'drizzle-orm/pg-core'
 import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
@@ -64,6 +65,14 @@ function isNumericTaskIdentifier(value: string) {
   return /^\d+$/.test(value)
 }
 
+type BuildConditionsResult = {
+  conditions: (SQL | undefined)[]
+  sortBy: ListTasksQuery['sortBy']
+  order: ListTasksQuery['order']
+  freeTextWords: string[]
+  prioritySettings: PrioritySetting[]
+}
+
 type ResolvedTaskFilter = { id: string | null }
 
 type ResolvedTaskFilters = {
@@ -73,33 +82,13 @@ type ResolvedTaskFilters = {
 
 type TaskConditionsQuery = Omit<ListTasksQuery, 'limit' | 'view'>
 
-// NULL-safe "doesn't belong to this project", for a `projectId` column on
-// `tasks` or its `parentTasks` self-join alias. A plain
-// `not(eq(projectIdColumn, id))` would evaluate to NULL (not TRUE) when
-// `projectIdColumn` is NULL, which would wrongly exclude project-less rows.
-function projectMismatch(projectIdColumn: AnyPgColumn, identifier: string) {
-  return z.uuid().safeParse(identifier).success
-    ? or(isNull(projectIdColumn), ne(projectIdColumn, identifier))
-    : notExists(
-        db
-          .select({ _: sql`1` })
-          .from(projects)
-          .where(
-            and(
-              eq(projects.id, projectIdColumn),
-              eq(projects.title, identifier),
-            ),
-          ),
-      )
-}
-
 function buildConditions(
   query: Omit<TaskConditionsQuery, 'ids'>,
   ids: string[] | undefined,
   parsed: ReturnType<typeof parseSearchQuery> | null,
   resolvedFilters: ResolvedTaskFilters,
   prioritySettings: PrioritySetting[],
-) {
+): BuildConditionsResult {
   const conditions = []
 
   if (ids != null) {
@@ -230,17 +219,24 @@ function buildConditions(
 
   const parent = resolvedFilters.parent
   if (parent === 'root') {
-    // A task in this project whose actual parent belongs to a different
-    // project (or none) has no visible parent within this project's task
-    // list, so it needs to count as a root here too — otherwise it would
-    // never appear anywhere in the project's tree.
+    // A parent outside this filter has no visible place in the result tree.
+    const parentConditions = buildConditions(
+      query,
+      ids,
+      parsed,
+      { ...resolvedFilters, parent: undefined },
+      prioritySettings,
+    ).conditions
     conditions.push(
-      projectIdentifier != null
-        ? or(
-            isNull(tasks.parentId),
-            projectMismatch(parentTasks.projectId, projectIdentifier),
-          )
-        : isNull(tasks.parentId),
+      or(
+        isNull(tasks.parentId),
+        notExists(
+          db
+            .select({ _: sql`1` })
+            .from(tasks)
+            .where(and(eq(tasks.id, parentTasks.id), ...parentConditions)),
+        ),
+      ),
     )
   } else if (parent != null) {
     conditions.push(
