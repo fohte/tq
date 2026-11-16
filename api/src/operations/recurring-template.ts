@@ -6,7 +6,11 @@ import {
   recurrenceCliOptions,
   recurrenceRuleFromCli,
 } from '#operations/recurrence-cli'
-import { defineOperation, requestJson } from '#operations/types'
+import {
+  defineOperation,
+  requestJson,
+  requestNoContent,
+} from '#operations/types'
 import {
   createRecurringTaskOccurrenceSchema,
   updateRecurringTaskTemplateSchema,
@@ -86,6 +90,20 @@ export const recurringTemplateOperations = [
           param: { id: encodePathSegment(id) },
         }),
       ),
+  }),
+  defineOperation(getRecurringTemplateInputSchema, {
+    path: ['recurring-template', 'delete'],
+    description: 'Delete a recurring task template by its UUID.',
+    positionalArgs: ['id'],
+    kind: 'delete',
+    routes: ['DELETE /api/recurring-task-templates/:id'],
+    cli: { output: { kind: 'json' } },
+    run: (client, { id }) =>
+      requestNoContent(
+        client.api['recurring-task-templates'][':id'].$delete({
+          param: { id: encodePathSegment(id) },
+        }),
+      ).map(() => ({ deleted: true, id })),
   }),
   defineOperation(updateRecurringTemplateInputSchema, {
     path: ['recurring-template', 'update'],
