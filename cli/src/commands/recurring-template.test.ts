@@ -90,6 +90,31 @@ describe('recurring-template get', () => {
   })
 })
 
+describe('recurring-template delete', () => {
+  it('deletes a template by UUID and prints the deletion result as JSON', async () => {
+    const id = '11111111-2222-4333-8444-555555555555'
+
+    expect(
+      await runRecurringTemplateCli(
+        ['recurring-template', 'delete', id],
+        new Response(null, { status: 204 }),
+      ),
+    ).toEqual({
+      exitCode: 0,
+      requests: [
+        {
+          method: 'DELETE',
+          pathname: `/api/recurring-task-templates/${id}`,
+          query: {},
+          body: undefined,
+        },
+      ],
+      stdout: [[`${JSON.stringify({ deleted: true, id }, null, 2)}\n`]],
+      stderr: [],
+    })
+  })
+})
+
 describe('recurring-template update', () => {
   it('enables a template when --enable is given', async () => {
     const id = '11111111-2222-4333-8444-555555555555'

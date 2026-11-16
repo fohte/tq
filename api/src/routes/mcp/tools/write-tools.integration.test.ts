@@ -722,6 +722,7 @@ describe('operation tool input schemas', () => {
       project_tasks: false,
       project_update: false,
       recurring_template_get: false,
+      recurring_template_delete: false,
       recurring_template_list: false,
       recurring_template_update: false,
       task_complete: true,
@@ -850,6 +851,10 @@ describe('operation tool annotations', () => {
       memo_get: { readOnlyHint: true },
       memo_update: { readOnlyHint: false, destructiveHint: false },
       recurring_template_get: { readOnlyHint: true },
+      recurring_template_delete: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
       recurring_template_list: { readOnlyHint: true },
       recurring_template_update: {
         readOnlyHint: false,

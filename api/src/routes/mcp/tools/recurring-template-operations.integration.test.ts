@@ -50,7 +50,28 @@ function summarizeTemplateGeneration<Tasks>(
   }
 }
 
+function summarizeDeletion(
+  result: Awaited<ReturnType<typeof callMcpTool>>,
+  lookupStatus: number,
+) {
+  return { result: parseToolJson(result), lookupStatus }
+}
+
 describe('recurring template operation tools', () => {
+  it('deletes a template and returns its id', async () => {
+    const template = await createRecurringTemplate()
+    const result = await callMcpTool(client, 'recurring_template_delete', {
+      id: template.id,
+    })
+    const lookup = await app.request(
+      `/api/recurring-task-templates/${template.id}`,
+    )
+    expect(summarizeDeletion(result, lookup.status)).toEqual({
+      result: { deleted: true, id: template.id },
+      lookupStatus: 404,
+    })
+  })
+
   it('uses an updated title for the next generated task', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2031-04-10T12:00:00Z'))

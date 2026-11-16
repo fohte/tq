@@ -57,6 +57,7 @@ const REGISTERED_TOOL_NAMES = [
   'queue_get',
   'queue_list',
   'queue_set',
+  'recurring_template_delete',
   'recurring_template_get',
   'recurring_template_list',
   'recurring_template_occurrence_create',
