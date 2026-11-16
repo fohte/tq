@@ -40,6 +40,20 @@ async function createRecurringTemplate() {
   return jsonBody(response, z.object({ id: z.uuid() }))
 }
 
+async function createProject(title: string) {
+  const response = await app.request('/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  })
+  return jsonBody(response, z.object({ id: z.uuid() }))
+}
+
+async function readProjectTitle(id: string) {
+  const response = await app.request(`/api/projects/${id}`)
+  return jsonBody(response, z.object({ title: z.string() }))
+}
+
 function summarizeTemplateGeneration<Tasks>(
   updated: Awaited<ReturnType<typeof callMcpTool>>,
   generatedTasks: Tasks,
@@ -57,6 +71,13 @@ function summarizeDeletion(
   return { result: parseToolJson(result), lookupStatus }
 }
 
+function summarizeTraversal(
+  result: Awaited<ReturnType<typeof callMcpTool>>,
+  projectTitle: string,
+) {
+  return { result, projectTitle }
+}
+
 describe('recurring template operation tools', () => {
   it('deletes a template and returns its id', async () => {
     const template = await createRecurringTemplate()
@@ -69,6 +90,23 @@ describe('recurring template operation tools', () => {
     expect(summarizeDeletion(result, lookup.status)).toEqual({
       result: { deleted: true, id: template.id },
       lookupStatus: 404,
+    })
+  })
+
+  it('does not route a traversal id to project deletion', async () => {
+    const project = await createProject('Original project')
+    const result = await callMcpTool(client, 'recurring_template_delete', {
+      id: `../projects/${project.id}`,
+    })
+
+    expect(
+      summarizeTraversal(result, (await readProjectTitle(project.id)).title),
+    ).toEqual({
+      result: {
+        isError: true,
+        content: [{ type: 'text', text: 'Recurring task template not found' }],
+      },
+      projectTitle: 'Original project',
     })
   })
 
