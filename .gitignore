@@ -133,6 +133,7 @@ dist
 # Storybook build output
 storybook-static/
 
+<<<<<<< before updating
 # Generated storycap screenshot output
 __screenshots__/
 
@@ -144,3 +145,8 @@ __screenshots__/
 
 # Electron app build output (desktop)
 desktop/release/
+||||||| last update
+=======
+# Captured VRT screenshots
+/web/__screenshots__/
+>>>>>>> after updating
