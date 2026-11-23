@@ -34,6 +34,7 @@ import {
   toListItemResponse,
   toListRowResponse,
   withoutLinkSync,
+  withoutLinkSyncAndBlockedByGithubRefs,
 } from '#routes/tasks/testing'
 import { createTaskResponseSchema } from '#schemas/task-response'
 import {
@@ -308,6 +309,7 @@ function expectedTaskWithAllRelations({
     blockedBy: [duplicateTargetDetail],
     blocking: [incomingTaskDetail],
     githubBlockers: [],
+    blockedByGithubRefs: [],
     checklistCompletionCount: { total: 0, completed: 0 },
     checklists: [],
   }
@@ -362,6 +364,7 @@ function createdTaskResponse(
   title: string,
   description: string | null,
   priority: -1 | 0 | 1 | 2 | null = null,
+  includeBlockedByGithubRefs = true,
 ): { status: number; body: TaskResponse } {
   return responseSnapshot(201, {
     id: 'ID',
@@ -383,6 +386,7 @@ function createdTaskResponse(
     templateId: null,
     occurrenceDate: null,
     githubLinks: [],
+    ...(includeBlockedByGithubRefs ? { blockedByGithubRefs: [] } : {}),
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
     linkSync: { added: [], unresolvedRefs: [] },
@@ -395,7 +399,12 @@ function updatedTaskResponse(
   includeLinkSync = true,
   priority: -1 | 0 | 1 | 2 | null = null,
 ) {
-  const createdResponse = createdTaskResponse(title, description, priority)
+  const createdResponse = createdTaskResponse(
+    title,
+    description,
+    priority,
+    false,
+  )
   return responseSnapshot(
     200,
     includeLinkSync
@@ -719,6 +728,7 @@ describe('tasks CRUD API', () => {
         templateId: null,
         occurrenceDate: null,
         githubLinks: [],
+        blockedByGithubRefs: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
         linkSync: { added: [], unresolvedRefs: [] },
@@ -731,7 +741,7 @@ describe('tasks CRUD API', () => {
 
     it('creates task and GitHub blockers from mixed ids and URLs', async () => {
       const blocker = await createTask('Internal blocker')
-      const url = 'https://github.com/example-owner/example-repo/issues/17'
+      const url = 'https://github.com/example-owner/example-repo/pull/17'
       await upsertGithubToken('valid-token')
       mockGithubIssueResponse({
         title: 'External blocker',
@@ -747,6 +757,7 @@ describe('tasks CRUD API', () => {
         }),
       })
       const body = await jsonBody<TaskResponse>(res)
+      const schemaBody = createTaskResponseSchema.parse(body)
       const relations = await db
         .select({ targetTaskId: taskRelations.targetTaskId })
         .from(taskRelations)
@@ -769,6 +780,8 @@ describe('tasks CRUD API', () => {
         targetTaskIds: relations.map(({ targetTaskId }) => targetTaskId),
         githubBlockers,
         responseGithubLinks: body.githubLinks,
+        responseGithubRefs: body.blockedByGithubRefs,
+        schemaGithubRefs: schemaBody.blockedByGithubRefs,
       })
       expect(getActual()).toEqual({
         status: 201,
@@ -785,6 +798,22 @@ describe('tasks CRUD API', () => {
           },
         ],
         responseGithubLinks: [],
+        responseGithubRefs: [
+          {
+            owner: 'example-owner',
+            repo: 'example-repo',
+            number: 17,
+            url,
+          },
+        ],
+        schemaGithubRefs: [
+          {
+            owner: 'example-owner',
+            repo: 'example-repo',
+            number: 17,
+            url,
+          },
+        ],
       })
     })
 
@@ -1230,6 +1259,7 @@ describe('tasks CRUD API', () => {
         templateId: null,
         occurrenceDate: null,
         githubLinks: [],
+        blockedByGithubRefs: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
         linkSync: { added: [], unresolvedRefs: [] },
@@ -3250,6 +3280,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [],
         },
@@ -3279,6 +3310,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -3312,6 +3344,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -3961,7 +3994,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(created),
+        ...withoutLinkSyncAndBlockedByGithubRefs(created),
         labels: ['bug'],
         updatedAt: body.updatedAt,
       })
@@ -3979,7 +4012,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(created),
+        ...withoutLinkSyncAndBlockedByGithubRefs(created),
         labels: ['new-label'],
         updatedAt: body.updatedAt,
       })
@@ -4027,7 +4060,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(created),
+        ...withoutLinkSyncAndBlockedByGithubRefs(created),
         labels: [],
         updatedAt: body.updatedAt,
       })
@@ -4188,7 +4221,7 @@ describe('tasks CRUD API', () => {
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
         expect(body).toEqual({
-          ...withoutLinkSync(task),
+          ...withoutLinkSyncAndBlockedByGithubRefs(task),
           updatedAt: body.updatedAt,
         })
       })
@@ -4487,6 +4520,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [blockerA, blockerB].map((t) => toLinkedTaskDetail(t)),
           blocking: [],
         })
@@ -4525,6 +4559,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [blockedXAfterPatch, blockedYAfterPatch].map((t) =>
             toLinkedTaskDetail(t, [blocker.number]),
@@ -4598,6 +4633,7 @@ describe('tasks CRUD API', () => {
             title: link.title,
             lastSyncedAt: 'TIMESTAMP',
           })),
+          detailGithubRefs: detail.blockedByGithubRefs,
           listNumbers: listItem.blockedByNumbers,
           listGithubRefs: listItem.blockedByGithubRefs,
           hasBlockerIds: hasBlockerTasks.map(({ id }) => id),
@@ -4620,6 +4656,14 @@ describe('tasks CRUD API', () => {
               state: 'open',
               title: 'External blocker',
               lastSyncedAt: 'TIMESTAMP',
+            },
+          ],
+          detailGithubRefs: [
+            {
+              owner: 'example-owner',
+              repo: 'example-repo',
+              number: 17,
+              url,
             },
           ],
           listNumbers: [],
@@ -4682,6 +4726,7 @@ describe('tasks CRUD API', () => {
             title: link.title,
             url: link.url,
           })),
+          detailGithubRefs: detail.blockedByGithubRefs,
           listGithubRefs: item.blockedByGithubRefs,
           hasBlockerTitles: hasBlockerTasks.map(({ title }) => title),
           hasNoBlockerTitles: hasNoBlockerTasks.map(({ title }) => title),
@@ -4701,6 +4746,7 @@ describe('tasks CRUD API', () => {
               url,
             },
           ],
+          detailGithubRefs: [],
           listGithubRefs: [],
           hasBlockerTitles: [],
           hasNoBlockerTitles: ['Blocked by a closed issue'],
@@ -4772,6 +4818,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -4806,6 +4853,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -4907,6 +4955,7 @@ describe('tasks CRUD API', () => {
           templateId: 'TEMPLATE_ID',
           occurrenceDate: '2026-03-22',
           githubLinks: [],
+          blockedByGithubRefs: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
           linkSync: { added: [], unresolvedRefs: [] },
@@ -5084,7 +5133,7 @@ describe('tasks CRUD API', () => {
         expect(body.number).toBe(task.number)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
-            ...withoutLinkSync(task),
+            ...withoutLinkSyncAndBlockedByGithubRefs(task),
             dueDate: '2026-04-01',
             occurrenceDate: '2026-04-01',
             templateId: body.templateId,
@@ -5117,7 +5166,7 @@ describe('tasks CRUD API', () => {
         assertDefined(body.templateId)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
-            ...withoutLinkSync(task),
+            ...withoutLinkSyncAndBlockedByGithubRefs(task),
             title: 'New title',
             dueDate: '2026-06-01',
             occurrenceDate: '2026-06-01',
@@ -5276,6 +5325,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [],
         })

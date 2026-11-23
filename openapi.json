@@ -486,6 +486,35 @@
               ]
             }
           },
+          "blockedByGithubRefs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "owner": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                },
+                "number": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "required": [
+                "owner",
+                "repo",
+                "number",
+                "url"
+              ]
+            }
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -737,6 +766,7 @@
           "templateId",
           "occurrenceDate",
           "githubLinks",
+          "blockedByGithubRefs",
           "createdAt",
           "updatedAt",
           "linkSync"

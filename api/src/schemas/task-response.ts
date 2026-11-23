@@ -81,6 +81,14 @@ export const createTaskResponseSchema = z.object({
   templateId: z.uuid().nullable(),
   occurrenceDate: z.iso.date().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
+  blockedByGithubRefs: z.array(
+    z.object({
+      owner: z.string(),
+      repo: z.string(),
+      number: z.number().int(),
+      url: z.url(),
+    }),
+  ),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   linkSync: linkSyncResponseSchema,

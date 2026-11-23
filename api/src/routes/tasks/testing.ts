@@ -108,6 +108,12 @@ export interface TaskResponse {
   githubLinks: GithubLinkResponse[]
   // Present only on the single-task detail response.
   githubBlockers?: GithubLinkResponse[]
+  blockedByGithubRefs?: {
+    owner: string
+    repo: string
+    number: number
+    url: string
+  }[]
   hasUnresolvedWait?: boolean
   waits?: TaskWaitResponse[]
   createdAt: string
@@ -205,6 +211,15 @@ export function withoutLinkSync<T extends { linkSync?: unknown }>(
 ): Omit<T, 'linkSync'> {
   const { linkSync, ...rest } = task
   void linkSync
+  return rest
+}
+
+export function withoutLinkSyncAndBlockedByGithubRefs<
+  T extends { linkSync?: unknown; blockedByGithubRefs?: unknown },
+>(task: T): Omit<T, 'linkSync' | 'blockedByGithubRefs'> {
+  const { linkSync, blockedByGithubRefs, ...rest } = task
+  void linkSync
+  void blockedByGithubRefs
   return rest
 }
 
@@ -428,6 +443,16 @@ const taskResponseSchema = z.object({
   occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   githubBlockers: z.array(githubLinkResponseSchema).optional(),
+  blockedByGithubRefs: z
+    .array(
+      z.object({
+        owner: z.string(),
+        repo: z.string(),
+        number: z.number(),
+        url: z.string(),
+      }),
+    )
+    .optional(),
   hasUnresolvedWait: z.boolean().optional(),
   waits: z.array(taskWaitResponseSchema).optional(),
   createdAt: z.string(),

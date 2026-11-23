@@ -342,6 +342,7 @@ describe('task_create tool', () => {
       templateId: null,
       occurrenceDate: null,
       githubLinks: [],
+      blockedByGithubRefs: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       linkSync: { added: [], unresolvedRefs: [] },
@@ -416,6 +417,7 @@ describe('task_create tool', () => {
       templateId: null,
       occurrenceDate: null,
       githubLinks: [],
+      blockedByGithubRefs: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       linkSync: { added: [], unresolvedRefs: [] },
@@ -787,6 +789,7 @@ describe('task_complete tool', () => {
         checklistCompletionCount: { completed: 0, total: 0 },
       },
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })
