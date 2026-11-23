@@ -363,6 +363,7 @@ function createdTaskResponse(
   title: string,
   description: string | null,
   priority: -1 | 0 | 1 | 2 | null = null,
+  includeBlockedByGithubRefs = true,
 ): { status: number; body: TaskResponse } {
   return responseSnapshot(201, {
     id: 'ID',
@@ -384,6 +385,7 @@ function createdTaskResponse(
     templateId: null,
     occurrenceDate: null,
     githubLinks: [],
+    ...(includeBlockedByGithubRefs ? { blockedByGithubRefs: [] } : {}),
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
     linkSync: { added: [], unresolvedRefs: [] },
@@ -396,7 +398,12 @@ function updatedTaskResponse(
   includeLinkSync = true,
   priority: -1 | 0 | 1 | 2 | null = null,
 ) {
-  const createdResponse = createdTaskResponse(title, description, priority)
+  const createdResponse = createdTaskResponse(
+    title,
+    description,
+    priority,
+    false,
+  )
   return responseSnapshot(
     200,
     includeLinkSync
