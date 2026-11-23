@@ -58,6 +58,7 @@ describe('REST/MCP parity', () => {
       duplicateOfNumber: null,
       duplicateOfTask: null,
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })
@@ -89,6 +90,7 @@ describe('REST/MCP parity', () => {
       duplicateOfNumber: null,
       duplicateOfTask: null,
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })
@@ -149,6 +151,7 @@ describe('REST/MCP parity', () => {
       duplicateOfNumber: null,
       duplicateOfTask: null,
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })
@@ -185,6 +188,7 @@ describe('REST/MCP parity', () => {
       duplicateOfNumber: null,
       duplicateOfTask: null,
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })
@@ -220,6 +224,7 @@ describe('REST/MCP parity', () => {
       duplicateOfNumber: null,
       duplicateOfTask: null,
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })

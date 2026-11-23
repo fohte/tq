@@ -29,6 +29,7 @@ import {
   taskConventionViolationBody,
 } from '#services/task-conventions'
 import {
+  getOpenGithubBlockerRefsByTaskId,
   insertTaskGithubBlockers,
   type PreparedGithubBlockers,
 } from '#services/task-github-blockers'
@@ -195,6 +196,8 @@ export const tasksCreateApp = new Hono().post(
 
     const body = {
       ...taskToResponse(task, createdRule, [], labelNames),
+      blockedByGithubRefs:
+        (await getOpenGithubBlockerRefsByTaskId([task.id])).get(task.id) ?? [],
       linkSync: toTaskLinkSyncResponse(linkSync),
     }
     // Keep the published schema and the handler response shape in sync.

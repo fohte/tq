@@ -439,6 +439,7 @@ describe('task_get', () => {
       duplicateOfNumber: null,
       duplicateOfTask: null,
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
       subtasks: [
@@ -504,6 +505,7 @@ describe('task_get', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [],
           subtasks: [],

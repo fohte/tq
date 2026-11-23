@@ -16,7 +16,10 @@ import {
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
-import { getTaskGithubBlockers } from '#services/task-github-blockers'
+import {
+  getOpenGithubBlockerRefsByTaskId,
+  getTaskGithubBlockers,
+} from '#services/task-github-blockers'
 import { getTaskLinkRows } from '#services/task-links'
 import {
   getDuplicateOfTaskRow,
@@ -75,6 +78,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     taskFieldAuthors,
     labelsByTaskId,
     githubBlockers,
+    blockedByGithubRefsByTaskId,
     waits,
     checklistData,
     relatedTasks,
@@ -117,6 +121,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     getTaskFieldAuthors(id),
     getLabelNamesByTaskId([id]),
     getTaskGithubBlockers(id),
+    getOpenGithubBlockerRefsByTaskId([id]),
     listTaskWaits(id),
     getTaskChecklistData(id),
     relatedTasksPromise,
@@ -151,6 +156,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
       blockedBy: relatedTasks.blockedBy,
       blocking: relatedTasks.blocking,
       githubBlockers: githubBlockers.map(githubLinkToResponse),
+      blockedByGithubRefs: blockedByGithubRefsByTaskId.get(id) ?? [],
       ...(waits.some((wait) => wait.resolvedAt == null)
         ? { hasUnresolvedWait: true }
         : {}),

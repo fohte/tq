@@ -787,6 +787,7 @@ describe('task_complete tool', () => {
         checklistCompletionCount: { completed: 0, total: 0 },
       },
       githubBlockers: [],
+      blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
     })
