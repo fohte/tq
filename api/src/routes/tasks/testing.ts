@@ -214,6 +214,15 @@ export function withoutLinkSync<T extends { linkSync?: unknown }>(
   return rest
 }
 
+export function withoutLinkSyncAndBlockedByGithubRefs<
+  T extends { linkSync?: unknown; blockedByGithubRefs?: unknown },
+>(task: T): Omit<T, 'linkSync' | 'blockedByGithubRefs'> {
+  const { linkSync, blockedByGithubRefs, ...rest } = task
+  void linkSync
+  void blockedByGithubRefs
+  return rest
+}
+
 // The `TaskListItemResponse` shape of a task with no parent or duplicate-of
 // relation, for building expected `links`/`blockedBy`/`blocking` entries from
 // a `TaskResponse` without repeating its field list at each call site.

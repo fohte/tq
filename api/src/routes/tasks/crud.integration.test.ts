@@ -34,6 +34,7 @@ import {
   toListItemResponse,
   toListRowResponse,
   withoutLinkSync,
+  withoutLinkSyncAndBlockedByGithubRefs,
 } from '#routes/tasks/testing'
 import { createTaskResponseSchema } from '#schemas/task-response'
 import {
@@ -1258,6 +1259,7 @@ describe('tasks CRUD API', () => {
         templateId: null,
         occurrenceDate: null,
         githubLinks: [],
+        blockedByGithubRefs: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
         linkSync: { added: [], unresolvedRefs: [] },
@@ -3992,7 +3994,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(created),
+        ...withoutLinkSyncAndBlockedByGithubRefs(created),
         labels: ['bug'],
         updatedAt: body.updatedAt,
       })
@@ -4010,7 +4012,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(created),
+        ...withoutLinkSyncAndBlockedByGithubRefs(created),
         labels: ['new-label'],
         updatedAt: body.updatedAt,
       })
@@ -4058,7 +4060,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(created),
+        ...withoutLinkSyncAndBlockedByGithubRefs(created),
         labels: [],
         updatedAt: body.updatedAt,
       })
@@ -4219,7 +4221,7 @@ describe('tasks CRUD API', () => {
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
         expect(body).toEqual({
-          ...withoutLinkSync(task),
+          ...withoutLinkSyncAndBlockedByGithubRefs(task),
           updatedAt: body.updatedAt,
         })
       })
@@ -4953,6 +4955,7 @@ describe('tasks CRUD API', () => {
           templateId: 'TEMPLATE_ID',
           occurrenceDate: '2026-03-22',
           githubLinks: [],
+          blockedByGithubRefs: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
           linkSync: { added: [], unresolvedRefs: [] },
@@ -5130,7 +5133,7 @@ describe('tasks CRUD API', () => {
         expect(body.number).toBe(task.number)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
-            ...withoutLinkSync(task),
+            ...withoutLinkSyncAndBlockedByGithubRefs(task),
             dueDate: '2026-04-01',
             occurrenceDate: '2026-04-01',
             templateId: body.templateId,
@@ -5163,7 +5166,7 @@ describe('tasks CRUD API', () => {
         assertDefined(body.templateId)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
-            ...withoutLinkSync(task),
+            ...withoutLinkSyncAndBlockedByGithubRefs(task),
             title: 'New title',
             dueDate: '2026-06-01',
             occurrenceDate: '2026-06-01',

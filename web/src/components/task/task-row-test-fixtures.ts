@@ -91,6 +91,7 @@ export function makeTaskDetail(
     blockedBy: [],
     blocking: [],
     ...overrides,
+    blockedByGithubRefs: overrides.blockedByGithubRefs ?? [],
   }
 }
 
