@@ -506,6 +506,7 @@ describe('task_update tool', () => {
       templateId: null,
       occurrenceDate: null,
       githubLinks: [],
+      blockedByGithubRefs: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
@@ -541,6 +542,7 @@ describe('task_update tool', () => {
       templateId: null,
       occurrenceDate: null,
       githubLinks: [],
+      blockedByGithubRefs: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       linkSync: { added: [], unresolvedRefs: [] },
@@ -587,6 +589,7 @@ describe('task_update tool', () => {
       templateId: null,
       occurrenceDate: null,
       githubLinks: [],
+      blockedByGithubRefs: [],
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
     })
