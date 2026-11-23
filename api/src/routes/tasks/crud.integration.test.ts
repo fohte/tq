@@ -34,7 +34,6 @@ import {
   toListItemResponse,
   toListRowResponse,
   withoutLinkSync,
-  withoutLinkSyncAndBlockedByGithubRefs,
 } from '#routes/tasks/testing'
 import { createTaskResponseSchema } from '#schemas/task-response'
 import {
@@ -364,7 +363,6 @@ function createdTaskResponse(
   title: string,
   description: string | null,
   priority: -1 | 0 | 1 | 2 | null = null,
-  includeBlockedByGithubRefs = true,
 ): { status: number; body: TaskResponse } {
   return responseSnapshot(201, {
     id: 'ID',
@@ -386,7 +384,7 @@ function createdTaskResponse(
     templateId: null,
     occurrenceDate: null,
     githubLinks: [],
-    ...(includeBlockedByGithubRefs ? { blockedByGithubRefs: [] } : {}),
+    blockedByGithubRefs: [],
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
     linkSync: { added: [], unresolvedRefs: [] },
@@ -399,12 +397,7 @@ function updatedTaskResponse(
   includeLinkSync = true,
   priority: -1 | 0 | 1 | 2 | null = null,
 ) {
-  const createdResponse = createdTaskResponse(
-    title,
-    description,
-    priority,
-    false,
-  )
+  const createdResponse = createdTaskResponse(title, description, priority)
   return responseSnapshot(
     200,
     includeLinkSync
@@ -3994,7 +3987,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSyncAndBlockedByGithubRefs(created),
+        ...withoutLinkSync(created),
         labels: ['bug'],
         updatedAt: body.updatedAt,
       })
@@ -4012,7 +4005,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSyncAndBlockedByGithubRefs(created),
+        ...withoutLinkSync(created),
         labels: ['new-label'],
         updatedAt: body.updatedAt,
       })
@@ -4060,7 +4053,7 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSyncAndBlockedByGithubRefs(created),
+        ...withoutLinkSync(created),
         labels: [],
         updatedAt: body.updatedAt,
       })
@@ -4221,9 +4214,64 @@ describe('tasks CRUD API', () => {
         expect(res.status).toBe(200)
         const body = await jsonBody<TaskResponse>(res)
         expect(body).toEqual({
-          ...withoutLinkSyncAndBlockedByGithubRefs(task),
+          ...withoutLinkSync(task),
           updatedAt: body.updatedAt,
         })
+      })
+
+      it('returns GitHub blocker refs after updating with a pull request URL', async () => {
+        const task = await createTask('Blocked task')
+        const url = 'https://github.com/example-owner/example-repo/pull/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ html_url: url })
+
+        const res = await setBlockedBy(task.id, [url])
+
+        const body = await jsonBody<TaskResponse>(res)
+        expect(responseSnapshot(res.status, body)).toEqual(
+          responseSnapshot(200, {
+            ...withoutLinkSync(task),
+            blockedByGithubRefs: [
+              {
+                owner: 'example-owner',
+                repo: 'example-repo',
+                number: 17,
+                url,
+              },
+            ],
+            updatedAt: body.updatedAt,
+          }),
+        )
+      })
+
+      it('returns existing GitHub blocker refs when blockedBy is omitted', async () => {
+        const task = await createTask('Blocked task')
+        const url = 'https://github.com/example-owner/example-repo/pull/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ html_url: url })
+        await setBlockedBy(task.id, [url])
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Renamed task' }),
+        })
+        const body = await jsonBody<TaskResponse>(res)
+        expect(responseSnapshot(res.status, body)).toEqual(
+          responseSnapshot(200, {
+            ...withoutLinkSync(task),
+            title: 'Renamed task',
+            blockedByGithubRefs: [
+              {
+                owner: 'example-owner',
+                repo: 'example-repo',
+                number: 17,
+                url,
+              },
+            ],
+            updatedAt: body.updatedAt,
+          }),
+        )
       })
 
       it('clears blocked_by relations when given an empty array', async () => {
@@ -5133,7 +5181,7 @@ describe('tasks CRUD API', () => {
         expect(body.number).toBe(task.number)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
-            ...withoutLinkSyncAndBlockedByGithubRefs(task),
+            ...withoutLinkSync(task),
             dueDate: '2026-04-01',
             occurrenceDate: '2026-04-01',
             templateId: body.templateId,
@@ -5166,7 +5214,7 @@ describe('tasks CRUD API', () => {
         assertDefined(body.templateId)
         expect(normalizeRecurringTask(body)).toEqual(
           normalizeRecurringTask({
-            ...withoutLinkSyncAndBlockedByGithubRefs(task),
+            ...withoutLinkSync(task),
             title: 'New title',
             dueDate: '2026-06-01',
             occurrenceDate: '2026-06-01',
