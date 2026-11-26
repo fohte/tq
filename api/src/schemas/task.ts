@@ -6,6 +6,7 @@ import { splitCommaList } from '#lib/split-comma-list'
 import { labelNameSchema } from '#schemas/label-name'
 import { queueDateSchema } from '#schemas/queue-date'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
+import { taskFieldValuesSchema } from '#schemas/task-field-values'
 import { queryTimezoneOffsetMinutesSchema } from '#schemas/timezone'
 
 export const taskStatus = z.enum(['todo', 'completed'])
@@ -114,12 +115,7 @@ export const createTaskSchema = z.object({
   context: contextEnum.optional(),
   priority: taskPriority.nullable().optional(),
   labels: z.array(labelNameSchema).optional(),
-  fieldValues: z
-    .record(z.string().min(1), z.string().nullable())
-    .describe(
-      'Project custom field values keyed by field id or name, with option id or name as values. Use null to clear a field.',
-    )
-    .optional(),
+  fieldValues: taskFieldValuesSchema.optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
   blockedBy: z
     .array(blockedByItemSchema)
@@ -140,12 +136,7 @@ export const updateTaskSchema = z.object({
   context: contextEnum.optional(),
   priority: taskPriority.nullable().optional(),
   labels: z.array(labelNameSchema).optional(),
-  fieldValues: z
-    .record(z.string().min(1), z.string().nullable())
-    .describe(
-      'Project custom field values keyed by field id or name, with option id or name as values. Use null to clear a field.',
-    )
-    .optional(),
+  fieldValues: taskFieldValuesSchema.optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
   remindAt: z.iso
     .datetime({ offset: true })

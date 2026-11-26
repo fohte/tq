@@ -178,25 +178,27 @@ async function hasBlockedByCycle(
 export type SyncBlockedByResult =
   'ok' | 'cycle' | 'github-subject-conflict' | 'github-stale-blocker'
 
-// Full replacement: an empty array clears every `blocked_by` relation. Owns
-// its own transaction (unlike `syncTaskLabels`) so the cycle re-check and the
-// write happen atomically under one advisory lock, closing the race where two
-// concurrent callers each pass a pre-check and jointly create a cycle.
+export async function lockTaskBlockedByWrites(
+  tx: DbTransaction,
+): Promise<void> {
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext('task_relations:blocked_by'))`,
+  )
+}
+
+// `blockedBy` は全件置換で、空配列なら全て解除する。循環検査と書き込みを同じ transaction で行う。
 export async function syncTaskBlockedBy(
   taskId: string,
   blockedByIds: string[],
   githubBlockers?: PreparedGithubBlockers,
+  executor?: DbTransaction,
 ): Promise<SyncBlockedByResult> {
   const uniqueIds = [...new Set(blockedByIds)]
 
-  return db.transaction(async (tx) => {
+  const sync = async (tx: DbTransaction): Promise<SyncBlockedByResult> => {
     if (uniqueIds.length > 0 || githubBlockers != null) {
-      // A cycle can span any two tasks, so a per-task lock key can't rule
-      // out two different tasks' transactions racing each other -- this
-      // lock is global to all blocked_by writes.
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(hashtext('task_relations:blocked_by'))`,
-      )
+      // 循環は複数タスクにまたがるため、全ての blockedBy 書き込みで同じ advisory lock を使う。
+      await lockTaskBlockedByWrites(tx)
       if (await hasBlockedByCycle(tx, taskId, uniqueIds)) {
         return 'cycle'
       }
@@ -235,5 +237,7 @@ export async function syncTaskBlockedBy(
     }
 
     return 'ok'
-  })
+  }
+
+  return executor == null ? db.transaction(sync) : sync(executor)
 }

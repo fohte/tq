@@ -1,5 +1,6 @@
 import {
   foreignKey,
+  index,
   pgTable,
   primaryKey,
   text,
@@ -26,6 +27,17 @@ export const taskFieldValues = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.taskId, table.fieldId] }),
+    index('idx_task_field_values_project_id').on(table.projectId),
+    index('idx_task_field_values_field_project_task').on(
+      table.fieldId,
+      table.projectId,
+      table.taskId,
+    ),
+    index('idx_task_field_values_option_field_task').on(
+      table.optionId,
+      table.fieldId,
+      table.taskId,
+    ),
     foreignKey({
       columns: [table.taskId, table.projectId],
       foreignColumns: [tasks.id, tasks.projectId],

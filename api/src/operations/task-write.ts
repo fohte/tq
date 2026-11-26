@@ -78,10 +78,8 @@ function fieldValuesFromCli(
   if (raw === undefined) return ok(undefined)
   if (!Array.isArray(raw)) return err(new Error('Invalid --field value'))
   if (raw.length === 0) return ok(undefined)
-  const fieldEntries: unknown[] = raw.map((value: unknown) => value)
-
-  const fieldValues: Record<string, string | null> = {}
-  for (const value of fieldEntries) {
+  const fieldEntries: Array<[string, string | null]> = []
+  for (const value of raw) {
     if (typeof value !== 'string') {
       return err(new Error('Invalid --field value'))
     }
@@ -92,9 +90,9 @@ function fieldValuesFromCli(
     }
     const field = entry.slice(0, separator)
     const option = entry.slice(separator + 1)
-    fieldValues[field] = option === '' ? null : option
+    fieldEntries.push([field, option === '' ? null : option])
   }
-  return ok(fieldValues)
+  return ok(Object.fromEntries(fieldEntries))
 }
 
 function mapUpdateCliInput(

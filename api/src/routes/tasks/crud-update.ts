@@ -36,10 +36,14 @@ import {
 import {
   getOpenGithubBlockerRefsByTaskId,
   GithubBlockerSubjectConflictError,
+  type PreparedGithubBlockers,
 } from '#services/task-github-blockers'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
-import { syncTaskBlockedBy } from '#services/task-relations'
+import {
+  lockTaskBlockedByWrites,
+  syncTaskBlockedBy,
+} from '#services/task-relations'
 
 export const tasksUpdateApp = new Hono().patch(
   '/:id',
@@ -62,10 +66,6 @@ export const tasksUpdateApp = new Hono().patch(
       ...taskFieldsWithoutPriority,
       ...(priorityInput === undefined ? {} : { priority: priorityInput }),
     }
-    const effectiveProjectId =
-      'projectId' in taskFields
-        ? (taskFields.projectId ?? null)
-        : existing.projectId
     const affectedTaskIdsBefore = await getTaskChangeEventIds([id])
 
     if (recurrenceRuleInput !== undefined && existing.templateId != null) {
@@ -96,16 +96,9 @@ export const tasksUpdateApp = new Hono().patch(
         ? {}
         : { remindAt: remindAtInput == null ? null : new Date(remindAtInput) }
 
-    if (fieldValuesInput !== undefined) {
-      // blockedBy は別トランザクションで同期するため、先に fieldValues を検証する。
-      const resolvedFieldValues = await db.transaction((tx) =>
-        resolveTaskFieldValues(tx, effectiveProjectId, fieldValuesInput),
-      )
-      if ('error' in resolvedFieldValues) {
-        return c.json({ error: 'Invalid task field values' }, 400)
-      }
-    }
-
+    let blockedByResolution:
+      | { targetIds: string[]; githubBlockers: PreparedGithubBlockers }
+      | undefined
     if (blockedByInput != null) {
       const resolveResult = await resolveUpdateBlockedByInputs(
         existing,
@@ -121,37 +114,8 @@ export const tasksUpdateApp = new Hono().patch(
           'tasks.blocked-by',
         )
       }
-
-      const syncResult = await syncTaskBlockedBy(
-        id,
-        resolveResult.targetIds,
-        resolveResult.githubBlockers,
-      )
-      if (syncResult === 'cycle') {
-        return c.json({ error: 'Circular blocking relationship detected' }, 409)
-      }
-      if (syncResult === 'github-subject-conflict') {
-        return githubLinkErrorResponse(
-          c,
-          new GithubBlockerSubjectConflictError(),
-          'tasks.blocked-by',
-        )
-      }
-      if (syncResult === 'github-stale-blocker') {
-        return c.json(
-          {
-            error:
-              'GitHub blockers changed during this update. Retry the request.',
-          },
-          409,
-        )
-      }
+      blockedByResolution = resolveResult
     }
-
-    const changedFields = diffFields(existing, taskFields, [
-      'title',
-      'description',
-    ])
 
     const existingLabelNames =
       recurrenceRuleInput != null
@@ -159,6 +123,18 @@ export const tasksUpdateApp = new Hono().patch(
         : []
 
     const result = await db.transaction(async (tx) => {
+      if (blockedByResolution != null) {
+        // advisory lock を行ロックより先に取って、blockedBy 更新との deadlock を防ぐ。
+        await lockTaskBlockedByWrites(tx)
+      }
+
+      const lockedTask = firstOrThrow(
+        await tx.select().from(tasks).where(eq(tasks.id, id)).for('update'),
+      )
+      const effectiveProjectId =
+        'projectId' in taskFields
+          ? (taskFields.projectId ?? null)
+          : lockedTask.projectId
       const resolvedFieldValues =
         fieldValuesInput === undefined
           ? undefined
@@ -171,6 +147,33 @@ export const tasksUpdateApp = new Hono().patch(
         return { kind: 'invalid-field-values' as const }
       }
 
+      if (recurrenceRuleInput !== undefined && lockedTask.templateId != null) {
+        return {
+          kind: 'error' as const,
+          body: {
+            error: 'Task was concurrently linked to a recurrence template',
+          },
+          status: 409 as const,
+        }
+      }
+
+      if (blockedByResolution != null) {
+        const syncResult = await syncTaskBlockedBy(
+          id,
+          blockedByResolution.targetIds,
+          blockedByResolution.githubBlockers,
+          tx,
+        )
+        if (syncResult !== 'ok') {
+          return { kind: 'blocked-by-error' as const, syncResult }
+        }
+      }
+
+      const changedFields = diffFields(lockedTask, taskFields, [
+        'title',
+        'description',
+      ])
+
       let recurrenceRuleId: string | null | undefined = undefined
       let updatedRule: typeof recurrenceRules.$inferSelect | null = null
       let templateFields:
@@ -180,59 +183,32 @@ export const tasksUpdateApp = new Hono().patch(
       if (recurrenceRuleInput === null) {
         // Remove: check shared references before deleting
         recurrenceRuleId = null
-        if (existing.recurrenceRuleId != null) {
+        if (lockedTask.recurrenceRuleId != null) {
           await deleteRecurrenceRuleIfUnreferenced(
             tx,
-            existing.recurrenceRuleId,
+            lockedTask.recurrenceRuleId,
             id,
           )
         }
       } else if (recurrenceRuleInput !== undefined) {
-        // A concurrent PATCH may have linked this task to a different
-        // template between the initial requireTask read and this lock;
-        // re-check templateId under the row lock so only one request
-        // creates a template for it.
-        const locked = firstOrThrow(
-          await tx
-            .select({ templateId: tasks.templateId })
-            .from(tasks)
-            .where(eq(tasks.id, id))
-            .for('update'),
-        )
-        if (locked.templateId != null) {
-          return {
-            kind: 'error' as const,
-            body: {
-              error: 'Task was concurrently linked to a recurrence template',
-            },
-            status: 409 as const,
-          }
-        }
-
         // Setting a recurrence rule redirects into the template model: a
         // template owns the rule from here on, and this task becomes its
         // first generated instance instead of owning a rule directly.
-        // Merge this same request's field edits over `existing` so the
-        // template reflects the effective post-update task, not the
-        // pre-PATCH row.
-        const effectiveTitle = taskFields.title ?? existing.title
+        // この要求の変更をロック済みの行に反映し、更新後のタスクから template を作る。
+        const effectiveTitle = taskFields.title ?? lockedTask.title
         const effectiveDescription =
           'description' in taskFields
             ? (taskFields.description ?? null)
-            : existing.description
-        const effectiveProjectId =
-          'projectId' in taskFields
-            ? (taskFields.projectId ?? null)
-            : existing.projectId
-        const effectiveContext = taskFields.context ?? existing.context
+            : lockedTask.description
+        const effectiveContext = taskFields.context ?? lockedTask.context
         const effectiveStartDate =
           'startDate' in taskFields
             ? (taskFields.startDate ?? null)
-            : existing.startDate
+            : lockedTask.startDate
         const effectiveDueDate =
           'dueDate' in taskFields
             ? (taskFields.dueDate ?? null)
-            : existing.dueDate
+            : lockedTask.dueDate
         const effectiveLabelNames = labelsInput ?? existingLabelNames
 
         const created = await createTemplateFromTaskFields(
@@ -241,7 +217,7 @@ export const tasksUpdateApp = new Hono().patch(
             title: effectiveTitle,
             description: effectiveDescription,
             projectId: effectiveProjectId,
-            parentId: existing.parentId,
+            parentId: lockedTask.parentId,
             context: effectiveContext,
             labels: effectiveLabelNames,
           },
@@ -268,16 +244,16 @@ export const tasksUpdateApp = new Hono().patch(
         // A task migrated from before the template model may still own a
         // legacy rule directly; redirecting it into a template must not
         // orphan that rule.
-        if (existing.recurrenceRuleId != null) {
+        if (lockedTask.recurrenceRuleId != null) {
           await deleteRecurrenceRuleIfUnreferenced(
             tx,
-            existing.recurrenceRuleId,
+            lockedTask.recurrenceRuleId,
             id,
           )
         }
       }
 
-      if (effectiveProjectId !== existing.projectId) {
+      if (effectiveProjectId !== lockedTask.projectId) {
         await tx.delete(taskFieldValues).where(eq(taskFieldValues.taskId, id))
       }
 
@@ -344,6 +320,25 @@ export const tasksUpdateApp = new Hono().patch(
     }
     if (result.kind === 'invalid-field-values') {
       return c.json({ error: 'Invalid task field values' }, 400)
+    }
+    if (result.kind === 'blocked-by-error') {
+      if (result.syncResult === 'cycle') {
+        return c.json({ error: 'Circular blocking relationship detected' }, 409)
+      }
+      if (result.syncResult === 'github-subject-conflict') {
+        return githubLinkErrorResponse(
+          c,
+          new GithubBlockerSubjectConflictError(),
+          'tasks.blocked-by',
+        )
+      }
+      return c.json(
+        {
+          error:
+            'GitHub blockers changed during this update. Retry the request.',
+        },
+        409,
+      )
     }
     const { updatedTask, updatedRule } = result
 

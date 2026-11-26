@@ -317,6 +317,40 @@ describe('task create', () => {
     })
   })
 
+  it('preserves a special field name in the create request', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        '__proto__=North Route',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: {
+          title: 'New task',
+          fieldValues: { ['__proto__']: 'North Route' },
+        },
+      },
+    })
+  })
+
   it('splits --blocked-by into task ids/numbers and GitHub URLs', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
@@ -671,6 +705,37 @@ describe('task update', () => {
         body: {
           fieldValues: { 'Orbit Mode': 'Quiet Path', 'Signal Phase': null },
         },
+      },
+    })
+  })
+
+  it('preserves a special field name in the update request', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'update',
+        '42',
+        '--field',
+        '__proto__=North Route',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'PATCH',
+        pathname: '/api/tasks/42',
+        query: {},
+        body: { fieldValues: { ['__proto__']: 'North Route' } },
       },
     })
   })

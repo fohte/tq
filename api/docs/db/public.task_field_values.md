@@ -32,9 +32,12 @@ Single-select custom field values assigned to tasks.
 
 ## Indexes
 
-| Name                                  | Definition                                                                                                            |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| task_field_values_task_id_field_id_pk | CREATE UNIQUE INDEX task_field_values_task_id_field_id_pk ON public.task_field_values USING btree (task_id, field_id) |
+| Name                                     | Definition                                                                                                                    |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| task_field_values_task_id_field_id_pk    | CREATE UNIQUE INDEX task_field_values_task_id_field_id_pk ON public.task_field_values USING btree (task_id, field_id)         |
+| idx_task_field_values_project_id         | CREATE INDEX idx_task_field_values_project_id ON public.task_field_values USING btree (project_id)                            |
+| idx_task_field_values_field_project_task | CREATE INDEX idx_task_field_values_field_project_task ON public.task_field_values USING btree (field_id, project_id, task_id) |
+| idx_task_field_values_option_field_task  | CREATE INDEX idx_task_field_values_option_field_task ON public.task_field_values USING btree (option_id, field_id, task_id)   |
 
 ## Relations
 

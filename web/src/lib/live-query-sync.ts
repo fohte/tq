@@ -138,7 +138,13 @@ const resourceQueryFilters: Record<
       },
     )
   },
-  project: () => ({ filters: [{ queryKey: projectKeys.all }] }),
+  project: ({ taskIds }) =>
+    taskIds == null
+      ? { filters: [{ queryKey: projectKeys.all }] }
+      : withFilters(
+          taskInvalidation(taskIds, true, { queryKey: taskKeys.all }),
+          { before: [{ queryKey: projectKeys.all }] },
+        ),
   label: ({ taskIds }) => {
     const invalidation = taskInvalidation(taskIds, true, {
       queryKey: taskKeys.all,

@@ -225,6 +225,91 @@ describe('task field values API', () => {
     })
   })
 
+  it('returns field values when completing a task', async () => {
+    const project = await createProject('Sample Observatory')
+    const field = await createField(project.id, 'Signal Phase', ['Early Arc'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+
+    const createResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { [field.id]: option.id },
+    })
+    const created = await jsonBody<{ id: string }>(createResponse)
+    const completeResponse = await requestJson(
+      `/api/tasks/${created.id}/complete`,
+      'POST',
+      {},
+    )
+    const completed = await jsonBody<{
+      status: string
+      fieldValues: Array<{
+        fieldId: string
+        fieldName: string
+        optionId: string
+        optionName: string
+      }>
+    }>(completeResponse)
+
+    expect(
+      taskFieldValuesSnapshot({
+        statuses: [createResponse.status, completeResponse.status],
+        taskStatus: completed.status,
+        fieldValues: completed.fieldValues,
+      }),
+    ).toEqual({
+      statuses: [201, 200],
+      taskStatus: 'completed',
+      fieldValues: [
+        {
+          fieldId: field.id,
+          fieldName: field.name,
+          optionId: option.id,
+          optionName: option.name,
+        },
+      ],
+    })
+  })
+
+  it('accepts a field name that is special to JavaScript objects', async () => {
+    const project = await createProject('Sample Observatory')
+    const field = await createField(project.id, '__proto__', ['Early Arc'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+
+    const response = await requestJson('/api/tasks', 'POST', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: Object.fromEntries([['__proto__', option.name]]),
+    })
+    const created = await jsonBody<{
+      fieldValues: Array<{
+        fieldId: string
+        fieldName: string
+        optionId: string
+        optionName: string
+      }>
+    }>(response)
+
+    expect(
+      taskFieldValuesSnapshot({
+        status: response.status,
+        fieldValues: created.fieldValues,
+      }),
+    ).toEqual({
+      status: 201,
+      fieldValues: [
+        {
+          fieldId: field.id,
+          fieldName: field.name,
+          optionId: option.id,
+          optionName: option.name,
+        },
+      ],
+    })
+  })
+
   it('rejects missing and cross-project fields or options without changing existing values', async () => {
     const sourceProject = await createProject('Sample Archive')
     const otherProject = await createProject('Sample Archive Two')
@@ -312,28 +397,14 @@ describe('task field values API', () => {
     })
   })
 
-  it('clears values on project changes and deletes and refreshes tasks when names change', async () => {
+  it('keeps values and updates their names after field and option renames', async () => {
     const sourceProject = await createProject('Sample Catalogue')
-    const destinationProject = await createProject('Sample Catalogue Two')
     const sourceField = await createField(sourceProject.id, 'Stage Map', [
       'First Span',
-      'Second Span',
     ])
-    const destinationField = await createField(
-      destinationProject.id,
-      'Stage Map',
-      ['Third Span'],
-    )
     const sourceOption = sourceField.options[0]
-    const secondSourceOption = sourceField.options[1]
-    const destinationOption = destinationField.options[0]
-    if (
-      sourceOption == null ||
-      secondSourceOption == null ||
-      destinationOption == null
-    ) {
-      throw new Error('Test field options were not created')
-    }
+    if (sourceOption == null)
+      throw new Error('Test field option was not created')
     const createResponse = await requestJson('/api/tasks', 'POST', {
       title: 'Map a sample',
       projectId: sourceProject.id,
@@ -351,9 +422,17 @@ describe('task field values API', () => {
     )
     const renamedDetailResponse = await app.request(`/api/tasks/${created.id}`)
     const renamedDetail = await jsonBody<{
-      fieldValues: Array<{ fieldName: string; optionName: string }>
+      fieldValues: Array<{
+        fieldId: string
+        fieldName: string
+        optionId: string
+        optionName: string
+      }>
     }>(renamedDetailResponse)
-    const renameTaskChangeIds = changedEvents.map((event) => event.taskIds)
+    const optionRenameEvents = changedEvents.map(({ resource, taskIds }) => ({
+      resource,
+      taskIds,
+    }))
     unsubscribe()
     const fieldRenameEvents: ChangeEvent[] = []
     const unsubscribeFieldRename = subscribeToChangeEvents((event) => {
@@ -364,15 +443,20 @@ describe('task field values API', () => {
       'PATCH',
       { name: 'Renamed Stage Map' },
     )
-    const fieldRenameTaskChangeIds = fieldRenameEvents.map(
-      (event) => event.taskIds,
+    const fieldRenameTaskEvents = fieldRenameEvents.map(
+      ({ resource, taskIds }) => ({ resource, taskIds }),
     )
     unsubscribeFieldRename()
     const fieldRenamedDetailResponse = await app.request(
       `/api/tasks/${created.id}`,
     )
     const fieldRenamedDetail = await jsonBody<{
-      fieldValues: Array<{ fieldName: string; optionName: string }>
+      fieldValues: Array<{
+        fieldId: string
+        fieldName: string
+        optionId: string
+        optionName: string
+      }>
     }>(fieldRenamedDetailResponse)
     const statusResponse = await requestJson(
       `/api/tasks/${created.id}/status`,
@@ -387,6 +471,80 @@ describe('task field values API', () => {
         optionName: string
       }>
     }>(statusResponse)
+
+    expect(
+      taskFieldValuesSnapshot({
+        statuses: [
+          createResponse.status,
+          renameOptionResponse.status,
+          renamedDetailResponse.status,
+          renameFieldResponse.status,
+          fieldRenamedDetailResponse.status,
+          statusResponse.status,
+        ],
+        renamedOption: renamedDetail.fieldValues,
+        renamedField: fieldRenamedDetail.fieldValues,
+        statusValues: statusTask.fieldValues,
+        events: {
+          optionRename: optionRenameEvents,
+          fieldRename: fieldRenameTaskEvents,
+        },
+      }),
+    ).toEqual({
+      statuses: [201, 200, 200, 200, 200, 200],
+      renamedOption: [
+        {
+          fieldId: sourceField.id,
+          fieldName: 'Stage Map',
+          optionId: sourceOption.id,
+          optionName: 'Renamed Span',
+        },
+      ],
+      renamedField: [
+        {
+          fieldId: sourceField.id,
+          fieldName: 'Renamed Stage Map',
+          optionId: sourceOption.id,
+          optionName: 'Renamed Span',
+        },
+      ],
+      statusValues: [
+        {
+          fieldId: sourceField.id,
+          fieldName: 'Renamed Stage Map',
+          optionId: sourceOption.id,
+          optionName: 'Renamed Span',
+        },
+      ],
+      events: {
+        optionRename: [{ resource: 'project', taskIds: [created.id] }],
+        fieldRename: [{ resource: 'project', taskIds: [created.id] }],
+      },
+    })
+  })
+
+  it('clears values on project changes and applies values from the destination project', async () => {
+    const sourceProject = await createProject('Sample Catalogue')
+    const destinationProject = await createProject('Sample Catalogue Two')
+    const sourceField = await createField(sourceProject.id, 'Stage Map', [
+      'First Span',
+    ])
+    const destinationField = await createField(
+      destinationProject.id,
+      'Stage Map',
+      ['Third Span'],
+    )
+    const sourceOption = sourceField.options[0]
+    const destinationOption = destinationField.options[0]
+    if (sourceOption == null || destinationOption == null) {
+      throw new Error('Test field options were not created')
+    }
+    const createResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Map a sample',
+      projectId: sourceProject.id,
+      fieldValues: { [sourceField.id]: sourceOption.id },
+    })
+    const created = await jsonBody<{ id: string }>(createResponse)
     const moveResponse = await requestJson(
       `/api/tasks/${created.id}`,
       'PATCH',
@@ -408,149 +566,22 @@ describe('task field values API', () => {
       fieldValues: unknown[]
       projectId: string | null
     }>(clearProjectResponse)
-    const clearedProject = {
-      projectId: clearProjectTask.projectId,
-      fieldValues: clearProjectTask.fieldValues,
-    }
-    const optionDeleteTaskResponse = await requestJson('/api/tasks', 'POST', {
-      title: 'Keep an option record',
-      projectId: sourceProject.id,
-      fieldValues: { [sourceField.id]: secondSourceOption.id },
-    })
-    const optionDeleteTask = await jsonBody<{ id: string }>(
-      optionDeleteTaskResponse,
-    )
-    const optionDeleteEvents: ChangeEvent[] = []
-    const unsubscribeOptionDelete = subscribeToChangeEvents((event) => {
-      optionDeleteEvents.push(event)
-    })
-    const deleteOptionResponse = await app.request(
-      `/api/projects/${sourceProject.id}/fields/${sourceField.id}/options/${secondSourceOption.id}`,
-      { method: 'DELETE' },
-    )
-    const optionDeleteTaskChangeIds = optionDeleteEvents.map(
-      (event) => event.taskIds,
-    )
-    unsubscribeOptionDelete()
-    const optionDeleteDetailResponse = await app.request(
-      `/api/tasks/${optionDeleteTask.id}`,
-    )
-    const optionDeleteDetail = await jsonBody<{
-      fieldValues: unknown[]
-    }>(optionDeleteDetailResponse)
-    const sourceFieldDeleteTaskResponse = await requestJson(
-      '/api/tasks',
-      'POST',
-      {
-        title: 'Keep an unassigned record',
-        projectId: sourceProject.id,
-        fieldValues: { [sourceField.id]: sourceOption.id },
-      },
-    )
-    const fieldDeleteTask = await jsonBody<{ id: string }>(
-      sourceFieldDeleteTaskResponse,
-    )
-    const fieldDeleteEvents: ChangeEvent[] = []
-    const unsubscribeFieldDelete = subscribeToChangeEvents((event) => {
-      fieldDeleteEvents.push(event)
-    })
-    const sourceFieldDeleteResponse = await app.request(
-      `/api/projects/${sourceProject.id}/fields/${sourceField.id}`,
-      { method: 'DELETE' },
-    )
-    const fieldDeleteTaskChangeIds = fieldDeleteEvents.map(
-      (event) => event.taskIds,
-    )
-    unsubscribeFieldDelete()
-    const sourceFieldDeleteDetailResponse = await app.request(
-      `/api/tasks/${fieldDeleteTask.id}`,
-    )
-    const projectDeleteTaskResponse = await requestJson('/api/tasks', 'POST', {
-      title: 'Keep a project record',
-      projectId: destinationProject.id,
-      fieldValues: { [destinationField.id]: destinationOption.id },
-    })
-    const projectDeleteTask = await jsonBody<{ id: string }>(
-      projectDeleteTaskResponse,
-    )
-    const deleteProjectResponse = await app.request(
-      `/api/projects/${destinationProject.id}`,
-      { method: 'DELETE' },
-    )
-    const afterProjectDeleteResponse = await app.request(
-      `/api/tasks/${projectDeleteTask.id}`,
-    )
-    const afterProjectDelete = await jsonBody<{
-      projectId: string | null
-      fieldValues: unknown[]
-    }>(afterProjectDeleteResponse)
-    const afterProjectDeleteValues = {
-      projectId: afterProjectDelete.projectId,
-      fieldValues: afterProjectDelete.fieldValues,
-    }
-
-    const fieldDeleteDetail = await jsonBody<{ fieldValues: unknown[] }>(
-      sourceFieldDeleteDetailResponse,
-    )
     expect(
       taskFieldValuesSnapshot({
         statuses: [
           createResponse.status,
-          renameOptionResponse.status,
-          renamedDetailResponse.status,
-          renameFieldResponse.status,
-          fieldRenamedDetailResponse.status,
           moveResponse.status,
           clearProjectResponse.status,
-          sourceFieldDeleteTaskResponse.status,
-          optionDeleteTaskResponse.status,
-          deleteOptionResponse.status,
-          optionDeleteDetailResponse.status,
-          sourceFieldDeleteResponse.status,
-          sourceFieldDeleteDetailResponse.status,
-          statusResponse.status,
-          projectDeleteTaskResponse.status,
-          deleteProjectResponse.status,
-          afterProjectDeleteResponse.status,
         ],
-        renamedOptionName: renamedDetail.fieldValues[0]?.optionName,
-        renamedFieldValue: fieldRenamedDetail.fieldValues,
-        statusValues: statusTask.fieldValues,
         movedProjectId: moved.projectId,
         movedValues: moved.fieldValues,
-        clearedProject,
-        fieldDeleteValues: fieldDeleteDetail.fieldValues,
-        optionDeleteValues: optionDeleteDetail.fieldValues,
-        afterProjectDelete: afterProjectDeleteValues,
-        taskChangeIds: {
-          optionRename: renameTaskChangeIds,
-          fieldRename: fieldRenameTaskChangeIds,
-          optionDelete: optionDeleteTaskChangeIds,
-          fieldDelete: fieldDeleteTaskChangeIds,
+        clearedProject: {
+          projectId: clearProjectTask.projectId,
+          fieldValues: clearProjectTask.fieldValues,
         },
       }),
     ).toEqual({
-      statuses: [
-        201, 200, 200, 200, 200, 200, 200, 201, 201, 204, 200, 204, 200, 200,
-        201, 204, 200,
-      ],
-      renamedOptionName: 'Renamed Span',
-      renamedFieldValue: [
-        {
-          fieldId: sourceField.id,
-          fieldName: 'Renamed Stage Map',
-          optionId: sourceOption.id,
-          optionName: 'Renamed Span',
-        },
-      ],
-      statusValues: [
-        {
-          fieldId: sourceField.id,
-          fieldName: 'Renamed Stage Map',
-          optionId: sourceOption.id,
-          optionName: 'Renamed Span',
-        },
-      ],
+      statuses: [201, 200, 200],
       movedProjectId: destinationProject.id,
       movedValues: [
         {
@@ -561,15 +592,131 @@ describe('task field values API', () => {
         },
       ],
       clearedProject: { projectId: null, fieldValues: [] },
-      fieldDeleteValues: [],
-      optionDeleteValues: [],
-      afterProjectDelete: { projectId: null, fieldValues: [] },
-      taskChangeIds: {
-        optionRename: [[created.id]],
-        fieldRename: [[created.id]],
-        optionDelete: [[optionDeleteTask.id]],
-        fieldDelete: [[fieldDeleteTask.id]],
-      },
+    })
+  })
+
+  it('clears the selected value and notifies its task when an option is deleted', async () => {
+    const project = await createProject('Sample Observatory')
+    const field = await createField(project.id, 'Signal Phase', ['Early Arc'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+    const createResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { [field.id]: option.id },
+    })
+    const created = await jsonBody<{ id: string }>(createResponse)
+    const changedEvents: ChangeEvent[] = []
+    const unsubscribe = subscribeToChangeEvents((event) => {
+      changedEvents.push(event)
+    })
+    const deleteResponse = await app.request(
+      `/api/projects/${project.id}/fields/${field.id}/options/${option.id}`,
+      { method: 'DELETE' },
+    )
+    const detailResponse = await app.request(`/api/tasks/${created.id}`)
+    const detail = await jsonBody<{ fieldValues: unknown[] }>(detailResponse)
+    const events = changedEvents.map(({ resource, taskIds }) => ({
+      resource,
+      taskIds,
+    }))
+    unsubscribe()
+
+    expect(
+      taskFieldValuesSnapshot({
+        statuses: [
+          createResponse.status,
+          deleteResponse.status,
+          detailResponse.status,
+        ],
+        fieldValues: detail.fieldValues,
+        events,
+      }),
+    ).toEqual({
+      statuses: [201, 204, 200],
+      fieldValues: [],
+      events: [{ resource: 'project', taskIds: [created.id] }],
+    })
+  })
+
+  it('clears all values and notifies their tasks when a field is deleted', async () => {
+    const project = await createProject('Sample Observatory')
+    const field = await createField(project.id, 'Signal Phase', ['Early Arc'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+    const createResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { [field.id]: option.id },
+    })
+    const created = await jsonBody<{ id: string }>(createResponse)
+    const changedEvents: ChangeEvent[] = []
+    const unsubscribe = subscribeToChangeEvents((event) => {
+      changedEvents.push(event)
+    })
+    const deleteResponse = await app.request(
+      `/api/projects/${project.id}/fields/${field.id}`,
+      { method: 'DELETE' },
+    )
+    const detailResponse = await app.request(`/api/tasks/${created.id}`)
+    const detail = await jsonBody<{ fieldValues: unknown[] }>(detailResponse)
+    const events = changedEvents.map(({ resource, taskIds }) => ({
+      resource,
+      taskIds,
+    }))
+    unsubscribe()
+
+    expect(
+      taskFieldValuesSnapshot({
+        statuses: [
+          createResponse.status,
+          deleteResponse.status,
+          detailResponse.status,
+        ],
+        fieldValues: detail.fieldValues,
+        events,
+      }),
+    ).toEqual({
+      statuses: [201, 204, 200],
+      fieldValues: [],
+      events: [{ resource: 'project', taskIds: [created.id] }],
+    })
+  })
+
+  it('keeps the task without its project or values when the project is deleted', async () => {
+    const project = await createProject('Sample Observatory')
+    const field = await createField(project.id, 'Signal Phase', ['Early Arc'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+    const createResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { [field.id]: option.id },
+    })
+    const created = await jsonBody<{ id: string }>(createResponse)
+    const deleteResponse = await app.request(`/api/projects/${project.id}`, {
+      method: 'DELETE',
+    })
+    const detailResponse = await app.request(`/api/tasks/${created.id}`)
+    const detail = await jsonBody<{
+      projectId: string | null
+      fieldValues: unknown[]
+    }>(detailResponse)
+
+    expect(
+      taskFieldValuesSnapshot({
+        statuses: [
+          createResponse.status,
+          deleteResponse.status,
+          detailResponse.status,
+        ],
+        projectId: detail.projectId,
+        fieldValues: detail.fieldValues,
+      }),
+    ).toEqual({
+      statuses: [201, 204, 200],
+      projectId: null,
+      fieldValues: [],
     })
   })
 })

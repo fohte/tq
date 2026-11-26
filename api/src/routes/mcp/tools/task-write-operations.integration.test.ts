@@ -166,7 +166,7 @@ describe('task_create tool', () => {
           propertyNames: { minLength: 1, type: 'string' },
           type: 'object',
           description:
-            'Project custom field values keyed by field id or name, with option id or name as values. Use null to clear a field.',
+            'Project custom field values keyed by a non-empty field id or name, with option id or name as values. Use null to clear a field.',
         },
         recurrenceRule: {
           type: 'object',
