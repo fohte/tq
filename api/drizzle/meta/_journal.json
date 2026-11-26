@@ -498,6 +498,13 @@
       "when": 1793777535606,
       "tag": "0070_living_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795699554633,
+      "tag": "0071_milky_wither",
+      "breakpoints": true
     }
   ]
 }

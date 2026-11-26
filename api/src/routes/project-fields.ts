@@ -1,0 +1,319 @@
+import { zValidator } from '@hono/zod-validator'
+import { and, asc, eq, inArray } from 'drizzle-orm'
+import { Hono } from 'hono'
+
+import { db } from '#db/connection'
+import { projectFieldOptions, projectFields, projects } from '#db/schema'
+import {
+  createProjectFieldOptionSchema,
+  createProjectFieldSchema,
+  projectFieldOptionParamSchema,
+  projectFieldParamSchema,
+  projectIdParamSchema,
+  updateProjectFieldOptionSchema,
+  updateProjectFieldSchema,
+} from '#schemas/project-field'
+
+function optionToResponse(option: typeof projectFieldOptions.$inferSelect) {
+  return { id: option.id, name: option.name }
+}
+
+async function fieldToResponse(
+  field: typeof projectFields.$inferSelect,
+  query: typeof db,
+) {
+  const options = await query
+    .select()
+    .from(projectFieldOptions)
+    .where(eq(projectFieldOptions.fieldId, field.id))
+    .orderBy(asc(projectFieldOptions.id))
+
+  return {
+    id: field.id,
+    projectId: field.projectId,
+    name: field.name,
+    type: field.type,
+    options: options.map(optionToResponse),
+    createdAt: field.createdAt.toISOString(),
+    updatedAt: field.updatedAt.toISOString(),
+  }
+}
+
+async function findField(projectId: string, fieldId: string) {
+  const [field] = await db
+    .select()
+    .from(projectFields)
+    .where(
+      and(
+        eq(projectFields.projectId, projectId),
+        eq(projectFields.id, fieldId),
+      ),
+    )
+    .limit(1)
+  return field
+}
+
+export const projectFieldsApp = new Hono()
+  .get('/', zValidator('param', projectIdParamSchema), async (c) => {
+    const { projectId } = c.req.valid('param')
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1)
+    if (!project) return c.json({ error: 'Project not found' }, 404)
+
+    const fields = await db
+      .select()
+      .from(projectFields)
+      .where(eq(projectFields.projectId, projectId))
+      .orderBy(asc(projectFields.id))
+    const options =
+      fields.length === 0
+        ? []
+        : await db
+            .select()
+            .from(projectFieldOptions)
+            .where(
+              inArray(
+                projectFieldOptions.fieldId,
+                fields.map((field) => field.id),
+              ),
+            )
+            .orderBy(asc(projectFieldOptions.id))
+    const optionsByField = options.reduce<
+      Map<string, (typeof options)[number][]>
+    >((groups, option) => {
+      const fieldOptions = groups.get(option.fieldId) ?? []
+      fieldOptions.push(option)
+      groups.set(option.fieldId, fieldOptions)
+      return groups
+    }, new Map())
+
+    return c.json(
+      fields.map((field) => ({
+        id: field.id,
+        projectId: field.projectId,
+        name: field.name,
+        type: field.type,
+        options: (optionsByField.get(field.id) ?? []).map(optionToResponse),
+        createdAt: field.createdAt.toISOString(),
+        updatedAt: field.updatedAt.toISOString(),
+      })),
+      200,
+    )
+  })
+  .post(
+    '/',
+    zValidator('param', projectIdParamSchema),
+    zValidator('json', createProjectFieldSchema),
+    async (c) => {
+      const { projectId } = c.req.valid('param')
+      const input = c.req.valid('json')
+      const optionNames = input.options ?? []
+      if (new Set(optionNames).size !== optionNames.length) {
+        return c.json({ error: 'An option with this name already exists' }, 409)
+      }
+
+      const result = await db.transaction(async (tx) => {
+        const [project] = await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(eq(projects.id, projectId))
+          .limit(1)
+        if (!project) return { kind: 'not-found' as const }
+
+        const [field] = await tx
+          .insert(projectFields)
+          .values({
+            projectId,
+            name: input.name,
+            type: input.type ?? 'single_select',
+          })
+          .onConflictDoNothing({
+            target: [projectFields.projectId, projectFields.name],
+          })
+          .returning()
+        if (!field) return { kind: 'conflict' as const }
+
+        if (optionNames.length > 0) {
+          await tx
+            .insert(projectFieldOptions)
+            .values(optionNames.map((name) => ({ fieldId: field.id, name })))
+        }
+        return { kind: 'created' as const, fieldId: field.id }
+      })
+
+      if (result.kind === 'not-found') {
+        return c.json({ error: 'Project not found' }, 404)
+      }
+      if (result.kind === 'conflict') {
+        return c.json({ error: 'A field with this name already exists' }, 409)
+      }
+
+      const field = await findField(projectId, result.fieldId)
+      if (!field) return c.json({ error: 'Field not found' }, 404)
+      return c.json(await fieldToResponse(field, db), 201)
+    },
+  )
+  .patch(
+    '/:fieldId',
+    zValidator('param', projectFieldParamSchema),
+    zValidator('json', updateProjectFieldSchema),
+    async (c) => {
+      const { projectId, fieldId } = c.req.valid('param')
+      const input = c.req.valid('json')
+      const existing = await findField(projectId, fieldId)
+      if (!existing) return c.json({ error: 'Field not found' }, 404)
+
+      if (input.name !== existing.name) {
+        const [conflicting] = await db
+          .select({ id: projectFields.id })
+          .from(projectFields)
+          .where(
+            and(
+              eq(projectFields.projectId, projectId),
+              eq(projectFields.name, input.name),
+            ),
+          )
+          .limit(1)
+        if (conflicting) {
+          return c.json({ error: 'A field with this name already exists' }, 409)
+        }
+      }
+
+      const [updated] = await db
+        .update(projectFields)
+        .set({ name: input.name, updatedAt: new Date() })
+        .where(
+          and(
+            eq(projectFields.projectId, projectId),
+            eq(projectFields.id, fieldId),
+          ),
+        )
+        .returning()
+      if (!updated) return c.json({ error: 'Field not found' }, 404)
+      return c.json(await fieldToResponse(updated, db), 200)
+    },
+  )
+  .delete(
+    '/:fieldId',
+    zValidator('param', projectFieldParamSchema),
+    async (c) => {
+      const { projectId, fieldId } = c.req.valid('param')
+      const existing = await findField(projectId, fieldId)
+      if (!existing) return c.json({ error: 'Field not found' }, 404)
+
+      await db
+        .delete(projectFields)
+        .where(
+          and(
+            eq(projectFields.projectId, projectId),
+            eq(projectFields.id, fieldId),
+          ),
+        )
+      return c.body(null, 204)
+    },
+  )
+  .post(
+    '/:fieldId/options',
+    zValidator('param', projectFieldParamSchema),
+    zValidator('json', createProjectFieldOptionSchema),
+    async (c) => {
+      const { projectId, fieldId } = c.req.valid('param')
+      const input = c.req.valid('json')
+      if (!(await findField(projectId, fieldId))) {
+        return c.json({ error: 'Field not found' }, 404)
+      }
+
+      const [created] = await db
+        .insert(projectFieldOptions)
+        .values({ fieldId, name: input.name })
+        .onConflictDoNothing({
+          target: [projectFieldOptions.fieldId, projectFieldOptions.name],
+        })
+        .returning()
+      if (!created) {
+        return c.json({ error: 'An option with this name already exists' }, 409)
+      }
+      return c.json(optionToResponse(created), 201)
+    },
+  )
+  .patch(
+    '/:fieldId/options/:optionId',
+    zValidator('param', projectFieldOptionParamSchema),
+    zValidator('json', updateProjectFieldOptionSchema),
+    async (c) => {
+      const { projectId, fieldId, optionId } = c.req.valid('param')
+      const input = c.req.valid('json')
+      if (!(await findField(projectId, fieldId))) {
+        return c.json({ error: 'Field not found' }, 404)
+      }
+
+      const [existing] = await db
+        .select()
+        .from(projectFieldOptions)
+        .where(
+          and(
+            eq(projectFieldOptions.fieldId, fieldId),
+            eq(projectFieldOptions.id, optionId),
+          ),
+        )
+        .limit(1)
+      if (!existing) return c.json({ error: 'Option not found' }, 404)
+
+      if (input.name !== existing.name) {
+        const [conflicting] = await db
+          .select({ id: projectFieldOptions.id })
+          .from(projectFieldOptions)
+          .where(
+            and(
+              eq(projectFieldOptions.fieldId, fieldId),
+              eq(projectFieldOptions.name, input.name),
+            ),
+          )
+          .limit(1)
+        if (conflicting) {
+          return c.json(
+            { error: 'An option with this name already exists' },
+            409,
+          )
+        }
+      }
+
+      const [updated] = await db
+        .update(projectFieldOptions)
+        .set({ name: input.name, updatedAt: new Date() })
+        .where(
+          and(
+            eq(projectFieldOptions.fieldId, fieldId),
+            eq(projectFieldOptions.id, optionId),
+          ),
+        )
+        .returning()
+      if (!updated) return c.json({ error: 'Option not found' }, 404)
+      return c.json(optionToResponse(updated), 200)
+    },
+  )
+  .delete(
+    '/:fieldId/options/:optionId',
+    zValidator('param', projectFieldOptionParamSchema),
+    async (c) => {
+      const { projectId, fieldId, optionId } = c.req.valid('param')
+      if (!(await findField(projectId, fieldId))) {
+        return c.json({ error: 'Field not found' }, 404)
+      }
+
+      const [deleted] = await db
+        .delete(projectFieldOptions)
+        .where(
+          and(
+            eq(projectFieldOptions.fieldId, fieldId),
+            eq(projectFieldOptions.id, optionId),
+          ),
+        )
+        .returning({ id: projectFieldOptions.id })
+      if (!deleted) return c.json({ error: 'Option not found' }, 404)
+      return c.body(null, 204)
+    },
+  )
