@@ -4170,39 +4170,10 @@ describe('schedule overrides API', () => {
       body: { skipped: true, date: '2026-03-23' },
       issues: [
         {
-          code: 'invalid_union',
-          errors: [
-            [
-              {
-                code: 'unrecognized_keys',
-                keys: ['date'],
-                path: [],
-                message: 'Unrecognized key: "date"',
-              },
-            ],
-            [
-              {
-                expected: 'string',
-                code: 'invalid_type',
-                path: ['startTime'],
-                message: 'Invalid input: expected string, received undefined',
-              },
-              {
-                expected: 'string',
-                code: 'invalid_type',
-                path: ['endTime'],
-                message: 'Invalid input: expected string, received undefined',
-              },
-              {
-                code: 'invalid_value',
-                values: [false],
-                path: ['skipped'],
-                message: 'Invalid input: expected false',
-              },
-            ],
-          ],
+          code: 'unrecognized_keys',
+          keys: ['date'],
           path: [],
-          message: 'Invalid input',
+          message: 'Unrecognized key: "date"',
         },
       ],
     },
