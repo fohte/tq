@@ -7,9 +7,8 @@ import {
   requestNoContent,
 } from '#operations/types'
 import {
-  createProjectFieldOptionSchema,
   createProjectFieldSchema,
-  updateProjectFieldOptionSchema,
+  projectFieldOptionNameSchema,
   updateProjectFieldSchema,
 } from '#schemas/project-field'
 
@@ -31,10 +30,12 @@ const updateProjectFieldInputSchema = updateProjectFieldSchema.extend({
   projectId,
   fieldId,
 })
-const createProjectFieldOptionInputSchema =
-  createProjectFieldOptionSchema.extend({ projectId, fieldId })
-const updateProjectFieldOptionInputSchema =
-  updateProjectFieldOptionSchema.extend({ projectId, fieldId, optionId })
+const createProjectFieldOptionInputSchema = projectFieldOptionNameSchema.extend(
+  { projectId, fieldId },
+)
+const updateProjectFieldOptionInputSchema = projectFieldOptionNameSchema.extend(
+  { projectId, fieldId, optionId },
+)
 
 export const projectFieldOperations = [
   defineOperation(projectFieldsInputSchema, {

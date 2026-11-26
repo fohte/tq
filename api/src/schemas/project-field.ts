@@ -17,7 +17,6 @@ export const createProjectFieldSchema = z.object({
 })
 
 export const updateProjectFieldSchema = z.object({ name: fieldNameSchema })
-export const createProjectFieldOptionSchema = z.object({
+export const projectFieldOptionNameSchema = z.object({
   name: fieldNameSchema,
 })
-export const updateProjectFieldOptionSchema = createProjectFieldOptionSchema

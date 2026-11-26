@@ -5,12 +5,11 @@ import { Hono } from 'hono'
 import { db } from '#db/connection'
 import { projectFieldOptions, projectFields, projects } from '#db/schema'
 import {
-  createProjectFieldOptionSchema,
   createProjectFieldSchema,
+  projectFieldOptionNameSchema,
   projectFieldOptionParamSchema,
   projectFieldParamSchema,
   projectIdParamSchema,
-  updateProjectFieldOptionSchema,
   updateProjectFieldSchema,
 } from '#schemas/project-field'
 
@@ -246,7 +245,7 @@ export const projectFieldsApp = new Hono()
   .post(
     '/:fieldId/options',
     zValidator('param', projectFieldParamSchema),
-    zValidator('json', createProjectFieldOptionSchema),
+    zValidator('json', projectFieldOptionNameSchema),
     async (c) => {
       const { projectId, fieldId } = c.req.valid('param')
       const input = c.req.valid('json')
@@ -288,7 +287,7 @@ export const projectFieldsApp = new Hono()
   .patch(
     '/:fieldId/options/:optionId',
     zValidator('param', projectFieldOptionParamSchema),
-    zValidator('json', updateProjectFieldOptionSchema),
+    zValidator('json', projectFieldOptionNameSchema),
     async (c) => {
       const { projectId, fieldId, optionId } = c.req.valid('param')
       const input = c.req.valid('json')
