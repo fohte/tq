@@ -8,8 +8,8 @@ import {
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { makeProjectField } from '#components/project/project-field-test-fixtures'
 import { ProjectFieldsManagerDialog } from '#components/project/project-fields-manager-dialog'
+import { makeProjectField } from '#components/project/project-test-fixtures'
 
 function renderDialog(
   overrides: Partial<
@@ -207,6 +207,76 @@ describe('ProjectFieldsManagerDialog', () => {
       pendingState: { field: true, option: true },
       idleState: { field: false, option: false },
       createCalls: [['OtherCategory']],
+    })
+  })
+
+  it('resets form and error state when reopened', async () => {
+    const user = userEvent.setup()
+    const onCreateField = vi.fn(() =>
+      Promise.reject(
+        new Error('このプロジェクトには同じ名前のフィールドがあります'),
+      ),
+    )
+    const props: React.ComponentProps<typeof ProjectFieldsManagerDialog> = {
+      open: true,
+      onOpenChange: vi.fn(),
+      fields: [makeProjectField()],
+      initialEditingFieldId: 'field-a',
+      initialEditingOption: { fieldId: 'field-a', optionId: 'option-a' },
+      onCreateField,
+      onRenameField: vi.fn(async () => {}),
+      onDeleteField: vi.fn(async () => {}),
+      onCreateOption: vi.fn(async () => {}),
+      onRenameOption: vi.fn(async () => {}),
+      onDeleteOption: vi.fn(async () => {}),
+    }
+    const { rerender } = render(<ProjectFieldsManagerDialog {...props} />)
+
+    fireEvent.change(screen.getByLabelText('新しいフィールド名'), {
+      target: { value: 'DuplicateCategory' },
+    })
+    fireEvent.change(screen.getByLabelText('SampleCategoryの新しい選択肢'), {
+      target: { value: 'UnsavedOption' },
+    })
+    await user.click(
+      inputForm('新しいフィールド名').getByRole('button', { name: '追加' }),
+    )
+    await screen.findByRole('alert')
+
+    rerender(<ProjectFieldsManagerDialog {...props} open={false} />)
+    rerender(<ProjectFieldsManagerDialog {...props} open />)
+    await waitFor(() => {
+      if (screen.queryByRole('alert') != null) {
+        throw new Error('The previous error is still visible')
+      }
+      if (screen.queryByLabelText('フィールド名を変更') != null) {
+        throw new Error('The previous field editor is still open')
+      }
+      if (screen.queryByLabelText('選択肢名を変更') != null) {
+        throw new Error('The previous option editor is still open')
+      }
+    })
+
+    const result = () => ({
+      error: screen.queryByRole('alert')?.textContent ?? null,
+      newFieldName:
+        screen.getByLabelText<HTMLInputElement>('新しいフィールド名').value,
+      newOptionName: screen.getByLabelText<HTMLInputElement>(
+        'SampleCategoryの新しい選択肢',
+      ).value,
+      editingField:
+        screen.queryByLabelText<HTMLInputElement>('フィールド名を変更')
+          ?.value ?? null,
+      editingOption:
+        screen.queryByLabelText<HTMLInputElement>('選択肢名を変更')?.value ??
+        null,
+    })
+    expect(result()).toEqual({
+      error: null,
+      newFieldName: '',
+      newOptionName: '',
+      editingField: null,
+      editingOption: null,
     })
   })
 

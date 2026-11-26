@@ -1,14 +1,10 @@
 import { fireEvent, render, waitFor, within } from '@testing-library/react'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { MarkdownEditor } from '#components/ui/markdown-editor'
 import { assertDefined } from '#lib/test-utils'
 
 const HOVER_TARGET_TEXT = 'Hover this paragraph to reveal its block handle.'
-
-beforeAll(async () => {
-  await import('#components/ui/markdown-editor-crepe')
-}, 20_000)
 
 // BlockProvider binds its hover listener asynchronously and throttles
 // pointermove; wait for the handle before hovering.

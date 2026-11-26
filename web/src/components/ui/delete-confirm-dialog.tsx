@@ -14,7 +14,6 @@ export function DeleteConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
-  confirmDisabled = false,
   onConfirm,
   open,
   onOpenChange,
@@ -23,7 +22,6 @@ export function DeleteConfirmDialog({
   title: string
   description: string
   confirmLabel?: string
-  confirmDisabled?: boolean
   onConfirm: () => void
   open?: boolean | undefined
   onOpenChange?: ((open: boolean) => void) | undefined
@@ -44,7 +42,7 @@ export function DeleteConfirmDialog({
             Cancel
           </DialogClose>
           <DialogClose
-            render={<Button variant="destructive" disabled={confirmDisabled} />}
+            render={<Button variant="destructive" />}
             onClick={onConfirm}
           >
             {confirmLabel}

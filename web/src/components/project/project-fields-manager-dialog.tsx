@@ -8,7 +8,7 @@ import {
 } from '@fohte/ui/dialog'
 import { Input } from '@fohte/ui/input'
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { type SyntheticEvent, useState } from 'react'
+import { type SyntheticEvent, useEffect, useRef, useState } from 'react'
 
 import { DeleteConfirmDialog } from '#components/ui/delete-confirm-dialog'
 import type { ProjectField } from '#hooks/use-project-fields'
@@ -85,6 +85,19 @@ export function ProjectFieldsManagerDialog({
   )
   const [errorMessage, setErrorMessage] = useState(initialErrorMessage ?? '')
   const [pendingAction, setPendingAction] = useState(false)
+  const wasOpen = useRef(open)
+
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setNewFieldName('')
+      setNewOptionNames({})
+      setEditingField(null)
+      setEditingOption(null)
+      setDeleteTarget(null)
+      setErrorMessage('')
+    }
+    wasOpen.current = open
+  }, [open])
 
   const runAction = async (action: () => Promise<void>) => {
     if (pendingAction) return
@@ -432,7 +445,6 @@ export function ProjectFieldsManagerDialog({
         }
         description={deleteDescription}
         confirmLabel="削除"
-        confirmDisabled={pendingAction}
         onConfirm={handleDelete}
       />
     </>

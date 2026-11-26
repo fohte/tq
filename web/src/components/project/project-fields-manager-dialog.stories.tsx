@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
-import { makeProjectField } from '#components/project/project-field-test-fixtures'
 import { ProjectFieldsManagerDialog } from '#components/project/project-fields-manager-dialog'
+import { makeProjectField } from '#components/project/project-test-fixtures'
 
 const fields = [makeProjectField()]
 
