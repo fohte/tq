@@ -1,6 +1,5 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
@@ -121,11 +120,7 @@ describe('MCP endpoint', () => {
         fetch: async (url, init) => app.request(url, init),
       },
     )
-    // `Transport.sessionId` is `sessionId?: string`, which `exactOptionalPropertyTypes`
-    // treats as excluding `undefined`; this class's getter returns `string | undefined`,
-    // so the SDK's own types don't satisfy its interface under this tsconfig.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- see comment above
-    await client.connect(transport as Transport)
+    await client.connect(transport)
 
     try {
       const result = await client.listTools()
