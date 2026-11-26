@@ -44,3 +44,5 @@ minimumReleaseAgeExclude:
   - '@storybook/addon-vitest@10.6.2'
   # Renovate security update: @modelcontextprotocol/server@2.3.0
   - '@modelcontextprotocol/server@2.3.0'
+  # Renovate security update: zod@4.6.6
+  - zod@4.6.6
