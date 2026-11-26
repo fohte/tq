@@ -13,6 +13,7 @@ import {
   formatDate,
   getDaysRemaining,
 } from '#components/project/project-detail-utils'
+import { ProjectFieldsManager } from '#components/project/project-fields-manager'
 import { statusLabels } from '#components/project/project-status-badge'
 import { contextLabels } from '#components/task/create-task-modal-fields'
 import { DetailSidebarPanel } from '#components/ui/detail-sidebar-panel'
@@ -52,6 +53,7 @@ export function ProjectSidebar({ project }: { project: ProjectDetail }) {
       <ProjectSidebarField label="COLOR">
         <ColorSwatches projectId={project.id} color={project.color} />
       </ProjectSidebarField>
+      <ProjectFieldsManager projectId={project.id} />
       {project.targetDate != null && (
         <>
           <div className="border-t border-border" />
@@ -102,6 +104,7 @@ export function ProjectSidebarMobile({ project }: { project: ProjectDetail }) {
         <ProjectFieldRow label="COLOR">
           <ColorSwatches projectId={project.id} color={project.color} />
         </ProjectFieldRow>
+        <ProjectFieldsManager projectId={project.id} mobileLayout />
       </div>
       {project.targetDate != null && (
         <>

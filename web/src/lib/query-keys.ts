@@ -42,6 +42,7 @@ export const projectKeys = {
   lists: ['projects', 'list'] as const,
   list: (filter: ProjectFilter) => [...projectKeys.lists, filter] as const,
   detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
+  fields: (id: string) => [...projectKeys.detail(id), 'fields'] as const,
   taskIds: (id: string) => [...projectKeys.detail(id), 'task-ids'] as const,
 }
 
