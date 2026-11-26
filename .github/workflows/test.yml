@@ -157,7 +157,7 @@ jobs:
 
       - name: Install Playwright system dependencies
         if: matrix.package == 'web'
-        uses: fohte/storybook-vrt-workflows/apt-install@1752f73f6fe39a5f83ca7208a95b32e600e3813c # v0.2.3
+        uses: fohte/storybook-vrt-workflows/apt-install@39639ff752f7fc8b2e2ae4be350e3e6c67435ba9 # v0.2.4
         with:
           key: playwright-deps
           cache-key-suffix: ${{ steps.playwright-version.outputs.version }}
