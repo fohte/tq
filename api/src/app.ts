@@ -19,6 +19,7 @@ import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { memosApp } from '#routes/memos'
 import { prioritySettingsApp } from '#routes/priority-settings'
+import { projectFieldsApp } from '#routes/project-fields'
 import { projectsApp } from '#routes/projects'
 import { pushApp } from '#routes/push'
 import { queuesApp } from '#routes/queues'
@@ -80,6 +81,7 @@ const app = new Hono()
   .route('/api/tasks/:taskId/github-link', taskGithubLinkApp)
   .route('/api/tasks/:taskId/agent-sessions', taskAgentSessionsApp)
   .route('/api/projects', projectsApp)
+  .route('/api/projects/:projectId/fields', projectFieldsApp)
   .route('/api/push', pushApp)
   .route('/api/queues', queuesApp)
   .route('/api/recurring-task-templates', recurringTaskTemplatesApp)

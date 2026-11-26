@@ -94,6 +94,31 @@ describe('project operation tools', () => {
         name: 'project_delete',
         annotations: { readOnlyHint: false, destructiveHint: true },
       },
+      {
+        name: 'project_field_create',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
+        name: 'project_field_delete',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      { name: 'project_field_list', annotations: { readOnlyHint: true } },
+      {
+        name: 'project_field_option_create',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
+        name: 'project_field_option_delete',
+        annotations: { readOnlyHint: false, destructiveHint: true },
+      },
+      {
+        name: 'project_field_option_update',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
+      {
+        name: 'project_field_update',
+        annotations: { readOnlyHint: false, destructiveHint: false },
+      },
       { name: 'project_get', annotations: { readOnlyHint: true } },
       { name: 'project_list', annotations: { readOnlyHint: true } },
       { name: 'project_tasks', annotations: { readOnlyHint: true } },

@@ -12,6 +12,7 @@ import { memoOperations } from '#operations/memo'
 import { pageOperations } from '#operations/page'
 import { prioritySettingsOperations } from '#operations/priority-settings'
 import { projectOperations } from '#operations/project'
+import { projectFieldOperations } from '#operations/project-field'
 import { queueOperations } from '#operations/queue'
 import { recurringTemplateOperations } from '#operations/recurring-template'
 import { savedViewOperations } from '#operations/saved-view'
@@ -38,6 +39,7 @@ export {
   memoOperations,
   pageOperations,
   prioritySettingsOperations,
+  projectFieldOperations,
   projectOperations,
   queueOperations,
   recurringTemplateOperations,
@@ -66,6 +68,7 @@ export const operations = [
   ...pageOperations,
   ...prioritySettingsOperations,
   ...projectOperations,
+  ...projectFieldOperations,
   ...queueOperations,
   ...recurringTemplateOperations,
   ...savedViewOperations,

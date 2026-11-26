@@ -6,19 +6,19 @@ Projects group related tasks and track planning status and dates.
 
 ## Columns
 
-| Name        | Type                     | Default          | Nullable | Children                                                                                                                                                      | Parents | Comment                                                           |
-| ----------- | ------------------------ | ---------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------- |
-| id          | text                     |                  | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) [public.recurring_task_templates](public.recurring_task_templates.md) |         |                                                                   |
-| title       | text                     |                  | false    |                                                                                                                                                               |         | Human-readable project title.                                     |
-| description | text                     |                  | true     |                                                                                                                                                               |         | Optional description of the project.                              |
-| status      | text                     | 'active'::text   | false    |                                                                                                                                                               |         | Project lifecycle status: active, paused, completed, or archived. |
-| start_date  | date                     |                  | true     |                                                                                                                                                               |         | Planned start date for the project.                               |
-| target_date | date                     |                  | true     |                                                                                                                                                               |         | Target completion date for the project.                           |
-| color       | text                     |                  | true     |                                                                                                                                                               |         | Optional color value associated with the project.                 |
-| sort_order  | integer                  | 0                | false    |                                                                                                                                                               |         | Position used to order projects.                                  |
-| created_at  | timestamp with time zone | now()            | false    |                                                                                                                                                               |         |                                                                   |
-| updated_at  | timestamp with time zone | now()            | false    |                                                                                                                                                               |         |                                                                   |
-| context     | text                     | 'personal'::text | false    |                                                                                                                                                               |         | Whether the project belongs to the work or personal context.      |
+| Name        | Type                     | Default          | Nullable | Children                                                                                                                                                                                                        | Parents | Comment                                                           |
+| ----------- | ------------------------ | ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------- |
+| id          | text                     |                  | false    | [public.tasks](public.tasks.md) [public.github_sync_rules](public.github_sync_rules.md) [public.recurring_task_templates](public.recurring_task_templates.md) [public.project_fields](public.project_fields.md) |         |                                                                   |
+| title       | text                     |                  | false    |                                                                                                                                                                                                                 |         | Human-readable project title.                                     |
+| description | text                     |                  | true     |                                                                                                                                                                                                                 |         | Optional description of the project.                              |
+| status      | text                     | 'active'::text   | false    |                                                                                                                                                                                                                 |         | Project lifecycle status: active, paused, completed, or archived. |
+| start_date  | date                     |                  | true     |                                                                                                                                                                                                                 |         | Planned start date for the project.                               |
+| target_date | date                     |                  | true     |                                                                                                                                                                                                                 |         | Target completion date for the project.                           |
+| color       | text                     |                  | true     |                                                                                                                                                                                                                 |         | Optional color value associated with the project.                 |
+| sort_order  | integer                  | 0                | false    |                                                                                                                                                                                                                 |         | Position used to order projects.                                  |
+| created_at  | timestamp with time zone | now()            | false    |                                                                                                                                                                                                                 |         |                                                                   |
+| updated_at  | timestamp with time zone | now()            | false    |                                                                                                                                                                                                                 |         |                                                                   |
+| context     | text                     | 'personal'::text | false    |                                                                                                                                                                                                                 |         | Whether the project belongs to the work or personal context.      |
 
 ## Constraints
 
@@ -50,6 +50,7 @@ erDiagram
 "public.tasks" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
 "public.github_sync_rules" }o--|| "public.projects" : "FOREIGN KEY (target_project_id) REFERENCES projects(id) ON DELETE CASCADE"
 "public.recurring_task_templates" }o--o| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL"
+"public.project_fields" }o--|| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
 
 "public.projects" {
   text id
@@ -110,6 +111,14 @@ erDiagram
   date anchor_date
   date last_generated_date
   boolean enabled
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.project_fields" {
+  uuid id
+  text project_id FK
+  text name
+  text type
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }

@@ -109,6 +109,17 @@ comments:
       color: 'Optional color value associated with the project.'
       sort_order: 'Position used to order projects.'
       context: 'Whether the project belongs to the work or personal context.'
+  - table: project_fields
+    tableComment: 'Single-select custom field definitions scoped to a project.'
+    columnComments:
+      project_id: 'Project that owns this custom field.'
+      name: 'Unique field name within the project.'
+      type: 'Field type; currently only single_select is supported.'
+  - table: project_field_options
+    tableComment: 'Selectable options defined for a project custom field.'
+    columnComments:
+      field_id: 'Custom field that owns this option.'
+      name: 'Unique option name within the custom field.'
   - table: push_subscriptions
     tableComment: 'Browser push endpoints and encryption credentials registered for notifications.'
     columnComments:

@@ -26,5 +26,7 @@ export function authorHeader(
 }
 
 export function toolResult(data: unknown): CallToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(data) }] }
+  return {
+    content: [{ type: 'text', text: JSON.stringify(data ?? null) }],
+  }
 }

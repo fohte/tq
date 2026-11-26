@@ -43,6 +43,8 @@
 | [public.schedule_constraint_weekdays](public.schedule_constraint_weekdays.md)       | 3       | Per-weekday scheduling preferences for a schedule constraint; weekdays without rows are preferred. | BASE TABLE |
 | [public.schedule_constraints](public.schedule_constraints.md)                       | 9       | Optional weekly frequency, consecutive-day, and time-window constraints for a calendar schedule.   | BASE TABLE |
 | [public.priority_settings](public.priority_settings.md)                             | 6       | Display names, descriptions, and ordering for the fixed task priorities.                           | BASE TABLE |
+| [public.project_field_options](public.project_field_options.md)                     | 5       | Selectable options defined for a project custom field.                                             | BASE TABLE |
+| [public.project_fields](public.project_fields.md)                                   | 6       | Single-select custom field definitions scoped to a project.                                        | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -129,6 +131,8 @@ erDiagram
 "public.schedule_reminder_deliveries" }o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.schedule_constraint_weekdays" }o--|| "public.schedule_constraints" : "FOREIGN KEY (schedule_id) REFERENCES schedule_constraints(schedule_id) ON DELETE CASCADE"
 "public.schedule_constraints" |o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
+"public.project_field_options" }o--|| "public.project_fields" : "FOREIGN KEY (field_id) REFERENCES project_fields(id) ON DELETE CASCADE"
+"public.project_fields" }o--|| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
@@ -503,6 +507,21 @@ erDiagram
   integer sort_order
   timestamp_with_time_zone updated_at
   bigint id
+}
+"public.project_field_options" {
+  uuid id
+  uuid field_id FK
+  text name
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.project_fields" {
+  uuid id
+  text project_id FK
+  text name
+  text type
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
 }
 ```
 
