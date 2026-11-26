@@ -36,6 +36,7 @@ import {
 import {
   getOpenGithubBlockerRefsByTaskId,
   GithubBlockerSubjectConflictError,
+  lockTaskGithubLinks,
   type PreparedGithubBlockers,
 } from '#services/task-github-blockers'
 import { syncTaskLabels } from '#services/task-labels'
@@ -126,6 +127,8 @@ export const tasksUpdateApp = new Hono().patch(
       if (blockedByResolution != null) {
         // advisory lock を行ロックより先に取って、blockedBy 更新との deadlock を防ぐ。
         await lockTaskBlockedByWrites(tx)
+        // GitHub link の FK 挿入も task 行をロックするため、同じ advisory lock を先に取る。
+        await lockTaskGithubLinks(tx, id)
       }
 
       const lockedTask = firstOrThrow(
