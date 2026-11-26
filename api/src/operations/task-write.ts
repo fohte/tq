@@ -83,14 +83,36 @@ function fieldValuesFromCli(
     if (typeof value !== 'string') {
       return err(new Error('Invalid --field value'))
     }
-    const entry = value
-    const separator = entry.indexOf('=')
-    if (separator < 1) {
+    const field: string[] = []
+    let separator = -1
+    // フィールド名にも `=` が使えるため、`\=` は区切り文字として扱わない。
+    for (let index = 0; index < value.length; index += 1) {
+      const char = value.charAt(index)
+      if (char === '\\') {
+        const next = value.charAt(index + 1)
+        if (next === '=') {
+          field.push('=')
+          index += 1
+        } else if (next === '\\') {
+          field.push('\\')
+          index += 1
+        } else {
+          field.push('\\')
+        }
+      } else if (char === '=') {
+        separator = index
+        break
+      } else {
+        field.push(char)
+      }
+    }
+    if (separator < 0 || field.length === 0) {
       return err(new Error('--field must use <field>=<option>'))
     }
-    const field = entry.slice(0, separator)
-    const option = entry.slice(separator + 1)
-    fieldEntries.push([field, option === '' ? null : option])
+    fieldEntries.push([
+      field.join(''),
+      value.slice(separator + 1) === '' ? null : value.slice(separator + 1),
+    ])
   }
   return ok(Object.fromEntries(fieldEntries))
 }
@@ -183,7 +205,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field; repeat for multiple fields',
+            'Set or clear a project field; escape = as \\= in field names; repeat for multiple fields',
           repeatable: true,
         },
         {
@@ -230,7 +252,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field; repeat for multiple fields',
+            'Set or clear a project field; escape = as \\= in field names; repeat for multiple fields',
           repeatable: true,
         },
         ...recurrenceCliOptions(),
