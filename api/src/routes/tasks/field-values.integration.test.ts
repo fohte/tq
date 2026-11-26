@@ -8,6 +8,8 @@ import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import {
   type TaskListItemResponse,
   type TaskResponse,
+  toListItemResponse,
+  toListRowResponse,
 } from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
@@ -148,70 +150,11 @@ function normalizeTaskDetailResponse(task: TaskResponse) {
 }
 
 function expectedTaskListItem(input: TaskResponseInput) {
-  return {
-    id: 'TASK_ID',
-    number: -1,
-    title: input.title,
-    description: input.description ?? null,
-    status: input.status ?? 'todo',
-    statusReason: input.statusReason ?? null,
-    context: 'personal',
-    priority: null,
-    labels: [],
-    fieldValues: input.fieldValues ?? [],
-    startDate: null,
-    dueDate: null,
-    remindAt: null,
-    parentId: null,
-    projectId: input.projectId ?? null,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    templateId: null,
-    occurrenceDate: null,
-    githubLinks: [],
-    createdAt: 'TIMESTAMP',
-    updatedAt: 'TIMESTAMP',
-    parentNumber: null,
-    duplicateOfNumber: null,
-    blockedByNumbers: [],
-    blockedByGithubRefs: [],
-    hasUnresolvedWait: false,
-    childCompletionCount: { completed: 0, total: 0 },
-    checklistCompletionCount: { completed: 0, total: 0 },
-  } satisfies TaskListItemResponse
+  return toListItemResponse(expectedTaskResponse(input))
 }
 
 function expectedTaskListRow(input: TaskResponseInput) {
-  return {
-    id: 'TASK_ID',
-    number: -1,
-    title: input.title,
-    status: input.status ?? 'todo',
-    statusReason: input.statusReason ?? null,
-    context: 'personal',
-    priority: null,
-    labels: [],
-    fieldValues: input.fieldValues ?? [],
-    startDate: null,
-    dueDate: null,
-    remindAt: null,
-    parentId: null,
-    projectId: input.projectId ?? null,
-    recurrenceRuleId: null,
-    recurrenceRule: null,
-    templateId: null,
-    occurrenceDate: null,
-    githubLinks: [],
-    createdAt: 'TIMESTAMP',
-    updatedAt: 'TIMESTAMP',
-    parentNumber: null,
-    duplicateOfNumber: null,
-    blockedByNumbers: [],
-    blockedByGithubRefs: [],
-    hasUnresolvedWait: false,
-    childCompletionCount: { completed: 0, total: 0 },
-    checklistCompletionCount: { completed: 0, total: 0 },
-  } satisfies Omit<TaskListItemResponse, 'description'>
+  return toListRowResponse(expectedTaskResponse(input))
 }
 
 function responseSnapshot<T>(status: number, body: T) {
@@ -563,87 +506,51 @@ describe('task field values API', () => {
     )
   })
 
-  it('returns detailed errors for invalid fields and options without changing task data', async () => {
-    const sourceProject = await createProject('Sample Archive')
+  it('rejects field values when creating a task without a project', async () => {
+    const project = await createProject('Sample Archive')
+    const field = await createField(project.id, 'Review Track', ['North Route'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+
+    const response = await requestJson('/api/tasks', 'POST', {
+      title: 'Review an unassigned record',
+      fieldValues: { [field.name]: option.name },
+    })
+
+    expect(responseSnapshot(response.status, await jsonBody(response))).toEqual(
+      responseSnapshot(400, {
+        error: 'Task field values require a project',
+      }),
+    )
+  })
+
+  it('rejects fields outside the task project and unknown field names', async () => {
+    const project = await createProject('Sample Archive')
     const otherProject = await createProject('Sample Archive Two')
-    const field = await createField(sourceProject.id, 'Review Track', [
-      'North Route',
-    ])
-    const siblingField = await createField(sourceProject.id, 'Review Mode', [
-      'Local Route',
-    ])
     const foreignField = await createField(otherProject.id, 'Review Track', [
       'South Route',
     ])
-    const sourceOption = field.options[0]
-    const siblingOption = siblingField.options[0]
     const foreignOption = foreignField.options[0]
-    if (
-      sourceOption == null ||
-      siblingOption == null ||
-      foreignOption == null
-    ) {
-      throw new Error('Test field options were not created')
-    }
-    const createdResponse = await requestJson('/api/tasks', 'POST', {
+    if (foreignOption == null)
+      throw new Error('Test field option was not created')
+    const taskResponse = await requestJson('/api/tasks', 'POST', {
       title: 'Review a record',
-      projectId: sourceProject.id,
-      fieldValues: { [field.id]: sourceOption.id },
+      projectId: project.id,
     })
-    const created = await jsonBody<TaskResponse>(createdResponse)
-    const blockerCreateResponse = await requestJson('/api/tasks', 'POST', {
-      title: 'Review a supporting record',
-    })
-    const blocker = await jsonBody<TaskResponse>(blockerCreateResponse)
-    const withoutProjectResponse = await requestJson('/api/tasks', 'POST', {
-      title: 'Unassigned record',
-      fieldValues: { [field.name]: sourceOption.name },
-    })
+    const task = await jsonBody<TaskResponse>(taskResponse)
     const missingFieldResponse = await requestJson(
-      `/api/tasks/${created.id}`,
+      `/api/tasks/${task.id}`,
       'PATCH',
       { fieldValues: { 'Missing Track': 'Unknown Route' } },
     )
     const foreignFieldResponse = await requestJson(
-      `/api/tasks/${created.id}`,
+      `/api/tasks/${task.id}`,
       'PATCH',
-      {
-        blockedBy: [blocker.id],
-        fieldValues: { [foreignField.id]: foreignOption.id },
-      },
+      { fieldValues: { [foreignField.id]: foreignOption.id } },
     )
-    const foreignOptionResponse = await requestJson(
-      `/api/tasks/${created.id}`,
-      'PATCH',
-      { fieldValues: { [field.id]: foreignOption.id } },
-    )
-    const missingOptionResponse = await requestJson(
-      `/api/tasks/${created.id}`,
-      'PATCH',
-      { fieldValues: { [field.name]: 'Unlisted Route' } },
-    )
-    const sameProjectOptionResponse = await requestJson(
-      `/api/tasks/${created.id}`,
-      'PATCH',
-      { fieldValues: { [field.id]: siblingOption.id } },
-    )
-    const detailResponse = await app.request(`/api/tasks/${created.id}`)
-    const detail = await jsonBody<TaskResponse>(detailResponse)
-    const storedValues = await db
-      .select()
-      .from(taskFieldValues)
-      .where(eq(taskFieldValues.taskId, created.id))
-    const blockedRelations = await db
-      .select()
-      .from(taskRelations)
-      .where(eq(taskRelations.sourceTaskId, created.id))
 
     expect(
       responseSnapshot(200, {
-        withoutProject: responseSnapshot(
-          withoutProjectResponse.status,
-          await jsonBody(withoutProjectResponse),
-        ),
         missingField: responseSnapshot(
           missingFieldResponse.status,
           await jsonBody(missingFieldResponse),
@@ -652,17 +559,120 @@ describe('task field values API', () => {
           foreignFieldResponse.status,
           await jsonBody(foreignFieldResponse),
         ),
-        foreignOption: responseSnapshot(
-          foreignOptionResponse.status,
-          await jsonBody(foreignOptionResponse),
+      }),
+    ).toEqual(
+      responseSnapshot(200, {
+        missingField: responseSnapshot(400, {
+          error: 'Field not found: Missing Track',
+        }),
+        foreignField: responseSnapshot(400, {
+          error: `Field not found: ${foreignField.id}`,
+        }),
+      }),
+    )
+  })
+
+  it('rejects options from another field or project and unknown option names', async () => {
+    const project = await createProject('Sample Catalogue')
+    const otherProject = await createProject('Sample Catalogue Two')
+    const field = await createField(project.id, 'Stage Map', ['First Span'])
+    const siblingField = await createField(project.id, 'Stage Mode', [
+      'Local Span',
+    ])
+    const foreignField = await createField(otherProject.id, 'Stage Map', [
+      'Second Span',
+    ])
+    const foreignProjectOption = foreignField.options[0]
+    const otherFieldOption = siblingField.options[0]
+    if (foreignProjectOption == null || otherFieldOption == null) {
+      throw new Error('Test field options were not created')
+    }
+    const taskResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Map a sample',
+      projectId: project.id,
+    })
+    const task = await jsonBody<TaskResponse>(taskResponse)
+    const foreignProjectOptionResponse = await requestJson(
+      `/api/tasks/${task.id}`,
+      'PATCH',
+      { fieldValues: { [field.id]: foreignProjectOption.id } },
+    )
+    const otherFieldOptionResponse = await requestJson(
+      `/api/tasks/${task.id}`,
+      'PATCH',
+      { fieldValues: { [field.id]: otherFieldOption.id } },
+    )
+    const missingOptionResponse = await requestJson(
+      `/api/tasks/${task.id}`,
+      'PATCH',
+      { fieldValues: { [field.name]: 'Unlisted Span' } },
+    )
+
+    expect(
+      responseSnapshot(200, {
+        foreignProjectOption: responseSnapshot(
+          foreignProjectOptionResponse.status,
+          await jsonBody(foreignProjectOptionResponse),
+        ),
+        otherFieldOption: responseSnapshot(
+          otherFieldOptionResponse.status,
+          await jsonBody(otherFieldOptionResponse),
         ),
         missingOption: responseSnapshot(
           missingOptionResponse.status,
           await jsonBody(missingOptionResponse),
         ),
-        sameProjectOption: responseSnapshot(
-          sameProjectOptionResponse.status,
-          await jsonBody(sameProjectOptionResponse),
+      }),
+    ).toEqual(
+      responseSnapshot(200, {
+        foreignProjectOption: responseSnapshot(400, {
+          error: `Option not found for field: ${field.id}`,
+        }),
+        otherFieldOption: responseSnapshot(400, {
+          error: `Option not found for field: ${field.id}`,
+        }),
+        missingOption: responseSnapshot(400, {
+          error: 'Option not found for field: Stage Map',
+        }),
+      }),
+    )
+  })
+
+  it('does not apply other changes when field value validation fails', async () => {
+    const project = await createProject('Sample Archive')
+    const field = await createField(project.id, 'Review Track', ['North Route'])
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+    const taskResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Review a record',
+      projectId: project.id,
+      fieldValues: { [field.id]: option.id },
+    })
+    const task = await jsonBody<TaskResponse>(taskResponse)
+    const blockerResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Review a supporting record',
+    })
+    const blocker = await jsonBody<TaskResponse>(blockerResponse)
+    const updateResponse = await requestJson(`/api/tasks/${task.id}`, 'PATCH', {
+      blockedBy: [blocker.id],
+      fieldValues: { [field.id]: 'Unknown Route' },
+    })
+    const detailResponse = await app.request(`/api/tasks/${task.id}`)
+    const detail = await jsonBody<TaskResponse>(detailResponse)
+    const storedValues = await db
+      .select()
+      .from(taskFieldValues)
+      .where(eq(taskFieldValues.taskId, task.id))
+    const blockedRelations = await db
+      .select()
+      .from(taskRelations)
+      .where(eq(taskRelations.sourceTaskId, task.id))
+
+    expect(
+      responseSnapshot(200, {
+        update: responseSnapshot(
+          updateResponse.status,
+          await jsonBody(updateResponse),
         ),
         detail: responseSnapshot(
           detailResponse.status,
@@ -675,35 +685,20 @@ describe('task field values API', () => {
       }),
     ).toEqual(
       responseSnapshot(200, {
-        withoutProject: responseSnapshot(400, {
-          error: 'Task field values require a project',
-        }),
-        missingField: responseSnapshot(400, {
-          error: 'Field not found: Missing Track',
-        }),
-        foreignField: responseSnapshot(400, {
-          error: `Field not found: ${foreignField.id}`,
-        }),
-        foreignOption: responseSnapshot(400, {
-          error: `Option not found for field: ${field.id}`,
-        }),
-        missingOption: responseSnapshot(400, {
-          error: 'Option not found for field: Review Track',
-        }),
-        sameProjectOption: responseSnapshot(400, {
+        update: responseSnapshot(400, {
           error: `Option not found for field: ${field.id}`,
         }),
         detail: responseSnapshot(
           200,
           expectedTaskDetailResponse({
             title: 'Review a record',
-            projectId: sourceProject.id,
+            projectId: project.id,
             fieldValues: [
               {
                 fieldId: field.id,
                 fieldName: field.name,
-                optionId: sourceOption.id,
-                optionName: sourceOption.name,
+                optionId: option.id,
+                optionName: option.name,
               },
             ],
           }),
