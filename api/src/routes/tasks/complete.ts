@@ -28,6 +28,7 @@ import {
   taskConventionViolationBody,
   taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
+import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
 import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
 
 export const tasksCompleteApp = new Hono().post(
@@ -160,7 +161,10 @@ export const tasksCompleteApp = new Hono().post(
         })) ?? null
     }
 
-    const labelsByTaskId = await getLabelNamesByTaskId([id])
+    const [labelsByTaskId, fieldValuesByTaskId] = await Promise.all([
+      getLabelNamesByTaskId([id]),
+      getTaskFieldValuesByTaskId([id]),
+    ])
 
     return c.json(
       taskToResponse(
@@ -168,6 +172,7 @@ export const tasksCompleteApp = new Hono().post(
         completedTaskRule,
         undefined,
         labelsByTaskId.get(id) ?? [],
+        fieldValuesByTaskId.get(id) ?? [],
       ),
       200,
     )

@@ -6,14 +6,14 @@ Single-select custom field definitions scoped to a project.
 
 ## Columns
 
-| Name       | Type                     | Default               | Nullable | Children                                                        | Parents                               | Comment                                                |
-| ---------- | ------------------------ | --------------------- | -------- | --------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------ |
-| id         | uuid                     | uuidv7()              | false    | [public.project_field_options](public.project_field_options.md) |                                       |                                                        |
-| project_id | text                     |                       | false    |                                                                 | [public.projects](public.projects.md) | Project that owns this custom field.                   |
-| name       | text                     |                       | false    |                                                                 |                                       | Unique field name within the project.                  |
-| type       | text                     | 'single_select'::text | false    |                                                                 |                                       | Field type; currently only single_select is supported. |
-| created_at | timestamp with time zone | now()                 | false    |                                                                 |                                       |                                                        |
-| updated_at | timestamp with time zone | now()                 | false    |                                                                 |                                       |                                                        |
+| Name       | Type                     | Default               | Nullable | Children                                                                                                                | Parents                               | Comment                                                |
+| ---------- | ------------------------ | --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| id         | uuid                     | uuidv7()              | false    | [public.project_field_options](public.project_field_options.md) [public.task_field_values](public.task_field_values.md) |                                       |                                                        |
+| project_id | text                     |                       | false    | [public.task_field_values](public.task_field_values.md)                                                                 | [public.projects](public.projects.md) | Project that owns this custom field.                   |
+| name       | text                     |                       | false    |                                                                                                                         |                                       | Unique field name within the project.                  |
+| type       | text                     | 'single_select'::text | false    |                                                                                                                         |                                       | Field type; currently only single_select is supported. |
+| created_at | timestamp with time zone | now()                 | false    |                                                                                                                         |                                       |                                                        |
+| updated_at | timestamp with time zone | now()                 | false    |                                                                                                                         |                                       |                                                        |
 
 ## Constraints
 
@@ -45,6 +45,7 @@ Single-select custom field definitions scoped to a project.
 erDiagram
 
 "public.project_field_options" }o--|| "public.project_fields" : "FOREIGN KEY (field_id) REFERENCES project_fields(id) ON DELETE CASCADE"
+"public.task_field_values" }o--|| "public.project_fields" : "FOREIGN KEY (field_id, project_id) REFERENCES project_fields(id, project_id) ON DELETE CASCADE"
 "public.project_fields" }o--|| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
 
 "public.project_fields" {
@@ -59,6 +60,14 @@ erDiagram
   uuid id
   uuid field_id FK
   text name
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.task_field_values" {
+  text task_id FK
+  text project_id FK
+  uuid field_id FK
+  uuid option_id FK
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }

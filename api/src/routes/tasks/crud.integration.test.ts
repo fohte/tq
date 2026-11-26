@@ -112,6 +112,7 @@ function normalizeTask<
 >(task: T) {
   return {
     ...task,
+    fieldValues: 'fieldValues' in task ? task.fieldValues : [],
     id: 'ID',
     number: -1,
     createdAt: 'TIMESTAMP',
@@ -374,6 +375,7 @@ function createdTaskResponse(
     context: 'personal',
     priority,
     labels: [],
+    fieldValues: [],
     startDate: null,
     dueDate: null,
     remindAt: null,
@@ -711,6 +713,7 @@ describe('tasks CRUD API', () => {
         context: 'personal',
         priority: null,
         labels: [],
+        fieldValues: [],
         startDate: null,
         dueDate: null,
         remindAt: null,
@@ -1242,6 +1245,7 @@ describe('tasks CRUD API', () => {
         context: 'personal',
         priority: null,
         labels: [],
+        fieldValues: [],
         startDate: null,
         dueDate: null,
         remindAt: null,
@@ -3215,7 +3219,7 @@ describe('tasks CRUD API', () => {
       const actual = relatedTaskQueryCountSnapshot(
         relatedTaskHydrationQueryCount,
       )
-      const expected = relatedTaskQueryCountSnapshot(8)
+      const expected = relatedTaskQueryCountSnapshot(9)
 
       expect(actual).toEqual(expected)
     })
@@ -4987,6 +4991,7 @@ describe('tasks CRUD API', () => {
           context: 'personal',
           priority: null,
           labels: [],
+          fieldValues: [],
           startDate: null,
           dueDate: '2026-03-22',
           remindAt: null,

@@ -152,7 +152,11 @@ export interface OperationDefinition {
     optionNames?: Readonly<Record<string, string>>
     optionDescriptions?: Readonly<Record<string, string>>
     optionMetavars?: Readonly<Record<string, string>>
-    customOptions?: readonly { flags: string; description: string }[]
+    customOptions?: readonly {
+      flags: string
+      description: string
+      repeatable?: boolean
+    }[]
     mapInput?: (
       input: Record<string, unknown>,
       options: Record<string, unknown>,

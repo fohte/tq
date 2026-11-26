@@ -186,6 +186,14 @@
               "minLength": 1
             }
           },
+          "fieldValues": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true,
+              "type": "string"
+            },
+            "description": "Project custom field values keyed by field id or name, with option id or name as values. Use null to clear a field."
+          },
           "recurrenceRule": {
             "type": "object",
             "properties": {
@@ -310,6 +318,36 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "fieldValues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fieldId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "fieldName": {
+                  "type": "string"
+                },
+                "optionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "optionName": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fieldId",
+                "fieldName",
+                "optionId",
+                "optionName"
+              ]
             }
           },
           "startDate": {
@@ -756,6 +794,7 @@
           "context",
           "priority",
           "labels",
+          "fieldValues",
           "startDate",
           "dueDate",
           "remindAt",
@@ -949,6 +988,36 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "fieldValues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fieldId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "fieldName": {
+                  "type": "string"
+                },
+                "optionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "optionName": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "fieldId",
+                "fieldName",
+                "optionId",
+                "optionName"
+              ]
             }
           },
           "startDate": {
@@ -1146,6 +1215,7 @@
           "context",
           "priority",
           "labels",
+          "fieldValues",
           "startDate",
           "dueDate",
           "remindAt",

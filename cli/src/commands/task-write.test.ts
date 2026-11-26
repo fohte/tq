@@ -281,6 +281,42 @@ describe('task create', () => {
     })
   })
 
+  it('maps repeated --field flags to field values and an empty option to null', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Orbit Mode=Quiet Path',
+        '--field',
+        'Signal Phase=',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: {
+          title: 'New task',
+          fieldValues: { 'Orbit Mode': 'Quiet Path', 'Signal Phase': null },
+        },
+      },
+    })
+  })
+
   it('splits --blocked-by into task ids/numbers and GitHub URLs', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
@@ -601,6 +637,41 @@ describe('task update', () => {
       pathname: '/api/tasks/42',
       query: {},
       body: { labels: ['dev/tq', 'dev/meshi'] },
+    })
+  })
+
+  it('maps repeated --field flags to field values and an empty option to null', async () => {
+    const updated = { id: 't1', number: 1 }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'update',
+        '42',
+        '--field',
+        'Orbit Mode=Quiet Path',
+        '--field',
+        'Signal Phase=',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'PATCH',
+        pathname: '/api/tasks/42',
+        query: {},
+        body: {
+          fieldValues: { 'Orbit Mode': 'Quiet Path', 'Signal Phase': null },
+        },
+      },
     })
   })
 

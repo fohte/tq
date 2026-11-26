@@ -31,6 +31,10 @@ afterEach(async () => {
   await client.close()
 })
 
+function taskCustomFieldValuesSnapshot<Value>(value: Value): Value {
+  return value
+}
+
 describe('REST/MCP parity', () => {
   it('a task created via task_create is visible through GET /api/tasks/:id', async () => {
     const created = await callMcpTool(client, 'task_create', {
@@ -227,6 +231,104 @@ describe('REST/MCP parity', () => {
       blockedByGithubRefs: [],
       blockedBy: [],
       blocking: [],
+    })
+  })
+
+  it('creates, updates, and clears custom field values through MCP tools', async () => {
+    const projectResponse = await app.request('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'MCP Sample Observatory' }),
+    })
+    const project = await jsonBody<{ id: string }>(projectResponse)
+    const fieldResponse = await app.request(
+      `/api/projects/${project.id}/fields`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Signal Phase',
+          options: ['Early Arc', 'Late Arc'],
+        }),
+      },
+    )
+    const field = await jsonBody<{
+      id: string
+      name: string
+      options: Array<{ id: string; name: string }>
+    }>(fieldResponse)
+    const [firstOption, secondOption] = field.options
+    if (firstOption == null || secondOption == null) {
+      throw new Error('Test field options were not created')
+    }
+
+    const createResult = await callMcpTool(client, 'task_create', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { [field.name]: firstOption.name },
+    })
+    const created = passthroughSchema<TaskResponse>().parse(
+      parseToolJson(createResult),
+    )
+    const updateResult = await callMcpTool(client, 'task_update', {
+      taskId: created.id,
+      fieldValues: { [field.id]: secondOption.id },
+    })
+    const updated = passthroughSchema<TaskResponse>().parse(
+      parseToolJson(updateResult),
+    )
+    const detailResponse = await app.request(`/api/tasks/${created.id}`)
+    const detail = await jsonBody<TaskResponse>(detailResponse)
+    const clearResult = await callMcpTool(client, 'task_update', {
+      taskId: created.id,
+      fieldValues: { [field.id]: null },
+    })
+    const cleared = passthroughSchema<TaskResponse>().parse(
+      parseToolJson(clearResult),
+    )
+    const listResponse = await app.request(
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited',
+    )
+    const list =
+      await jsonBody<Array<TaskResponse & { fieldValues: unknown[] }>>(
+        listResponse,
+      )
+    const expectedSelectedValue = [
+      {
+        fieldId: field.id,
+        fieldName: field.name,
+        optionId: secondOption.id,
+        optionName: secondOption.name,
+      },
+    ]
+    expect(
+      taskCustomFieldValuesSnapshot({
+        statuses: [
+          projectResponse.status,
+          fieldResponse.status,
+          detailResponse.status,
+          listResponse.status,
+        ],
+        createdValues: created.fieldValues,
+        updatedValues: updated.fieldValues,
+        detailValues: detail.fieldValues,
+        clearedValues: cleared.fieldValues,
+        listedValues: list.find((task) => task.id === created.id)?.fieldValues,
+      }),
+    ).toEqual({
+      statuses: [201, 201, 200, 200],
+      createdValues: [
+        {
+          fieldId: field.id,
+          fieldName: field.name,
+          optionId: firstOption.id,
+          optionName: firstOption.name,
+        },
+      ],
+      updatedValues: expectedSelectedValue,
+      detailValues: expectedSelectedValue,
+      clearedValues: [],
+      listedValues: [],
     })
   })
 })

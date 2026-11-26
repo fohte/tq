@@ -120,6 +120,13 @@ comments:
     columnComments:
       field_id: 'Custom field that owns this option.'
       name: 'Unique option name within the custom field.'
+  - table: task_field_values
+    tableComment: 'Single-select custom field values assigned to tasks.'
+    columnComments:
+      task_id: 'Task that owns this field value.'
+      project_id: 'Project that scopes the task, field, and selected option.'
+      field_id: 'Custom field receiving the selected option.'
+      option_id: 'Selected option for the custom field.'
   - table: push_subscriptions
     tableComment: 'Browser push endpoints and encryption credentials registered for notifications.'
     columnComments:

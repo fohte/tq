@@ -29,6 +29,7 @@ import {
   taskConventionViolationBody,
   taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
+import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
 import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
 
 const updateStatusSchema = z.object({
@@ -167,7 +168,10 @@ export const tasksActionsApp = new Hono()
         await dispatchTaskStatusChangedWebhook(updated, duplicateTarget)
       }
 
-      const labelsByTaskId = await getLabelNamesByTaskId([id])
+      const [labelsByTaskId, fieldValuesByTaskId] = await Promise.all([
+        getLabelNamesByTaskId([id]),
+        getTaskFieldValuesByTaskId([id]),
+      ])
 
       return c.json(
         taskToResponse(
@@ -175,6 +179,7 @@ export const tasksActionsApp = new Hono()
           undefined,
           undefined,
           labelsByTaskId.get(id) ?? [],
+          fieldValuesByTaskId.get(id) ?? [],
         ),
         200,
       )
@@ -229,7 +234,10 @@ export const tasksActionsApp = new Hono()
           .returning(),
       )
 
-      const labelsByTaskId = await getLabelNamesByTaskId([id])
+      const [labelsByTaskId, fieldValuesByTaskId] = await Promise.all([
+        getLabelNamesByTaskId([id]),
+        getTaskFieldValuesByTaskId([id]),
+      ])
 
       return c.json(
         taskToResponse(
@@ -237,6 +245,7 @@ export const tasksActionsApp = new Hono()
           undefined,
           undefined,
           labelsByTaskId.get(id) ?? [],
+          fieldValuesByTaskId.get(id) ?? [],
         ),
         200,
       )

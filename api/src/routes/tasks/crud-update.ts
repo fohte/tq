@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { recurrenceRules, tasks } from '#db/schema'
+import { recurrenceRules, taskFieldValues, tasks } from '#db/schema'
 import { setChangeEventTaskIds } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
 import { diffFields, recordEdit } from '#lib/edits'
@@ -29,6 +29,11 @@ import {
   taskConventionViolationBody,
 } from '#services/task-conventions'
 import {
+  applyTaskFieldValues,
+  getTaskFieldValuesByTaskId,
+  resolveTaskFieldValues,
+} from '#services/task-field-values'
+import {
   getOpenGithubBlockerRefsByTaskId,
   GithubBlockerSubjectConflictError,
 } from '#services/task-github-blockers'
@@ -47,6 +52,7 @@ export const tasksUpdateApp = new Hono().patch(
     const {
       recurrenceRule: recurrenceRuleInput,
       labels: labelsInput,
+      fieldValues: fieldValuesInput,
       blockedBy: blockedByInput,
       remindAt: remindAtInput,
       priority: priorityInput,
@@ -56,6 +62,10 @@ export const tasksUpdateApp = new Hono().patch(
       ...taskFieldsWithoutPriority,
       ...(priorityInput === undefined ? {} : { priority: priorityInput }),
     }
+    const effectiveProjectId =
+      'projectId' in taskFields
+        ? (taskFields.projectId ?? null)
+        : existing.projectId
     const affectedTaskIdsBefore = await getTaskChangeEventIds([id])
 
     if (recurrenceRuleInput !== undefined && existing.templateId != null) {
@@ -85,6 +95,16 @@ export const tasksUpdateApp = new Hono().patch(
       remindAtInput === undefined
         ? {}
         : { remindAt: remindAtInput == null ? null : new Date(remindAtInput) }
+
+    if (fieldValuesInput !== undefined) {
+      // blockedBy は別トランザクションで同期するため、先に fieldValues を検証する。
+      const resolvedFieldValues = await db.transaction((tx) =>
+        resolveTaskFieldValues(tx, effectiveProjectId, fieldValuesInput),
+      )
+      if ('error' in resolvedFieldValues) {
+        return c.json({ error: 'Invalid task field values' }, 400)
+      }
+    }
 
     if (blockedByInput != null) {
       const resolveResult = await resolveUpdateBlockedByInputs(
@@ -139,6 +159,18 @@ export const tasksUpdateApp = new Hono().patch(
         : []
 
     const result = await db.transaction(async (tx) => {
+      const resolvedFieldValues =
+        fieldValuesInput === undefined
+          ? undefined
+          : await resolveTaskFieldValues(
+              tx,
+              effectiveProjectId,
+              fieldValuesInput,
+            )
+      if (resolvedFieldValues != null && 'error' in resolvedFieldValues) {
+        return { kind: 'invalid-field-values' as const }
+      }
+
       let recurrenceRuleId: string | null | undefined = undefined
       let updatedRule: typeof recurrenceRules.$inferSelect | null = null
       let templateFields:
@@ -245,6 +277,10 @@ export const tasksUpdateApp = new Hono().patch(
         }
       }
 
+      if (effectiveProjectId !== existing.projectId) {
+        await tx.delete(taskFieldValues).where(eq(taskFieldValues.taskId, id))
+      }
+
       const updatedTask = firstOrThrow(
         await tx
           .update(tasks)
@@ -267,6 +303,14 @@ export const tasksUpdateApp = new Hono().patch(
           .where(eq(tasks.id, id))
           .returning(),
       )
+      if (resolvedFieldValues != null && 'values' in resolvedFieldValues) {
+        await applyTaskFieldValues(
+          tx,
+          id,
+          updatedTask.projectId ?? '',
+          resolvedFieldValues.values,
+        )
+      }
       if (updatedRule == null && updatedTask.templateId != null) {
         const rulesByTemplateId = await getRecurrenceRulesByTemplateIds([
           updatedTask.templateId,
@@ -298,6 +342,9 @@ export const tasksUpdateApp = new Hono().patch(
     if (result.kind === 'error') {
       return c.json(result.body, result.status)
     }
+    if (result.kind === 'invalid-field-values') {
+      return c.json({ error: 'Invalid task field values' }, 400)
+    }
     const { updatedTask, updatedRule } = result
 
     const linkSync =
@@ -308,12 +355,17 @@ export const tasksUpdateApp = new Hono().patch(
       ...new Set([...affectedTaskIdsBefore, ...affectedTaskIdsAfter]),
     ])
 
-    const [githubLinksByTaskId, labelsByTaskId, githubBlockerRefsByTaskId] =
-      await Promise.all([
-        getGithubLinksByTaskId([id], { role: 'subject' }),
-        getLabelNamesByTaskId([id]),
-        getOpenGithubBlockerRefsByTaskId([id]),
-      ])
+    const [
+      githubLinksByTaskId,
+      labelsByTaskId,
+      githubBlockerRefsByTaskId,
+      fieldValuesByTaskId,
+    ] = await Promise.all([
+      getGithubLinksByTaskId([id], { role: 'subject' }),
+      getLabelNamesByTaskId([id]),
+      getOpenGithubBlockerRefsByTaskId([id]),
+      getTaskFieldValuesByTaskId([id]),
+    ])
 
     return c.json(
       {
@@ -322,6 +374,7 @@ export const tasksUpdateApp = new Hono().patch(
           updatedRule,
           githubLinksByTaskId.get(id) ?? [],
           labelsByTaskId.get(id) ?? [],
+          fieldValuesByTaskId.get(id) ?? [],
         ),
         blockedByGithubRefs: githubBlockerRefsByTaskId.get(id) ?? [],
         ...(linkSync

@@ -29,6 +29,12 @@ import {
   taskConventionViolationBody,
 } from '#services/task-conventions'
 import {
+  applyTaskFieldValues,
+  getTaskFieldValuesByTaskId,
+  type ResolvedTaskFieldValues,
+  resolveTaskFieldValues,
+} from '#services/task-field-values'
+import {
   getOpenGithubBlockerRefsByTaskId,
   insertTaskGithubBlockers,
   type PreparedGithubBlockers,
@@ -83,105 +89,133 @@ export const tasksCreateApp = new Hono().post(
       githubBlockers = resolved.githubBlockers
     }
 
-    const { task, createdRule, labelNames } = await db.transaction(
-      async (tx) => {
-        let descriptionTemplateId = templateSelection?.selected?.id ?? null
-        if (descriptionTemplateId !== null) {
-          // Keep deletion from racing between template selection and insertion.
-          const [selectedTemplate] = await tx
-            .select({ id: taskDescriptionTemplates.id })
-            .from(taskDescriptionTemplates)
-            .where(eq(taskDescriptionTemplates.id, descriptionTemplateId))
-            .for('key share')
-          descriptionTemplateId = selectedTemplate?.id ?? null
-        }
-
-        // Setting recurrence creates a template and links the task as its first instance.
-        let templateFields: {
-          templateId: string
-          occurrenceDate: string
-        } | null = null
-        let createdRule: typeof recurrenceRules.$inferSelect | null = null
-        if (input.recurrenceRule != null) {
-          const created = await createTemplateFromTaskFields(
-            tx,
-            {
-              title: input.title,
-              description: input.description ?? null,
-              projectId: input.projectId ?? null,
-              parentId,
-              context: input.context ?? 'personal',
-              labels: input.labels ?? [],
-            },
-            {
-              type: input.recurrenceRule.type,
-              interval: input.recurrenceRule.interval,
-              daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
-              dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
-            },
-            input.startDate ?? null,
-            input.dueDate ?? null,
-          )
-          createdRule = created.rule
-          templateFields = {
-            templateId: created.template.id,
-            occurrenceDate: created.occurrenceDate,
+    const transactionResult = await db.transaction(async (tx) => {
+      const resolvedFieldValues:
+        | {
+            error: string
           }
-        }
+        | { values: ResolvedTaskFieldValues } =
+        input.fieldValues === undefined
+          ? { values: { set: [], clearFieldIds: [] } }
+          : await resolveTaskFieldValues(
+              tx,
+              input.projectId ?? null,
+              input.fieldValues,
+            )
+      if ('error' in resolvedFieldValues) {
+        return { kind: 'invalid-field-values' as const }
+      }
 
-        const task = firstOrThrow(
-          await tx
-            .insert(tasks)
-            .values({
-              title:
-                templateFields != null
-                  ? replaceOccurrenceDateInTitle(
-                      input.title,
-                      templateFields.occurrenceDate,
-                    )
-                  : input.title,
-              description: input.description ?? null,
-              descriptionTemplateId,
-              startDate: input.startDate ?? null,
-              dueDate: templateFields?.occurrenceDate ?? input.dueDate ?? null,
-              parentId,
-              projectId: input.projectId ?? null,
-              context: input.context,
-              priority: input.priority,
-              templateId: templateFields?.templateId,
-              occurrenceDate: templateFields?.occurrenceDate,
-            })
-            .returning(),
+      let descriptionTemplateId = templateSelection?.selected?.id ?? null
+      if (descriptionTemplateId !== null) {
+        // Keep deletion from racing between template selection and insertion.
+        const [selectedTemplate] = await tx
+          .select({ id: taskDescriptionTemplates.id })
+          .from(taskDescriptionTemplates)
+          .where(eq(taskDescriptionTemplates.id, descriptionTemplateId))
+          .for('key share')
+        descriptionTemplateId = selectedTemplate?.id ?? null
+      }
+
+      // Setting recurrence creates a template and links the task as its first instance.
+      let templateFields: {
+        templateId: string
+        occurrenceDate: string
+      } | null = null
+      let createdRule: typeof recurrenceRules.$inferSelect | null = null
+      if (input.recurrenceRule != null) {
+        const created = await createTemplateFromTaskFields(
+          tx,
+          {
+            title: input.title,
+            description: input.description ?? null,
+            projectId: input.projectId ?? null,
+            parentId,
+            context: input.context ?? 'personal',
+            labels: input.labels ?? [],
+          },
+          {
+            type: input.recurrenceRule.type,
+            interval: input.recurrenceRule.interval,
+            daysOfWeek: input.recurrenceRule.daysOfWeek ?? null,
+            dayOfMonth: input.recurrenceRule.dayOfMonth ?? null,
+          },
+          input.startDate ?? null,
+          input.dueDate ?? null,
         )
-
-        const labelNames =
-          input.labels != null
-            ? await syncTaskLabels(tx, task.id, input.labels, task.context)
-            : []
-
-        // Inserted directly (not via `syncTaskBlockedBy`) so a blocker
-        // deleted between the existence check above and here aborts the
-        // whole insert atomically instead of leaving an orphaned task with
-        // a missing blocker. A cycle can't happen for a brand-new task, so
-        // `syncTaskBlockedBy`'s advisory-lock/cycle check isn't needed here.
-        if (blockedByTargetIds.length > 0) {
-          await tx.insert(taskRelations).values(
-            blockedByTargetIds.map((targetTaskId) => ({
-              sourceTaskId: task.id,
-              targetTaskId,
-              type: 'blocked_by' as const,
-            })),
-          )
+        createdRule = created.rule
+        templateFields = {
+          templateId: created.template.id,
+          occurrenceDate: created.occurrenceDate,
         }
-        if (githubBlockers != null) {
-          await insertTaskGithubBlockers(tx, task.id, githubBlockers.newIssues)
-        }
+      }
 
-        await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
+      const task = firstOrThrow(
+        await tx
+          .insert(tasks)
+          .values({
+            title:
+              templateFields != null
+                ? replaceOccurrenceDateInTitle(
+                    input.title,
+                    templateFields.occurrenceDate,
+                  )
+                : input.title,
+            description: input.description ?? null,
+            descriptionTemplateId,
+            startDate: input.startDate ?? null,
+            dueDate: templateFields?.occurrenceDate ?? input.dueDate ?? null,
+            parentId,
+            projectId: input.projectId ?? null,
+            context: input.context,
+            priority: input.priority,
+            templateId: templateFields?.templateId,
+            occurrenceDate: templateFields?.occurrenceDate,
+          })
+          .returning(),
+      )
 
-        return { task, createdRule, labelNames }
-      },
-    )
+      if (resolvedFieldValues.values.set.length > 0) {
+        await applyTaskFieldValues(
+          tx,
+          task.id,
+          task.projectId ?? '',
+          resolvedFieldValues.values,
+        )
+      }
+
+      const labelNames =
+        input.labels != null
+          ? await syncTaskLabels(tx, task.id, input.labels, task.context)
+          : []
+
+      // Inserted directly (not via `syncTaskBlockedBy`) so a blocker
+      // deleted between the existence check above and here aborts the
+      // whole insert atomically instead of leaving an orphaned task with
+      // a missing blocker. A cycle can't happen for a brand-new task, so
+      // `syncTaskBlockedBy`'s advisory-lock/cycle check isn't needed here.
+      if (blockedByTargetIds.length > 0) {
+        await tx.insert(taskRelations).values(
+          blockedByTargetIds.map((targetTaskId) => ({
+            sourceTaskId: task.id,
+            targetTaskId,
+            type: 'blocked_by' as const,
+          })),
+        )
+      }
+      if (githubBlockers != null) {
+        await insertTaskGithubBlockers(tx, task.id, githubBlockers.newIssues)
+      }
+
+      await recordEdit(tx, { taskId: task.id }, { action: 'create' }, author)
+
+      return { kind: 'created' as const, task, createdRule, labelNames }
+    })
+
+    if (transactionResult.kind === 'invalid-field-values') {
+      return c.json({ error: 'Invalid task field values' }, 400)
+    }
+    const { task, createdRule, labelNames } = transactionResult
 
     const linkSync = await syncTaskLinks(task.id)
     setChangeEventTaskIds(
@@ -195,7 +229,13 @@ export const tasksCreateApp = new Hono().post(
     )
 
     const body = {
-      ...taskToResponse(task, createdRule, [], labelNames),
+      ...taskToResponse(
+        task,
+        createdRule,
+        [],
+        labelNames,
+        (await getTaskFieldValuesByTaskId([task.id])).get(task.id) ?? [],
+      ),
       blockedByGithubRefs:
         (await getOpenGithubBlockerRefsByTaskId([task.id])).get(task.id) ?? [],
       linkSync: toTaskLinkSyncResponse(linkSync),

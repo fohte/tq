@@ -505,6 +505,13 @@
       "when": 1795699554633,
       "tag": "0071_milky_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1795717288895,
+      "tag": "0072_absurd_shiver_man",
+      "breakpoints": true
     }
   ]
 }

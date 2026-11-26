@@ -6,13 +6,13 @@ Selectable options defined for a project custom field.
 
 ## Columns
 
-| Name       | Type                     | Default  | Nullable | Children | Parents                                           | Comment                                     |
-| ---------- | ------------------------ | -------- | -------- | -------- | ------------------------------------------------- | ------------------------------------------- |
-| id         | uuid                     | uuidv7() | false    |          |                                                   |                                             |
-| field_id   | uuid                     |          | false    |          | [public.project_fields](public.project_fields.md) | Custom field that owns this option.         |
-| name       | text                     |          | false    |          |                                                   | Unique option name within the custom field. |
-| created_at | timestamp with time zone | now()    | false    |          |                                                   |                                             |
-| updated_at | timestamp with time zone | now()    | false    |          |                                                   |                                             |
+| Name       | Type                     | Default  | Nullable | Children                                                | Parents                                           | Comment                                     |
+| ---------- | ------------------------ | -------- | -------- | ------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------- |
+| id         | uuid                     | uuidv7() | false    | [public.task_field_values](public.task_field_values.md) |                                                   |                                             |
+| field_id   | uuid                     |          | false    | [public.task_field_values](public.task_field_values.md) | [public.project_fields](public.project_fields.md) | Custom field that owns this option.         |
+| name       | text                     |          | false    |                                                         |                                                   | Unique option name within the custom field. |
+| created_at | timestamp with time zone | now()    | false    |                                                         |                                                   |                                             |
+| updated_at | timestamp with time zone | now()    | false    |                                                         |                                                   |                                             |
 
 ## Constraints
 
@@ -41,12 +41,21 @@ Selectable options defined for a project custom field.
 ```mermaid
 erDiagram
 
+"public.task_field_values" }o--|| "public.project_field_options" : "FOREIGN KEY (option_id, field_id) REFERENCES project_field_options(id, field_id) ON DELETE CASCADE"
 "public.project_field_options" }o--|| "public.project_fields" : "FOREIGN KEY (field_id) REFERENCES project_fields(id) ON DELETE CASCADE"
 
 "public.project_field_options" {
   uuid id
   uuid field_id FK
   text name
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.task_field_values" {
+  text task_id FK
+  text project_id FK
+  uuid field_id FK
+  uuid option_id FK
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }

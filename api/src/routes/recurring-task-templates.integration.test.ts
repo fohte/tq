@@ -102,6 +102,7 @@ function expectedOccurrenceResponse(overrides: Record<string, unknown>) {
     context: 'personal',
     priority: null,
     labels: [],
+    fieldValues: [],
     startDate: null,
     dueDate: '2031-04-11',
     remindAt: null,

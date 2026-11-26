@@ -3,7 +3,7 @@ import { and, count, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { projects, tasks } from '#db/schema'
+import { projects, taskFieldValues, tasks } from '#db/schema'
 import {
   createProjectSchema,
   listProjectsQuerySchema,
@@ -176,14 +176,14 @@ export const projectsApp = new Hono()
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
 
-    const existing = await db.query.projects.findFirst({
-      where: eq(projects.id, id),
+    const [deleted] = await db.transaction(async (tx) => {
+      await tx.delete(taskFieldValues).where(eq(taskFieldValues.projectId, id))
+      return tx
+        .delete(projects)
+        .where(eq(projects.id, id))
+        .returning({ id: projects.id })
     })
-    if (!existing) {
-      return c.json({ error: 'Project not found' }, 404)
-    }
-
-    await db.delete(projects).where(eq(projects.id, id))
+    if (!deleted) return c.json({ error: 'Project not found' }, 404)
 
     return c.body(null, 204)
   })
