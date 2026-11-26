@@ -18,16 +18,10 @@ function optionToResponse(option: typeof projectFieldOptions.$inferSelect) {
   return { id: option.id, name: option.name }
 }
 
-async function fieldToResponse(
+function fieldToResponse(
   field: typeof projectFields.$inferSelect,
-  query: typeof db,
+  options: (typeof projectFieldOptions.$inferSelect)[],
 ) {
-  const options = await query
-    .select()
-    .from(projectFieldOptions)
-    .where(eq(projectFieldOptions.fieldId, field.id))
-    .orderBy(asc(projectFieldOptions.id))
-
   return {
     id: field.id,
     projectId: field.projectId,
@@ -37,6 +31,19 @@ async function fieldToResponse(
     createdAt: field.createdAt.toISOString(),
     updatedAt: field.updatedAt.toISOString(),
   }
+}
+
+async function loadFieldResponse(
+  field: typeof projectFields.$inferSelect,
+  query: typeof db,
+) {
+  const options = await query
+    .select()
+    .from(projectFieldOptions)
+    .where(eq(projectFieldOptions.fieldId, field.id))
+    .orderBy(asc(projectFieldOptions.id))
+
+  return fieldToResponse(field, options)
 }
 
 async function findField(projectId: string, fieldId: string) {
@@ -91,15 +98,9 @@ export const projectFieldsApp = new Hono()
     }, new Map())
 
     return c.json(
-      fields.map((field) => ({
-        id: field.id,
-        projectId: field.projectId,
-        name: field.name,
-        type: field.type,
-        options: (optionsByField.get(field.id) ?? []).map(optionToResponse),
-        createdAt: field.createdAt.toISOString(),
-        updatedAt: field.updatedAt.toISOString(),
-      })),
+      fields.map((field) =>
+        fieldToResponse(field, optionsByField.get(field.id) ?? []),
+      ),
       200,
     )
   })
@@ -121,6 +122,7 @@ export const projectFieldsApp = new Hono()
           .from(projects)
           .where(eq(projects.id, projectId))
           .limit(1)
+          .for('update')
         if (!project) return { kind: 'not-found' as const }
 
         const [field] = await tx
@@ -153,7 +155,7 @@ export const projectFieldsApp = new Hono()
 
       const field = await findField(projectId, result.fieldId)
       if (!field) return c.json({ error: 'Field not found' }, 404)
-      return c.json(await fieldToResponse(field, db), 201)
+      return c.json(await loadFieldResponse(field, db), 201)
     },
   )
   .patch(
@@ -163,37 +165,63 @@ export const projectFieldsApp = new Hono()
     async (c) => {
       const { projectId, fieldId } = c.req.valid('param')
       const input = c.req.valid('json')
-      const existing = await findField(projectId, fieldId)
-      if (!existing) return c.json({ error: 'Field not found' }, 404)
+      const result = await db.transaction(async (tx) => {
+        const [project] = await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(eq(projects.id, projectId))
+          .limit(1)
+          .for('update')
+        if (!project) return { kind: 'not-found' as const }
 
-      if (input.name !== existing.name) {
-        const [conflicting] = await db
-          .select({ id: projectFields.id })
+        const [existing] = await tx
+          .select()
           .from(projectFields)
           .where(
             and(
               eq(projectFields.projectId, projectId),
-              eq(projectFields.name, input.name),
+              eq(projectFields.id, fieldId),
             ),
           )
           .limit(1)
-        if (conflicting) {
-          return c.json({ error: 'A field with this name already exists' }, 409)
-        }
-      }
+        if (!existing) return { kind: 'not-found' as const }
 
-      const [updated] = await db
-        .update(projectFields)
-        .set({ name: input.name, updatedAt: new Date() })
-        .where(
-          and(
-            eq(projectFields.projectId, projectId),
-            eq(projectFields.id, fieldId),
-          ),
-        )
-        .returning()
-      if (!updated) return c.json({ error: 'Field not found' }, 404)
-      return c.json(await fieldToResponse(updated, db), 200)
+        if (input.name !== existing.name) {
+          const [conflicting] = await tx
+            .select({ id: projectFields.id })
+            .from(projectFields)
+            .where(
+              and(
+                eq(projectFields.projectId, projectId),
+                eq(projectFields.name, input.name),
+              ),
+            )
+            .limit(1)
+          if (conflicting) return { kind: 'conflict' as const }
+        }
+
+        const [updated] = await tx
+          .update(projectFields)
+          .set({ name: input.name, updatedAt: new Date() })
+          .where(
+            and(
+              eq(projectFields.projectId, projectId),
+              eq(projectFields.id, fieldId),
+            ),
+          )
+          .returning()
+        return updated
+          ? { kind: 'updated' as const, field: updated }
+          : { kind: 'not-found' as const }
+      })
+
+      if (result.kind === 'conflict') {
+        return c.json({ error: 'A field with this name already exists' }, 409)
+      }
+      if (result.kind === 'not-found') {
+        return c.json({ error: 'Field not found' }, 404)
+      }
+      return c.json(await loadFieldResponse(result.field, db), 200)
     },
   )
   .delete(
@@ -222,21 +250,39 @@ export const projectFieldsApp = new Hono()
     async (c) => {
       const { projectId, fieldId } = c.req.valid('param')
       const input = c.req.valid('json')
-      if (!(await findField(projectId, fieldId))) {
+      const result = await db.transaction(async (tx) => {
+        const [field] = await tx
+          .select({ id: projectFields.id })
+          .from(projectFields)
+          .where(
+            and(
+              eq(projectFields.projectId, projectId),
+              eq(projectFields.id, fieldId),
+            ),
+          )
+          .limit(1)
+          .for('update')
+        if (!field) return { kind: 'not-found' as const }
+
+        const [created] = await tx
+          .insert(projectFieldOptions)
+          .values({ fieldId, name: input.name })
+          .onConflictDoNothing({
+            target: [projectFieldOptions.fieldId, projectFieldOptions.name],
+          })
+          .returning()
+        return created
+          ? { kind: 'created' as const, option: created }
+          : { kind: 'conflict' as const }
+      })
+
+      if (result.kind === 'not-found') {
         return c.json({ error: 'Field not found' }, 404)
       }
-
-      const [created] = await db
-        .insert(projectFieldOptions)
-        .values({ fieldId, name: input.name })
-        .onConflictDoNothing({
-          target: [projectFieldOptions.fieldId, projectFieldOptions.name],
-        })
-        .returning()
-      if (!created) {
+      if (result.kind === 'conflict') {
         return c.json({ error: 'An option with this name already exists' }, 409)
       }
-      return c.json(optionToResponse(created), 201)
+      return c.json(optionToResponse(result.option), 201)
     },
   )
   .patch(
@@ -246,53 +292,71 @@ export const projectFieldsApp = new Hono()
     async (c) => {
       const { projectId, fieldId, optionId } = c.req.valid('param')
       const input = c.req.valid('json')
-      if (!(await findField(projectId, fieldId))) {
-        return c.json({ error: 'Field not found' }, 404)
-      }
+      const result = await db.transaction(async (tx) => {
+        const [field] = await tx
+          .select({ id: projectFields.id })
+          .from(projectFields)
+          .where(
+            and(
+              eq(projectFields.projectId, projectId),
+              eq(projectFields.id, fieldId),
+            ),
+          )
+          .limit(1)
+          .for('update')
+        if (!field) return { kind: 'not-found' as const }
 
-      const [existing] = await db
-        .select()
-        .from(projectFieldOptions)
-        .where(
-          and(
-            eq(projectFieldOptions.fieldId, fieldId),
-            eq(projectFieldOptions.id, optionId),
-          ),
-        )
-        .limit(1)
-      if (!existing) return c.json({ error: 'Option not found' }, 404)
-
-      if (input.name !== existing.name) {
-        const [conflicting] = await db
-          .select({ id: projectFieldOptions.id })
+        const [existing] = await tx
+          .select()
           .from(projectFieldOptions)
           .where(
             and(
               eq(projectFieldOptions.fieldId, fieldId),
-              eq(projectFieldOptions.name, input.name),
+              eq(projectFieldOptions.id, optionId),
             ),
           )
           .limit(1)
-        if (conflicting) {
-          return c.json(
-            { error: 'An option with this name already exists' },
-            409,
-          )
-        }
-      }
+        if (!existing) return { kind: 'option-not-found' as const }
 
-      const [updated] = await db
-        .update(projectFieldOptions)
-        .set({ name: input.name, updatedAt: new Date() })
-        .where(
-          and(
-            eq(projectFieldOptions.fieldId, fieldId),
-            eq(projectFieldOptions.id, optionId),
-          ),
-        )
-        .returning()
-      if (!updated) return c.json({ error: 'Option not found' }, 404)
-      return c.json(optionToResponse(updated), 200)
+        if (input.name !== existing.name) {
+          const [conflicting] = await tx
+            .select({ id: projectFieldOptions.id })
+            .from(projectFieldOptions)
+            .where(
+              and(
+                eq(projectFieldOptions.fieldId, fieldId),
+                eq(projectFieldOptions.name, input.name),
+              ),
+            )
+            .limit(1)
+          if (conflicting) return { kind: 'conflict' as const }
+        }
+
+        const [updated] = await tx
+          .update(projectFieldOptions)
+          .set({ name: input.name, updatedAt: new Date() })
+          .where(
+            and(
+              eq(projectFieldOptions.fieldId, fieldId),
+              eq(projectFieldOptions.id, optionId),
+            ),
+          )
+          .returning()
+        return updated
+          ? { kind: 'updated' as const, option: updated }
+          : { kind: 'option-not-found' as const }
+      })
+
+      if (result.kind === 'not-found') {
+        return c.json({ error: 'Field not found' }, 404)
+      }
+      if (result.kind === 'option-not-found') {
+        return c.json({ error: 'Option not found' }, 404)
+      }
+      if (result.kind === 'conflict') {
+        return c.json({ error: 'An option with this name already exists' }, 409)
+      }
+      return c.json(optionToResponse(result.option), 200)
     },
   )
   .delete(

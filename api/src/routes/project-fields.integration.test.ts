@@ -272,6 +272,23 @@ describe('project fields API', () => {
     })
   })
 
+  it('rejects field types that are not supported', async () => {
+    const project = await createProject('Example Workspace')
+    const response = await createField(project.id, {
+      name: 'Orbit Class',
+      type: 'multi_select',
+    })
+    const listResponse = await app.request(`/api/projects/${project.id}/fields`)
+    const fields = await jsonBody<FieldResponse[]>(listResponse)
+
+    expect(
+      fieldApiSnapshot({
+        status: response.status,
+        fields: fields.map(normalizeField),
+      }),
+    ).toEqual({ status: 400, fields: [] })
+  })
+
   it('returns 404 for missing projects and resources outside their parent', async () => {
     const projectA = await createProject('Example Workspace A')
     const projectB = await createProject('Example Workspace B')

@@ -36,7 +36,7 @@ function projectFieldMcpSnapshot<Value>(value: Value): Value {
 }
 
 describe('project field operation tools', () => {
-  it('creates and updates fields and options through MCP', async () => {
+  it('creates, updates, and deletes fields and options through MCP', async () => {
     const projectResponse = await app.request('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,6 +75,21 @@ describe('project field operation tools', () => {
     const listResult = await callTool('project_field_list', {
       projectId: project.id,
     })
+    const optionDeleteResult = await callTool('project_field_option_delete', {
+      projectId: project.id,
+      fieldId,
+      optionId,
+    })
+    const listAfterOptionDeleteResult = await callTool('project_field_list', {
+      projectId: project.id,
+    })
+    const fieldDeleteResult = await callTool('project_field_delete', {
+      projectId: project.id,
+      fieldId,
+    })
+    const listAfterFieldDeleteResult = await callTool('project_field_list', {
+      projectId: project.id,
+    })
 
     expect(
       projectFieldMcpSnapshot({
@@ -85,6 +100,14 @@ describe('project field operation tools', () => {
           parseToolJson(optionUpdateResult),
         ),
         list: normalizeDynamicValues(parseToolJson(listResult)),
+        optionDeleteIsError: optionDeleteResult.isError ?? false,
+        listAfterOptionDelete: normalizeDynamicValues(
+          parseToolJson(listAfterOptionDeleteResult),
+        ),
+        fieldDeleteIsError: fieldDeleteResult.isError ?? false,
+        listAfterFieldDelete: normalizeDynamicValues(
+          parseToolJson(listAfterFieldDeleteResult),
+        ),
       }),
     ).toEqual({
       created: {
@@ -124,6 +147,20 @@ describe('project field operation tools', () => {
           updatedAt: '<timestamp>',
         },
       ],
+      optionDeleteIsError: false,
+      listAfterOptionDelete: [
+        {
+          id: '<uuid>',
+          projectId: '<uuid>',
+          name: 'Orbit Group',
+          type: 'single_select',
+          options: [{ id: '<uuid>', name: 'Amber' }],
+          createdAt: '<timestamp>',
+          updatedAt: '<timestamp>',
+        },
+      ],
+      fieldDeleteIsError: false,
+      listAfterFieldDelete: [],
     })
   })
 })
