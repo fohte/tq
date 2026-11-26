@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, count, eq, ilike, inArray, sql } from 'drizzle-orm'
+import { and, asc, count, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -177,6 +177,13 @@ export const projectsApp = new Hono()
     const id = c.req.param('id')
 
     const [deleted] = await db.transaction(async (tx) => {
+      // task 更新と同じ順でロックし、値行を保持したまま task 行を待たない。
+      await tx
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.projectId, id))
+        .orderBy(asc(tasks.id))
+        .for('update')
       await tx.delete(taskFieldValues).where(eq(taskFieldValues.projectId, id))
       return tx
         .delete(projects)

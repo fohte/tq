@@ -1,9 +1,14 @@
 import { eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import { describe, expect, it } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
-import { taskFieldValues, taskRelations } from '#db/schema'
+import { dbContext } from '#db/context'
+import * as schema from '#db/schema'
+import { projectFields, taskFieldValues, taskRelations } from '#db/schema'
+import { DATABASE_URL } from '#env'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import {
   type TaskListItemResponse,
@@ -43,6 +48,15 @@ async function requestJson(path: string, method: string, body: unknown) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+function requestJsonWithDb(
+  database: typeof db,
+  path: string,
+  method: string,
+  body: unknown,
+) {
+  return dbContext.run(database, () => requestJson(path, method, body))
 }
 
 type TaskResponseInput = {
@@ -1075,4 +1089,242 @@ describe('task field values API', () => {
       }),
     )
   })
+
+  it('deletes a project after a concurrent field value update', async () => {
+    const fixtureClient = postgres(DATABASE_URL, { max: 1 })
+    const updateClient = postgres(DATABASE_URL, {
+      max: 1,
+      connection: { application_name: 'field-value-update-test' },
+    })
+    const deleteClient = postgres(DATABASE_URL, {
+      max: 1,
+      connection: { application_name: 'project-delete-test' },
+    })
+    const barrierClient = postgres(DATABASE_URL, { max: 1 })
+    const sharedLockClient = postgres(DATABASE_URL, {
+      max: 1,
+      connection: { application_name: 'shared-field-lock-test' },
+    })
+    const monitorClient = postgres(DATABASE_URL, { max: 1 })
+    const fixtureDb = drizzle(fixtureClient, { schema })
+    const updateDb = drizzle(updateClient, { schema })
+    const deleteDb = drizzle(deleteClient, { schema })
+    const barrierDb = drizzle(barrierClient, { schema })
+    const sharedLockDb = drizzle(sharedLockClient, { schema })
+    let projectId: string | undefined
+    let taskId: string | undefined
+    let releaseFieldLock: (() => void) | undefined
+    let releaseSharedFieldLock: (() => void) | undefined
+    let fieldLockTransaction: Promise<unknown> | undefined
+    let sharedFieldLockTransaction: Promise<unknown> | undefined
+    let pendingUpdateResponse: Promise<Response> | undefined
+    let pendingDeleteResponse: Promise<Response> | undefined
+
+    try {
+      const project = await dbContext.run(fixtureDb, () =>
+        createProject('Sample Archive'),
+      )
+      projectId = project.id
+      const field = await dbContext.run(fixtureDb, () =>
+        createField(project.id, 'Review Track', ['North Route', 'South Route']),
+      )
+      const [firstOption, nextOption] = field.options
+      if (firstOption == null || nextOption == null) {
+        throw new Error('Test field options were not created')
+      }
+      const createResponse = await requestJsonWithDb(
+        fixtureDb,
+        '/api/tasks',
+        'POST',
+        {
+          title: 'Review a record',
+          projectId: project.id,
+          fieldValues: { [field.id]: firstOption.id },
+        },
+      )
+      const task = await jsonBody<TaskResponse>(createResponse)
+      taskId = task.id
+
+      let fieldLockAcquired: (() => void) | undefined
+      const fieldLockReady = new Promise<void>((resolve) => {
+        fieldLockAcquired = resolve
+      })
+      const fieldLockReleased = new Promise<void>((resolve) => {
+        releaseFieldLock = resolve
+      })
+      fieldLockTransaction = barrierDb.transaction(async (tx) => {
+        await tx
+          .select({ id: projectFields.id })
+          .from(projectFields)
+          .where(eq(projectFields.id, field.id))
+          .for('update')
+        fieldLockAcquired?.()
+        await fieldLockReleased
+      })
+      void fieldLockTransaction.catch(() => undefined)
+      await fieldLockReady
+
+      const updateResponsePromise = requestJsonWithDb(
+        updateDb,
+        `/api/tasks/${task.id}`,
+        'PATCH',
+        { fieldValues: { [field.id]: nextOption.id } },
+      )
+      pendingUpdateResponse = updateResponsePromise
+
+      const waitForLockWait = async (applicationName: string) => {
+        const deadline = Date.now() + 10_000
+        while (Date.now() < deadline) {
+          const [activity] = await monitorClient`
+            SELECT EXISTS (
+              SELECT 1
+              FROM pg_stat_activity
+              WHERE application_name = ${applicationName}
+                AND state = 'active'
+                AND wait_event_type = 'Lock'
+            ) AS waiting
+          `
+          if (activity?.['waiting'] === true) return
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        throw new Error(`Database lock wait did not start: ${applicationName}`)
+      }
+
+      await waitForLockWait('field-value-update-test')
+      const sharedFieldLockReleased = new Promise<void>((resolve) => {
+        releaseSharedFieldLock = resolve
+      })
+      sharedFieldLockTransaction = sharedLockDb.transaction(async (tx) => {
+        await tx
+          .select({ id: projectFields.id })
+          .from(projectFields)
+          .where(eq(projectFields.id, field.id))
+          .for('key share')
+        await sharedFieldLockReleased
+      })
+      void sharedFieldLockTransaction.catch(() => undefined)
+      await waitForLockWait('shared-field-lock-test')
+
+      const deleteResponsePromise = dbContext.run(
+        deleteDb,
+        async () =>
+          await app.request(`/api/projects/${project.id}`, {
+            method: 'DELETE',
+          }),
+      )
+      pendingDeleteResponse = deleteResponsePromise
+      await waitForLockWait('project-delete-test')
+      releaseFieldLock?.()
+
+      const [updateResult] = await Promise.allSettled([updateResponsePromise])
+      releaseSharedFieldLock?.()
+      const [deleteResult] = await Promise.allSettled([deleteResponsePromise])
+      const updateOutput =
+        updateResult.status === 'fulfilled'
+          ? responseSnapshot(
+              updateResult.value.status,
+              updateResult.value.status === 200
+                ? normalizeTaskResponse(
+                    await jsonBody<TaskResponse>(updateResult.value),
+                  )
+                : await updateResult.value.text(),
+            )
+          : { status: 'rejected', error: String(updateResult.reason) }
+      const deleteOutput =
+        deleteResult.status === 'fulfilled'
+          ? responseSnapshot(
+              deleteResult.value.status,
+              await deleteResult.value.text(),
+            )
+          : { status: 'rejected', error: String(deleteResult.reason) }
+      const detailResponse = await requestJsonWithDb(
+        fixtureDb,
+        `/api/tasks/${task.id}`,
+        'GET',
+        undefined,
+      )
+      const detail = await jsonBody<TaskResponse>(detailResponse)
+
+      expect(
+        responseSnapshot(200, {
+          update: updateOutput,
+          delete: deleteOutput,
+          detail: responseSnapshot(
+            detailResponse.status,
+            normalizeTaskDetailResponse(detail),
+          ),
+        }),
+      ).toEqual(
+        responseSnapshot(200, {
+          update: responseSnapshot(
+            200,
+            expectedTaskWriteResponse({
+              title: 'Review a record',
+              projectId: project.id,
+              fieldValues: [
+                {
+                  fieldId: field.id,
+                  fieldName: field.name,
+                  optionId: nextOption.id,
+                  optionName: nextOption.name,
+                },
+              ],
+            }),
+          ),
+          delete: responseSnapshot(204, ''),
+          detail: responseSnapshot(
+            200,
+            expectedTaskDetailResponse({
+              title: 'Review a record',
+              projectId: null,
+              fieldValues: [],
+            }),
+          ),
+        }),
+      )
+    } finally {
+      releaseFieldLock?.()
+      releaseSharedFieldLock?.()
+      await Promise.all([
+        fieldLockTransaction?.catch(() => undefined),
+        sharedFieldLockTransaction?.catch(() => undefined),
+        pendingUpdateResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+        pendingDeleteResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+      ])
+      if (taskId != null) {
+        await requestJsonWithDb(
+          fixtureDb,
+          `/api/tasks/${taskId}`,
+          'DELETE',
+          undefined,
+        ).catch(() => undefined)
+      }
+      if (projectId != null) {
+        const projectToDelete = projectId
+        await dbContext
+          .run(
+            fixtureDb,
+            async () =>
+              await app.request(`/api/projects/${projectToDelete}`, {
+                method: 'DELETE',
+              }),
+          )
+          .catch(() => undefined)
+      }
+      await Promise.all([
+        fixtureClient.end(),
+        updateClient.end(),
+        deleteClient.end(),
+        barrierClient.end(),
+        sharedLockClient.end(),
+        monitorClient.end(),
+      ])
+    }
+  }, 20_000)
 })
