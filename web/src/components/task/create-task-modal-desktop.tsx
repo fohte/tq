@@ -12,7 +12,7 @@ import {
   Calendar,
   CalendarClock,
   CalendarPlus,
-  Inbox,
+  Flag,
   Layers,
   Tag,
   X,
@@ -20,17 +20,20 @@ import {
 import type { ReactNode } from 'react'
 
 import {
-  type CommitmentValue,
-  commitmentValues,
   type ContextValue,
   contextValues,
   type PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { PlanTabStrip } from '#components/task/plan-tab-strip'
+import { PrioritySelect } from '#components/task/priority-select'
 import { TagsInput } from '#components/task/tags-input'
 import { TaskTitleInput } from '#components/task/task-title-input'
 import { DesktopModalFrame } from '#components/ui/desktop-modal-frame'
 import { InlineFieldGroup } from '#components/ui/modal-field'
+import type {
+  PrioritySetting,
+  TaskPriority,
+} from '#hooks/use-priority-settings'
 import { selectValueHandler } from '#lib/form-utils'
 
 export function CreateTaskModalDesktop({
@@ -46,8 +49,9 @@ export function CreateTaskModalDesktop({
   setDueDate,
   context,
   setContext,
-  commitment,
-  setCommitment,
+  priority,
+  prioritySettings,
+  setPriority,
   plan,
   setPlan,
   labels,
@@ -68,8 +72,9 @@ export function CreateTaskModalDesktop({
   setDueDate: (value: string) => void
   context: ContextValue | ''
   setContext: (value: ContextValue | '') => void
-  commitment: CommitmentValue | ''
-  setCommitment: (value: CommitmentValue | '') => void
+  priority: TaskPriority
+  prioritySettings: PrioritySetting[] | undefined
+  setPriority: (value: TaskPriority) => void
   plan: PlanValue | ''
   setPlan: (value: PlanValue | '') => void
   labels: string[]
@@ -169,25 +174,14 @@ export function CreateTaskModalDesktop({
             </Select>
           </InlineFieldGroup>
           <InlineFieldGroup
-            label="Commitment"
-            icon={<Inbox className="size-3.5" />}
+            label="Priority"
+            icon={<Flag className="size-3.5" />}
           >
-            <Select
-              value={commitment}
-              onValueChange={selectValueHandler(
-                setCommitment,
-                commitmentValues,
-              )}
-            >
-              <SelectTrigger variant="ghost" size="sm">
-                <SelectValue placeholder="Inbox" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Inbox</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="someday">Someday</SelectItem>
-              </SelectContent>
-            </Select>
+            <PrioritySelect
+              value={priority}
+              settings={prioritySettings}
+              onValueChange={setPriority}
+            />
           </InlineFieldGroup>
           <div className="flex flex-col gap-1">
             <span className="flex items-center gap-1 font-mono text-2xs tracking-widest text-muted-foreground-faint">

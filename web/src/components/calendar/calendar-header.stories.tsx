@@ -62,6 +62,7 @@ export const Compact: Story = {
   args: {
     activeView: 'day',
     viewControl: 'week-toggle',
+    compactHeader: true,
   },
 }
 
@@ -78,5 +79,6 @@ export const CompactWeek: Story = {
   args: {
     activeView: 'week',
     viewControl: 'week-toggle',
+    compactHeader: true,
   },
 }

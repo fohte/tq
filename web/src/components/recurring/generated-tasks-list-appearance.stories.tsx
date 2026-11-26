@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fn } from 'storybook/test'
 
 import { GeneratedTasksListAppearance } from '#components/recurring/generated-tasks-list-appearance'
 import { makeTask } from '#components/task/task-row-test-fixtures'
@@ -47,6 +48,7 @@ const meta = {
     hasNextPage: false,
     isFetchingNextPage: false,
     isFetchNextPageError: false,
+    onAddTask: fn(),
   },
 } satisfies Meta<typeof GeneratedTasksListAppearance>
 

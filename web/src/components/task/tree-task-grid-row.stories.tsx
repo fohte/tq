@@ -98,9 +98,7 @@ function StaticTreeTaskGridRow(
 const meta = {
   title: 'Task/TreeTaskGridRow',
   component: TreeTaskGridRowWithProviders,
-  parameters: {
-    layout: 'centered',
-  },
+  parameters: { layout: 'centered' },
 } satisfies Meta<typeof TreeTaskGridRowWithProviders>
 
 export default meta

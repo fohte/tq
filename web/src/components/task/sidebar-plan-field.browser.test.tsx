@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
+import type { TaskPriority } from '#hooks/use-priority-settings'
 import { useTaskPlan } from '#hooks/use-queues'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { partialMutation } from '#lib/test-utils'
@@ -49,45 +50,60 @@ function setUp(plan: TaskPlanResult['plan'] = '') {
 }
 
 describe('SidebarPlanField', () => {
-  it('selecting "today" upgrades an inbox task to active', async () => {
+  it('selecting "today" sets an unset priority to zero', async () => {
     const { setPlan, mutate } = setUp()
     const user = userEvent.setup()
-    render(<SidebarPlanField taskId={taskId} commitment="inbox" />)
+    render(<SidebarPlanField taskId={taskId} priority={null} />)
 
     await user.click(screen.getByText('today'))
 
-    expect(setPlan).toHaveBeenCalledWith('day')
-    expect(mutate).toHaveBeenCalledWith({
-      id: taskId,
-      input: { commitment: 'active' },
+    const readResult = () => ({
+      plan: setPlan.mock.calls,
+      taskUpdates: mutate.mock.calls,
+    })
+    expect(readResult()).toEqual({
+      plan: [['day']],
+      taskUpdates: [[{ id: taskId, input: { priority: 0 } }]],
     })
   })
 
-  it.each(['active', 'someday'] as const)(
-    'selecting "today" does not change commitment when already %s',
-    async (commitment) => {
+  it.each([-1, 0, 1, 2] as const)(
+    'selecting "today" preserves the configured priority %s',
+    async (priority: Exclude<TaskPriority, null>) => {
       const { setPlan, mutate } = setUp()
       const user = userEvent.setup()
-      render(<SidebarPlanField taskId={taskId} commitment={commitment} />)
+      render(<SidebarPlanField taskId={taskId} priority={priority} />)
 
       await user.click(screen.getByText('today'))
 
-      expect(setPlan).toHaveBeenCalledWith('day')
-      expect(mutate).not.toHaveBeenCalled()
+      const readResult = () => ({
+        plan: setPlan.mock.calls,
+        taskUpdates: mutate.mock.calls,
+      })
+      expect(readResult()).toEqual({
+        plan: [['day']],
+        taskUpdates: [],
+      })
     },
   )
 
-  it.each(['inbox', 'active', 'someday'] as const)(
-    'clearing the plan never changes commitment (%s)',
-    async (commitment) => {
+  it.each([null, -1, 0, 1, 2] as const)(
+    'clearing the plan does not change priority (%s)',
+    async (priority) => {
       const { setPlan, mutate } = setUp('day')
       const user = userEvent.setup()
-      render(<SidebarPlanField taskId={taskId} commitment={commitment} />)
+      render(<SidebarPlanField taskId={taskId} priority={priority} />)
 
       await user.click(screen.getByText('—'))
 
-      expect(setPlan).toHaveBeenCalledWith('')
-      expect(mutate).not.toHaveBeenCalled()
+      const readResult = () => ({
+        plan: setPlan.mock.calls,
+        taskUpdates: mutate.mock.calls,
+      })
+      expect(readResult()).toEqual({
+        plan: [['']],
+        taskUpdates: [],
+      })
     },
   )
 })

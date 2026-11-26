@@ -10,7 +10,7 @@ export type CandidateReason =
   | { kind: 'due-today' }
   | { kind: 'due-later'; days: number }
   | { kind: 'starts'; days: number }
-  | { kind: 'active' }
+  | { kind: 'priority'; label: string }
 
 export interface QueueCandidate<T> {
   task: T
@@ -46,8 +46,8 @@ export function formatCandidateReason(reason: CandidateReason): string {
       return reason.days === 0
         ? 'starts today'
         : `started ${String(reason.days)}d ago`
-    case 'active':
-      return 'active'
+    case 'priority':
+      return reason.label
   }
 }
 

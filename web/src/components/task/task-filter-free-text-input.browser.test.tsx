@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { makeSuggestion } from '#components/search/search-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import type { Suggestion } from '#hooks/use-search'
+import { prioritySettingsKeys } from '#lib/query-keys'
 
 const suggestionFixtures: Suggestion[] = [
   makeSuggestion(),
@@ -14,6 +16,7 @@ const suggestionFixtures: Suggestion[] = [
 ]
 
 let mockSuggestionData: Suggestion[] = []
+let mockPrioritySettings = makePrioritySettings()
 
 vi.mock('#hooks/use-search', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-search')>()
@@ -29,6 +32,7 @@ function Wrapper({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  queryClient.setQueryData(prioritySettingsKeys.all, mockPrioritySettings)
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
@@ -58,6 +62,37 @@ function renderInput(
 describe('TaskFilterFreeTextInput', () => {
   beforeEach(() => {
     mockSuggestionData = []
+    mockPrioritySettings = makePrioritySettings()
+  })
+
+  it('shows priority DSL values with configured names in syntax help', async () => {
+    const names = ['Amber', 'Blue', 'Coral', 'Green', 'Silver']
+    mockPrioritySettings = makePrioritySettings().map((setting, index) => ({
+      ...setting,
+      name: names[index] ?? setting.name,
+    }))
+    const user = userEvent.setup()
+    renderInput()
+
+    await user.click(screen.getByRole('textbox', { name: 'Filter query' }))
+
+    await waitFor(() => {
+      expect(
+        Array.from(document.querySelectorAll('code'))
+          .filter((code) => code.textContent.startsWith('priority:'))
+          .map((code) => ({
+            syntax: code.textContent,
+            display:
+              code.parentElement?.querySelector('span')?.textContent ?? null,
+          })),
+      ).toEqual([
+        { syntax: 'priority:2', display: 'Amber' },
+        { syntax: 'priority:1', display: 'Blue' },
+        { syntax: 'priority:0', display: 'Coral' },
+        { syntax: 'priority:none', display: 'Green' },
+        { syntax: 'priority:-1', display: 'Silver' },
+      ])
+    })
   })
 
   it('keeps focus on the input while the suggestion popup is shown', async () => {

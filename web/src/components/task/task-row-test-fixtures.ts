@@ -18,7 +18,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     blockedByGithubRefs: [],
     hasUnresolvedWait: false,
     context: 'personal',
-    commitment: 'active',
+    priority: 0,
     labels: [],
     startDate: null,
     dueDate: null,
@@ -63,7 +63,7 @@ export function makeTaskDetail(
     duplicateOfNumber: null,
     duplicateOfTask: null,
     context: 'personal',
-    commitment: 'active',
+    priority: 0,
     labels: [],
     startDate: '2026-03-20',
     dueDate: '2026-03-25',
@@ -91,6 +91,7 @@ export function makeTaskDetail(
     blockedBy: [],
     blocking: [],
     ...overrides,
+    blockedByGithubRefs: overrides.blockedByGithubRefs ?? [],
   }
 }
 
@@ -116,7 +117,7 @@ export function makeNode(overrides: Partial<TreeNode> = {}): TreeNode {
     blockedByGithubRefs: [],
     hasUnresolvedWait: false,
     context: 'personal',
-    commitment: 'active',
+    priority: 0,
     labels: [],
     startDate: null,
     dueDate: null,

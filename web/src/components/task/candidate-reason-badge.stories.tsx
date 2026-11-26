@@ -25,3 +25,8 @@ export const WaitResolved: Story = {
   name: 'a resolved reply uses the emphasized text color',
   args: { reason: { kind: 'wait-resolved' } },
 }
+
+export const Priority: Story = {
+  name: 'the badge shows the configured priority name',
+  args: { reason: { kind: 'priority', label: 'Routine' } },
+}

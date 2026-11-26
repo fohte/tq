@@ -27,6 +27,25 @@ export interface GithubBlockerRef {
   url: string
 }
 
+type GithubBlockerRefSource = Pick<
+  LinkRow,
+  'owner' | 'repo' | 'number' | 'url' | 'state'
+>
+
+export function toOpenGithubBlockerRefs(
+  blockers: GithubBlockerRefSource[],
+): GithubBlockerRef[] {
+  return blockers
+    .filter(({ state }) => state === 'open')
+    .map(({ owner, repo, number, url }) => ({ owner, repo, number, url }))
+    .sort(
+      (left, right) =>
+        left.owner.localeCompare(right.owner) ||
+        left.repo.localeCompare(right.repo) ||
+        left.number - right.number,
+    )
+}
+
 export interface PreparedGithubBlockers {
   refs: GithubResourceRef[]
   newIssues: GithubIssueData[]
@@ -237,6 +256,7 @@ export async function getOpenGithubBlockerRefsByTaskId(
       repo: taskGithubLinks.repo,
       number: taskGithubLinks.number,
       url: taskGithubLinks.url,
+      state: taskGithubLinks.state,
     })
     .from(taskGithubLinks)
     .where(
@@ -252,18 +272,19 @@ export async function getOpenGithubBlockerRefsByTaskId(
       taskGithubLinks.number,
     )
 
-  const result = new Map<string, GithubBlockerRef[]>()
+  const blockersByTaskId = new Map<string, GithubBlockerRefSource[]>()
   for (const row of rows) {
-    const refs = result.get(row.taskId) ?? []
-    refs.push({
-      owner: row.owner,
-      repo: row.repo,
-      number: row.number,
-      url: row.url,
-    })
-    result.set(row.taskId, refs)
+    const blockers = blockersByTaskId.get(row.taskId) ?? []
+    blockers.push(row)
+    blockersByTaskId.set(row.taskId, blockers)
   }
-  return result
+
+  return new Map(
+    [...blockersByTaskId].map(([taskId, blockers]) => [
+      taskId,
+      toOpenGithubBlockerRefs(blockers),
+    ]),
+  )
 }
 
 export async function getIncompleteGithubBlockerRefs(

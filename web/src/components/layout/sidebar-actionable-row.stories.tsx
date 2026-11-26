@@ -29,7 +29,7 @@ const meta = {
     ),
   ],
   args: {
-    search: { q: 'commitment:active' },
+    search: { q: 'priority:0' },
     isActive: false,
     actionsAriaLabel: 'View actions',
     editItemLabel: 'rename…',

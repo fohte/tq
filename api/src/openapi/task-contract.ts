@@ -5,6 +5,10 @@ import {
   githubLinkLookupResponseSchema,
   githubLinkLookupTaskResponseSchema,
 } from '#schemas/github-link'
+import {
+  prioritySettingsSchema,
+  updatePrioritySettingsSchema,
+} from '#schemas/priority-settings'
 import { createTaskSchema } from '#schemas/task'
 import { createTaskResponseSchema } from '#schemas/task-response'
 import { taskStatusChangedWebhookEventSchema } from '#schemas/webhook'
@@ -18,6 +22,14 @@ const createTaskResponseJsonSchema = z.toJSONSchema(createTaskResponseSchema, {
   target: 'openapi-3.0',
   io: 'input',
 })
+const prioritySettingsResponseJsonSchema = z.toJSONSchema(
+  prioritySettingsSchema,
+  { target: 'openapi-3.0', io: 'input' },
+)
+const updatePrioritySettingsRequestJsonSchema = z.toJSONSchema(
+  updatePrioritySettingsSchema,
+  { target: 'openapi-3.0', io: 'input' },
+)
 const githubLinkLookupQueryUrlSchema = z.toJSONSchema(
   githubLinkLookupQuerySchema.shape.url,
   {
@@ -110,11 +122,55 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/priority-settings': {
+      get: {
+        tags: ['Priority settings'],
+        operationId: 'getPrioritySettings',
+        summary: 'Get priority names, descriptions, and order',
+        responses: {
+          '200': {
+            description: 'The configured priorities in display order',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PrioritySettings' },
+              },
+            },
+          },
+        },
+      },
+      put: {
+        tags: ['Priority settings'],
+        operationId: 'updatePrioritySettings',
+        summary: 'Replace priority names, descriptions, and order',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                $ref: '#/components/schemas/UpdatePrioritySettingsRequest',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'The updated priorities in display order',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PrioritySettings' },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     schemas: {
       CreateTaskRequest: createTaskRequestSchema,
       CreateTaskResponse: createTaskResponseJsonSchema,
+      PrioritySettings: prioritySettingsResponseJsonSchema,
+      UpdatePrioritySettingsRequest: updatePrioritySettingsRequestJsonSchema,
       GithubLinkLookupTaskResponse: githubLinkLookupTaskResponseJsonSchema,
       GithubLinkLookupResponse: githubLinkLookupResponseJsonSchema,
       TaskStatusChangedWebhookEvent: taskStatusChangedWebhookEventJsonSchema,

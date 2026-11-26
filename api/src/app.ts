@@ -18,6 +18,7 @@ import { githubSyncRulesApp } from '#routes/github-sync-rules'
 import { integrationsApp } from '#routes/integrations'
 import { labelsApp } from '#routes/labels'
 import { memosApp } from '#routes/memos'
+import { prioritySettingsApp } from '#routes/priority-settings'
 import { projectsApp } from '#routes/projects'
 import { pushApp } from '#routes/push'
 import { queuesApp } from '#routes/queues'
@@ -83,6 +84,7 @@ const app = new Hono()
   .route('/api/queues', queuesApp)
   .route('/api/recurring-task-templates', recurringTaskTemplatesApp)
   .route('/api/description-templates', descriptionTemplatesApp)
+  .route('/api/priority-settings', prioritySettingsApp)
   .route('/api/memos', memosApp)
   .route('/api/saved-views', savedViewsApp)
   .route('/api/schedule', schedulesApp)

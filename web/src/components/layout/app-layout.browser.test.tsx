@@ -102,7 +102,7 @@ const manyCandidateTasks: Task[] = Array.from({ length: 40 }, (_, i) =>
   makeTask({
     id: `candidate-${String(i)}`,
     title: `Candidate task ${String(i)}`,
-    candidateReason: { kind: 'active' },
+    candidateReason: { kind: 'priority', label: 'Routine' },
   }),
 )
 const manyQueueCandidates = getQueueCandidates(manyCandidateTasks)

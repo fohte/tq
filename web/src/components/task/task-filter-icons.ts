@@ -10,12 +10,13 @@ import {
 } from 'lucide-react'
 
 export const taskFilterAxisIcons: Record<
-  'is' | 'project' | 'label' | 'has' | 'parent' | 'sort',
+  'is' | 'project' | 'label' | 'priority' | 'has' | 'parent' | 'sort',
   LucideIcon
 > = {
   is: CircleDot,
   project: FolderKanban,
   label: Tag,
+  priority: CircleDot,
   has: FileText,
   parent: ListTree,
   sort: ArrowDownWideNarrow,

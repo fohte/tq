@@ -53,7 +53,6 @@ const activeTasks = [
     id: '4',
     number: 90,
     title: 'Ship the release notes',
-    commitment: 'active',
   }),
 ]
 
@@ -62,7 +61,6 @@ const someTasks = [
     id: '5',
     number: 55,
     title: 'Learn Rust',
-    commitment: 'someday',
   }),
 ]
 

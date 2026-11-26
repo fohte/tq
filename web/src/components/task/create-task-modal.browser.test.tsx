@@ -1,6 +1,9 @@
 import { QueryClient } from '@tanstack/react-query'
 import { screen, waitFor, within } from '@testing-library/react'
-import userEvent, { type UserEvent } from '@testing-library/user-event'
+import userEvent, {
+  PointerEventsCheckLevel,
+  type UserEvent,
+} from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
@@ -11,6 +14,7 @@ import {
   makeGithubLink,
   makeResolveGithubUrlResult,
 } from '#components/task/github-link-test-fixtures'
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { makeQueueItem } from '#components/task/queue-item-test-fixtures'
 import { makeTaskPreview } from '#components/task/task-preview-test-fixtures'
 import {
@@ -21,6 +25,7 @@ import { resetSessionOpenSettings } from '#hooks/session-open-settings-test-fixt
 import type { DescriptionTemplate } from '#hooks/use-description-templates'
 import { useDescriptionTemplates } from '#hooks/use-description-templates'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
 import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
@@ -56,6 +61,11 @@ vi.mock('#hooks/use-github-link', async (importOriginal) => {
     await importOriginal<typeof import('#hooks/use-github-link')>()
   return { ...original, useLinkTaskToGithub: vi.fn() }
 })
+vi.mock('#hooks/use-priority-settings', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('#hooks/use-priority-settings')>()
+  return { ...original, usePrioritySettings: vi.fn() }
+})
 vi.mock('#hooks/use-description-templates', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('#hooks/use-description-templates')>()
@@ -68,6 +78,7 @@ vi.mock('#hooks/use-queues', async (importOriginal) => {
 
 const mockUseCreateTask = vi.mocked(useCreateTask)
 const mockUseLinkTaskToGithub = vi.mocked(useLinkTaskToGithub)
+const mockUsePrioritySettings = vi.mocked(usePrioritySettings)
 const mockUseSetQueueItems = vi.mocked(useSetQueueItems)
 const mockUseDescriptionTemplates = vi.mocked(useDescriptionTemplates)
 
@@ -78,12 +89,14 @@ const githubIssueUrl = 'https://github.com/fohte/tq/issues/123'
 // synchronously — unlike the other two mutation mocks below, whose callers
 // never depend on their outcome within the same test.
 function mockCreateTaskSuccess(task: Task) {
+  const inputs: CreateTaskInput[] = []
   const mutate = vi.fn(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double: CreateTaskModal only ever calls mutate(input, { onSuccess }), so the exact mutate overload signature doesn't matter here
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test double only handles the mutate arguments used by CreateTaskModal
     ((
-      _input: CreateTaskInput,
+      input: CreateTaskInput,
       options?: { onSuccess?: (task: Task) => void },
     ) => {
+      inputs.push(input)
       options?.onSuccess?.(task)
     }) as ReturnType<typeof useCreateTask>['mutate'],
   )
@@ -93,7 +106,7 @@ function mockCreateTaskSuccess(task: Task) {
       isPending: false,
     }),
   )
-  return mutate
+  return Object.assign(mutate, { inputs })
 }
 
 function mockCreateTaskPendingSuccess() {
@@ -272,6 +285,11 @@ function closeState(
 describe('CreateTaskModal', () => {
   beforeEach(() => {
     setDescriptionTemplates()
+    mockUsePrioritySettings.mockReturnValue(
+      partialMutation<ReturnType<typeof usePrioritySettings>>({
+        data: makePrioritySettings(),
+      }),
+    )
     mockUseCreateTask.mockReturnValue(
       partialMutation<ReturnType<typeof useCreateTask>>({
         mutate: vi.fn(),
@@ -848,7 +866,7 @@ describe('CreateTaskModal', () => {
       }
     })
 
-    it('activates commitment and appends the task to the day queue when "today" is selected', async () => {
+    it('sets an unset priority to zero and appends the task when "today" is selected', async () => {
       const user = userEvent.setup()
       const today = formatLocalDate(new Date())
       const existingQueueItem = makeQueueItem({
@@ -865,7 +883,8 @@ describe('CreateTaskModal', () => {
       const mutateCreateTask = mockCreateTaskSuccess(
         makeTask({ id: 'new-task-id', number: 2 }),
       )
-      const mutateSetQueueItems = vi.fn()
+      const mutateSetQueueItems =
+        vi.fn<ReturnType<typeof useSetQueueItems>['mutate']>()
       mockUseSetQueueItems.mockReturnValue(
         partialMutation<ReturnType<typeof useSetQueueItems>>({
           mutate: mutateSetQueueItems,
@@ -888,21 +907,78 @@ describe('CreateTaskModal', () => {
       )
       await user.click(enabledCreateButton)
 
-      expect(mutateCreateTask).toHaveBeenCalledWith(
-        { title: 'Ship it', context: 'personal', commitment: 'active' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-        { onSuccess: expect.any(Function) },
-      )
-      expect(mutateSetQueueItems).toHaveBeenCalledWith(
-        {
-          key: 'day',
-          date: today,
-          taskIds: ['existing-task', 'new-task-id'],
-        },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- vitest's expect.any() return type isn't generic, so TS can only type this property as `any`
-        { onError: expect.any(Function) },
-      )
+      const readResult = () => ({
+        createdTasks: mutateCreateTask.inputs,
+        queueUpdates: mutateSetQueueItems.mock.calls.map(([input]) => input),
+      })
+      expect(readResult()).toEqual({
+        createdTasks: [{ title: 'Ship it', context: 'personal', priority: 0 }],
+        queueUpdates: [
+          {
+            key: 'day',
+            date: today,
+            taskIds: ['existing-task', 'new-task-id'],
+          },
+        ],
+      })
     })
+
+    it.each([
+      ['desktop', DESKTOP_VIEWPORT],
+      ['mobile', MOBILE_VIEWPORT],
+    ] as const)(
+      '%s form preserves the selected priority when today is selected',
+      async (viewportName, viewport) => {
+        await page.viewport(viewport.width, viewport.height)
+        const user = userEvent.setup({
+          pointerEventsCheck: PointerEventsCheckLevel.Never,
+        })
+        const today = formatLocalDate(new Date())
+        const queryClient = new QueryClient({
+          defaultOptions: { queries: { retry: false } },
+        })
+        queryClient.setQueryData(queueKeys.items(DAY_QUEUE_KEY, today), [])
+        const mutateCreateTask = mockCreateTaskSuccess(
+          makeTask({ id: 'new-task-id', number: 2 }),
+        )
+        renderControlledModal(CreateTaskModal, {}, { queryClient })
+
+        const titleInput = atIndex(
+          screen.getAllByPlaceholderText(titleInputPlaceholder),
+          0,
+        )
+        await user.type(titleInput, 'Review notes')
+        if (viewportName === 'mobile') {
+          await user.click(
+            assertDefined(
+              findVisible(screen.getAllByRole('button', { name: 'Inbox' })),
+            ),
+          )
+        }
+        await user.click(screen.getByRole('combobox', { name: 'Priority' }))
+        const options = Array.from(
+          document.querySelectorAll('[data-slot="select-item"]'),
+        ).map((option) => option.textContent)
+        await user.click(screen.getByText('Next'))
+        await user.click(atIndex(screen.getAllByText('today'), 0))
+        await user.click(
+          assertDefined(
+            screen
+              .getAllByRole('button', { name: /create/i })
+              .find((button) => !button.hasAttribute('disabled')),
+          ),
+        )
+
+        const readResult = () => ({
+          options,
+          inputs: mutateCreateTask.inputs,
+        })
+        expect(readResult()).toEqual({
+          options: ['Now', 'Next', 'Normal', 'Inbox', 'Later'],
+          inputs: [{ title: 'Review notes', context: 'personal', priority: 1 }],
+        })
+      },
+    )
 
     // Regression test: each `*` token is stripped from the title once
     // completed, so a second `*weekday` typed afterward is parsed from a

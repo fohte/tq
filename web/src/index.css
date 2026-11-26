@@ -71,7 +71,7 @@
 
 /*
  * Three 14 pt AppKit button frames, two 9 pt gaps, and a 9 pt inset occupy
- * 69 pt; the 80 px heading inset leaves 11 px. Keep these dimensions aligned
+ * 69 pt; the 80 px left inset leaves 11 px. Keep these dimensions aligned
  * with `trafficLightPosition` in desktop/src/index.ts to prevent overlap.
  */
 .electron-titlebar-bar {

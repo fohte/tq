@@ -139,6 +139,6 @@ export const Active: Story = {
   name: 'the row marks a task that is already active',
   args: {
     task: makeTask({ title: 'Refactor the auth module' }),
-    reason: { kind: 'active' },
+    reason: { kind: 'priority', label: 'Routine' },
   },
 }

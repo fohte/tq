@@ -2,22 +2,41 @@ import { parseSearchQuery } from 'api/search-query-parser'
 import { describe, expect, it } from 'vitest'
 
 import {
+  defaultTaskListSort,
+  defaultTaskSort,
   sortOptionValues,
   tagFilterSearch,
+  taskListSearchDefaultQuery,
   withDefaultSort,
 } from '#lib/tasks-query'
 
+function getTaskSortDefaults() {
+  return {
+    projectSort: defaultTaskSort,
+    taskListSort: defaultTaskListSort,
+    taskListQuery: taskListSearchDefaultQuery,
+  }
+}
+
 describe('tagFilterSearch', () => {
-  it('builds a not-completed, tag-scoped, updated-sorted search', () => {
+  it('builds a not-completed, tag-scoped search sorted by priority, then update', () => {
     expect(tagFilterSearch('dev:tq')).toEqual({
-      q: 'is:todo label:dev:tq sort:updated',
+      q: 'is:todo label:dev:tq sort:priority sort:updated',
     })
   })
 })
 
 describe('sortOptionValues', () => {
   it('exposes the dropdown/tab-strip sort choices', () => {
-    expect(sortOptionValues).toEqual(['updated', 'due', 'created'])
+    expect(sortOptionValues).toEqual(['updated', 'due', 'created', 'priority'])
+  })
+
+  it('keeps the project default separate from the task-list default', () => {
+    expect(getTaskSortDefaults()).toEqual({
+      projectSort: ['updated'],
+      taskListSort: ['priority', 'updated'],
+      taskListQuery: 'is:todo sort:priority sort:updated',
+    })
   })
 })
 
@@ -25,14 +44,14 @@ describe('withDefaultSort', () => {
   it('defaults the sort when the query has none', () => {
     expect(withDefaultSort({ freeText: '' })).toEqual({
       freeText: '',
-      sortBy: 'updated',
+      sortBy: ['updated'],
     })
   })
 
   it('defaults the sort when a stored query uses an unsupported sort', () => {
     expect(withDefaultSort(parseSearchQuery('sort:invalid'))).toEqual({
       freeText: '',
-      sortBy: 'updated',
+      sortBy: ['updated'],
     })
   })
 })

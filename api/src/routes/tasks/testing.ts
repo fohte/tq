@@ -11,8 +11,12 @@ import {
   taskEvents,
 } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import type { TaskStatusReason } from '#schemas/task'
-import { taskStatusReason } from '#schemas/task'
+import {
+  type TaskPriority,
+  taskPriority,
+  type TaskStatusReason,
+  taskStatusReason,
+} from '#schemas/task'
 import type { TaskQueueCandidateReason } from '#services/task-queue-candidates'
 import { jsonBody } from '#testing'
 
@@ -90,7 +94,7 @@ export interface TaskResponse {
   status: 'todo' | 'completed'
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
-  commitment: 'inbox' | 'active' | 'someday'
+  priority: TaskPriority | null
   labels: string[]
   startDate: string | null
   dueDate: string | null
@@ -104,6 +108,12 @@ export interface TaskResponse {
   githubLinks: GithubLinkResponse[]
   // Present only on the single-task detail response.
   githubBlockers?: GithubLinkResponse[]
+  blockedByGithubRefs?: {
+    owner: string
+    repo: string
+    number: number
+    url: string
+  }[]
   hasUnresolvedWait?: boolean
   waits?: TaskWaitResponse[]
   createdAt: string
@@ -137,7 +147,7 @@ export interface TaskListItemResponse {
   status: 'todo' | 'completed'
   statusReason: TaskStatusReason | null
   context: 'work' | 'personal'
-  commitment: 'inbox' | 'active' | 'someday'
+  priority: TaskPriority | null
   labels: string[]
   startDate: string | null
   dueDate: string | null
@@ -204,6 +214,15 @@ export function withoutLinkSync<T extends { linkSync?: unknown }>(
   return rest
 }
 
+export function withoutLinkSyncAndBlockedByGithubRefs<
+  T extends { linkSync?: unknown; blockedByGithubRefs?: unknown },
+>(task: T): Omit<T, 'linkSync' | 'blockedByGithubRefs'> {
+  const { linkSync, blockedByGithubRefs, ...rest } = task
+  void linkSync
+  void blockedByGithubRefs
+  return rest
+}
+
 // The `TaskListItemResponse` shape of a task with no parent or duplicate-of
 // relation, for building expected `links`/`blockedBy`/`blocking` entries from
 // a `TaskResponse` without repeating its field list at each call site.
@@ -217,7 +236,7 @@ export function toListItemResponse(
     | 'status'
     | 'statusReason'
     | 'context'
-    | 'commitment'
+    | 'priority'
     | 'labels'
     | 'startDate'
     | 'dueDate'
@@ -248,7 +267,7 @@ export function toListItemResponse(
     status: task.status,
     statusReason: task.statusReason,
     context: task.context,
-    commitment: task.commitment,
+    priority: task.priority,
     labels: task.labels,
     startDate: task.startDate,
     dueDate: task.dueDate,
@@ -367,7 +386,7 @@ const taskListItemResponseSchema = z.object({
   status: z.enum(['todo', 'completed']),
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
-  commitment: z.enum(['inbox', 'active', 'someday']),
+  priority: taskPriority.nullable(),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -411,7 +430,7 @@ const taskResponseSchema = z.object({
   status: z.enum(['todo', 'completed']),
   statusReason: taskStatusReason.nullable(),
   context: z.enum(['work', 'personal']),
-  commitment: z.enum(['inbox', 'active', 'someday']),
+  priority: taskPriority.nullable(),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -424,6 +443,16 @@ const taskResponseSchema = z.object({
   occurrenceDate: z.string().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
   githubBlockers: z.array(githubLinkResponseSchema).optional(),
+  blockedByGithubRefs: z
+    .array(
+      z.object({
+        owner: z.string(),
+        repo: z.string(),
+        number: z.number(),
+        url: z.string(),
+      }),
+    )
+    .optional(),
   hasUnresolvedWait: z.boolean().optional(),
   waits: z.array(taskWaitResponseSchema).optional(),
   createdAt: z.string(),
@@ -469,7 +498,7 @@ export async function createTask(
     startDate?: string
     dueDate?: string
     context?: string
-    commitment?: string
+    priority?: TaskPriority | null
     labels?: string[]
   } = {},
 ) {

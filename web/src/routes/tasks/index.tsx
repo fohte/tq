@@ -12,13 +12,14 @@ import { SectionHeading } from '#components/ui/section-heading'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import {
+  defaultTaskListSort,
   sortOptionValues,
-  tasksSearchDefaultQuery,
+  taskListSearchDefaultQuery,
   withDefaultSort,
 } from '#lib/tasks-query'
 
 const tasksSearchDefaults = {
-  q: tasksSearchDefaultQuery,
+  q: taskListSearchDefaultQuery,
 }
 
 interface TasksSearch {
@@ -37,8 +38,10 @@ function validateSearch(search: Record<string, unknown>): TasksSearch {
     'projectId' in search ||
     'tag' in search
   ) {
-    const sortBy =
-      sortOptionValues.find((value) => value === search['sortBy']) ?? 'updated'
+    const legacySort = sortOptionValues.find(
+      (value) => value === search['sortBy'],
+    )
+    const sortBy = legacySort != null ? [legacySort] : defaultTaskListSort
     const showCompleted = search['showCompleted'] === true
     const projectId =
       typeof search['projectId'] === 'string' ? search['projectId'] : undefined
@@ -68,7 +71,9 @@ export const Route = createFileRoute('/tasks/')({
 function TaskList() {
   const { q = tasksSearchDefaults.q } = Route.useSearch()
   const parsed = parseSearchQuery(q)
-  const filteredQuery = buildSearchQuery(withDefaultSort(parsed))
+  const filteredQuery = buildSearchQuery(
+    withDefaultSort(parsed, defaultTaskListSort),
+  )
   const navigate = Route.useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -103,7 +108,11 @@ function TaskList() {
           />
         </ScreenHeaderBar>
 
-        <TaskFilterChipRow onQueryChange={setQuery} parsed={parsed} />
+        <TaskFilterChipRow
+          onQueryChange={setQuery}
+          parsed={parsed}
+          defaultSort={defaultTaskListSort}
+        />
       </div>
 
       <TaskTreeList

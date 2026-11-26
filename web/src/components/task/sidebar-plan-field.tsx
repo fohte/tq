@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import type { PlanValue } from '#components/task/create-task-modal-fields'
 import { PlanTabStrip } from '#components/task/plan-tab-strip'
 import { SidebarField } from '#components/task/sidebar-field'
+import type { TaskPriority } from '#hooks/use-priority-settings'
 import { useTaskPlan } from '#hooks/use-queues'
 import { useUpdateTask } from '#hooks/use-tasks'
 import { formatLocalDate } from '#lib/date-range'
@@ -10,10 +11,10 @@ import { ordinal } from '#lib/format'
 
 export function SidebarPlanField({
   taskId,
-  commitment,
+  priority,
 }: {
   taskId: string
-  commitment: 'inbox' | 'active' | 'someday'
+  priority: TaskPriority
 }) {
   const date = useMemo(() => formatLocalDate(new Date()), [])
   const { plan, position, setPlan, isLoading } = useTaskPlan(taskId, date)
@@ -21,10 +22,8 @@ export function SidebarPlanField({
 
   const handleChange = (next: PlanValue | '') => {
     setPlan(next)
-    // "I'll do this now" already implies triage is done; someday/active are
-    // values the user chose explicitly, so only inbox gets bumped.
-    if (next !== '' && commitment === 'inbox') {
-      updateTask.mutate({ id: taskId, input: { commitment: 'active' } })
+    if (next !== '' && priority === null) {
+      updateTask.mutate({ id: taskId, input: { priority: 0 } })
     }
   }
 

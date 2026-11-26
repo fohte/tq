@@ -11,7 +11,9 @@ import {
   getTaskChecklistOwnerIds,
 } from '#routes/tasks/change-event-task-ids'
 import { earliestUnresolvedTaskWaitFollowUpSubquery } from '#routes/tasks/list-query-waits'
+import type { PrioritySetting } from '#schemas/priority-settings'
 import type { TaskSortBy, TaskSortOrder } from '#schemas/task'
+import { priorityOrderExpression } from '#services/priority-settings'
 import { hasUnacknowledgedResolvedTaskWaitCondition } from '#services/task-blockers'
 
 export {
@@ -28,11 +30,12 @@ export {
   timeBlockToResponse,
 } from '#routes/tasks/task-response'
 
-function resolvePrimaryTaskListOrderBy(
-  sortBy: TaskSortBy | undefined,
+function resolveSortKeyOrderBy(
+  key: TaskSortBy | undefined,
   order: TaskSortOrder,
+  prioritySettings: PrioritySetting[],
 ) {
-  switch (sortBy) {
+  switch (key) {
     case 'updated':
       return order === 'desc' ? desc(tasks.updatedAt) : tasks.updatedAt
     case 'due':
@@ -43,6 +46,10 @@ function resolvePrimaryTaskListOrderBy(
       const waitResolved = hasUnacknowledgedResolvedTaskWaitCondition()
       const direction = order === 'desc' ? sql`DESC` : sql`ASC`
       return sql`CASE WHEN ${waitResolved} THEN 0 ELSE 1 END, (${earliestUnresolvedTaskWaitFollowUpSubquery()}) ${direction} NULLS LAST`
+    }
+    case 'priority': {
+      const direction = order === 'desc' ? sql`DESC` : sql`ASC`
+      return sql`${priorityOrderExpression(prioritySettings)} ${direction}`
     }
     case 'created':
     default:
@@ -56,14 +63,29 @@ function resolvePrimaryTaskListOrderBy(
 // transaction share one `now()`-derived `createdAt`), which limit/offset
 // paging requires to avoid duplicate or skipped rows across pages.
 export function resolveTaskListOrderBy(
-  sortBy?: TaskSortBy,
-  order?: TaskSortOrder,
+  sortBy: TaskSortBy[] | undefined,
+  order: TaskSortOrder | undefined,
+  prioritySettings: PrioritySetting[],
 ) {
-  const defaultOrder = sortBy === 'updated' ? 'desc' : 'asc'
-  return [
-    resolvePrimaryTaskListOrderBy(sortBy, order ?? defaultOrder),
-    tasks.number,
+  const defaultOrderOf = (key: TaskSortBy | undefined): TaskSortOrder =>
+    key === 'updated' ? 'desc' : 'asc'
+  const [first, ...rest] = sortBy ?? []
+  const keys = [
+    resolveSortKeyOrderBy(
+      first,
+      order ?? defaultOrderOf(first),
+      prioritySettings,
+    ),
+    ...rest.map((key) =>
+      resolveSortKeyOrderBy(key, defaultOrderOf(key), prioritySettings),
+    ),
   ]
+  // A lone priority key breaks ties by due date so existing sort:priority
+  // views keep their order.
+  if (first === 'priority' && rest.length === 0) {
+    keys.push(sql`${tasks.dueDate} ASC NULLS LAST`)
+  }
+  return [...keys, tasks.number]
 }
 
 // Self-join alias resolving a task row's parent's `number`, for list

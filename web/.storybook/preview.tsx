@@ -5,9 +5,11 @@ import {
   reportUnhandledApiRequest,
 } from '@fohte/storybook-addon/preview'
 import type { Preview } from '@storybook/react-vite'
+import { http, HttpResponse } from 'msw'
 import { setupWorker } from 'msw/browser'
 import { mswLoader } from 'msw-storybook-addon/csf3'
 
+import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { StoryRouter } from '#storybook-config/story-router'
 
 configureUnhandledApiRequestCheck({ pathPrefixes: ['/api/'] })
@@ -54,7 +56,11 @@ const preview: Preview = {
   ],
   loaders: [
     mswLoader(async () => {
-      const worker = setupWorker()
+      const worker = setupWorker(
+        http.get('/api/priority-settings', () =>
+          HttpResponse.json(makePrioritySettings()),
+        ),
+      )
       await worker.start({
         onUnhandledRequest: ({ url }, print) => {
           if (reportUnhandledApiRequest(url)) {

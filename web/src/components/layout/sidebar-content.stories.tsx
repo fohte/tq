@@ -54,8 +54,8 @@ const projectsAcrossStatuses: Project[] = [
 ]
 
 const savedViews: SavedView[] = [
-  makeSavedView({ id: '1', name: 'Now', query: 'commitment:active' }),
-  makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
+  makeSavedView({ id: '1', name: 'Now', query: 'priority:0' }),
+  makeSavedView({ id: '2', name: 'Someday', query: 'priority:-1' }),
 ]
 
 function SidebarContentStory({
@@ -74,7 +74,7 @@ function SidebarContentStory({
   queryClient.setQueryData(
     taskKeys.count({
       context: 'personal',
-      commitment: 'inbox',
+      priority: 'none',
       status: 'todo',
       q: 'has:no-blockers',
     }),

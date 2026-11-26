@@ -28,7 +28,10 @@ import {
   checkTaskUpdate,
   taskConventionViolationBody,
 } from '#services/task-conventions'
-import { GithubBlockerSubjectConflictError } from '#services/task-github-blockers'
+import {
+  getOpenGithubBlockerRefsByTaskId,
+  GithubBlockerSubjectConflictError,
+} from '#services/task-github-blockers'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
 import { syncTaskBlockedBy } from '#services/task-relations'
@@ -46,8 +49,13 @@ export const tasksUpdateApp = new Hono().patch(
       labels: labelsInput,
       blockedBy: blockedByInput,
       remindAt: remindAtInput,
-      ...taskFields
+      priority: priorityInput,
+      ...taskFieldsWithoutPriority
     } = c.req.valid('json')
+    const taskFields = {
+      ...taskFieldsWithoutPriority,
+      ...(priorityInput === undefined ? {} : { priority: priorityInput }),
+    }
     const affectedTaskIdsBefore = await getTaskChangeEventIds([id])
 
     if (recurrenceRuleInput !== undefined && existing.templateId != null) {
@@ -300,10 +308,12 @@ export const tasksUpdateApp = new Hono().patch(
       ...new Set([...affectedTaskIdsBefore, ...affectedTaskIdsAfter]),
     ])
 
-    const [githubLinksByTaskId, labelsByTaskId] = await Promise.all([
-      getGithubLinksByTaskId([id], { role: 'subject' }),
-      getLabelNamesByTaskId([id]),
-    ])
+    const [githubLinksByTaskId, labelsByTaskId, githubBlockerRefsByTaskId] =
+      await Promise.all([
+        getGithubLinksByTaskId([id], { role: 'subject' }),
+        getLabelNamesByTaskId([id]),
+        getOpenGithubBlockerRefsByTaskId([id]),
+      ])
 
     return c.json(
       {
@@ -313,6 +323,7 @@ export const tasksUpdateApp = new Hono().patch(
           githubLinksByTaskId.get(id) ?? [],
           labelsByTaskId.get(id) ?? [],
         ),
+        blockedByGithubRefs: githubBlockerRefsByTaskId.get(id) ?? [],
         ...(linkSync
           ? {
               linkSync: toTaskLinkSyncResponse(linkSync),

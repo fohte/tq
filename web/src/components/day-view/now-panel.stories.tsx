@@ -62,7 +62,8 @@ interface NowPanelStoryProps {
   calendarEvents: TimeBlockEvent[]
   taskMap: Map<string, Task>
   isLoading?: boolean
-  desktopWindowControls?: boolean | undefined
+  compact?: boolean | undefined
+  scrollableContentMaxHeight?: number | undefined
 }
 
 function NowPanelStory({
@@ -71,7 +72,8 @@ function NowPanelStory({
   calendarEvents,
   taskMap,
   isLoading,
-  desktopWindowControls,
+  compact,
+  scrollableContentMaxHeight,
 }: NowPanelStoryProps) {
   const model = useMemo(
     () =>
@@ -84,9 +86,10 @@ function NowPanelStory({
       <NowPanel
         model={model}
         {...(isLoading === undefined ? {} : { isLoading })}
-        {...(desktopWindowControls === undefined
+        {...(compact === undefined ? {} : { compact })}
+        {...(scrollableContentMaxHeight === undefined
           ? {}
-          : { desktopWindowControls })}
+          : { scrollableContentMaxHeight })}
       />
     </Providers>
   )
@@ -141,6 +144,23 @@ export const CurrentTask: Story = {
   },
 }
 
+const unresolvedTaskBlock = block(
+  'block-unresolved-task',
+  'unresolved-task',
+  localTime(9, 14),
+  localTime(9, 15),
+)
+
+export const MissingTask: Story = {
+  name: 'a block without task details appears as Busy',
+  args: {
+    now: new Date(2031, 3, 9, 14, 14, 30),
+    timeBlocks: [unresolvedTaskBlock],
+    calendarEvents: [blockEvent(unresolvedTaskBlock, 'Unknown task')],
+    taskMap: taskMap(),
+  },
+}
+
 export const ParallelTasks: Story = {
   name: 'overlapping time blocks show every task in start order',
   args: {
@@ -152,6 +172,22 @@ export const ParallelTasks: Story = {
       blockEvent(activeA, taskA.title),
     ],
     taskMap: taskMap(taskA, taskB, taskC),
+  },
+}
+
+export const Compact: Story = {
+  name: 'the compact panel keeps overlapping activities and upcoming work in its scroll area',
+  args: {
+    now: new Date(2031, 3, 9, 9, 14, 45),
+    timeBlocks: [activeA, activeB],
+    calendarEvents: [
+      blockEvent(activeA, taskA.title),
+      blockEvent(activeB, taskB.title),
+      blockEvent(nextC, taskC.title),
+    ],
+    taskMap: taskMap(taskA, taskB, taskC),
+    compact: true,
+    scrollableContentMaxHeight: 320,
   },
 }
 
@@ -256,18 +292,6 @@ export const Loading: Story = {
     calendarEvents: [],
     taskMap: taskMap(),
     isLoading: true,
-  },
-}
-
-export const DesktopWindowControls: Story = {
-  name: 'the Now panel reserves space for the desktop window controls',
-  tags: ['desktop-only'],
-  args: {
-    desktopWindowControls: true,
-    now,
-    timeBlocks: [],
-    calendarEvents: [],
-    taskMap: taskMap(),
   },
 }
 

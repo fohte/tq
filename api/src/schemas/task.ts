@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { MAX_MARKDOWN_CONTENT_LENGTH } from '#constants/content-length'
 import { taskIdOrNumber } from '#lib/numeric-id'
+import { splitCommaList } from '#lib/split-comma-list'
 import { labelNameSchema } from '#schemas/label-name'
 import { queueDateSchema } from '#schemas/queue-date'
 import { recurrenceRuleSchema } from '#schemas/recurrence-rule'
@@ -19,14 +20,51 @@ export const taskStatusReason = z.enum([
 ])
 export type TaskStatusReason = z.infer<typeof taskStatusReason>
 export const contextEnum = z.enum(['work', 'personal'])
-export const commitmentEnum = z.enum(['inbox', 'active', 'someday'])
+export const taskPriority = z.number().int().min(-1).max(2)
+export type TaskPriority = z.infer<typeof taskPriority>
+
+const taskPriorityFilter = z.enum(['none', '-1', '0', '1', '2'])
+export type TaskPriorityFilter = z.infer<typeof taskPriorityFilter>
 
 const blockedByItemSchema = z.union([taskIdOrNumber, z.url()])
 
-export const taskSortBy = z.enum(['created', 'updated', 'due', 'follow-up'])
+export const taskSortBy = z.enum([
+  'created',
+  'updated',
+  'due',
+  'follow-up',
+  'priority',
+])
 export type TaskSortBy = z.infer<typeof taskSortBy>
 export const taskSortOrder = z.enum(['asc', 'desc'])
 export type TaskSortOrder = z.infer<typeof taskSortOrder>
+
+const taskSortKeysQuerySchema = z
+  .union([
+    z
+      .string()
+      .describe(
+        'Comma-separated sort keys, most significant first. Keys: created, updated, due, follow-up, priority.',
+      ),
+    z.array(z.string()),
+  ])
+  .transform((values, ctx) => {
+    const result = z
+      .array(taskSortBy)
+      .min(1)
+      .safeParse(
+        (Array.isArray(values) ? values : [values]).flatMap(splitCommaList),
+      )
+    if (!result.success) {
+      ctx.addIssue({
+        code: 'custom',
+        message: result.error.issues[0]?.message ?? 'Invalid value',
+      })
+      return z.NEVER
+    }
+    return [...new Set(result.data)]
+  })
+  .optional()
 
 const hasFlagSchema = z
   .string()
@@ -74,7 +112,7 @@ export const createTaskSchema = z.object({
   parentId: taskIdOrNumber.optional(),
   projectId: z.uuid().optional(),
   context: contextEnum.optional(),
-  commitment: commitmentEnum.optional(),
+  priority: taskPriority.nullable().optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.optional(),
   blockedBy: z
@@ -94,7 +132,7 @@ export const updateTaskSchema = z.object({
   dueDate: z.string().nullable().optional(),
   projectId: z.uuid().nullable().optional(),
   context: contextEnum.optional(),
-  commitment: commitmentEnum.optional(),
+  priority: taskPriority.nullable().optional(),
   labels: z.array(labelNameSchema).optional(),
   recurrenceRule: recurrenceRuleSchema.nullable().optional(),
   remindAt: z.iso
@@ -151,23 +189,25 @@ export const listTasksQuerySchema = z.object({
     .describe('Only return tasks that can be added to a queue on this date.')
     .optional(),
   context: taskListContext,
-  commitment: commitmentEnum.optional(),
+  priority: taskPriorityFilter.optional(),
   projectId: z.uuid().optional(),
   templateId: z.uuid().optional(),
   parentId: z
     .union([z.literal('root'), taskIdOrNumber])
-    .describe("Parent task UUID or number, or 'root' for tasks with no parent.")
+    .describe(
+      "Parent task UUID or number, or 'root' for tasks whose parent does not match the other filters.",
+    )
     .optional(),
   descendantOf: taskIdOrNumber
     .describe('Return descendants of this task UUID or number.')
     .optional(),
   includeAncestors: strictBooleanFlagSchema,
   includeMatch: hasFlagSchema,
-  sortBy: taskSortBy.optional(),
+  sortBy: taskSortKeysQuerySchema,
   order: taskSortOrder
     .optional()
     .describe(
-      'Sort direction. Defaults to desc for sortBy=updated and asc for sortBy=created or sortBy=due.',
+      'Sort direction of the first sort key. Defaults to desc when the first key is updated and asc otherwise. Later keys keep their own direction: updated is newest first, and the others are ascending. When priority is the only key, the nearest due date comes first within each priority regardless of this direction.',
     ),
   limit: z.union([
     z.coerce.number().int().min(1).max(100),

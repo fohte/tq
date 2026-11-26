@@ -2,8 +2,8 @@ import { z } from 'zod'
 
 import { GITHUB_LINK_ROLES, GITHUB_NOTIFY_EVENTS } from '#db/schema'
 import {
-  commitmentEnum,
   contextEnum,
+  taskPriority,
   taskStatus,
   taskStatusReason,
 } from '#schemas/task'
@@ -69,7 +69,7 @@ export const createTaskResponseSchema = z.object({
   status: taskStatus,
   statusReason: taskStatusReason.nullable(),
   context: contextEnum,
-  commitment: commitmentEnum,
+  priority: taskPriority.nullable(),
   labels: z.array(z.string()),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
@@ -81,6 +81,14 @@ export const createTaskResponseSchema = z.object({
   templateId: z.uuid().nullable(),
   occurrenceDate: z.iso.date().nullable(),
   githubLinks: z.array(githubLinkResponseSchema),
+  blockedByGithubRefs: z.array(
+    z.object({
+      owner: z.string(),
+      repo: z.string(),
+      number: z.number().int(),
+      url: z.url(),
+    }),
+  ),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   linkSync: linkSyncResponseSchema,

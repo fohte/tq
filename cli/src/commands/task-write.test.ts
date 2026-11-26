@@ -82,6 +82,31 @@ describe('task create', () => {
     ])
   })
 
+  it('parses a numeric priority flag', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'create', 'New task', '--priority', '2'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const snapshot = () => [exitCode, request(calls[0])] as const
+
+    expect(snapshot()).toEqual([
+      0,
+      {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: { title: 'New task', priority: 2 },
+      },
+    ])
+  })
+
   it('prints the linkSync summary to stderr when the response includes one', async () => {
     const created = {
       id: 't1',
@@ -405,6 +430,31 @@ describe('task update', () => {
       query: {},
       body: { title: 'Updated title' },
     })
+  })
+
+  it('parses a numeric priority flag', async () => {
+    const updated = { id: 't1', number: 1, title: 'Updated title' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(updated), { status: 200 }),
+    )
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'task', 'update', '42', '--priority', '-1'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const snapshot = () => [exitCode, request(calls[0])] as const
+
+    expect(snapshot()).toEqual([
+      0,
+      {
+        method: 'PATCH',
+        pathname: '/api/tasks/42',
+        query: {},
+        body: { priority: -1 },
+      },
+    ])
   })
 
   it('prints the linkSync summary to stderr when the response includes one', async () => {
@@ -1356,22 +1406,25 @@ Commands:
                             multiple statuses),
                             reason:completed|not_planned|duplicate, label:<name>
                             (also matches descendants under a /-separated path),
-                            context:work|personal,
-                            commitment:inbox|active|someday,
+                            context:work|personal, priority:-1|0|1|2|none,
                             has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
-                            parent:<uuid|number>|root, project:<uuid|title>, and
-                            sort:due|created|updated. has:follow-up-due matches
-                            tasks with an unresolved wait whose follow-up date
-                            is today or earlier in the client timezone.
-                            has:resolved-wait matches tasks with a resolved wait
-                            that has not been acknowledged and is available
-                            through q. Search filters with corresponding fields
-                            in the task search schema can also be sent as
-                            explicit parameters. For example, q: "is:todo
-                            label:example context:work planning" finds matching
-                            todo tasks whose title, description, or pages
-                            mention planning. Task descriptions are omitted from
-                            results by default; set full to include them.
+                            parent:<uuid|number>|root (root includes tasks whose
+                            parent does not match the other filters),
+                            project:<uuid|title>, and
+                            sort:due|created|updated|priority (repeat sort: to
+                            break ties with later keys). has:follow-up-due
+                            matches tasks with an unresolved wait whose
+                            follow-up date is today or earlier in the client
+                            timezone. has:resolved-wait matches tasks with a
+                            resolved wait that has not been acknowledged and is
+                            available through q. Search filters with
+                            corresponding fields in the task search schema can
+                            also be sent as explicit parameters. For example, q:
+                            "is:todo label:example context:work planning" finds
+                            matching todo tasks whose title, description, or
+                            pages mention planning. Task descriptions are
+                            omitted from results by default; set full to include
+                            them.
   activity <id>             Get the activity history of a task.
   sessions <id>             List agent sessions linked to a task.
   from-github <url>         Create a task from a GitHub issue or pull request

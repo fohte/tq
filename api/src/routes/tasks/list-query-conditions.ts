@@ -8,9 +8,11 @@ import {
   ne,
   notExists,
   or,
+  type SQL,
   sql,
 } from 'drizzle-orm'
-import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core'
+import { alias } from 'drizzle-orm/pg-core'
+import { err, ok, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { db } from '#db/connection'
@@ -27,8 +29,10 @@ import { formatDateAtOffset } from '#lib/timezone'
 import { buildTaskDateConditions } from '#routes/tasks/list-date-conditions'
 import { followUpDueTaskWaitSubquery } from '#routes/tasks/list-query-waits'
 import { parentTasks, resolveTasksByIdsOrNumbers } from '#routes/tasks/shared'
+import type { PrioritySetting } from '#schemas/priority-settings'
 import type { ListTasksQuery } from '#schemas/task'
 import { parseSearchQuery } from '#search-query-parser'
+import { getPrioritySettings } from '#services/priority-settings'
 import {
   hasBlockingStateCondition,
   hasNoBlockingStateCondition,
@@ -61,6 +65,14 @@ function isNumericTaskIdentifier(value: string) {
   return /^\d+$/.test(value)
 }
 
+type BuildConditionsResult = {
+  conditions: (SQL | undefined)[]
+  sortBy: ListTasksQuery['sortBy']
+  order: ListTasksQuery['order']
+  freeTextWords: string[]
+  prioritySettings: PrioritySetting[]
+}
+
 type ResolvedTaskFilter = { id: string | null }
 
 type ResolvedTaskFilters = {
@@ -70,32 +82,13 @@ type ResolvedTaskFilters = {
 
 type TaskConditionsQuery = Omit<ListTasksQuery, 'limit' | 'view'>
 
-// NULL-safe "doesn't belong to this project", for a `projectId` column on
-// `tasks` or its `parentTasks` self-join alias. A plain
-// `not(eq(projectIdColumn, id))` would evaluate to NULL (not TRUE) when
-// `projectIdColumn` is NULL, which would wrongly exclude project-less rows.
-function projectMismatch(projectIdColumn: AnyPgColumn, identifier: string) {
-  return z.uuid().safeParse(identifier).success
-    ? or(isNull(projectIdColumn), ne(projectIdColumn, identifier))
-    : notExists(
-        db
-          .select({ _: sql`1` })
-          .from(projects)
-          .where(
-            and(
-              eq(projects.id, projectIdColumn),
-              eq(projects.title, identifier),
-            ),
-          ),
-      )
-}
-
 function buildConditions(
   query: Omit<TaskConditionsQuery, 'ids'>,
   ids: string[] | undefined,
   parsed: ReturnType<typeof parseSearchQuery> | null,
   resolvedFilters: ResolvedTaskFilters,
-) {
+  prioritySettings: PrioritySetting[],
+): BuildConditionsResult {
   const conditions = []
 
   if (ids != null) {
@@ -113,9 +106,18 @@ function buildConditions(
     conditions.push(eq(tasks.context, context))
   }
 
-  const commitment = parsed?.commitment ?? query.commitment
-  if (commitment != null) {
-    conditions.push(eq(tasks.commitment, commitment))
+  const priority =
+    parsed?.priority !== undefined
+      ? parsed.priority
+      : query.priority === undefined
+        ? undefined
+        : query.priority === 'none'
+          ? null
+          : Number(query.priority)
+  if (priority !== undefined) {
+    conditions.push(
+      priority === null ? isNull(tasks.priority) : eq(tasks.priority, priority),
+    )
   }
 
   const reason = parsed?.reason ?? query.statusReason?.[0]
@@ -217,17 +219,25 @@ function buildConditions(
 
   const parent = resolvedFilters.parent
   if (parent === 'root') {
-    // A task in this project whose actual parent belongs to a different
-    // project (or none) has no visible parent within this project's task
-    // list, so it needs to count as a root here too — otherwise it would
-    // never appear anywhere in the project's tree.
+    // A parent outside this filter has no visible place in the result tree.
+    const parentConditions = buildConditions(
+      query,
+      ids,
+      parsed,
+      { ...resolvedFilters, parent: undefined },
+      prioritySettings,
+    ).conditions
     conditions.push(
-      projectIdentifier != null
-        ? or(
-            isNull(tasks.parentId),
-            projectMismatch(parentTasks.projectId, projectIdentifier),
-          )
-        : isNull(tasks.parentId),
+      or(
+        isNull(tasks.parentId),
+        notExists(
+          // The inner `tasks` scope evaluates the parent row; `parentTasks` comes from the caller's join.
+          db
+            .select({ _: sql`1` })
+            .from(tasks)
+            .where(and(eq(tasks.id, parentTasks.id), ...parentConditions)),
+        ),
+      ),
     )
   } else if (parent != null) {
     conditions.push(
@@ -267,7 +277,7 @@ function buildConditions(
     conditions.push(isNull(tasks.dueDate))
   }
 
-  conditions.push(...buildTaskDateConditions(query))
+  conditions.push(...buildTaskDateConditions(query, prioritySettings))
 
   if (parsed?.freeText != null && parsed.freeText !== '') {
     const freeText = parsed.freeText
@@ -311,12 +321,25 @@ function buildConditions(
     sortBy: parsed?.sortBy ?? query.sortBy,
     order: query.order,
     freeTextWords: freeTextWords(parsed?.freeText),
+    prioritySettings,
   }
 }
 
-export async function buildTaskFilterConditions(query: TaskConditionsQuery) {
+export type TaskFilterConditions = ReturnType<typeof buildConditions>
+
+export async function buildTaskFilterConditions(
+  query: TaskConditionsQuery,
+): Promise<Result<TaskFilterConditions, Error>> {
   const { ids: rawIds, ...filters } = query
   const parsed = query.q != null ? parseSearchQuery(query.q) : null
+  const sortBy = parsed?.sortBy ?? filters.sortBy
+  const prioritySettingsResult =
+    sortBy?.includes('priority') === true || filters.candidatesOn != null
+      ? await getPrioritySettings()
+      : ok([])
+  if (prioritySettingsResult.isErr()) {
+    return err(prioritySettingsResult.error)
+  }
   const parentIdentifier = parsed?.parentId ?? filters.parentId
   const parentIdentifierString =
     parentIdentifier == null || parentIdentifier === 'root'
@@ -347,5 +370,13 @@ export async function buildTaskFilterConditions(query: TaskConditionsQuery) {
       ? undefined
       : (await resolveTasksByIdsOrNumbers(rawIds.map(String))).ids
 
-  return buildConditions(filters, ids, parsed, resolvedFilters)
+  return ok(
+    buildConditions(
+      filters,
+      ids,
+      parsed,
+      resolvedFilters,
+      prioritySettingsResult.value,
+    ),
+  )
 }

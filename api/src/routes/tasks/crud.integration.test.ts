@@ -308,6 +308,7 @@ function expectedTaskWithAllRelations({
     blockedBy: [duplicateTargetDetail],
     blocking: [incomingTaskDetail],
     githubBlockers: [],
+    blockedByGithubRefs: [],
     checklistCompletionCount: { total: 0, completed: 0 },
     checklists: [],
   }
@@ -360,7 +361,8 @@ async function taskResponseSnapshot(res: Response) {
 
 function createdTaskResponse(
   title: string,
-  description: string,
+  description: string | null,
+  priority: -1 | 0 | 1 | 2 | null = null,
 ): { status: number; body: TaskResponse } {
   return responseSnapshot(201, {
     id: 'ID',
@@ -370,7 +372,7 @@ function createdTaskResponse(
     status: 'todo',
     statusReason: null,
     context: 'personal',
-    commitment: 'inbox',
+    priority,
     labels: [],
     startDate: null,
     dueDate: null,
@@ -382,6 +384,7 @@ function createdTaskResponse(
     templateId: null,
     occurrenceDate: null,
     githubLinks: [],
+    blockedByGithubRefs: [],
     createdAt: 'TIMESTAMP',
     updatedAt: 'TIMESTAMP',
     linkSync: { added: [], unresolvedRefs: [] },
@@ -390,10 +393,11 @@ function createdTaskResponse(
 
 function updatedTaskResponse(
   title: string,
-  description: string,
+  description: string | null,
   includeLinkSync = true,
+  priority: -1 | 0 | 1 | 2 | null = null,
 ) {
-  const createdResponse = createdTaskResponse(title, description)
+  const createdResponse = createdTaskResponse(title, description, priority)
   return responseSnapshot(
     200,
     includeLinkSync
@@ -705,7 +709,7 @@ describe('tasks CRUD API', () => {
         status: 'todo',
         statusReason: null,
         context: 'personal',
-        commitment: 'inbox',
+        priority: null,
         labels: [],
         startDate: null,
         dueDate: null,
@@ -717,6 +721,7 @@ describe('tasks CRUD API', () => {
         templateId: null,
         occurrenceDate: null,
         githubLinks: [],
+        blockedByGithubRefs: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
         linkSync: { added: [], unresolvedRefs: [] },
@@ -729,7 +734,7 @@ describe('tasks CRUD API', () => {
 
     it('creates task and GitHub blockers from mixed ids and URLs', async () => {
       const blocker = await createTask('Internal blocker')
-      const url = 'https://github.com/example-owner/example-repo/issues/17'
+      const url = 'https://github.com/example-owner/example-repo/pull/17'
       await upsertGithubToken('valid-token')
       mockGithubIssueResponse({
         title: 'External blocker',
@@ -745,6 +750,7 @@ describe('tasks CRUD API', () => {
         }),
       })
       const body = await jsonBody<TaskResponse>(res)
+      const schemaBody = createTaskResponseSchema.parse(body)
       const relations = await db
         .select({ targetTaskId: taskRelations.targetTaskId })
         .from(taskRelations)
@@ -767,6 +773,8 @@ describe('tasks CRUD API', () => {
         targetTaskIds: relations.map(({ targetTaskId }) => targetTaskId),
         githubBlockers,
         responseGithubLinks: body.githubLinks,
+        responseGithubRefs: body.blockedByGithubRefs,
+        schemaGithubRefs: schemaBody.blockedByGithubRefs,
       })
       expect(getActual()).toEqual({
         status: 201,
@@ -783,6 +791,22 @@ describe('tasks CRUD API', () => {
           },
         ],
         responseGithubLinks: [],
+        responseGithubRefs: [
+          {
+            owner: 'example-owner',
+            repo: 'example-repo',
+            number: 17,
+            url,
+          },
+        ],
+        schemaGithubRefs: [
+          {
+            owner: 'example-owner',
+            repo: 'example-repo',
+            number: 17,
+            url,
+          },
+        ],
       })
     })
 
@@ -1163,7 +1187,6 @@ describe('tasks CRUD API', () => {
           startDate: '2026-03-20',
           dueDate: '2026-03-25',
           context: 'work',
-          commitment: 'inbox',
         }),
       })
 
@@ -1174,10 +1197,33 @@ describe('tasks CRUD API', () => {
       expect(body.startDate).toBe('2026-03-20')
       expect(body.dueDate).toBe('2026-03-25')
       expect(body.context).toBe('work')
-      expect(body.commitment).toBe('inbox')
     })
 
-    it('defaults commitment to inbox when unspecified', async () => {
+    it('creates and updates a task priority', async () => {
+      const created = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Priority task', priority: 2 }),
+      })
+      const createdBody = await jsonBody<TaskResponse>(created.clone())
+      const updated = await app.request(`/api/tasks/${createdBody.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority: -1 }),
+      })
+
+      expect(
+        await Promise.all([
+          taskResponseSnapshot(created),
+          taskResponseSnapshot(updated),
+        ]),
+      ).toEqual([
+        createdTaskResponse('Priority task', null, 2),
+        updatedTaskResponse('Priority task', null, false, -1),
+      ])
+    })
+
+    it('defaults priority to null when unspecified', async () => {
       const res = await app.request('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1194,7 +1240,7 @@ describe('tasks CRUD API', () => {
         status: 'todo',
         statusReason: null,
         context: 'personal',
-        commitment: 'inbox',
+        priority: null,
         labels: [],
         startDate: null,
         dueDate: null,
@@ -1206,6 +1252,7 @@ describe('tasks CRUD API', () => {
         templateId: null,
         occurrenceDate: null,
         githubLinks: [],
+        blockedByGithubRefs: [],
         createdAt: 'TIMESTAMP',
         updatedAt: 'TIMESTAMP',
         linkSync: { added: [], unresolvedRefs: [] },
@@ -1544,6 +1591,46 @@ describe('tasks CRUD API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
       expect(body.map((t) => t.title)).toEqual(['Parent', 'Orphan'])
+    })
+
+    it('returns tasks whose parent does not match the other filters as roots', async () => {
+      const completedParent = await createTask('Completed parent')
+      await setStatus(completedParent.id, 'completed')
+      await createTask('Todo under completed parent', {
+        parentId: completedParent.id,
+      })
+      const completedIntermediate = await createTask('Completed intermediate', {
+        parentId: completedParent.id,
+      })
+      await setStatus(completedIntermediate.id, 'completed')
+      await createTask('Todo under completed intermediate', {
+        parentId: completedIntermediate.id,
+      })
+
+      const matchingParent = await createTask('Todo parent')
+      await createTask('Todo under matching parent', {
+        parentId: matchingParent.id,
+      })
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&parentId=root&q=is%3Atodo',
+      )
+
+      expect(
+        responseSnapshot(
+          res.status,
+          (await jsonBody<TaskListItemResponse[]>(res))
+            .map((task) => task.title)
+            .toSorted(),
+        ),
+      ).toEqual({
+        status: 200,
+        body: [
+          'Todo parent',
+          'Todo under completed intermediate',
+          'Todo under completed parent',
+        ],
+      })
     })
 
     it('filters by status', async () => {
@@ -1915,7 +2002,11 @@ describe('tasks CRUD API', () => {
         startDate: '2026-03-18',
       })
       const activeCandidate = await createTask('Active candidate', {
-        commitment: 'active',
+        priority: 0,
+      })
+      const priorityCandidate = await createTask('Priority candidate', {
+        startDate: '2026-03-19',
+        priority: 0,
       })
       const dueOnCandidateDate = await createTask('Due on candidate date', {
         dueDate: '2026-03-18',
@@ -1946,7 +2037,7 @@ describe('tasks CRUD API', () => {
       await createTask('Not a candidate', {
         startDate: '2026-03-19',
         dueDate: '2026-03-20',
-        commitment: 'someday',
+        priority: -1,
       })
 
       const queues = await db.select().from(taskQueues)
@@ -2021,6 +2112,7 @@ describe('tasks CRUD API', () => {
         dueCandidate.id,
         startCandidate.id,
         activeCandidate.id,
+        priorityCandidate.id,
         dueOnCandidateDate.id,
         completedCandidate.id,
         otherWeekQueued.id,
@@ -2030,6 +2122,7 @@ describe('tasks CRUD API', () => {
         dueCandidate.id,
         startCandidate.id,
         activeCandidate.id,
+        priorityCandidate.id,
         dueOnCandidateDate.id,
         otherWeekQueued.id,
       ]
@@ -2284,20 +2377,64 @@ describe('tasks CRUD API', () => {
       expect(body[0].title).toBe('Work task')
     })
 
-    it('filters by commitment: prefix in q parameter', async () => {
-      await createTask('Someday task', { commitment: 'someday' })
+    it('filters by priority: prefix in q parameter', async () => {
+      const someday = await createTask('Someday task', { priority: -1 })
       await createTask('Active task')
 
       const res = await app.request(
         '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
-          encodeURIComponent('commitment:someday'),
+          encodeURIComponent('priority:-1'),
       )
 
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskListItemResponse[]>(res)
-      expect(body).toHaveLength(1)
-      assertDefined(body[0])
-      expect(body[0].title).toBe('Someday task')
+      expect(normalizeTaskListItems(body)).toEqual([
+        expectedTaskListItem(someday, null),
+      ])
+    })
+
+    it('treats unknown property tokens as free text in q parameter', async () => {
+      await createTask('Active task')
+
+      const res = await app.request(
+        '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
+          encodeURIComponent('retired:active'),
+      )
+      const body = await jsonBody<TaskListItemResponse[]>(res)
+
+      expect(
+        responseSnapshot(res.status, normalizeTaskListItems(body)),
+      ).toEqual({ status: 200, body: [] })
+    })
+
+    it('filters tasks by priority query parameter', async () => {
+      const inbox = await createTask('Inbox task')
+      const priorityTwo = await createTask('Priority two task', {
+        priority: 2,
+      })
+      const response = await Promise.all([
+        app.request(
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&priority=none',
+        ),
+        app.request(
+          '/api/tasks?view=full&context=all&status=all&limit=unlimited&priority=2',
+        ),
+      ])
+      const bodies = await Promise.all(
+        response.map((item) => jsonBody<TaskListItemResponse[]>(item)),
+      )
+
+      expect(
+        response.map((item, index) =>
+          responseSnapshot(
+            item.status,
+            normalizeTaskListItems(bodies[index] ?? []),
+          ),
+        ),
+      ).toEqual([
+        responseSnapshot(200, [expectedTaskListItem(inbox, null)]),
+        responseSnapshot(200, [expectedTaskListItem(priorityTwo, null)]),
+      ])
     })
 
     it('filters by reason:not_planned in q parameter', async () => {
@@ -2793,7 +2930,6 @@ describe('tasks CRUD API', () => {
       const selectedByNumber = await createTask('Selected by number', {
         parentId: root.id,
         dueDate: '2026-09-30',
-        commitment: 'active',
       })
       const selectedById = await createTask('Selected by ID', {
         parentId: root.id,
@@ -3137,6 +3273,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [],
         },
@@ -3166,6 +3303,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -3199,6 +3337,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -4080,6 +4219,61 @@ describe('tasks CRUD API', () => {
         })
       })
 
+      it('returns GitHub blocker refs after updating with a pull request URL', async () => {
+        const task = await createTask('Blocked task')
+        const url = 'https://github.com/example-owner/example-repo/pull/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ html_url: url })
+
+        const res = await setBlockedBy(task.id, [url])
+
+        const body = await jsonBody<TaskResponse>(res)
+        expect(responseSnapshot(res.status, body)).toEqual(
+          responseSnapshot(200, {
+            ...withoutLinkSync(task),
+            blockedByGithubRefs: [
+              {
+                owner: 'example-owner',
+                repo: 'example-repo',
+                number: 17,
+                url,
+              },
+            ],
+            updatedAt: body.updatedAt,
+          }),
+        )
+      })
+
+      it('returns existing GitHub blocker refs when blockedBy is omitted', async () => {
+        const task = await createTask('Blocked task')
+        const url = 'https://github.com/example-owner/example-repo/pull/17'
+        await upsertGithubToken('valid-token')
+        mockGithubIssueResponse({ html_url: url })
+        await setBlockedBy(task.id, [url])
+
+        const res = await app.request(`/api/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Renamed task' }),
+        })
+        const body = await jsonBody<TaskResponse>(res)
+        expect(responseSnapshot(res.status, body)).toEqual(
+          responseSnapshot(200, {
+            ...withoutLinkSync(task),
+            title: 'Renamed task',
+            blockedByGithubRefs: [
+              {
+                owner: 'example-owner',
+                repo: 'example-repo',
+                number: 17,
+                url,
+              },
+            ],
+            updatedAt: body.updatedAt,
+          }),
+        )
+      })
+
       it('clears blocked_by relations when given an empty array', async () => {
         const blocker = await createTask('Blocker')
         const task = await createTask('Blocked')
@@ -4374,6 +4568,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [blockerA, blockerB].map((t) => toLinkedTaskDetail(t)),
           blocking: [],
         })
@@ -4412,6 +4607,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [blockedXAfterPatch, blockedYAfterPatch].map((t) =>
             toLinkedTaskDetail(t, [blocker.number]),
@@ -4485,6 +4681,7 @@ describe('tasks CRUD API', () => {
             title: link.title,
             lastSyncedAt: 'TIMESTAMP',
           })),
+          detailGithubRefs: detail.blockedByGithubRefs,
           listNumbers: listItem.blockedByNumbers,
           listGithubRefs: listItem.blockedByGithubRefs,
           hasBlockerIds: hasBlockerTasks.map(({ id }) => id),
@@ -4507,6 +4704,14 @@ describe('tasks CRUD API', () => {
               state: 'open',
               title: 'External blocker',
               lastSyncedAt: 'TIMESTAMP',
+            },
+          ],
+          detailGithubRefs: [
+            {
+              owner: 'example-owner',
+              repo: 'example-repo',
+              number: 17,
+              url,
             },
           ],
           listNumbers: [],
@@ -4569,6 +4774,7 @@ describe('tasks CRUD API', () => {
             title: link.title,
             url: link.url,
           })),
+          detailGithubRefs: detail.blockedByGithubRefs,
           listGithubRefs: item.blockedByGithubRefs,
           hasBlockerTitles: hasBlockerTasks.map(({ title }) => title),
           hasNoBlockerTitles: hasNoBlockerTasks.map(({ title }) => title),
@@ -4588,6 +4794,7 @@ describe('tasks CRUD API', () => {
               url,
             },
           ],
+          detailGithubRefs: [],
           listGithubRefs: [],
           hasBlockerTitles: [],
           hasNoBlockerTitles: ['Blocked by a closed issue'],
@@ -4659,6 +4866,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -4693,6 +4901,7 @@ describe('tasks CRUD API', () => {
         duplicateOfNumber: null,
         duplicateOfTask: null,
         githubBlockers: [],
+        blockedByGithubRefs: [],
         blockedBy: [],
         blocking: [],
       })
@@ -4776,7 +4985,7 @@ describe('tasks CRUD API', () => {
           status: 'todo',
           statusReason: null,
           context: 'personal',
-          commitment: 'inbox',
+          priority: null,
           labels: [],
           startDate: null,
           dueDate: '2026-03-22',
@@ -4794,6 +5003,7 @@ describe('tasks CRUD API', () => {
           templateId: 'TEMPLATE_ID',
           occurrenceDate: '2026-03-22',
           githubLinks: [],
+          blockedByGithubRefs: [],
           createdAt: 'TIMESTAMP',
           updatedAt: 'TIMESTAMP',
           linkSync: { added: [], unresolvedRefs: [] },
@@ -5163,6 +5373,7 @@ describe('tasks CRUD API', () => {
           duplicateOfNumber: null,
           duplicateOfTask: null,
           githubBlockers: [],
+          blockedByGithubRefs: [],
           blockedBy: [],
           blocking: [],
         })

@@ -713,12 +713,18 @@ describe('operation tool input schemas', () => {
       page_list: false,
       page_search: false,
       page_update: true,
+      priority_settings_get: false,
+      priority_settings_update: false,
       project_create: false,
       project_delete: false,
       project_get: false,
       project_list: false,
       project_tasks: false,
       project_update: false,
+      recurring_template_get: false,
+      recurring_template_delete: false,
+      recurring_template_list: false,
+      recurring_template_update: false,
       task_complete: true,
       task_create: true,
       task_delete: false,
@@ -726,6 +732,7 @@ describe('operation tool input schemas', () => {
       queue_get: false,
       queue_list: false,
       queue_set: false,
+      recurring_template_occurrence_create: true,
       saved_view_create: false,
       saved_view_delete: false,
       saved_view_get: false,
@@ -843,6 +850,16 @@ describe('operation tool annotations', () => {
       },
       memo_get: { readOnlyHint: true },
       memo_update: { readOnlyHint: false, destructiveHint: false },
+      recurring_template_get: { readOnlyHint: true },
+      recurring_template_delete: {
+        readOnlyHint: false,
+        destructiveHint: true,
+      },
+      recurring_template_list: { readOnlyHint: true },
+      recurring_template_update: {
+        readOnlyHint: false,
+        destructiveHint: false,
+      },
     }
     const annotations = Object.fromEntries(
       tools.tools

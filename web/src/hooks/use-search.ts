@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { parseSearchQuery } from 'api/search-query-parser'
 import type { InferResponseType } from 'hono/client'
+import { useEffect } from 'react'
 
 import { useDebounce } from '#hooks/use-debounce'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
 import {
   fetchTaskList,
   type Task,
@@ -10,6 +12,7 @@ import {
 } from '#hooks/use-task-queries'
 import { api } from '#lib/api'
 import { assertOk, unwrapOrThrow } from '#lib/assert-response'
+import { applyPrioritySettingsToSuggestions } from '#lib/priority-suggestions'
 import type { SearchContext } from '#lib/query-keys'
 import { searchKeys } from '#lib/query-keys'
 import {
@@ -147,8 +150,24 @@ export function applySuggestionToQuery(
 
 export function useSearchSuggestions(prefix: string) {
   const debouncedPrefix = useDebounce(prefix, 150)
+  const normalizedPrefix = prefix.toLowerCase()
+  const isPriorityPrefix =
+    prefix.length > 0 &&
+    ('priority:'.startsWith(normalizedPrefix) ||
+      normalizedPrefix.startsWith('priority:'))
+  const prioritySettings = usePrioritySettings({
+    enabled: isPriorityPrefix,
+  })
+  useEffect(() => {
+    if (isPriorityPrefix && prioritySettings.error != null) {
+      console.error(
+        'Failed to load priority settings for search suggestions',
+        prioritySettings.error,
+      )
+    }
+  }, [isPriorityPrefix, prioritySettings.error])
 
-  return useQuery({
+  const query = useQuery({
     queryKey: searchKeys.suggestions(debouncedPrefix),
     queryFn: async () => {
       const res = await api.api.tasks.search.suggest.$get({
@@ -158,4 +177,9 @@ export function useSearchSuggestions(prefix: string) {
     },
     enabled: debouncedPrefix.length > 0,
   })
+
+  return {
+    ...query,
+    data: applyPrioritySettingsToSuggestions(query.data, prioritySettings.data),
+  }
 }

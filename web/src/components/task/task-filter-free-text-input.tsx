@@ -4,10 +4,7 @@ import { Popover, PopoverContent } from '@fohte/ui/popover'
 import { parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
-import {
-  getSearchSyntaxHelpSections,
-  type SearchSyntaxHelpSection,
-} from '#components/search/search-syntax-help-data'
+import { type SearchSyntaxHelpOptions } from '#components/search/search-syntax-help-data'
 import { SearchSyntaxHelpPopover } from '#components/search/search-syntax-help-popover'
 import type { Suggestion } from '#hooks/use-search'
 import {
@@ -15,6 +12,7 @@ import {
   extractCurrentPrefix,
   useSearchSuggestions,
 } from '#hooks/use-search'
+import { useSearchSyntaxHelpSections } from '#hooks/use-search-syntax-help-sections'
 
 interface TaskFilterFreeTextInputProps {
   id: string
@@ -24,7 +22,7 @@ interface TaskFilterFreeTextInputProps {
   disabledSuggestionCategories?: readonly string[]
   placeholder?: string
   autoFocus?: boolean
-  syntaxHelpSections?: SearchSyntaxHelpSection[]
+  syntaxHelpOptions?: Omit<SearchSyntaxHelpOptions, 'prioritySettings'>
 }
 
 // The tail of the filter row's token input: a plain text box for the parts
@@ -41,12 +39,17 @@ export function TaskFilterFreeTextInput({
   disabledSuggestionCategories = [],
   placeholder,
   autoFocus = false,
-  syntaxHelpSections = getSearchSyntaxHelpSections({ audience: 'task-filter' }),
+  syntaxHelpOptions,
 }: TaskFilterFreeTextInputProps) {
   const [value, setValue] = useState(freeText)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isHelpOpen = isFocused && value.trim() === ''
+  const syntaxHelpSections = useSearchSyntaxHelpSections({
+    ...(syntaxHelpOptions ?? { audience: 'task-filter' }),
+    enabled: isHelpOpen,
+  })
 
   // Resync when freeText changes for a reason other than our own commit
   // below (e.g. a chip removed elsewhere in the row), but never while the
@@ -185,7 +188,7 @@ export function TaskFilterFreeTextInput({
       </Popover>
       <SearchSyntaxHelpPopover
         anchor={inputRef}
-        open={isFocused && value.trim() === ''}
+        open={isHelpOpen}
         sections={syntaxHelpSections}
       />
     </div>

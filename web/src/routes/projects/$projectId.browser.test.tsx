@@ -521,7 +521,7 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(router.state.location.search).toEqual({
-      q: 'is:todo sort:created',
+      q: 'is:todo sort:updated sort:created',
     })
   })
 
@@ -536,7 +536,7 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo sort:created', projectId: 'p1' },
+      { q: 'is:todo sort:updated sort:created', projectId: 'p1' },
     ])
   })
 

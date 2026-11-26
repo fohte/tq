@@ -7,7 +7,7 @@ export function makeSavedView(overrides: Partial<SavedView> = {}): SavedView {
   return {
     id: '00000000-0000-0000-0000-000000000201',
     name: 'Now',
-    query: 'commitment:active',
+    query: 'priority:0',
     position: 0,
     context: 'personal',
     createdAt: '2026-03-20T00:00:00.000Z',

@@ -1,4 +1,8 @@
-import { type TaskStatusReason, taskStatusReason } from '#schemas/task'
+import {
+  type TaskPriority,
+  type TaskStatusReason,
+  taskStatusReason,
+} from '#schemas/task'
 
 export interface ParsedQuery {
   freeText: string
@@ -6,7 +10,7 @@ export interface ParsedQuery {
   reason?: TaskStatusReason
   label?: string
   context?: 'work' | 'personal'
-  commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority | null
   hasPages?: boolean
   hasComments?: boolean
   hasNoChildren?: boolean
@@ -16,7 +20,7 @@ export interface ParsedQuery {
   hasResolvedWait?: boolean
   parentId?: string
   projectId?: string
-  sortBy?: 'due' | 'created' | 'updated'
+  sortBy?: ('due' | 'created' | 'updated' | 'priority')[]
 }
 
 export interface SearchQueryTokenRange {
@@ -90,26 +94,30 @@ const searchQueryTokenDefinitions = new Map(
       },
       true,
     ),
-    commitment: defineFixedToken(
+    priority: defineFixedToken(
       [
-        ['inbox', 'Inbox'],
-        ['active', 'Active'],
-        ['someday', 'Someday'],
+        ['2', 'Priority 2'],
+        ['1', 'Priority 1'],
+        ['0', 'Priority 0'],
+        ['none', 'Inbox'],
+        ['-1', 'Priority -1'],
       ],
-      'Limit tasks by commitment level.',
+      'Limit tasks by priority value.',
       (result, value) => {
-        result.commitment = value
+        result.priority = value === 'none' ? null : Number(value)
       },
+      true,
     ),
     sort: defineFixedToken(
       [
         ['due', 'Sort by due date'],
         ['created', 'Sort by creation date'],
         ['updated', 'Sort by update date'],
+        ['priority', 'Sort by priority'],
       ],
-      'Sort results by date.',
+      'Sort results by date or configured priority. Repeat sort: to break ties with later keys.',
       (result, value) => {
-        result.sortBy = value
+        result.sortBy = [...new Set([...(result.sortBy ?? []), value])]
       },
       true,
     ),
@@ -184,7 +192,7 @@ const searchQueryTokenDefinitions = new Map(
     parent: {
       display: 'Parent task',
       description:
-        "Limit results to children of this task UUID or number, or use 'root' for tasks with no parent.",
+        "Limit results to children of this task UUID or number, or use 'root' for tasks whose parent does not match the other filters.",
       taskFilter: true,
       valuePlaceholder: 'task-id-or-number|root',
       parse: (result: ParsedQuery, value: string) => {
@@ -302,8 +310,10 @@ export function buildSearchQuery(query: ParsedQuery): string {
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)
   }
-  if (query.commitment !== undefined) {
-    parts.push(`commitment:${query.commitment}`)
+  if (query.priority !== undefined) {
+    parts.push(
+      `priority:${query.priority === null ? 'none' : String(query.priority)}`,
+    )
   }
   if (query.reason !== undefined) {
     parts.push(`reason:${query.reason}`)
@@ -335,8 +345,8 @@ export function buildSearchQuery(query: ParsedQuery): string {
   if (query.projectId !== undefined) {
     parts.push(`project:${quoteIfNeeded(query.projectId)}`)
   }
-  if (query.sortBy !== undefined) {
-    parts.push(`sort:${query.sortBy}`)
+  for (const key of query.sortBy ?? []) {
+    parts.push(`sort:${key}`)
   }
 
   return parts.join(' ')

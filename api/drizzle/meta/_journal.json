@@ -463,6 +463,41 @@
       "when": 1792212771802,
       "tag": "0065_opposite_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1793695954260,
+      "tag": "0066_concerned_shinobi_shaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793697944800,
+      "tag": "0067_fixed_mandrill",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793701117023,
+      "tag": "0068_oval_obadiah_stane",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793703225213,
+      "tag": "0069_sour_captain_universe",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1793777535606,
+      "tag": "0070_living_lady_deathstrike",
+      "breakpoints": true
     }
   ]
 }

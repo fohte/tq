@@ -43,7 +43,7 @@ function taskCoreFieldsToResponse(
     status: task.status,
     statusReason: task.statusReason,
     context: task.context,
-    commitment: task.commitment,
+    priority: task.priority,
     labels: labelNames,
     startDate: task.startDate,
     dueDate: task.dueDate,

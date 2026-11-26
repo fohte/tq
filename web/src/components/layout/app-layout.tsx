@@ -4,6 +4,7 @@ import { type ReactNode, useCallback, useMemo, useState } from 'react'
 import { BottomTabBar } from '#components/layout/bottom-tab-bar'
 import { Sidebar } from '#components/layout/sidebar'
 import { StatusLine } from '#components/layout/status-line'
+import { TaskCompletionFailurePanel } from '#components/layout/task-completion-failure-panel'
 import { UrlCopiedToast } from '#components/layout/url-copied-toast'
 import { FindInPageBar } from '#components/search/find-in-page-bar'
 import { SearchModal } from '#components/search/search-modal'
@@ -97,6 +98,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         }}
       />
       <UrlCopiedToast url={copiedUrl} />
+      <TaskCompletionFailurePanel />
       <FindInPageBar
         open={findInPage.open}
         requestId={findInPage.requestId}

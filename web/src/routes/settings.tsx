@@ -8,6 +8,7 @@ import { GcalCalendarPicker } from '#components/settings/gcal-calendar-picker'
 import { GithubSyncRuleList } from '#components/settings/github-sync-rule-list'
 import { IntegrationCard } from '#components/settings/integration-card'
 import { KeybindingsList } from '#components/settings/keybindings-list'
+import { PrioritySettingsPanel } from '#components/settings/priority-settings-panel'
 import { PushNotificationsPanel } from '#components/settings/push-notifications-panel'
 import { QueryStateMessage } from '#components/settings/query-state-message'
 import { ServiceWorkerPanel } from '#components/settings/service-worker-panel'
@@ -75,6 +76,10 @@ function Settings() {
 
           <div className="mt-8">
             <SessionOpenSettingsPanel />
+          </div>
+
+          <div className="mt-8">
+            <PrioritySettingsPanel />
           </div>
 
           <div className="mt-8">

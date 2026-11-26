@@ -10,20 +10,6 @@ export const contextLabels: Record<ContextValue, string> = {
   personal: 'Personal',
 }
 
-export type CommitmentValue = 'inbox' | 'active' | 'someday'
-export const commitmentValues = [
-  '',
-  'inbox',
-  'active',
-  'someday',
-] as const satisfies readonly (CommitmentValue | '')[]
-
-export const commitmentLabels: Record<CommitmentValue, string> = {
-  inbox: 'Inbox',
-  active: 'Active',
-  someday: 'Someday',
-}
-
 export type PlanValue = 'day' | 'week'
 export const planValues = ['', 'day', 'week'] as const satisfies readonly (
   PlanValue | ''

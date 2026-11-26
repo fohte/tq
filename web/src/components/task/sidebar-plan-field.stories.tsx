@@ -65,17 +65,17 @@ type Story = StoryObj<typeof meta>
 export const NoPlan: Story = {
   name: 'the plan field shows a task that is not in a queue',
   decorators: [withSeededQueues([], [])],
-  args: { taskId, commitment: 'active' },
+  args: { taskId, priority: 0 },
 }
 
 export const InTodayQueue: Story = {
   name: 'the plan field shows the task in today’s queue',
   decorators: [withSeededQueues(['other-task', taskId, 'other-task-2'], [])],
-  args: { taskId, commitment: 'active' },
+  args: { taskId, priority: 0 },
 }
 
 export const InThisWeekQueue: Story = {
   name: 'the plan field shows the task in this week’s queue',
   decorators: [withSeededQueues([], [taskId])],
-  args: { taskId, commitment: 'active' },
+  args: { taskId, priority: 0 },
 }

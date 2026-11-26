@@ -3,14 +3,23 @@ import { and, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { recurrenceRules, recurringTaskTemplates } from '#db/schema'
+import { recurrenceRules, recurringTaskTemplates, tasks } from '#db/schema'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import { recurrenceRuleToResponse, resolveParentId } from '#routes/tasks/shared'
 import {
+  recurrenceRuleToResponse,
+  resolveParentId,
+  taskToResponse,
+} from '#routes/tasks/shared'
+import {
+  createRecurringTaskOccurrenceSchema,
   createRecurringTaskTemplateSchema,
   listRecurringTaskTemplatesQuerySchema,
   updateRecurringTaskTemplateSchema,
 } from '#schemas/recurring-task-template'
+import {
+  afterRecurringTaskOccurrenceCreated,
+  createRecurringTaskOccurrence,
+} from '#services/recurring-task-occurrences'
 import {
   getTemplateLabelNames,
   getTemplateLabelNamesByTemplateIds,
@@ -155,6 +164,54 @@ export const recurringTaskTemplatesApp = new Hono()
       )
     },
   )
+  .post(
+    '/:id/occurrences',
+    zValidator('json', createRecurringTaskOccurrenceSchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const { occurrenceDate } = c.req.valid('json')
+      const result = await db.transaction(async (tx) => {
+        const [template] = await tx
+          .select()
+          .from(recurringTaskTemplates)
+          .where(eq(recurringTaskTemplates.id, id))
+          .for('key share')
+        if (!template) return { kind: 'not-found' as const }
+
+        const labelNames = await getTemplateLabelNames(template.id, tx)
+        const task = await createRecurringTaskOccurrence(
+          tx,
+          template,
+          occurrenceDate,
+          labelNames,
+          c.get('author'),
+        )
+        if (task == null) return { kind: 'conflict' as const }
+        return { kind: 'created' as const, task, labelNames }
+      })
+
+      if (result.kind === 'not-found') {
+        return c.json({ error: 'Recurring task template not found' }, 404)
+      }
+      if (result.kind === 'conflict') {
+        return c.json(
+          { error: 'Recurring task occurrence already exists' },
+          409,
+        )
+      }
+
+      await afterRecurringTaskOccurrenceCreated(
+        result.task.id,
+        result.task.parentId,
+        c.get('origin'),
+      )
+
+      return c.json(
+        taskToResponse(result.task, null, [], result.labelNames),
+        201,
+      )
+    },
+  )
   .get('/:id', async (c) => {
     const id = c.req.param('id')
 
@@ -259,14 +316,22 @@ export const recurringTaskTemplatesApp = new Hono()
   )
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
-    const existing = await db.query.recurringTaskTemplates.findFirst({
-      where: eq(recurringTaskTemplates.id, id),
-    })
-    if (!existing) {
-      return c.json({ error: 'Recurring task template not found' }, 404)
-    }
+    const existing = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(recurringTaskTemplates)
+        .where(eq(recurringTaskTemplates.id, id))
+        // Serialize with the generator's claim UPDATE to prevent it from creating
+        // tasks after they are detached.
+        .for('update')
+      if (!existing) return null
 
-    await db.transaction(async (tx) => {
+      // ON DELETE SET NULL clears only template_id, leaving occurrence_date set,
+      // which violates tasks_template_occurrence_paired_check.
+      await tx
+        .update(tasks)
+        .set({ templateId: null, occurrenceDate: null })
+        .where(eq(tasks.templateId, id))
       await tx
         .delete(recurringTaskTemplates)
         .where(eq(recurringTaskTemplates.id, id))
@@ -274,7 +339,12 @@ export const recurringTaskTemplatesApp = new Hono()
       await tx
         .delete(recurrenceRules)
         .where(eq(recurrenceRules.id, existing.recurrenceRuleId))
+
+      return existing
     })
+    if (!existing) {
+      return c.json({ error: 'Recurring task template not found' }, 404)
+    }
 
     return c.body(null, 204)
   })

@@ -45,7 +45,9 @@ export interface TaskKanbanColumn {
   title: string
   tasks: Task[]
   isLoading?: boolean
+  loadingMessage?: ReactNode
   hasError?: boolean
+  errorMessage?: ReactNode
   /** Set false when `tasks` is a truncated subset, so the header doesn't show a count that reads as the true total. */
   showCount?: boolean
   /** Set false when this column is derived from task state and tasks cannot be moved manually. */
@@ -186,7 +188,9 @@ function TaskKanbanColumnView({
     title,
     tasks,
     isLoading = false,
+    loadingMessage = 'Loading...',
     hasError = false,
+    errorMessage = 'Failed to load tasks.',
     showCount = true,
     allowsManualMoves = true,
     dateRangeLabel,
@@ -230,9 +234,9 @@ function TaskKanbanColumnView({
         )}
       >
         {isLoading ? (
-          <ListAreaMessage>Loading...</ListAreaMessage>
+          <ListAreaMessage>{loadingMessage}</ListAreaMessage>
         ) : hasError ? (
-          <ListAreaMessage>Failed to load tasks.</ListAreaMessage>
+          <ListAreaMessage>{errorMessage}</ListAreaMessage>
         ) : tasks.length === 0 ? (
           <ListAreaMessage>No tasks</ListAreaMessage>
         ) : (

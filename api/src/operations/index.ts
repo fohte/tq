@@ -10,8 +10,10 @@ import { labelOperations } from '#operations/label'
 import { linkOperations } from '#operations/link'
 import { memoOperations } from '#operations/memo'
 import { pageOperations } from '#operations/page'
+import { prioritySettingsOperations } from '#operations/priority-settings'
 import { projectOperations } from '#operations/project'
 import { queueOperations } from '#operations/queue'
+import { recurringTemplateOperations } from '#operations/recurring-template'
 import { savedViewOperations } from '#operations/saved-view'
 import { scheduleOperations } from '#operations/schedule'
 import { scheduleConstraintOperations } from '#operations/schedule-constraints'
@@ -35,8 +37,10 @@ export {
   linkOperations,
   memoOperations,
   pageOperations,
+  prioritySettingsOperations,
   projectOperations,
   queueOperations,
+  recurringTemplateOperations,
   savedViewOperations,
   scheduleConstraintOperations,
   scheduleOperations,
@@ -60,8 +64,10 @@ export const operations = [
   ...linkOperations,
   ...memoOperations,
   ...pageOperations,
+  ...prioritySettingsOperations,
   ...projectOperations,
   ...queueOperations,
+  ...recurringTemplateOperations,
   ...savedViewOperations,
   ...scheduleOperations,
   ...scheduleConstraintOperations,

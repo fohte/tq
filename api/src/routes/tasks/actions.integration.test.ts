@@ -23,7 +23,7 @@ import {
   TaskListItemResponse,
   TaskResponse,
   TEST_UUID,
-  withoutLinkSync,
+  withoutLinkSyncAndBlockedByGithubRefs,
 } from '#routes/tasks/testing'
 import { assertDefined, jsonBody, setupTestDb } from '#testing'
 
@@ -544,7 +544,7 @@ describe('tasks actions API', () => {
       expect(res.status).toBe(200)
       const body = await jsonBody<TaskResponse>(res)
       expect(body).toEqual({
-        ...withoutLinkSync(task),
+        ...withoutLinkSyncAndBlockedByGithubRefs(task),
         status: 'completed',
         statusReason: 'completed',
         updatedAt: body.updatedAt,

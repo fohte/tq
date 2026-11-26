@@ -1,58 +1,69 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 
-import type { TaskKanbanColumn } from '#components/kanban/task-kanban'
-import { TaskKanban } from '#components/kanban/task-kanban'
+import { InboxKanbanPresentation } from '#components/kanban/inbox-kanban-presentation'
 import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
 import { SectionHeading } from '#components/ui/section-heading'
 import { useCurrentContext } from '#hooks/use-current-context'
-import type { Task, TaskCommitment, TaskListFilter } from '#hooks/use-tasks'
-import { taskKeys, useTaskList, useUpdateTask } from '#hooks/use-tasks'
+import type {
+  PrioritySetting,
+  TaskPriority,
+} from '#hooks/use-priority-settings'
+import { usePrioritySettings } from '#hooks/use-priority-settings'
+import type { Task, TaskListFilter, TaskPriorityFilter } from '#hooks/use-tasks'
+import {
+  fetchTaskList,
+  taskKeys,
+  useTaskList,
+  useUpdateTask,
+} from '#hooks/use-tasks'
 
 export const Route = createFileRoute('/inbox')({
   component: InboxKanban,
 })
 
-const COMMITMENTS: TaskCommitment[] = ['inbox', 'active', 'someday']
-
-function isTaskCommitment(value: string): value is TaskCommitment {
-  return value === 'inbox' || value === 'active' || value === 'someday'
+function priorityFilter(
+  priority: PrioritySetting['priority'],
+): TaskPriorityFilter {
+  switch (priority) {
+    case null:
+      return 'none'
+    case -1:
+      return '-1'
+    case 0:
+      return '0'
+    case 1:
+      return '1'
+    case 2:
+      return '2'
+  }
 }
 
 function InboxKanban() {
   const context = useCurrentContext()
   const queryClient = useQueryClient()
   const updateTask = useUpdateTask()
+  const prioritySettings = usePrioritySettings()
+  const settings = prioritySettings.data ?? []
 
-  const columnFilters: Record<TaskCommitment, TaskListFilter<'row'>> = {
-    inbox: {
+  const priorityFilters = settings.map((setting) => ({
+    setting,
+    filter: {
       view: 'row',
       context,
-      commitment: 'inbox',
+      priority: priorityFilter(setting.priority),
       status: 'todo',
-      sortBy: 'due',
+      sortBy: setting.priority === null ? 'due' : 'updated',
       limit: 'unlimited',
       q: 'has:no-blockers',
-    },
-    active: {
-      view: 'row',
-      context,
-      commitment: 'active',
-      status: 'todo',
-      sortBy: 'updated',
-      limit: 'unlimited',
-      q: 'has:no-blockers',
-    },
-    someday: {
-      view: 'row',
-      context,
-      commitment: 'someday',
-      status: 'todo',
-      sortBy: 'updated',
-      limit: 'unlimited',
-      q: 'has:no-blockers',
-    },
-  }
+    } as const satisfies TaskListFilter<'row'>,
+  }))
+  const priorityQueries = useQueries({
+    queries: priorityFilters.map(({ filter }) => ({
+      queryKey: taskKeys.list(filter),
+      queryFn: () => fetchTaskList(filter),
+    })),
+  })
 
   const waitingFilter: TaskListFilter<'full'> = {
     view: 'full',
@@ -62,78 +73,45 @@ function InboxKanban() {
     limit: 'unlimited',
     q: 'has:blockers',
   }
-
-  const inbox = useTaskList(columnFilters.inbox)
-  const active = useTaskList(columnFilters.active)
-  const someday = useTaskList(columnFilters.someday)
   const waiting = useTaskList(waitingFilter)
 
-  const columns: TaskKanbanColumn[] = [
-    {
-      id: 'inbox',
-      title: 'Inbox',
-      tasks: inbox.categorized.all,
-      isLoading: inbox.isLoading,
-    },
-    {
-      id: 'active',
-      title: 'Active',
-      tasks: active.categorized.all,
-      isLoading: active.isLoading,
-    },
-    {
-      id: 'someday',
-      title: 'Someday',
-      tasks: someday.categorized.all,
-      isLoading: someday.isLoading,
-    },
-    {
-      id: 'waiting',
-      title: 'Waiting',
-      tasks: waiting.categorized.all,
-      isLoading: waiting.isLoading,
-      hasError: waiting.isError,
-      allowsManualMoves: false,
-    },
-  ]
-
-  // useUpdateTask's own optimistic update only patches the `commitment`
-  // field in place inside whichever cached list already contains the task
-  // — it doesn't move the task across these commitment-filtered list
-  // caches, so without this the card would stay in its source column until
-  // the mutation's onSettled refetch lands. onSettled still refetches
-  // after this, so a failed request self-corrects rather than needing a
-  // manual rollback here.
-  const handleDrop = (taskId: string, columnId: string) => {
-    if (!isTaskCommitment(columnId)) return
-
-    const sourceCommitment = COMMITMENTS.find(
-      (commitment) =>
+  const handleDrop = (taskId: string, nextPriority: TaskPriority) => {
+    const source = priorityFilters.find(
+      ({ filter }) =>
         queryClient
-          .getQueryData<Task[]>(taskKeys.list(columnFilters[commitment]))
+          .getQueryData<Task[]>(taskKeys.list(filter))
           ?.some((task) => task.id === taskId) ?? false,
     )
     const task =
-      sourceCommitment != null
-        ? queryClient
-            .getQueryData<Task[]>(
-              taskKeys.list(columnFilters[sourceCommitment]),
-            )
-            ?.find((t) => t.id === taskId)
-        : undefined
+      source == null
+        ? undefined
+        : queryClient
+            .getQueryData<Task[]>(taskKeys.list(source.filter))
+            ?.find((candidate) => candidate.id === taskId)
 
-    if (sourceCommitment != null && task != null) {
-      queryClient.setQueryData<Task[]>(
-        taskKeys.list(columnFilters[sourceCommitment]),
-        (old) => old?.filter((t) => t.id !== taskId),
+    if (
+      source != null &&
+      task != null &&
+      source.setting.priority !== nextPriority
+    ) {
+      const destination = priorityFilters.find(
+        ({ setting }) => setting.priority === nextPriority,
       )
-      queryClient.setQueryData<Task[]>(
-        taskKeys.list(columnFilters[columnId]),
-        (old) => [{ ...task, commitment: columnId }, ...(old ?? [])],
-      )
+      if (destination != null) {
+        // useUpdateTask patches a task in whichever cached list contains it,
+        // but doesn't move it between priority filters. Move it here so the
+        // card reaches its destination before the refetch.
+        queryClient.setQueryData<Task[]>(taskKeys.list(source.filter), (old) =>
+          old?.filter((candidate) => candidate.id !== taskId),
+        )
+        queryClient.setQueryData<Task[]>(
+          taskKeys.list(destination.filter),
+          (old) => [{ ...task, priority: nextPriority }, ...(old ?? [])],
+        )
+      }
     }
 
-    updateTask.mutate({ id: taskId, input: { commitment: columnId } })
+    updateTask.mutate({ id: taskId, input: { priority: nextPriority } })
   }
 
   return (
@@ -143,7 +121,19 @@ function InboxKanban() {
       </ScreenHeaderBar>
 
       <div className="min-h-0 flex-1">
-        <TaskKanban columns={columns} onDrop={handleDrop} />
+        <InboxKanbanPresentation
+          priorityColumns={priorityFilters.map(({ setting }, index) => ({
+            setting,
+            tasks: priorityQueries[index]?.data ?? [],
+            isLoading: priorityQueries[index]?.isLoading ?? false,
+          }))}
+          waitingTasks={waiting.categorized.all}
+          waitingIsLoading={waiting.isLoading}
+          waitingHasError={waiting.isError}
+          prioritySettingsIsLoading={prioritySettings.isLoading}
+          prioritySettingsHasError={prioritySettings.isError}
+          onDrop={handleDrop}
+        />
       </div>
     </div>
   )

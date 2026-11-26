@@ -23,6 +23,7 @@ type StatusPickerValue = 'todo' | 'completed' | 'not_planned' | 'duplicate'
 
 export function useHandleStatusChange(
   id: string,
+  taskNumber: number,
   status: Task['status'],
   statusReason: Task['statusReason'],
 ) {
@@ -48,13 +49,17 @@ export function useHandleStatusChange(
       // side effect only belongs to the actual close transition.
       updateStatus.mutate({
         id,
+        taskNumber,
         status: 'completed',
+        previousStatus: status,
         statusReason: reason,
         ...duplicateOfTaskIdField,
       })
     } else {
       completeTask.mutate({
         id,
+        taskNumber,
+        previousStatus: status,
         statusReason: reason,
         ...duplicateOfTaskIdField,
       })

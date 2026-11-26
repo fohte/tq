@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 
+import { RecurringTemplateCreateModal } from '#components/recurring/recurring-template-create-modal'
 import { RecurringTemplateListSection } from '#components/recurring/recurring-template-list-section'
+import { RecurringTemplateListToolbar } from '#components/recurring/recurring-template-list-toolbar'
 import { ListAreaMessage } from '#components/ui/list-area-message'
-import { ScreenHeaderBar } from '#components/ui/screen-header-bar'
-import { SectionHeading } from '#components/ui/section-heading'
 import { useRecurringTemplates } from '#hooks/use-recurring-templates'
 
 export const Route = createFileRoute('/recurring/')({
@@ -11,14 +12,17 @@ export const Route = createFileRoute('/recurring/')({
 })
 
 function RecurringTemplateList() {
+  const [showCreate, setShowCreate] = useState(false)
   const { data: templates, isLoading } = useRecurringTemplates()
 
   return (
     <div className="flex flex-col">
       <div className="sticky top-0 z-10">
-        <ScreenHeaderBar>
-          <SectionHeading level={2}>recurring</SectionHeading>
-        </ScreenHeaderBar>
+        <RecurringTemplateListToolbar
+          onCreate={() => {
+            setShowCreate(true)
+          }}
+        />
       </div>
 
       <div>
@@ -39,6 +43,11 @@ function RecurringTemplateList() {
           </>
         )}
       </div>
+
+      <RecurringTemplateCreateModal
+        open={showCreate}
+        onOpenChange={setShowCreate}
+      />
     </div>
   )
 }

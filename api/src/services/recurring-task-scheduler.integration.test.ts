@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { app } from '#app'
 import { db } from '#db/connection'
 import {
   labels,
@@ -86,7 +87,7 @@ function expectedTask(
     templateId: template.id,
     occurrenceDate: null,
     context: template.context,
-    commitment: 'inbox' as const,
+    priority: null,
     remindAt: null,
     createdAt: 'DATE',
     updatedAt: 'DATE',
@@ -132,6 +133,10 @@ async function outcomeWithTemplateTitle(templateId: string) {
   )
 
   return { ...(await outcome(templateId)), templateTitle: template.title }
+}
+
+function responseWithStatus<T>(status: number, body: T) {
+  return { status, body }
 }
 
 async function taskLabelNames(taskId: string) {
@@ -249,6 +254,99 @@ describe('generateDueRecurringTasks', () => {
     })
   })
 
+  it('skips an existing occurrence and advances the generated date', async () => {
+    fakeToday('2031-04-10')
+    const template = await createTemplate(
+      { type: 'daily', interval: 1 },
+      {
+        title: 'Digest {date}',
+        anchorDate: '2031-04-01',
+        lastGeneratedDate: '2031-04-06',
+      },
+    )
+    const existingTask = firstOrThrow(
+      await db
+        .insert(tasks)
+        .values({
+          title: 'Manually created occurrence',
+          dueDate: '2031-04-08',
+          templateId: template.id,
+          occurrenceDate: '2031-04-08',
+        })
+        .returning(),
+    )
+
+    await generateDueRecurringTasks()
+
+    expect(await outcomeWithTemplateTitle(template.id)).toEqual({
+      tasks: [
+        expectedTask(template, {
+          title: 'Digest 2031-04-07',
+          dueDate: '2031-04-07',
+          occurrenceDate: '2031-04-07',
+        }),
+        expectedTask(template, {
+          title: existingTask.title,
+          dueDate: '2031-04-08',
+          occurrenceDate: '2031-04-08',
+        }),
+        expectedTask(template, {
+          title: 'Digest 2031-04-09',
+          dueDate: '2031-04-09',
+          occurrenceDate: '2031-04-09',
+        }),
+        expectedTask(template, {
+          title: 'Digest 2031-04-10',
+          dueDate: '2031-04-10',
+          occurrenceDate: '2031-04-10',
+        }),
+      ],
+      lastGeneratedDate: '2031-04-10',
+      templateTitle: 'Digest {date}',
+    })
+  })
+
+  it('uses the title saved through the API for the next generated task', async () => {
+    fakeToday('2031-04-10')
+    const template = await createTemplate(
+      { type: 'daily', interval: 1 },
+      {
+        title: 'Old digest {date}',
+        anchorDate: '2031-04-09',
+      },
+    )
+
+    const response = await app.request(
+      `/api/recurring-task-templates/${template.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Updated digest {date}' }),
+      },
+    )
+    await generateDueRecurringTasks()
+
+    expect(
+      responseWithStatus(
+        response.status,
+        await outcomeWithTemplateTitle(template.id),
+      ),
+    ).toEqual({
+      status: 200,
+      body: {
+        tasks: [
+          expectedTask(template, {
+            title: 'Updated digest 2031-04-10',
+            dueDate: '2031-04-10',
+            occurrenceDate: '2031-04-10',
+          }),
+        ],
+        lastGeneratedDate: '2031-04-10',
+        templateTitle: 'Updated digest {date}',
+      },
+    })
+  })
+
   it('never double-generates when the tick runs twice for the same day', async () => {
     fakeToday('2026-03-23')
     const template = await createTemplate(
@@ -301,25 +399,37 @@ describe('generateDueRecurringTasks', () => {
     expect(await taskLabelNames(task.id)).toEqual(['focus', 'urgent'])
   })
 
-  it('derives startDate from startOffsetDays', async () => {
-    fakeToday('2026-03-23')
+  it('generates an occurrence on its start date, not before', async () => {
+    // Weekly on Mondays, starting on the previous Monday.
     const template = await createTemplate(
-      { type: 'daily', interval: 1 },
-      { anchorDate: '2026-03-22', startOffsetDays: 2 },
+      { type: 'weekly', interval: 1, daysOfWeek: [1] },
+      {
+        anchorDate: '2026-03-09',
+        lastGeneratedDate: '2026-03-16',
+        startOffsetDays: 7,
+      },
     )
 
-    await generateDueRecurringTasks()
+    const outcomes = []
+    for (const today of ['2026-03-15', '2026-03-16']) {
+      fakeToday(today)
+      await generateDueRecurringTasks()
+      outcomes.push(await outcome(template.id))
+    }
 
-    expect(await outcome(template.id)).toEqual({
-      tasks: [
-        expectedTask(template, {
-          dueDate: '2026-03-23',
-          occurrenceDate: '2026-03-23',
-          startDate: '2026-03-21',
-        }),
-      ],
-      lastGeneratedDate: '2026-03-23',
-    })
+    expect(outcomes).toEqual([
+      { tasks: [], lastGeneratedDate: '2026-03-16' },
+      {
+        tasks: [
+          expectedTask(template, {
+            startDate: '2026-03-16',
+            dueDate: '2026-03-23',
+            occurrenceDate: '2026-03-23',
+          }),
+        ],
+        lastGeneratedDate: '2026-03-23',
+      },
+    ])
   })
 
   it('copies description and context from the template', async () => {

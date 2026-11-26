@@ -106,7 +106,7 @@ async function renderSidebar({
   queryClient.setQueryData(
     taskKeys.count({
       context: 'personal',
-      commitment: 'inbox',
+      priority: 'none',
       status: 'todo',
       q: 'has:no-blockers',
     }),
@@ -168,8 +168,8 @@ describe('Sidebar', () => {
 
   describe('ViewsSection', () => {
     const views: SavedView[] = [
-      makeSavedView({ id: '1', name: 'Now', query: 'commitment:active' }),
-      makeSavedView({ id: '2', name: 'Someday', query: 'commitment:someday' }),
+      makeSavedView({ id: '1', name: 'Now', query: 'priority:0' }),
+      makeSavedView({ id: '2', name: 'Someday', query: 'priority:-1' }),
     ]
 
     it('shows each saved view by name', async () => {
@@ -185,7 +185,7 @@ describe('Sidebar', () => {
       const nowLink = screen.getByRole('link', { name: 'Now' })
       expect(nowLink).toHaveAttribute('href', '/tasks')
       expect(nowLink.dataset['search']).toBe(
-        JSON.stringify({ q: 'commitment:active' }),
+        JSON.stringify({ q: 'priority:0' }),
       )
     })
 
@@ -199,7 +199,7 @@ describe('Sidebar', () => {
 
     it('highlights the view whose saved query matches the current query', async () => {
       await renderSidebar({
-        initialEntry: '/?q=commitment:active',
+        initialEntry: '/?q=priority:0',
         savedViews: views,
       })
 
@@ -236,7 +236,7 @@ describe('Sidebar', () => {
         makeSavedView({
           id: String(i + 1),
           name: `View ${String(i + 1)}`,
-          query: `commitment:active label:view-${String(i + 1)}`,
+          query: `priority:0 label:view-${String(i + 1)}`,
         }),
       )
 
@@ -401,7 +401,7 @@ describe('Sidebar', () => {
       expect(devTqLink).toHaveAttribute('href', '/tasks')
       expect(devTqLink.dataset['search']).toBe(
         JSON.stringify({
-          q: 'is:todo label:dev:tq sort:updated',
+          q: 'is:todo label:dev:tq sort:priority sort:updated',
         }),
       )
     })
@@ -493,7 +493,7 @@ describe('Sidebar', () => {
         const devLink = screen.getByRole('link', { name: /dev/ })
         expect(devLink).toHaveAttribute('href', '/tasks')
         expect(devLink.dataset['search']).toBe(
-          JSON.stringify({ q: 'is:todo label:dev sort:updated' }),
+          JSON.stringify({ q: 'is:todo label:dev sort:priority sort:updated' }),
         )
       })
 

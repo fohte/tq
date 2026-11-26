@@ -4,7 +4,7 @@ import {
   type TemplateRecurrenceType,
   TemplateRepeatFieldAppearance,
 } from '#components/recurring/template-repeat-field-appearance'
-import { toggleWeekday } from '#components/schedule/create-schedule-modal'
+import { useRecurrenceRuleDraft } from '#components/recurring/use-recurrence-rule-draft'
 import { useUpdateRecurringTemplate } from '#hooks/use-recurring-templates'
 import { buildRecurrenceRule, type RecurrenceRule } from '#lib/recurrence'
 
@@ -32,30 +32,20 @@ export function TemplateRepeatField({
       ? recurrenceRule.type
       : 'weekly'
 
-  const [type, setType] = useState<TemplateRecurrenceType>(initialType)
-  const [intervalInput, setIntervalInput] = useState(
-    String(recurrenceRule.interval),
-  )
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
-    recurrenceRule.daysOfWeek ?? [],
-  )
-  const [dayOfMonth, setDayOfMonth] = useState(
-    recurrenceRule.dayOfMonth != null ? String(recurrenceRule.dayOfMonth) : '',
-  )
-
-  const resetDraft = () => {
-    setType(initialType)
-    setIntervalInput(String(recurrenceRule.interval))
-    setDaysOfWeek(recurrenceRule.daysOfWeek ?? [])
-    setDayOfMonth(
+  const draft = useRecurrenceRuleDraft({
+    type: initialType,
+    intervalInput: String(recurrenceRule.interval),
+    ...(recurrenceRule.daysOfWeek == null
+      ? {}
+      : { daysOfWeek: recurrenceRule.daysOfWeek }),
+    dayOfMonth:
       recurrenceRule.dayOfMonth != null
         ? String(recurrenceRule.dayOfMonth)
         : '',
-    )
-  }
+  })
 
   const openEditing = () => {
-    resetDraft()
+    draft.reset()
     setIsEditing(true)
   }
 
@@ -71,22 +61,7 @@ export function TemplateRepeatField({
     }
   }
 
-  const toggleDay = (day: number) => {
-    setDaysOfWeek((prev) => toggleWeekday(prev, day))
-  }
-
-  const parsedInterval = Number.parseInt(intervalInput, 10)
-  const intervalValue =
-    Number.isInteger(parsedInterval) && parsedInterval > 0
-      ? parsedInterval
-      : null
-
-  const draftRule = buildRecurrenceRule(
-    type,
-    intervalValue,
-    daysOfWeek,
-    dayOfMonth,
-  )
+  const draftRule = draft.recurrenceRule
 
   const originalRule = buildRecurrenceRule(
     initialType,
@@ -111,14 +86,14 @@ export function TemplateRepeatField({
       recurrenceRule={recurrenceRule}
       isEditing={isEditing}
       onOpenChange={handleOpenChange}
-      type={type}
-      onTypeChange={setType}
-      intervalInput={intervalInput}
-      onIntervalInputChange={setIntervalInput}
-      daysOfWeek={daysOfWeek}
-      onToggleDay={toggleDay}
-      dayOfMonth={dayOfMonth}
-      onDayOfMonthChange={setDayOfMonth}
+      type={draft.type}
+      onTypeChange={draft.setType}
+      intervalInput={draft.intervalInput}
+      onIntervalInputChange={draft.setIntervalInput}
+      daysOfWeek={draft.daysOfWeek}
+      onToggleDay={draft.toggleDay}
+      dayOfMonth={draft.dayOfMonth}
+      onDayOfMonthChange={draft.setDayOfMonth}
       anchorDate={anchorDate}
       lastGeneratedDate={lastGeneratedDate}
       canSave={canSave}

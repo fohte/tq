@@ -90,7 +90,7 @@ const noDateTasks: Task[] = [
     status: 'todo',
     startDate: null,
     context: 'personal',
-    candidateReason: { kind: 'active' },
+    candidateReason: { kind: 'priority', label: 'Routine' },
   },
   {
     ...baseTask,
@@ -99,7 +99,7 @@ const noDateTasks: Task[] = [
     status: 'todo',
     startDate: null,
     context: 'personal',
-    candidateReason: { kind: 'active' },
+    candidateReason: { kind: 'priority', label: 'Routine' },
   },
 ]
 
@@ -275,7 +275,7 @@ const compactQueueSections = [
 const compactCandidate = makeTask({
   id: 'compact-candidate',
   title: 'Add a follow-up check',
-  candidateReason: { kind: 'active' },
+  candidateReason: { kind: 'priority', label: 'Routine' },
 })
 const compactQueueCandidates = getQueueCandidates([compactCandidate])
 const compactTaskBlock = makeTimeBlock({
@@ -479,8 +479,7 @@ export const Default: Story = {
 }
 
 export const Compact: Story = {
-  name: "the compact day planner shows current work, due tasks, this week's queue, and its work memo",
-  tags: ['mobile-only'],
+  name: 'the compact day planner keeps date controls above Now and the queue',
   decorators: [
     (Story) => (
       <div className="mx-auto h-screen w-80 max-w-full">
@@ -491,6 +490,7 @@ export const Compact: Story = {
   args: {
     ...Default.args,
     layout: 'compact',
+    desktopWindowControls: false,
     calendarEvents: compactEvents,
     schedules: compactSchedules,
     nowPanel: {
@@ -537,6 +537,31 @@ export const Compact: Story = {
     queueSections: compactQueueSections,
     dayQueueTasks: compactTasks,
     queueCandidates: compactQueueCandidates,
+  },
+}
+
+export const CompactDesktopWindowControls: Story = {
+  ...Compact,
+  name: 'the compact day planner keeps an empty draggable strip for desktop window controls above date controls',
+  tags: ['desktop-only'],
+  args: {
+    ...Compact.args,
+    desktopWindowControls: true,
+  },
+}
+
+export const CompactShortWindow: Story = {
+  name: 'the compact planner keeps its queue reachable in a short window',
+  tags: ['mobile-only'],
+  decorators: [
+    (Story) => (
+      <div className="mx-auto h-64 w-80 max-w-full">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    ...Compact.args,
   },
 }
 

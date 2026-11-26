@@ -68,6 +68,7 @@ export function TaskMainContent({
       <div className="flex items-start gap-3">
         <TaskStatusToggle
           taskId={task.id}
+          taskNumber={task.number}
           status={task.status}
           statusReason={task.statusReason}
         />
@@ -234,10 +235,12 @@ function TaskBreadcrumb({ task }: { task: TaskDetail }) {
 
 function TaskStatusToggle({
   taskId,
+  taskNumber,
   status,
   statusReason,
 }: {
   taskId: string
+  taskNumber: number
   status: TaskDetail['status']
   statusReason: TaskDetail['statusReason']
 }) {
@@ -248,6 +251,8 @@ function TaskStatusToggle({
     updateStatus.mutate({
       id: taskId,
       status: nextStatus,
+      taskNumber,
+      previousStatus: status,
     })
   }
 

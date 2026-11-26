@@ -140,6 +140,12 @@ export function computeDueOccurrences(
   }
 }
 
+export function addDays(dateStr: string, days: number): string {
+  const date = new Date(`${dateStr}T00:00:00`)
+  date.setDate(date.getDate() + days)
+  return formatDate(date)
+}
+
 export function formatDate(d: Date): string {
   const year = String(d.getFullYear())
   const month = String(d.getMonth() + 1).padStart(2, '0')

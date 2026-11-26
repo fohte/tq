@@ -109,7 +109,7 @@ describe('TaskKanban waiting column dragging', () => {
             candidates={[
               makeQueueCandidate({
                 task: candidateTask,
-                reason: { kind: 'active' },
+                reason: { kind: 'priority', label: 'Routine' },
               }),
             ]}
             onAddCandidate={onAddCandidate}

@@ -35,6 +35,7 @@ export const tasksListApp = new Hono().get(
                 candidateReason: getTaskQueueCandidateReason(
                   item,
                   query.candidatesOn,
+                  result.prioritySettings,
                 ),
               }),
           ...(match === undefined ? {} : { match }),

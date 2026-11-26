@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { RecurrenceType } from '#components/schedule/create-schedule-modal'
+import type { TaskPriority } from '#hooks/use-priority-settings'
 import { projectKeys } from '#hooks/use-projects'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
 import { taskKeys } from '#hooks/use-task-queries'
@@ -15,7 +16,7 @@ export interface CreateTaskInput {
   startDate?: string
   dueDate?: string
   context?: 'work' | 'personal'
-  commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority
   labels?: string[]
   projectId?: string
   parentId?: string
@@ -62,7 +63,7 @@ export function useCreateTask() {
         statusReason: null,
         duplicateOfNumber: null,
         context: input.context ?? 'personal',
-        commitment: input.commitment ?? 'inbox',
+        priority: input.priority ?? null,
         labels: input.labels ?? [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
@@ -112,82 +113,6 @@ export function useCreateTask() {
   })
 }
 
-export function useUpdateTaskStatus() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      status,
-      statusReason,
-      duplicateOfTaskId,
-    }: {
-      id: string
-      status: 'todo' | 'completed'
-      statusReason?: 'completed' | 'not_planned' | 'duplicate'
-      duplicateOfTaskId?: string
-    }) => {
-      const res = await api.api.tasks[':id'].status.$patch({
-        param: { id },
-        json: { status, statusReason, duplicateOfTaskId },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
-    onMutate: async ({ id, status, statusReason }) => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
-
-      const previousLists = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists,
-      })
-      const previousDetail = queryClient.getQueryData<TaskDetail>(
-        taskKeys.detail(id),
-      )
-
-      // Mirrors the server: statusReason is only meaningful for 'completed',
-      // cleared to null for every other status.
-      const nextStatusReason =
-        status === 'completed' ? (statusReason ?? 'completed') : null
-
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: taskKeys.lists },
-        (old) => {
-          if (!old) return old
-          return old.map((task) =>
-            task.id === id
-              ? { ...task, status, statusReason: nextStatusReason }
-              : task,
-          )
-        },
-      )
-
-      if (previousDetail) {
-        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
-          ...previousDetail,
-          status,
-          statusReason: nextStatusReason,
-        })
-      }
-
-      return { previousLists, previousDetail }
-    },
-    onError: (_err, { id }, context) => {
-      if (context?.previousLists) {
-        for (const [key, data] of context.previousLists) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-      if (context?.previousDetail) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
-      }
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
-      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
-    },
-  })
-}
-
 export interface UpdateTaskInput {
   title?: string
   description?: string | null
@@ -196,7 +121,7 @@ export interface UpdateTaskInput {
   remindAt?: string | null
   projectId?: string | null
   context?: 'work' | 'personal'
-  commitment?: 'inbox' | 'active' | 'someday'
+  priority?: TaskPriority
   labels?: string[]
 }
 
@@ -349,87 +274,13 @@ export function useUpdateTaskRecurrenceRule() {
 }
 
 export {
+  useCompleteTask,
+  useUpdateTaskStatus,
+} from '#hooks/use-task-completion-mutations'
+export {
   useUpdateTaskBlockedBy,
   useUpdateTaskParent,
 } from '#hooks/use-task-relation-mutations'
-
-export function useCompleteTask() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      statusReason,
-      duplicateOfTaskId,
-    }: {
-      id: string
-      statusReason?: 'completed' | 'not_planned' | 'duplicate'
-      duplicateOfTaskId?: string
-    }) => {
-      const res = await api.api.tasks[':id'].complete.$post({
-        param: { id },
-        json: { statusReason, duplicateOfTaskId },
-      })
-      return unwrapOrThrow(assertOk(res)).json()
-    },
-    onMutate: async ({ id, statusReason }) => {
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists })
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
-
-      const previousLists = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists,
-      })
-      const previousDetail = queryClient.getQueryData<TaskDetail>(
-        taskKeys.detail(id),
-      )
-
-      const now = new Date().toISOString()
-      const nextStatusReason = statusReason ?? 'completed'
-
-      queryClient.setQueriesData<Task[]>(
-        { queryKey: taskKeys.lists },
-        (old) => {
-          if (!old) return old
-          return old.map((task) =>
-            task.id === id
-              ? {
-                  ...task,
-                  status: 'completed',
-                  statusReason: nextStatusReason,
-                  updatedAt: now,
-                }
-              : task,
-          )
-        },
-      )
-
-      if (previousDetail) {
-        queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
-          ...previousDetail,
-          status: 'completed',
-          statusReason: nextStatusReason,
-          updatedAt: now,
-        })
-      }
-
-      return { previousLists, previousDetail }
-    },
-    onError: (_err, { id }, context) => {
-      if (context?.previousLists) {
-        for (const [key, data] of context.previousLists) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-      if (context?.previousDetail) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousDetail)
-      }
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: taskKeys.all })
-      void queryClient.invalidateQueries({ queryKey: projectKeys.all })
-    },
-  })
-}
 
 export function useDeleteTask() {
   const queryClient = useQueryClient()

@@ -7,7 +7,10 @@ export const githubLinkLookupQuerySchema = z.object({
 })
 
 export const githubLinkLookupTaskResponseSchema = createTaskResponseSchema.omit(
-  { linkSync: true },
+  {
+    linkSync: true,
+    blockedByGithubRefs: true,
+  },
 )
 
 export const githubLinkLookupResponseSchema = z.object({
