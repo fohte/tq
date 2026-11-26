@@ -62,10 +62,10 @@
     "zod": "4.6.6"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.32.0",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@types/web-push": "3.6.4",
     "aws-sdk-client-mock": "4.1.0",
-    "drizzle-kit": "0.31.10",
+    "drizzle-kit": "0.31.11",
     "tsup": "8.5.1",
     "tsx": "4.23.15"
   }
