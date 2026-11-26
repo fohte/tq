@@ -6,11 +6,11 @@ export function makeProjectField(
   return {
     id: 'field-a',
     projectId: 'project-a',
-    name: '分類サンプル',
+    name: 'SampleCategory',
     type: 'single_select',
     options: [
-      { id: 'option-a', name: '候補 A' },
-      { id: 'option-b', name: '候補 B' },
+      { id: 'option-a', name: 'OptionA' },
+      { id: 'option-b', name: 'OptionB' },
     ],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

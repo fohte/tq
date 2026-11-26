@@ -29,6 +29,14 @@ export const Open: Story = {
   },
 }
 
+export const ConfirmDisabled: Story = {
+  name: 'disables confirmation while a delete is pending',
+  args: {
+    open: true,
+    confirmDisabled: true,
+  },
+}
+
 export const WithTrigger: Story = {
   name: 'shows a delete item trigger before confirmation',
   args: {

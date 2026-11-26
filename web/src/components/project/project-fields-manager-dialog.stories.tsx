@@ -35,6 +35,20 @@ export const Empty: Story = {
   },
 }
 
+export const Loading: Story = {
+  name: 'the fields list is loading',
+  args: {
+    isLoading: true,
+  },
+}
+
+export const LoadError: Story = {
+  name: 'the fields list shows a loading error',
+  args: {
+    loadError: true,
+  },
+}
+
 export const WithFields: Story = {
   name: 'the project has a field with two options',
 }
@@ -73,7 +87,7 @@ export const ConfirmingFieldDeletion: Story = {
     initialDeleteTarget: {
       kind: 'field',
       fieldId: 'field-a',
-      name: '分類サンプル',
+      name: 'SampleCategory',
     },
   },
 }
@@ -85,7 +99,7 @@ export const ConfirmingOptionDeletion: Story = {
       kind: 'option',
       fieldId: 'field-a',
       optionId: 'option-a',
-      name: '候補 A',
+      name: 'OptionA',
     },
   },
 }

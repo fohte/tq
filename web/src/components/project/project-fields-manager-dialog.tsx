@@ -253,6 +253,7 @@ export function ProjectFieldsManagerDialog({
                           size="icon-sm"
                           variant="ghost"
                           aria-label={`${field.name}を編集`}
+                          disabled={pendingAction}
                           onClick={() => {
                             setEditingField({ id: field.id, name: field.name })
                           }}
@@ -264,6 +265,7 @@ export function ProjectFieldsManagerDialog({
                           size="icon-sm"
                           variant="ghost"
                           aria-label={`${field.name}を削除`}
+                          disabled={pendingAction}
                           onClick={() => {
                             setDeleteTarget({
                               kind: 'field',
@@ -346,6 +348,7 @@ export function ProjectFieldsManagerDialog({
                                 size="icon-sm"
                                 variant="ghost"
                                 aria-label={`${option.name}を編集`}
+                                disabled={pendingAction}
                                 onClick={() => {
                                   setEditingOption({
                                     fieldId: field.id,
@@ -361,6 +364,7 @@ export function ProjectFieldsManagerDialog({
                                 size="icon-sm"
                                 variant="ghost"
                                 aria-label={`${option.name}を削除`}
+                                disabled={pendingAction}
                                 onClick={() => {
                                   setDeleteTarget({
                                     kind: 'option',
@@ -428,6 +432,7 @@ export function ProjectFieldsManagerDialog({
         }
         description={deleteDescription}
         confirmLabel="削除"
+        confirmDisabled={pendingAction}
         onConfirm={handleDelete}
       />
     </>
