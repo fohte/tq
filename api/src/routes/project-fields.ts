@@ -122,7 +122,7 @@ export const projectFieldsApp = new Hono()
           .from(projects)
           .where(eq(projects.id, projectId))
           .limit(1)
-          .for('update')
+          .for('no key update')
         if (!project) return { kind: 'not-found' as const }
 
         const [field] = await tx
@@ -171,7 +171,7 @@ export const projectFieldsApp = new Hono()
           .from(projects)
           .where(eq(projects.id, projectId))
           .limit(1)
-          .for('update')
+          .for('no key update')
         if (!project) return { kind: 'not-found' as const }
 
         const [existing] = await tx
@@ -261,7 +261,7 @@ export const projectFieldsApp = new Hono()
             ),
           )
           .limit(1)
-          .for('update')
+          .for('no key update')
         if (!field) return { kind: 'not-found' as const }
 
         const [created] = await tx
@@ -303,7 +303,7 @@ export const projectFieldsApp = new Hono()
             ),
           )
           .limit(1)
-          .for('update')
+          .for('no key update')
         if (!field) return { kind: 'not-found' as const }
 
         const [existing] = await tx

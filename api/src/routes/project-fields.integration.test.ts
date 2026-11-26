@@ -300,11 +300,26 @@ describe('project fields API', () => {
       name: 'Orbit Class',
       options: ['Amber'],
     })
+    const responseOtherField = await createField(projectA.id, {
+      name: 'Orbit Secondary Class',
+      options: ['Cobalt'],
+    })
     const fieldA = await jsonBody<FieldResponse>(responseA)
     const fieldB = await jsonBody<FieldResponse>(responseB)
+    const otherField = await jsonBody<FieldResponse>(responseOtherField)
     const optionA = fieldA.options[0]
+    const optionFromOtherField = otherField.options[0]
     assertDefined(optionA)
+    assertDefined(optionFromOtherField)
     const projectMissing = await app.request('/api/projects/missing/fields')
+    const projectMissingCreate = await app.request(
+      '/api/projects/missing/fields',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Orbit Class' }),
+      },
+    )
     const foreignField = await app.request(
       `/api/projects/${projectB.id}/fields/${fieldA.id}`,
       {
@@ -313,18 +328,42 @@ describe('project fields API', () => {
         body: JSON.stringify({ name: 'Elsewhere' }),
       },
     )
+    const foreignFieldDelete = await app.request(
+      `/api/projects/${projectB.id}/fields/${fieldA.id}`,
+      { method: 'DELETE' },
+    )
+    const foreignFieldOptionCreate = await app.request(
+      `/api/projects/${projectB.id}/fields/${fieldA.id}/options`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Jade' }),
+      },
+    )
     const foreignOption = await app.request(
       `/api/projects/${projectB.id}/fields/${fieldB.id}/options/${optionA.id}`,
       { method: 'DELETE' },
+    )
+    const foreignOptionPatch = await app.request(
+      `/api/projects/${projectA.id}/fields/${fieldA.id}/options/${optionFromOtherField.id}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Jade' }),
+      },
     )
 
     expect(
       statusSnapshot([
         projectMissing.status,
+        projectMissingCreate.status,
         foreignField.status,
+        foreignFieldDelete.status,
+        foreignFieldOptionCreate.status,
         foreignOption.status,
+        foreignOptionPatch.status,
       ]),
-    ).toEqual([404, 404, 404])
+    ).toEqual([404, 404, 404, 404, 404, 404, 404])
   })
 
   it('cascades project deletion to fields and options', async () => {
