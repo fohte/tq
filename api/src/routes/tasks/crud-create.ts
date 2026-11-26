@@ -103,7 +103,10 @@ export const tasksCreateApp = new Hono().post(
               input.fieldValues,
             )
       if ('error' in resolvedFieldValues) {
-        return { kind: 'invalid-field-values' as const }
+        return {
+          kind: 'invalid-field-values' as const,
+          error: resolvedFieldValues.error,
+        }
       }
 
       let descriptionTemplateId = templateSelection?.selected?.id ?? null
@@ -213,7 +216,7 @@ export const tasksCreateApp = new Hono().post(
     })
 
     if (transactionResult.kind === 'invalid-field-values') {
-      return c.json({ error: 'Invalid task field values' }, 400)
+      return c.json({ error: transactionResult.error }, 400)
     }
     const { task, createdRule, labelNames } = transactionResult
 

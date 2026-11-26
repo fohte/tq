@@ -357,6 +357,28 @@ describe('task_create tool', () => {
     })
   })
 
+  it('returns the missing field name when task_create receives an unknown field', async () => {
+    const projectResponse = await app.request('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Sample Observatory' }),
+    })
+    const project = await jsonBody<{ id: string }>(projectResponse)
+
+    const result = await callMcpTool(client, 'task_create', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { 'Missing Signal Phase': 'North Route' },
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [
+        { type: 'text', text: 'Field not found: Missing Signal Phase' },
+      ],
+    })
+  })
+
   it('creates a GitHub blocker from a URL', async () => {
     const url = 'https://github.com/example-owner/example-repo/issues/17'
     await upsertGithubToken('valid-token')

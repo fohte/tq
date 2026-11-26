@@ -97,22 +97,34 @@ function normalizeTimeBlock(block: TimeBlockResponse) {
   }
 }
 
+type TaskResponseShape = {
+  id: string
+  number: number
+  createdAt: string
+  updatedAt: string
+  fieldValues: unknown
+}
+
+type NormalizedTask<T extends TaskResponseShape> = Omit<
+  T,
+  'id' | 'number' | 'createdAt' | 'updatedAt'
+> & {
+  id: 'ID'
+  number: -1
+  createdAt: 'TIMESTAMP'
+  updatedAt: 'TIMESTAMP'
+}
+
 // Generic (rather than `TaskResponse`-typed) so it also accepts the
 // zod-inferred return type of `createTask`/`createTask`-derived PATCH
 // responses, whose optional fields are typed as `T | undefined` and would
 // otherwise conflict with `TaskResponse`'s plain optional fields under
 // `exactOptionalPropertyTypes`.
-function normalizeTask<
-  T extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
-  },
->(task: T) {
+function normalizeTask<T extends TaskResponseShape>(
+  task: T,
+): NormalizedTask<T> {
   return {
     ...task,
-    fieldValues: 'fieldValues' in task ? task.fieldValues : [],
     id: 'ID',
     number: -1,
     createdAt: 'TIMESTAMP',
@@ -121,19 +133,12 @@ function normalizeTask<
 }
 
 function normalizeTaskResponsePair<
-  Raw extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
-  },
-  Parsed extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
-  },
->(raw: Raw, parsed: Parsed) {
+  Raw extends TaskResponseShape,
+  Parsed extends TaskResponseShape,
+>(
+  raw: Raw,
+  parsed: Parsed,
+): { raw: NormalizedTask<Raw>; parsed: NormalizedTask<Parsed> } {
   return {
     raw: normalizeTask(raw),
     parsed: normalizeTask(parsed),
@@ -457,15 +462,16 @@ async function attachLegacyRecurrenceRule(
 }
 
 function normalizeRecurringTask<
-  T extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
+  T extends TaskResponseShape & {
     recurrenceRule: { id: string } | null
     templateId: string | null
   },
->(task: T) {
+>(
+  task: T,
+): Omit<NormalizedTask<T>, 'recurrenceRule' | 'templateId'> & {
+  recurrenceRule: { id: 'RULE_ID' } | null
+  templateId: 'TEMPLATE_ID' | null
+} {
   return {
     ...normalizeTask(task),
     recurrenceRule:

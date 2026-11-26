@@ -16,6 +16,7 @@ function encodeFieldValueKeys(value: unknown): unknown {
     return value
   }
 
+  // Zod の record parser が `__proto__` キーを除外するため、NUL prefix で退避してから復元する。
   return Object.fromEntries(
     Object.entries(value).map(([key, option]) => [
       key.length === 0 ? key : `\u0000${key}`,

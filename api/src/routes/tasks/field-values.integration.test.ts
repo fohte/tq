@@ -5,6 +5,10 @@ import { app } from '#app'
 import { db } from '#db/connection'
 import { taskFieldValues, taskRelations } from '#db/schema'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
+import {
+  type TaskListItemResponse,
+  type TaskResponse,
+} from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -39,8 +43,179 @@ async function requestJson(path: string, method: string, body: unknown) {
   })
 }
 
-function taskFieldValuesSnapshot<Value>(value: Value): Value {
-  return value
+type TaskResponseInput = {
+  title: string
+  projectId?: string | null
+  fieldValues?: TaskResponse['fieldValues']
+  description?: string | null
+  status?: TaskResponse['status']
+  statusReason?: TaskResponse['statusReason']
+  parentId?: string | null
+}
+
+function expectedTaskResponse(input: TaskResponseInput): TaskResponse {
+  return {
+    id: 'TASK_ID',
+    number: -1,
+    title: input.title,
+    description: input.description ?? null,
+    status: input.status ?? 'todo',
+    statusReason: input.statusReason ?? null,
+    context: 'personal',
+    priority: null,
+    labels: [],
+    fieldValues: input.fieldValues ?? [],
+    startDate: null,
+    dueDate: null,
+    remindAt: null,
+    parentId: input.parentId ?? null,
+    projectId: input.projectId ?? null,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    templateId: null,
+    occurrenceDate: null,
+    githubLinks: [],
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
+function expectedTaskWriteResponse(
+  input: TaskResponseInput,
+  includeLinkSync = false,
+) {
+  return {
+    ...expectedTaskResponse(input),
+    blockedByGithubRefs: [],
+    ...(includeLinkSync ? { linkSync: { added: [], unresolvedRefs: [] } } : {}),
+  }
+}
+
+function expectedTaskDetailResponse(
+  input: TaskResponseInput & {
+    parentNumber?: number | null
+    parentTitle?: string | null
+  },
+) {
+  return {
+    ...expectedTaskResponse(input),
+    titleAuthor: { kind: 'human', agent: null },
+    descriptionAuthor: { kind: 'human', agent: null },
+    parentNumber: input.parentNumber ?? null,
+    parentTitle: input.parentTitle ?? null,
+    childCompletionCount: { total: 0, completed: 0 },
+    pages: [],
+    timeBlocks: [],
+    links: { outgoing: [], incoming: [] },
+    duplicateOfNumber: null,
+    duplicateOfTask: null,
+    blockedBy: [],
+    blocking: [],
+    githubBlockers: [],
+    blockedByGithubRefs: [],
+    checklistCompletionCount: { total: 0, completed: 0 },
+    checklists: [],
+  }
+}
+
+function normalizeTaskResponse<
+  T extends {
+    id: string
+    number: number
+    createdAt: string
+    updatedAt: string
+  },
+>(task: T) {
+  return {
+    ...task,
+    id: 'TASK_ID',
+    number: -1,
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+  }
+}
+
+function normalizeTaskDetailResponse(task: TaskResponse) {
+  return {
+    ...normalizeTaskResponse(task),
+    parentId: task.parentId === null ? null : 'PARENT_ID',
+    ...(task.parentNumber === undefined
+      ? {}
+      : {
+          parentNumber: task.parentNumber === null ? null : -1,
+        }),
+  }
+}
+
+function expectedTaskListItem(input: TaskResponseInput) {
+  return {
+    id: 'TASK_ID',
+    number: -1,
+    title: input.title,
+    description: input.description ?? null,
+    status: input.status ?? 'todo',
+    statusReason: input.statusReason ?? null,
+    context: 'personal',
+    priority: null,
+    labels: [],
+    fieldValues: input.fieldValues ?? [],
+    startDate: null,
+    dueDate: null,
+    remindAt: null,
+    parentId: null,
+    projectId: input.projectId ?? null,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    templateId: null,
+    occurrenceDate: null,
+    githubLinks: [],
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+    parentNumber: null,
+    duplicateOfNumber: null,
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    hasUnresolvedWait: false,
+    childCompletionCount: { completed: 0, total: 0 },
+    checklistCompletionCount: { completed: 0, total: 0 },
+  } satisfies TaskListItemResponse
+}
+
+function expectedTaskListRow(input: TaskResponseInput) {
+  return {
+    id: 'TASK_ID',
+    number: -1,
+    title: input.title,
+    status: input.status ?? 'todo',
+    statusReason: input.statusReason ?? null,
+    context: 'personal',
+    priority: null,
+    labels: [],
+    fieldValues: input.fieldValues ?? [],
+    startDate: null,
+    dueDate: null,
+    remindAt: null,
+    parentId: null,
+    projectId: input.projectId ?? null,
+    recurrenceRuleId: null,
+    recurrenceRule: null,
+    templateId: null,
+    occurrenceDate: null,
+    githubLinks: [],
+    createdAt: 'TIMESTAMP',
+    updatedAt: 'TIMESTAMP',
+    parentNumber: null,
+    duplicateOfNumber: null,
+    blockedByNumbers: [],
+    blockedByGithubRefs: [],
+    hasUnresolvedWait: false,
+    childCompletionCount: { completed: 0, total: 0 },
+    checklistCompletionCount: { completed: 0, total: 0 },
+  } satisfies Omit<TaskListItemResponse, 'description'>
+}
+
+function responseSnapshot<T>(status: number, body: T) {
+  return { status, body }
 }
 
 describe('task field values API', () => {
@@ -81,31 +256,29 @@ describe('task field values API', () => {
     const subtaskResponse = await app.request(
       `/api/tasks/${promoted.subtaskId}`,
     )
-    const subtask = await jsonBody<{
-      projectId: string | null
-      fieldValues: unknown[]
-    }>(subtaskResponse)
+    const subtask = await jsonBody<TaskResponse>(subtaskResponse)
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          parentResponse.status,
-          checklistResponse.status,
-          itemResponse.status,
-          promotionResponse.status,
-          subtaskResponse.status,
-        ],
-        subtaskProjectId: subtask.projectId,
-        subtaskValues: subtask.fieldValues,
-      }),
-    ).toEqual({
-      statuses: [201, 201, 201, 200, 200],
-      subtaskProjectId: project.id,
-      subtaskValues: [],
-    })
+      responseSnapshot(
+        subtaskResponse.status,
+        normalizeTaskDetailResponse(subtask),
+      ),
+    ).toEqual(
+      responseSnapshot(
+        200,
+        expectedTaskDetailResponse({
+          title: 'Inspect the signal',
+          projectId: project.id,
+          fieldValues: [],
+          parentId: 'PARENT_ID',
+          parentNumber: -1,
+          parentTitle: 'Observe a signal',
+        }),
+      ),
+    )
   })
 
-  it('resolves ids and names, updates selected fields, and returns values in detail and list views', async () => {
+  it('resolves ids and names and updates only the selected fields', async () => {
     const project = await createProject('Sample Observatory')
     const firstField = await createField(project.id, 'Signal Phase', [
       'Early Arc',
@@ -125,15 +298,7 @@ describe('task field values API', () => {
       projectId: project.id,
       fieldValues: { [firstField.name]: firstOption.name },
     })
-    const created = await jsonBody<{
-      id: string
-      fieldValues: Array<{
-        fieldId: string
-        fieldName: string
-        optionId: string
-        optionName: string
-      }>
-    }>(createResponse)
+    const created = await jsonBody<TaskResponse>(createResponse)
     const updateResponse = await requestJson(
       `/api/tasks/${created.id}`,
       'PATCH',
@@ -143,30 +308,122 @@ describe('task field values API', () => {
         },
       },
     )
-    const updated = await jsonBody<{ fieldValues: unknown[] }>(updateResponse)
-    const detailResponse = await app.request(`/api/tasks/${created.id}`)
-    const detail = await jsonBody<{ fieldValues: unknown[] }>(detailResponse)
-    const fullListResponse = await app.request(
-      '/api/tasks?view=full&context=all&status=all&limit=unlimited',
-    )
-    const fullList =
-      await jsonBody<Array<{ id: string; fieldValues: unknown[] }>>(
-        fullListResponse,
-      )
-    const rowListResponse = await app.request(
-      '/api/tasks?view=row&context=all&status=all&limit=unlimited',
-    )
-    const rowList =
-      await jsonBody<Array<{ id: string; fieldValues: unknown[] }>>(
-        rowListResponse,
-      )
+    const updated = await jsonBody<TaskResponse>(updateResponse)
     const clearResponse = await requestJson(
       `/api/tasks/${created.id}`,
       'PATCH',
       { fieldValues: { [firstField.id]: null } },
     )
-    const cleared = await jsonBody<{ fieldValues: unknown[] }>(clearResponse)
-    const expected = [
+    const cleared = await jsonBody<TaskResponse>(clearResponse)
+    const firstFieldValue = [
+      {
+        fieldId: firstField.id,
+        fieldName: firstField.name,
+        optionId: firstOption.id,
+        optionName: firstOption.name,
+      },
+    ]
+    const bothFieldValues = [
+      ...firstFieldValue,
+      {
+        fieldId: secondField.id,
+        fieldName: secondField.name,
+        optionId: secondOption.id,
+        optionName: secondOption.name,
+      },
+    ]
+
+    expect(
+      responseSnapshot(200, {
+        create: responseSnapshot(
+          createResponse.status,
+          normalizeTaskResponse(created),
+        ),
+        update: responseSnapshot(
+          updateResponse.status,
+          normalizeTaskResponse(updated),
+        ),
+        clear: responseSnapshot(
+          clearResponse.status,
+          normalizeTaskResponse(cleared),
+        ),
+      }),
+    ).toEqual(
+      responseSnapshot(200, {
+        create: responseSnapshot(
+          201,
+          expectedTaskWriteResponse(
+            {
+              title: 'Observe a signal',
+              projectId: project.id,
+              fieldValues: firstFieldValue,
+            },
+            true,
+          ),
+        ),
+        update: responseSnapshot(
+          200,
+          expectedTaskWriteResponse({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: bothFieldValues,
+          }),
+        ),
+        clear: responseSnapshot(
+          200,
+          expectedTaskWriteResponse({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: [
+              {
+                fieldId: secondField.id,
+                fieldName: secondField.name,
+                optionId: secondOption.id,
+                optionName: secondOption.name,
+              },
+            ],
+          }),
+        ),
+      }),
+    )
+  })
+
+  it('returns values in field creation order in detail and list views', async () => {
+    const project = await createProject('Sample Observatory')
+    const firstField = await createField(project.id, 'Signal Phase', [
+      'Early Arc',
+    ])
+    const secondField = await createField(project.id, 'Orbit Mode', [
+      'Quiet Path',
+    ])
+    const firstOption = firstField.options[0]
+    const secondOption = secondField.options[0]
+    if (firstOption == null || secondOption == null) {
+      throw new Error('Test field options were not created')
+    }
+    const createResponse = await requestJson('/api/tasks', 'POST', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: {
+        [secondField.id]: secondOption.id,
+        [firstField.id]: firstOption.id,
+      },
+    })
+    const created = await jsonBody<TaskResponse>(createResponse)
+    const detailResponse = await app.request(`/api/tasks/${created.id}`)
+    const detail = await jsonBody<TaskResponse>(detailResponse)
+    const fullListResponse = await app.request(
+      '/api/tasks?view=full&context=all&status=all&limit=unlimited',
+    )
+    const fullList = await jsonBody<TaskListItemResponse[]>(fullListResponse)
+    const rowListResponse = await app.request(
+      '/api/tasks?view=row&context=all&status=all&limit=unlimited',
+    )
+    const rowList =
+      await jsonBody<Array<Omit<TaskListItemResponse, 'description'>>>(
+        rowListResponse,
+      )
+    const orderedValues = [
       {
         fieldId: firstField.id,
         fieldName: firstField.name,
@@ -182,47 +439,46 @@ describe('task field values API', () => {
     ]
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
-          updateResponse.status,
+      responseSnapshot(200, {
+        detail: responseSnapshot(
           detailResponse.status,
+          normalizeTaskDetailResponse(detail),
+        ),
+        fullList: responseSnapshot(
           fullListResponse.status,
+          fullList.map(normalizeTaskResponse),
+        ),
+        rowList: responseSnapshot(
           rowListResponse.status,
-          clearResponse.status,
-        ],
-        createdValues: created.fieldValues,
-        updatedValues: updated.fieldValues,
-        detailValues: detail.fieldValues,
-        fullListValues: fullList.find((task) => task.id === created.id)
-          ?.fieldValues,
-        rowListValues: rowList.find((task) => task.id === created.id)
-          ?.fieldValues,
-        clearedValues: cleared.fieldValues,
+          rowList.map(normalizeTaskResponse),
+        ),
       }),
-    ).toEqual({
-      statuses: [201, 200, 200, 200, 200, 200],
-      createdValues: [
-        {
-          fieldId: firstField.id,
-          fieldName: firstField.name,
-          optionId: firstOption.id,
-          optionName: firstOption.name,
-        },
-      ],
-      updatedValues: expected,
-      detailValues: expected,
-      fullListValues: expected,
-      rowListValues: expected,
-      clearedValues: [
-        {
-          fieldId: secondField.id,
-          fieldName: secondField.name,
-          optionId: secondOption.id,
-          optionName: secondOption.name,
-        },
-      ],
-    })
+    ).toEqual(
+      responseSnapshot(200, {
+        detail: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: orderedValues,
+          }),
+        ),
+        fullList: responseSnapshot(200, [
+          expectedTaskListItem({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: orderedValues,
+          }),
+        ]),
+        rowList: responseSnapshot(200, [
+          expectedTaskListRow({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: orderedValues,
+          }),
+        ]),
+      }),
+    )
   })
 
   it('returns field values when completing a task', async () => {
@@ -236,40 +492,38 @@ describe('task field values API', () => {
       projectId: project.id,
       fieldValues: { [field.id]: option.id },
     })
-    const created = await jsonBody<{ id: string }>(createResponse)
+    const created = await jsonBody<TaskResponse>(createResponse)
     const completeResponse = await requestJson(
       `/api/tasks/${created.id}/complete`,
       'POST',
       {},
     )
-    const completed = await jsonBody<{
-      status: string
-      fieldValues: Array<{
-        fieldId: string
-        fieldName: string
-        optionId: string
-        optionName: string
-      }>
-    }>(completeResponse)
+    const completed = await jsonBody<TaskResponse>(completeResponse)
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [createResponse.status, completeResponse.status],
-        taskStatus: completed.status,
-        fieldValues: completed.fieldValues,
-      }),
-    ).toEqual({
-      statuses: [201, 200],
-      taskStatus: 'completed',
-      fieldValues: [
-        {
-          fieldId: field.id,
-          fieldName: field.name,
-          optionId: option.id,
-          optionName: option.name,
-        },
-      ],
-    })
+      responseSnapshot(
+        completeResponse.status,
+        normalizeTaskResponse(completed),
+      ),
+    ).toEqual(
+      responseSnapshot(
+        200,
+        expectedTaskResponse({
+          title: 'Observe a signal',
+          projectId: project.id,
+          fieldValues: [
+            {
+              fieldId: field.id,
+              fieldName: field.name,
+              optionId: option.id,
+              optionName: option.name,
+            },
+          ],
+          status: 'completed',
+          statusReason: 'completed',
+        }),
+      ),
+    )
   })
 
   it('accepts a field name that is special to JavaScript objects', async () => {
@@ -283,61 +537,73 @@ describe('task field values API', () => {
       projectId: project.id,
       fieldValues: Object.fromEntries([['__proto__', option.name]]),
     })
-    const created = await jsonBody<{
-      fieldValues: Array<{
-        fieldId: string
-        fieldName: string
-        optionId: string
-        optionName: string
-      }>
-    }>(response)
+    const created = await jsonBody<TaskResponse>(response)
 
     expect(
-      taskFieldValuesSnapshot({
-        status: response.status,
-        fieldValues: created.fieldValues,
-      }),
-    ).toEqual({
-      status: 201,
-      fieldValues: [
-        {
-          fieldId: field.id,
-          fieldName: field.name,
-          optionId: option.id,
-          optionName: option.name,
-        },
-      ],
-    })
+      responseSnapshot(response.status, normalizeTaskResponse(created)),
+    ).toEqual(
+      responseSnapshot(
+        201,
+        expectedTaskWriteResponse(
+          {
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: [
+              {
+                fieldId: field.id,
+                fieldName: field.name,
+                optionId: option.id,
+                optionName: option.name,
+              },
+            ],
+          },
+          true,
+        ),
+      ),
+    )
   })
 
-  it('rejects missing and cross-project fields or options without changing existing values', async () => {
+  it('returns detailed errors for invalid fields and options without changing task data', async () => {
     const sourceProject = await createProject('Sample Archive')
     const otherProject = await createProject('Sample Archive Two')
     const field = await createField(sourceProject.id, 'Review Track', [
       'North Route',
     ])
+    const siblingField = await createField(sourceProject.id, 'Review Mode', [
+      'Local Route',
+    ])
     const foreignField = await createField(otherProject.id, 'Review Track', [
       'South Route',
     ])
     const sourceOption = field.options[0]
+    const siblingOption = siblingField.options[0]
     const foreignOption = foreignField.options[0]
-    if (sourceOption == null || foreignOption == null) {
+    if (
+      sourceOption == null ||
+      siblingOption == null ||
+      foreignOption == null
+    ) {
       throw new Error('Test field options were not created')
     }
-    const createResponse = await requestJson('/api/tasks', 'POST', {
+    const createdResponse = await requestJson('/api/tasks', 'POST', {
       title: 'Review a record',
       projectId: sourceProject.id,
       fieldValues: { [field.id]: sourceOption.id },
     })
-    const created = await jsonBody<{ id: string }>(createResponse)
-    const blockerResponse = await requestJson('/api/tasks', 'POST', {
+    const created = await jsonBody<TaskResponse>(createdResponse)
+    const blockerCreateResponse = await requestJson('/api/tasks', 'POST', {
       title: 'Review a supporting record',
     })
-    const blocker = await jsonBody<{ id: string }>(blockerResponse)
+    const blocker = await jsonBody<TaskResponse>(blockerCreateResponse)
     const withoutProjectResponse = await requestJson('/api/tasks', 'POST', {
       title: 'Unassigned record',
       fieldValues: { [field.name]: sourceOption.name },
     })
+    const missingFieldResponse = await requestJson(
+      `/api/tasks/${created.id}`,
+      'PATCH',
+      { fieldValues: { 'Missing Track': 'Unknown Route' } },
+    )
     const foreignFieldResponse = await requestJson(
       `/api/tasks/${created.id}`,
       'PATCH',
@@ -356,8 +622,13 @@ describe('task field values API', () => {
       'PATCH',
       { fieldValues: { [field.name]: 'Unlisted Route' } },
     )
+    const sameProjectOptionResponse = await requestJson(
+      `/api/tasks/${created.id}`,
+      'PATCH',
+      { fieldValues: { [field.id]: siblingOption.id } },
+    )
     const detailResponse = await app.request(`/api/tasks/${created.id}`)
-    const detail = await jsonBody<{ fieldValues: unknown[] }>(detailResponse)
+    const detail = await jsonBody<TaskResponse>(detailResponse)
     const storedValues = await db
       .select()
       .from(taskFieldValues)
@@ -368,33 +639,78 @@ describe('task field values API', () => {
       .where(eq(taskRelations.sourceTaskId, created.id))
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
-          blockerResponse.status,
+      responseSnapshot(200, {
+        withoutProject: responseSnapshot(
           withoutProjectResponse.status,
+          await jsonBody(withoutProjectResponse),
+        ),
+        missingField: responseSnapshot(
+          missingFieldResponse.status,
+          await jsonBody(missingFieldResponse),
+        ),
+        foreignField: responseSnapshot(
           foreignFieldResponse.status,
+          await jsonBody(foreignFieldResponse),
+        ),
+        foreignOption: responseSnapshot(
           foreignOptionResponse.status,
+          await jsonBody(foreignOptionResponse),
+        ),
+        missingOption: responseSnapshot(
           missingOptionResponse.status,
+          await jsonBody(missingOptionResponse),
+        ),
+        sameProjectOption: responseSnapshot(
+          sameProjectOptionResponse.status,
+          await jsonBody(sameProjectOptionResponse),
+        ),
+        detail: responseSnapshot(
           detailResponse.status,
-        ],
-        values: detail.fieldValues,
-        storedCount: storedValues.length,
-        blockedRelationCount: blockedRelations.length,
-      }),
-    ).toEqual({
-      statuses: [201, 201, 400, 400, 400, 400, 200],
-      values: [
-        {
-          fieldId: field.id,
-          fieldName: field.name,
-          optionId: sourceOption.id,
-          optionName: sourceOption.name,
+          normalizeTaskDetailResponse(detail),
+        ),
+        state: {
+          storedFieldValues: storedValues.length,
+          blockedRelations: blockedRelations.length,
         },
-      ],
-      storedCount: 1,
-      blockedRelationCount: 0,
-    })
+      }),
+    ).toEqual(
+      responseSnapshot(200, {
+        withoutProject: responseSnapshot(400, {
+          error: 'Task field values require a project',
+        }),
+        missingField: responseSnapshot(400, {
+          error: 'Field not found: Missing Track',
+        }),
+        foreignField: responseSnapshot(400, {
+          error: `Field not found: ${foreignField.id}`,
+        }),
+        foreignOption: responseSnapshot(400, {
+          error: `Option not found for field: ${field.id}`,
+        }),
+        missingOption: responseSnapshot(400, {
+          error: 'Option not found for field: Review Track',
+        }),
+        sameProjectOption: responseSnapshot(400, {
+          error: `Option not found for field: ${field.id}`,
+        }),
+        detail: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Review a record',
+            projectId: sourceProject.id,
+            fieldValues: [
+              {
+                fieldId: field.id,
+                fieldName: field.name,
+                optionId: sourceOption.id,
+                optionName: sourceOption.name,
+              },
+            ],
+          }),
+        ),
+        state: { storedFieldValues: 1, blockedRelations: 0 },
+      }),
+    )
   })
 
   it('keeps values and updates their names after field and option renames', async () => {
@@ -410,117 +726,105 @@ describe('task field values API', () => {
       projectId: sourceProject.id,
       fieldValues: { [sourceField.id]: sourceOption.id },
     })
-    const created = await jsonBody<{ id: string }>(createResponse)
+    const created = await jsonBody<TaskResponse>(createResponse)
     const changedEvents: ChangeEvent[] = []
     const unsubscribe = subscribeToChangeEvents((event) => {
       changedEvents.push(event)
     })
-    const renameOptionResponse = await requestJson(
+    await requestJson(
       `/api/projects/${sourceProject.id}/fields/${sourceField.id}/options/${sourceOption.id}`,
       'PATCH',
       { name: 'Renamed Span' },
     )
     const renamedDetailResponse = await app.request(`/api/tasks/${created.id}`)
-    const renamedDetail = await jsonBody<{
-      fieldValues: Array<{
-        fieldId: string
-        fieldName: string
-        optionId: string
-        optionName: string
-      }>
-    }>(renamedDetailResponse)
-    const optionRenameEvents = changedEvents.map(({ resource, taskIds }) => ({
-      resource,
-      taskIds,
-    }))
+    const renamedDetail = await jsonBody<TaskResponse>(renamedDetailResponse)
+    const optionRenameEvents = [...changedEvents]
     unsubscribe()
     const fieldRenameEvents: ChangeEvent[] = []
     const unsubscribeFieldRename = subscribeToChangeEvents((event) => {
       fieldRenameEvents.push(event)
     })
-    const renameFieldResponse = await requestJson(
+    await requestJson(
       `/api/projects/${sourceProject.id}/fields/${sourceField.id}`,
       'PATCH',
       { name: 'Renamed Stage Map' },
     )
-    const fieldRenameTaskEvents = fieldRenameEvents.map(
-      ({ resource, taskIds }) => ({ resource, taskIds }),
-    )
+    const fieldRenameTaskEvents = [...fieldRenameEvents]
     unsubscribeFieldRename()
     const fieldRenamedDetailResponse = await app.request(
       `/api/tasks/${created.id}`,
     )
-    const fieldRenamedDetail = await jsonBody<{
-      fieldValues: Array<{
-        fieldId: string
-        fieldName: string
-        optionId: string
-        optionName: string
-      }>
-    }>(fieldRenamedDetailResponse)
-    const statusResponse = await requestJson(
-      `/api/tasks/${created.id}/status`,
-      'PATCH',
-      { status: 'completed' },
+    const fieldRenamedDetail = await jsonBody<TaskResponse>(
+      fieldRenamedDetailResponse,
     )
-    const statusTask = await jsonBody<{
-      fieldValues: Array<{
-        fieldId: string
-        fieldName: string
-        optionId: string
-        optionName: string
-      }>
-    }>(statusResponse)
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
-          renameOptionResponse.status,
+      responseSnapshot(200, {
+        optionRename: responseSnapshot(
           renamedDetailResponse.status,
-          renameFieldResponse.status,
+          normalizeTaskDetailResponse(renamedDetail),
+        ),
+        fieldRename: responseSnapshot(
           fieldRenamedDetailResponse.status,
-          statusResponse.status,
-        ],
-        renamedOption: renamedDetail.fieldValues,
-        renamedField: fieldRenamedDetail.fieldValues,
-        statusValues: statusTask.fieldValues,
+          normalizeTaskDetailResponse(fieldRenamedDetail),
+        ),
         events: {
           optionRename: optionRenameEvents,
           fieldRename: fieldRenameTaskEvents,
         },
       }),
-    ).toEqual({
-      statuses: [201, 200, 200, 200, 200, 200],
-      renamedOption: [
-        {
-          fieldId: sourceField.id,
-          fieldName: 'Stage Map',
-          optionId: sourceOption.id,
-          optionName: 'Renamed Span',
+    ).toEqual(
+      responseSnapshot(200, {
+        optionRename: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Map a sample',
+            projectId: sourceProject.id,
+            fieldValues: [
+              {
+                fieldId: sourceField.id,
+                fieldName: 'Stage Map',
+                optionId: sourceOption.id,
+                optionName: 'Renamed Span',
+              },
+            ],
+          }),
+        ),
+        fieldRename: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Map a sample',
+            projectId: sourceProject.id,
+            fieldValues: [
+              {
+                fieldId: sourceField.id,
+                fieldName: 'Renamed Stage Map',
+                optionId: sourceOption.id,
+                optionName: 'Renamed Span',
+              },
+            ],
+          }),
+        ),
+        events: {
+          optionRename: [
+            {
+              resource: 'project',
+              id: sourceProject.id,
+              origin: null,
+              taskIds: [created.id],
+            },
+          ],
+          fieldRename: [
+            {
+              resource: 'project',
+              id: sourceProject.id,
+              origin: null,
+              taskIds: [created.id],
+            },
+          ],
         },
-      ],
-      renamedField: [
-        {
-          fieldId: sourceField.id,
-          fieldName: 'Renamed Stage Map',
-          optionId: sourceOption.id,
-          optionName: 'Renamed Span',
-        },
-      ],
-      statusValues: [
-        {
-          fieldId: sourceField.id,
-          fieldName: 'Renamed Stage Map',
-          optionId: sourceOption.id,
-          optionName: 'Renamed Span',
-        },
-      ],
-      events: {
-        optionRename: [{ resource: 'project', taskIds: [created.id] }],
-        fieldRename: [{ resource: 'project', taskIds: [created.id] }],
-      },
-    })
+      }),
+    )
   })
 
   it('clears values on project changes and applies values from the destination project', async () => {
@@ -548,51 +852,74 @@ describe('task field values API', () => {
     const moveResponse = await requestJson(
       `/api/tasks/${created.id}`,
       'PATCH',
-      {
-        projectId: destinationProject.id,
-        fieldValues: { [destinationField.name]: destinationOption.name },
-      },
+      { projectId: destinationProject.id },
     )
-    const moved = await jsonBody<{
-      fieldValues: unknown[]
-      projectId: string
-    }>(moveResponse)
+    const moved = await jsonBody<TaskResponse>(moveResponse)
+    const setDestinationValueResponse = await requestJson(
+      `/api/tasks/${created.id}`,
+      'PATCH',
+      { fieldValues: { [destinationField.name]: destinationOption.name } },
+    )
+    const setDestinationValue = await jsonBody<TaskResponse>(
+      setDestinationValueResponse,
+    )
     const clearProjectResponse = await requestJson(
       `/api/tasks/${created.id}`,
       'PATCH',
       { projectId: null },
     )
-    const clearProjectTask = await jsonBody<{
-      fieldValues: unknown[]
-      projectId: string | null
-    }>(clearProjectResponse)
+    const clearProjectTask = await jsonBody<TaskResponse>(clearProjectResponse)
+
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
+      responseSnapshot(200, {
+        move: responseSnapshot(
           moveResponse.status,
+          normalizeTaskResponse(moved),
+        ),
+        setDestinationValue: responseSnapshot(
+          setDestinationValueResponse.status,
+          normalizeTaskResponse(setDestinationValue),
+        ),
+        clearProject: responseSnapshot(
           clearProjectResponse.status,
-        ],
-        movedProjectId: moved.projectId,
-        movedValues: moved.fieldValues,
-        clearedProject: {
-          projectId: clearProjectTask.projectId,
-          fieldValues: clearProjectTask.fieldValues,
-        },
+          normalizeTaskResponse(clearProjectTask),
+        ),
       }),
-    ).toEqual({
-      statuses: [201, 200, 200],
-      movedProjectId: destinationProject.id,
-      movedValues: [
-        {
-          fieldId: destinationField.id,
-          fieldName: destinationField.name,
-          optionId: destinationOption.id,
-          optionName: destinationOption.name,
-        },
-      ],
-      clearedProject: { projectId: null, fieldValues: [] },
-    })
+    ).toEqual(
+      responseSnapshot(200, {
+        move: responseSnapshot(
+          200,
+          expectedTaskWriteResponse({
+            title: 'Map a sample',
+            projectId: destinationProject.id,
+            fieldValues: [],
+          }),
+        ),
+        setDestinationValue: responseSnapshot(
+          200,
+          expectedTaskWriteResponse({
+            title: 'Map a sample',
+            projectId: destinationProject.id,
+            fieldValues: [
+              {
+                fieldId: destinationField.id,
+                fieldName: destinationField.name,
+                optionId: destinationOption.id,
+                optionName: destinationOption.name,
+              },
+            ],
+          }),
+        ),
+        clearProject: responseSnapshot(
+          200,
+          expectedTaskWriteResponse({
+            title: 'Map a sample',
+            projectId: null,
+            fieldValues: [],
+          }),
+        ),
+      }),
+    )
   })
 
   it('clears the selected value and notifies its task when an option is deleted', async () => {
@@ -615,28 +942,42 @@ describe('task field values API', () => {
       { method: 'DELETE' },
     )
     const detailResponse = await app.request(`/api/tasks/${created.id}`)
-    const detail = await jsonBody<{ fieldValues: unknown[] }>(detailResponse)
-    const events = changedEvents.map(({ resource, taskIds }) => ({
-      resource,
-      taskIds,
-    }))
+    const detail = await jsonBody<TaskResponse>(detailResponse)
     unsubscribe()
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
+      responseSnapshot(200, {
+        delete: responseSnapshot(
           deleteResponse.status,
+          await deleteResponse.text(),
+        ),
+        detail: responseSnapshot(
           detailResponse.status,
-        ],
-        fieldValues: detail.fieldValues,
-        events,
+          normalizeTaskDetailResponse(detail),
+        ),
+        events: changedEvents,
       }),
-    ).toEqual({
-      statuses: [201, 204, 200],
-      fieldValues: [],
-      events: [{ resource: 'project', taskIds: [created.id] }],
-    })
+    ).toEqual(
+      responseSnapshot(200, {
+        delete: responseSnapshot(204, ''),
+        detail: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: [],
+          }),
+        ),
+        events: [
+          {
+            resource: 'project',
+            id: project.id,
+            origin: null,
+            taskIds: [created.id],
+          },
+        ],
+      }),
+    )
   })
 
   it('clears all values and notifies their tasks when a field is deleted', async () => {
@@ -649,7 +990,7 @@ describe('task field values API', () => {
       projectId: project.id,
       fieldValues: { [field.id]: option.id },
     })
-    const created = await jsonBody<{ id: string }>(createResponse)
+    const created = await jsonBody<TaskResponse>(createResponse)
     const changedEvents: ChangeEvent[] = []
     const unsubscribe = subscribeToChangeEvents((event) => {
       changedEvents.push(event)
@@ -659,28 +1000,42 @@ describe('task field values API', () => {
       { method: 'DELETE' },
     )
     const detailResponse = await app.request(`/api/tasks/${created.id}`)
-    const detail = await jsonBody<{ fieldValues: unknown[] }>(detailResponse)
-    const events = changedEvents.map(({ resource, taskIds }) => ({
-      resource,
-      taskIds,
-    }))
+    const detail = await jsonBody<TaskResponse>(detailResponse)
     unsubscribe()
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
+      responseSnapshot(200, {
+        delete: responseSnapshot(
           deleteResponse.status,
+          await deleteResponse.text(),
+        ),
+        detail: responseSnapshot(
           detailResponse.status,
-        ],
-        fieldValues: detail.fieldValues,
-        events,
+          normalizeTaskDetailResponse(detail),
+        ),
+        events: changedEvents,
       }),
-    ).toEqual({
-      statuses: [201, 204, 200],
-      fieldValues: [],
-      events: [{ resource: 'project', taskIds: [created.id] }],
-    })
+    ).toEqual(
+      responseSnapshot(200, {
+        delete: responseSnapshot(204, ''),
+        detail: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Observe a signal',
+            projectId: project.id,
+            fieldValues: [],
+          }),
+        ),
+        events: [
+          {
+            resource: 'project',
+            id: project.id,
+            origin: null,
+            taskIds: [created.id],
+          },
+        ],
+      }),
+    )
   })
 
   it('keeps the task without its project or values when the project is deleted', async () => {
@@ -693,30 +1048,36 @@ describe('task field values API', () => {
       projectId: project.id,
       fieldValues: { [field.id]: option.id },
     })
-    const created = await jsonBody<{ id: string }>(createResponse)
+    const created = await jsonBody<TaskResponse>(createResponse)
     const deleteResponse = await app.request(`/api/projects/${project.id}`, {
       method: 'DELETE',
     })
     const detailResponse = await app.request(`/api/tasks/${created.id}`)
-    const detail = await jsonBody<{
-      projectId: string | null
-      fieldValues: unknown[]
-    }>(detailResponse)
+    const detail = await jsonBody<TaskResponse>(detailResponse)
 
     expect(
-      taskFieldValuesSnapshot({
-        statuses: [
-          createResponse.status,
+      responseSnapshot(200, {
+        delete: responseSnapshot(
           deleteResponse.status,
+          await deleteResponse.text(),
+        ),
+        detail: responseSnapshot(
           detailResponse.status,
-        ],
-        projectId: detail.projectId,
-        fieldValues: detail.fieldValues,
+          normalizeTaskDetailResponse(detail),
+        ),
       }),
-    ).toEqual({
-      statuses: [201, 204, 200],
-      projectId: null,
-      fieldValues: [],
-    })
+    ).toEqual(
+      responseSnapshot(200, {
+        delete: responseSnapshot(204, ''),
+        detail: responseSnapshot(
+          200,
+          expectedTaskDetailResponse({
+            title: 'Observe a signal',
+            projectId: null,
+            fieldValues: [],
+          }),
+        ),
+      }),
+    )
   })
 })

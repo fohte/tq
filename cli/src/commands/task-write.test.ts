@@ -317,6 +317,42 @@ describe('task create', () => {
     })
   })
 
+  it('rejects --field without an equals sign before making a fetch call', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 201 }),
+    )
+    const stdout = spyStdout()
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Signal Phase',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { apiCallCount: calls.length },
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      apiCallCount: 0,
+      stdout: [],
+      stderr: [['Error: --field must use <field>=<option>\n']],
+    })
+  })
+
   it('preserves a special field name in the create request', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(

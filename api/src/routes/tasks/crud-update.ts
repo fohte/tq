@@ -144,7 +144,10 @@ export const tasksUpdateApp = new Hono().patch(
               fieldValuesInput,
             )
       if (resolvedFieldValues != null && 'error' in resolvedFieldValues) {
-        return { kind: 'invalid-field-values' as const }
+        return {
+          kind: 'invalid-field-values' as const,
+          error: resolvedFieldValues.error,
+        }
       }
 
       if (recurrenceRuleInput !== undefined && lockedTask.templateId != null) {
@@ -319,7 +322,7 @@ export const tasksUpdateApp = new Hono().patch(
       return c.json(result.body, result.status)
     }
     if (result.kind === 'invalid-field-values') {
-      return c.json({ error: 'Invalid task field values' }, 400)
+      return c.json({ error: result.error }, 400)
     }
     if (result.kind === 'blocked-by-error') {
       if (result.syncResult === 'cycle') {
