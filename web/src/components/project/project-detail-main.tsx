@@ -379,6 +379,7 @@ function ProjectTaskList({
                 title={group.name}
                 projectId={projectId}
                 q={group.q}
+                expandedIdsStorageKey={`tq:expanded-project-field-group:${projectId}:${groupByField.id}:${group.key}`}
                 sessionsByTaskId={sessionsByTaskId}
                 enableKeyboardShortcuts={false}
               />
@@ -444,12 +445,14 @@ function ProjectTaskFieldGroupContents({
   title,
   projectId,
   q,
+  expandedIdsStorageKey,
   sessionsByTaskId,
   enableKeyboardShortcuts,
 }: {
   title: string
   projectId: string
   q: string
+  expandedIdsStorageKey: string
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
   enableKeyboardShortcuts: boolean
 }) {
@@ -468,6 +471,7 @@ function ProjectTaskFieldGroupContents({
         tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
+        expandedIdsStorageKey={expandedIdsStorageKey}
         lazyChildrenFilter={taskList.lazyChildrenFilter}
         hasNextPage={taskList.hasNextPage}
         isFetchingNextPage={taskList.isFetchingNextPage}

@@ -23,11 +23,12 @@ const EXPANDED_TASK_IDS_STORAGE_KEY = 'tq:expanded-task-ids'
 export function useLazyTaskTree(
   rootTree: TreeNode[],
   lazyChildrenFilter: TaskListFilter<'row'> | undefined,
+  expandedIdsStorageKey?: string,
 ) {
   const lazy = lazyChildrenFilter != null
   const { isExpanded, toggleExpand, toggledIds } = useExpandedIds(
     !lazy,
-    lazy ? EXPANDED_TASK_IDS_STORAGE_KEY : undefined,
+    lazy ? (expandedIdsStorageKey ?? EXPANDED_TASK_IDS_STORAGE_KEY) : undefined,
   )
   const expandedIdList = useMemo(() => [...toggledIds], [toggledIds])
 
