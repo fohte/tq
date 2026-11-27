@@ -183,7 +183,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field; the first = separates the field name from the option, and all remaining characters belong to the option; repeat for multiple fields',
+            'Set or clear a project field; the first = separates the field name from the option, and all remaining characters belong to the option; backslashes are literal; repeat for multiple fields',
           repeatable: true,
         },
         {
@@ -230,7 +230,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field; the first = separates the field name from the option, and all remaining characters belong to the option; repeat for multiple fields',
+            'Set or clear a project field; the first = separates the field name from the option, and all remaining characters belong to the option; backslashes are literal; repeat for multiple fields',
           repeatable: true,
         },
         ...recurrenceCliOptions(),

@@ -351,6 +351,40 @@ describe('task create', () => {
     })
   })
 
+  it('treats a backslash before the separator literally', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Signal\\=Early',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: {
+          title: 'New task',
+          fieldValues: { 'Signal\\': 'Early' },
+        },
+      },
+    })
+  })
+
   it('preserves consecutive backslashes literally in a field name', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
