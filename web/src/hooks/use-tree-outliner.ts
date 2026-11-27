@@ -64,7 +64,14 @@ function getExpandedIdsStore(storageKey: string): ExpandedIdsStore {
           listeners.size === 0 &&
           expandedIdsStores.get(storageKey) === store
         ) {
-          expandedIdsStores.delete(storageKey)
+          queueMicrotask(() => {
+            if (
+              listeners.size === 0 &&
+              expandedIdsStores.get(storageKey) === store
+            ) {
+              expandedIdsStores.delete(storageKey)
+            }
+          })
         }
       }
     },

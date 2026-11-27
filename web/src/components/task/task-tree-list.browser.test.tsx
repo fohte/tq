@@ -115,6 +115,30 @@ async function renderTaskTreeList(
   return renderTaskTreeLists([{ tree, props: extraProps }])
 }
 
+function makeLazyGroupTasks() {
+  const alphaRoot = makeNode({
+    id: 'root-alpha',
+    title: 'Alpha parent',
+    childCompletionCount: { completed: 0, total: 1 },
+  })
+  const betaRoot = makeNode({
+    id: 'root-beta',
+    title: 'Beta parent',
+    childCompletionCount: { completed: 0, total: 1 },
+  })
+  const alphaChild = makeTask({
+    id: 'child-alpha',
+    title: 'Alpha child',
+    parentId: alphaRoot.id,
+  })
+  const betaChild = makeTask({
+    id: 'child-beta',
+    title: 'Beta child',
+    parentId: betaRoot.id,
+  })
+  return { alphaRoot, betaRoot, alphaChild, betaChild }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockFetchTaskList.mockResolvedValue([])
@@ -413,26 +437,7 @@ describe('TaskTreeList lazyChildrenFilter', () => {
 
   it('restores expansions from multiple lazy lists after remounting', async () => {
     const user = userEvent.setup()
-    const alphaRoot = makeNode({
-      id: 'root-alpha',
-      title: 'Alpha parent',
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    const betaRoot = makeNode({
-      id: 'root-beta',
-      title: 'Beta parent',
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    const alphaChild = makeTask({
-      id: 'child-alpha',
-      title: 'Alpha child',
-      parentId: alphaRoot.id,
-    })
-    const betaChild = makeTask({
-      id: 'child-beta',
-      title: 'Beta child',
-      parentId: betaRoot.id,
-    })
+    const { alphaRoot, betaRoot, alphaChild, betaChild } = makeLazyGroupTasks()
     const childFetchCalls: Array<{ q: string; parentId: string }> = []
     mockFetchTaskList.mockImplementation(
       (filter?: { q: string; parentId?: string }) => {
@@ -487,41 +492,28 @@ describe('TaskTreeList lazyChildrenFilter', () => {
       alphaChild: screen.queryAllByText(alphaChild.title).length,
       betaChild: screen.queryAllByText(betaChild.title).length,
     })
-    await waitFor(() => {
-      expect(getRestoredChildCounts()).toEqual({ alphaChild: 1, betaChild: 1 })
-    })
-    expect(
-      childFetchCalls.sort((left, right) =>
+    const getSortedChildFetchCalls = () =>
+      [...childFetchCalls].sort((left, right) =>
         left.parentId.localeCompare(right.parentId),
-      ),
-    ).toEqual([
-      { q: 'field:SampleCategory=Alpha', parentId: alphaRoot.id },
-      { q: 'field:SampleCategory=Beta', parentId: betaRoot.id },
-    ])
+      )
+    const getRestoredOutput = () => ({
+      childCounts: getRestoredChildCounts(),
+      childFetchCalls: getSortedChildFetchCalls(),
+    })
+    await waitFor(() => {
+      expect(getRestoredOutput()).toEqual({
+        childCounts: { alphaChild: 1, betaChild: 1 },
+        childFetchCalls: [
+          { q: 'field:SampleCategory=Alpha', parentId: alphaRoot.id },
+          { q: 'field:SampleCategory=Beta', parentId: betaRoot.id },
+        ],
+      })
+    })
   })
 
   it('keeps same-key lazy tree instances in sync across remounts', async () => {
     const user = userEvent.setup()
-    const alphaRoot = makeNode({
-      id: 'root-alpha',
-      title: 'Alpha parent',
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    const betaRoot = makeNode({
-      id: 'root-beta',
-      title: 'Beta parent',
-      childCompletionCount: { completed: 0, total: 1 },
-    })
-    const alphaChild = makeTask({
-      id: 'child-alpha',
-      title: 'Alpha child',
-      parentId: alphaRoot.id,
-    })
-    const betaChild = makeTask({
-      id: 'child-beta',
-      title: 'Beta child',
-      parentId: betaRoot.id,
-    })
+    const { alphaRoot, betaRoot, alphaChild, betaChild } = makeLazyGroupTasks()
     mockFetchTaskList.mockImplementation((filter?: { parentId?: string }) =>
       Promise.resolve(
         filter?.parentId === alphaRoot.id
@@ -558,11 +550,7 @@ describe('TaskTreeList lazyChildrenFilter', () => {
     await screen.findAllByText(alphaChild.title)
     await user.click(getExpandButton(mobileList, betaRoot.title))
     await screen.findAllByText(betaChild.title)
-
-    firstRender.unmount()
-    await renderTaskTreeLists(lists)
-
-    const getRestoredChildCounts = () => {
+    const getChildCounts = () => {
       const desktop = screen.getByTestId('desktop-list')
       const mobile = screen.getByTestId('mobile-list')
       return {
@@ -572,12 +560,29 @@ describe('TaskTreeList lazyChildrenFilter', () => {
         mobileBeta: within(mobile).queryAllByText(betaChild.title).length,
       }
     }
+    const beforeRemount = getChildCounts()
+    const getRemountSnapshot = () => ({
+      beforeRemount,
+      afterRemount: getChildCounts(),
+    })
+
+    firstRender.unmount()
+    await renderTaskTreeLists(lists)
+
     await waitFor(() => {
-      expect(getRestoredChildCounts()).toEqual({
-        desktopAlpha: 1,
-        desktopBeta: 1,
-        mobileAlpha: 1,
-        mobileBeta: 1,
+      expect(getRemountSnapshot()).toEqual({
+        beforeRemount: {
+          desktopAlpha: 1,
+          desktopBeta: 1,
+          mobileAlpha: 1,
+          mobileBeta: 1,
+        },
+        afterRemount: {
+          desktopAlpha: 1,
+          desktopBeta: 1,
+          mobileAlpha: 1,
+          mobileBeta: 1,
+        },
       })
     })
   })

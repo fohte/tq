@@ -302,6 +302,30 @@ describe('useTreeOutliner', () => {
 })
 
 describe('useExpandedIds', () => {
+  it('synchronizes a storage key across StrictMode consumers', () => {
+    const storageKey = 'test:expanded-ids-strict-mode'
+    localStorage.removeItem(storageKey)
+    const first = renderHook(() => useExpandedIds(false, storageKey), {
+      reactStrictMode: true,
+    })
+    const second = renderHook(() => useExpandedIds(false, storageKey), {
+      reactStrictMode: true,
+    })
+
+    act(() => {
+      first.result.current.toggleExpand('shared')
+    })
+
+    const getExpandedStates = () => [
+      first.result.current.isExpanded('shared'),
+      second.result.current.isExpanded('shared'),
+    ]
+    expect(getExpandedStates()).toEqual([true, true])
+
+    first.unmount()
+    second.unmount()
+  })
+
   it('with defaultExpanded true, starts with everything expanded and toggling collapses', () => {
     const { result } = renderHook(() => useExpandedIds(true))
 
