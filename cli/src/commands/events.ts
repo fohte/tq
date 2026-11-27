@@ -1,8 +1,7 @@
 import type { Command } from 'commander'
 
-import { toApiError } from '#client'
+import { fetchWithNetworkError, toApiError } from '#client'
 import { buildClientConfig } from '#command-context'
-import { NetworkError } from '#errors'
 import { fail, tryParseJson } from '#result'
 
 type SseEvent = {
@@ -10,14 +9,20 @@ type SseEvent = {
   data: string[]
 }
 
-function dispatchEvent(event: SseEvent, command: Command): void {
+function writeStdoutLine(line: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (process.stdout.write(`${line}\n`)) resolve()
+    else process.stdout.once('drain', resolve)
+  })
+}
+
+async function dispatchEvent(event: SseEvent, command: Command): Promise<void> {
   if (event.event !== 'change' || event.data.length === 0) return
 
   const data = event.data.join('\n')
-  tryParseJson(data).match(
-    (value) => process.stdout.write(`${JSON.stringify(value)}\n`),
-    () => fail(command, new Error('Invalid JSON in change event.')),
-  )
+  const parsed = tryParseJson(data)
+  if (parsed.isErr()) fail(command, new Error('Invalid JSON in change event.'))
+  await writeStdoutLine(JSON.stringify(parsed.value))
 }
 
 async function readEvents(
@@ -40,7 +45,7 @@ async function readEvents(
       buffer = buffer.slice(newline + 1)
 
       if (line.length === 0) {
-        dispatchEvent(event, command)
+        await dispatchEvent(event, command)
         event = { event: '', data: [] }
       } else if (!line.startsWith(':')) {
         const separator = line.indexOf(':')
@@ -64,18 +69,17 @@ export function registerEventsCommand(
 ): void {
   program
     .command('events')
-    .description('Stream task change events as newline-delimited JSON')
+    .description('Stream change events as NDJSON after a connected marker')
     .action(async (_options: unknown, command: Command) => {
       const config = buildClientConfig(command)
       if (config.isErr()) fail(command, config.error)
 
       const url = `${config.value.apiUrl.replace(/\/+$/, '')}/api/events`
-      const response = await fetchImpl(url, {
-        headers: { ...config.value.headers, Accept: 'text/event-stream' },
-      }).catch((cause: unknown) =>
-        Promise.reject(
-          new NetworkError(`Failed to reach ${config.value.apiUrl}`, cause),
-        ),
+      const response = await fetchWithNetworkError(
+        config.value.apiUrl,
+        fetchImpl,
+        url,
+        { headers: { ...config.value.headers, Accept: 'text/event-stream' } },
       )
 
       if (!response.ok) fail(command, await toApiError(response))
@@ -83,7 +87,7 @@ export function registerEventsCommand(
         fail(command, new Error('Event stream response has no body.'))
       }
 
-      process.stdout.write(`${JSON.stringify({ type: 'connected' })}\n`)
+      await writeStdoutLine(JSON.stringify({ type: 'connected' }))
       await readEvents(response.body, command)
       fail(command, new Error('Event stream closed.'))
     })

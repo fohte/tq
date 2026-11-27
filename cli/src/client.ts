@@ -22,15 +22,24 @@ export function createClient(
       for (const [name, value] of Object.entries(headers)) {
         merged.set(name, value)
       }
-      // hc()'s fetch option must satisfy the standard fetch contract (reject
-      // the returned promise on failure), so this boundary can't return a
-      // Result — it converts the rejection to a NetworkError instead.
-      return fetchImpl(input, { ...init, headers: merged }).catch(
-        (cause: unknown) =>
-          Promise.reject(new NetworkError(`Failed to reach ${apiUrl}`, cause)),
-      )
+      return fetchWithNetworkError(apiUrl, fetchImpl, input, {
+        ...init,
+        headers: merged,
+      })
     },
   })
+}
+
+export function fetchWithNetworkError(
+  apiUrl: string,
+  fetchImpl: typeof fetch,
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
+  // `hc()` は fetch の失敗を reject で受け取る契約です。
+  return fetchImpl(input, init).catch((cause: unknown) =>
+    Promise.reject(new NetworkError(`Failed to reach ${apiUrl}`, cause)),
+  )
 }
 
 export async function toApiError(res: Response): Promise<ApiError> {
