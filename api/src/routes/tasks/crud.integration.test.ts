@@ -2180,6 +2180,135 @@ describe('tasks CRUD API', () => {
   })
 
   describe('GET /api/tasks with extended predicates', () => {
+    async function createProjectFieldSearchFixture() {
+      const reviewProject = await createProject('Review workflow')
+      const orbitProject = await createProject('Orbit workflow')
+      const emptyProject = await createProject('Unconfigured workflow')
+
+      async function createField(
+        projectId: string,
+        name: string,
+        options: string[],
+      ) {
+        const response = await app.request(
+          `/api/projects/${projectId}/fields`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, options }),
+          },
+        )
+        return jsonBody<{
+          id: string
+          options: Array<{ id: string; name: string }>
+        }>(response)
+      }
+
+      async function createProjectTask(
+        projectId: string,
+        title: string,
+        fieldValues?: Record<string, string>,
+      ) {
+        const response = await app.request('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            projectId,
+            ...(fieldValues == null ? {} : { fieldValues }),
+          }),
+        })
+        return jsonBody<TaskResponse>(response)
+      }
+
+      const reviewField = await createField(reviewProject.id, 'Review stage', [
+        'Draft',
+        'Approved',
+      ])
+      const orbitField = await createField(orbitProject.id, 'Review stage', [
+        'Draft',
+        'Approved',
+      ])
+      const modeField = await createField(reviewProject.id, 'Orbit mode', [
+        'Quiet',
+        'Active',
+      ])
+      const draftOption = reviewField.options.find(
+        ({ name }) => name === 'Draft',
+      )
+      const approvedOption = reviewField.options.find(
+        ({ name }) => name === 'Approved',
+      )
+      const quietOption = modeField.options.find(({ name }) => name === 'Quiet')
+      const activeOption = modeField.options.find(
+        ({ name }) => name === 'Active',
+      )
+      const orbitDraftOption = orbitField.options.find(
+        ({ name }) => name === 'Draft',
+      )
+      if (
+        draftOption == null ||
+        approvedOption == null ||
+        quietOption == null ||
+        activeOption == null ||
+        orbitDraftOption == null
+      ) {
+        throw new Error('Test field options were not created')
+      }
+
+      const draftQuiet = await createProjectTask(
+        reviewProject.id,
+        'Draft with quiet mode',
+        {
+          [reviewField.id]: draftOption.id,
+          [modeField.id]: quietOption.id,
+        },
+      )
+      const draftActive = await createProjectTask(
+        reviewProject.id,
+        'Draft with active mode',
+        {
+          [reviewField.id]: draftOption.id,
+          [modeField.id]: activeOption.id,
+        },
+      )
+      await createProjectTask(reviewProject.id, 'Approved with quiet mode', {
+        [reviewField.id]: approvedOption.id,
+        [modeField.id]: quietOption.id,
+      })
+      const reviewUnset = await createProjectTask(
+        reviewProject.id,
+        'Review value unset',
+      )
+      const orbitDraft = await createProjectTask(
+        orbitProject.id,
+        'Orbit project draft',
+        { [orbitField.id]: orbitDraftOption.id },
+      )
+      const orbitUnset = await createProjectTask(
+        orbitProject.id,
+        'Orbit project unset',
+      )
+      await createProjectTask(emptyProject.id, 'No matching field exists')
+
+      return {
+        draftIds: [draftActive.id, draftQuiet.id, orbitDraft.id],
+        unsetIds: [orbitUnset.id, reviewUnset.id],
+        draftQuietId: draftQuiet.id,
+        async query(query: string) {
+          const response = await app.request(
+            '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
+              encodeURIComponent(query),
+          )
+          const body = await jsonBody<TaskListItemResponse[]>(response)
+          return {
+            status: response.status,
+            ids: body.map(({ id }) => id).toSorted(),
+          }
+        },
+      }
+    }
+
     it('filters by free text via q', async () => {
       await createTask('Deploy to production')
       await createTask('Buy groceries')
@@ -2392,151 +2521,45 @@ describe('tasks CRUD API', () => {
       )
     })
 
-    it('filters tasks by project field values and project-scoped unset fields', async () => {
-      const reviewProject = await createProject('Review workflow')
-      const orbitProject = await createProject('Orbit workflow')
-      const emptyProject = await createProject('Unconfigured workflow')
+    it('matches field values by project-specific field and option names', async () => {
+      const fixture = await createProjectFieldSearchFixture()
 
-      async function createField(
-        projectId: string,
-        name: string,
-        options: string[],
-      ) {
-        const response = await app.request(
-          `/api/projects/${projectId}/fields`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, options }),
-          },
-        )
-        return jsonBody<{
-          id: string
-          name: string
-          options: Array<{ id: string; name: string }>
-        }>(response)
-      }
-
-      async function createProjectTask(
-        projectId: string,
-        title: string,
-        fieldValues?: Record<string, string>,
-      ) {
-        const response = await app.request('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            projectId,
-            ...(fieldValues == null ? {} : { fieldValues }),
-          }),
-        })
-        return jsonBody<TaskResponse>(response)
-      }
-
-      const reviewField = await createField(reviewProject.id, 'Review stage', [
-        'Draft',
-        'Approved',
-      ])
-      const orbitField = await createField(orbitProject.id, 'Review stage', [
-        'Draft',
-        'Approved',
-      ])
-      const modeField = await createField(reviewProject.id, 'Orbit mode', [
-        'Quiet',
-        'Active',
-      ])
-      const draftOption = reviewField.options.find(
-        ({ name }) => name === 'Draft',
-      )
-      const approvedOption = reviewField.options.find(
-        ({ name }) => name === 'Approved',
-      )
-      const quietOption = modeField.options.find(({ name }) => name === 'Quiet')
-      const activeOption = modeField.options.find(
-        ({ name }) => name === 'Active',
-      )
-      const orbitDraftOption = orbitField.options.find(
-        ({ name }) => name === 'Draft',
-      )
-      if (
-        draftOption == null ||
-        approvedOption == null ||
-        quietOption == null ||
-        activeOption == null ||
-        orbitDraftOption == null
-      ) {
-        throw new Error('Test field options were not created')
-      }
-
-      const draftQuiet = await createProjectTask(
-        reviewProject.id,
-        'Draft with quiet mode',
-        {
-          [reviewField.id]: draftOption.id,
-          [modeField.id]: quietOption.id,
-        },
-      )
-      const draftActive = await createProjectTask(
-        reviewProject.id,
-        'Draft with active mode',
-        {
-          [reviewField.id]: draftOption.id,
-          [modeField.id]: activeOption.id,
-        },
-      )
-      await createProjectTask(reviewProject.id, 'Approved with quiet mode', {
-        [reviewField.id]: approvedOption.id,
-        [modeField.id]: quietOption.id,
+      expect(await fixture.query('field:"Review stage=Draft"')).toEqual({
+        status: 200,
+        ids: fixture.draftIds.toSorted(),
       })
-      const reviewUnset = await createProjectTask(
-        reviewProject.id,
-        'Review value unset',
-      )
-      const orbitDraft = await createProjectTask(
-        orbitProject.id,
-        'Orbit project draft',
-        { [orbitField.id]: orbitDraftOption.id },
-      )
-      const orbitUnset = await createProjectTask(
-        orbitProject.id,
-        'Orbit project unset',
-      )
-      await createProjectTask(emptyProject.id, 'No matching field exists')
+    })
 
-      const filteredIds = async (query: string) => {
-        const response = await app.request(
-          '/api/tasks?view=full&context=all&status=all&limit=unlimited&q=' +
-            encodeURIComponent(query),
-        )
-        const body = await jsonBody<TaskListItemResponse[]>(response)
-        return {
-          status: response.status,
-          ids: body.map(({ id }) => id).toSorted(),
-        }
-      }
+    it('matches unset values only where the project has that field', async () => {
+      const fixture = await createProjectFieldSearchFixture()
+
+      expect(await fixture.query('field:"Review stage="')).toEqual({
+        status: 200,
+        ids: fixture.unsetIds.toSorted(),
+      })
+    })
+
+    it('combines different project field filters with AND', async () => {
+      const fixture = await createProjectFieldSearchFixture()
 
       expect(
-        await Promise.all([
-          filteredIds('field:"Review stage=Draft"'),
-          filteredIds('field:"Review stage="'),
-          filteredIds('field:"Review stage=Draft" field:"Orbit mode=Quiet"'),
-          filteredIds(
-            'field:"Review stage=Approved" field:"Review stage=Draft"',
-          ),
-        ]),
-      ).toEqual([
-        {
-          status: 200,
-          ids: [draftActive.id, draftQuiet.id, orbitDraft.id].toSorted(),
-        },
-        { status: 200, ids: [orbitUnset.id, reviewUnset.id].toSorted() },
-        { status: 200, ids: [draftQuiet.id] },
-        {
-          status: 200,
-          ids: [draftActive.id, draftQuiet.id, orbitDraft.id].toSorted(),
-        },
-      ])
+        await fixture.query(
+          'field:"Review stage=Draft" field:"Orbit mode=Quiet"',
+        ),
+      ).toEqual({ status: 200, ids: [fixture.draftQuietId] })
+    })
+
+    it('uses the last filter for a repeated project field name', async () => {
+      const fixture = await createProjectFieldSearchFixture()
+
+      expect(
+        await fixture.query(
+          'field:"Review stage=Approved" field:"Review stage=Draft"',
+        ),
+      ).toEqual({
+        status: 200,
+        ids: fixture.draftIds.toSorted(),
+      })
     })
 
     it('filters by hasDue', async () => {

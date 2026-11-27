@@ -57,6 +57,27 @@ function statusSnapshot(statuses: number[]) {
 }
 
 describe('project fields API', () => {
+  it('rejects equals signs in field names', async () => {
+    const project = await createProject('Review workflow')
+    const response = await createField(project.id, { name: 'Review=stage' })
+
+    expect(response.status).toBe(400)
+  })
+
+  it('allows equals signs in option names', async () => {
+    const project = await createProject('Review workflow')
+    const response = await createField(project.id, {
+      name: 'Review stage',
+      options: ['Draft=queued'],
+    })
+    const field = await jsonBody<FieldResponse>(response)
+    const actual = `${String(response.status)}:${field.options
+      .map(({ name }) => name)
+      .join(',')}`
+
+    expect(actual).toBe('201:Draft=queued')
+  })
+
   it('creates, lists, renames, and deletes fields and options', async () => {
     const project = await createProject('Example Workspace')
     const createResponse = await createField(project.id, {

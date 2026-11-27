@@ -54,18 +54,28 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery('label:dev').label).toBe('dev')
   })
 
-  it('parses field filters, keeps the first equals sign as the separator, and lets later names win', () => {
+  it('splits a field filter at the first equals sign', () => {
+    expect(parseSearchQuery('field:"Review stage=In flight=ready"')).toEqual({
+      freeText: '',
+      fields: { 'Review stage': 'In flight=ready' },
+    })
+  })
+
+  it('uses the last value for a repeated field name', () => {
     expect(
       parseSearchQuery(
-        'field:"Review stage=In flight=ready" field:"Orbit mode=Quiet" field:"Review stage=Draft" field:"Unassigned="',
+        'field:"Review stage=Approved" field:"Review stage=Draft"',
       ),
     ).toEqual({
       freeText: '',
-      fields: {
-        'Review stage': 'Draft',
-        'Orbit mode': 'Quiet',
-        Unassigned: null,
-      },
+      fields: { 'Review stage': 'Draft' },
+    })
+  })
+
+  it('uses null for an empty field option', () => {
+    expect(parseSearchQuery('field:"Review stage="')).toEqual({
+      freeText: '',
+      fields: { 'Review stage': null },
     })
   })
 
@@ -279,9 +289,9 @@ describe('getSearchQuerySuggestions', () => {
     ).toEqual({
       key: 'field',
       description:
-        'Limit results to tasks whose project has a field with this exact name and selected option. Leave the option empty after = to match tasks with no value.',
-      taskFilter: true,
-      syntax: 'field:<field-name=option-name>',
+        'Limit results to tasks whose project has this exact field name and selected option. Field names cannot contain =. Quote the full token when either name contains spaces. Leave the option empty after = to match tasks with no value.',
+      taskFilter: false,
+      syntax: 'field:"<field-name>=<option-name>"',
       values: [],
     })
   })

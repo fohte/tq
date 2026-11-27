@@ -414,6 +414,26 @@ describe('TaskFilterChipRow', () => {
     expect(onQueryChange).toHaveBeenCalledWith('has:pages sort:updated')
   })
 
+  it('keeps typed project field filters in the applied query', async () => {
+    const { onQueryChange } = renderRow({
+      parsed: {
+        ...defaultParsed,
+        fields: { 'Orbit mode': 'Quiet' },
+      },
+    })
+    const user = userEvent.setup()
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'field:"Review stage=Draft"')
+    await user.keyboard('{Enter}')
+
+    expect(onQueryChange.mock.calls).toEqual([
+      [
+        'is:todo field:"Orbit mode=Quiet" field:"Review stage=Draft" sort:updated',
+      ],
+    ])
+  })
+
   it('does not duplicate a typed token already applied to the query', async () => {
     const { onQueryChange } = renderRow()
     const user = userEvent.setup()

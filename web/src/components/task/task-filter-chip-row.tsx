@@ -169,6 +169,9 @@ export function TaskFilterChipRow({
       ])
     }
     if (typed.label != null) next = withLabel(next, typed.label)
+    if (typed.fields != null) {
+      next.fields = { ...next.fields, ...typed.fields }
+    }
     if (typed.context != null) next.context = typed.context
     if (typed.priority !== undefined) {
       next = withPriority(next, typed.priority)
@@ -412,6 +415,7 @@ export function TaskFilterChipRow({
           disabledSuggestionCategories={[
             ...(disableStatusFilter ? ['is'] : []),
             ...(disableSortFilter ? ['sort'] : []),
+            'field',
           ]}
           placeholder="Filter…"
           autoFocus={autoFocus}

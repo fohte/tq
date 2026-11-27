@@ -47,6 +47,7 @@ type SearchQueryTokenDefinition =
       description: string
       taskFilter?: boolean
       valuePlaceholder: string
+      valueSyntax?: string
       parse: (result: ParsedQuery, value: string) => void
     }
 
@@ -193,9 +194,9 @@ const searchQueryTokenDefinitions = new Map(
     field: {
       display: 'Project field',
       description:
-        'Limit results to tasks whose project has a field with this exact name and selected option. Leave the option empty after = to match tasks with no value.',
-      taskFilter: true,
+        'Limit results to tasks whose project has this exact field name and selected option. Field names cannot contain =. Quote the full token when either name contains spaces. Leave the option empty after = to match tasks with no value.',
       valuePlaceholder: 'field-name=option-name',
+      valueSyntax: '"<field-name>=<option-name>"',
       parse: (result: ParsedQuery, value: string) => {
         const separatorIndex = value.indexOf('=')
         const fieldName = value.slice(0, separatorIndex)
@@ -261,7 +262,7 @@ export function getSearchQueryHelpTokens() {
     syntax:
       'values' in definition
         ? `${key}:`
-        : `${key}:<${definition.valuePlaceholder}>`,
+        : `${key}:${definition.valueSyntax ?? `<${definition.valuePlaceholder}>`}`,
     values:
       'values' in definition
         ? definition.values.map(({ value, display }) => ({
