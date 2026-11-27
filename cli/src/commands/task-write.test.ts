@@ -351,7 +351,43 @@ describe('task create', () => {
     })
   })
 
-  it('preserves a trailing backslash in a field name', async () => {
+  it('requires an escaped equals sign to be followed by an unescaped delimiter', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify({}), { status: 201 }),
+    )
+    const stdout = spyStdout()
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Stage\\=Early',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      commandOutputSnapshot(
+        exitCode,
+        { apiCallCount: calls.length },
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      apiCallCount: 0,
+      stdout: [],
+      stderr: [['Error: --field must use <field>=<option>\n']],
+    })
+  })
+
+  it('represents a trailing backslash in a field name with a doubled backslash', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -365,7 +401,7 @@ describe('task create', () => {
         'create',
         'New task',
         '--field',
-        'Stage\\=Early',
+        'Stage\\\\=Early',
       ],
       fetchStub,
       fakeStdin(true),
@@ -405,6 +441,40 @@ describe('task create', () => {
         'New task',
         '--field',
         'Stage\\\\Track=Early',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: {
+          title: 'New task',
+          fieldValues: { 'Stage\\Track': 'Early' },
+        },
+      },
+    })
+  })
+
+  it('preserves a single backslash before an ordinary field-name character', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Stage\\Track=Early',
       ],
       fetchStub,
       fakeStdin(true),
