@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { seedContextLabels } from '#components/label/label-test-fixtures'
+import { makeProjectField } from '#components/project/project-test-fixtures'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import {
@@ -26,6 +27,7 @@ import type { DescriptionTemplate } from '#hooks/use-description-templates'
 import { useDescriptionTemplates } from '#hooks/use-description-templates'
 import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { usePrioritySettings } from '#hooks/use-priority-settings'
+import { useProjectFields } from '#hooks/use-project-fields'
 import { DAY_QUEUE_KEY, queueKeys, useSetQueueItems } from '#hooks/use-queues'
 import type { CreateTaskInput, Task } from '#hooks/use-tasks'
 import { useCreateTask } from '#hooks/use-tasks'
@@ -66,6 +68,11 @@ vi.mock('#hooks/use-priority-settings', async (importOriginal) => {
     await importOriginal<typeof import('#hooks/use-priority-settings')>()
   return { ...original, usePrioritySettings: vi.fn() }
 })
+vi.mock('#hooks/use-project-fields', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('#hooks/use-project-fields')>()
+  return { ...original, useProjectFields: vi.fn() }
+})
 vi.mock('#hooks/use-description-templates', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('#hooks/use-description-templates')>()
@@ -79,6 +86,7 @@ vi.mock('#hooks/use-queues', async (importOriginal) => {
 const mockUseCreateTask = vi.mocked(useCreateTask)
 const mockUseLinkTaskToGithub = vi.mocked(useLinkTaskToGithub)
 const mockUsePrioritySettings = vi.mocked(usePrioritySettings)
+const mockUseProjectFields = vi.mocked(useProjectFields)
 const mockUseSetQueueItems = vi.mocked(useSetQueueItems)
 const mockUseDescriptionTemplates = vi.mocked(useDescriptionTemplates)
 
@@ -290,6 +298,9 @@ describe('CreateTaskModal', () => {
         data: makePrioritySettings(),
       }),
     )
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({ data: [] }),
+    )
     mockUseCreateTask.mockReturnValue(
       partialMutation<ReturnType<typeof useCreateTask>>({
         mutate: vi.fn(),
@@ -361,6 +372,70 @@ describe('CreateTaskModal', () => {
       })
     })
   })
+
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'submits selected project field option IDs from the %s form',
+    async (_viewportName, viewport) => {
+      await page.viewport(viewport.width, viewport.height)
+      const user = userEvent.setup({
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+      const field = makeProjectField({
+        id: 'field-delivery-zone',
+        projectId: 'project-demo',
+        name: 'DeliveryZone',
+        options: [
+          { id: 'option-coastal', name: 'Coastal' },
+          { id: 'option-inland', name: 'Inland' },
+        ],
+      })
+      mockUseProjectFields.mockReturnValue(
+        partialMutation<ReturnType<typeof useProjectFields>>({ data: [field] }),
+      )
+      const mutate = mockCreateTaskSuccess(makeTask())
+      renderControlledModal(CreateTaskModal, {
+        projectId: 'project-demo',
+        defaultContext: 'personal',
+      })
+
+      if (viewport.width < DESKTOP_VIEWPORT.width) {
+        await user.click(
+          assertDefined(
+            findVisible(
+              screen.getAllByRole('button', { name: 'DeliveryZone' }),
+            ),
+          ),
+        )
+      }
+      await user.click(
+        assertDefined(
+          findVisible(
+            screen.getAllByRole('combobox', { name: 'DeliveryZone' }),
+          ),
+        ),
+      )
+      await user.click(await screen.findByRole('option', { name: 'Coastal' }))
+
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+      )
+      await user.type(titleInput, 'Prepare delivery guide')
+      await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+      expect(mutate.inputs).toEqual([
+        {
+          title: 'Prepare delivery guide',
+          context: 'personal',
+          projectId: 'project-demo',
+          fieldValues: { 'field-delivery-zone': 'option-coastal' },
+        },
+      ])
+      await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    },
+  )
 
   it('replaces an untouched template body immediately after another template is selected', async () => {
     const user = userEvent.setup()

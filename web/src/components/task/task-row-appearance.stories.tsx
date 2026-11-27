@@ -500,6 +500,45 @@ export const WithTags: Story = {
   },
 }
 
+export const WithFieldValues: Story = {
+  name: 'the row shows configured project field values in order',
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/projects/:id', () =>
+          HttpResponse.json(
+            makeProject({
+              id: 'project-field-values',
+              completionRate: 0,
+              taskCount: { total: 1, completed: 0 },
+            }),
+          ),
+        ),
+      ],
+    },
+  },
+  args: {
+    task: makeTask({
+      title: 'Prepare the sample workspace',
+      projectId: 'project-field-values',
+      fieldValues: [
+        {
+          fieldId: 'field-phase',
+          fieldName: 'Phase',
+          optionId: 'option-draft',
+          optionName: 'Draft',
+        },
+        {
+          fieldId: 'field-region',
+          fieldName: 'Region',
+          optionId: 'option-east',
+          optionName: 'East',
+        },
+      ],
+    }),
+  },
+}
+
 export const WithProject: Story = {
   name: 'the row shows a task linked to a project',
   parameters: {

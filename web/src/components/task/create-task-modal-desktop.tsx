@@ -56,6 +56,7 @@ export function CreateTaskModalDesktop({
   setPlan,
   labels,
   setLabels,
+  projectFieldValues,
   handleOpenChange,
   handleSubmit,
   submitDisabled,
@@ -79,6 +80,7 @@ export function CreateTaskModalDesktop({
   setPlan: (value: PlanValue | '') => void
   labels: string[]
   setLabels: (labels: string[]) => void
+  projectFieldValues: ReactNode
   handleOpenChange: (open: boolean) => void
   handleSubmit: () => void
   submitDisabled: boolean
@@ -191,6 +193,8 @@ export function CreateTaskModalDesktop({
             <PlanTabStrip value={plan} onChange={setPlan} />
           </div>
         </div>
+
+        {projectFieldValues}
 
         {/* Tags */}
         <div className="flex items-center gap-2">

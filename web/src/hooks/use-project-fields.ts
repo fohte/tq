@@ -12,14 +12,18 @@ import {
 } from '#lib/assert-response'
 import { projectKeys } from '#lib/query-keys'
 
-const projectFieldsApi = api.api.projects[':projectId'].fields
+type ProjectFieldsApi = (typeof api.api.projects)[':projectId']['fields']
+
+function getProjectFieldsApi() {
+  return api.api.projects[':projectId'].fields
+}
 
 export type ProjectField = InferResponseType<
-  typeof projectFieldsApi.$get,
+  ProjectFieldsApi['$get'],
   200
 >[number]
 export type CreateProjectFieldInput = InferRequestType<
-  typeof projectFieldsApi.$post
+  ProjectFieldsApi['$post']
 >['json']
 
 function conflictMessage(res: { status: number }, entity: 'field' | 'option') {
@@ -54,7 +58,7 @@ export function useProjectFields(
     queryKey: projectKeys.fields(projectId),
     enabled,
     queryFn: async () => {
-      const res = await projectFieldsApi.$get({ param: { projectId } })
+      const res = await getProjectFieldsApi().$get({ param: { projectId } })
       return unwrapOrThrow(assertOk(res)).json()
     },
   })
@@ -70,7 +74,7 @@ export function useCreateProjectField(projectId: string) {
   const invalidate = useInvalidateProjectFields(projectId)
   return useMutation({
     mutationFn: async (input: CreateProjectFieldInput) => {
-      const res = await projectFieldsApi.$post({
+      const res = await getProjectFieldsApi().$post({
         param: { projectId },
         json: input,
       })
@@ -90,7 +94,7 @@ export function useUpdateProjectField(projectId: string) {
       fieldId: string
       name: string
     }) => {
-      const res = await projectFieldsApi[':fieldId'].$patch({
+      const res = await getProjectFieldsApi()[':fieldId'].$patch({
         param: { projectId, fieldId },
         json: { name },
       })
@@ -104,7 +108,7 @@ export function useDeleteProjectField(projectId: string) {
   const invalidate = useInvalidateProjectFields(projectId)
   return useMutation({
     mutationFn: async (fieldId: string) => {
-      const res = await projectFieldsApi[':fieldId'].$delete({
+      const res = await getProjectFieldsApi()[':fieldId'].$delete({
         param: { projectId, fieldId },
       })
       assertOkOrThrow(res)
@@ -123,7 +127,7 @@ export function useCreateProjectFieldOption(projectId: string) {
       fieldId: string
       name: string
     }) => {
-      const res = await projectFieldsApi[':fieldId'].options.$post({
+      const res = await getProjectFieldsApi()[':fieldId'].options.$post({
         param: { projectId, fieldId },
         json: { name },
       })
@@ -145,7 +149,7 @@ export function useUpdateProjectFieldOption(projectId: string) {
       optionId: string
       name: string
     }) => {
-      const res = await projectFieldsApi[':fieldId'].options[
+      const res = await getProjectFieldsApi()[':fieldId'].options[
         ':optionId'
       ].$patch({
         param: { projectId, fieldId, optionId },
@@ -167,7 +171,7 @@ export function useDeleteProjectFieldOption(projectId: string) {
       fieldId: string
       optionId: string
     }) => {
-      const res = await projectFieldsApi[':fieldId'].options[
+      const res = await getProjectFieldsApi()[':fieldId'].options[
         ':optionId'
       ].$delete({
         param: { projectId, fieldId, optionId },

@@ -1,12 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useLayoutEffect, useRef } from 'react'
 
-import { makeProjectDetail } from '#components/project/project-test-fixtures'
+import {
+  makeProjectDetail,
+  makeProjectField,
+} from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskSidebar } from '#components/task/task-detail-sidebar'
 import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
 import { TaskSidebarStoryProviders } from '#components/task/task-sidebar-story-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
+import type { ProjectField } from '#hooks/use-project-fields'
 import type { ProjectDetail } from '#hooks/use-projects'
 import type { TaskDetail } from '#hooks/use-tasks'
 
@@ -43,16 +47,18 @@ function SidebarPanelStoryView({
 function SidebarStory({
   task,
   project,
+  projectFields,
   defaultOpen,
   scrollToTimeBlocks = false,
 }: {
   task: TaskDetail
   project?: ProjectDetail | undefined
+  projectFields?: ProjectField[] | undefined
   defaultOpen?: boolean | undefined
   scrollToTimeBlocks?: boolean | undefined
 }) {
   return (
-    <TaskSidebarStoryProviders project={project}>
+    <TaskSidebarStoryProviders project={project} projectFields={projectFields}>
       <SidebarPanelStoryView
         task={task}
         defaultOpen={defaultOpen}
@@ -129,6 +135,33 @@ export const SidebarWithProject: Story = {
   args: {
     task: { ...baseTask, projectId: sampleProject.id },
     project: sampleProject,
+  },
+}
+
+const selectedCategoryOption = { id: 'option-release', name: 'Release' }
+const categoryField = makeProjectField({
+  id: 'field-category',
+  projectId: sampleProject.id,
+  name: 'DeliveryStage',
+  options: [selectedCategoryOption],
+})
+
+export const SidebarWithCustomField: Story = {
+  name: 'the sidebar shows and selects a project custom field',
+  args: {
+    task: makeTaskDetail({
+      projectId: sampleProject.id,
+      fieldValues: [
+        {
+          fieldId: categoryField.id,
+          fieldName: categoryField.name,
+          optionId: selectedCategoryOption.id,
+          optionName: selectedCategoryOption.name,
+        },
+      ],
+    }),
+    project: sampleProject,
+    projectFields: [categoryField],
   },
 }
 

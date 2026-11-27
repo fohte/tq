@@ -52,6 +52,7 @@ const baseTask = {
   blockedByGithubRefs: [],
   context: 'personal' as const,
   labels: [],
+  fieldValues: [],
   startDate: null,
   dueDate: null,
   parentId: null,

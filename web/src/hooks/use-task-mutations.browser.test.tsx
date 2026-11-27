@@ -60,6 +60,20 @@ afterEach(() => {
 
 const taskId = '00000000-0000-0000-0000-000000000001'
 
+function normalizeUpdatedAt<T extends { updatedAt: string }>(task: T): T {
+  return { ...task, updatedAt: '<updated-at>' }
+}
+
+function readFieldValueState() {
+  const tasks = queryClient.getQueryData<Task[]>(taskKeys.list(allTasksFilter))
+  const detail = queryClient.getQueryData<TaskDetail>(taskKeys.detail(taskId))
+
+  return {
+    list: tasks?.map(normalizeUpdatedAt),
+    detail: detail ? normalizeUpdatedAt(detail) : null,
+  }
+}
+
 function readPriorityState() {
   const detail = queryClient.getQueryData<TaskDetail>(taskKeys.detail(taskId))
 
@@ -147,5 +161,70 @@ describe('useUpdateTask priority optimism', () => {
       list: [{ priority: 0 }],
       detail: { priority: 0 },
     })
+  })
+})
+
+describe('useUpdateTask custom field values', () => {
+  it('keeps response-shaped field values until the server refetches', async () => {
+    const fieldValue = {
+      fieldId: 'field-stage',
+      fieldName: 'DeliveryStage',
+      optionId: 'option-triage',
+      optionName: 'Triage',
+    }
+    const task = makeTask({ id: taskId, fieldValues: [fieldValue] })
+    const detail = makeTaskDetail({ id: taskId, fieldValues: [fieldValue] })
+    queryClient.setQueryData(taskKeys.list(allTasksFilter), [task])
+    queryClient.setQueryData(taskKeys.detail(taskId), detail)
+
+    let resolvePatch: ((response: Response) => void) | undefined
+    const pendingPatch = new Promise<Response>((resolve) => {
+      resolvePatch = resolve
+    })
+    const mockTaskPatch = await getMockTaskPatch()
+    mockTaskPatch.mockReturnValue(pendingPatch)
+
+    const { result } = renderHook(() => useUpdateTask(), { wrapper })
+    let signalSettled: (() => void) | undefined
+    const settled = new Promise<void>((resolve) => {
+      signalSettled = resolve
+    })
+    act(() => {
+      result.current.mutate(
+        {
+          id: taskId,
+          input: { fieldValues: { [fieldValue.fieldId]: 'option-review' } },
+        },
+        {
+          onSettled: () => {
+            assertDefined(signalSettled)()
+          },
+        },
+      )
+    })
+    await vi.waitFor(() => {
+      expect(mockTaskPatch).toHaveBeenCalled()
+    })
+
+    expect(mockTaskPatch.mock.calls).toEqual([
+      [
+        {
+          param: { id: taskId },
+          json: { fieldValues: { [fieldValue.fieldId]: 'option-review' } },
+        },
+      ],
+    ])
+    expect(readFieldValueState()).toEqual({
+      list: [normalizeUpdatedAt(task)],
+      detail: normalizeUpdatedAt(detail),
+    })
+
+    assertDefined(resolvePatch)(
+      new Response(JSON.stringify(task), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    await settled
   })
 })

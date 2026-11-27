@@ -81,6 +81,43 @@ function readPriorityBadgeState() {
 }
 
 describe('TaskRowAppearance', () => {
+  it('shows configured project field values in response order', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        fieldValues: [
+          {
+            fieldId: 'field-phase',
+            fieldName: 'Phase',
+            optionId: 'option-draft',
+            optionName: 'Draft',
+          },
+          {
+            fieldId: 'field-region',
+            fieldName: 'Region',
+            optionId: 'option-east',
+            optionName: 'East',
+          },
+        ],
+      }),
+    )
+
+    expect(
+      Array.from(
+        container.querySelectorAll('[data-testid="task-field-value"]'),
+      ).map((element) => element.textContent),
+    ).toEqual(['Phase: Draft', 'Region: East'])
+  })
+
+  it('omits project field value chips when no values are configured', async () => {
+    const { container } = await renderTaskRow(makeTask())
+
+    expect(
+      Array.from(
+        container.querySelectorAll('[data-testid="task-field-value"]'),
+      ).map((element) => element.textContent),
+    ).toEqual([])
+  })
+
   it('shows the configured name for a set priority', async () => {
     await renderTaskRow(makeTask({ priority: -1 }))
 

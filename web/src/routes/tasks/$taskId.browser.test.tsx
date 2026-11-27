@@ -275,6 +275,7 @@ describe('TaskPage', () => {
       blockedByGithubRefs: [],
       context: 'personal' as const,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       parentId: mockTask.id,
