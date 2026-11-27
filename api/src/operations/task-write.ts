@@ -106,6 +106,15 @@ function fieldValuesFromCli(
         field.push(char)
       }
     }
+    if (separator < 0) {
+      // 末尾が `\` のフィールド名では、最初の `=` を区切りとして保持する。
+      const legacySeparator = value.indexOf('=')
+      if (legacySeparator > 0) {
+        field.length = 0
+        field.push(value.slice(0, legacySeparator))
+        separator = legacySeparator
+      }
+    }
     if (separator < 0 || field.length === 0) {
       return err(new Error('--field must use <field>=<option>'))
     }
@@ -205,7 +214,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field; escape = as \\= in field names; repeat for multiple fields',
+            'Set or clear a project field; escape = as \\= and \\ as \\\\ in field names; repeat for multiple fields',
           repeatable: true,
         },
         {
@@ -252,7 +261,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field; escape = as \\= in field names; repeat for multiple fields',
+            'Set or clear a project field; escape = as \\= and \\ as \\\\ in field names; repeat for multiple fields',
           repeatable: true,
         },
         ...recurrenceCliOptions(),

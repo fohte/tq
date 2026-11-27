@@ -351,6 +351,79 @@ describe('task create', () => {
     })
   })
 
+  it('preserves a trailing backslash in a field name', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Stage\\=Early',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    const actual =
+      calls[0] == null
+        ? { exitCode, request: null }
+        : operationSnapshot(exitCode, calls[0])
+
+    expect(actual).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: {
+          title: 'New task',
+          fieldValues: { ['Stage\\']: 'Early' },
+        },
+      },
+    })
+  })
+
+  it('decodes doubled backslashes in a field name', async () => {
+    const created = { id: 't1', number: 1, title: 'New task' }
+    const { fetchStub, calls } = captureFetch(
+      () => new Response(JSON.stringify(created), { status: 201 }),
+    )
+
+    const exitCode = await runCli(
+      [
+        '--api-url',
+        apiUrl,
+        'task',
+        'create',
+        'New task',
+        '--field',
+        'Stage\\\\Track=Early',
+      ],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(operationSnapshot(exitCode, calls[0])).toEqual({
+      exitCode: 0,
+      request: {
+        method: 'POST',
+        pathname: '/api/tasks',
+        query: {},
+        body: {
+          title: 'New task',
+          fieldValues: { 'Stage\\Track': 'Early' },
+        },
+      },
+    })
+  })
+
   it('rejects --field without an equals sign before making a fetch call', async () => {
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify({}), { status: 201 }),
