@@ -1,4 +1,5 @@
 import type { Command } from 'commander'
+import { ResultAsync } from 'neverthrow'
 
 import { fetchWithNetworkError, toApiError } from '#client'
 import { buildClientConfig } from '#command-context'
@@ -39,9 +40,13 @@ function readChunk(
     }, EVENT_STREAM_IDLE_TIMEOUT_MS)
   })
 
-  return Promise.race([reader.read(), idleTimeout]).finally(() => {
-    if (timer != null) clearTimeout(timer)
-  })
+  return ResultAsync.fromPromise(
+    Promise.race([reader.read(), idleTimeout]).finally(() => {
+      if (timer != null) clearTimeout(timer)
+    }),
+    (cause: unknown) =>
+      cause instanceof Error ? cause : new Error(String(cause)),
+  )
 }
 
 async function readEvents(
@@ -56,7 +61,9 @@ async function readEvents(
 
   let done = false
   while (!done) {
-    const chunk = await readChunk(reader, abortController)
+    const result = await readChunk(reader, abortController)
+    if (result.isErr()) fail(command, result.error)
+    const chunk = result.value
     buffer += decoder.decode(chunk.value, { stream: !chunk.done })
 
     let newline = buffer.indexOf('\n')

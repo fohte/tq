@@ -121,9 +121,10 @@ describe('events', () => {
           new ReadableStream<Uint8Array>({
             start(controller) {
               controller.enqueue(
-                encoder.encode(
-                  'event: change\ndata: {"resource":"task","id":"task-a","origin":null,"taskIds":["task-a"]}\n\n',
-                ),
+                encoder.encode(`event: change\ndata: ${taskChange}\n\n`),
+              )
+              controller.enqueue(
+                encoder.encode(`event: change\ndata: ${labelChange}\n\n`),
               )
               controller.close()
             },
@@ -135,7 +136,7 @@ describe('events', () => {
     spyStdout().mockImplementation((chunk) => {
       const line = String(chunk)
       writes.push(line)
-      if (writes.length === 1) {
+      if (line === `${taskChange}\n`) {
         setImmediate(() => {
           writes.push('drain')
           process.stdout.emit('drain')
@@ -159,8 +160,9 @@ describe('events', () => {
       requests: undefined,
       stdout: [
         '{"type":"connected"}\n',
+        `${taskChange}\n`,
         'drain',
-        '{"resource":"task","id":"task-a","origin":null,"taskIds":["task-a"]}\n',
+        `${labelChange}\n`,
       ],
       stderr: [['Error: Event stream closed.\n']],
     })
@@ -233,12 +235,18 @@ describe('events', () => {
   it('exits when no event or heartbeat arrives for 90 seconds', async () => {
     vi.useFakeTimers()
     let resolveConnected: () => void = () => undefined
+    let requestSignal: AbortSignal | null | undefined
     const connected = new Promise<void>((resolve) => {
       resolveConnected = resolve
     })
-    const { fetchStub } = captureFetch(
-      () => new Response(new ReadableStream<Uint8Array>(), { status: 200 }),
-    )
+    const fetchStub = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        requestSignal = init?.signal
+        return Promise.resolve(
+          new Response(new ReadableStream<Uint8Array>(), { status: 200 }),
+        )
+      },
+    ) as typeof fetch
     const stdout = spyStdout().mockImplementation(() => {
       resolveConnected()
       return true
@@ -256,16 +264,15 @@ describe('events', () => {
     await vi.advanceTimersByTimeAsync(90_000)
     const exitCode = await result
 
-    expect(
-      eventsResultSnapshot(
-        exitCode,
-        undefined,
-        stdout.mock.calls,
-        stderr.mock.calls,
-      ),
-    ).toEqual({
+    const snapshot = () => ({
+      exitCode,
+      requestSignalAborted: requestSignal?.aborted,
+      stdout: stdout.mock.calls,
+      stderr: stderr.mock.calls,
+    })
+    expect(snapshot()).toEqual({
       exitCode: 1,
-      requests: undefined,
+      requestSignalAborted: true,
       stdout: [['{"type":"connected"}\n']],
       stderr: [['Error: Event stream idle for 90 seconds.\n']],
     })

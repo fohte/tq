@@ -4,6 +4,7 @@ import { streamSSE } from 'hono/streaming'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 
 const HEARTBEAT_INTERVAL_MS = 30_000
+const MAX_PENDING_EVENTS = 100
 
 export const eventsApp = new Hono().get('/events', (c) =>
   streamSSE(c, async (stream) => {
@@ -21,6 +22,11 @@ export const eventsApp = new Hono().get('/events', (c) =>
       resolveWait?.()
     }
     const unsubscribe = subscribeToChangeEvents((event) => {
+      // 遅い購読者は再接続後に全件を取り直すため、キューが上限を超えたら切断する。
+      if (pending.length >= MAX_PENDING_EVENTS) {
+        stream.abort()
+        return
+      }
       pending.push(event)
       wake()
     })
