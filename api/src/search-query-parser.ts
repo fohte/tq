@@ -331,7 +331,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
     parts.push(`label:${quoteIfNeeded(query.label)}`)
   }
   for (const [fieldName, optionName] of Object.entries(query.fields ?? {})) {
-    parts.push(`field:${quoteIfNeeded(`${fieldName}=${optionName ?? ''}`)}`)
+    parts.push(
+      `field:${quoteIfNeeded(`${fieldName}=${optionName ?? ''}`, true)}`,
+    )
   }
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)
@@ -378,11 +380,13 @@ export function buildSearchQuery(query: ParsedQuery): string {
   return parts.join(' ')
 }
 
-// quoted 値では末尾の区切りと混同しないよう、\\ と " をエスケープする。
-function quoteIfNeeded(value: string): string {
-  return /[\s"']/.test(value)
-    ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-    : value
+// field: の引用値は新しい構文なので、末尾の \\ も round-trip できるようにする。
+function quoteIfNeeded(value: string, escapeBackslashes = false): string {
+  if (!/[\s"']/.test(value)) return value
+  const escaped = escapeBackslashes
+    ? value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    : value.replace(/"/g, '\\"')
+  return `"${escaped}"`
 }
 
 export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
@@ -397,7 +401,10 @@ export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
     if (inQuote) {
       if (ch === '\\') {
         const next = input.charAt(i + 1)
-        if (next === quoteChar || next === '\\') {
+        if (
+          next === quoteChar ||
+          (next === '\\' && current.startsWith('field:'))
+        ) {
           current += next
           i++
         } else {

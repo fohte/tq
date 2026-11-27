@@ -457,6 +457,13 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     })
   })
 
+  it('preserves consecutive backslashes in an existing quoted label query', () => {
+    expect(parseSearchQuery('label:"Team\\\\Ops"')).toEqual({
+      freeText: '',
+      label: 'Team\\\\Ops',
+    })
+  })
+
   it('round-trips a quoted field option ending in a backslash', () => {
     expect(
       parseSearchQuery(
