@@ -100,20 +100,26 @@ function renderRow(
     parsed: defaultParsed,
     ...props,
   }
-  const renderWithParsed = (
-    parsed: ComponentProps<typeof TaskFilterChipRow>['parsed'],
-  ) => (
+  let currentRowProps = rowProps
+  const renderCurrentRow = () => (
     <QueryClientProvider client={queryClient}>
-      <TaskFilterChipRow {...rowProps} parsed={parsed} />
+      <TaskFilterChipRow {...currentRowProps} />
     </QueryClientProvider>
   )
-  const view = render(renderWithParsed(rowProps.parsed))
+  const view = render(renderCurrentRow())
   return {
     onQueryChange,
     rerenderWithParsed: (
       parsed: ComponentProps<typeof TaskFilterChipRow>['parsed'],
     ) => {
-      view.rerender(renderWithParsed(parsed))
+      currentRowProps = { ...currentRowProps, parsed }
+      view.rerender(renderCurrentRow())
+    },
+    rerenderWithProps: (
+      nextProps: Partial<ComponentProps<typeof TaskFilterChipRow>>,
+    ) => {
+      currentRowProps = { ...currentRowProps, ...nextProps }
+      view.rerender(renderCurrentRow())
     },
   }
 }
@@ -457,18 +463,23 @@ describe('TaskFilterChipRow', () => {
       parsed: makeParsedQuery({ fields: { SampleCategory: 'OptionA' } }),
     })
     const user = userEvent.setup()
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
 
-    await user.type(
-      screen.getByRole('textbox', { name: 'Filter query' }),
-      'field:"SampleAudience=OptionB"',
-    )
+    await user.type(input, 'field:"SampleAudience=OptionB"')
     await user.keyboard('{Enter}')
 
-    expect(onQueryChange.mock.calls).toEqual([
-      [
-        'is:todo field:SampleCategory=OptionA field:SampleAudience=OptionB sort:updated',
+    const getActual = () => ({
+      queryChanges: onQueryChange.mock.calls,
+      inputValue: input instanceof HTMLInputElement ? input.value : null,
+    })
+    expect(getActual()).toEqual({
+      queryChanges: [
+        [
+          'is:todo field:SampleCategory=OptionA field:SampleAudience=OptionB sort:updated',
+        ],
       ],
-    ])
+      inputValue: '',
+    })
   })
 
   it('keeps applied project field filters editable in the query input', async () => {
@@ -529,6 +540,39 @@ describe('TaskFilterChipRow', () => {
     expect(getSnapshot()).toEqual({
       fieldChips: ['SampleCategory OptionA'],
       inputValue: '',
+    })
+  })
+
+  it('clears an applied field token from the input when project fields load while focused', async () => {
+    const { onQueryChange, rerenderWithParsed, rerenderWithProps } = renderRow({
+      parsed: makeParsedQuery({ fields: { SampleCategory: 'OptionA' } }),
+    })
+    const user = userEvent.setup()
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+
+    await user.click(input)
+    rerenderWithProps({
+      projectFields: [makeProjectField({ name: 'SampleCategory' })],
+    })
+    const draftAfterChipAppears =
+      input instanceof HTMLInputElement ? input.value : null
+
+    await user.click(
+      screen.getByRole('button', { name: 'Remove samplecategory filter' }),
+    )
+    rerenderWithParsed(makeParsedQuery())
+    await user.click(input)
+    await user.tab()
+
+    const getActual = () => ({
+      draftAfterChipAppears,
+      queryChanges: onQueryChange.mock.calls,
+      finalInputValue: input instanceof HTMLInputElement ? input.value : null,
+    })
+    expect(getActual()).toEqual({
+      draftAfterChipAppears: '',
+      queryChanges: [['is:todo sort:updated']],
+      finalInputValue: '',
     })
   })
 

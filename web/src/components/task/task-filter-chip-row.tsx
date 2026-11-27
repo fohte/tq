@@ -455,6 +455,7 @@ export function TaskFilterChipRow({
         <TaskFilterFreeTextInput
           id={freeTextInputId}
           freeText={filterInputQuery === '' ? '' : `${filterInputQuery} `}
+          projectFieldsAsChips={projectFields !== undefined}
           onCommit={commitFreeText}
           onBackspaceEmpty={removeLastChip}
           disabledSuggestionCategories={[
