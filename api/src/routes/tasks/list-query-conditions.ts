@@ -18,8 +18,11 @@ import { z } from 'zod'
 import { db } from '#db/connection'
 import {
   labels,
+  projectFieldOptions,
+  projectFields,
   projects,
   taskComments,
+  taskFieldValues,
   taskLabels,
   taskPages,
   tasks,
@@ -145,6 +148,55 @@ function buildConditions(
                 eq(labels.name, labelName),
                 sql`starts_with(${labels.name}, ${`${labelName}/`})`,
               ),
+            ),
+          ),
+      ),
+    )
+  }
+
+  for (const [fieldName, optionName] of Object.entries(parsed?.fields ?? {})) {
+    conditions.push(
+      exists(
+        db
+          .select({ _: sql`1` })
+          .from(projectFields)
+          .where(
+            and(
+              eq(projectFields.projectId, tasks.projectId),
+              eq(projectFields.name, fieldName),
+              optionName === null
+                ? notExists(
+                    db
+                      .select({ _: sql`1` })
+                      .from(taskFieldValues)
+                      .where(
+                        and(
+                          eq(taskFieldValues.taskId, tasks.id),
+                          eq(taskFieldValues.projectId, tasks.projectId),
+                          eq(taskFieldValues.fieldId, projectFields.id),
+                        ),
+                      ),
+                  )
+                : exists(
+                    db
+                      .select({ _: sql`1` })
+                      .from(taskFieldValues)
+                      .innerJoin(
+                        projectFieldOptions,
+                        and(
+                          eq(projectFieldOptions.id, taskFieldValues.optionId),
+                          eq(projectFieldOptions.fieldId, projectFields.id),
+                        ),
+                      )
+                      .where(
+                        and(
+                          eq(taskFieldValues.taskId, tasks.id),
+                          eq(taskFieldValues.projectId, tasks.projectId),
+                          eq(taskFieldValues.fieldId, projectFields.id),
+                          eq(projectFieldOptions.name, optionName),
+                        ),
+                      ),
+                  ),
             ),
           ),
       ),

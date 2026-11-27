@@ -9,6 +9,7 @@ export interface ParsedQuery {
   status?: Array<'todo' | 'completed'>
   reason?: TaskStatusReason
   label?: string
+  fields?: Record<string, string | null>
   context?: 'work' | 'personal'
   priority?: TaskPriority | null
   hasPages?: boolean
@@ -46,6 +47,7 @@ type SearchQueryTokenDefinition =
       description: string
       taskFilter?: boolean
       valuePlaceholder: string
+      valueSyntax?: string
       parse: (result: ParsedQuery, value: string) => void
     }
 
@@ -189,6 +191,22 @@ const searchQueryTokenDefinitions = new Map(
         result.label = value
       },
     },
+    field: {
+      display: 'Project field',
+      description:
+        'Limit results to tasks whose project has this exact field name and selected option. Field names cannot contain =. Quote the full token when either name contains spaces. Leave the option empty after = to match tasks with no value.',
+      valuePlaceholder: 'field-name=option-name',
+      valueSyntax: '"<field-name>=<option-name>"',
+      parse: (result: ParsedQuery, value: string) => {
+        const separatorIndex = value.indexOf('=')
+        const fieldName = value.slice(0, separatorIndex)
+        const optionName = value.slice(separatorIndex + 1)
+        result.fields = {
+          ...result.fields,
+          [fieldName]: optionName === '' ? null : optionName,
+        }
+      },
+    },
     parent: {
       display: 'Parent task',
       description:
@@ -244,7 +262,7 @@ export function getSearchQueryHelpTokens() {
     syntax:
       'values' in definition
         ? `${key}:`
-        : `${key}:<${definition.valuePlaceholder}>`,
+        : `${key}:${definition.valueSyntax ?? `<${definition.valuePlaceholder}>`}`,
     values:
       'values' in definition
         ? definition.values.map(({ value, display }) => ({
@@ -278,6 +296,11 @@ export function parseSearchQuery(q: string): ParsedQuery {
       continue
     }
 
+    if (prefix === 'field' && value.indexOf('=') <= 0) {
+      freeTextParts.push(token)
+      continue
+    }
+
     if ('values' in definition) {
       const option = definition.values.find((item) => item.value === value)
       if (option === undefined) {
@@ -306,6 +329,11 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.label !== undefined) {
     parts.push(`label:${quoteIfNeeded(query.label)}`)
+  }
+  for (const [fieldName, optionName] of Object.entries(query.fields ?? {})) {
+    parts.push(
+      `field:${quoteIfNeeded(`${fieldName}=${optionName ?? ''}`, true)}`,
+    )
   }
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)
@@ -352,12 +380,13 @@ export function buildSearchQuery(query: ParsedQuery): string {
   return parts.join(' ')
 }
 
-// Symmetric with tokenize()'s quote handling: a value containing whitespace
-// or a quote character must round-trip through parseSearchQuery as a single
-// token, with embedded double quotes escaped so tokenize() doesn't treat
-// them as the closing quote.
-function quoteIfNeeded(value: string): string {
-  return /[\s"']/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value
+// field: の引用値は新しい構文なので、末尾の \\ も round-trip できるようにする。
+function quoteIfNeeded(value: string, escapeBackslashes = false): string {
+  if (!/[\s"']/.test(value)) return value
+  const escaped = escapeBackslashes
+    ? value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    : value.replace(/"/g, '\\"')
+  return `"${escaped}"`
 }
 
 export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
@@ -370,9 +399,17 @@ export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
   for (let i = 0; i < input.length; i++) {
     const ch = input.charAt(i)
     if (inQuote) {
-      if (ch === '\\' && input.charAt(i + 1) === quoteChar) {
-        current += quoteChar
-        i++
+      if (ch === '\\') {
+        const next = input.charAt(i + 1)
+        if (
+          next === quoteChar ||
+          (next === '\\' && current.startsWith('field:'))
+        ) {
+          current += next
+          i++
+        } else {
+          current += ch
+        }
       } else if (ch === quoteChar) {
         inQuote = false
       } else {

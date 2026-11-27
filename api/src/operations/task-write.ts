@@ -83,34 +83,12 @@ function fieldValuesFromCli(
     if (typeof value !== 'string') {
       return err(new Error('Invalid --field value'))
     }
-    const field: string[] = []
-    let separator = -1
-    // フィールド名にも `=` が使えるため、`\=` は区切り文字として扱わない。
-    for (let index = 0; index < value.length; index += 1) {
-      const char = value.charAt(index)
-      if (char === '\\') {
-        const next = value.charAt(index + 1)
-        if (next === '=') {
-          field.push('=')
-          index += 1
-        } else if (next === '\\') {
-          field.push('\\')
-          index += 1
-        } else {
-          field.push('\\')
-        }
-      } else if (char === '=') {
-        separator = index
-        break
-      } else {
-        field.push(char)
-      }
-    }
-    if (separator < 0 || field.length === 0) {
+    const separator = value.indexOf('=')
+    if (separator < 0 || separator === 0) {
       return err(new Error('--field must use <field>=<option>'))
     }
     fieldEntries.push([
-      field.join(''),
+      value.slice(0, separator),
       value.slice(separator + 1) === '' ? null : value.slice(separator + 1),
     ])
   }
@@ -205,7 +183,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field with an unescaped = separator; escape = as \\= and \\ as \\\\ in field names; other single backslashes stay literal; repeat for multiple fields',
+            'Set or clear a project field; the first = separates the field name from the option, and all remaining characters belong to the option; backslashes are literal; repeat for multiple fields',
           repeatable: true,
         },
         {
@@ -252,7 +230,7 @@ export const taskWriteOperations = [
         {
           flags: '--field <field=option>',
           description:
-            'Set or clear a project field with an unescaped = separator; escape = as \\= and \\ as \\\\ in field names; other single backslashes stay literal; repeat for multiple fields',
+            'Set or clear a project field; the first = separates the field name from the option, and all remaining characters belong to the option; backslashes are literal; repeat for multiple fields',
           repeatable: true,
         },
         ...recurrenceCliOptions(),

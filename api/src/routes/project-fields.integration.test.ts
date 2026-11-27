@@ -57,6 +57,55 @@ function statusSnapshot(statuses: number[]) {
 }
 
 describe('project fields API', () => {
+  it('rejects equals signs in field names', async () => {
+    const project = await createProject('Review workflow')
+    const response = await createField(project.id, { name: 'Review=stage' })
+
+    expect(
+      fieldApiSnapshot({
+        status: response.status,
+        body: await response.json(),
+      }),
+    ).toEqual({
+      status: 400,
+      body: {
+        success: false,
+        error: {
+          name: 'ZodError',
+          message:
+            '[\n  {\n    "code": "custom",\n    "path": [\n      "name"\n    ],\n    "message": "Field names cannot contain ="\n  }\n]',
+        },
+      },
+    })
+  })
+
+  it('allows equals signs in option names', async () => {
+    const project = await createProject('Review workflow')
+    const response = await createField(project.id, {
+      name: 'Review stage',
+      options: ['Draft=queued'],
+    })
+    const field = await jsonBody<FieldResponse>(response)
+
+    expect(
+      fieldApiSnapshot({
+        status: response.status,
+        body: normalizeField(field),
+      }),
+    ).toEqual({
+      status: 201,
+      body: {
+        id: 'FIELD_ID',
+        projectId: 'PROJECT_ID',
+        name: 'Review stage',
+        type: 'single_select',
+        options: [{ id: 'OPTION_1', name: 'Draft=queued' }],
+        createdAt: 'CREATED_AT',
+        updatedAt: 'UPDATED_AT',
+      },
+    })
+  })
+
   it('creates, lists, renames, and deletes fields and options', async () => {
     const project = await createProject('Example Workspace')
     const createResponse = await createField(project.id, {

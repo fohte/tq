@@ -169,6 +169,11 @@ export function TaskFilterChipRow({
       ])
     }
     if (typed.label != null) next = withLabel(next, typed.label)
+    if (typed.fields === undefined) {
+      delete next.fields
+    } else {
+      next.fields = typed.fields
+    }
     if (typed.context != null) next.context = typed.context
     if (typed.priority !== undefined) {
       next = withPriority(next, typed.priority)
@@ -220,6 +225,10 @@ export function TaskFilterChipRow({
   }
 
   const query = buildSearchQuery(withDefaultSort(parsed, defaultSort))
+  const filterInputQuery = buildSearchQuery({
+    freeText: parsed.freeText,
+    ...(parsed.fields === undefined ? {} : { fields: parsed.fields }),
+  })
   const defaultQuery = defaultTaskSearchQuery(defaultSort)
   const statusValue =
     parsed.status?.map((status) => statusChipLabels[status]).join(', ') ?? ''
@@ -406,12 +415,13 @@ export function TaskFilterChipRow({
 
         <TaskFilterFreeTextInput
           id={freeTextInputId}
-          freeText={parsed.freeText}
+          freeText={filterInputQuery === '' ? '' : `${filterInputQuery} `}
           onCommit={commitFreeText}
           onBackspaceEmpty={removeLastChip}
           disabledSuggestionCategories={[
             ...(disableStatusFilter ? ['is'] : []),
             ...(disableSortFilter ? ['sort'] : []),
+            'field',
           ]}
           placeholder="Filter…"
           autoFocus={autoFocus}

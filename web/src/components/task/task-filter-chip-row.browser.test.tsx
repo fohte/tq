@@ -87,7 +87,7 @@ beforeEach(() => {
 function renderRow(
   props: Partial<ComponentProps<typeof TaskFilterChipRow>> = {},
 ) {
-  const onQueryChange = vi.fn()
+  const onQueryChange = vi.fn<(query: string) => void>()
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -176,7 +176,9 @@ describe('TaskFilterChipRow', () => {
     )
     const user = userEvent.setup()
 
-    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    const input = screen.getByRole('textbox', {
+      name: 'Filter query',
+    })
     await user.type(input, 'is:completed sort:due')
     await user.keyboard('{Enter}')
 
@@ -412,6 +414,69 @@ describe('TaskFilterChipRow', () => {
     await user.keyboard('{Enter}')
 
     expect(onQueryChange).toHaveBeenCalledWith('has:pages sort:updated')
+  })
+
+  it('keeps typed project field filters in the applied query', async () => {
+    const { onQueryChange } = renderRow({
+      parsed: {
+        ...defaultParsed,
+        fields: { 'Orbit mode': 'Quiet' },
+      },
+    })
+    const user = userEvent.setup()
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    await user.type(input, 'field:"Review stage=Draft"')
+    await user.keyboard('{Enter}')
+
+    expect(onQueryChange.mock.calls).toEqual([
+      [
+        'is:todo field:"Orbit mode=Quiet" field:"Review stage=Draft" sort:updated',
+      ],
+    ])
+  })
+
+  it('keeps applied project field filters editable in the query input', async () => {
+    const { onQueryChange, rerenderWithParsed } = renderRow()
+    const user = userEvent.setup()
+
+    const input = screen.getByRole('textbox', {
+      name: 'Filter query',
+    })
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('Expected a query input element')
+    }
+    await user.type(input, 'field:"Review stage=Draft"')
+    await user.keyboard('{Enter}')
+    rerenderWithParsed(makeParsedQuery({ fields: { 'Review stage': 'Draft' } }))
+    const appliedValue = input.value
+    await user.clear(input)
+    await user.keyboard('{Enter}')
+
+    const getActual = () => ({
+      appliedValue,
+      queryChanges: onQueryChange.mock.calls,
+      finalValue: input.value,
+    })
+    expect(getActual()).toEqual({
+      appliedValue: 'field:"Review stage=Draft" ',
+      queryChanges: [
+        ['is:todo field:"Review stage=Draft" sort:updated'],
+        ['is:todo sort:updated'],
+      ],
+      finalValue: '',
+    })
+  })
+
+  it('shows initially applied project field filters in the query input', () => {
+    renderRow({
+      parsed: makeParsedQuery({ fields: { 'Review stage': 'Draft' } }),
+    })
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    const inputValue = input instanceof HTMLInputElement ? input.value : null
+
+    expect(inputValue).toEqual('field:"Review stage=Draft" ')
   })
 
   it('does not duplicate a typed token already applied to the query', async () => {

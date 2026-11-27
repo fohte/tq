@@ -317,7 +317,7 @@ describe('task create', () => {
     })
   })
 
-  it('preserves equals signs escaped in a field name', async () => {
+  it('uses the first equals sign as the field separator', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -331,7 +331,7 @@ describe('task create', () => {
         'create',
         'New task',
         '--field',
-        'Stage\\=Track=Phase=Early',
+        'Signal Path=Phase=Early',
       ],
       fetchStub,
       fakeStdin(true),
@@ -345,49 +345,13 @@ describe('task create', () => {
         query: {},
         body: {
           title: 'New task',
-          fieldValues: { 'Stage=Track': 'Phase=Early' },
+          fieldValues: { 'Signal Path': 'Phase=Early' },
         },
       },
     })
   })
 
-  it('requires an escaped equals sign to be followed by an unescaped delimiter', async () => {
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify({}), { status: 201 }),
-    )
-    const stdout = spyStdout()
-    const stderr = spyStderr()
-
-    const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'task',
-        'create',
-        'New task',
-        '--field',
-        'Stage\\=Early',
-      ],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    expect(
-      commandOutputSnapshot(
-        exitCode,
-        { apiCallCount: calls.length },
-        stdout.mock.calls,
-        stderr.mock.calls,
-      ),
-    ).toEqual({
-      exitCode: 1,
-      apiCallCount: 0,
-      stdout: [],
-      stderr: [['Error: --field must use <field>=<option>\n']],
-    })
-  })
-
-  it('represents a trailing backslash in a field name with a doubled backslash', async () => {
+  it('treats a backslash before the separator literally', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -401,46 +365,7 @@ describe('task create', () => {
         'create',
         'New task',
         '--field',
-        'Stage\\\\=Early',
-      ],
-      fetchStub,
-      fakeStdin(true),
-    )
-
-    const actual =
-      calls[0] == null
-        ? { exitCode, request: null }
-        : operationSnapshot(exitCode, calls[0])
-
-    expect(actual).toEqual({
-      exitCode: 0,
-      request: {
-        method: 'POST',
-        pathname: '/api/tasks',
-        query: {},
-        body: {
-          title: 'New task',
-          fieldValues: { ['Stage\\']: 'Early' },
-        },
-      },
-    })
-  })
-
-  it('decodes doubled backslashes in a field name', async () => {
-    const created = { id: 't1', number: 1, title: 'New task' }
-    const { fetchStub, calls } = captureFetch(
-      () => new Response(JSON.stringify(created), { status: 201 }),
-    )
-
-    const exitCode = await runCli(
-      [
-        '--api-url',
-        apiUrl,
-        'task',
-        'create',
-        'New task',
-        '--field',
-        'Stage\\\\Track=Early',
+        'Signal\\=Early',
       ],
       fetchStub,
       fakeStdin(true),
@@ -454,13 +379,13 @@ describe('task create', () => {
         query: {},
         body: {
           title: 'New task',
-          fieldValues: { 'Stage\\Track': 'Early' },
+          fieldValues: { 'Signal\\': 'Early' },
         },
       },
     })
   })
 
-  it('preserves a single backslash before an ordinary field-name character', async () => {
+  it('preserves consecutive backslashes literally in a field name', async () => {
     const created = { id: 't1', number: 1, title: 'New task' }
     const { fetchStub, calls } = captureFetch(
       () => new Response(JSON.stringify(created), { status: 201 }),
@@ -474,7 +399,7 @@ describe('task create', () => {
         'create',
         'New task',
         '--field',
-        'Stage\\Track=Early',
+        'Signal\\\\Track=Early',
       ],
       fetchStub,
       fakeStdin(true),
@@ -488,7 +413,7 @@ describe('task create', () => {
         query: {},
         body: {
           title: 'New task',
-          fieldValues: { 'Stage\\Track': 'Early' },
+          fieldValues: { 'Signal\\\\Track': 'Early' },
         },
       },
     })
@@ -1755,25 +1680,30 @@ Commands:
                             multiple statuses),
                             reason:completed|not_planned|duplicate, label:<name>
                             (also matches descendants under a /-separated path),
+                            field:"<field-name>=<option-name>" (repeat different
+                            field names to combine filters; the last filter for
+                            the same field name wins; use an empty option after
+                            = to match tasks without a value),
                             context:work|personal, priority:-1|0|1|2|none,
                             has:pages|comments|no-children|blockers|no-blockers|follow-up-due|resolved-wait,
                             parent:<uuid|number>|root (root includes tasks whose
                             parent does not match the other filters),
                             project:<uuid|title>, and
                             sort:due|created|updated|priority (repeat sort: to
-                            break ties with later keys). has:follow-up-due
-                            matches tasks with an unresolved wait whose
-                            follow-up date is today or earlier in the client
-                            timezone. has:resolved-wait matches tasks with a
-                            resolved wait that has not been acknowledged and is
-                            available through q. Search filters with
-                            corresponding fields in the task search schema can
-                            also be sent as explicit parameters. For example, q:
-                            "is:todo label:example context:work planning" finds
-                            matching todo tasks whose title, description, or
-                            pages mention planning. Task descriptions are
-                            omitted from results by default; set full to include
-                            them.
+                            break ties with later keys). Field names cannot
+                            contain =; field and option names match exactly
+                            within each task project. has:follow-up-due matches
+                            tasks with an unresolved wait whose follow-up date
+                            is today or earlier in the client timezone.
+                            has:resolved-wait matches tasks with a resolved wait
+                            that has not been acknowledged and is available
+                            through q. Search filters with corresponding fields
+                            in the task search schema can also be sent as
+                            explicit parameters. For example, q: "is:todo
+                            label:example context:work planning" finds matching
+                            todo tasks whose title, description, or pages
+                            mention planning. Task descriptions are omitted from
+                            results by default; set full to include them.
   activity <id>             Get the activity history of a task.
   sessions <id>             List agent sessions linked to a task.
   from-github <url>         Create a task from a GitHub issue or pull request
