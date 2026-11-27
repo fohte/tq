@@ -104,6 +104,7 @@ const meta = {
     setPlan: fn(),
     labels: [],
     setLabels: fn(),
+    projectFieldValues: null,
     handleOpenChange: fn(),
     handleSubmit: fn(),
     submitDisabled: true,

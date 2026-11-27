@@ -18,6 +18,7 @@ export interface CreateTaskInput {
   context?: 'work' | 'personal'
   priority?: TaskPriority
   labels?: string[]
+  fieldValues?: Record<string, string | null>
   projectId?: string
   parentId?: string
   recurrenceRule?: {
@@ -124,6 +125,7 @@ export interface UpdateTaskInput {
   context?: 'work' | 'personal'
   priority?: TaskPriority
   labels?: string[]
+  fieldValues?: Record<string, string | null>
 }
 
 export function useUpdateTask() {
@@ -155,12 +157,20 @@ export function useUpdateTask() {
       })
 
       const optimisticTimestamp = new Date().toISOString()
-      const listInput = omitTaskDescription(input)
+      const optimisticInput = omitTaskFieldValues(input)
+      const detailProjectChanged =
+        previousDetail != null &&
+        input.projectId !== undefined &&
+        input.projectId !== previousDetail.projectId
+      const detailInput = detailProjectChanged
+        ? { ...optimisticInput, fieldValues: [] }
+        : optimisticInput
+      const listInput = omitTaskDescription(optimisticInput)
 
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
-          ...input,
+          ...detailInput,
           updatedAt: optimisticTimestamp,
         })
       }
@@ -169,11 +179,18 @@ export function useUpdateTask() {
         { queryKey: taskKeys.lists },
         (old) => {
           if (!old) return old
-          return old.map((task) =>
-            task.id === id
-              ? { ...task, ...listInput, updatedAt: optimisticTimestamp }
-              : task,
-          )
+          return old.map((task) => {
+            if (task.id !== id) return task
+            const projectChanged =
+              input.projectId !== undefined &&
+              input.projectId !== task.projectId
+            return {
+              ...task,
+              ...listInput,
+              ...(projectChanged ? { fieldValues: [] } : {}),
+              updatedAt: optimisticTimestamp,
+            }
+          })
         },
       )
 
@@ -200,9 +217,17 @@ export function useUpdateTask() {
   })
 }
 
-function omitTaskDescription(
+function omitTaskFieldValues(
   input: UpdateTaskInput,
-): Omit<UpdateTaskInput, 'description'> {
+): Omit<UpdateTaskInput, 'fieldValues'> {
+  const optimisticInput = { ...input }
+  delete optimisticInput.fieldValues
+  return optimisticInput
+}
+
+function omitTaskDescription(
+  input: ReturnType<typeof omitTaskFieldValues>,
+): Omit<UpdateTaskInput, 'description' | 'fieldValues'> {
   const listInput = { ...input }
   delete listInput.description
   return listInput

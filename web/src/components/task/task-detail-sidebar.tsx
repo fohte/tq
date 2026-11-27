@@ -14,6 +14,7 @@ import { SidebarField } from '#components/task/sidebar-field'
 import { SidebarParentField } from '#components/task/sidebar-parent-field'
 import { SidebarPlanField } from '#components/task/sidebar-plan-field'
 import { SidebarPriorityField } from '#components/task/sidebar-priority-field'
+import { SidebarProjectCustomFields } from '#components/task/sidebar-project-custom-fields'
 import { SidebarProjectField } from '#components/task/sidebar-project-field'
 import { SidebarRecurrenceField } from '#components/task/sidebar-recurrence-field'
 import { SidebarRemindField } from '#components/task/sidebar-remind-field'
@@ -85,6 +86,11 @@ export function TaskSidebar({
       <SidebarContextField taskId={task.id} context={task.context} />
       <SidebarPriorityField taskId={task.id} priority={task.priority} />
       <SidebarProjectField taskId={task.id} projectId={task.projectId} />
+      <SidebarProjectCustomFields
+        taskId={task.id}
+        projectId={task.projectId}
+        fieldValues={task.fieldValues}
+      />
       <SidebarTagsField
         taskId={task.id}
         context={task.context}
@@ -182,6 +188,12 @@ export function TaskSidebarMobile({ task }: { task: TaskDetail }) {
         <MobileFieldCell>
           <SidebarProjectField taskId={task.id} projectId={task.projectId} />
         </MobileFieldCell>
+        <SidebarProjectCustomFields
+          taskId={task.id}
+          projectId={task.projectId}
+          fieldValues={task.fieldValues}
+          mobile
+        />
         <MobileFieldCell className="col-span-2">
           <SidebarTagsField
             taskId={task.id}

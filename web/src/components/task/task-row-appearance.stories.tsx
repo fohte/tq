@@ -7,7 +7,10 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import { getTaskRowTimeBlockExtras } from '#components/task/task-row-time-block'
 import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
@@ -498,6 +501,63 @@ export const WithTags: Story = {
       labels: ['dev:tq', 'chore'],
     },
   },
+}
+
+export const WithFieldValues: Story = {
+  name: 'the row shows configured project field values in order',
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/projects/:id', () =>
+          HttpResponse.json(
+            makeProject({
+              id: 'project-field-values',
+              completionRate: 0,
+              taskCount: { total: 1, completed: 0 },
+            }),
+          ),
+        ),
+      ],
+    },
+  },
+  args: {
+    task: makeTask({
+      title: 'Prepare the sample workspace',
+      projectId: 'project-field-values',
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-phase',
+          fieldName: 'Phase',
+          optionId: 'option-draft',
+          optionName: 'Draft',
+        }),
+        makeTaskFieldValue({
+          fieldId: 'field-region',
+          fieldName: 'Region',
+          optionId: 'option-east',
+          optionName: 'East',
+        }),
+      ],
+    }),
+  },
+}
+
+export const WithLongFieldValues: Story = {
+  name: 'the row truncates long project field names to fit its width',
+  args: {
+    task: makeTask({
+      title: 'Prepare the sample workspace',
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-customer-readiness-classification',
+          fieldName: 'Customer Readiness Classification',
+          optionId: 'option-prepared-for-regional-launch',
+          optionName: 'Prepared for the Regional Launch',
+        }),
+      ],
+    }),
+  },
+  render: ({ task }) => <TaskRowAppearanceNarrow task={task} />,
 }
 
 export const WithProject: Story = {

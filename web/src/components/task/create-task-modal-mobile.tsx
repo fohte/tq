@@ -59,6 +59,7 @@ export function CreateTaskModalMobile({
   setPlan,
   labels,
   setLabels,
+  projectFieldValues,
   handleOpenChange,
   handleSubmit,
   submitDisabled,
@@ -82,6 +83,7 @@ export function CreateTaskModalMobile({
   setPlan: (value: PlanValue | '') => void
   labels: string[]
   setLabels: (labels: string[]) => void
+  projectFieldValues: ReactNode
   handleOpenChange: (open: boolean) => void
   handleSubmit: () => void
   submitDisabled: boolean
@@ -209,6 +211,8 @@ export function CreateTaskModalMobile({
               <PlanTabStrip value={plan} onChange={setPlan} />
             </div>
           </div>
+
+          {projectFieldValues}
 
           {/* Tags */}
           <TagsInput

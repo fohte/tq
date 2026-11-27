@@ -19,6 +19,7 @@ import { page } from 'vitest/browser'
 
 import { makeProject } from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import { useProjectFields } from '#hooks/use-project-fields'
 import { useProjects } from '#hooks/use-projects'
 import { useCreateTask } from '#hooks/use-tasks'
 import {
@@ -52,6 +53,7 @@ const baseTask = {
   blockedByGithubRefs: [],
   context: 'personal' as const,
   labels: [],
+  fieldValues: [],
   startDate: null,
   dueDate: null,
   parentId: null,
@@ -71,6 +73,7 @@ const mockUseProjects = vi.fn<typeof useProjects>()
 const mockUpdateMutate = vi.fn()
 const mockUseFilteredTaskTree = vi.fn()
 const mockUseCreateTask = vi.fn()
+const mockUseProjectFields = vi.fn<typeof useProjectFields>()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('#hooks/use-tasks')>()
@@ -99,6 +102,16 @@ vi.mock('#hooks/use-filtered-tasks', () => ({
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
   useFilteredTaskTree: (...args: unknown[]) => mockUseFilteredTaskTree(...args),
 }))
+
+vi.mock('#hooks/use-project-fields', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('#hooks/use-project-fields')>()
+  return {
+    ...actual,
+    useProjectFields: (...args: Parameters<typeof useProjectFields>) =>
+      mockUseProjectFields(...args),
+  }
+})
 
 vi.mock('#components/ui/markdown-editor', () => ({
   MarkdownEditor: ({
@@ -224,6 +237,14 @@ beforeEach(() => {
     tasks: [],
     lazyChildrenFilter: {},
   })
+  mockUseProjectFields.mockReturnValue(
+    partialMutation<ReturnType<typeof useProjectFields>>({
+      data: [],
+      isSuccess: true,
+      isError: false,
+      isLoading: false,
+    }),
+  )
 })
 
 afterEach(() => {

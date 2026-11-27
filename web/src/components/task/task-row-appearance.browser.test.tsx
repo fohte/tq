@@ -13,7 +13,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { makeBlockedByGithubRef } from '#components/task/github-link-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { prioritySettingsKeys } from '#lib/query-keys'
@@ -81,6 +84,43 @@ function readPriorityBadgeState() {
 }
 
 describe('TaskRowAppearance', () => {
+  it('shows configured project field values in response order', async () => {
+    const { container } = await renderTaskRow(
+      makeTask({
+        fieldValues: [
+          makeTaskFieldValue({
+            fieldId: 'field-phase',
+            fieldName: 'Phase',
+            optionId: 'option-draft',
+            optionName: 'Draft',
+          }),
+          makeTaskFieldValue({
+            fieldId: 'field-region',
+            fieldName: 'Region',
+            optionId: 'option-east',
+            optionName: 'East',
+          }),
+        ],
+      }),
+    )
+
+    expect(
+      Array.from(
+        container.querySelectorAll('[data-testid="task-field-value"]'),
+      ).map((element) => element.textContent),
+    ).toEqual(['Phase: Draft', 'Region: East'])
+  })
+
+  it('omits project field value chips when no values are configured', async () => {
+    const { container } = await renderTaskRow(makeTask())
+
+    expect(
+      Array.from(
+        container.querySelectorAll('[data-testid="task-field-value"]'),
+      ).map((element) => element.textContent),
+    ).toEqual([])
+  })
+
   it('shows the configured name for a set priority', async () => {
     await renderTaskRow(makeTask({ priority: -1 }))
 

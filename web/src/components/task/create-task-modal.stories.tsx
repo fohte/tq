@@ -5,6 +5,10 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { fn } from 'storybook/test'
 
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 
@@ -87,6 +91,33 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   name: 'opens an empty task creation form',
+}
+
+const projectFields = [
+  makeProjectField({
+    id: 'field-delivery-zone',
+    projectId: 'project-story',
+    name: 'DeliveryZone',
+    options: [
+      makeProjectFieldOption({ id: 'option-coastal', name: 'Coastal' }),
+      makeProjectFieldOption({ id: 'option-inland', name: 'Inland' }),
+    ],
+  }),
+]
+
+export const WithProjectFields: Story = {
+  name: 'the project form offers its configured field values',
+  args: { projectId: 'project-story' },
+  parameters: {
+    msw: {
+      handlers: [
+        ...createTaskModalHandlers(),
+        http.get('/api/projects/project-story/fields', () =>
+          HttpResponse.json(projectFields),
+        ),
+      ],
+    },
+  },
 }
 
 export const WithDefaultStartDate: Story = {

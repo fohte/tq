@@ -17,6 +17,7 @@ import type {
   PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
+import { useCreateTaskModalProjectFieldsState } from '#components/task/create-task-modal-project-fields-state'
 import { createTaskModalTitleChangeHandler } from '#components/task/create-task-modal-title-change'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { toGithubUrlSummary } from '#components/task/github-url-summary'
@@ -105,6 +106,11 @@ export function CreateTaskModal({
   const [recurrenceRule, setRecurrenceRule] = useState<
     ShorthandRecurrenceRule | undefined
   >(undefined)
+  const projectFieldValues = useCreateTaskModalProjectFieldsState(
+    projectId,
+    open,
+    recurrenceRule != null,
+  )
   const createTask = useCreateTask()
   const linkGithub = useLinkTaskToGithub()
   const today = useMemo(() => formatLocalDate(new Date()), [])
@@ -180,6 +186,7 @@ export function CreateTaskModal({
     setPriority(null)
     setPlan('')
     setLabels(defaultLabels ?? [])
+    projectFieldValues.reset()
     setParentOverrideNumber(undefined)
     setGithubUrl(undefined)
     setRecurrenceRule(undefined)
@@ -188,13 +195,18 @@ export function CreateTaskModal({
     effectiveDefaultContext,
     defaultLabels,
     descriptionTemplate.reset,
+    projectFieldValues.reset,
   ])
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) {
         const description = descriptionTemplate.getDescription()
-        if (title.trim() !== '' || description.trim() !== '') {
+        if (
+          title.trim() !== '' ||
+          description.trim() !== '' ||
+          Object.keys(projectFieldValues.values).length > 0
+        ) {
           setDiscardConfirmationOpen(true)
           return
         }
@@ -202,7 +214,13 @@ export function CreateTaskModal({
       }
       onOpenChange(nextOpen)
     },
-    [descriptionTemplate.getDescription, onOpenChange, resetForm, title],
+    [
+      descriptionTemplate.getDescription,
+      onOpenChange,
+      projectFieldValues.values,
+      resetForm,
+      title,
+    ],
   )
 
   const discardDraft = () => {
@@ -255,6 +273,9 @@ export function CreateTaskModal({
       ...(effectivePriority === null ? {} : { priority: effectivePriority }),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
+      ...(Object.keys(projectFieldValues.values).length > 0
+        ? { fieldValues: projectFieldValues.values }
+        : {}),
       ...(effectiveParentId != null ? { parentId: effectiveParentId } : {}),
       ...(recurrenceRule != null ? { recurrenceRule } : {}),
     }
@@ -411,6 +432,7 @@ export function CreateTaskModal({
             setPlan={setPlan}
             labels={labels}
             setLabels={setLabels}
+            projectFieldValues={projectFieldValues.input}
             handleOpenChange={handleOpenChange}
             handleSubmit={handleSubmit}
             submitDisabled={submitDisabled}
@@ -435,6 +457,7 @@ export function CreateTaskModal({
             setPlan={setPlan}
             labels={labels}
             setLabels={setLabels}
+            projectFieldValues={projectFieldValues.compactInput}
             handleOpenChange={handleOpenChange}
             handleSubmit={handleSubmit}
             submitDisabled={submitDisabled}

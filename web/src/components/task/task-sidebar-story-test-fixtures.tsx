@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
+import type { ProjectField } from '#hooks/use-project-fields'
 import {
   ALL_PROJECTS_FILTER,
   type ProjectDetail,
@@ -16,9 +17,11 @@ import { StoryRouter } from '#storybook-config/story-router'
 export function TaskSidebarStoryProviders({
   children,
   project,
+  projectFields = [],
 }: {
   children: ReactNode
   project?: ProjectDetail | undefined
+  projectFields?: ProjectField[] | undefined
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -35,6 +38,7 @@ export function TaskSidebarStoryProviders({
   queryClient.setQueryData(queueKeys.items(WEEK_QUEUE_KEY, todayStr), [])
   if (project) {
     queryClient.setQueryData(projectKeys.detail(project.id), project)
+    queryClient.setQueryData(projectKeys.fields(project.id), projectFields)
   }
   return (
     <QueryClientProvider client={queryClient}>

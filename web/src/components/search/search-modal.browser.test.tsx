@@ -37,6 +37,12 @@ interface MockTask {
   status: 'todo' | 'completed'
   context: 'work' | 'personal'
   labels: string[]
+  fieldValues: {
+    fieldId: string
+    fieldName: string
+    optionId: string
+    optionName: string
+  }[]
   startDate: null
   dueDate: null
   parentId: null
@@ -67,6 +73,7 @@ function makeTask(overrides: Partial<MockTask> = {}): MockTask {
     status: 'todo',
     context: 'personal',
     labels: [],
+    fieldValues: [],
     startDate: null,
     dueDate: null,
     parentId: null,

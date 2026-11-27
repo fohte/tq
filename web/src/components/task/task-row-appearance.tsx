@@ -42,8 +42,8 @@ export interface TaskRowAppearanceProps {
   showChildCompletionCount?: boolean
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
-  // Appended after the row's canonical second-line items (labels, project,
-  // context, parent, dateRange, remindAt, recurrence, githubLink,
+  // Appended after the row's canonical second-line items (labels, fieldValues,
+  // project, context, parent, dateRange, remindAt, recurrence, githubLink,
   // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
   isCurrentTimeBlock?: boolean
@@ -72,6 +72,7 @@ export function TaskRowAppearance({
   size = 'default',
   checklistCompletionCountPlacement = 'title',
 }: TaskRowAppearanceProps) {
+  const fieldValues = task.fieldValues
   const isCompleted = task.status === 'completed'
   const completedReason = isCompleted
     ? (task.statusReason ?? 'completed')
@@ -108,6 +109,19 @@ export function TaskRowAppearance({
 
   const secondLineItems: React.ReactNode[] = [
     task.labels.length > 0 ? <TagTokens labels={task.labels} /> : null,
+    fieldValues.length > 0 ? (
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+        {fieldValues.map(({ fieldId, fieldName, optionName }) => (
+          <span
+            key={fieldId}
+            className="inline-flex min-w-0 max-w-full shrink truncate items-center rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+            data-testid="task-field-value"
+          >
+            {fieldName}: {optionName}
+          </span>
+        ))}
+      </div>
+    ) : null,
     task.projectId != null ? (
       <TaskProjectLabel projectId={task.projectId} />
     ) : null,
