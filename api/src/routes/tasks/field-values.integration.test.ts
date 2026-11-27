@@ -121,6 +121,27 @@ function connectToIsolatedTestDatabase(
   })
 }
 
+async function waitForLockWait(
+  monitorClient: ReturnType<typeof connectToIsolatedTestDatabase>,
+  applicationName: string,
+) {
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const [activity] = await monitorClient`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_stat_activity
+        WHERE application_name = ${applicationName}
+          AND state = 'active'
+          AND wait_event_type = 'Lock'
+      ) AS waiting
+    `
+    if (activity?.['waiting'] === true) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error(`Database lock wait did not start: ${applicationName}`)
+}
+
 async function dropIsolatedTestDatabase(
   isolated: Awaited<ReturnType<typeof createIsolatedTestDatabase>>,
 ) {
@@ -1255,25 +1276,7 @@ describe('task field values API', () => {
       )
       pendingUpdateResponse = updateResponsePromise
 
-      const waitForLockWait = async (applicationName: string) => {
-        const deadline = Date.now() + 10_000
-        while (Date.now() < deadline) {
-          const [activity] = await monitorClient`
-            SELECT EXISTS (
-              SELECT 1
-              FROM pg_stat_activity
-              WHERE application_name = ${applicationName}
-                AND state = 'active'
-                AND wait_event_type = 'Lock'
-            ) AS waiting
-          `
-          if (activity?.['waiting'] === true) return
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-        throw new Error(`Database lock wait did not start: ${applicationName}`)
-      }
-
-      await waitForLockWait(updateApplicationName)
+      await waitForLockWait(monitorClient, updateApplicationName)
       const sharedFieldLockReleased = new Promise<void>((resolve) => {
         releaseSharedFieldLock = resolve
       })
@@ -1286,7 +1289,7 @@ describe('task field values API', () => {
         await sharedFieldLockReleased
       })
       void sharedFieldLockTransaction.catch(() => undefined)
-      await waitForLockWait(sharedLockApplicationName)
+      await waitForLockWait(monitorClient, sharedLockApplicationName)
 
       const deleteResponsePromise = dbContext.run(
         deleteDb,
@@ -1296,7 +1299,7 @@ describe('task field values API', () => {
           }),
       )
       pendingDeleteResponse = deleteResponsePromise
-      await waitForLockWait(deleteApplicationName)
+      await waitForLockWait(monitorClient, deleteApplicationName)
       releaseFieldLock?.()
 
       const [updateResult] = await Promise.allSettled([updateResponsePromise])
@@ -1495,25 +1498,7 @@ describe('task field values API', () => {
       )
       pendingUpdateResponse = updateResponsePromise
 
-      const waitForLockWait = async (applicationName: string) => {
-        const deadline = Date.now() + 10_000
-        while (Date.now() < deadline) {
-          const [activity] = await monitorClient`
-            SELECT EXISTS (
-              SELECT 1
-              FROM pg_stat_activity
-              WHERE application_name = ${applicationName}
-                AND state = 'active'
-                AND wait_event_type = 'Lock'
-            ) AS waiting
-          `
-          if (activity?.['waiting'] === true) return
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-        throw new Error(`Database lock wait did not start: ${applicationName}`)
-      }
-
-      await waitForLockWait(updateApplicationName)
+      await waitForLockWait(monitorClient, updateApplicationName)
       const deleteResponsePromise = dbContext.run(
         deleteDb,
         async () =>
@@ -1522,7 +1507,7 @@ describe('task field values API', () => {
           }),
       )
       pendingDeleteResponse = deleteResponsePromise
-      await waitForLockWait(deleteApplicationName)
+      await waitForLockWait(monitorClient, deleteApplicationName)
       releaseSourceLock?.()
 
       const [updateResponse, deleteResponse] = await Promise.all([
@@ -1673,25 +1658,7 @@ describe('task field values API', () => {
       )
       pendingUpdateResponse = updateResponsePromise
 
-      const waitForLockWait = async (applicationName: string) => {
-        const deadline = Date.now() + 10_000
-        while (Date.now() < deadline) {
-          const [activity] = await monitorClient`
-            SELECT EXISTS (
-              SELECT 1
-              FROM pg_stat_activity
-              WHERE application_name = ${applicationName}
-                AND state = 'active'
-                AND wait_event_type = 'Lock'
-            ) AS waiting
-          `
-          if (activity?.['waiting'] === true) return
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-        throw new Error(`Database lock wait did not start: ${applicationName}`)
-      }
-
-      await waitForLockWait(updateApplicationName)
+      await waitForLockWait(monitorClient, updateApplicationName)
       const deleteResponsePromise = dbContext.run(
         deleteDb,
         async () =>
@@ -1700,7 +1667,7 @@ describe('task field values API', () => {
           }),
       )
       pendingDeleteResponse = deleteResponsePromise
-      await waitForLockWait(deleteApplicationName)
+      await waitForLockWait(monitorClient, deleteApplicationName)
       releaseSourceLock?.()
 
       const [updateResponse, deleteResponse] = await Promise.all([
@@ -1837,25 +1804,7 @@ describe('task field values API', () => {
       )
       pendingDeleteResponse = deleteResponsePromise
 
-      const waitForLockWait = async (applicationName: string) => {
-        const deadline = Date.now() + 10_000
-        while (Date.now() < deadline) {
-          const [activity] = await monitorClient`
-            SELECT EXISTS (
-              SELECT 1
-              FROM pg_stat_activity
-              WHERE application_name = ${applicationName}
-                AND state = 'active'
-                AND wait_event_type = 'Lock'
-            ) AS waiting
-          `
-          if (activity?.['waiting'] === true) return
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-        throw new Error(`Database lock wait did not start: ${applicationName}`)
-      }
-
-      await waitForLockWait(deleteApplicationName)
+      await waitForLockWait(monitorClient, deleteApplicationName)
       const updateResponsePromise = requestJsonWithDb(
         updateDb,
         '/api/tasks/task-z-child',
@@ -1863,7 +1812,7 @@ describe('task field values API', () => {
         { recurrenceRule: { type: 'daily', interval: 1 } },
       )
       pendingUpdateResponse = updateResponsePromise
-      await waitForLockWait(updateApplicationName)
+      await waitForLockWait(monitorClient, updateApplicationName)
       releaseParentLock?.()
 
       const [updateResponse, deleteResponse] = await Promise.all([
@@ -2016,24 +1965,6 @@ describe('task field values API', () => {
       void gateTransaction.catch(() => undefined)
       await gateReady
 
-      const waitForLockWait = async (applicationName: string) => {
-        const deadline = Date.now() + 10_000
-        while (Date.now() < deadline) {
-          const [activity] = await monitorClient`
-            SELECT EXISTS (
-              SELECT 1
-              FROM pg_stat_activity
-              WHERE application_name = ${applicationName}
-                AND state = 'active'
-                AND wait_event_type = 'Lock'
-            ) AS waiting
-          `
-          if (activity?.['waiting'] === true) return
-          await new Promise((resolve) => setTimeout(resolve, 10))
-        }
-        throw new Error(`Database lock wait did not start: ${applicationName}`)
-      }
-
       const deleteResponsePromise = dbContext.run(
         deleteDb,
         async () =>
@@ -2042,10 +1973,10 @@ describe('task field values API', () => {
           }),
       )
       pendingDelete = deleteResponsePromise
-      await waitForLockWait(deleteApplicationName)
+      await waitForLockWait(monitorClient, deleteApplicationName)
 
       pendingGeneration = dbContext.run(schedulerDb, generateDueRecurringTasks)
-      await waitForLockWait(schedulerApplicationName)
+      await waitForLockWait(monitorClient, schedulerApplicationName)
       releaseGate?.()
 
       const [deleteResponse] = await Promise.all([
