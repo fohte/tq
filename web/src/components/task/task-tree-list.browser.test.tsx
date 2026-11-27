@@ -85,6 +85,45 @@ async function renderTaskTreeList(
   )
 }
 
+async function renderGroupedTaskTreeLists(
+  lists: Array<{
+    tree: TreeNode[]
+    props: Partial<TaskTreeListProps>
+  }>,
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const rootRoute = createRootRoute({
+    validateSearch: (search: Record<string, unknown>) => search,
+    component: () => (
+      <>
+        {lists.map(({ tree, props }, index) => (
+          <TaskTreeList
+            key={index}
+            isLoading={false}
+            tree={tree}
+            tasks={[]}
+            sessionsByTaskId={new Map()}
+            {...props}
+          />
+        ))}
+      </>
+    ),
+  })
+  const router = createRouter({
+    routeTree: rootRoute,
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  })
+  await router.load()
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockFetchTaskList.mockResolvedValue([])
@@ -244,6 +283,35 @@ describe('TaskTreeList', () => {
 
     await screen.findAllByPlaceholderText(/task title|タスクのタイトル/i)
     expect(screen.queryByText(/#1 Root Task/)).toBeNull()
+  })
+
+  it('does not open a create-task modal when grouped lists disable row shortcuts', async () => {
+    const firstRoot = makeNode({
+      id: 'first-root',
+      number: 1,
+      title: 'First Group Task',
+    })
+    const secondRoot = makeNode({
+      id: 'second-root',
+      number: 2,
+      title: 'Second Group Task',
+    })
+    await renderGroupedTaskTreeLists([
+      {
+        tree: [firstRoot],
+        props: { enableKeyboardShortcuts: false },
+      },
+      {
+        tree: [secondRoot],
+        props: { enableKeyboardShortcuts: false },
+      },
+    ])
+
+    fireEvent.click(screen.getByText('First Group Task'))
+    fireEvent.click(screen.getByText('Second Group Task'))
+    fireEvent.keyDown(document.body, { key: 'o' })
+
+    expect(screen.queryAllByRole('dialog').length).toEqual(0)
   })
 
   it("opens the create-task modal with the row's parent when 'add subtask' is clicked via the row actions menu", async () => {

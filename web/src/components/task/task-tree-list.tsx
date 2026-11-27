@@ -61,6 +61,8 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  /** グループ内の複数リストが同じキー入力に応答しないよう制御します。 */
+  enableKeyboardShortcuts?: boolean
   /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
   lazyChildrenFilter?: TaskListFilter<'row'> | undefined
   /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
@@ -75,6 +77,7 @@ export function TaskTreeList({
   tree: rootTree,
   tasks,
   sessionsByTaskId,
+  enableKeyboardShortcuts = true,
   lazyChildrenFilter,
   hasNextPage = false,
   isFetchingNextPage = false,
@@ -97,7 +100,7 @@ export function TaskTreeList({
   )
 
   const treeOutliner = useTreeOutliner(tree, {
-    enabled: true,
+    enabled: enableKeyboardShortcuts,
     onOpenSiblingCreate: openCreateModal,
     isExpanded,
     toggleExpand,

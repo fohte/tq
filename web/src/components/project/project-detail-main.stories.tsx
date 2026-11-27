@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ParsedQuery } from 'api/search-query-parser'
+import { buildSearchQuery } from 'api/search-query-parser'
 import type { ReactNode } from 'react'
 
 import { ProjectMainContent } from '#components/project/project-detail-main'
@@ -8,10 +9,17 @@ import {
   ProjectSidebar,
   ProjectSidebarMobile,
 } from '#components/project/project-detail-sidebar'
-import { makeProjectDetail } from '#components/project/project-test-fixtures'
+import {
+  makeProjectDetail,
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { makeTask } from '#components/task/task-row-test-fixtures'
+import type { ProjectField } from '#hooks/use-project-fields'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
+import { taskKeys } from '#hooks/use-task-queries'
+import { withDefaultSort, withField } from '#lib/tasks-query'
 import { buildTree } from '#lib/tree-builder'
 import { StoryRouter } from '#storybook-config/story-router'
 
@@ -74,12 +82,27 @@ const defaultParsedQuery: ParsedQuery = {
   sortBy: ['updated'],
 }
 
+const sampleProjectField = makeProjectField({
+  id: 'field-category',
+  projectId: 'proj-001',
+  name: 'SampleCategory',
+  options: [
+    makeProjectFieldOption({ id: 'option-alpha', name: 'Alpha' }),
+    makeProjectFieldOption({ id: 'option-beta', name: 'Beta' }),
+  ],
+})
+const sampleProjectFields = [sampleProjectField]
+
 function Providers({
   project,
   children,
+  groupByField,
+  groupTasks = [],
 }: {
   project: ProjectDetail
   children: ReactNode
+  groupByField?: ProjectField | undefined
+  groupTasks?: ProjectTask[] | undefined
 }) {
   const queryClient = new QueryClient({
     // staleTime: Infinity keeps the seeded data below from being treated as
@@ -93,6 +116,34 @@ function Providers({
   // without this, TaskProjectLabel's useProject(task.projectId) would fire
   // an unmocked fetch.
   queryClient.setQueryData(projectKeys.detail(project.id), project)
+  if (groupByField != null) {
+    for (const context of ['personal', 'work'] as const) {
+      for (const [index, value] of [
+        ...groupByField.options.map((option) => option.name),
+        null,
+      ].entries()) {
+        const q = buildSearchQuery(
+          withDefaultSort(
+            withField(defaultParsedQuery, groupByField.name, value),
+          ),
+        )
+        queryClient.setQueryData(
+          taskKeys.infiniteList({
+            view: 'row',
+            q,
+            context,
+            status: 'all',
+            projectId: project.id,
+            parentId: 'root',
+          }),
+          {
+            pages: [groupTasks[index] == null ? [] : [groupTasks[index]]],
+            pageParams: [0],
+          },
+        )
+      }
+    }
+  }
   return (
     <QueryClientProvider client={queryClient}>
       <StoryRouter
@@ -108,16 +159,22 @@ function Providers({
 function MainContentStory({
   project,
   tasks,
+  parsedQuery = defaultParsedQuery,
+  projectFields,
+  groupByField,
 }: {
   project: ProjectDetail
   tasks: ProjectTask[]
+  parsedQuery?: ParsedQuery
+  projectFields?: ProjectField[] | undefined
+  groupByField?: ProjectField | undefined
 }) {
   return (
-    <Providers project={project}>
+    <Providers project={project} groupByField={groupByField} groupTasks={tasks}>
       <div className="max-w-2xl p-6">
         <ProjectMainContent
           project={project}
-          parsedQuery={defaultParsedQuery}
+          parsedQuery={parsedQuery}
           onQueryChange={() => {}}
           tree={buildTree(tasks)}
           filteredTasks={tasks}
@@ -128,6 +185,9 @@ function MainContentStory({
           isFetchingNextPage={false}
           isFetchNextPageError={false}
           fetchNextPage={() => {}}
+          projectFields={projectFields}
+          groupByField={groupByField}
+          onGroupByChange={() => {}}
         />
       </div>
     </Providers>
@@ -183,6 +243,39 @@ export const Completed: Story = {
       taskCount: { total: 5, completed: 5 },
     },
     tasks: sampleTasks.map((task) => ({ ...task, status: 'completed' })),
+  },
+}
+
+export const FieldsAvailable: Story = {
+  name: 'a project task list shows field filters and the grouping control',
+  args: {
+    project: { ...baseProject },
+    tasks: sampleTasks,
+    projectFields: sampleProjectFields,
+  },
+}
+
+export const GroupedByField: Story = {
+  name: 'a project task list shows groups for each field option and unset tasks',
+  args: {
+    project: { ...baseProject },
+    tasks: sampleTasks,
+    projectFields: sampleProjectFields,
+    groupByField: sampleProjectField,
+  },
+}
+
+export const NoMatchingFieldGroup: Story = {
+  name: 'a field filter with no matching option shows an empty state',
+  args: {
+    project: { ...baseProject },
+    tasks: [],
+    parsedQuery: {
+      ...defaultParsedQuery,
+      fields: { [sampleProjectField.name]: 'Unlisted' },
+    },
+    projectFields: sampleProjectFields,
+    groupByField: sampleProjectField,
   },
 }
 

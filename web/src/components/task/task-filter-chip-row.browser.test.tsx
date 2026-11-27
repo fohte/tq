@@ -466,7 +466,7 @@ describe('TaskFilterChipRow', () => {
 
     expect(onQueryChange.mock.calls).toEqual([
       [
-        'is:todo field:"SampleCategory=OptionA" field:"SampleAudience=OptionB" sort:updated',
+        'is:todo field:SampleCategory=OptionA field:SampleAudience=OptionB sort:updated',
       ],
     ])
   })
@@ -542,7 +542,7 @@ describe('TaskFilterChipRow', () => {
     await user.click(await screen.findByRole('button', { name: 'OptionA' }))
 
     expect(onQueryChange.mock.calls).toEqual([
-      ['is:todo field:"SampleCategory=OptionA" sort:updated'],
+      ['is:todo field:SampleCategory=OptionA sort:updated'],
     ])
   })
 
@@ -555,7 +555,7 @@ describe('TaskFilterChipRow', () => {
     await user.click(screen.getByRole('button', { name: 'SampleCategory Any' }))
     await user.click(await screen.findByRole('button', { name: 'Unset' }))
     expect(onQueryChange.mock.calls).toEqual([
-      ['is:todo field:"SampleCategory=" sort:updated'],
+      ['is:todo field:SampleCategory= sort:updated'],
     ])
   })
 

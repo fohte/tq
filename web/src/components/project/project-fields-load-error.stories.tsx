@@ -15,3 +15,8 @@ type Story = StoryObj<typeof meta>
 export const Error: Story = {
   name: 'the project field controls show a load error with retry',
 }
+
+export const SidebarMobile: Story = {
+  name: 'the mobile task sidebar shows a project field load error',
+  args: { mobile: true },
+}

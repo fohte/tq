@@ -683,7 +683,7 @@ describe('ProjectDetailPage task list', () => {
     expect(mutate.mock.calls.map(([input]) => input)).toEqual([
       {
         name: 'Sample view',
-        query: 'is:todo field:"SampleCategory=OptionA" project:p1 sort:updated',
+        query: 'is:todo field:SampleCategory=OptionA project:p1 sort:updated',
       },
     ])
   })
@@ -698,7 +698,7 @@ describe('ProjectDetailPage task list', () => {
         isLoading: false,
       }),
     )
-    const q = 'is:todo field:"SampleCategory=OptionB" sort:updated'
+    const q = 'is:todo field:SampleCategory=OptionB sort:updated'
     await renderProjectDetailPage(
       `/projects/p1?q=${encodeURIComponent(q)}&groupBy=field-a`,
     )
@@ -719,6 +719,36 @@ describe('ProjectDetailPage task list', () => {
     })
   })
 
+  it('shows an empty state when the field filter matches no option', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const q = 'is:todo field:SampleCategory=Unlisted sort:updated'
+    await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent(q)}&groupBy=field-a`,
+    )
+
+    const getSnapshot = () => ({
+      taskListQueries: mockUseFilteredTaskTree.mock.calls.map(
+        ([options]) => options,
+      ),
+      groupNames: getProjectTaskGroupNames(),
+      emptyStates: screen
+        .getAllByText('No groups match this filter.')
+        .map((message) => message.textContent),
+    })
+    expect(getSnapshot()).toEqual({
+      taskListQueries: [{ q, projectId: 'p1', enabled: false }],
+      groupNames: [],
+      emptyStates: Array(2).fill('No groups match this filter.'),
+    })
+  })
+
   it('queries every option in order followed by unset', async () => {
     mockUseProjectFields.mockReturnValue(
       partialMutation<ReturnType<typeof useProjectFields>>({
@@ -734,12 +764,12 @@ describe('ProjectDetailPage task list', () => {
       .filter(([options]) => options.enabled !== false)
       .map(([options]) => options.q)
     expect(groupQueries).toEqual([
-      'is:todo field:"SampleCategory=OptionA" sort:updated',
-      'is:todo field:"SampleCategory=OptionB" sort:updated',
-      'is:todo field:"SampleCategory=" sort:updated',
-      'is:todo field:"SampleCategory=OptionA" sort:updated',
-      'is:todo field:"SampleCategory=OptionB" sort:updated',
-      'is:todo field:"SampleCategory=" sort:updated',
+      'is:todo field:SampleCategory=OptionA sort:updated',
+      'is:todo field:SampleCategory=OptionB sort:updated',
+      'is:todo field:SampleCategory= sort:updated',
+      'is:todo field:SampleCategory=OptionA sort:updated',
+      'is:todo field:SampleCategory=OptionB sort:updated',
+      'is:todo field:SampleCategory= sort:updated',
     ])
   })
 

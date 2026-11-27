@@ -7,10 +7,12 @@ export function ProjectTaskGroupByFilter({
   fields,
   selectedFieldId,
   onChange,
+  defaultOpen = false,
 }: {
   fields: ProjectField[]
   selectedFieldId?: string | undefined
   onChange: (fieldId: string | undefined) => void
+  defaultOpen?: boolean
 }) {
   const selectedField = fields.find((field) => field.id === selectedFieldId)
 
@@ -28,6 +30,7 @@ export function ProjectTaskGroupByFilter({
         selectedField == null ? 'Group by' : `Group by ${selectedField.name}`
       }
       title="Group by"
+      defaultOpen={defaultOpen}
     >
       <List>
         <ListItem

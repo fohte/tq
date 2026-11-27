@@ -28,3 +28,8 @@ export const FieldSelected: Story = {
   name: 'the task list is grouped by a project field',
   args: { selectedFieldId: 'field-category' },
 }
+
+export const MenuOpen: Story = {
+  name: 'the grouping menu is open with the available project fields',
+  args: { defaultOpen: true },
+}

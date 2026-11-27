@@ -22,6 +22,7 @@ import { getProjectFieldOptionLabel } from '#components/task/project-field-filte
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
+import { ListAreaMessage } from '#components/ui/list-area-message'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
@@ -305,6 +306,8 @@ function ProjectTaskList({
   const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
+  const fieldGroups =
+    groupByField == null ? [] : getFieldGroups(groupByField, parsedQuery)
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -368,15 +371,21 @@ function ProjectTaskList({
             fetchNextPage={fetchNextPage}
           />
         ) : (
-          getFieldGroups(groupByField, parsedQuery).map((group) => (
-            <ProjectTaskFieldGroupContents
-              key={group.key}
-              title={group.name}
-              projectId={projectId}
-              q={group.q}
-              sessionsByTaskId={sessionsByTaskId}
-            />
-          ))
+          <>
+            {fieldGroups.map((group) => (
+              <ProjectTaskFieldGroupContents
+                key={group.key}
+                title={group.name}
+                projectId={projectId}
+                q={group.q}
+                sessionsByTaskId={sessionsByTaskId}
+                enableKeyboardShortcuts={false}
+              />
+            ))}
+            {fieldGroups.length === 0 && (
+              <ListAreaMessage>No groups match this filter.</ListAreaMessage>
+            )}
+          </>
         )}
       </div>
 
@@ -435,11 +444,13 @@ function ProjectTaskFieldGroupContents({
   projectId,
   q,
   sessionsByTaskId,
+  enableKeyboardShortcuts,
 }: {
   title: string
   projectId: string
   q: string
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  enableKeyboardShortcuts: boolean
 }) {
   const taskList = useFilteredTaskTree({ q, projectId })
 
@@ -454,6 +465,7 @@ function ProjectTaskFieldGroupContents({
         tree={taskList.tree}
         tasks={taskList.tasks}
         sessionsByTaskId={sessionsByTaskId}
+        enableKeyboardShortcuts={enableKeyboardShortcuts}
         lazyChildrenFilter={taskList.lazyChildrenFilter}
         hasNextPage={taskList.hasNextPage}
         isFetchingNextPage={taskList.isFetchingNextPage}
