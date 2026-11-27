@@ -36,7 +36,7 @@ export function fetchWithNetworkError(
   input: string | URL | Request,
   init?: RequestInit,
 ): Promise<Response> {
-  // `hc()` は fetch の失敗を reject で受け取る契約です。
+  // `hc()`'s fetch option must satisfy the standard fetch contract (reject the returned promise on failure), so this boundary can't return a Result — it converts the rejection to a NetworkError instead.
   return fetchImpl(input, init).catch((cause: unknown) =>
     Promise.reject(new NetworkError(`Failed to reach ${apiUrl}`, cause)),
   )

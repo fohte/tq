@@ -9,6 +9,8 @@ type SseEvent = {
   data: string[]
 }
 
+const EVENT_STREAM_IDLE_TIMEOUT_MS = 90_000
+
 function writeStdoutLine(line: string): Promise<void> {
   return new Promise((resolve) => {
     if (process.stdout.write(`${line}\n`)) resolve()
@@ -25,9 +27,27 @@ async function dispatchEvent(event: SseEvent, command: Command): Promise<void> {
   await writeStdoutLine(JSON.stringify(parsed.value))
 }
 
+function readChunk(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  abortController: AbortController,
+) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const idleTimeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      abortController.abort()
+      reject(new Error('Event stream idle for 90 seconds.'))
+    }, EVENT_STREAM_IDLE_TIMEOUT_MS)
+  })
+
+  return Promise.race([reader.read(), idleTimeout]).finally(() => {
+    if (timer != null) clearTimeout(timer)
+  })
+}
+
 async function readEvents(
   body: ReadableStream<Uint8Array>,
   command: Command,
+  abortController: AbortController,
 ): Promise<void> {
   const reader = body.getReader()
   const decoder = new TextDecoder()
@@ -36,7 +56,7 @@ async function readEvents(
 
   let done = false
   while (!done) {
-    const chunk = await reader.read()
+    const chunk = await readChunk(reader, abortController)
     buffer += decoder.decode(chunk.value, { stream: !chunk.done })
 
     let newline = buffer.indexOf('\n')
@@ -75,11 +95,15 @@ export function registerEventsCommand(
       if (config.isErr()) fail(command, config.error)
 
       const url = `${config.value.apiUrl.replace(/\/+$/, '')}/api/events`
+      const abortController = new AbortController()
       const response = await fetchWithNetworkError(
         config.value.apiUrl,
         fetchImpl,
         url,
-        { headers: { ...config.value.headers, Accept: 'text/event-stream' } },
+        {
+          headers: { ...config.value.headers, Accept: 'text/event-stream' },
+          signal: abortController.signal,
+        },
       )
 
       if (!response.ok) fail(command, await toApiError(response))
@@ -88,7 +112,7 @@ export function registerEventsCommand(
       }
 
       await writeStdoutLine(JSON.stringify({ type: 'connected' }))
-      await readEvents(response.body, command)
+      await readEvents(response.body, command, abortController)
       fail(command, new Error('Event stream closed.'))
     })
 }
