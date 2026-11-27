@@ -14,6 +14,7 @@ import { projectKeys } from '#lib/query-keys'
 
 type ProjectFieldsApi = (typeof api.api.projects)[':projectId']['fields']
 
+// テストで差し替えた API endpoint を使えるよう、呼び出し時に取得する
 function getProjectFieldsApi() {
   return api.api.projects[':projectId'].fields
 }
