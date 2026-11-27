@@ -1,7 +1,7 @@
 import { Input } from '@fohte/ui/input'
 import { List, ListItem } from '@fohte/ui/list'
 import { Popover, PopoverContent } from '@fohte/ui/popover'
-import { parseSearchQuery } from 'api/search-query-parser'
+import { buildSearchQuery, parseSearchQuery } from 'api/search-query-parser'
 import { useEffect, useRef, useState } from 'react'
 
 import { type SearchSyntaxHelpOptions } from '#components/search/search-syntax-help-data'
@@ -25,12 +25,8 @@ interface TaskFilterFreeTextInputProps {
   syntaxHelpOptions?: Omit<SearchSyntaxHelpOptions, 'prioritySettings'>
 }
 
-// The tail of the filter row's token input: a plain text box for the parts
-// of the query that aren't a structured `key:value` condition. Always
-// mounted (no edit-mode toggle) so it stays visible across viewports.
-// Typing a recognized token (e.g. `is:todo`) and committing hands it to the
-// caller, which lifts it out into a chip; anything left over round-trips
-// back here as plain freeText.
+// チップに対応する条件は commit 時にチップへ移し、それ以外は入力に残す。
+// field 条件はこの行にチップがないため、query text のまま編集可能にする。
 export function TaskFilterFreeTextInput({
   id,
   freeText,
@@ -78,13 +74,12 @@ export function TaskFilterFreeTextInput({
     const trimmed = value.trim()
     if (trimmed === freeText.trim()) return
     onCommit(trimmed)
-    // Reflect the leftover text immediately rather than waiting for the
-    // caller's merged `freeText` to round-trip back down as a prop — that
-    // round trip can leave `value` unchanged (e.g. committing an
-    // already-applied `is:todo` again) or never resync while this input
-    // stays focused, either of which would strand the just-lifted token
-    // visibly in the box even though it already became a chip.
-    setValue(parseSearchQuery(trimmed).freeText)
+    const typed = parseSearchQuery(trimmed)
+    const remainingQuery = buildSearchQuery({
+      freeText: typed.freeText,
+      ...(typed.fields === undefined ? {} : { fields: typed.fields }),
+    })
+    setValue(remainingQuery === '' ? '' : `${remainingQuery} `)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
