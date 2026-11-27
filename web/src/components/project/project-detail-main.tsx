@@ -32,6 +32,7 @@ import { useUpdateProject } from '#hooks/use-projects'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TaskListFilter, TreeNode } from '#hooks/use-tasks'
 import { withDefaultSort, withField, withProjectId } from '#lib/tasks-query'
+import { buildTree } from '#lib/tree-builder'
 
 // --- Main Content ---
 
@@ -453,17 +454,18 @@ function ProjectTaskFieldGroupContents({
   enableKeyboardShortcuts: boolean
 }) {
   const taskList = useFilteredTaskTree({ q, projectId })
+  const tasks = taskList.tasks.filter((task) => task.ancestorOnly !== true)
 
   return (
     <ProjectTaskFieldGroup
       title={title}
       isError={taskList.isError}
-      hasTasks={taskList.tasks.length > 0}
+      hasTasks={tasks.length > 0}
     >
       <TaskTreeList
         isLoading={taskList.isLoading}
-        tree={taskList.tree}
-        tasks={taskList.tasks}
+        tree={buildTree(tasks)}
+        tasks={tasks}
         sessionsByTaskId={sessionsByTaskId}
         enableKeyboardShortcuts={enableKeyboardShortcuts}
         lazyChildrenFilter={taskList.lazyChildrenFilter}

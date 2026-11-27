@@ -22,7 +22,10 @@ import {
   makeProjectField,
   makeProjectFieldOption,
 } from '#components/project/project-test-fixtures'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import type { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProjectFields } from '#hooks/use-project-fields'
 import { useProjects } from '#hooks/use-projects'
@@ -36,6 +39,7 @@ import {
   mutateInvokingOnSuccess,
   partialMutation,
 } from '#lib/test-utils'
+import { buildTree } from '#lib/tree-builder'
 // Import after mocks
 import { Route as ProjectDetailRoute } from '#routes/projects/$projectId'
 import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
@@ -717,6 +721,93 @@ describe('ProjectDetailPage task list', () => {
       ],
       displayedGroups: ['OptionB group'],
     })
+  })
+
+  it('shows an option-matching parent only in its own field group during text search', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const parent = makeTask({
+      ...baseTask,
+      id: 'parent-task',
+      number: 1,
+      title: 'Option A parent',
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-a',
+          fieldName: 'SampleCategory',
+          optionId: 'option-a',
+          optionName: 'OptionA',
+        }),
+      ],
+    })
+    const parentAncestor = makeTask({
+      ...parent,
+      ancestorOnly: true,
+    })
+    const optionBTask = makeTask({
+      ...baseTask,
+      id: 'option-b-task',
+      number: 2,
+      title: 'Matching option B task',
+      parentId: parent.id,
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-a',
+          fieldName: 'SampleCategory',
+          optionId: 'option-b',
+          optionName: 'OptionB',
+        }),
+      ],
+    })
+    mockUseFilteredTaskTree.mockImplementation(({ q }) => {
+      const tasks = q.includes('field:SampleCategory=OptionA')
+        ? [parent]
+        : q.includes('field:SampleCategory=OptionB')
+          ? [parentAncestor, optionBTask]
+          : []
+      return {
+        isLoading: false,
+        tree: buildTree(tasks),
+        tasks,
+        lazyChildrenFilter: undefined,
+      }
+    })
+    await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent('needle is:todo sort:updated')}&groupBy=field-a`,
+    )
+
+    const getSnapshot = () =>
+      screen
+        .queryAllByRole('region')
+        .filter((region) => {
+          const label = region.getAttribute('aria-label')
+          return label != null && label.endsWith(' group')
+        })
+        .map((region) => ({
+          name: region.getAttribute('aria-label'),
+          parent: within(region).queryAllByText('Option A parent').length,
+          optionB: within(region).queryAllByText('Matching option B task')
+            .length,
+        }))
+    expect(getSnapshot()).toEqual([
+      {
+        name: 'OptionA group',
+        parent: 1,
+        optionB: 0,
+      },
+      {
+        name: 'OptionB group',
+        parent: 0,
+        optionB: 1,
+      },
+      { name: 'Unset group', parent: 0, optionB: 0 },
+    ])
   })
 
   it('shows an empty state when the field filter matches no option', async () => {
