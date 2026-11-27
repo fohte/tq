@@ -1,23 +1,26 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { fn } from 'storybook/test'
 
-import { makeProjectField } from '#components/project/project-test-fixtures'
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { CreateTaskModalProjectFields } from '#components/task/create-task-modal-project-fields'
 
 const deliveryField = makeProjectField({
   id: 'field-delivery-zone',
   name: 'DeliveryZone',
   options: [
-    { id: 'option-coastal', name: 'Coastal' },
-    { id: 'option-inland', name: 'Inland' },
+    makeProjectFieldOption({ id: 'option-coastal', name: 'Coastal' }),
+    makeProjectFieldOption({ id: 'option-inland', name: 'Inland' }),
   ],
 })
 const supportField = makeProjectField({
   id: 'field-support-tier',
   name: 'SupportTier',
   options: [
-    { id: 'option-standard', name: 'Standard' },
-    { id: 'option-priority', name: 'Priority' },
+    makeProjectFieldOption({ id: 'option-standard', name: 'Standard' }),
+    makeProjectFieldOption({ id: 'option-priority', name: 'Priority' }),
   ],
 })
 

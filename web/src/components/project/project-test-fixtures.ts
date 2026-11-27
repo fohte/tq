@@ -26,6 +26,18 @@ export function makeProjectDetail(
   return makeProject(overrides)
 }
 
+type ProjectFieldOption = ProjectField['options'][number]
+
+export function makeProjectFieldOption(
+  overrides: Partial<ProjectFieldOption> = {},
+): ProjectFieldOption {
+  return {
+    id: 'option-example',
+    name: 'ExampleChoice',
+    ...overrides,
+  }
+}
+
 export function makeProjectField(
   overrides: Partial<ProjectField> = {},
 ): ProjectField {
@@ -35,8 +47,8 @@ export function makeProjectField(
     name: 'SampleCategory',
     type: 'single_select',
     options: [
-      { id: 'option-a', name: 'OptionA' },
-      { id: 'option-b', name: 'OptionB' },
+      makeProjectFieldOption({ id: 'option-a', name: 'OptionA' }),
+      makeProjectFieldOption({ id: 'option-b', name: 'OptionB' }),
     ],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',

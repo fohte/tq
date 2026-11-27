@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-import { makeProjectField } from '#components/project/project-test-fixtures'
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { SidebarProjectCustomFields } from '#components/task/sidebar-project-custom-fields'
 import type { ProjectField } from '#hooks/use-project-fields'
 import { projectKeys } from '#hooks/use-projects'
@@ -11,7 +14,7 @@ const categoryField = makeProjectField({
   id: 'field-category',
   projectId,
   name: 'DeliveryStage',
-  options: [{ id: 'option-ready', name: 'Ready' }],
+  options: [makeProjectFieldOption({ id: 'option-ready', name: 'Ready' })],
 })
 
 function SidebarProjectCustomFieldsStory({

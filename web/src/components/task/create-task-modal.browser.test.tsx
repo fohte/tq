@@ -8,7 +8,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { seedContextLabels } from '#components/label/label-test-fixtures'
-import { makeProjectField } from '#components/project/project-test-fixtures'
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import {
@@ -391,8 +394,8 @@ describe('CreateTaskModal', () => {
         projectId: 'project-demo',
         name: 'DeliveryZone',
         options: [
-          { id: 'option-coastal', name: 'Coastal' },
-          { id: 'option-inland', name: 'Inland' },
+          makeProjectFieldOption({ id: 'option-coastal', name: 'Coastal' }),
+          makeProjectFieldOption({ id: 'option-inland', name: 'Inland' }),
         ],
       })
       mockUseProjectFields.mockReturnValue(
@@ -457,7 +460,9 @@ describe('CreateTaskModal', () => {
         id: 'field-delivery-zone',
         projectId: 'project-demo',
         name: 'DeliveryZone',
-        options: [{ id: 'option-coastal', name: 'Coastal' }],
+        options: [
+          makeProjectFieldOption({ id: 'option-coastal', name: 'Coastal' }),
+        ],
       })
       mockUseProjectFields.mockReturnValue(
         partialMutation<ReturnType<typeof useProjectFields>>({
@@ -815,7 +820,9 @@ describe('CreateTaskModal', () => {
             id: 'field-delivery-zone',
             projectId: 'project-demo',
             name: 'DeliveryZone',
-            options: [{ id: 'option-coastal', name: 'Coastal' }],
+            options: [
+              makeProjectFieldOption({ id: 'option-coastal', name: 'Coastal' }),
+            ],
           }),
         ],
         isSuccess: true,

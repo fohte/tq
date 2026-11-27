@@ -3,7 +3,10 @@ import { act, render, screen } from '@testing-library/react'
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { makeProjectField } from '#components/project/project-test-fixtures'
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { SidebarCustomField } from '#components/task/sidebar-custom-field'
 import { useUpdateTask } from '#hooks/use-tasks'
 import {
@@ -23,8 +26,8 @@ const field = makeProjectField({
   id: 'field-stage',
   name: 'DeliveryStage',
   options: [
-    { id: 'option-triage', name: 'Triage' },
-    { id: 'option-review', name: 'Review' },
+    makeProjectFieldOption({ id: 'option-triage', name: 'Triage' }),
+    makeProjectFieldOption({ id: 'option-review', name: 'Review' }),
   ],
 })
 

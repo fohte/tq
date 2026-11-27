@@ -5,7 +5,10 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { fn } from 'storybook/test'
 
-import { makeProjectField } from '#components/project/project-test-fixtures'
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { makeDescriptionTemplate } from '#components/settings/description-template-test-fixtures'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 
@@ -96,8 +99,8 @@ const projectFields = [
     projectId: 'project-story',
     name: 'DeliveryZone',
     options: [
-      { id: 'option-coastal', name: 'Coastal' },
-      { id: 'option-inland', name: 'Inland' },
+      makeProjectFieldOption({ id: 'option-coastal', name: 'Coastal' }),
+      makeProjectFieldOption({ id: 'option-inland', name: 'Inland' }),
     ],
   }),
 ]

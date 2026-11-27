@@ -2,14 +2,17 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
-import { makeProjectField } from '#components/project/project-test-fixtures'
+import {
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
 import { SidebarCustomField } from '#components/task/sidebar-custom-field'
 
 const field = makeProjectField({
   name: 'DeliveryStage',
   options: [
-    { id: 'option-triage', name: 'Triage' },
-    { id: 'option-review', name: 'Review' },
+    makeProjectFieldOption({ id: 'option-triage', name: 'Triage' }),
+    makeProjectFieldOption({ id: 'option-review', name: 'Review' }),
   ],
 })
 

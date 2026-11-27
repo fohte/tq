@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import {
   makeProjectDetail,
   makeProjectField,
+  makeProjectFieldOption,
 } from '#components/project/project-test-fixtures'
 import { TaskSidebarMobile } from '#components/task/task-detail-sidebar'
 import {
@@ -72,7 +73,10 @@ export const MobileSidebarWithProjectNoFields: Story = {
   },
 }
 
-const mobileFieldOption = { id: 'option-triage', name: 'Triage' }
+const mobileFieldOption = makeProjectFieldOption({
+  id: 'option-triage',
+  name: 'Triage',
+})
 const mobileField = makeProjectField({
   id: 'field-phase',
   projectId: mobileProject.id,

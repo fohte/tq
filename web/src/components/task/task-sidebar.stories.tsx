@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from 'react'
 import {
   makeProjectDetail,
   makeProjectField,
+  makeProjectFieldOption,
 } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskSidebar } from '#components/task/task-detail-sidebar'
@@ -142,7 +143,10 @@ export const SidebarWithProject: Story = {
   },
 }
 
-const selectedCategoryOption = { id: 'option-release', name: 'Release' }
+const selectedCategoryOption = makeProjectFieldOption({
+  id: 'option-release',
+  name: 'Release',
+})
 const categoryField = makeProjectField({
   id: 'field-category',
   projectId: sampleProject.id,
