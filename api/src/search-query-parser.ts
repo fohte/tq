@@ -378,12 +378,11 @@ export function buildSearchQuery(query: ParsedQuery): string {
   return parts.join(' ')
 }
 
-// Symmetric with tokenize()'s quote handling: a value containing whitespace
-// or a quote character must round-trip through parseSearchQuery as a single
-// token, with embedded double quotes escaped so tokenize() doesn't treat
-// them as the closing quote.
+// quoted 値では末尾の区切りと混同しないよう、\\ と " をエスケープする。
 function quoteIfNeeded(value: string): string {
-  return /[\s"']/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value
+  return /[\s"']/.test(value)
+    ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+    : value
 }
 
 export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
@@ -396,9 +395,14 @@ export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {
   for (let i = 0; i < input.length; i++) {
     const ch = input.charAt(i)
     if (inQuote) {
-      if (ch === '\\' && input.charAt(i + 1) === quoteChar) {
-        current += quoteChar
-        i++
+      if (ch === '\\') {
+        const next = input.charAt(i + 1)
+        if (next === quoteChar || next === '\\') {
+          current += next
+          i++
+        } else {
+          current += ch
+        }
       } else if (ch === quoteChar) {
         inQuote = false
       } else {

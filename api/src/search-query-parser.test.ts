@@ -457,6 +457,20 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     })
   })
 
+  it('round-trips a quoted field option ending in a backslash', () => {
+    expect(
+      parseSearchQuery(
+        buildSearchQuery({
+          freeText: '',
+          fields: { 'Review stage': 'Draft\\' },
+        }),
+      ),
+    ).toEqual({
+      freeText: '',
+      fields: { 'Review stage': 'Draft\\' },
+    })
+  })
+
   it('round-trips a priority value', () => {
     const q = 'priority:-1'
     expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
