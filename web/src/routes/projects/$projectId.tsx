@@ -148,9 +148,7 @@ function ProjectDetailPage() {
             projectFields={projectFields}
             groupByField={groupByField}
             onGroupByChange={setGroupBy}
-            hasProjectFieldsError={
-              projectFieldsQuery.isError && projectFieldsQuery.data == null
-            }
+            hasProjectFieldsError={projectFieldsQuery.isError}
             onProjectFieldsRetry={() => void projectFieldsQuery.refetch()}
           />
         </div>
@@ -180,9 +178,7 @@ function ProjectDetailPage() {
             projectFields={projectFields}
             groupByField={groupByField}
             onGroupByChange={setGroupBy}
-            hasProjectFieldsError={
-              projectFieldsQuery.isError && projectFieldsQuery.data == null
-            }
+            hasProjectFieldsError={projectFieldsQuery.isError}
             onProjectFieldsRetry={() => void projectFieldsQuery.refetch()}
           />
         </div>

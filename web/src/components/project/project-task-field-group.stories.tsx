@@ -31,3 +31,8 @@ export const LoadError: Story = {
   name: 'the task list shows when a group failed to load',
   args: { isError: true },
 }
+
+export const StaleTasksWithLoadError: Story = {
+  name: 'the task list keeps cached tasks while showing a load error',
+  args: { isError: true, hasTasks: true },
+}

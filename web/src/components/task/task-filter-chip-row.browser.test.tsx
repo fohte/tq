@@ -577,7 +577,23 @@ describe('TaskFilterChipRow', () => {
         name: 'SampleCategory',
         options: [
           makeProjectFieldOption({ id: 'option-any', name: 'Any' }),
+          makeProjectFieldOption({
+            id: 'option-any-alias',
+            name: 'Any (option)',
+          }),
+          makeProjectFieldOption({
+            id: 'option-any-prefix',
+            name: 'Option: Any',
+          }),
           makeProjectFieldOption({ id: 'option-unset', name: 'Unset' }),
+          makeProjectFieldOption({
+            id: 'option-unset-alias',
+            name: 'Unset (option)',
+          }),
+          makeProjectFieldOption({
+            id: 'option-unset-prefix',
+            name: 'Option: Unset',
+          }),
         ],
       }),
     ]
@@ -587,12 +603,25 @@ describe('TaskFilterChipRow', () => {
       .getAllByRole('button')
       .map((button) => button.textContent.trim())
       .filter((label) =>
-        ['Any', 'Any (option)', 'Unset', 'Unset (option)'].includes(label),
+        [
+          'Any',
+          'Option: Any',
+          'Any (option)',
+          'Option: Option: Any',
+          'Option: Unset',
+          'Unset (option)',
+          'Option: Option: Unset',
+          'Unset',
+        ].includes(label),
       )
     expect(menuChoices).toEqual([
       'Any',
+      'Option: Any',
       'Any (option)',
+      'Option: Option: Any',
+      'Option: Unset',
       'Unset (option)',
+      'Option: Option: Unset',
       'Unset',
     ])
   })

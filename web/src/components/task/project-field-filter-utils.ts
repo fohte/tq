@@ -15,5 +15,7 @@ export function getProjectFieldFilterNames(
 }
 
 export function getProjectFieldOptionLabel(name: string) {
-  return name === 'Any' || name === 'Unset' ? `${name} (option)` : name
+  return name === 'Any' || name === 'Unset' || name.startsWith('Option: ')
+    ? `Option: ${name}`
+    : name
 }

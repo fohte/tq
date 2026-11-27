@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -47,5 +47,24 @@ describe('useFilteredTaskTree', () => {
     })
 
     expect(mockGet.mock.calls).toEqual([])
+  })
+
+  it('reports errors from paginated and free-text task queries', async () => {
+    mockGet.mockRejectedValue(new Error('request failed'))
+    const { result } = renderHook(
+      () => ({
+        root: useFilteredTaskTree({ q: 'is:todo sort:updated' }),
+        search: useFilteredTaskTree({ q: 'sample is:todo sort:updated' }),
+      }),
+      { wrapper },
+    )
+
+    const getErrorSnapshot = () => ({
+      root: result.current.root.isError,
+      search: result.current.search.isError,
+    })
+    await waitFor(() => {
+      expect(getErrorSnapshot()).toEqual({ root: true, search: true })
+    })
   })
 })

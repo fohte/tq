@@ -446,7 +446,8 @@ function ProjectTaskFieldGroupContents({
   return (
     <ProjectTaskFieldGroup
       title={title}
-      isError={taskList.isError && taskList.tasks.length === 0}
+      isError={taskList.isError}
+      hasTasks={taskList.tasks.length > 0}
     >
       <TaskTreeList
         isLoading={taskList.isLoading}

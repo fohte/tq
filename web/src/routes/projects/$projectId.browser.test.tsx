@@ -587,6 +587,40 @@ describe('ProjectDetailPage task list', () => {
     })
   })
 
+  it('keeps cached field controls visible when refreshing them fails', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isError: true,
+        isLoading: false,
+      }),
+    )
+    await renderProjectDetailPage()
+
+    const getSnapshot = () => ({
+      errors: screen.getAllByRole('alert').map((alert) => ({
+        message: within(alert).getByText('Could not load project fields.')
+          .textContent,
+        actions: within(alert)
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      })),
+      controls: getProjectFieldControlSnapshot(),
+    })
+    expect(getSnapshot()).toEqual({
+      errors: [
+        {
+          message: 'Could not load project fields.',
+          actions: ['Retry'],
+        },
+      ],
+      controls: {
+        groupBy: ['Group by'],
+        fieldChips: ['SampleCategory Any'],
+      },
+    })
+  })
+
   it('stores the selected group field in the URL without changing q', async () => {
     const fields = [makeProjectField({ id: 'field-a', projectId: 'p1' })]
     mockUseProjectFields.mockReturnValue(
@@ -727,7 +761,7 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage('/projects/p1?groupBy=field-a')
 
     expect(getProjectTaskGroupNames()).toEqual([
-      'Unset (option) group',
+      'Option: Unset group',
       'Unset group',
     ])
   })

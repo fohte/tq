@@ -60,7 +60,23 @@ export const ReservedOptionNames: Story = {
         name: 'SampleCategory',
         options: [
           makeProjectFieldOption({ id: 'option-any', name: 'Any' }),
+          makeProjectFieldOption({
+            id: 'option-any-alias',
+            name: 'Any (option)',
+          }),
+          makeProjectFieldOption({
+            id: 'option-any-prefix',
+            name: 'Option: Any',
+          }),
           makeProjectFieldOption({ id: 'option-unset', name: 'Unset' }),
+          makeProjectFieldOption({
+            id: 'option-unset-alias',
+            name: 'Unset (option)',
+          }),
+          makeProjectFieldOption({
+            id: 'option-unset-prefix',
+            name: 'Option: Unset',
+          }),
         ],
       }),
     ],
