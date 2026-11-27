@@ -12,6 +12,7 @@ import {
 import { taskToResponse } from '#routes/tasks/shared'
 import { githubLinkLookupQuerySchema } from '#schemas/github-link'
 import { syncAllGithubLinks } from '#services/github-sync'
+import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
 import {
   findTaskByGithubRef,
   resolveGithubUrl,
@@ -40,36 +41,45 @@ export const githubApp = new Hono()
     )
 
     return result.match(
-      (resolved) =>
-        'existingTask' in resolved
-          ? c.json(
-              {
-                linked: true,
-                // Only the one link this URL resolved to, not the task's
-                // full link set — this endpoint answers "what does this
-                // GitHub resource point to", not "list this task's links".
-                task: taskToResponse(resolved.existingTask, undefined, [
-                  resolved.existingLink,
-                ]),
-              },
-              200,
-            )
-          : c.json(
-              {
-                linked: false,
-                preview: {
-                  owner: resolved.preview.owner,
-                  repo: resolved.preview.repo,
-                  number: resolved.preview.number,
-                  kind: resolved.preview.kind,
-                  url: resolved.preview.url,
-                  title: resolved.preview.title,
-                  body: resolved.preview.body,
-                  state: resolved.preview.state,
-                },
-              },
-              200,
-            ),
+      async (resolved) => {
+        if ('existingTask' in resolved) {
+          const fieldValuesByTaskId = await getTaskFieldValuesByTaskId([
+            resolved.existingTask.id,
+          ])
+          return c.json(
+            {
+              linked: true,
+              // Only the one link this URL resolved to, not the task's
+              // full link set — this endpoint answers "what does this
+              // GitHub resource point to", not "list this task's links".
+              task: taskToResponse(
+                resolved.existingTask,
+                undefined,
+                [resolved.existingLink],
+                [],
+                fieldValuesByTaskId.get(resolved.existingTask.id) ?? [],
+              ),
+            },
+            200,
+          )
+        }
+        return c.json(
+          {
+            linked: false,
+            preview: {
+              owner: resolved.preview.owner,
+              repo: resolved.preview.repo,
+              number: resolved.preview.number,
+              kind: resolved.preview.kind,
+              url: resolved.preview.url,
+              title: resolved.preview.title,
+              body: resolved.preview.body,
+              state: resolved.preview.state,
+            },
+          },
+          200,
+        )
+      },
       (error) => githubLinkErrorResponse(c, error, 'github.resolve'),
     )
   })
@@ -83,15 +93,27 @@ export const githubApp = new Hono()
     )
 
     return result.match(
-      (found) =>
-        c.json(
+      async (found) => {
+        const fieldValues = found
+          ? ((await getTaskFieldValuesByTaskId([found.task.id])).get(
+              found.task.id,
+            ) ?? [])
+          : []
+        return c.json(
           {
             task: found
-              ? taskToResponse(found.task, undefined, [found.link])
+              ? taskToResponse(
+                  found.task,
+                  undefined,
+                  [found.link],
+                  [],
+                  fieldValues,
+                )
               : null,
           },
           200,
-        ),
+        )
+      },
       (error) => githubLinkErrorResponse(c, error, 'github.link'),
     )
   })

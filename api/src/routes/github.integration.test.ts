@@ -11,7 +11,11 @@ import {
 } from '#integrations/github/testing'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import { firstOrThrow } from '#lib/drizzle-utils'
-import type { GithubLinkResponse, TaskResponse } from '#routes/tasks/testing'
+import {
+  type GithubLinkResponse,
+  type TaskResponse,
+  withoutLinkSyncAndBlockedByGithubRefs,
+} from '#routes/tasks/testing'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -121,6 +125,92 @@ describe('GET /api/github/link', () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ task: createdBody.task })
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns populated field values from resolve and link responses', async () => {
+    const url = 'https://github.com/example-team/sample-repo/issues/17'
+    await upsertGithubToken('valid-token')
+    mockGithubIssueResponse({ html_url: url })
+    mockGithubIssueResponse({ html_url: url })
+    const createdResponse = await app.request('/api/tasks/from-github', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    const created = await jsonBody<{ task: TaskResponse }>(createdResponse)
+    const projectResponse = await app.request('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Sample Observatory' }),
+    })
+    const project = await jsonBody<{ id: string }>(projectResponse)
+    const fieldResponse = await app.request(
+      `/api/projects/${project.id}/fields`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Signal Phase', options: ['Early Arc'] }),
+      },
+    )
+    const field = await jsonBody<{
+      id: string
+      name: string
+      options: Array<{ id: string; name: string }>
+    }>(fieldResponse)
+    const option = field.options[0]
+    if (option == null) throw new Error('Test field option was not created')
+    const updateResponse = await app.request(`/api/tasks/${created.task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: project.id,
+        fieldValues: { [field.id]: option.id },
+      }),
+    })
+    const updatedTask = withoutLinkSyncAndBlockedByGithubRefs(
+      await jsonBody<TaskResponse>(updateResponse),
+    )
+    const detailResponse = await app.request(`/api/tasks/${created.task.id}`)
+    const detail = await jsonBody<TaskResponse>(detailResponse)
+    const resolveResponse = await resolve(url)
+    const resolved = await jsonBody<{ linked: boolean; task: TaskResponse }>(
+      resolveResponse,
+    )
+    const linkResponse = await link(url)
+    const linked = await jsonBody<{ task: TaskResponse }>(linkResponse)
+
+    function responseSnapshot() {
+      return {
+        statuses: [
+          createdResponse.status,
+          projectResponse.status,
+          fieldResponse.status,
+          updateResponse.status,
+          detailResponse.status,
+          resolveResponse.status,
+          linkResponse.status,
+        ],
+        resolved: { linked: resolved.linked, task: resolved.task },
+        linked,
+        updatedTask,
+        detailFieldValues: detail.fieldValues,
+      }
+    }
+
+    expect(responseSnapshot()).toEqual({
+      statuses: [201, 201, 201, 200, 200, 200, 200],
+      resolved: { linked: true, task: updatedTask },
+      linked: { task: updatedTask },
+      updatedTask,
+      detailFieldValues: [
+        {
+          fieldId: field.id,
+          fieldName: field.name,
+          optionId: option.id,
+          optionName: option.name,
+        },
+      ],
+    })
   })
 
   it('returns 400 for a non-GitHub URL', async () => {

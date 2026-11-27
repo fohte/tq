@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 
 import { db } from '#db/connection'
 import { projectFieldOptions, projectFields, projects } from '#db/schema'
+import { setChangeEventTaskIds } from '#lib/change-events'
 import {
   createProjectFieldSchema,
   projectFieldOptionNameSchema,
@@ -12,6 +13,7 @@ import {
   projectIdParamSchema,
   updateProjectFieldSchema,
 } from '#schemas/project-field'
+import { getTaskIdsWithFieldValue } from '#services/task-field-values'
 
 function optionToResponse(option: typeof projectFieldOptions.$inferSelect) {
   return { id: option.id, name: option.name }
@@ -220,6 +222,7 @@ export const projectFieldsApp = new Hono()
       if (result.kind === 'not-found') {
         return c.json({ error: 'Field not found' }, 404)
       }
+      setChangeEventTaskIds(c, await getTaskIdsWithFieldValue({ fieldId }))
       return c.json(await loadFieldResponse(result.field, db), 200)
     },
   )
@@ -231,6 +234,8 @@ export const projectFieldsApp = new Hono()
       const existing = await findField(projectId, fieldId)
       if (!existing) return c.json({ error: 'Field not found' }, 404)
 
+      const affectedTaskIds = await getTaskIdsWithFieldValue({ fieldId })
+
       await db
         .delete(projectFields)
         .where(
@@ -239,6 +244,7 @@ export const projectFieldsApp = new Hono()
             eq(projectFields.id, fieldId),
           ),
         )
+      setChangeEventTaskIds(c, affectedTaskIds)
       return c.body(null, 204)
     },
   )
@@ -355,6 +361,7 @@ export const projectFieldsApp = new Hono()
       if (result.kind === 'conflict') {
         return c.json({ error: 'An option with this name already exists' }, 409)
       }
+      setChangeEventTaskIds(c, await getTaskIdsWithFieldValue({ optionId }))
       return c.json(optionToResponse(result.option), 200)
     },
   )
@@ -367,6 +374,8 @@ export const projectFieldsApp = new Hono()
         return c.json({ error: 'Field not found' }, 404)
       }
 
+      const affectedTaskIds = await getTaskIdsWithFieldValue({ optionId })
+
       const [deleted] = await db
         .delete(projectFieldOptions)
         .where(
@@ -377,6 +386,7 @@ export const projectFieldsApp = new Hono()
         )
         .returning({ id: projectFieldOptions.id })
       if (!deleted) return c.json({ error: 'Option not found' }, 404)
+      setChangeEventTaskIds(c, affectedTaskIds)
       return c.body(null, 204)
     },
   )

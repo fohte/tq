@@ -8,6 +8,7 @@ import { addDays } from '#services/recurrence'
 import { replaceOccurrenceDateInTitle } from '#services/recurring-task-templates'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 export async function createRecurringTaskOccurrence(
   tx: DbTransaction,
@@ -24,6 +25,8 @@ export async function createRecurringTaskOccurrence(
   labelNames: string[],
   author: EditAuthor,
 ): Promise<typeof tasks.$inferSelect | null> {
+  await lockTaskRelationWrites(tx)
+
   const [task] = await tx
     .insert(tasks)
     .values({

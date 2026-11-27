@@ -164,6 +164,7 @@ export const tasks = pgTable(
     uniqueIndex('tasks_template_id_occurrence_date_unique')
       .on(table.templateId, table.occurrenceDate)
       .where(sql`${table.templateId} IS NOT NULL`),
+    unique('uq_tasks_id_project_id').on(table.id, table.projectId),
     // Partial: `remind_at` is NULL on all but the handful of tasks with a
     // pending reminder, and the poll's predicate never matches NULL anyway.
     index('idx_tasks_remind_at')

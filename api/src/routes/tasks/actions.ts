@@ -29,6 +29,8 @@ import {
   taskConventionViolationBody,
   taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
+import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
+import { lockTaskRelationWrites } from '#services/task-relations'
 import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
 
 const updateStatusSchema = z.object({
@@ -80,6 +82,9 @@ export const tasksActionsApp = new Hono()
       // Locking and re-reading here keeps fromStatus accurate for whichever
       // request commits second.
       const result = await db.transaction(async (tx) => {
+        if (duplicateTarget != null) {
+          await lockTaskRelationWrites(tx)
+        }
         const current = firstOrThrow(
           await tx
             .select({
@@ -167,7 +172,10 @@ export const tasksActionsApp = new Hono()
         await dispatchTaskStatusChangedWebhook(updated, duplicateTarget)
       }
 
-      const labelsByTaskId = await getLabelNamesByTaskId([id])
+      const [labelsByTaskId, fieldValuesByTaskId] = await Promise.all([
+        getLabelNamesByTaskId([id]),
+        getTaskFieldValuesByTaskId([id]),
+      ])
 
       return c.json(
         taskToResponse(
@@ -175,6 +183,7 @@ export const tasksActionsApp = new Hono()
           undefined,
           undefined,
           labelsByTaskId.get(id) ?? [],
+          fieldValuesByTaskId.get(id) ?? [],
         ),
         200,
       )
@@ -200,36 +209,46 @@ export const tasksActionsApp = new Hono()
         if (parentId === id) {
           return c.json({ error: 'A task cannot be its own parent' }, 409)
         }
-
-        // Check for circular reference by walking ancestors
-        const ancestors = await db.execute(sql`
-        WITH RECURSIVE ancestors AS (
-          SELECT id, parent_id FROM ${tasks} WHERE id = ${parentId}
-          UNION ALL
-          SELECT t.id, t.parent_id
-          FROM ${tasks} t
-          INNER JOIN ancestors a ON t.id = a.parent_id
-        )
-        SELECT id FROM ancestors WHERE id = ${id}
-      `)
-
-        const ancestorRows = z
-          .array(z.object({ id: z.string() }))
-          .parse(ancestors)
-        if (ancestorRows.length > 0) {
-          return c.json({ error: 'Circular reference detected' }, 409)
-        }
       }
 
-      const updated = firstOrThrow(
-        await db
-          .update(tasks)
-          .set({ parentId, updatedAt: new Date() })
-          .where(eq(tasks.id, id))
-          .returning(),
-      )
+      const parentUpdate = await db.transaction(async (tx) => {
+        await lockTaskRelationWrites(tx)
+        if (parentId != null) {
+          const ancestors = await tx.execute(sql`
+            WITH RECURSIVE ancestors AS (
+              SELECT id, parent_id FROM ${tasks} WHERE id = ${parentId}
+              UNION ALL
+              SELECT t.id, t.parent_id
+              FROM ${tasks} t
+              INNER JOIN ancestors a ON t.id = a.parent_id
+            )
+            SELECT id FROM ancestors WHERE id = ${id}
+          `)
 
-      const labelsByTaskId = await getLabelNamesByTaskId([id])
+          const ancestorRows = z
+            .array(z.object({ id: z.string() }))
+            .parse(ancestors)
+          if (ancestorRows.length > 0) return { kind: 'cycle' as const }
+        }
+
+        const updated = firstOrThrow(
+          await tx
+            .update(tasks)
+            .set({ parentId, updatedAt: new Date() })
+            .where(eq(tasks.id, id))
+            .returning(),
+        )
+        return { kind: 'updated' as const, updated }
+      })
+      if (parentUpdate.kind === 'cycle') {
+        return c.json({ error: 'Circular reference detected' }, 409)
+      }
+      const updated = parentUpdate.updated
+
+      const [labelsByTaskId, fieldValuesByTaskId] = await Promise.all([
+        getLabelNamesByTaskId([id]),
+        getTaskFieldValuesByTaskId([id]),
+      ])
 
       return c.json(
         taskToResponse(
@@ -237,6 +256,7 @@ export const tasksActionsApp = new Hono()
           undefined,
           undefined,
           labelsByTaskId.get(id) ?? [],
+          fieldValuesByTaskId.get(id) ?? [],
         ),
         200,
       )

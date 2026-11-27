@@ -86,6 +86,13 @@ export interface TaskWaitResponse extends TaskWaitSummaryResponse {
   createdAt: string
 }
 
+interface TaskFieldValueResponse {
+  fieldId: string
+  fieldName: string
+  optionId: string
+  optionName: string
+}
+
 export interface TaskResponse {
   id: string
   number: number
@@ -96,6 +103,7 @@ export interface TaskResponse {
   context: 'work' | 'personal'
   priority: TaskPriority | null
   labels: string[]
+  fieldValues: TaskFieldValueResponse[]
   startDate: string | null
   dueDate: string | null
   remindAt: string | null
@@ -149,6 +157,7 @@ export interface TaskListItemResponse {
   context: 'work' | 'personal'
   priority: TaskPriority | null
   labels: string[]
+  fieldValues: TaskFieldValueResponse[]
   startDate: string | null
   dueDate: string | null
   remindAt: string | null
@@ -250,7 +259,7 @@ export function toListItemResponse(
     | 'githubLinks'
     | 'createdAt'
     | 'updatedAt'
-  >,
+  > & { fieldValues?: TaskResponse['fieldValues'] },
   opts: {
     childCompletionCount?: { completed: number; total: number }
     checklistCompletionCount?: { completed: number; total: number }
@@ -269,6 +278,7 @@ export function toListItemResponse(
     context: task.context,
     priority: task.priority,
     labels: task.labels,
+    fieldValues: task.fieldValues ?? [],
     startDate: task.startDate,
     dueDate: task.dueDate,
     remindAt: task.remindAt,
@@ -388,6 +398,14 @@ const taskListItemResponseSchema = z.object({
   context: z.enum(['work', 'personal']),
   priority: taskPriority.nullable(),
   labels: z.array(z.string()),
+  fieldValues: z.array(
+    z.object({
+      fieldId: z.string(),
+      fieldName: z.string(),
+      optionId: z.string(),
+      optionName: z.string(),
+    }),
+  ),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
   remindAt: z.string().nullable(),
@@ -432,6 +450,14 @@ const taskResponseSchema = z.object({
   context: z.enum(['work', 'personal']),
   priority: taskPriority.nullable(),
   labels: z.array(z.string()),
+  fieldValues: z.array(
+    z.object({
+      fieldId: z.string(),
+      fieldName: z.string(),
+      optionId: z.string(),
+      optionName: z.string(),
+    }),
+  ),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
   remindAt: z.string().nullable(),

@@ -45,6 +45,7 @@
 | [public.priority_settings](public.priority_settings.md)                             | 6       | Display names, descriptions, and ordering for the fixed task priorities.                           | BASE TABLE |
 | [public.project_field_options](public.project_field_options.md)                     | 5       | Selectable options defined for a project custom field.                                             | BASE TABLE |
 | [public.project_fields](public.project_fields.md)                                   | 6       | Single-select custom field definitions scoped to a project.                                        | BASE TABLE |
+| [public.task_field_values](public.task_field_values.md)                             | 6       | Single-select custom field values assigned to tasks.                                               | BASE TABLE |
 
 ## Stored procedures and functions
 
@@ -133,6 +134,9 @@ erDiagram
 "public.schedule_constraints" |o--|| "public.schedules" : "FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE"
 "public.project_field_options" }o--|| "public.project_fields" : "FOREIGN KEY (field_id) REFERENCES project_fields(id) ON DELETE CASCADE"
 "public.project_fields" }o--|| "public.projects" : "FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE"
+"public.task_field_values" }o--|| "public.project_field_options" : "FOREIGN KEY (option_id, field_id) REFERENCES project_field_options(id, field_id) ON DELETE CASCADE"
+"public.task_field_values" }o--|| "public.project_fields" : "FOREIGN KEY (field_id, project_id) REFERENCES project_fields(id, project_id) ON DELETE CASCADE"
+"public.task_field_values" }o--|| "public.tasks" : "FOREIGN KEY (task_id, project_id) REFERENCES tasks(id, project_id) ON DELETE CASCADE"
 
 "public.assets" {
   text id
@@ -520,6 +524,14 @@ erDiagram
   text project_id FK
   text name
   text type
+  timestamp_with_time_zone created_at
+  timestamp_with_time_zone updated_at
+}
+"public.task_field_values" {
+  text task_id FK
+  text project_id FK
+  uuid field_id FK
+  uuid option_id FK
   timestamp_with_time_zone created_at
   timestamp_with_time_zone updated_at
 }

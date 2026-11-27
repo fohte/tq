@@ -1,4 +1,5 @@
 import { recurrenceRules, taskGithubLinks, tasks, timeBlocks } from '#db/schema'
+import type { TaskFieldValue } from '#services/task-field-values'
 
 export function recurrenceRuleToResponse(
   rule: typeof recurrenceRules.$inferSelect,
@@ -35,6 +36,7 @@ function taskCoreFieldsToResponse(
   rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
+  fieldValues: TaskFieldValue[] = [],
 ) {
   return {
     id: task.id,
@@ -45,6 +47,7 @@ function taskCoreFieldsToResponse(
     context: task.context,
     priority: task.priority,
     labels: labelNames,
+    fieldValues,
     startDate: task.startDate,
     dueDate: task.dueDate,
     remindAt: task.remindAt?.toISOString() ?? null,
@@ -65,9 +68,16 @@ function taskCoreToResponse(
   rule: typeof recurrenceRules.$inferSelect | null = null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
+  fieldValues: TaskFieldValue[] = [],
 ) {
   return {
-    ...taskCoreFieldsToResponse(task, rule, githubLinks, labelNames),
+    ...taskCoreFieldsToResponse(
+      task,
+      rule,
+      githubLinks,
+      labelNames,
+      fieldValues,
+    ),
     description: task.description,
   }
 }
@@ -77,8 +87,15 @@ export function taskToResponse(
   rule?: typeof recurrenceRules.$inferSelect | null,
   githubLinks: (typeof taskGithubLinks.$inferSelect)[] = [],
   labelNames: string[] = [],
+  fieldValues: TaskFieldValue[] = [],
 ) {
-  return taskCoreToResponse(task, rule ?? null, githubLinks, labelNames)
+  return taskCoreToResponse(
+    task,
+    rule ?? null,
+    githubLinks,
+    labelNames,
+    fieldValues,
+  )
 }
 
 export function timeBlockToResponse(block: typeof timeBlocks.$inferSelect) {

@@ -6,6 +6,7 @@ import { parseGithubIssueUrl } from '#integrations/github/issues'
 import { setChangeEventTaskIds } from '#lib/change-events'
 import { githubLinkErrorResponse } from '#routes/github-link-error'
 import { taskToResponse } from '#routes/tasks/shared'
+import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
 import { createTaskFromGithubUrl } from '#services/task-github-links'
 
 const fromGithubSchema = z.object({ url: z.string().min(1) })
@@ -21,10 +22,20 @@ export const tasksGithubApp = new Hono().post(
     )
 
     return result.match(
-      ({ task, link, created }) => {
+      async ({ task, link, created }) => {
         setChangeEventTaskIds(c, created ? [task.id] : [])
+        const fieldValuesByTaskId = await getTaskFieldValuesByTaskId([task.id])
         return c.json(
-          { created, task: taskToResponse(task, undefined, [link]) },
+          {
+            created,
+            task: taskToResponse(
+              task,
+              undefined,
+              [link],
+              [],
+              fieldValuesByTaskId.get(task.id) ?? [],
+            ),
+          },
           created ? 201 : 200,
         )
       },

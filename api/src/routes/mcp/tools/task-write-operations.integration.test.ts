@@ -161,6 +161,13 @@ describe('task_create tool', () => {
           type: 'array',
           items: { type: 'string', minLength: 1 },
         },
+        fieldValues: {
+          additionalProperties: { type: ['string', 'null'] },
+          propertyNames: { minLength: 1, type: 'string' },
+          type: 'object',
+          description:
+            'Project custom field values keyed by a non-empty field id or name, with option id or name as values. Use null to clear a field.',
+        },
         recurrenceRule: {
           type: 'object',
           properties: {
@@ -332,6 +339,7 @@ describe('task_create tool', () => {
       context: 'work',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -346,6 +354,28 @@ describe('task_create tool', () => {
       createdAt: '<timestamp>',
       updatedAt: '<timestamp>',
       linkSync: { added: [], unresolvedRefs: [] },
+    })
+  })
+
+  it('returns the missing field name when task_create receives an unknown field', async () => {
+    const projectResponse = await app.request('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Sample Observatory' }),
+    })
+    const project = await jsonBody<{ id: string }>(projectResponse)
+
+    const result = await callMcpTool(client, 'task_create', {
+      title: 'Observe a signal',
+      projectId: project.id,
+      fieldValues: { 'Missing Signal Phase': 'North Route' },
+    })
+
+    expect(result).toEqual({
+      isError: true,
+      content: [
+        { type: 'text', text: 'Field not found: Missing Signal Phase' },
+      ],
     })
   })
 
@@ -407,6 +437,7 @@ describe('task_create tool', () => {
       context: 'personal',
       priority: null,
       labels: ['new-label', 'urgent'],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -496,6 +527,7 @@ describe('task_update tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -532,6 +564,7 @@ describe('task_update tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -579,6 +612,7 @@ describe('task_update tool', () => {
       context: 'personal',
       priority: null,
       labels: ['bug'],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -615,6 +649,7 @@ describe('task_complete tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -674,6 +709,7 @@ describe('task_complete tool', () => {
       context: 'personal',
       priority: null,
       labels: ['urgent'],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -709,6 +745,7 @@ describe('task_complete tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -738,6 +775,7 @@ describe('task_complete tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -771,6 +809,7 @@ describe('task_complete tool', () => {
         context: 'personal',
         priority: null,
         labels: [],
+        fieldValues: [],
         startDate: null,
         dueDate: null,
         remindAt: null,
@@ -856,6 +895,7 @@ describe('task_status tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -904,6 +944,7 @@ describe('task_parent tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,
@@ -941,6 +982,7 @@ describe('task_parent tool', () => {
       context: 'personal',
       priority: null,
       labels: [],
+      fieldValues: [],
       startDate: null,
       dueDate: null,
       remindAt: null,

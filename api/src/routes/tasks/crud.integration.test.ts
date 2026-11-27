@@ -1,8 +1,13 @@
 import { and, eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 
 import { app } from '#app'
 import { db } from '#db/connection'
+import { dbContext } from '#db/context'
+import * as schema from '#db/schema'
 import {
   edits,
   recurrenceRules,
@@ -14,6 +19,7 @@ import {
   taskRelations,
   tasks,
 } from '#db/schema'
+import { DATABASE_URL } from '#env'
 import {
   mockGithubIssueResponse,
   upsertGithubToken,
@@ -36,6 +42,7 @@ import {
   withoutLinkSync,
 } from '#routes/tasks/testing'
 import { createTaskResponseSchema } from '#schemas/task-response'
+import { lockTaskGithubLinks } from '#services/task-github-blockers'
 import {
   assertDefined,
   captureDbQueries,
@@ -77,6 +84,35 @@ function setBlockedBy(taskId: string, blockedBy: string[]) {
   })
 }
 
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
+async function waitForApplicationLockWait(
+  monitorClient: ReturnType<typeof postgres>,
+  backendPid: number,
+): Promise<void> {
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const [activity] = await monitorClient`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_stat_activity
+        WHERE pid = ${backendPid}
+          AND state = 'active'
+          AND wait_event_type = 'Lock'
+      ) AS waiting
+    `
+    if (activity?.['waiting'] === true) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error(`Database lock wait did not start: ${String(backendPid)}`)
+}
+
 async function createProject(title: string) {
   const res = await app.request('/api/projects', {
     method: 'POST',
@@ -97,19 +133,32 @@ function normalizeTimeBlock(block: TimeBlockResponse) {
   }
 }
 
+type TaskResponseShape = {
+  id: string
+  number: number
+  createdAt: string
+  updatedAt: string
+  fieldValues: unknown
+}
+
+type NormalizedTask<T extends TaskResponseShape> = Omit<
+  T,
+  'id' | 'number' | 'createdAt' | 'updatedAt'
+> & {
+  id: 'ID'
+  number: -1
+  createdAt: 'TIMESTAMP'
+  updatedAt: 'TIMESTAMP'
+}
+
 // Generic (rather than `TaskResponse`-typed) so it also accepts the
 // zod-inferred return type of `createTask`/`createTask`-derived PATCH
 // responses, whose optional fields are typed as `T | undefined` and would
 // otherwise conflict with `TaskResponse`'s plain optional fields under
 // `exactOptionalPropertyTypes`.
-function normalizeTask<
-  T extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
-  },
->(task: T) {
+function normalizeTask<T extends TaskResponseShape>(
+  task: T,
+): NormalizedTask<T> {
   return {
     ...task,
     id: 'ID',
@@ -120,19 +169,12 @@ function normalizeTask<
 }
 
 function normalizeTaskResponsePair<
-  Raw extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
-  },
-  Parsed extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
-  },
->(raw: Raw, parsed: Parsed) {
+  Raw extends TaskResponseShape,
+  Parsed extends TaskResponseShape,
+>(
+  raw: Raw,
+  parsed: Parsed,
+): { raw: NormalizedTask<Raw>; parsed: NormalizedTask<Parsed> } {
   return {
     raw: normalizeTask(raw),
     parsed: normalizeTask(parsed),
@@ -374,6 +416,7 @@ function createdTaskResponse(
     context: 'personal',
     priority,
     labels: [],
+    fieldValues: [],
     startDate: null,
     dueDate: null,
     remindAt: null,
@@ -455,15 +498,16 @@ async function attachLegacyRecurrenceRule(
 }
 
 function normalizeRecurringTask<
-  T extends {
-    id: string
-    number: number
-    createdAt: string
-    updatedAt: string
+  T extends TaskResponseShape & {
     recurrenceRule: { id: string } | null
     templateId: string | null
   },
->(task: T) {
+>(
+  task: T,
+): Omit<NormalizedTask<T>, 'recurrenceRule' | 'templateId'> & {
+  recurrenceRule: { id: 'RULE_ID' } | null
+  templateId: 'TEMPLATE_ID' | null
+} {
   return {
     ...normalizeTask(task),
     recurrenceRule:
@@ -711,6 +755,7 @@ describe('tasks CRUD API', () => {
         context: 'personal',
         priority: null,
         labels: [],
+        fieldValues: [],
         startDate: null,
         dueDate: null,
         remindAt: null,
@@ -1242,6 +1287,7 @@ describe('tasks CRUD API', () => {
         context: 'personal',
         priority: null,
         labels: [],
+        fieldValues: [],
         startDate: null,
         dueDate: null,
         remindAt: null,
@@ -3215,7 +3261,7 @@ describe('tasks CRUD API', () => {
       const actual = relatedTaskQueryCountSnapshot(
         relatedTaskHydrationQueryCount,
       )
-      const expected = relatedTaskQueryCountSnapshot(8)
+      const expected = relatedTaskQueryCountSnapshot(9)
 
       expect(actual).toEqual(expected)
     })
@@ -4084,6 +4130,136 @@ describe('tasks CRUD API', () => {
     }
 
     describe('PATCH /api/tasks/:id', () => {
+      it('does not deadlock when clearing blockers overlaps a GitHub link insert', async () => {
+        const fixtureClient = postgres(DATABASE_URL, { max: 1 })
+        const updateClient = postgres(DATABASE_URL, {
+          max: 1,
+          connection: { application_name: 'blocked-by-update-test' },
+        })
+        const barrierClient = postgres(DATABASE_URL, { max: 1 })
+        const monitorClient = postgres(DATABASE_URL, { max: 1 })
+        const fixtureDb = drizzle(fixtureClient, { schema })
+        const updateDb = drizzle(updateClient, { schema })
+        const barrierDb = drizzle(barrierClient, { schema })
+        let taskId: string | undefined
+        let releaseInsert: (() => void) | undefined
+        let linkTransaction: Promise<void> | undefined
+        let updateResponse: Promise<Response> | undefined
+
+        try {
+          const task = await dbContext.run(fixtureDb, () =>
+            createTask('Task with blockers'),
+          )
+          taskId = task.id
+
+          const linkLockHeld = deferred()
+          const allowInsert = deferred()
+          releaseInsert = allowInsert.resolve
+          const linkTransactionPromise = barrierDb.transaction(async (tx) => {
+            await lockTaskGithubLinks(tx, task.id)
+            linkLockHeld.resolve()
+            await allowInsert.promise
+            await tx.insert(taskGithubLinks).values({
+              taskId: task.id,
+              owner: 'sample-owner',
+              repo: 'sample-repo',
+              number: 73,
+              role: 'blocker',
+              notifyEvents: ['closed'],
+              kind: 'issue',
+              url: 'https://github.com/sample-owner/sample-repo/issues/73',
+              state: 'open',
+              title: 'Sample blocker',
+            })
+          })
+          linkTransaction = linkTransactionPromise
+          void linkTransactionPromise.catch(() => undefined)
+          await linkLockHeld.promise
+
+          const updateBackendPid = z
+            .number()
+            .parse(
+              firstOrThrow(await updateClient`SELECT pg_backend_pid() AS pid`)[
+                'pid'
+              ],
+            )
+          const updateResponsePromise = Promise.resolve(
+            dbContext.run(updateDb, () => setBlockedBy(task.id, [])),
+          )
+          updateResponse = updateResponsePromise
+          const lockWaitObserved = await waitForApplicationLockWait(
+            monitorClient,
+            updateBackendPid,
+          ).then(
+            () => true,
+            () => false,
+          )
+          allowInsert.resolve()
+
+          const [updateResult, linkResult] = await Promise.allSettled([
+            updateResponsePromise,
+            linkTransactionPromise,
+          ])
+          const updateStatus =
+            updateResult.status === 'fulfilled'
+              ? updateResult.value.status
+              : 'rejected'
+          const linkInsertOutcome =
+            linkResult.status === 'fulfilled' ? 'inserted' : 'rejected'
+          const remainingLinks = await fixtureDb
+            .select({
+              owner: taskGithubLinks.owner,
+              repo: taskGithubLinks.repo,
+              number: taskGithubLinks.number,
+              role: taskGithubLinks.role,
+            })
+            .from(taskGithubLinks)
+            .where(eq(taskGithubLinks.taskId, task.id))
+            .orderBy(taskGithubLinks.seq)
+
+          expect(
+            responseSnapshot(200, {
+              lockWaitObserved,
+              updateStatus,
+              linkInsertOutcome,
+              remainingLinks: remainingLinks.map(
+                ({ owner, repo, number, role }) => ({
+                  owner,
+                  repo,
+                  number,
+                  role,
+                }),
+              ),
+            }),
+          ).toEqual(
+            responseSnapshot(200, {
+              lockWaitObserved: true,
+              updateStatus: 200,
+              linkInsertOutcome: 'inserted',
+              remainingLinks: [],
+            }),
+          )
+        } finally {
+          releaseInsert?.()
+          await Promise.all([
+            updateResponse?.catch(() => undefined),
+            linkTransaction?.catch(() => undefined),
+          ])
+          if (taskId != null) {
+            const taskToDelete = taskId
+            await dbContext.run(fixtureDb, () =>
+              app.request(`/api/tasks/${taskToDelete}`, { method: 'DELETE' }),
+            )
+          }
+          await Promise.all([
+            fixtureClient.end(),
+            updateClient.end(),
+            barrierClient.end(),
+            monitorClient.end(),
+          ])
+        }
+      }, 20_000)
+
       it('keeps retained GitHub blocker rows and removes omitted ones', async () => {
         const task = await createTask('Blocked task')
         const retainedUrl =
@@ -4987,6 +5163,7 @@ describe('tasks CRUD API', () => {
           context: 'personal',
           priority: null,
           labels: [],
+          fieldValues: [],
           startDate: null,
           dueDate: '2026-03-22',
           remindAt: null,

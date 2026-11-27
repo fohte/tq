@@ -390,7 +390,15 @@ function registerOperationsInGroup(
     }
 
     for (const option of operation.cli.customOptions ?? []) {
-      command = command.option(option.flags, option.description)
+      command =
+        option.repeatable === true
+          ? command.option(
+              option.flags,
+              option.description,
+              (value: string, previous: string[]) => [...previous, value],
+              [],
+            )
+          : command.option(option.flags, option.description)
     }
 
     const excluded = [

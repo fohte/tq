@@ -1,4 +1,4 @@
-import { err, errAsync, ok, okAsync } from 'neverthrow'
+import { err, errAsync, ok, okAsync, type Result } from 'neverthrow'
 import { z } from 'zod'
 
 import { taskIdOrNumber } from '#lib/numeric-id'
@@ -57,32 +57,88 @@ function mapCreateCliInput(
   input: Record<string, unknown>,
   options: Record<string, unknown>,
 ) {
-  return recurrenceRuleFromCli(options).map((recurrenceRule) => ({
-    ...input,
-    ...(optionString(options, 'parentId') === undefined
-      ? {}
-      : { parentId: optionString(options, 'parentId') }),
-    ...(recurrenceRule === undefined ? {} : { recurrenceRule }),
-  }))
+  return recurrenceRuleFromCli(options).andThen((recurrenceRule) =>
+    fieldValuesFromCli(options).map(
+      (fieldValues: Record<string, string | null> | undefined) => ({
+        ...input,
+        ...(optionString(options, 'parentId') === undefined
+          ? {}
+          : { parentId: optionString(options, 'parentId') }),
+        ...(recurrenceRule === undefined ? {} : { recurrenceRule }),
+        ...(fieldValues === undefined ? {} : { fieldValues }),
+      }),
+    ),
+  )
+}
+
+function fieldValuesFromCli(
+  options: Record<string, unknown>,
+): Result<Record<string, string | null> | undefined, Error> {
+  const raw = options['field']
+  if (raw === undefined) return ok(undefined)
+  if (!Array.isArray(raw)) return err(new Error('Invalid --field value'))
+  if (raw.length === 0) return ok(undefined)
+  const fieldEntries: Array<[string, string | null]> = []
+  for (const value of raw) {
+    if (typeof value !== 'string') {
+      return err(new Error('Invalid --field value'))
+    }
+    const field: string[] = []
+    let separator = -1
+    // フィールド名にも `=` が使えるため、`\=` は区切り文字として扱わない。
+    for (let index = 0; index < value.length; index += 1) {
+      const char = value.charAt(index)
+      if (char === '\\') {
+        const next = value.charAt(index + 1)
+        if (next === '=') {
+          field.push('=')
+          index += 1
+        } else if (next === '\\') {
+          field.push('\\')
+          index += 1
+        } else {
+          field.push('\\')
+        }
+      } else if (char === '=') {
+        separator = index
+        break
+      } else {
+        field.push(char)
+      }
+    }
+    if (separator < 0 || field.length === 0) {
+      return err(new Error('--field must use <field>=<option>'))
+    }
+    fieldEntries.push([
+      field.join(''),
+      value.slice(separator + 1) === '' ? null : value.slice(separator + 1),
+    ])
+  }
+  return ok(Object.fromEntries(fieldEntries))
 }
 
 function mapUpdateCliInput(
   input: Record<string, unknown>,
   options: Record<string, unknown>,
 ) {
-  return recurrenceRuleFromCli(options).andThen((recurrenceRule) => {
-    const mappedInput = { ...input }
-    if (recurrenceRule !== undefined) {
-      mappedInput['recurrenceRule'] = recurrenceRule
-    } else if (options['recurrence'] === false) {
-      mappedInput['recurrenceRule'] = null
-    }
+  return recurrenceRuleFromCli(options).andThen((recurrenceRule) =>
+    fieldValuesFromCli(options).andThen(
+      (fieldValues: Record<string, string | null> | undefined) => {
+        const mappedInput = { ...input }
+        if (recurrenceRule !== undefined) {
+          mappedInput['recurrenceRule'] = recurrenceRule
+        } else if (options['recurrence'] === false) {
+          mappedInput['recurrenceRule'] = null
+        }
+        if (fieldValues !== undefined) mappedInput['fieldValues'] = fieldValues
 
-    if (Object.keys(mappedInput).every((key) => key === 'taskId')) {
-      return err(new Error('Pass at least one flag to update'))
-    }
-    return ok(mappedInput)
-  })
+        if (Object.keys(mappedInput).every((key) => key === 'taskId')) {
+          return err(new Error('Pass at least one flag to update'))
+        }
+        return ok(mappedInput)
+      },
+    ),
+  )
 }
 
 function getTaskDeleteSummary(
@@ -133,7 +189,7 @@ export const taskWriteOperations = [
     cli: {
       commandOrder: 3,
       description: 'Create a task',
-      excludeFields: ['parentId', 'recurrenceRule'],
+      excludeFields: ['parentId', 'recurrenceRule', 'fieldValues'],
       envDefaults: { context: 'TQ_CONTEXT' },
       commaSeparatedOptions: ['labels', 'blockedBy'],
       optionDescriptions: {
@@ -146,6 +202,12 @@ export const taskWriteOperations = [
       },
       optionMetavars: { labels: 'names', blockedBy: 'items', template: 'name' },
       customOptions: [
+        {
+          flags: '--field <field=option>',
+          description:
+            'Set or clear a project field with an unescaped = separator; escape = as \\= and \\ as \\\\ in field names; other single backslashes stay literal; repeat for multiple fields',
+          repeatable: true,
+        },
         {
           flags: '--parent-id <id>',
           description: 'Id or number of the parent task',
@@ -177,7 +239,7 @@ export const taskWriteOperations = [
     cli: {
       commandOrder: 4,
       description: 'Update a task',
-      excludeFields: ['recurrenceRule'],
+      excludeFields: ['recurrenceRule', 'fieldValues'],
       commaSeparatedOptions: ['labels', 'blockedBy'],
       optionDescriptions: {
         blockedBy:
@@ -187,6 +249,12 @@ export const taskWriteOperations = [
       },
       optionMetavars: { labels: 'names', blockedBy: 'items' },
       customOptions: [
+        {
+          flags: '--field <field=option>',
+          description:
+            'Set or clear a project field with an unescaped = separator; escape = as \\= and \\ as \\\\ in field names; other single backslashes stay literal; repeat for multiple fields',
+          repeatable: true,
+        },
         ...recurrenceCliOptions(),
         {
           flags: '--no-recurrence',

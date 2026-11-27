@@ -71,6 +71,14 @@ export const createTaskResponseSchema = z.object({
   context: contextEnum,
   priority: taskPriority.nullable(),
   labels: z.array(z.string()),
+  fieldValues: z.array(
+    z.object({
+      fieldId: z.uuid(),
+      fieldName: z.string(),
+      optionId: z.uuid(),
+      optionName: z.string(),
+    }),
+  ),
   startDate: z.string().nullable(),
   dueDate: z.string().nullable(),
   remindAt: z.iso.datetime().nullable(),

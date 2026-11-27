@@ -65,6 +65,7 @@ export function useCreateTask() {
         context: input.context ?? 'personal',
         priority: input.priority ?? null,
         labels: input.labels ?? [],
+        fieldValues: [],
         startDate: input.startDate ?? null,
         dueDate: input.dueDate ?? null,
         remindAt: null,

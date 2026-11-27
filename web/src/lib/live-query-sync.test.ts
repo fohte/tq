@@ -642,6 +642,20 @@ describe('connectLiveQuerySync', () => {
       expectedUnresolvedPreviews: [0, 0],
     },
     {
+      resource: 'project',
+      expectedInvalidationKeys: [
+        projectKeys.all,
+        taskKeys.lists,
+        taskKeys.infiniteLists,
+        'predicate',
+      ],
+      expectedTaskLists: [1, 1],
+      expectedTaskCounts: 0,
+      expectedLabelCounts: 0,
+      expectedOtherQueries: [0, 0, 0, 0, 1, 0],
+      expectedUnresolvedPreviews: [0, 0],
+    },
+    {
       resource: 'time_block',
       expectedInvalidationKeys: [timeBlockKeys.all, 'predicate'],
       expectedTaskLists: [0, 0],

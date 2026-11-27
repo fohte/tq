@@ -16,6 +16,10 @@ import {
 } from '#routes/tasks/checklist-data'
 import { taskCoreFieldsToResponse } from '#routes/tasks/task-response'
 import {
+  getTaskFieldValuesByTaskId,
+  type TaskFieldValue,
+} from '#services/task-field-values'
+import {
   getOpenGithubBlockerRefsByTaskId,
   type GithubBlockerRef,
 } from '#services/task-github-blockers'
@@ -155,9 +159,16 @@ function taskListItemFieldsToResponse(
   blockedByNumbers: number[] = [],
   blockedByGithubRefs: GithubBlockerRef[] = [],
   waits: TaskWaitSummary[] = [],
+  fieldValues: TaskFieldValue[] = [],
 ) {
   return {
-    ...taskCoreFieldsToResponse(task, rule, githubLinks, labelNames),
+    ...taskCoreFieldsToResponse(
+      task,
+      rule,
+      githubLinks,
+      labelNames,
+      fieldValues,
+    ),
     parentNumber,
     duplicateOfNumber,
     blockedByNumbers,
@@ -225,6 +236,7 @@ async function hydrateTaskListRowsWith<
     waitsByTaskId,
     recurrenceRulesById,
     recurrenceRulesByTemplateId,
+    fieldValuesByTaskId,
   ] = await Promise.all([
     getLabelNamesByTaskId(ids),
     getChildCompletionCountsByTaskId(ids),
@@ -236,6 +248,7 @@ async function hydrateTaskListRowsWith<
     getVisibleTaskWaitSummariesByTaskId(ids),
     getRecurrenceRulesByIds(ruleIds),
     getRecurrenceRulesByTemplateIds(templateIds),
+    getTaskFieldValuesByTaskId(ids),
   ])
 
   return rows.map((r) => {
@@ -257,6 +270,7 @@ async function hydrateTaskListRowsWith<
       blockedByNumbersByTaskId.get(r.task.id) ?? [],
       openGithubBlockerRefsByTaskId.get(r.task.id) ?? [],
       waitsByTaskId.get(r.task.id) ?? [],
+      fieldValuesByTaskId.get(r.task.id) ?? [],
     )
     const childCompletionCount = childCompletionCountsByTaskId.get(
       r.task.id,

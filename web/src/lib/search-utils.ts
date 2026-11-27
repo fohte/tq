@@ -38,6 +38,7 @@ export function taskDetailToSearchResult(task: TaskDetail): SearchResult {
     context: task.context,
     priority: task.priority,
     labels: task.labels,
+    fieldValues: task.fieldValues,
     startDate: task.startDate,
     dueDate: task.dueDate,
     remindAt: task.remindAt,

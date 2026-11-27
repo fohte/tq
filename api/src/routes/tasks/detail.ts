@@ -16,6 +16,7 @@ import {
   taskToResponse,
   timeBlockToResponse,
 } from '#routes/tasks/shared'
+import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
 import {
   getTaskGithubBlockers,
   toOpenGithubBlockerRefs,
@@ -81,6 +82,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     waits,
     checklistData,
     relatedTasks,
+    fieldValuesByTaskId,
   ] = await Promise.all([
     db
       .select({
@@ -123,6 +125,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
     listTaskWaits(id),
     getTaskChecklistData(id),
     relatedTasksPromise,
+    getTaskFieldValuesByTaskId([id]),
   ])
 
   const pageAuthors = await getPageAuthors(pages.map((page) => page.id))
@@ -134,6 +137,7 @@ export const tasksDetailApp = new Hono().get('/:id', requireTask, async (c) => {
         rule,
         githubLinksByTaskId.get(id) ?? [],
         labelsByTaskId.get(id) ?? [],
+        fieldValuesByTaskId.get(id) ?? [],
       ),
       titleAuthor: taskFieldAuthors.title,
       descriptionAuthor: taskFieldAuthors.description,

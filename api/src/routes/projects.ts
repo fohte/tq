@@ -3,12 +3,13 @@ import { and, count, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
-import { projects, tasks } from '#db/schema'
+import { projects, taskFieldValues, tasks } from '#db/schema'
 import {
   createProjectSchema,
   listProjectsQuerySchema,
   updateProjectSchema,
 } from '#schemas/project'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 function projectToResponse(project: typeof projects.$inferSelect) {
   return {
@@ -176,14 +177,25 @@ export const projectsApp = new Hono()
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
 
-    const existing = await db.query.projects.findFirst({
-      where: eq(projects.id, id),
+    const [deleted] = await db.transaction(async (tx) => {
+      await lockTaskRelationWrites(tx)
+      await tx.execute(sql`
+        WITH locked_tasks AS MATERIALIZED (
+          SELECT id
+          FROM ${tasks}
+          WHERE ${tasks.projectId} = ${id}
+          ORDER BY ${tasks.id}
+          FOR UPDATE
+        )
+        SELECT count(*) FROM locked_tasks
+      `)
+      await tx.delete(taskFieldValues).where(eq(taskFieldValues.projectId, id))
+      return tx
+        .delete(projects)
+        .where(eq(projects.id, id))
+        .returning({ id: projects.id })
     })
-    if (!existing) {
-      return c.json({ error: 'Project not found' }, 404)
-    }
-
-    await db.delete(projects).where(eq(projects.id, id))
+    if (!deleted) return c.json({ error: 'Project not found' }, 404)
 
     return c.body(null, 204)
   })
