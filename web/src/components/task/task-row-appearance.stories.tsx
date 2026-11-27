@@ -542,6 +542,24 @@ export const WithFieldValues: Story = {
   },
 }
 
+export const WithLongFieldValues: Story = {
+  name: 'the row truncates long project field names to fit its width',
+  args: {
+    task: makeTask({
+      title: 'Prepare the sample workspace',
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-customer-readiness-classification',
+          fieldName: 'Customer Readiness Classification',
+          optionId: 'option-prepared-for-regional-launch',
+          optionName: 'Prepared for the Regional Launch',
+        }),
+      ],
+    }),
+  },
+  render: ({ task }) => <TaskRowAppearanceNarrow task={task} />,
+}
+
 export const WithProject: Story = {
   name: 'the row shows a task linked to a project',
   parameters: {

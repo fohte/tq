@@ -110,11 +110,11 @@ export function TaskRowAppearance({
   const secondLineItems: React.ReactNode[] = [
     task.labels.length > 0 ? <TagTokens labels={task.labels} /> : null,
     fieldValues.length > 0 ? (
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
         {fieldValues.map(({ fieldId, fieldName, optionName }) => (
           <span
             key={fieldId}
-            className="inline-flex shrink-0 items-center rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+            className="inline-flex min-w-0 max-w-full shrink truncate items-center rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
             data-testid="task-field-value"
           >
             {fieldName}: {optionName}
