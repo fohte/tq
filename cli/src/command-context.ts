@@ -54,10 +54,20 @@ export function buildClient(
   command: Command,
   fetchImpl: typeof fetch,
 ): Result<Client, Error> {
+  return buildClientConfig(command).map((config) =>
+    createClient(config, fetchImpl),
+  )
+}
+
+export function buildClientConfig(command: Command): Result<
+  {
+    apiUrl: string
+    headers: Record<string, string>
+  },
+  Error
+> {
   const options = command.optsWithGlobals<GlobalOptions>()
   return resolveApiUrl(command).andThen((apiUrl) =>
-    resolveHeaders(options).map((headers) =>
-      createClient({ apiUrl, headers }, fetchImpl),
-    ),
+    resolveHeaders(options).map((headers) => ({ apiUrl, headers })),
   )
 }

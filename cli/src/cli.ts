@@ -1,6 +1,7 @@
 import { operations } from 'api/operations'
 import { Command, CommanderError, Option } from 'commander'
 
+import { registerEventsCommand } from '#commands/events'
 import { hookOperationHandler } from '#commands/hook'
 import { linkOperationHandler } from '#commands/link'
 import { formatError } from '#errors'
@@ -56,6 +57,7 @@ function buildProgram(
     },
     { removedCommandHints },
   )
+  registerEventsCommand(program, fetchImpl)
 
   return program
 }
