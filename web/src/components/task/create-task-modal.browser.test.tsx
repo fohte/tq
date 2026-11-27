@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent, {
   PointerEventsCheckLevel,
   type UserEvent,
@@ -510,7 +510,10 @@ describe('CreateTaskModal', () => {
       const titleInput = assertDefined(
         findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
       )
-      await user.type(titleInput, 'Prepare delivery guide')
+      await user.click(titleInput)
+      fireEvent.change(titleInput, {
+        target: { value: 'Prepare delivery guide' },
+      })
       await user.keyboard('{Meta>}{Enter}{/Meta}')
 
       expect(mutate.inputs).toEqual([
