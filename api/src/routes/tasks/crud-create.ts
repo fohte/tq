@@ -41,6 +41,7 @@ import {
 } from '#services/task-github-blockers'
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 export const tasksCreateApp = new Hono().post(
   '/',
@@ -90,6 +91,9 @@ export const tasksCreateApp = new Hono().post(
     }
 
     const transactionResult = await db.transaction(async (tx) => {
+      if (parentId != null || blockedByTargetIds.length > 0) {
+        await lockTaskRelationWrites(tx)
+      }
       const resolvedFieldValues:
         | {
             error: string
@@ -192,11 +196,7 @@ export const tasksCreateApp = new Hono().post(
           ? await syncTaskLabels(tx, task.id, input.labels, task.context)
           : []
 
-      // Inserted directly (not via `syncTaskBlockedBy`) so a blocker
-      // deleted between the existence check above and here aborts the
-      // whole insert atomically instead of leaving an orphaned task with
-      // a missing blocker. A cycle can't happen for a brand-new task, so
-      // `syncTaskBlockedBy`'s advisory-lock/cycle check isn't needed here.
+      // 解決後に blocker が削除された場合、FK 違反で task 作成全体を rollback するため、transaction 内で直接挿入する。
       if (blockedByTargetIds.length > 0) {
         await tx.insert(taskRelations).values(
           blockedByTargetIds.map((targetTaskId) => ({

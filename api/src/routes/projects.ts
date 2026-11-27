@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, asc, count, eq, ilike, inArray, sql } from 'drizzle-orm'
+import { and, count, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 
 import { db } from '#db/connection'
@@ -9,6 +9,7 @@ import {
   listProjectsQuerySchema,
   updateProjectSchema,
 } from '#schemas/project'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 function projectToResponse(project: typeof projects.$inferSelect) {
   return {
@@ -177,13 +178,17 @@ export const projectsApp = new Hono()
     const id = c.req.param('id')
 
     const [deleted] = await db.transaction(async (tx) => {
-      // task 更新と同じ順でロックし、値行を保持したまま task 行を待たない。
-      await tx
-        .select({ id: tasks.id })
-        .from(tasks)
-        .where(eq(tasks.projectId, id))
-        .orderBy(asc(tasks.id))
-        .for('update')
+      await lockTaskRelationWrites(tx)
+      await tx.execute(sql`
+        WITH locked_tasks AS MATERIALIZED (
+          SELECT id
+          FROM ${tasks}
+          WHERE ${tasks.projectId} = ${id}
+          ORDER BY ${tasks.id}
+          FOR UPDATE
+        )
+        SELECT count(*) FROM locked_tasks
+      `)
       await tx.delete(taskFieldValues).where(eq(taskFieldValues.projectId, id))
       return tx
         .delete(projects)

@@ -10,6 +10,7 @@ import {
 } from '#routes/tasks/change-event-task-ids'
 import { requireTask } from '#routes/tasks/shared'
 import { deleteRecurrenceRuleIfUnreferenced } from '#services/recurrence-rule-cleanup'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 export const tasksDeleteApp = new Hono().delete(
   '/:id',
@@ -21,6 +22,7 @@ export const tasksDeleteApp = new Hono().delete(
     const checklistOwnerIds = await getTaskChecklistOwnerIds(id)
 
     const reparentedChildIds = await db.transaction(async (tx) => {
+      await lockTaskRelationWrites(tx)
       // Reparent children to the deleted task's parent (or top-level if
       // none) before deleting, so the tree structure above the deleted task
       // is preserved. The parent is re-read from the row here rather than

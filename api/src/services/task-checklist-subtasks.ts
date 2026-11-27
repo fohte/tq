@@ -20,12 +20,15 @@ import { lockItemChecklistWith } from '#services/task-checklist-locking'
 import { recalculateChecklistAncestors } from '#services/task-checklist-progress'
 import { collectChecklistDescendants } from '#services/task-checklist-subtask-tree'
 import { syncTaskLabels } from '#services/task-labels'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 export async function promoteChecklistItemToSubtask(
   tx: DbTransaction,
   itemId: string,
   author: EditAuthor,
 ): Promise<Result<{ item: ChecklistItem; taskIds: string[] }, ChecklistError>> {
+  await lockTaskRelationWrites(tx)
+
   type ParentTask = Pick<
     typeof tasks.$inferSelect,
     'id' | 'context' | 'projectId'

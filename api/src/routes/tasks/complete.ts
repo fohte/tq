@@ -29,6 +29,7 @@ import {
   taskStatusReasonRequiredMessage,
 } from '#services/task-conventions'
 import { getTaskFieldValuesByTaskId } from '#services/task-field-values'
+import { lockTaskRelationWrites } from '#services/task-relations'
 import { dispatchTaskStatusChangedWebhook } from '#services/task-status-webhooks'
 
 export const tasksCompleteApp = new Hono().post(
@@ -72,6 +73,9 @@ export const tasksCompleteApp = new Hono().post(
     // otherwise both see the stale pre-completion status and both record a
     // status_changed event.
     const result = await db.transaction(async (tx) => {
+      if (duplicateTarget != null) {
+        await lockTaskRelationWrites(tx)
+      }
       const current = firstOrThrow(
         await tx
           .select({

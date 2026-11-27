@@ -25,6 +25,7 @@ import {
   getTemplateLabelNamesByTemplateIds,
   syncTemplateLabels,
 } from '#services/recurring-task-template-labels'
+import { lockTaskRelationWrites } from '#services/task-relations'
 
 function templateToResponse(
   template: typeof recurringTaskTemplates.$inferSelect,
@@ -79,6 +80,9 @@ export const recurringTaskTemplatesApp = new Hono()
 
       const { template, rule, labelNames } = await db.transaction(
         async (tx) => {
+          if (parentId != null) {
+            await lockTaskRelationWrites(tx)
+          }
           const rule = firstOrThrow(
             await tx
               .insert(recurrenceRules)
@@ -171,6 +175,7 @@ export const recurringTaskTemplatesApp = new Hono()
       const id = c.req.param('id')
       const { occurrenceDate } = c.req.valid('json')
       const result = await db.transaction(async (tx) => {
+        await lockTaskRelationWrites(tx)
         const [template] = await tx
           .select()
           .from(recurringTaskTemplates)
@@ -263,6 +268,7 @@ export const recurringTaskTemplatesApp = new Hono()
 
       const { updatedTemplate, rule, labelNames } = await db.transaction(
         async (tx) => {
+          await lockTaskRelationWrites(tx)
           const rule =
             recurrenceRuleInput !== undefined
               ? firstOrThrow(
@@ -317,6 +323,7 @@ export const recurringTaskTemplatesApp = new Hono()
   .delete('/:id', async (c) => {
     const id = c.req.param('id')
     const existing = await db.transaction(async (tx) => {
+      await lockTaskRelationWrites(tx)
       const [existing] = await tx
         .select()
         .from(recurringTaskTemplates)

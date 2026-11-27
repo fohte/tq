@@ -178,9 +178,8 @@ async function hasBlockedByCycle(
 export type SyncBlockedByResult =
   'ok' | 'cycle' | 'github-subject-conflict' | 'github-stale-blocker'
 
-export async function lockTaskBlockedByWrites(
-  tx: DbTransaction,
-): Promise<void> {
+// task 間の参照変更と project 削除を同じ advisory lock で直列化する。
+export async function lockTaskRelationWrites(tx: DbTransaction): Promise<void> {
   await tx.execute(
     sql`SELECT pg_advisory_xact_lock(hashtext('task_relations:blocked_by'))`,
   )
@@ -198,7 +197,7 @@ export async function syncTaskBlockedBy(
   const sync = async (tx: DbTransaction): Promise<SyncBlockedByResult> => {
     if (uniqueIds.length > 0 || githubBlockers != null) {
       // 循環は複数タスクにまたがるため、全ての blockedBy 書き込みで同じ advisory lock を使う。
-      await lockTaskBlockedByWrites(tx)
+      await lockTaskRelationWrites(tx)
       if (await hasBlockedByCycle(tx, taskId, uniqueIds)) {
         return 'cycle'
       }

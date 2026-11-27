@@ -1,13 +1,25 @@
-import { eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
+
+import { asc, eq, inArray, sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
+import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#app'
 import { db } from '#db/connection'
 import { dbContext } from '#db/context'
 import * as schema from '#db/schema'
-import { projectFields, taskFieldValues, taskRelations } from '#db/schema'
+import {
+  projectFields,
+  projects,
+  recurrenceRules,
+  recurringTaskTemplates,
+  taskFieldValues,
+  taskRelations,
+  tasks,
+} from '#db/schema'
 import { DATABASE_URL } from '#env'
 import { type ChangeEvent, subscribeToChangeEvents } from '#lib/change-events'
 import {
@@ -16,6 +28,7 @@ import {
   toListItemResponse,
   toListRowResponse,
 } from '#routes/tasks/testing'
+import { generateDueRecurringTasks } from '#services/recurring-task-generator'
 import { jsonBody, setupTestDb } from '#testing'
 
 setupTestDb()
@@ -26,6 +39,9 @@ async function createProject(title: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
   })
+  if (response.status !== 201) {
+    throw new Error(`Project creation failed: ${await response.text()}`)
+  }
   return jsonBody<{ id: string }>(response)
 }
 
@@ -35,6 +51,9 @@ async function createField(projectId: string, name: string, options: string[]) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, options }),
   })
+  if (response.status !== 201) {
+    throw new Error(`Field creation failed: ${await response.text()}`)
+  }
   return jsonBody<{
     id: string
     name: string
@@ -57,6 +76,61 @@ function requestJsonWithDb(
   body: unknown,
 ) {
   return dbContext.run(database, () => requestJson(path, method, body))
+}
+
+async function createIsolatedTestDatabase() {
+  const databaseName = `tq_field_value_race_${randomUUID().replaceAll('-', '')}`
+  const adminClient = postgres(DATABASE_URL, { max: 1 })
+  let client: ReturnType<typeof postgres> | undefined
+  try {
+    await adminClient.unsafe(`CREATE DATABASE "${databaseName}"`)
+    const databaseUrl = new URL(DATABASE_URL)
+    databaseUrl.pathname = `/${databaseName}`
+    client = postgres(databaseUrl.toString(), { max: 1 })
+    const database = drizzle(client, { schema })
+    await migrate(database, {
+      migrationsFolder: fileURLToPath(
+        new URL('../../../drizzle', import.meta.url),
+      ),
+    })
+
+    return { databaseName, adminClient, client, database }
+  } catch (error) {
+    await client?.end()
+    await adminClient
+      .unsafe(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`)
+      .catch(() => undefined)
+    await adminClient.end()
+    throw error
+  }
+}
+
+function connectToIsolatedTestDatabase(
+  databaseName: string,
+  applicationName?: string,
+) {
+  const databaseUrl = new URL(DATABASE_URL)
+  databaseUrl.pathname = `/${databaseName}`
+  return postgres(databaseUrl.toString(), {
+    max: 1,
+    connection: {
+      ...(applicationName === undefined
+        ? {}
+        : { application_name: applicationName }),
+    },
+  })
+}
+
+async function dropIsolatedTestDatabase(
+  isolated: Awaited<ReturnType<typeof createIsolatedTestDatabase>>,
+) {
+  try {
+    await isolated.adminClient.unsafe(
+      `DROP DATABASE IF EXISTS "${isolated.databaseName}" WITH (FORCE)`,
+    )
+  } finally {
+    await isolated.adminClient.end()
+  }
 }
 
 type TaskResponseInput = {
@@ -1091,22 +1165,31 @@ describe('task field values API', () => {
   })
 
   it('deletes a project after a concurrent field value update', async () => {
-    const fixtureClient = postgres(DATABASE_URL, { max: 1 })
-    const updateClient = postgres(DATABASE_URL, {
-      max: 1,
-      connection: { application_name: 'field-value-update-test' },
-    })
-    const deleteClient = postgres(DATABASE_URL, {
-      max: 1,
-      connection: { application_name: 'project-delete-test' },
-    })
-    const barrierClient = postgres(DATABASE_URL, { max: 1 })
-    const sharedLockClient = postgres(DATABASE_URL, {
-      max: 1,
-      connection: { application_name: 'shared-field-lock-test' },
-    })
-    const monitorClient = postgres(DATABASE_URL, { max: 1 })
-    const fixtureDb = drizzle(fixtureClient, { schema })
+    const invocationId = randomUUID()
+    const updateApplicationName = `field-value-update-${invocationId}`
+    const deleteApplicationName = `project-delete-${invocationId}`
+    const sharedLockApplicationName = `shared-field-lock-${invocationId}`
+    const isolatedDatabase = await createIsolatedTestDatabase()
+    const fixtureClient = isolatedDatabase.client
+    const updateClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      updateApplicationName,
+    )
+    const deleteClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      deleteApplicationName,
+    )
+    const barrierClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const sharedLockClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      sharedLockApplicationName,
+    )
+    const monitorClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const fixtureDb = isolatedDatabase.database
     const updateDb = drizzle(updateClient, { schema })
     const deleteDb = drizzle(deleteClient, { schema })
     const barrierDb = drizzle(barrierClient, { schema })
@@ -1190,7 +1273,7 @@ describe('task field values API', () => {
         throw new Error(`Database lock wait did not start: ${applicationName}`)
       }
 
-      await waitForLockWait('field-value-update-test')
+      await waitForLockWait(updateApplicationName)
       const sharedFieldLockReleased = new Promise<void>((resolve) => {
         releaseSharedFieldLock = resolve
       })
@@ -1203,7 +1286,7 @@ describe('task field values API', () => {
         await sharedFieldLockReleased
       })
       void sharedFieldLockTransaction.catch(() => undefined)
-      await waitForLockWait('shared-field-lock-test')
+      await waitForLockWait(sharedLockApplicationName)
 
       const deleteResponsePromise = dbContext.run(
         deleteDb,
@@ -1213,7 +1296,7 @@ describe('task field values API', () => {
           }),
       )
       pendingDeleteResponse = deleteResponsePromise
-      await waitForLockWait('project-delete-test')
+      await waitForLockWait(deleteApplicationName)
       releaseFieldLock?.()
 
       const [updateResult] = await Promise.allSettled([updateResponsePromise])
@@ -1325,6 +1408,541 @@ describe('task field values API', () => {
         sharedLockClient.end(),
         monitorClient.end(),
       ])
+      await dropIsolatedTestDatabase(isolatedDatabase)
+    }
+  }, 20_000)
+
+  it('serializes project deletion with a concurrent blockedBy update', async () => {
+    const invocationId = randomUUID()
+    const updateApplicationName = `blocked-by-update-${invocationId}`
+    const deleteApplicationName = `blocked-by-delete-${invocationId}`
+    const isolatedDatabase = await createIsolatedTestDatabase()
+    const fixtureClient = isolatedDatabase.client
+    const updateClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      updateApplicationName,
+    )
+    const deleteClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      deleteApplicationName,
+    )
+    const barrierClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const monitorClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const fixtureDb = isolatedDatabase.database
+    const updateDb = drizzle(updateClient, { schema })
+    const deleteDb = drizzle(deleteClient, { schema })
+    const barrierDb = drizzle(barrierClient, { schema })
+    let projectId: string | undefined
+    const taskIds: string[] = []
+    let releaseSourceLock: (() => void) | undefined
+    let sourceLockTransaction: Promise<unknown> | undefined
+    let pendingUpdateResponse: Promise<Response> | undefined
+    let pendingDeleteResponse: Promise<Response> | undefined
+
+    try {
+      const project = await dbContext.run(fixtureDb, () =>
+        createProject('Sample Archive'),
+      )
+      projectId = project.id
+      for (const title of ['Target record', 'Source record']) {
+        const response = await requestJsonWithDb(
+          fixtureDb,
+          '/api/tasks',
+          'POST',
+          { title, projectId: project.id },
+        )
+        const task = await jsonBody<TaskResponse>(response)
+        taskIds.push(task.id)
+      }
+
+      const [target, source] = await fixtureDb
+        .select({ id: tasks.id, title: tasks.title })
+        .from(tasks)
+        .where(eq(tasks.projectId, project.id))
+        .orderBy(asc(tasks.id))
+      if (target == null || source == null) {
+        throw new Error('Test tasks were not created')
+      }
+
+      let sourceLockAcquired: (() => void) | undefined
+      const sourceLockReady = new Promise<void>((resolve) => {
+        sourceLockAcquired = resolve
+      })
+      const sourceLockReleased = new Promise<void>((resolve) => {
+        releaseSourceLock = resolve
+      })
+      sourceLockTransaction = barrierDb.transaction(async (tx) => {
+        await tx
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.id, source.id))
+          .for('update')
+        sourceLockAcquired?.()
+        await sourceLockReleased
+      })
+      void sourceLockTransaction.catch(() => undefined)
+      await sourceLockReady
+
+      const updateResponsePromise = requestJsonWithDb(
+        updateDb,
+        `/api/tasks/${source.id}`,
+        'PATCH',
+        { blockedBy: [target.id] },
+      )
+      pendingUpdateResponse = updateResponsePromise
+
+      const waitForLockWait = async (applicationName: string) => {
+        const deadline = Date.now() + 10_000
+        while (Date.now() < deadline) {
+          const [activity] = await monitorClient`
+            SELECT EXISTS (
+              SELECT 1
+              FROM pg_stat_activity
+              WHERE application_name = ${applicationName}
+                AND state = 'active'
+                AND wait_event_type = 'Lock'
+            ) AS waiting
+          `
+          if (activity?.['waiting'] === true) return
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        throw new Error(`Database lock wait did not start: ${applicationName}`)
+      }
+
+      await waitForLockWait(updateApplicationName)
+      const deleteResponsePromise = dbContext.run(
+        deleteDb,
+        async () =>
+          await app.request(`/api/projects/${project.id}`, {
+            method: 'DELETE',
+          }),
+      )
+      pendingDeleteResponse = deleteResponsePromise
+      await waitForLockWait(deleteApplicationName)
+      releaseSourceLock?.()
+
+      const [updateResponse, deleteResponse] = await Promise.all([
+        updateResponsePromise,
+        deleteResponsePromise,
+      ])
+      const relations = await fixtureDb
+        .select({
+          sourceTaskId: taskRelations.sourceTaskId,
+          targetTaskId: taskRelations.targetTaskId,
+          type: taskRelations.type,
+        })
+        .from(taskRelations)
+        .where(eq(taskRelations.sourceTaskId, source.id))
+
+      const output = () => ({
+        updateStatus: updateResponse.status,
+        deleteStatus: deleteResponse.status,
+        relations,
+      })
+      expect(output()).toEqual({
+        updateStatus: 200,
+        deleteStatus: 204,
+        relations: [
+          {
+            sourceTaskId: source.id,
+            targetTaskId: target.id,
+            type: 'blocked_by',
+          },
+        ],
+      })
+    } finally {
+      releaseSourceLock?.()
+      await Promise.all([
+        sourceLockTransaction?.catch(() => undefined),
+        pendingUpdateResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+        pendingDeleteResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+      ])
+      if (taskIds.length > 0) {
+        await fixtureDb
+          .delete(tasks)
+          .where(inArray(tasks.id, taskIds))
+          .catch(() => undefined)
+      }
+      if (projectId != null) {
+        await fixtureDb
+          .delete(projects)
+          .where(eq(projects.id, projectId))
+          .catch(() => undefined)
+      }
+      await Promise.all([
+        fixtureClient.end(),
+        updateClient.end(),
+        deleteClient.end(),
+        barrierClient.end(),
+        monitorClient.end(),
+      ])
+      await dropIsolatedTestDatabase(isolatedDatabase)
+    }
+  }, 20_000)
+
+  it('serializes project deletion with a concurrent parent update', async () => {
+    const invocationId = randomUUID()
+    const updateApplicationName = `parent-update-${invocationId}`
+    const deleteApplicationName = `parent-delete-${invocationId}`
+    const isolatedDatabase = await createIsolatedTestDatabase()
+    const fixtureClient = isolatedDatabase.client
+    const updateClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      updateApplicationName,
+    )
+    const deleteClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      deleteApplicationName,
+    )
+    const barrierClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const monitorClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const fixtureDb = isolatedDatabase.database
+    const updateDb = drizzle(updateClient, { schema })
+    const deleteDb = drizzle(deleteClient, { schema })
+    const barrierDb = drizzle(barrierClient, { schema })
+    let projectId: string | undefined
+    const taskIds: string[] = []
+    let releaseSourceLock: (() => void) | undefined
+    let sourceLockTransaction: Promise<unknown> | undefined
+    let pendingUpdateResponse: Promise<Response> | undefined
+    let pendingDeleteResponse: Promise<Response> | undefined
+
+    try {
+      const project = await dbContext.run(fixtureDb, () =>
+        createProject('Sample Archive'),
+      )
+      projectId = project.id
+      for (const title of ['Target record', 'Source record']) {
+        const response = await requestJsonWithDb(
+          fixtureDb,
+          '/api/tasks',
+          'POST',
+          { title, projectId: project.id },
+        )
+        const task = await jsonBody<TaskResponse>(response)
+        taskIds.push(task.id)
+      }
+
+      const [target, source] = await fixtureDb
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(eq(tasks.projectId, project.id))
+        .orderBy(asc(tasks.id))
+      if (target == null || source == null) {
+        throw new Error('Test tasks were not created')
+      }
+
+      let sourceLockAcquired: (() => void) | undefined
+      const sourceLockReady = new Promise<void>((resolve) => {
+        sourceLockAcquired = resolve
+      })
+      const sourceLockReleased = new Promise<void>((resolve) => {
+        releaseSourceLock = resolve
+      })
+      sourceLockTransaction = barrierDb.transaction(async (tx) => {
+        await tx
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.id, source.id))
+          .for('update')
+        sourceLockAcquired?.()
+        await sourceLockReleased
+      })
+      void sourceLockTransaction.catch(() => undefined)
+      await sourceLockReady
+
+      const updateResponsePromise = requestJsonWithDb(
+        updateDb,
+        `/api/tasks/${source.id}/parent`,
+        'PATCH',
+        { parentId: target.id },
+      )
+      pendingUpdateResponse = updateResponsePromise
+
+      const waitForLockWait = async (applicationName: string) => {
+        const deadline = Date.now() + 10_000
+        while (Date.now() < deadline) {
+          const [activity] = await monitorClient`
+            SELECT EXISTS (
+              SELECT 1
+              FROM pg_stat_activity
+              WHERE application_name = ${applicationName}
+                AND state = 'active'
+                AND wait_event_type = 'Lock'
+            ) AS waiting
+          `
+          if (activity?.['waiting'] === true) return
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        throw new Error(`Database lock wait did not start: ${applicationName}`)
+      }
+
+      await waitForLockWait(updateApplicationName)
+      const deleteResponsePromise = dbContext.run(
+        deleteDb,
+        async () =>
+          await app.request(`/api/projects/${project.id}`, {
+            method: 'DELETE',
+          }),
+      )
+      pendingDeleteResponse = deleteResponsePromise
+      await waitForLockWait(deleteApplicationName)
+      releaseSourceLock?.()
+
+      const [updateResponse, deleteResponse] = await Promise.all([
+        updateResponsePromise,
+        deleteResponsePromise,
+      ])
+      const [updatedSource] = await fixtureDb
+        .select({ parentId: tasks.parentId })
+        .from(tasks)
+        .where(eq(tasks.id, source.id))
+
+      const output = () => ({
+        updateStatus: updateResponse.status,
+        deleteStatus: deleteResponse.status,
+        parentId: updatedSource?.parentId,
+      })
+      expect(output()).toEqual({
+        updateStatus: 200,
+        deleteStatus: 204,
+        parentId: target.id,
+      })
+    } finally {
+      releaseSourceLock?.()
+      await Promise.all([
+        sourceLockTransaction?.catch(() => undefined),
+        pendingUpdateResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+        pendingDeleteResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+      ])
+      if (taskIds.length > 0) {
+        await fixtureDb
+          .delete(tasks)
+          .where(inArray(tasks.id, taskIds))
+          .catch(() => undefined)
+      }
+      if (projectId != null) {
+        const projectToDelete = projectId
+        await dbContext
+          .run(
+            fixtureDb,
+            async () =>
+              await app.request(`/api/projects/${projectToDelete}`, {
+                method: 'DELETE',
+              }),
+          )
+          .catch(() => undefined)
+      }
+      await Promise.all([
+        fixtureClient.end(),
+        updateClient.end(),
+        deleteClient.end(),
+        barrierClient.end(),
+        monitorClient.end(),
+      ])
+      await dropIsolatedTestDatabase(isolatedDatabase)
+    }
+  }, 20_000)
+
+  it('generates occurrences from the current template after project deletion', async () => {
+    const invocationId = randomUUID()
+    const deleteApplicationName = `template-project-delete-${invocationId}`
+    const schedulerApplicationName = `template-scheduler-${invocationId}`
+    const isolatedDatabase = await createIsolatedTestDatabase()
+    const fixtureClient = isolatedDatabase.client
+    const gateClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const deleteClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      deleteApplicationName,
+    )
+    const schedulerClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      schedulerApplicationName,
+    )
+    const monitorClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const fixtureDb = isolatedDatabase.database
+    const gateDb = drizzle(gateClient, { schema })
+    const deleteDb = drizzle(deleteClient, { schema })
+    const schedulerDb = drizzle(schedulerClient, { schema })
+    let releaseGate: (() => void) | undefined
+    let gateTransaction: Promise<unknown> | undefined
+    let pendingDelete: Promise<Response> | undefined
+    let pendingGeneration: Promise<void> | undefined
+
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2031-04-10T12:00:00Z'))
+
+    try {
+      const project = await dbContext.run(fixtureDb, () =>
+        createProject('Sample Archive'),
+      )
+      const [rule] = await fixtureDb
+        .insert(recurrenceRules)
+        .values({ type: 'daily', interval: 1 })
+        .returning()
+      if (rule == null) throw new Error('Test recurrence rule was not created')
+      const [template] = await fixtureDb
+        .insert(recurringTaskTemplates)
+        .values({
+          title: 'Review a record {date}',
+          anchorDate: '2031-04-09',
+          projectId: project.id,
+          recurrenceRuleId: rule.id,
+        })
+        .returning()
+      if (template == null) {
+        throw new Error('Test recurring template was not created')
+      }
+
+      let gateAcquired: (() => void) | undefined
+      const gateReady = new Promise<void>((resolve) => {
+        gateAcquired = resolve
+      })
+      const gateReleased = new Promise<void>((resolve) => {
+        releaseGate = resolve
+      })
+      gateTransaction = gateDb.transaction(async (tx) => {
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(hashtext('task_relations:blocked_by'))`,
+        )
+        gateAcquired?.()
+        await gateReleased
+      })
+      void gateTransaction.catch(() => undefined)
+      await gateReady
+
+      const waitForLockWait = async (applicationName: string) => {
+        const deadline = Date.now() + 10_000
+        while (Date.now() < deadline) {
+          const [activity] = await monitorClient`
+            SELECT EXISTS (
+              SELECT 1
+              FROM pg_stat_activity
+              WHERE application_name = ${applicationName}
+                AND state = 'active'
+                AND wait_event_type = 'Lock'
+            ) AS waiting
+          `
+          if (activity?.['waiting'] === true) return
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        throw new Error(`Database lock wait did not start: ${applicationName}`)
+      }
+
+      const deleteResponsePromise = dbContext.run(
+        deleteDb,
+        async () =>
+          await app.request(`/api/projects/${project.id}`, {
+            method: 'DELETE',
+          }),
+      )
+      pendingDelete = deleteResponsePromise
+      await waitForLockWait(deleteApplicationName)
+
+      pendingGeneration = dbContext.run(schedulerDb, generateDueRecurringTasks)
+      await waitForLockWait(schedulerApplicationName)
+      releaseGate?.()
+
+      const [deleteResponse] = await Promise.all([
+        deleteResponsePromise,
+        pendingGeneration,
+      ])
+      const generatedTasks = await fixtureDb
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          projectId: tasks.projectId,
+          parentId: tasks.parentId,
+          templateId: tasks.templateId,
+          occurrenceDate: tasks.occurrenceDate,
+        })
+        .from(tasks)
+        .where(eq(tasks.templateId, template.id))
+      const [storedTemplate] = await fixtureDb
+        .select({
+          projectId: recurringTaskTemplates.projectId,
+          lastGeneratedDate: recurringTaskTemplates.lastGeneratedDate,
+        })
+        .from(recurringTaskTemplates)
+        .where(eq(recurringTaskTemplates.id, template.id))
+      const [remainingProject] = await fixtureDb
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.id, project.id))
+
+      const output = async () => ({
+        delete: {
+          status: deleteResponse.status,
+          body: await deleteResponse.text(),
+        },
+        generatedTasks: generatedTasks.map((task) => ({
+          ...task,
+          id: 'TASK_ID',
+        })),
+        template: storedTemplate,
+        projectExists: remainingProject != null,
+      })
+      expect(await output()).toEqual({
+        delete: { status: 204, body: '' },
+        generatedTasks: [
+          {
+            id: 'TASK_ID',
+            title: 'Review a record 2031-04-10',
+            projectId: null,
+            parentId: null,
+            templateId: template.id,
+            occurrenceDate: '2031-04-10',
+          },
+        ],
+        template: {
+          projectId: null,
+          lastGeneratedDate: '2031-04-10',
+        },
+        projectExists: false,
+      })
+    } finally {
+      vi.useRealTimers()
+      releaseGate?.()
+      await Promise.all([
+        gateTransaction?.catch(() => undefined),
+        pendingDelete?.then(
+          () => undefined,
+          () => undefined,
+        ),
+        pendingGeneration?.catch(() => undefined),
+      ])
+      await Promise.all([
+        fixtureClient.end(),
+        gateClient.end(),
+        deleteClient.end(),
+        schedulerClient.end(),
+        monitorClient.end(),
+      ])
+      await dropIsolatedTestDatabase(isolatedDatabase)
     }
   }, 20_000)
 })

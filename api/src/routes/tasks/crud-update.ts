@@ -42,7 +42,7 @@ import {
 import { syncTaskLabels } from '#services/task-labels'
 import { syncTaskLinks } from '#services/task-links'
 import {
-  lockTaskBlockedByWrites,
+  lockTaskRelationWrites,
   syncTaskBlockedBy,
 } from '#services/task-relations'
 
@@ -125,8 +125,8 @@ export const tasksUpdateApp = new Hono().patch(
 
     const result = await db.transaction(async (tx) => {
       if (blockedByResolution != null) {
-        // advisory lock を行ロックより先に取って、blockedBy 更新との deadlock を防ぐ。
-        await lockTaskBlockedByWrites(tx)
+        // project 削除が task row を順番にロックするため、relation の書き込みは先に gate を取得する。
+        await lockTaskRelationWrites(tx)
         // GitHub link の FK 挿入も task 行をロックするため、同じ advisory lock を先に取る。
         await lockTaskGithubLinks(tx, id)
       }
