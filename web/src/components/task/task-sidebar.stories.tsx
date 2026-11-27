@@ -156,6 +156,7 @@ const categoryField = makeProjectField({
 
 export const SidebarWithCustomField: Story = {
   name: 'the sidebar shows and selects a project custom field',
+  tags: ['desktop-only'],
   args: {
     task: makeTaskDetail({
       projectId: sampleProject.id,
