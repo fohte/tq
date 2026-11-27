@@ -2,6 +2,7 @@ import type { CliOutput } from 'api/operations'
 import { err, errAsync, ok, Result, ResultAsync } from 'neverthrow'
 
 import { toApiError } from '#client'
+import { errorFromCause } from '#errors'
 import {
   printJson,
   printJsonList,
@@ -14,10 +15,6 @@ type JsonOutput = Extract<CliOutput, { kind: 'json' }>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function errorFromCause(cause: unknown): Error {
-  return cause instanceof Error ? cause : new Error(String(cause))
 }
 
 function requiredStringField(

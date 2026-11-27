@@ -50,9 +50,6 @@ export const EXCLUDED_ROUTES = {
   'DELETE /api/push/subscriptions': 'web push is a browser-only capability',
   'POST /api/push/test': 'web push is a browser-only capability',
 
-  // The web UI consumes the live event stream through EventSource.
-  'GET /api/events': 'live refresh is a browser-only capability',
-
   // Not a REST resource: a JSON-RPC/MCP transport endpoint, not a CLI concern.
   'ALL /api/mcp': 'MCP transport endpoint, not a REST resource',
 
@@ -85,6 +82,8 @@ export const EXCLUDED_ROUTES = {
 } as const satisfies Partial<Record<AllRoutes, string>>
 
 type ExcludedRoutes = keyof typeof EXCLUDED_ROUTES
+type CustomCliRoutes = 'GET /api/events'
+type CliRoutes = OperationRoutes | CustomCliRoutes
 
 type AssertNever<T extends never> = T
 
@@ -92,15 +91,12 @@ type AssertNever<T extends never> = T
  * Compile error if any API route is neither implemented nor excluded — the
  * mechanism that keeps the CLI from silently falling behind the API.
  */
-export type UnclassifiedRoutes = Exclude<
-  AllRoutes,
-  OperationRoutes | ExcludedRoutes
->
+export type UnclassifiedRoutes = Exclude<AllRoutes, CliRoutes | ExcludedRoutes>
 export type _AssertAllRoutesClassified = AssertNever<UnclassifiedRoutes>
 
 /**
  * Operation-backed and excluded routes must be disjoint.
  */
 export type _AssertCoveredExcludedDisjoint = AssertNever<
-  Extract<OperationRoutes, ExcludedRoutes>
+  Extract<CliRoutes, ExcludedRoutes>
 >

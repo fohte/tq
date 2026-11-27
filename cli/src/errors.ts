@@ -19,6 +19,10 @@ export class ApiError extends Error {
   }
 }
 
+export function errorFromCause(cause: unknown): Error {
+  return cause instanceof Error ? cause : new Error(String(cause))
+}
+
 export function formatError(err: unknown): string {
   if (err instanceof ApiError) {
     return `${err.message} (HTTP ${String(err.status)})`

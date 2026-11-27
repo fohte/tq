@@ -303,6 +303,24 @@ describe('change events', () => {
     })
   })
 
+  it('closes subscribers whose pending event queue grows too large', async () => {
+    const response = await new Hono()
+      .route('/api', eventsApp)
+      .request('/api/events')
+    for (let index = 0; index < 101; index++) {
+      publishChangeEvent({
+        resource: 'task',
+        id: `task-${String(index)}`,
+        origin: null,
+        taskIds: [taskId],
+      })
+    }
+
+    const body = await response.text()
+    const snapshot = () => ({ status: response.status, body })
+    expect(snapshot()).toEqual({ status: 200, body: '' })
+  })
+
   it('sends a heartbeat after 30 seconds without changes', async () => {
     vi.useFakeTimers()
     const response = await new Hono()
