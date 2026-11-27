@@ -9,6 +9,7 @@ export interface ParsedQuery {
   status?: Array<'todo' | 'completed'>
   reason?: TaskStatusReason
   label?: string
+  fields?: Record<string, string | null>
   context?: 'work' | 'personal'
   priority?: TaskPriority | null
   hasPages?: boolean
@@ -189,6 +190,22 @@ const searchQueryTokenDefinitions = new Map(
         result.label = value
       },
     },
+    field: {
+      display: 'Project field',
+      description:
+        'Limit results to tasks whose project has a field with this exact name and selected option. Leave the option empty after = to match tasks with no value.',
+      taskFilter: true,
+      valuePlaceholder: 'field-name=option-name',
+      parse: (result: ParsedQuery, value: string) => {
+        const separatorIndex = value.indexOf('=')
+        const fieldName = value.slice(0, separatorIndex)
+        const optionName = value.slice(separatorIndex + 1)
+        result.fields = {
+          ...result.fields,
+          [fieldName]: optionName === '' ? null : optionName,
+        }
+      },
+    },
     parent: {
       display: 'Parent task',
       description:
@@ -278,6 +295,11 @@ export function parseSearchQuery(q: string): ParsedQuery {
       continue
     }
 
+    if (prefix === 'field' && value.indexOf('=') <= 0) {
+      freeTextParts.push(token)
+      continue
+    }
+
     if ('values' in definition) {
       const option = definition.values.find((item) => item.value === value)
       if (option === undefined) {
@@ -306,6 +328,9 @@ export function buildSearchQuery(query: ParsedQuery): string {
   }
   if (query.label !== undefined) {
     parts.push(`label:${quoteIfNeeded(query.label)}`)
+  }
+  for (const [fieldName, optionName] of Object.entries(query.fields ?? {})) {
+    parts.push(`field:${quoteIfNeeded(`${fieldName}=${optionName ?? ''}`)}`)
   }
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)

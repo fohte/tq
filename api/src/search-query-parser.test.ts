@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildSearchQuery,
+  getSearchQueryHelpTokens,
   getSearchQuerySuggestions,
   parseSearchQuery,
   tokenizeSearchQuery,
@@ -51,6 +52,29 @@ describe('parseSearchQuery', () => {
 
   it('parses label: prefix', () => {
     expect(parseSearchQuery('label:dev').label).toBe('dev')
+  })
+
+  it('parses field filters, keeps the first equals sign as the separator, and lets later names win', () => {
+    expect(
+      parseSearchQuery(
+        'field:"Review stage=In flight=ready" field:"Orbit mode=Quiet" field:"Review stage=Draft" field:"Unassigned="',
+      ),
+    ).toEqual({
+      freeText: '',
+      fields: {
+        'Review stage': 'Draft',
+        'Orbit mode': 'Quiet',
+        Unassigned: null,
+      },
+    })
+  })
+
+  it('keeps field tokens without a valid field name and separator as free text', () => {
+    expect(
+      parseSearchQuery('field:missing-separator field:=empty-name'),
+    ).toEqual({
+      freeText: 'field:missing-separator field:=empty-name',
+    })
   })
 
   it('parses context: prefix', () => {
@@ -243,6 +267,25 @@ describe('getSearchQuerySuggestions', () => {
     ])
   })
 
+  it('suggests the field token without hard-coding field names or options', () => {
+    expect(getSearchQuerySuggestions('field:', 'field')).toEqual([
+      { value: 'field:', display: 'Project field', category: 'field' },
+    ])
+  })
+
+  it('documents the field filter syntax', () => {
+    expect(
+      getSearchQueryHelpTokens().find(({ key }) => key === 'field'),
+    ).toEqual({
+      key: 'field',
+      description:
+        'Limit results to tasks whose project has a field with this exact name and selected option. Leave the option empty after = to match tasks with no value.',
+      taskFilter: true,
+      syntax: 'field:<field-name=option-name>',
+      values: [],
+    })
+  })
+
   it('returns all suggestions when category is omitted', () => {
     expect(getSearchQuerySuggestions('')).toEqual([
       { value: 'is:todo', display: 'Todo', category: 'is' },
@@ -309,6 +352,7 @@ describe('getSearchQuerySuggestions', () => {
       },
       { value: 'reason:duplicate', display: 'Duplicate', category: 'reason' },
       { value: 'label:', display: 'Label', category: 'label' },
+      { value: 'field:', display: 'Project field', category: 'field' },
       { value: 'parent:', display: 'Parent task', category: 'parent' },
       { value: 'project:', display: 'Project', category: 'project' },
     ])
@@ -332,6 +376,7 @@ describe('buildSearchQuery', () => {
         freeText: 'deploy',
         status: ['todo'],
         label: 'dev',
+        fields: { 'Review stage': 'In flight', 'Orbit mode': null },
         context: 'work',
         priority: 0,
         hasPages: true,
@@ -346,7 +391,7 @@ describe('buildSearchQuery', () => {
         sortBy: ['due', 'updated'],
       }),
     ).toBe(
-      'deploy is:todo label:dev context:work priority:0 has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due sort:updated',
+      'deploy is:todo label:dev field:"Review stage=In flight" field:"Orbit mode=" context:work priority:0 has:pages has:comments has:no-children has:blockers has:no-blockers has:follow-up-due has:resolved-wait parent:parent-1 project:proj-1 sort:due sort:updated',
     )
   })
 
@@ -365,6 +410,15 @@ describe('buildSearchQuery', () => {
       'label:"my label"',
     )
   })
+
+  it('quotes field names and options containing spaces', () => {
+    expect(
+      buildSearchQuery({
+        freeText: '',
+        fields: { 'Review stage': 'In flight', Unassigned: null },
+      }),
+    ).toBe('field:"Review stage=In flight" field:Unassigned=')
+  })
 })
 
 describe('parseSearchQuery and buildSearchQuery round-trip', () => {
@@ -382,6 +436,14 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
       freeText: '',
       label: 'my label',
       projectId: 'my project',
+    })
+  })
+
+  it('round-trips field filters with an unset value', () => {
+    const q = 'field:"Review stage=In flight" field:"Orbit mode="'
+    expect(parseSearchQuery(buildSearchQuery(parseSearchQuery(q)))).toEqual({
+      freeText: '',
+      fields: { 'Review stage': 'In flight', 'Orbit mode': null },
     })
   })
 

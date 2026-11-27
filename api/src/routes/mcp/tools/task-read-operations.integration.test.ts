@@ -517,6 +517,58 @@ describe('task_get', () => {
 })
 
 describe('task_search', () => {
+  it('filters tasks by project field through the MCP search tool', async () => {
+    const projectResponse = await app.request('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Review workflow' }),
+    })
+    const project = await jsonBody<{ id: string }>(projectResponse)
+    const fieldResponse = await app.request(
+      `/api/projects/${project.id}/fields`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Review stage',
+          options: ['Draft', 'Approved'],
+        }),
+      },
+    )
+    const field = await jsonBody<{
+      id: string
+      options: Array<{ id: string; name: string }>
+    }>(fieldResponse)
+    const draftOption = field.options.find(({ name }) => name === 'Draft')
+    const approvedOption = field.options.find(({ name }) => name === 'Approved')
+    if (draftOption == null || approvedOption == null) {
+      throw new Error('Test field options were not created')
+    }
+
+    async function createProjectTask(title: string, optionId: string) {
+      const response = await app.request('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          projectId: project.id,
+          fieldValues: { [field.id]: optionId },
+        }),
+      })
+      expect(response.status).toBe(201)
+      return jsonBody<CreatedTaskResponse>(response)
+    }
+
+    const draft = await createProjectTask('Draft task', draftOption.id)
+    await createProjectTask('Approved task', approvedOption.id)
+
+    const toolResult = await callTaskReadTool('task_search', {
+      q: 'field:"Review stage=Draft"',
+    })
+
+    expect(parseToolJson(toolResult)).toEqual([expectedTaskListRowItem(draft)])
+  })
+
   it('defaults to all contexts and statuses when context and status are omitted', async () => {
     const workTodo = await createTask('Work todo', { context: 'work' })
     const personalTodo = await createTask('Personal todo', {

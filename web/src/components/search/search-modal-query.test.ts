@@ -41,4 +41,11 @@ describe('search modal query scopes', () => {
       removeSearchContextTokens('"a context:work b" context:work context:WORK'),
     ).toBe('"a context:work b" context:WORK')
   })
+
+  it('keeps project field filters in the editable query instead of scope chips', () => {
+    const query = 'field:"Review stage=In flight" context:work'
+    const actual = `${JSON.stringify(extractSearchScopeTokens(query))}\n${removeSearchContextTokens(query)}`
+
+    expect(actual).toBe('[]\nfield:"Review stage=In flight"')
+  })
 })
