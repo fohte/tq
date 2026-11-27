@@ -62,8 +62,3 @@ export const Mobile: Story = {
   name: 'the mobile sidebar places project fields across the grid',
   args: { mobile: true },
 }
-
-export const NoFields: Story = {
-  name: 'the sidebar shows no custom fields when the project has none',
-  args: { fields: [], fieldValues: [] },
-}

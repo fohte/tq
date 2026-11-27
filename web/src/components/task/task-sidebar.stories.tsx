@@ -133,11 +133,12 @@ const sampleProject: ProjectDetail = makeProjectDetail({
 
 // Desktop only: the project row is below the fold at the mobile viewport.
 export const SidebarWithProject: Story = {
-  name: 'the linked project appears in the task sidebar',
+  name: 'the linked project appears without custom fields',
   tags: ['desktop-only'],
   args: {
     task: { ...baseTask, projectId: sampleProject.id },
     project: sampleProject,
+    projectFields: [],
   },
 }
 

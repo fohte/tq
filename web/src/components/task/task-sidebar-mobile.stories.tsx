@@ -62,6 +62,16 @@ export const MobileSidebarWithChecklistProgress: Story = {
 const mobileProject = makeProjectDetail({
   id: 'bbbb0000-0000-0000-0000-000000000000',
 })
+
+export const MobileSidebarWithProjectNoFields: Story = {
+  name: 'the mobile sidebar shows a project with no custom fields',
+  args: {
+    task: makeTaskDetail({ projectId: mobileProject.id }),
+    project: mobileProject,
+    projectFields: [],
+  },
+}
+
 const mobileFieldOption = { id: 'option-triage', name: 'Triage' }
 const mobileField = makeProjectField({
   id: 'field-phase',
