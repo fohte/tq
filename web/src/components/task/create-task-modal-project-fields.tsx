@@ -18,7 +18,6 @@ export function CreateTaskModalProjectFields({
   fields,
   values,
   onValueChange,
-  isLoading = false,
   loadError = false,
   onRetry,
   recurring = false,
@@ -27,21 +26,15 @@ export function CreateTaskModalProjectFields({
   fields: ProjectField[]
   values: Record<string, string>
   onValueChange: (fieldId: string, optionId: string) => void
-  isLoading?: boolean
   loadError?: boolean
   onRetry?: () => void
   recurring?: boolean
   compact?: boolean
 }) {
-  if (fields.length === 0 && !isLoading && !loadError) return null
+  if (fields.length === 0 && !loadError) return null
 
   return (
     <>
-      {isLoading && (
-        <p role="status" className="text-xs text-muted-foreground">
-          Loading project fields...
-        </p>
-      )}
       {loadError && (
         <div
           role="alert"

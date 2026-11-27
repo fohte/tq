@@ -242,7 +242,6 @@ export function CreateTaskModal({
     title.trim() !== '' &&
     !createTask.isPending &&
     !planQueueLoading &&
-    projectFieldValues.isReady &&
     !parentNotFound &&
     !parentPending &&
     !githubPending &&

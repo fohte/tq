@@ -17,10 +17,6 @@ export function useCreateTaskModalProjectFieldsState(
     setValues({})
   }, [projectId])
 
-  useEffect(() => {
-    if (!open) setValues({})
-  }, [open])
-
   const reset = useCallback(() => {
     setValues({})
   }, [])
@@ -46,7 +42,6 @@ export function useCreateTaskModalProjectFieldsState(
     fields,
     values,
     onValueChange,
-    isLoading: projectId != null && query.isLoading,
     loadError: projectId != null && query.isError,
     onRetry,
     recurring,
@@ -59,6 +54,5 @@ export function useCreateTaskModalProjectFieldsState(
     reset,
     input,
     compactInput,
-    isReady: projectId == null || query.isSuccess,
   }
 }

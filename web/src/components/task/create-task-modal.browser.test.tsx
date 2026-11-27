@@ -524,7 +524,50 @@ describe('CreateTaskModal', () => {
     },
   )
 
-  it('blocks task creation and offers retry when project fields fail to load', async () => {
+  it('allows task creation while project fields are loading', async () => {
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: undefined,
+        isLoading: true,
+        isSuccess: false,
+      }),
+    )
+    const mutate = mockCreateTaskSuccess(makeTask())
+    renderControlledModal(CreateTaskModal, {
+      projectId: 'project-demo',
+    })
+    const titleInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+    )
+    await user.type(titleInput, 'Prepare delivery guide')
+    const enabledCreateButtons = screen
+      .getAllByRole('button', { name: /create/i })
+      .filter((button) => !button.hasAttribute('disabled')).length
+    const loadingMessage = screen.queryByRole('status')?.textContent ?? null
+    await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+    const readResult = () => ({
+      loadingMessage,
+      enabledCreateButtons,
+      createdTasks: mutate.inputs,
+    })
+    expect(readResult()).toEqual({
+      loadingMessage: null,
+      enabledCreateButtons: 1,
+      createdTasks: [
+        {
+          title: 'Prepare delivery guide',
+          context: 'personal',
+          projectId: 'project-demo',
+        },
+      ],
+    })
+  })
+
+  it('shows a retry and allows task creation when project fields fail to load', async () => {
     const user = userEvent.setup({
       pointerEventsCheck: PointerEventsCheckLevel.Never,
     })
@@ -546,25 +589,35 @@ describe('CreateTaskModal', () => {
       findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
     )
     await user.type(titleInput, 'Prepare delivery guide')
+    const enabledCreateButtons = screen
+      .getAllByRole('button', { name: /create/i })
+      .filter((button) => !button.hasAttribute('disabled')).length
     await user.click(
       assertDefined(
         findVisible(screen.getAllByRole('button', { name: 'Retry' })),
       ),
     )
+    const alert = screen.getByRole('alert').textContent
+
+    await user.keyboard('{Meta>}{Enter}{/Meta}')
 
     const readResult = () => ({
-      alert: screen.getByRole('alert').textContent,
+      alert,
       retries: refetch.mock.calls,
       createdTasks: mutate.inputs,
-      enabledCreateButtons: screen
-        .getAllByRole('button', { name: /create/i })
-        .filter((button) => !button.hasAttribute('disabled')).length,
+      enabledCreateButtons,
     })
     expect(readResult()).toEqual({
       alert: 'Could not load project fields.Retry',
       retries: [[]],
-      createdTasks: [],
-      enabledCreateButtons: 0,
+      createdTasks: [
+        {
+          title: 'Prepare delivery guide',
+          context: 'personal',
+          projectId: 'project-demo',
+        },
+      ],
+      enabledCreateButtons: 1,
     })
   })
 
