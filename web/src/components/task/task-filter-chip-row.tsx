@@ -6,6 +6,8 @@ import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { priorityName } from '#components/task/priority-select'
+import { getProjectFieldFilterNames } from '#components/task/project-field-filter-utils'
+import { TaskFieldFilterChips } from '#components/task/task-field-filter-chips'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
 import { taskFilterAxisIcons } from '#components/task/task-filter-icons'
@@ -17,6 +19,7 @@ import { TaskStatusFilterFields } from '#components/task/task-status-filter-fiel
 import { Checkbox } from '#components/ui/checkbox'
 import { shouldIgnoreShortcut } from '#hooks/use-global-keybindings'
 import { usePrioritySettings } from '#hooks/use-priority-settings'
+import type { ProjectField } from '#hooks/use-project-fields'
 import type { Project } from '#hooks/use-projects'
 import {
   ALL_PROJECTS_FILTER,
@@ -32,6 +35,7 @@ import {
   isSameSort,
   statusChipLabels,
   withDefaultSort,
+  withField,
   withHasPages,
   withLabel,
   withParentId,
@@ -41,7 +45,14 @@ import {
 } from '#lib/tasks-query'
 
 type TaskFilterKind =
-  'status' | 'project' | 'label' | 'priority' | 'pages' | 'parent' | 'sort'
+  | 'status'
+  | 'project'
+  | 'label'
+  | 'priority'
+  | 'field'
+  | 'pages'
+  | 'parent'
+  | 'sort'
 
 interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
@@ -59,6 +70,8 @@ interface TaskFilterChipRowProps {
   disableProjectFilter?: boolean
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
+  projectFields?: ProjectField[] | undefined
+  saveViewQuery?: string | undefined
   defaultSort?: TaskSortBy[]
   defaultOpenFilter?: TaskFilterKind
   autoFocus?: boolean
@@ -71,6 +84,8 @@ export function TaskFilterChipRow({
   disableProjectFilter = false,
   disableStatusFilter = false,
   disableSortFilter = false,
+  projectFields,
+  saveViewQuery,
   defaultSort = defaultTaskSort,
   defaultOpenFilter,
   autoFocus = false,
@@ -149,6 +164,14 @@ export function TaskFilterChipRow({
     )
   }
 
+  const fieldNames = getProjectFieldFilterNames(
+    projectFields ?? [],
+    parsed.fields,
+  )
+  const lastAppliedField = [...fieldNames]
+    .reverse()
+    .find((name) => Object.hasOwn(parsed.fields ?? {}, name))
+
   // Merges newly typed free text back into the applied query: anything that
   // parses as a structured `key:value` token is lifted out as a condition,
   // the rest stays as parsed.freeText. Parses only the typed fragment (not
@@ -169,11 +192,14 @@ export function TaskFilterChipRow({
       ])
     }
     if (typed.label != null) next = withLabel(next, typed.label)
-    if (typed.fields === undefined) {
-      delete next.fields
-    } else {
-      next.fields = typed.fields
-    }
+    if (typed.fields !== undefined) {
+      if (projectFields === undefined) next.fields = typed.fields
+      else {
+        for (const [name, value] of Object.entries(typed.fields)) {
+          next = withField(next, name, value)
+        }
+      }
+    } else if (projectFields === undefined) delete next.fields
     if (typed.context != null) next.context = typed.context
     if (typed.priority !== undefined) {
       next = withPriority(next, typed.priority)
@@ -209,6 +235,8 @@ export function TaskFilterChipRow({
       setParsed(withParentId(parsed, undefined))
     } else if (parsed.hasPages === true) {
       setParsed(withHasPages(parsed, false))
+    } else if (projectFields !== undefined && lastAppliedField != null) {
+      setParsed(withField(parsed, lastAppliedField, undefined))
     } else if (parsed.priority !== undefined) {
       setParsed(withPriority(parsed, undefined))
     } else if (parsed.label != null) {
@@ -227,7 +255,9 @@ export function TaskFilterChipRow({
   const query = buildSearchQuery(withDefaultSort(parsed, defaultSort))
   const filterInputQuery = buildSearchQuery({
     freeText: parsed.freeText,
-    ...(parsed.fields === undefined ? {} : { fields: parsed.fields }),
+    ...(projectFields !== undefined || parsed.fields === undefined
+      ? {}
+      : { fields: parsed.fields }),
   })
   const defaultQuery = defaultTaskSearchQuery(defaultSort)
   const statusValue =
@@ -333,6 +363,15 @@ export function TaskFilterChipRow({
           </TaskFilterChip>
         )}
 
+        {projectFields !== undefined && (
+          <TaskFieldFilterChips
+            projectFields={projectFields}
+            parsed={parsed}
+            onChange={setParsed}
+            defaultOpen={defaultOpenFilter === 'field'}
+          />
+        )}
+
         {parsed.hasPages === true && (
           <TaskFilterChip
             icon={taskFilterAxisIcons.has}
@@ -416,6 +455,7 @@ export function TaskFilterChipRow({
         <TaskFilterFreeTextInput
           id={freeTextInputId}
           freeText={filterInputQuery === '' ? '' : `${filterInputQuery} `}
+          projectFieldsAsChips={projectFields !== undefined}
           onCommit={commitFreeText}
           onBackspaceEmpty={removeLastChip}
           disabledSuggestionCategories={[
@@ -435,7 +475,7 @@ export function TaskFilterChipRow({
       </div>
 
       {!hideSaveView && query !== defaultQuery && (
-        <SaveViewButton query={query} />
+        <SaveViewButton query={saveViewQuery ?? query} />
       )}
     </div>
   )

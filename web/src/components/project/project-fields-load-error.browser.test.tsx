@@ -2,13 +2,13 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { SidebarProjectFieldsLoadError } from '#components/task/sidebar-project-fields-load-error'
+import { ProjectFieldsLoadError } from '#components/project/project-fields-load-error'
 
-describe('SidebarProjectFieldsLoadError', () => {
-  it('retries loading project fields', async () => {
+describe('ProjectFieldsLoadError', () => {
+  it('retries loading project fields from the mobile sidebar', async () => {
     const onRetry = vi.fn()
     const user = userEvent.setup()
-    render(<SidebarProjectFieldsLoadError onRetry={onRetry} />)
+    render(<ProjectFieldsLoadError mobile onRetry={onRetry} />)
 
     await user.click(screen.getByRole('button', { name: 'Retry' }))
 

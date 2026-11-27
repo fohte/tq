@@ -1,5 +1,5 @@
+import { ProjectFieldsLoadError } from '#components/project/project-fields-load-error'
 import { SidebarCustomField } from '#components/task/sidebar-custom-field'
-import { SidebarProjectFieldsLoadError } from '#components/task/sidebar-project-fields-load-error'
 import { useProjectFields } from '#hooks/use-project-fields'
 
 export function SidebarProjectCustomFields({
@@ -40,7 +40,7 @@ function SidebarProjectCustomFieldsForProject({
   return (
     <>
       {fields.isError && (
-        <SidebarProjectFieldsLoadError
+        <ProjectFieldsLoadError
           mobile={mobile}
           onRetry={() => {
             void fields.refetch()

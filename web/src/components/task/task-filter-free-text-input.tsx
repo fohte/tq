@@ -17,6 +17,7 @@ import { useSearchSyntaxHelpSections } from '#hooks/use-search-syntax-help-secti
 interface TaskFilterFreeTextInputProps {
   id: string
   freeText: string
+  projectFieldsAsChips?: boolean
   onCommit: (freeText: string) => void
   onBackspaceEmpty: () => void
   disabledSuggestionCategories?: readonly string[]
@@ -25,11 +26,12 @@ interface TaskFilterFreeTextInputProps {
   syntaxHelpOptions?: Omit<SearchSyntaxHelpOptions, 'prioritySettings'>
 }
 
-// チップに対応する条件は commit 時にチップへ移し、それ以外は入力に残す。
-// field 条件はこの行にチップがないため、query text のまま編集可能にする。
+// チップ対応の条件は commit 時に入力から外す。project field 条件は、
+// field chip が有効な行では chip に移し、それ以外では query text に残す。
 export function TaskFilterFreeTextInput({
   id,
   freeText,
+  projectFieldsAsChips = false,
   onCommit,
   onBackspaceEmpty,
   disabledSuggestionCategories = [],
@@ -41,18 +43,23 @@ export function TaskFilterFreeTextInput({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const hasUncommittedChanges = useRef(false)
   const isHelpOpen = isFocused && value.trim() === ''
   const syntaxHelpSections = useSearchSyntaxHelpSections({
     ...(syntaxHelpOptions ?? { audience: 'task-filter' }),
     enabled: isHelpOpen,
   })
 
-  // Resync when freeText changes for a reason other than our own commit
-  // below (e.g. a chip removed elsewhere in the row), but never while the
-  // user has this field focused with unsent edits.
+  // 未送信の編集がなければ、フォーカス中でも外部の条件変更に合わせて入力を同期する。
   useEffect(() => {
-    if (document.activeElement === inputRef.current) return
+    if (
+      document.activeElement === inputRef.current &&
+      hasUncommittedChanges.current
+    ) {
+      return
+    }
     setValue(freeText)
+    hasUncommittedChanges.current = false
   }, [freeText])
 
   const currentPrefix = extractCurrentPrefix(value)
@@ -67,19 +74,26 @@ export function TaskFilterFreeTextInput({
 
   const applySuggestion = (suggestion: Suggestion) => {
     setValue(applySuggestionToQuery(value, suggestion))
+    hasUncommittedChanges.current = true
     setSelectedIndex(0)
   }
 
   const commit = () => {
     const trimmed = value.trim()
-    if (trimmed === freeText.trim()) return
+    if (trimmed === freeText.trim()) {
+      hasUncommittedChanges.current = false
+      return
+    }
     onCommit(trimmed)
     const typed = parseSearchQuery(trimmed)
     const remainingQuery = buildSearchQuery({
       freeText: typed.freeText,
-      ...(typed.fields === undefined ? {} : { fields: typed.fields }),
+      ...(!projectFieldsAsChips && typed.fields !== undefined
+        ? { fields: typed.fields }
+        : {}),
     })
     setValue(remainingQuery === '' ? '' : `${remainingQuery} `)
+    hasUncommittedChanges.current = false
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -123,6 +137,7 @@ export function TaskFilterFreeTextInput({
       case 'Escape':
         e.preventDefault()
         setValue(freeText)
+        hasUncommittedChanges.current = false
         break
       case 'Backspace':
         if (value === '') {
@@ -143,6 +158,7 @@ export function TaskFilterFreeTextInput({
         value={value}
         onChange={(e) => {
           setValue(e.target.value)
+          hasUncommittedChanges.current = true
           setSelectedIndex(0)
         }}
         onKeyDown={handleKeyDown}

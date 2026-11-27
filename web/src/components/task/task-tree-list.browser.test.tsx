@@ -5,7 +5,13 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { fireEvent, render, screen } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -53,9 +59,12 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderTaskTreeList(
-  tree: TreeNode[],
-  extraProps: Partial<TaskTreeListProps> = {},
+async function renderTaskTreeLists(
+  lists: Array<{
+    tree: TreeNode[]
+    props: Partial<TaskTreeListProps>
+    testId?: string
+  }>,
 ) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -63,13 +72,27 @@ async function renderTaskTreeList(
   const rootRoute = createRootRoute({
     validateSearch: (search: Record<string, unknown>) => search,
     component: () => (
-      <TaskTreeList
-        isLoading={false}
-        tree={tree}
-        tasks={[]}
-        sessionsByTaskId={new Map()}
-        {...extraProps}
-      />
+      <>
+        {lists.map(({ tree, props, testId }, index) => {
+          const taskTreeList = (
+            <TaskTreeList
+              key={index}
+              isLoading={false}
+              tree={tree}
+              tasks={[]}
+              sessionsByTaskId={new Map()}
+              {...props}
+            />
+          )
+          return testId == null ? (
+            taskTreeList
+          ) : (
+            <div key={index} data-testid={testId}>
+              {taskTreeList}
+            </div>
+          )
+        })}
+      </>
     ),
   })
   const router = createRouter({
@@ -83,6 +106,37 @@ async function renderTaskTreeList(
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+}
+
+async function renderTaskTreeList(
+  tree: TreeNode[],
+  extraProps: Partial<TaskTreeListProps> = {},
+) {
+  return renderTaskTreeLists([{ tree, props: extraProps }])
+}
+
+function makeLazyGroupTasks() {
+  const alphaRoot = makeNode({
+    id: 'root-alpha',
+    title: 'Alpha parent',
+    childCompletionCount: { completed: 0, total: 1 },
+  })
+  const betaRoot = makeNode({
+    id: 'root-beta',
+    title: 'Beta parent',
+    childCompletionCount: { completed: 0, total: 1 },
+  })
+  const alphaChild = makeTask({
+    id: 'child-alpha',
+    title: 'Alpha child',
+    parentId: alphaRoot.id,
+  })
+  const betaChild = makeTask({
+    id: 'child-beta',
+    title: 'Beta child',
+    parentId: betaRoot.id,
+  })
+  return { alphaRoot, betaRoot, alphaChild, betaChild }
 }
 
 beforeEach(() => {
@@ -246,6 +300,35 @@ describe('TaskTreeList', () => {
     expect(screen.queryByText(/#1 Root Task/)).toBeNull()
   })
 
+  it('does not open a create-task modal when grouped lists disable row shortcuts', async () => {
+    const firstRoot = makeNode({
+      id: 'first-root',
+      number: 1,
+      title: 'First Group Task',
+    })
+    const secondRoot = makeNode({
+      id: 'second-root',
+      number: 2,
+      title: 'Second Group Task',
+    })
+    await renderTaskTreeLists([
+      {
+        tree: [firstRoot],
+        props: { enableKeyboardShortcuts: false },
+      },
+      {
+        tree: [secondRoot],
+        props: { enableKeyboardShortcuts: false },
+      },
+    ])
+
+    fireEvent.click(screen.getByText('First Group Task'))
+    fireEvent.click(screen.getByText('Second Group Task'))
+    fireEvent.keyDown(document.body, { key: 'o' })
+
+    expect(screen.queryAllByRole('dialog').length).toEqual(0)
+  })
+
   it("opens the create-task modal with the row's parent when 'add subtask' is clicked via the row actions menu", async () => {
     const user = userEvent.setup()
     const root = makeNode({ id: 'root-1', number: 5, title: 'Parent Task' })
@@ -349,6 +432,158 @@ describe('TaskTreeList lazyChildrenFilter', () => {
       q: 'is:todo',
       ...allTasksFilter,
       parentId: 'root-1',
+    })
+  })
+
+  it('restores expansions from multiple lazy lists after remounting', async () => {
+    const user = userEvent.setup()
+    const { alphaRoot, betaRoot, alphaChild, betaChild } = makeLazyGroupTasks()
+    const childFetchCalls: Array<{ q: string; parentId: string }> = []
+    mockFetchTaskList.mockImplementation(
+      (filter?: { q: string; parentId?: string }) => {
+        if (filter?.parentId == null) return Promise.resolve([])
+        if (filter.parentId === alphaRoot.id) {
+          childFetchCalls.push({ q: filter.q, parentId: filter.parentId })
+          return Promise.resolve([alphaChild])
+        }
+        if (filter.parentId === betaRoot.id) {
+          childFetchCalls.push({ q: filter.q, parentId: filter.parentId })
+          return Promise.resolve([betaChild])
+        }
+        return Promise.resolve([])
+      },
+    )
+    const lists = [
+      {
+        tree: [alphaRoot],
+        props: {
+          expandedIdsStorageKey: 'tq:test-project:field-category:option-alpha',
+          lazyChildrenFilter: {
+            q: 'field:SampleCategory=Alpha',
+            ...allTasksFilter,
+          },
+        },
+      },
+      {
+        tree: [betaRoot],
+        props: {
+          expandedIdsStorageKey: 'tq:test-project:field-category:option-beta',
+          lazyChildrenFilter: {
+            q: 'field:SampleCategory=Beta',
+            ...allTasksFilter,
+          },
+        },
+      },
+    ]
+
+    const firstRender = await renderTaskTreeLists(lists)
+
+    await user.click(assertDefined(screen.getAllByLabelText('Expand')[0]))
+    await screen.findByText(alphaChild.title)
+    await user.click(screen.getByLabelText('Expand'))
+    await screen.findByText(betaChild.title)
+
+    firstRender.unmount()
+    childFetchCalls.splice(0)
+    mockFetchTaskList.mockClear()
+    await renderTaskTreeLists(lists)
+
+    const getRestoredChildCounts = () => ({
+      alphaChild: screen.queryAllByText(alphaChild.title).length,
+      betaChild: screen.queryAllByText(betaChild.title).length,
+    })
+    const getSortedChildFetchCalls = () =>
+      [...childFetchCalls].sort((left, right) =>
+        left.parentId.localeCompare(right.parentId),
+      )
+    const getRestoredOutput = () => ({
+      childCounts: getRestoredChildCounts(),
+      childFetchCalls: getSortedChildFetchCalls(),
+    })
+    await waitFor(() => {
+      expect(getRestoredOutput()).toEqual({
+        childCounts: { alphaChild: 1, betaChild: 1 },
+        childFetchCalls: [
+          { q: 'field:SampleCategory=Alpha', parentId: alphaRoot.id },
+          { q: 'field:SampleCategory=Beta', parentId: betaRoot.id },
+        ],
+      })
+    })
+  })
+
+  it('keeps same-key lazy tree instances in sync across remounts', async () => {
+    const user = userEvent.setup()
+    const { alphaRoot, betaRoot, alphaChild, betaChild } = makeLazyGroupTasks()
+    mockFetchTaskList.mockImplementation((filter?: { parentId?: string }) =>
+      Promise.resolve(
+        filter?.parentId === alphaRoot.id
+          ? [alphaChild]
+          : filter?.parentId === betaRoot.id
+            ? [betaChild]
+            : [],
+      ),
+    )
+    const rootTree = [alphaRoot, betaRoot]
+    const listProps = {
+      lazyChildrenFilter: {
+        q: 'field:SampleCategory=Alpha',
+        ...allTasksFilter,
+      },
+    }
+    const lists = [
+      { tree: rootTree, props: listProps, testId: 'desktop-list' },
+      { tree: rootTree, props: listProps, testId: 'mobile-list' },
+    ]
+    const getExpandButton = (container: HTMLElement, title: string) => {
+      const row = within(container)
+        .getAllByTestId('task-tree-row')
+        .find((element) => element.textContent.includes(title))
+      if (row == null) throw new Error('Could not find row for ' + title)
+      return within(row).getByLabelText('Expand')
+    }
+
+    const firstRender = await renderTaskTreeLists(lists)
+    const desktopList = screen.getByTestId('desktop-list')
+    const mobileList = screen.getByTestId('mobile-list')
+
+    await user.click(getExpandButton(desktopList, alphaRoot.title))
+    await screen.findAllByText(alphaChild.title)
+    await user.click(getExpandButton(mobileList, betaRoot.title))
+    await screen.findAllByText(betaChild.title)
+    const getChildCounts = () => {
+      const desktop = screen.getByTestId('desktop-list')
+      const mobile = screen.getByTestId('mobile-list')
+      return {
+        desktopAlpha: within(desktop).queryAllByText(alphaChild.title).length,
+        desktopBeta: within(desktop).queryAllByText(betaChild.title).length,
+        mobileAlpha: within(mobile).queryAllByText(alphaChild.title).length,
+        mobileBeta: within(mobile).queryAllByText(betaChild.title).length,
+      }
+    }
+    const beforeRemount = getChildCounts()
+    const getRemountSnapshot = () => ({
+      beforeRemount,
+      afterRemount: getChildCounts(),
+    })
+
+    firstRender.unmount()
+    await renderTaskTreeLists(lists)
+
+    await waitFor(() => {
+      expect(getRemountSnapshot()).toEqual({
+        beforeRemount: {
+          desktopAlpha: 1,
+          desktopBeta: 1,
+          mobileAlpha: 1,
+          mobileBeta: 1,
+        },
+        afterRemount: {
+          desktopAlpha: 1,
+          desktopBeta: 1,
+          mobileAlpha: 1,
+          mobileBeta: 1,
+        },
+      })
     })
   })
 })

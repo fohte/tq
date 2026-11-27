@@ -1,6 +1,6 @@
 import { Button } from '@fohte/ui/button'
 
-export function SidebarProjectFieldsLoadError({
+export function ProjectFieldsLoadError({
   mobile = false,
   onRetry,
 }: {

@@ -6,6 +6,8 @@ import { fn } from 'storybook/test'
 import {
   makeProject,
   makeProjectDetail,
+  makeProjectField,
+  makeProjectFieldOption,
 } from '#components/project/project-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
@@ -52,6 +54,15 @@ queryClient.setQueryData(
 queryClient.setQueryData(projectKeys.list(ALL_PROJECTS_FILTER), projects)
 
 const defaultParsed = makeParsedQuery()
+const projectFields = [
+  makeProjectField({
+    name: 'SampleCategory',
+    options: [
+      makeProjectFieldOption({ id: 'option-alpha', name: 'Alpha' }),
+      makeProjectFieldOption({ id: 'option-beta', name: 'Beta' }),
+    ],
+  }),
+]
 
 const meta = {
   title: 'Task/TaskFilterChipRow',
@@ -166,10 +177,16 @@ export const FreeTextInInput: Story = {
 }
 
 export const FieldsSelected: Story = {
-  name: 'the search input shows an applied project field filter',
+  name: 'the row shows an applied project field filter as a chip',
   args: {
-    parsed: makeParsedQuery({ fields: { 'Review stage': 'Draft' } }),
+    projectFields,
+    parsed: makeParsedQuery({ fields: { SampleCategory: 'Alpha' } }),
   },
+}
+
+export const ProjectFieldsUnfiltered: Story = {
+  name: 'the row offers project field chips before a value is selected',
+  args: { projectFields },
 }
 
 export const SyntaxHelpFocused: Story = {

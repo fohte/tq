@@ -61,6 +61,10 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  /** ツリー操作のキーボードショートカットを有効にするかどうか。 */
+  enableKeyboardShortcuts?: boolean
+  /** 遅延読み込みで共有する展開状態の保存キー。 */
+  expandedIdsStorageKey?: string | undefined
   /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
   lazyChildrenFilter?: TaskListFilter<'row'> | undefined
   /** Root-level pagination (see useFilteredTaskTree). Omit for a list that always fetches everything up front. */
@@ -75,6 +79,8 @@ export function TaskTreeList({
   tree: rootTree,
   tasks,
   sessionsByTaskId,
+  enableKeyboardShortcuts = true,
+  expandedIdsStorageKey,
   lazyChildrenFilter,
   hasNextPage = false,
   isFetchingNextPage = false,
@@ -94,10 +100,11 @@ export function TaskTreeList({
   const { tree, isExpanded, toggleExpand, hasChildren } = useLazyTaskTree(
     rootTree,
     lazyChildrenFilter,
+    expandedIdsStorageKey,
   )
 
   const treeOutliner = useTreeOutliner(tree, {
-    enabled: true,
+    enabled: enableKeyboardShortcuts,
     onOpenSiblingCreate: openCreateModal,
     isExpanded,
     toggleExpand,

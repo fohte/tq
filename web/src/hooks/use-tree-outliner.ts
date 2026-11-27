@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 
 import { isEditableTarget } from '#hooks/use-global-keybindings'
 import type { TreeNode } from '#hooks/use-tasks'
@@ -34,6 +40,59 @@ function writeStoredIds(storageKey: string, ids: ReadonlySet<string>): void {
   setStorageItem(storageKey, JSON.stringify([...ids])).unwrapOr(undefined)
 }
 
+interface ExpandedIdsStore {
+  getSnapshot: () => ReadonlySet<string>
+  subscribe: (listener: () => void) => () => void
+  toggle: (id: string) => void
+}
+
+const expandedIdsStores = new Map<string, ExpandedIdsStore>()
+
+function getExpandedIdsStore(storageKey: string): ExpandedIdsStore {
+  const existing = expandedIdsStores.get(storageKey)
+  if (existing != null) return existing
+
+  let toggledIds = readStoredIds(storageKey)
+  const listeners = new Set<() => void>()
+  const store: ExpandedIdsStore = {
+    getSnapshot: () => toggledIds,
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+        if (
+          listeners.size === 0 &&
+          expandedIdsStores.get(storageKey) === store
+        ) {
+          queueMicrotask(() => {
+            if (
+              listeners.size === 0 &&
+              expandedIdsStores.get(storageKey) === store
+            ) {
+              expandedIdsStores.delete(storageKey)
+            }
+          })
+        }
+      }
+    },
+    toggle: (id) => {
+      const next = new Set(toggledIds)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      toggledIds = next
+      writeStoredIds(storageKey, next)
+      for (const listener of listeners) listener()
+    },
+  }
+  expandedIdsStores.set(storageKey, store)
+  return store
+}
+
+const noSubscribe = () => () => {}
+
 /**
  * Tracks which node ids have had their expand-state explicitly flipped away
  * from `defaultExpanded`. `isExpanded(id) = defaultExpanded !== toggledIds.has(id)`
@@ -47,8 +106,16 @@ function writeStoredIds(storageKey: string, ids: ReadonlySet<string>): void {
  * navigation, reload).
  */
 export function useExpandedIds(defaultExpanded: boolean, storageKey?: string) {
-  const [toggledIds, setToggledIds] = useState<ReadonlySet<string>>(() =>
-    storageKey != null ? readStoredIds(storageKey) : new Set(),
+  const [localToggledIds, setLocalToggledIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
+  const sharedStore =
+    storageKey == null ? undefined : getExpandedIdsStore(storageKey)
+  const getSnapshot = sharedStore?.getSnapshot ?? (() => localToggledIds)
+  const toggledIds = useSyncExternalStore(
+    sharedStore?.subscribe ?? noSubscribe,
+    getSnapshot,
+    getSnapshot,
   )
 
   const isExpanded = useCallback(
@@ -58,18 +125,21 @@ export function useExpandedIds(defaultExpanded: boolean, storageKey?: string) {
 
   const toggleExpand = useCallback(
     (id: string) => {
-      setToggledIds((prev) => {
+      if (sharedStore != null) {
+        sharedStore.toggle(id)
+        return
+      }
+      setLocalToggledIds((prev) => {
         const next = new Set(prev)
         if (next.has(id)) {
           next.delete(id)
         } else {
           next.add(id)
         }
-        if (storageKey != null) writeStoredIds(storageKey, next)
         return next
       })
     },
-    [storageKey],
+    [sharedStore],
   )
 
   return { isExpanded, toggleExpand, toggledIds }

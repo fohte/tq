@@ -3,26 +3,36 @@ import { FieldTrigger } from '@fohte/ui/field-trigger'
 import { Input } from '@fohte/ui/input'
 import { Link, useNavigate } from '@tanstack/react-router'
 import type { ParsedQuery } from 'api/search-query-parser'
+import { buildSearchQuery } from 'api/search-query-parser'
 import { Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
+import { ProjectFieldsLoadError } from '#components/project/project-fields-load-error'
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
 import {
   isProjectStatus,
   ProjectStatusMark,
 } from '#components/project/project-status-mark'
+import { ProjectTaskFieldGroup } from '#components/project/project-task-field-group'
+import { ProjectTaskGroupByFilter } from '#components/project/project-task-group-by-filter'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { FloatingActionButton } from '#components/task/floating-action-button'
+import { getProjectFieldOptionLabel } from '#components/task/project-field-filter-utils'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
+import { ListAreaMessage } from '#components/ui/list-area-message'
 import { ProgressBar } from '#components/ui/progress-bar'
 import { useDebouncedSave } from '#hooks/use-debounced-save'
+import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
+import type { ProjectField } from '#hooks/use-project-fields'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { useUpdateProject } from '#hooks/use-projects'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TaskListFilter, TreeNode } from '#hooks/use-tasks'
+import { withDefaultSort, withField, withProjectId } from '#lib/tasks-query'
+import { buildTree } from '#lib/tree-builder'
 
 // --- Main Content ---
 
@@ -39,6 +49,11 @@ export function ProjectMainContent({
   isFetchingNextPage,
   isFetchNextPageError,
   fetchNextPage,
+  projectFields,
+  groupByField,
+  onGroupByChange,
+  hasProjectFieldsError,
+  onProjectFieldsRetry,
 }: {
   project: ProjectDetail
   parsedQuery: ParsedQuery
@@ -52,6 +67,11 @@ export function ProjectMainContent({
   isFetchingNextPage: boolean
   isFetchNextPageError: boolean
   fetchNextPage: () => void
+  projectFields?: ProjectField[] | undefined
+  groupByField?: ProjectField | undefined
+  onGroupByChange?: ((fieldId: string | undefined) => void) | undefined
+  hasProjectFieldsError?: boolean | undefined
+  onProjectFieldsRetry?: (() => void) | undefined
 }) {
   const statusOrFallback = isProjectStatus(project.status)
     ? project.status
@@ -104,6 +124,11 @@ export function ProjectMainContent({
         isFetchingNextPage={isFetchingNextPage}
         isFetchNextPageError={isFetchNextPageError}
         fetchNextPage={fetchNextPage}
+        projectFields={projectFields}
+        groupByField={groupByField}
+        onGroupByChange={onGroupByChange}
+        hasProjectFieldsError={hasProjectFieldsError}
+        onProjectFieldsRetry={onProjectFieldsRetry}
       />
     </div>
   )
@@ -254,6 +279,11 @@ function ProjectTaskList({
   isFetchingNextPage,
   isFetchNextPageError,
   fetchNextPage,
+  projectFields,
+  groupByField,
+  onGroupByChange,
+  hasProjectFieldsError,
+  onProjectFieldsRetry,
 }: {
   projectId: string
   projectTitle: string
@@ -268,14 +298,30 @@ function ProjectTaskList({
   isFetchingNextPage: boolean
   isFetchNextPageError: boolean
   fetchNextPage: () => void
+  projectFields?: ProjectField[] | undefined
+  groupByField?: ProjectField | undefined
+  onGroupByChange?: ((fieldId: string | undefined) => void) | undefined
+  hasProjectFieldsError?: boolean | undefined
+  onProjectFieldsRetry?: (() => void) | undefined
 }) {
   const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isLinkExistingOpen, setIsLinkExistingOpen] = useState(false)
+  const fieldGroups =
+    groupByField == null ? [] : getFieldGroups(groupByField, parsedQuery)
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-end gap-1">
+        {projectFields != null &&
+          projectFields.length > 0 &&
+          onGroupByChange != null && (
+            <ProjectTaskGroupByFilter
+              fields={projectFields}
+              selectedFieldId={groupByField?.id}
+              onChange={onGroupByChange}
+            />
+          )}
         <Button
           variant="ghost"
           size="icon-sm"
@@ -298,24 +344,51 @@ function ProjectTaskList({
         </Button>
       </div>
 
+      {hasProjectFieldsError === true && onProjectFieldsRetry != null && (
+        <ProjectFieldsLoadError onRetry={onProjectFieldsRetry} />
+      )}
+
       <div className="border border-border">
         <TaskFilterChipRow
           onQueryChange={onQueryChange}
           parsed={parsedQuery}
-          hideSaveView
+          hideSaveView={projectFields == null || projectFields.length === 0}
           disableProjectFilter
+          projectFields={projectFields}
+          saveViewQuery={buildSearchQuery(
+            withDefaultSort(withProjectId(parsedQuery, projectId)),
+          )}
         />
-        <TaskTreeList
-          isLoading={isLoading}
-          tree={tree}
-          tasks={filteredTasks}
-          sessionsByTaskId={sessionsByTaskId}
-          lazyChildrenFilter={lazyChildrenFilter}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          isFetchNextPageError={isFetchNextPageError}
-          fetchNextPage={fetchNextPage}
-        />
+        {groupByField == null ? (
+          <TaskTreeList
+            isLoading={isLoading}
+            tree={tree}
+            tasks={filteredTasks}
+            sessionsByTaskId={sessionsByTaskId}
+            lazyChildrenFilter={lazyChildrenFilter}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            isFetchNextPageError={isFetchNextPageError}
+            fetchNextPage={fetchNextPage}
+          />
+        ) : (
+          <>
+            {fieldGroups.map((group) => (
+              <ProjectTaskFieldGroupContents
+                key={group.key}
+                title={group.name}
+                projectId={projectId}
+                q={group.q}
+                expandedIdsStorageKey={`tq:expanded-project-field-group:${projectId}:${groupByField.id}:${group.key}`}
+                sessionsByTaskId={sessionsByTaskId}
+                enableKeyboardShortcuts={false}
+              />
+            ))}
+            {fieldGroups.length === 0 && (
+              <ListAreaMessage>No groups match this filter.</ListAreaMessage>
+            )}
+          </>
+        )}
       </div>
 
       {/* FAB (mobile only) */}
@@ -343,5 +416,68 @@ function ProjectTaskList({
         projectTitle={projectTitle}
       />
     </div>
+  )
+}
+
+function getFieldGroups(field: ProjectField, parsedQuery: ParsedQuery) {
+  const hasFilter = Object.hasOwn(parsedQuery.fields ?? {}, field.name)
+  const selectedValue = parsedQuery.fields?.[field.name]
+  const groups = [
+    ...field.options.map((option) => ({
+      key: `option:${option.id}`,
+      name: getProjectFieldOptionLabel(option.name),
+      value: option.name,
+    })),
+    { key: 'unset', name: 'Unset', value: null },
+  ]
+
+  return groups
+    .filter((group) => !hasFilter || group.value === selectedValue)
+    .map((group) => ({
+      ...group,
+      q: buildSearchQuery(
+        withDefaultSort(withField(parsedQuery, field.name, group.value)),
+      ),
+    }))
+}
+
+function ProjectTaskFieldGroupContents({
+  title,
+  projectId,
+  q,
+  expandedIdsStorageKey,
+  sessionsByTaskId,
+  enableKeyboardShortcuts,
+}: {
+  title: string
+  projectId: string
+  q: string
+  expandedIdsStorageKey: string
+  sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
+  enableKeyboardShortcuts: boolean
+}) {
+  const taskList = useFilteredTaskTree({ q, projectId })
+  const tasks = taskList.tasks.filter((task) => task.ancestorOnly !== true)
+
+  return (
+    <ProjectTaskFieldGroup
+      title={title}
+      isError={taskList.isError}
+      hasTasks={tasks.length > 0}
+    >
+      <TaskTreeList
+        isLoading={taskList.isLoading}
+        tree={buildTree(tasks)}
+        tasks={tasks}
+        sessionsByTaskId={sessionsByTaskId}
+        enableKeyboardShortcuts={enableKeyboardShortcuts}
+        expandedIdsStorageKey={expandedIdsStorageKey}
+        lazyChildrenFilter={taskList.lazyChildrenFilter}
+        hasNextPage={taskList.hasNextPage}
+        isFetchingNextPage={taskList.isFetchingNextPage}
+        isFetchNextPageError={taskList.isFetchNextPageError}
+        fetchNextPage={taskList.fetchNextPage}
+      />
+    </ProjectTaskFieldGroup>
   )
 }

@@ -17,10 +17,19 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
-import { makeProject } from '#components/project/project-test-fixtures'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeProject,
+  makeProjectField,
+  makeProjectFieldOption,
+} from '#components/project/project-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
+import type { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
 import { useProjectFields } from '#hooks/use-project-fields'
 import { useProjects } from '#hooks/use-projects'
+import { useCreateSavedView } from '#hooks/use-saved-views'
 import { useCreateTask } from '#hooks/use-tasks'
 import {
   assertDefined,
@@ -30,6 +39,7 @@ import {
   mutateInvokingOnSuccess,
   partialMutation,
 } from '#lib/test-utils'
+import { buildTree } from '#lib/tree-builder'
 // Import after mocks
 import { Route as ProjectDetailRoute } from '#routes/projects/$projectId'
 import { DESKTOP_VIEWPORT } from '#storybook-config/screenshot-viewports'
@@ -71,8 +81,10 @@ const mockUseProject = vi.fn()
 const mockUseProjectTaskIds = vi.fn()
 const mockUseProjects = vi.fn<typeof useProjects>()
 const mockUpdateMutate = vi.fn()
-const mockUseFilteredTaskTree = vi.fn()
+const mockUseFilteredTaskTree =
+  vi.fn<(options: Parameters<typeof useFilteredTaskTree>[0]) => unknown>()
 const mockUseCreateTask = vi.fn()
+const mockUseCreateSavedView = vi.fn<typeof useCreateSavedView>()
 const mockUseProjectFields = vi.fn<typeof useProjectFields>()
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
@@ -99,8 +111,8 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
 })
 
 vi.mock('#hooks/use-filtered-tasks', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- mock delegation
-  useFilteredTaskTree: (...args: unknown[]) => mockUseFilteredTaskTree(...args),
+  useFilteredTaskTree: (options: Parameters<typeof useFilteredTaskTree>[0]) =>
+    mockUseFilteredTaskTree(options),
 }))
 
 vi.mock('#hooks/use-project-fields', async (importOriginal) => {
@@ -110,6 +122,14 @@ vi.mock('#hooks/use-project-fields', async (importOriginal) => {
     ...actual,
     useProjectFields: (...args: Parameters<typeof useProjectFields>) =>
       mockUseProjectFields(...args),
+  }
+})
+
+vi.mock('#hooks/use-saved-views', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#hooks/use-saved-views')>()
+  return {
+    ...actual,
+    useCreateSavedView: () => mockUseCreateSavedView(),
   }
 })
 
@@ -212,6 +232,25 @@ async function renderProjectDetailPage(initialEntry = '/projects/p1') {
   }
 }
 
+function getProjectFieldControlSnapshot() {
+  const labels = screen
+    .getAllByRole('button')
+    .map((button) => button.getAttribute('aria-label'))
+  return {
+    groupBy: labels.filter((label) => label?.startsWith('Group by') === true),
+    fieldChips: labels.filter(
+      (label) => label?.startsWith('SampleCategory ') === true,
+    ),
+  }
+}
+
+function getProjectTaskGroupNames() {
+  return screen
+    .queryAllByRole('region')
+    .map((region) => region.getAttribute('aria-label'))
+    .filter((label): label is string => label?.endsWith(' group') === true)
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
@@ -243,6 +282,13 @@ beforeEach(() => {
       isSuccess: true,
       isError: false,
       isLoading: false,
+    }),
+  )
+  mockUseCreateSavedView.mockReturnValue(
+    partialMutation<ReturnType<typeof useCreateSavedView>>({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
     }),
   )
 })
@@ -496,8 +542,410 @@ describe('ProjectDetailPage task list', () => {
     await renderProjectDetailPage()
 
     expect(mockUseFilteredTaskTree.mock.calls[0]).toEqual([
-      { q: 'is:todo sort:updated', projectId: 'p1' },
+      { q: 'is:todo sort:updated', projectId: 'p1', enabled: true },
     ])
+  })
+
+  it('keeps the project task list unchanged when no fields exist', async () => {
+    await renderProjectDetailPage()
+
+    expect(getProjectFieldControlSnapshot()).toEqual({
+      groupBy: [],
+      fieldChips: [],
+    })
+  })
+
+  it('shows a retry action when project fields fail to load', async () => {
+    const refetch = vi.fn()
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: undefined,
+        isError: true,
+        isLoading: false,
+        refetch,
+      }),
+    )
+    await renderProjectDetailPage()
+    fireEvent.click(
+      atIndex(screen.getAllByRole('button', { name: 'Retry' }), 0),
+    )
+
+    const getSnapshot = () => ({
+      errors: screen.getAllByRole('alert').map((alert) => ({
+        message: within(alert).getByText('Could not load project fields.')
+          .textContent,
+        actions: within(alert)
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      })),
+      refetchCalls: refetch.mock.calls,
+    })
+    expect(getSnapshot()).toEqual({
+      errors: [
+        {
+          message: 'Could not load project fields.',
+          actions: ['Retry'],
+        },
+      ],
+      refetchCalls: [[]],
+    })
+  })
+
+  it('keeps cached field controls visible when refreshing them fails', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isError: true,
+        isLoading: false,
+      }),
+    )
+    await renderProjectDetailPage()
+
+    const getSnapshot = () => ({
+      errors: screen.getAllByRole('alert').map((alert) => ({
+        message: within(alert).getByText('Could not load project fields.')
+          .textContent,
+        actions: within(alert)
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      })),
+      controls: getProjectFieldControlSnapshot(),
+    })
+    expect(getSnapshot()).toEqual({
+      errors: [
+        {
+          message: 'Could not load project fields.',
+          actions: ['Retry'],
+        },
+      ],
+      controls: {
+        groupBy: ['Group by'],
+        fieldChips: ['SampleCategory Any'],
+      },
+    })
+  })
+
+  it('stores the selected group field in the URL without changing q', async () => {
+    const fields = [makeProjectField({ id: 'field-a', projectId: 'p1' })]
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: fields,
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const user = userEvent.setup()
+    const { router } = await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent('is:todo sort:updated sort:created')}`,
+    )
+    vi.useRealTimers()
+
+    await user.click(
+      atIndex(screen.getAllByRole('button', { name: 'Group by' }), 0),
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'SampleCategory' }),
+    )
+
+    expect(router.state.location.search).toEqual({
+      q: 'is:todo sort:updated sort:created',
+      groupBy: 'field-a',
+    })
+  })
+
+  it('saves a project field filter with its project scope', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const mutate = vi.fn<ReturnType<typeof useCreateSavedView>['mutate']>()
+    mockUseCreateSavedView.mockReturnValue(
+      partialMutation<ReturnType<typeof useCreateSavedView>>({
+        mutate,
+        isPending: false,
+        isError: false,
+      }),
+    )
+    const user = userEvent.setup()
+    await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent('is:todo field:"SampleCategory=OptionA"')}`,
+    )
+    vi.useRealTimers()
+
+    await user.click(screen.getByRole('button', { name: 'Save view' }))
+    await user.type(
+      await screen.findByPlaceholderText('View name'),
+      'Sample view',
+    )
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(mutate.mock.calls.map(([input]) => input)).toEqual([
+      {
+        name: 'Sample view',
+        query: 'is:todo field:SampleCategory=OptionA project:p1 sort:updated',
+      },
+    ])
+  })
+
+  it('groups by option order and keeps a matching field filter', async () => {
+    const fields = [makeProjectField({ id: 'field-a', projectId: 'p1' })]
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: fields,
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const q = 'is:todo field:SampleCategory=OptionB sort:updated'
+    await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent(q)}&groupBy=field-a`,
+    )
+
+    const getSnapshot = () => ({
+      taskListQueries: mockUseFilteredTaskTree.mock.calls.map(
+        ([options]) => options,
+      ),
+      displayedGroups: getProjectTaskGroupNames(),
+    })
+    expect(getSnapshot()).toEqual({
+      taskListQueries: [
+        { q, projectId: 'p1', enabled: false },
+        { q, projectId: 'p1' },
+        { q, projectId: 'p1' },
+      ],
+      displayedGroups: ['OptionB group'],
+    })
+  })
+
+  it('shows an option-matching parent only in its own field group during text search', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const parent = makeTask({
+      ...baseTask,
+      id: 'parent-task',
+      number: 1,
+      title: 'Option A parent',
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-a',
+          fieldName: 'SampleCategory',
+          optionId: 'option-a',
+          optionName: 'OptionA',
+        }),
+      ],
+    })
+    const parentAncestor = makeTask({
+      ...parent,
+      ancestorOnly: true,
+    })
+    const optionBTask = makeTask({
+      ...baseTask,
+      id: 'option-b-task',
+      number: 2,
+      title: 'Matching option B task',
+      parentId: parent.id,
+      fieldValues: [
+        makeTaskFieldValue({
+          fieldId: 'field-a',
+          fieldName: 'SampleCategory',
+          optionId: 'option-b',
+          optionName: 'OptionB',
+        }),
+      ],
+    })
+    mockUseFilteredTaskTree.mockImplementation(({ q }) => {
+      const tasks = q.includes('field:SampleCategory=OptionA')
+        ? [parent]
+        : q.includes('field:SampleCategory=OptionB')
+          ? [parentAncestor, optionBTask]
+          : []
+      return {
+        isLoading: false,
+        tree: buildTree(tasks),
+        tasks,
+        lazyChildrenFilter: undefined,
+      }
+    })
+    await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent('needle is:todo sort:updated')}&groupBy=field-a`,
+    )
+
+    const getSnapshot = () =>
+      screen
+        .queryAllByRole('region')
+        .filter((region) => {
+          const label = region.getAttribute('aria-label')
+          return label != null && label.endsWith(' group')
+        })
+        .map((region) => ({
+          name: region.getAttribute('aria-label'),
+          parent: within(region).queryAllByText('Option A parent').length,
+          optionB: within(region).queryAllByText('Matching option B task')
+            .length,
+        }))
+    expect(getSnapshot()).toEqual([
+      {
+        name: 'OptionA group',
+        parent: 1,
+        optionB: 0,
+      },
+      {
+        name: 'OptionB group',
+        parent: 0,
+        optionB: 1,
+      },
+      { name: 'Unset group', parent: 0, optionB: 0 },
+    ])
+  })
+
+  it('shows an empty state when the field filter matches no option', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    const q = 'is:todo field:SampleCategory=Unlisted sort:updated'
+    await renderProjectDetailPage(
+      `/projects/p1?q=${encodeURIComponent(q)}&groupBy=field-a`,
+    )
+
+    const getSnapshot = () => ({
+      taskListQueries: mockUseFilteredTaskTree.mock.calls.map(
+        ([options]) => options,
+      ),
+      groupNames: getProjectTaskGroupNames(),
+      emptyStates: screen
+        .getAllByText('No groups match this filter.')
+        .map((message) => message.textContent),
+    })
+    expect(getSnapshot()).toEqual({
+      taskListQueries: [{ q, projectId: 'p1', enabled: false }],
+      groupNames: [],
+      emptyStates: Array(2).fill('No groups match this filter.'),
+    })
+  })
+
+  it('queries every option in order followed by unset', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    await renderProjectDetailPage('/projects/p1?groupBy=field-a')
+
+    const groupQueries = mockUseFilteredTaskTree.mock.calls
+      .filter(([options]) => options.enabled !== false)
+      .map(([options]) => options.q)
+    expect(groupQueries).toEqual([
+      'is:todo field:SampleCategory=OptionA sort:updated',
+      'is:todo field:SampleCategory=OptionB sort:updated',
+      'is:todo field:SampleCategory= sort:updated',
+      'is:todo field:SampleCategory=OptionA sort:updated',
+      'is:todo field:SampleCategory=OptionB sort:updated',
+      'is:todo field:SampleCategory= sort:updated',
+    ])
+  })
+
+  it('disambiguates an option named Unset from the missing-value group', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [
+          makeProjectField({
+            id: 'field-a',
+            projectId: 'p1',
+            options: [makeProjectFieldOption({ name: 'Unset' })],
+          }),
+        ],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    await renderProjectDetailPage('/projects/p1?groupBy=field-a')
+
+    expect(getProjectTaskGroupNames()).toEqual([
+      'Option: Unset group',
+      'Unset group',
+    ])
+  })
+
+  it('shows a task-group load error instead of an empty state', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    mockUseFilteredTaskTree.mockReturnValue({
+      isError: true,
+      isLoading: false,
+      tasks: [],
+      tree: [],
+      lazyChildrenFilter: undefined,
+    })
+    await renderProjectDetailPage('/projects/p1?groupBy=field-a')
+
+    const getSnapshot = () => ({
+      groupErrors: screen
+        .getAllByRole('alert')
+        .map((alert) => alert.textContent),
+      emptyStates: screen
+        .queryAllByText('No tasks yet.')
+        .map((emptyState) => emptyState.textContent),
+    })
+    expect(getSnapshot()).toEqual({
+      groupErrors: Array(3).fill('Failed to load tasks for this group.'),
+      emptyStates: [],
+    })
+  })
+
+  it('treats a removed group field as no grouping', async () => {
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [makeProjectField({ id: 'field-a', projectId: 'p1' })],
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      }),
+    )
+    await renderProjectDetailPage('/projects/p1?groupBy=missing-field')
+
+    const getSnapshot = () => ({
+      taskListQueries: mockUseFilteredTaskTree.mock.calls,
+      displayedGroups: getProjectTaskGroupNames(),
+    })
+    expect(getSnapshot()).toEqual({
+      taskListQueries: [
+        [
+          {
+            q: 'is:todo sort:updated',
+            projectId: 'p1',
+            enabled: true,
+          },
+        ],
+      ],
+      displayedGroups: [],
+    })
   })
 
   it('does not fetch the project list on the project detail page', async () => {
@@ -557,7 +1005,11 @@ describe('ProjectDetailPage task list', () => {
     await user.click(await screen.findByRole('button', { name: 'Created' }))
 
     expect(mockUseFilteredTaskTree.mock.calls.at(-1)).toEqual([
-      { q: 'is:todo sort:updated sort:created', projectId: 'p1' },
+      {
+        q: 'is:todo sort:updated sort:created',
+        projectId: 'p1',
+        enabled: true,
+      },
     ])
   })
 

@@ -11,6 +11,7 @@ import { BackHeaderBar } from '#components/ui/back-header-bar'
 import { FullPageLoading } from '#components/ui/full-page-loading'
 import { FullPageMessage } from '#components/ui/full-page-message'
 import { useFilteredTaskTree } from '#hooks/use-filtered-tasks'
+import { useProjectFields } from '#hooks/use-project-fields'
 import { useProject } from '#hooks/use-projects'
 import { useTaskAgentSessionsByTaskId } from '#hooks/use-task-agent-sessions'
 import { recordRecentSearchItem } from '#lib/recent-search-items'
@@ -22,12 +23,17 @@ const projectTasksSearchDefaults = {
 
 interface ProjectDetailSearch {
   q?: string
+  groupBy?: string
 }
 
 function validateSearch(search: Record<string, unknown>): ProjectDetailSearch {
   const rawQ = typeof search['q'] === 'string' ? search['q'] : undefined
-  if (rawQ == null || rawQ === '') return { q: projectTasksSearchDefaults.q }
-  return { q: rawQ }
+  const groupBy =
+    typeof search['groupBy'] === 'string' ? search['groupBy'] : undefined
+  return {
+    q: rawQ == null || rawQ === '' ? projectTasksSearchDefaults.q : rawQ,
+    ...(groupBy == null ? {} : { groupBy }),
+  }
 }
 
 export const Route = createFileRoute('/projects/$projectId')({
@@ -40,13 +46,24 @@ export const Route = createFileRoute('/projects/$projectId')({
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams()
-  const { q = projectTasksSearchDefaults.q } = Route.useSearch()
+  const { q = projectTasksSearchDefaults.q, groupBy } = Route.useSearch()
   const navigate = Route.useNavigate()
   const {
     data: project,
     isLoading: isProjectLoading,
     error,
   } = useProject(projectId)
+  const projectFieldsQuery = useProjectFields(projectId, {
+    enabled: project != null,
+  })
+  const projectFields = projectFieldsQuery.data ?? []
+  const groupByField = projectFieldsQuery.data?.find(
+    (field) => field.id === groupBy,
+  )
+  const groupByResolved =
+    groupBy == null ||
+    projectFieldsQuery.data != null ||
+    projectFieldsQuery.isError
 
   useEffect(() => {
     if (isProjectLoading || error || project == null) return
@@ -65,6 +82,20 @@ function ProjectDetailPage() {
     })
   }
 
+  const setGroupBy = (fieldId: string | undefined) => {
+    void navigate({
+      search: (prev) => {
+        if (fieldId == null) {
+          const next = { ...prev }
+          delete next.groupBy
+          return next
+        }
+        return { ...prev, groupBy: fieldId }
+      },
+      replace: true,
+    })
+  }
+
   const parsedQuery = parseSearchQuery(q)
   const filteredQuery = buildSearchQuery(withDefaultSort(parsedQuery))
   const {
@@ -76,7 +107,13 @@ function ProjectDetailPage() {
     isFetchingNextPage,
     isFetchNextPageError,
     fetchNextPage,
-  } = useFilteredTaskTree({ q: filteredQuery, projectId })
+  } = useFilteredTaskTree({
+    q: filteredQuery,
+    projectId,
+    enabled: groupByResolved && groupByField == null,
+  })
+  const isProjectTaskListLoading =
+    isFilteredTasksLoading || (groupBy != null && !groupByResolved)
   const sessionsByTaskId = useTaskAgentSessionsByTaskId().data ?? new Map()
 
   const isLoading = isProjectLoading
@@ -101,13 +138,18 @@ function ProjectDetailPage() {
             onQueryChange={setQuery}
             tree={tree}
             filteredTasks={filteredTasks}
-            isTasksLoading={isFilteredTasksLoading}
+            isTasksLoading={isProjectTaskListLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             isFetchNextPageError={isFetchNextPageError}
             fetchNextPage={fetchNextPage}
+            projectFields={projectFields}
+            groupByField={groupByField}
+            onGroupByChange={setGroupBy}
+            hasProjectFieldsError={projectFieldsQuery.isError}
+            onProjectFieldsRetry={() => void projectFieldsQuery.refetch()}
           />
         </div>
         <ProjectSidebar key={project.id} project={project} />
@@ -126,13 +168,18 @@ function ProjectDetailPage() {
             onQueryChange={setQuery}
             tree={tree}
             filteredTasks={filteredTasks}
-            isTasksLoading={isFilteredTasksLoading}
+            isTasksLoading={isProjectTaskListLoading}
             lazyChildrenFilter={lazyChildrenFilter}
             sessionsByTaskId={sessionsByTaskId}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             isFetchNextPageError={isFetchNextPageError}
             fetchNextPage={fetchNextPage}
+            projectFields={projectFields}
+            groupByField={groupByField}
+            onGroupByChange={setGroupBy}
+            hasProjectFieldsError={projectFieldsQuery.isError}
+            onProjectFieldsRetry={() => void projectFieldsQuery.refetch()}
           />
         </div>
         <div className="border-t border-border p-4">
