@@ -8,6 +8,7 @@ import { KanbanFilterRow } from '#components/day-view/kanban-filter-row'
 import {
   makeProject,
   makeProjectDetail,
+  makeProjectField,
 } from '#components/project/project-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
@@ -477,6 +478,59 @@ describe('TaskFilterChipRow', () => {
     const inputValue = input instanceof HTMLInputElement ? input.value : null
 
     expect(inputValue).toEqual('field:"Review stage=Draft" ')
+  })
+
+  it('shows project field filters as chips instead of input text', () => {
+    renderRow({
+      projectFields: [makeProjectField({ name: 'SampleCategory' })],
+      parsed: makeParsedQuery({ fields: { SampleCategory: 'OptionA' } }),
+    })
+
+    expect(
+      screen.getByRole('button', { name: 'SampleCategory OptionA' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Filter query' })).toHaveValue(
+      '',
+    )
+  })
+
+  it('selects a project field option and writes it to the query', async () => {
+    const { onQueryChange } = renderRow({
+      projectFields: [makeProjectField({ name: 'SampleCategory' })],
+    })
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'SampleCategory Any' }))
+    await user.click(await screen.findByRole('button', { name: 'OptionA' }))
+
+    expect(onQueryChange.mock.calls).toEqual([
+      ['is:todo field:"SampleCategory=OptionA" sort:updated'],
+    ])
+  })
+
+  it('filters for an unset project field and removes it with Backspace', async () => {
+    const { onQueryChange, rerenderWithParsed } = renderRow({
+      projectFields: [makeProjectField({ name: 'SampleCategory' })],
+    })
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: 'SampleCategory Any' }))
+    await user.click(await screen.findByRole('button', { name: 'Unset' }))
+    expect(onQueryChange.mock.calls).toEqual([
+      ['is:todo field:"SampleCategory=" sort:updated'],
+    ])
+    rerenderWithParsed(makeParsedQuery({ fields: { SampleCategory: null } }))
+    expect(
+      screen.getByRole('button', { name: 'SampleCategory Unset' }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('textbox', { name: 'Filter query' }))
+    await user.keyboard('{Backspace}')
+
+    expect(onQueryChange.mock.calls).toEqual([
+      ['is:todo field:"SampleCategory=" sort:updated'],
+      ['is:todo sort:updated'],
+    ])
   })
 
   it('does not duplicate a typed token already applied to the query', async () => {

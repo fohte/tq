@@ -119,6 +119,26 @@ export function withParentId(
   return next
 }
 
+export function withField(
+  parsed: ParsedQuery,
+  name: string,
+  value: string | null | undefined,
+): ParsedQuery {
+  const fields =
+    value === undefined
+      ? Object.fromEntries(
+          Object.entries(parsed.fields ?? {}).filter(
+            ([fieldName]) => fieldName !== name,
+          ),
+        )
+      : { ...parsed.fields, [name]: value }
+
+  const next = { ...parsed }
+  if (Object.keys(fields).length === 0) delete next.fields
+  else next.fields = fields
+  return next
+}
+
 // The /tasks search for "default filters, scoped to this tag" — shared by
 // every tag-token click/link (sidebar, task row, task detail) so they all
 // navigate to the same place.

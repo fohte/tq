@@ -427,7 +427,7 @@ describe('buildSearchQuery', () => {
         freeText: '',
         fields: { 'Review stage': 'In flight', Unassigned: null },
       }),
-    ).toBe('field:"Review stage=In flight" field:Unassigned=')
+    ).toBe('field:"Review stage=In flight" field:"Unassigned="')
   })
 })
 

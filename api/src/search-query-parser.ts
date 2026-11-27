@@ -331,9 +331,7 @@ export function buildSearchQuery(query: ParsedQuery): string {
     parts.push(`label:${quoteIfNeeded(query.label)}`)
   }
   for (const [fieldName, optionName] of Object.entries(query.fields ?? {})) {
-    parts.push(
-      `field:${quoteIfNeeded(`${fieldName}=${optionName ?? ''}`, true)}`,
-    )
+    parts.push(`field:${quoteFieldValue(`${fieldName}=${optionName ?? ''}`)}`)
   }
   if (query.context !== undefined) {
     parts.push(`context:${query.context}`)
@@ -380,13 +378,14 @@ export function buildSearchQuery(query: ParsedQuery): string {
   return parts.join(' ')
 }
 
-// field: の引用値は新しい構文なので、末尾の \\ も round-trip できるようにする。
-function quoteIfNeeded(value: string, escapeBackslashes = false): string {
+function quoteIfNeeded(value: string): string {
   if (!/[\s"']/.test(value)) return value
-  const escaped = escapeBackslashes
-    ? value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-    : value.replace(/"/g, '\\"')
-  return `"${escaped}"`
+  return `"${value.replace(/"/g, '\\"')}"`
+}
+
+// フィールド名と選択肢名は任意の文字列なので、常に引用して 1 トークンとして往復させる。
+function quoteFieldValue(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
 export function tokenizeSearchQuery(input: string): SearchQueryTokenRange[] {

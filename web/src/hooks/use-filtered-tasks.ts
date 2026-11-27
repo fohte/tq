@@ -25,9 +25,11 @@ export function useBaseFilter(
 export function useFilteredTaskTree(options: {
   q: string
   projectId?: string
+  enabled?: boolean
 }) {
   const context = useCurrentContext()
   const isSearching = parseSearchQuery(options.q).freeText !== ''
+  const enabled = options.enabled ?? true
 
   const baseFilter: InfiniteTaskListFilter<'row'> = {
     view: 'row',
@@ -41,11 +43,11 @@ export function useFilteredTaskTree(options: {
   // non-paginated search and paginated root tasks.
   const searchResult = useTaskList(
     { ...baseFilter, includeAncestors: true, limit: 'unlimited' },
-    { enabled: isSearching },
+    { enabled: enabled && isSearching },
   )
   const rootResult = useInfiniteTaskList(
     { ...baseFilter, parentId: 'root' },
-    { enabled: !isSearching },
+    { enabled: enabled && !isSearching },
   )
 
   const tasks = isSearching ? searchResult.categorized.all : rootResult.tasks
