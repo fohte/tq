@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   makeTask,
   makeTaskDetail,
+  makeTaskFieldValue,
 } from '#components/task/task-row-test-fixtures'
 import { useUpdateTask } from '#hooks/use-task-mutations'
 import type { Task, TaskDetail } from '#hooks/use-task-queries'
@@ -166,12 +167,7 @@ describe('useUpdateTask priority optimism', () => {
 
 describe('useUpdateTask custom field values', () => {
   it('keeps response-shaped field values until the server refetches', async () => {
-    const fieldValue = {
-      fieldId: 'field-stage',
-      fieldName: 'DeliveryStage',
-      optionId: 'option-triage',
-      optionName: 'Triage',
-    }
+    const fieldValue = makeTaskFieldValue()
     const task = makeTask({ id: taskId, fieldValues: [fieldValue] })
     const detail = makeTaskDetail({ id: taskId, fieldValues: [fieldValue] })
     queryClient.setQueryData(taskKeys.list(allTasksFilter), [task])
@@ -227,6 +223,95 @@ describe('useUpdateTask custom field values', () => {
 
     assertDefined(resolvePatch)(
       new Response(JSON.stringify(task), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    await settled
+  })
+
+  it('clears field values optimistically when the project changes', async () => {
+    const fieldValue = makeTaskFieldValue()
+    const previousTask = makeTask({
+      id: taskId,
+      projectId: 'project-previous',
+      fieldValues: [fieldValue],
+    })
+    const previousDetail = makeTaskDetail({
+      id: taskId,
+      projectId: 'project-previous',
+      fieldValues: [fieldValue],
+    })
+    const updatedTask = makeTask({
+      ...previousTask,
+      projectId: 'project-next',
+      fieldValues: [],
+    })
+    queryClient.setQueryData(taskKeys.list(allTasksFilter), [previousTask])
+    queryClient.setQueryData(taskKeys.detail(taskId), previousDetail)
+
+    let resolvePatch: ((response: Response) => void) | undefined
+    const pendingPatch = new Promise<Response>((resolve) => {
+      resolvePatch = resolve
+    })
+    let signalPatchCalled: (() => void) | undefined
+    const patchCalled = new Promise<void>((resolve) => {
+      signalPatchCalled = resolve
+    })
+    const mockTaskPatch = await getMockTaskPatch()
+    mockTaskPatch.mockImplementation(() => {
+      assertDefined(signalPatchCalled)()
+      return pendingPatch
+    })
+
+    const { result } = renderHook(() => useUpdateTask(), { wrapper })
+    let signalSettled: (() => void) | undefined
+    const settled = new Promise<void>((resolve) => {
+      signalSettled = resolve
+    })
+    act(() => {
+      result.current.mutate(
+        { id: taskId, input: { projectId: 'project-next' } },
+        {
+          onSettled: () => {
+            assertDefined(signalSettled)()
+          },
+        },
+      )
+    })
+    await patchCalled
+
+    const readResult = () => ({
+      patchCalls: mockTaskPatch.mock.calls,
+      cache: readFieldValueState(),
+    })
+    expect(readResult()).toEqual({
+      patchCalls: [
+        [
+          {
+            param: { id: taskId },
+            json: { projectId: 'project-next' },
+          },
+        ],
+      ],
+      cache: {
+        list: [
+          normalizeUpdatedAt({
+            ...previousTask,
+            projectId: 'project-next',
+            fieldValues: [],
+          }),
+        ],
+        detail: normalizeUpdatedAt({
+          ...previousDetail,
+          projectId: 'project-next',
+          fieldValues: [],
+        }),
+      },
+    })
+
+    assertDefined(resolvePatch)(
+      new Response(JSON.stringify(updatedTask), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),

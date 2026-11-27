@@ -158,12 +158,19 @@ export function useUpdateTask() {
 
       const optimisticTimestamp = new Date().toISOString()
       const optimisticInput = omitTaskFieldValues(input)
+      const detailProjectChanged =
+        previousDetail != null &&
+        input.projectId !== undefined &&
+        input.projectId !== previousDetail.projectId
+      const detailInput = detailProjectChanged
+        ? { ...optimisticInput, fieldValues: [] }
+        : optimisticInput
       const listInput = omitTaskDescription(optimisticInput)
 
       if (previousDetail) {
         queryClient.setQueryData<TaskDetail>(taskKeys.detail(id), {
           ...previousDetail,
-          ...optimisticInput,
+          ...detailInput,
           updatedAt: optimisticTimestamp,
         })
       }
@@ -172,11 +179,18 @@ export function useUpdateTask() {
         { queryKey: taskKeys.lists },
         (old) => {
           if (!old) return old
-          return old.map((task) =>
-            task.id === id
-              ? { ...task, ...listInput, updatedAt: optimisticTimestamp }
-              : task,
-          )
+          return old.map((task) => {
+            if (task.id !== id) return task
+            const projectChanged =
+              input.projectId !== undefined &&
+              input.projectId !== task.projectId
+            return {
+              ...task,
+              ...listInput,
+              ...(projectChanged ? { fieldValues: [] } : {}),
+              updatedAt: optimisticTimestamp,
+            }
+          })
         },
       )
 
