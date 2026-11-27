@@ -113,6 +113,81 @@ afterEach(() => {
 })
 
 describe('project field mutations', () => {
+  it('does not invalidate task queries after creating fields or options', async () => {
+    mockCreateField.mockResolvedValue(
+      new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    mockCreateOption.mockResolvedValue(
+      new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    const invalidateQueries = vi
+      .spyOn(queryClient, 'invalidateQueries')
+      .mockResolvedValue(undefined)
+    const field = renderHook(() => useCreateProjectField('project-a'), {
+      wrapper,
+    })
+    const option = renderHook(() => useCreateProjectFieldOption('project-a'), {
+      wrapper,
+    })
+    let fieldOutcome: unknown
+    let optionOutcome: unknown
+
+    await act(async () => {
+      fieldOutcome = await captureOutcome(
+        field.result.current.mutateAsync({ name: 'NewCategory' }),
+      )
+      optionOutcome = await captureOutcome(
+        option.result.current.mutateAsync({
+          fieldId: 'field-a',
+          name: 'NewChoice',
+        }),
+      )
+    })
+
+    expect(
+      projectFieldMutationOutput(
+        fieldOutcome,
+        mockCreateField.mock.calls,
+        optionOutcome,
+        mockCreateOption.mock.calls,
+        invalidateQueries.mock.calls.map(([filters]) => filters?.queryKey),
+      ),
+    ).toEqual({
+      field: {
+        outcome: { status: 'resolved', value: {} },
+        calls: [
+          [
+            {
+              param: { projectId: 'project-a' },
+              json: { name: 'NewCategory' },
+            },
+          ],
+        ],
+      },
+      option: {
+        outcome: { status: 'resolved', value: {} },
+        calls: [
+          [
+            {
+              param: { projectId: 'project-a', fieldId: 'field-a' },
+              json: { name: 'NewChoice' },
+            },
+          ],
+        ],
+      },
+      invalidationKeys: [
+        projectKeys.fields('project-a'),
+        projectKeys.fields('project-a'),
+      ],
+    })
+  })
+
   it('invalidates task queries after field and option names change', async () => {
     mockUpdateField.mockResolvedValue(
       new Response(JSON.stringify({}), {

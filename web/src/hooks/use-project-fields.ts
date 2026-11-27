@@ -67,12 +67,17 @@ export function useProjectFields(
 
 function useInvalidateProjectFields(projectId: string) {
   const queryClient = useQueryClient()
+  return () =>
+    queryClient.invalidateQueries({ queryKey: projectKeys.fields(projectId) })
+}
+
+function useInvalidateProjectFieldsAndTasks(projectId: string) {
+  const invalidateProjectFields = useInvalidateProjectFields(projectId)
+  const queryClient = useQueryClient()
   return () => {
-    // タスク応答にもフィールド名を含むため、定義変更後はタスクも再取得する
+    // タスク応答にも定義名が含まれるため、名称変更や削除ではタスクも再取得する
     return Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: projectKeys.fields(projectId),
-      }),
+      invalidateProjectFields(),
       queryClient.invalidateQueries({ queryKey: taskKeys.all }),
     ])
   }
@@ -93,7 +98,7 @@ export function useCreateProjectField(projectId: string) {
 }
 
 export function useUpdateProjectField(projectId: string) {
-  const invalidate = useInvalidateProjectFields(projectId)
+  const invalidate = useInvalidateProjectFieldsAndTasks(projectId)
   return useMutation({
     mutationFn: async ({
       fieldId,
@@ -113,7 +118,7 @@ export function useUpdateProjectField(projectId: string) {
 }
 
 export function useDeleteProjectField(projectId: string) {
-  const invalidate = useInvalidateProjectFields(projectId)
+  const invalidate = useInvalidateProjectFieldsAndTasks(projectId)
   return useMutation({
     mutationFn: async (fieldId: string) => {
       const res = await getProjectFieldsApi()[':fieldId'].$delete({
@@ -146,7 +151,7 @@ export function useCreateProjectFieldOption(projectId: string) {
 }
 
 export function useUpdateProjectFieldOption(projectId: string) {
-  const invalidate = useInvalidateProjectFields(projectId)
+  const invalidate = useInvalidateProjectFieldsAndTasks(projectId)
   return useMutation({
     mutationFn: async ({
       fieldId,
@@ -170,7 +175,7 @@ export function useUpdateProjectFieldOption(projectId: string) {
 }
 
 export function useDeleteProjectFieldOption(projectId: string) {
-  const invalidate = useInvalidateProjectFields(projectId)
+  const invalidate = useInvalidateProjectFieldsAndTasks(projectId)
   return useMutation({
     mutationFn: async ({
       fieldId,
