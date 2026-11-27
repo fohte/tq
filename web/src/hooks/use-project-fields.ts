@@ -10,7 +10,7 @@ import {
   assertOkWithMessage,
   unwrapOrThrow,
 } from '#lib/assert-response'
-import { projectKeys } from '#lib/query-keys'
+import { projectKeys, taskKeys } from '#lib/query-keys'
 
 type ProjectFieldsApi = (typeof api.api.projects)[':projectId']['fields']
 
@@ -67,8 +67,15 @@ export function useProjectFields(
 
 function useInvalidateProjectFields(projectId: string) {
   const queryClient = useQueryClient()
-  return () =>
-    queryClient.invalidateQueries({ queryKey: projectKeys.fields(projectId) })
+  return () => {
+    // タスク応答にもフィールド名を含むため、定義変更後はタスクも再取得する
+    return Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.fields(projectId),
+      }),
+      queryClient.invalidateQueries({ queryKey: taskKeys.all }),
+    ])
+  }
 }
 
 export function useCreateProjectField(projectId: string) {
