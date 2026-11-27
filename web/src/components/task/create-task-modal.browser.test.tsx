@@ -800,6 +800,57 @@ describe('CreateTaskModal', () => {
     })
   })
 
+  it('asks before closing when a project field value is the only draft content', async () => {
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    setDescriptionTemplates([])
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [
+          makeProjectField({
+            id: 'field-delivery-zone',
+            projectId: 'project-demo',
+            name: 'DeliveryZone',
+            options: [{ id: 'option-coastal', name: 'Coastal' }],
+          }),
+        ],
+        isSuccess: true,
+      }),
+    )
+    const { onOpenChange } = renderControlledModal(CreateTaskModal, {
+      projectId: 'project-demo',
+    })
+
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('combobox', { name: 'DeliveryZone' })),
+      ),
+    )
+    await user.click(await screen.findByRole('option', { name: 'Coastal' }))
+    await user.keyboard('{Escape}')
+    await screen.findByRole('dialog', { name: 'Discard task draft?' })
+    const confirmationBeforeCancel = isDiscardConfirmationOpen()
+    await clickDiscardConfirmation(user, 'Cancel')
+
+    const readState = () => ({
+      confirmationBeforeCancel,
+      confirmationAfterCancel: isDiscardConfirmationOpen(),
+      selectedValue: findVisible(
+        screen.getAllByRole('combobox', { name: 'DeliveryZone' }),
+      )?.textContent,
+      onOpenChange: onOpenChange.mock.calls,
+    })
+    await waitFor(() => {
+      expect(readState()).toEqual({
+        confirmationBeforeCancel: true,
+        confirmationAfterCancel: false,
+        selectedValue: 'Coastal',
+        onOpenChange: [],
+      })
+    })
+  })
+
   it('closes and resets the draft when discard is confirmed', async () => {
     const user = userEvent.setup()
     const { onOpenChange, setOpen } = renderControlledModal(CreateTaskModal, {})

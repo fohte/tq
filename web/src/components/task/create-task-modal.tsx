@@ -202,7 +202,11 @@ export function CreateTaskModal({
     (nextOpen: boolean) => {
       if (!nextOpen) {
         const description = descriptionTemplate.getDescription()
-        if (title.trim() !== '' || description.trim() !== '') {
+        if (
+          title.trim() !== '' ||
+          description.trim() !== '' ||
+          Object.keys(projectFieldValues.values).length > 0
+        ) {
           setDiscardConfirmationOpen(true)
           return
         }
@@ -210,7 +214,13 @@ export function CreateTaskModal({
       }
       onOpenChange(nextOpen)
     },
-    [descriptionTemplate.getDescription, onOpenChange, resetForm, title],
+    [
+      descriptionTemplate.getDescription,
+      onOpenChange,
+      projectFieldValues.values,
+      resetForm,
+      title,
+    ],
   )
 
   const discardDraft = () => {
