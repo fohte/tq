@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -153,12 +153,13 @@ function getUnavailableProjectSnapshot() {
   }
 }
 
-function getProjectFieldChipLabels(fieldName: string) {
+function getProjectFieldChipLabels(fieldNames: string | string[]) {
+  const names = typeof fieldNames === 'string' ? [fieldNames] : fieldNames
   return screen
     .getAllByRole('button')
     .map((button) => button.getAttribute('aria-label'))
-    .filter(
-      (label): label is string => label?.startsWith(`${fieldName} `) === true,
+    .filter((label): label is string =>
+      names.some((name) => label?.startsWith(`${name} `) === true),
     )
 }
 
@@ -599,21 +600,9 @@ describe('TaskFilterChipRow', () => {
     ]
     renderRow({ projectFields: reservedFields, defaultOpenFilter: 'field' })
 
-    const menuChoices = screen
+    const menuChoices = within(screen.getByRole('list'))
       .getAllByRole('button')
       .map((button) => button.textContent.trim())
-      .filter((label) =>
-        [
-          'Any',
-          'Option: Any',
-          'Any (option)',
-          'Option: Option: Any',
-          'Option: Unset',
-          'Unset (option)',
-          'Option: Option: Unset',
-          'Unset',
-        ].includes(label),
-      )
     expect(menuChoices).toEqual([
       'Any',
       'Option: Any',
@@ -624,6 +613,30 @@ describe('TaskFilterChipRow', () => {
       'Option: Option: Unset',
       'Unset',
     ])
+  })
+
+  it('shows reserved option names with distinct selected chip labels', () => {
+    renderRow({
+      projectFields: [
+        makeProjectField({
+          id: 'field-category',
+          name: 'SampleCategory',
+          options: [makeProjectFieldOption({ name: 'Any' })],
+        }),
+        makeProjectField({
+          id: 'field-status',
+          name: 'SampleStatus',
+          options: [makeProjectFieldOption({ name: 'Unset' })],
+        }),
+      ],
+      parsed: makeParsedQuery({
+        fields: { SampleCategory: 'Any', SampleStatus: 'Unset' },
+      }),
+    })
+
+    expect(
+      getProjectFieldChipLabels(['SampleCategory', 'SampleStatus']),
+    ).toEqual(['SampleCategory Option: Any', 'SampleStatus Option: Unset'])
   })
 
   it('does not duplicate a typed token already applied to the query', async () => {

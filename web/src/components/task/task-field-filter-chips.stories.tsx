@@ -19,6 +19,33 @@ const fields = [
   }),
 ]
 
+const reservedOptionFields = [
+  makeProjectField({
+    id: 'field-reserved',
+    name: 'SampleCategory',
+    options: [
+      makeProjectFieldOption({ id: 'option-any', name: 'Any' }),
+      makeProjectFieldOption({
+        id: 'option-any-alias',
+        name: 'Any (option)',
+      }),
+      makeProjectFieldOption({
+        id: 'option-any-prefix',
+        name: 'Option: Any',
+      }),
+      makeProjectFieldOption({ id: 'option-unset', name: 'Unset' }),
+      makeProjectFieldOption({
+        id: 'option-unset-alias',
+        name: 'Unset (option)',
+      }),
+      makeProjectFieldOption({
+        id: 'option-unset-prefix',
+        name: 'Option: Unset',
+      }),
+    ],
+  }),
+]
+
 const meta = {
   title: 'Task/TaskFieldFilterChips',
   component: TaskFieldFilterChips,
@@ -54,31 +81,22 @@ export const ReservedOptionNames: Story = {
   name: 'the menu distinguishes options from Any and Unset states',
   args: {
     defaultOpen: true,
-    projectFields: [
-      makeProjectField({
-        id: 'field-reserved',
-        name: 'SampleCategory',
-        options: [
-          makeProjectFieldOption({ id: 'option-any', name: 'Any' }),
-          makeProjectFieldOption({
-            id: 'option-any-alias',
-            name: 'Any (option)',
-          }),
-          makeProjectFieldOption({
-            id: 'option-any-prefix',
-            name: 'Option: Any',
-          }),
-          makeProjectFieldOption({ id: 'option-unset', name: 'Unset' }),
-          makeProjectFieldOption({
-            id: 'option-unset-alias',
-            name: 'Unset (option)',
-          }),
-          makeProjectFieldOption({
-            id: 'option-unset-prefix',
-            name: 'Option: Unset',
-          }),
-        ],
-      }),
-    ],
+    projectFields: reservedOptionFields,
+  },
+}
+
+export const ReservedAnyOptionSelected: Story = {
+  name: 'the Any option value is distinct on the selected chip',
+  args: {
+    projectFields: reservedOptionFields,
+    parsed: makeParsedQuery({ fields: { SampleCategory: 'Any' } }),
+  },
+}
+
+export const ReservedUnsetOptionSelected: Story = {
+  name: 'the Unset option value is distinct on the selected chip',
+  args: {
+    projectFields: reservedOptionFields,
+    parsed: makeParsedQuery({ fields: { SampleCategory: 'Unset' } }),
   },
 }
