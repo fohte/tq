@@ -236,13 +236,32 @@ describe('events', () => {
   })
 
   it('rejects a successful HTTP response that is not an event stream', async () => {
-    const { fetchStub, calls } = captureFetch(
-      () =>
-        new Response('<html></html>', {
-          status: 200,
-          headers: { 'content-type': 'text/html' },
-        }),
-    )
+    let requestSignal: AbortSignal | null | undefined
+    const fetchStub = vi.fn(
+      (_input: string | URL | Request, init?: RequestInit) => {
+        const signal = init?.signal
+        requestSignal = signal
+        return Promise.resolve(
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                signal?.addEventListener(
+                  'abort',
+                  () => {
+                    controller.error(signal.reason)
+                  },
+                  { once: true },
+                )
+              },
+            }),
+            {
+              status: 200,
+              headers: { 'content-type': 'text/html' },
+            },
+          ),
+        )
+      },
+    ) as typeof fetch
     const stdout = spyStdout()
     const stderr = spyStderr()
 
@@ -255,20 +274,25 @@ describe('events', () => {
     expect(
       eventsResultSnapshot(
         exitCode,
-        calls,
-        stdout.mock.calls,
-        stderr.mock.calls,
-      ),
-    ).toEqual({
-      exitCode: 1,
-      requests: [
         {
           method: 'GET',
           url: `${apiUrl}/api/events`,
           headers: { accept: 'text/event-stream' },
           body: undefined,
+          signalAborted: requestSignal?.aborted,
         },
-      ],
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: {
+        method: 'GET',
+        url: `${apiUrl}/api/events`,
+        headers: { accept: 'text/event-stream' },
+        body: undefined,
+        signalAborted: true,
+      },
       stdout: [],
       stderr: [['Error: Expected text/event-stream response.\n']],
     })
