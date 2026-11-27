@@ -49,3 +49,20 @@ export const UnsetSelected: Story = {
     parsed: makeParsedQuery({ fields: { SampleCategory: null } }),
   },
 }
+
+export const ReservedOptionNames: Story = {
+  name: 'the menu distinguishes options from Any and Unset states',
+  args: {
+    defaultOpen: true,
+    projectFields: [
+      makeProjectField({
+        id: 'field-reserved',
+        name: 'SampleCategory',
+        options: [
+          makeProjectFieldOption({ id: 'option-any', name: 'Any' }),
+          makeProjectFieldOption({ id: 'option-unset', name: 'Unset' }),
+        ],
+      }),
+    ],
+  },
+}

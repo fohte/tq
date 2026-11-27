@@ -8,6 +8,7 @@ import { Plus, Search } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { LinkExistingProjectTaskMenu } from '#components/project/link-existing-project-task-menu'
+import { ProjectFieldsLoadError } from '#components/project/project-fields-load-error'
 import { ProjectStatusBadge } from '#components/project/project-status-badge'
 import {
   isProjectStatus,
@@ -17,6 +18,7 @@ import { ProjectTaskFieldGroup } from '#components/project/project-task-field-gr
 import { ProjectTaskGroupByFilter } from '#components/project/project-task-group-by-filter'
 import { CreateTaskModal } from '#components/task/create-task-modal'
 import { FloatingActionButton } from '#components/task/floating-action-button'
+import { getProjectFieldOptionLabel } from '#components/task/project-field-filter-utils'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
 import { TaskTreeList } from '#components/task/task-tree-list'
 import { EditableMarkdownDescription } from '#components/ui/editable-markdown-description'
@@ -28,7 +30,7 @@ import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { useUpdateProject } from '#hooks/use-projects'
 import type { TaskAgentSession } from '#hooks/use-task-agent-sessions'
 import type { TaskListFilter, TreeNode } from '#hooks/use-tasks'
-import { withDefaultSort, withField } from '#lib/tasks-query'
+import { withDefaultSort, withField, withProjectId } from '#lib/tasks-query'
 
 // --- Main Content ---
 
@@ -48,6 +50,8 @@ export function ProjectMainContent({
   projectFields,
   groupByField,
   onGroupByChange,
+  hasProjectFieldsError,
+  onProjectFieldsRetry,
 }: {
   project: ProjectDetail
   parsedQuery: ParsedQuery
@@ -64,6 +68,8 @@ export function ProjectMainContent({
   projectFields?: ProjectField[] | undefined
   groupByField?: ProjectField | undefined
   onGroupByChange?: ((fieldId: string | undefined) => void) | undefined
+  hasProjectFieldsError?: boolean | undefined
+  onProjectFieldsRetry?: (() => void) | undefined
 }) {
   const statusOrFallback = isProjectStatus(project.status)
     ? project.status
@@ -119,6 +125,8 @@ export function ProjectMainContent({
         projectFields={projectFields}
         groupByField={groupByField}
         onGroupByChange={onGroupByChange}
+        hasProjectFieldsError={hasProjectFieldsError}
+        onProjectFieldsRetry={onProjectFieldsRetry}
       />
     </div>
   )
@@ -272,6 +280,8 @@ function ProjectTaskList({
   projectFields,
   groupByField,
   onGroupByChange,
+  hasProjectFieldsError,
+  onProjectFieldsRetry,
 }: {
   projectId: string
   projectTitle: string
@@ -289,6 +299,8 @@ function ProjectTaskList({
   projectFields?: ProjectField[] | undefined
   groupByField?: ProjectField | undefined
   onGroupByChange?: ((fieldId: string | undefined) => void) | undefined
+  hasProjectFieldsError?: boolean | undefined
+  onProjectFieldsRetry?: (() => void) | undefined
 }) {
   const navigate = useNavigate()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -328,13 +340,20 @@ function ProjectTaskList({
         </Button>
       </div>
 
+      {hasProjectFieldsError === true && onProjectFieldsRetry != null && (
+        <ProjectFieldsLoadError onRetry={onProjectFieldsRetry} />
+      )}
+
       <div className="border border-border">
         <TaskFilterChipRow
           onQueryChange={onQueryChange}
           parsed={parsedQuery}
-          hideSaveView
+          hideSaveView={projectFields == null || projectFields.length === 0}
           disableProjectFilter
           projectFields={projectFields}
+          saveViewQuery={buildSearchQuery(
+            withDefaultSort(withProjectId(parsedQuery, projectId)),
+          )}
         />
         {groupByField == null ? (
           <TaskTreeList
@@ -350,13 +369,13 @@ function ProjectTaskList({
           />
         ) : (
           getFieldGroups(groupByField, parsedQuery).map((group) => (
-            <ProjectTaskFieldGroup key={group.key} title={group.name}>
-              <ProjectTaskFieldGroupContents
-                projectId={projectId}
-                q={group.q}
-                sessionsByTaskId={sessionsByTaskId}
-              />
-            </ProjectTaskFieldGroup>
+            <ProjectTaskFieldGroupContents
+              key={group.key}
+              title={group.name}
+              projectId={projectId}
+              q={group.q}
+              sessionsByTaskId={sessionsByTaskId}
+            />
           ))
         )}
       </div>
@@ -395,7 +414,7 @@ function getFieldGroups(field: ProjectField, parsedQuery: ParsedQuery) {
   const groups = [
     ...field.options.map((option) => ({
       key: `option:${option.id}`,
-      name: option.name,
+      name: getProjectFieldOptionLabel(option.name),
       value: option.name,
     })),
     { key: 'unset', name: 'Unset', value: null },
@@ -412,10 +431,12 @@ function getFieldGroups(field: ProjectField, parsedQuery: ParsedQuery) {
 }
 
 function ProjectTaskFieldGroupContents({
+  title,
   projectId,
   q,
   sessionsByTaskId,
 }: {
+  title: string
   projectId: string
   q: string
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
@@ -423,16 +444,21 @@ function ProjectTaskFieldGroupContents({
   const taskList = useFilteredTaskTree({ q, projectId })
 
   return (
-    <TaskTreeList
-      isLoading={taskList.isLoading}
-      tree={taskList.tree}
-      tasks={taskList.tasks}
-      sessionsByTaskId={sessionsByTaskId}
-      lazyChildrenFilter={taskList.lazyChildrenFilter}
-      hasNextPage={taskList.hasNextPage}
-      isFetchingNextPage={taskList.isFetchingNextPage}
-      isFetchNextPageError={taskList.isFetchNextPageError}
-      fetchNextPage={taskList.fetchNextPage}
-    />
+    <ProjectTaskFieldGroup
+      title={title}
+      isError={taskList.isError && taskList.tasks.length === 0}
+    >
+      <TaskTreeList
+        isLoading={taskList.isLoading}
+        tree={taskList.tree}
+        tasks={taskList.tasks}
+        sessionsByTaskId={sessionsByTaskId}
+        lazyChildrenFilter={taskList.lazyChildrenFilter}
+        hasNextPage={taskList.hasNextPage}
+        isFetchingNextPage={taskList.isFetchingNextPage}
+        isFetchNextPageError={taskList.isFetchNextPageError}
+        fetchNextPage={taskList.fetchNextPage}
+      />
+    </ProjectTaskFieldGroup>
   )
 }

@@ -59,6 +59,7 @@ export function useFilteredTaskTree(options: {
 
   return {
     isLoading: isSearching ? searchResult.isLoading : rootResult.isLoading,
+    isError: isSearching ? searchResult.isError : rootResult.isError,
     tree,
     tasks,
     lazyChildrenFilter: isSearching

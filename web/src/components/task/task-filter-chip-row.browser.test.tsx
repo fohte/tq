@@ -9,6 +9,7 @@ import {
   makeProject,
   makeProjectDetail,
   makeProjectField,
+  makeProjectFieldOption,
 } from '#components/project/project-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskFilterChipRow } from '#components/task/task-filter-chip-row'
@@ -150,6 +151,15 @@ function getUnavailableProjectSnapshot() {
       .getByRole('button', { name: 'Remove project filter' })
       .getAttribute('aria-label'),
   }
+}
+
+function getProjectFieldChipLabels(fieldName: string) {
+  return screen
+    .getAllByRole('button')
+    .map((button) => button.getAttribute('aria-label'))
+    .filter(
+      (label): label is string => label?.startsWith(`${fieldName} `) === true,
+    )
 }
 
 function getPriorityFilterSnapshot(
@@ -437,6 +447,29 @@ describe('TaskFilterChipRow', () => {
     ])
   })
 
+  it('merges a typed project field with other applied field filters', async () => {
+    const { onQueryChange } = renderRow({
+      projectFields: [
+        makeProjectField({ name: 'SampleCategory' }),
+        makeProjectField({ name: 'SampleAudience' }),
+      ],
+      parsed: makeParsedQuery({ fields: { SampleCategory: 'OptionA' } }),
+    })
+    const user = userEvent.setup()
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Filter query' }),
+      'field:"SampleAudience=OptionB"',
+    )
+    await user.keyboard('{Enter}')
+
+    expect(onQueryChange.mock.calls).toEqual([
+      [
+        'is:todo field:"SampleCategory=OptionA" field:"SampleAudience=OptionB" sort:updated',
+      ],
+    ])
+  })
+
   it('keeps applied project field filters editable in the query input', async () => {
     const { onQueryChange, rerenderWithParsed } = renderRow()
     const user = userEvent.setup()
@@ -486,12 +519,16 @@ describe('TaskFilterChipRow', () => {
       parsed: makeParsedQuery({ fields: { SampleCategory: 'OptionA' } }),
     })
 
-    expect(
-      screen.getByRole('button', { name: 'SampleCategory OptionA' }),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: 'Filter query' })).toHaveValue(
-      '',
-    )
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    const inputValue = input instanceof HTMLInputElement ? input.value : null
+    const getSnapshot = () => ({
+      fieldChips: getProjectFieldChipLabels('SampleCategory'),
+      inputValue,
+    })
+    expect(getSnapshot()).toEqual({
+      fieldChips: ['SampleCategory OptionA'],
+      inputValue: '',
+    })
   })
 
   it('selects a project field option and writes it to the query', async () => {
@@ -508,8 +545,8 @@ describe('TaskFilterChipRow', () => {
     ])
   })
 
-  it('filters for an unset project field and removes it with Backspace', async () => {
-    const { onQueryChange, rerenderWithParsed } = renderRow({
+  it('filters for an unset project field', async () => {
+    const { onQueryChange } = renderRow({
       projectFields: [makeProjectField({ name: 'SampleCategory' })],
     })
     const user = userEvent.setup()
@@ -519,17 +556,44 @@ describe('TaskFilterChipRow', () => {
     expect(onQueryChange.mock.calls).toEqual([
       ['is:todo field:"SampleCategory=" sort:updated'],
     ])
-    rerenderWithParsed(makeParsedQuery({ fields: { SampleCategory: null } }))
-    expect(
-      screen.getByRole('button', { name: 'SampleCategory Unset' }),
-    ).toBeInTheDocument()
+  })
+
+  it('removes an unset project field filter with Backspace', async () => {
+    const { onQueryChange } = renderRow({
+      projectFields: [makeProjectField({ name: 'SampleCategory' })],
+      parsed: makeParsedQuery({ fields: { SampleCategory: null } }),
+    })
+    const user = userEvent.setup()
 
     await user.click(screen.getByRole('textbox', { name: 'Filter query' }))
     await user.keyboard('{Backspace}')
 
-    expect(onQueryChange.mock.calls).toEqual([
-      ['is:todo field:"SampleCategory=" sort:updated'],
-      ['is:todo sort:updated'],
+    expect(onQueryChange.mock.calls).toEqual([['is:todo sort:updated']])
+  })
+
+  it('keeps reserved option names distinct from the filter states', () => {
+    const reservedFields = [
+      makeProjectField({
+        name: 'SampleCategory',
+        options: [
+          makeProjectFieldOption({ id: 'option-any', name: 'Any' }),
+          makeProjectFieldOption({ id: 'option-unset', name: 'Unset' }),
+        ],
+      }),
+    ]
+    renderRow({ projectFields: reservedFields, defaultOpenFilter: 'field' })
+
+    const menuChoices = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent.trim())
+      .filter((label) =>
+        ['Any', 'Any (option)', 'Unset', 'Unset (option)'].includes(label),
+      )
+    expect(menuChoices).toEqual([
+      'Any',
+      'Any (option)',
+      'Unset (option)',
+      'Unset',
     ])
   })
 

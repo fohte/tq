@@ -6,6 +6,7 @@ import { useEffect, useId } from 'react'
 
 import { SaveViewButton } from '#components/saved-view/save-view-button'
 import { priorityName } from '#components/task/priority-select'
+import { getProjectFieldFilterNames } from '#components/task/project-field-filter-utils'
 import { TaskFieldFilterChips } from '#components/task/task-field-filter-chips'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { TaskFilterFreeTextInput } from '#components/task/task-filter-free-text-input'
@@ -44,7 +45,14 @@ import {
 } from '#lib/tasks-query'
 
 type TaskFilterKind =
-  'status' | 'project' | 'label' | 'priority' | 'pages' | 'parent' | 'sort'
+  | 'status'
+  | 'project'
+  | 'label'
+  | 'priority'
+  | 'field'
+  | 'pages'
+  | 'parent'
+  | 'sort'
 
 interface TaskFilterChipRowProps {
   onQueryChange: (query: string) => void
@@ -63,6 +71,7 @@ interface TaskFilterChipRowProps {
   disableStatusFilter?: boolean
   disableSortFilter?: boolean
   projectFields?: ProjectField[] | undefined
+  saveViewQuery?: string | undefined
   defaultSort?: TaskSortBy[]
   defaultOpenFilter?: TaskFilterKind
   autoFocus?: boolean
@@ -76,6 +85,7 @@ export function TaskFilterChipRow({
   disableStatusFilter = false,
   disableSortFilter = false,
   projectFields,
+  saveViewQuery,
   defaultSort = defaultTaskSort,
   defaultOpenFilter,
   autoFocus = false,
@@ -154,14 +164,10 @@ export function TaskFilterChipRow({
     )
   }
 
-  const fieldNames = [
-    ...(projectFields ?? []).map((field) => field.name),
-    ...Object.keys(parsed.fields ?? {}).filter(
-      (name) =>
-        projectFields === undefined ||
-        !projectFields.some((field) => field.name === name),
-    ),
-  ]
+  const fieldNames = getProjectFieldFilterNames(
+    projectFields ?? [],
+    parsed.fields,
+  )
   const lastAppliedField = [...fieldNames]
     .reverse()
     .find((name) => Object.hasOwn(parsed.fields ?? {}, name))
@@ -362,6 +368,7 @@ export function TaskFilterChipRow({
             projectFields={projectFields}
             parsed={parsed}
             onChange={setParsed}
+            defaultOpen={defaultOpenFilter === 'field'}
           />
         )}
 
@@ -467,7 +474,7 @@ export function TaskFilterChipRow({
       </div>
 
       {!hideSaveView && query !== defaultQuery && (
-        <SaveViewButton query={query} />
+        <SaveViewButton query={saveViewQuery ?? query} />
       )}
     </div>
   )

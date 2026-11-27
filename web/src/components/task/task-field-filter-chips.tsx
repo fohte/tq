@@ -1,6 +1,10 @@
 import { List, ListItem } from '@fohte/ui/list'
 import type { ParsedQuery } from 'api/search-query-parser'
 
+import {
+  getProjectFieldFilterNames,
+  getProjectFieldOptionLabel,
+} from '#components/task/project-field-filter-utils'
 import { TaskFilterChip } from '#components/task/task-filter-chip'
 import { taskFilterAxisIcons } from '#components/task/task-filter-icons'
 import type { ProjectField } from '#hooks/use-project-fields'
@@ -10,17 +14,14 @@ export function TaskFieldFilterChips({
   projectFields,
   parsed,
   onChange,
+  defaultOpen = false,
 }: {
   projectFields: ProjectField[]
   parsed: ParsedQuery
   onChange: (parsed: ParsedQuery) => void
+  defaultOpen?: boolean
 }) {
-  const names = [
-    ...projectFields.map((field) => field.name),
-    ...Object.keys(parsed.fields ?? {}).filter(
-      (name) => !projectFields.some((field) => field.name === name),
-    ),
-  ]
+  const names = getProjectFieldFilterNames(projectFields, parsed.fields)
 
   return (
     <>
@@ -28,7 +29,11 @@ export function TaskFieldFilterChips({
         const field = projectFields.find((candidate) => candidate.name === name)
         const hasFilter = Object.hasOwn(parsed.fields ?? {}, name)
         const selectedValue = parsed.fields?.[name]
-        const value = !hasFilter ? 'Any' : (selectedValue ?? 'Unset')
+        const value = !hasFilter
+          ? 'Any'
+          : selectedValue == null
+            ? 'Unset'
+            : getProjectFieldOptionLabel(selectedValue)
 
         return (
           <TaskFilterChip
@@ -38,6 +43,7 @@ export function TaskFieldFilterChips({
             value={value}
             menuTitle={name}
             ariaLabel={`${name} ${value}`}
+            defaultOpen={defaultOpen}
             onRemove={
               hasFilter
                 ? () => {
@@ -63,7 +69,7 @@ export function TaskFieldFilterChips({
                     onChange(withField(parsed, name, option.name))
                   }}
                 >
-                  {option.name}
+                  {getProjectFieldOptionLabel(option.name)}
                 </ListItem>
               ))}
               <ListItem

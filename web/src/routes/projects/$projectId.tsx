@@ -148,6 +148,10 @@ function ProjectDetailPage() {
             projectFields={projectFields}
             groupByField={groupByField}
             onGroupByChange={setGroupBy}
+            hasProjectFieldsError={
+              projectFieldsQuery.isError && projectFieldsQuery.data == null
+            }
+            onProjectFieldsRetry={() => void projectFieldsQuery.refetch()}
           />
         </div>
         <ProjectSidebar key={project.id} project={project} />
@@ -176,6 +180,10 @@ function ProjectDetailPage() {
             projectFields={projectFields}
             groupByField={groupByField}
             onGroupByChange={setGroupBy}
+            hasProjectFieldsError={
+              projectFieldsQuery.isError && projectFieldsQuery.data == null
+            }
+            onProjectFieldsRetry={() => void projectFieldsQuery.refetch()}
           />
         </div>
         <div className="border-t border-border p-4">

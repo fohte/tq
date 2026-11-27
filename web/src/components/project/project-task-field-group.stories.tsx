@@ -26,3 +26,8 @@ export const Unset: Story = {
   name: 'the task list shows a group for tasks without a value',
   args: { title: 'Unset' },
 }
+
+export const LoadError: Story = {
+  name: 'the task list shows when a group failed to load',
+  args: { isError: true },
+}
