@@ -28,6 +28,9 @@ const meta = {
     fields: [deliveryField, supportField],
     values: { [deliveryField.id]: 'option-coastal' },
     onValueChange: fn(),
+    onRetry: fn(),
+    isLoading: false,
+    loadError: false,
   },
 } satisfies Meta<typeof CreateTaskModalProjectFields>
 
@@ -41,4 +44,19 @@ export const Desktop: Story = {
 export const Mobile: Story = {
   name: 'the mobile form shows configured fields as editable chips',
   args: { compact: true },
+}
+
+export const Loading: Story = {
+  name: 'shows a loading message while project fields are fetched',
+  args: { fields: [], isLoading: true },
+}
+
+export const LoadError: Story = {
+  name: 'offers a retry when project fields cannot be loaded',
+  args: { fields: [], loadError: true },
+}
+
+export const RecurringTask: Story = {
+  name: 'explains that field values apply only to this recurring task',
+  args: { recurring: true },
 }

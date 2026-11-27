@@ -6,6 +6,20 @@ import type {
 } from '#hooks/use-tasks'
 import type { QueueCandidate } from '#lib/queue-candidates'
 
+type TaskFieldValue = Task['fieldValues'][number]
+
+export function makeTaskFieldValue(
+  overrides: Partial<TaskFieldValue> = {},
+): TaskFieldValue {
+  return {
+    fieldId: 'field-example',
+    fieldName: 'ExampleCategory',
+    optionId: 'option-example',
+    optionName: 'ExampleChoice',
+    ...overrides,
+  }
+}
+
 export function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'task-1',

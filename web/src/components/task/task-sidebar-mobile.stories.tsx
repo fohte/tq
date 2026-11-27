@@ -5,7 +5,10 @@ import {
   makeProjectField,
 } from '#components/project/project-test-fixtures'
 import { TaskSidebarMobile } from '#components/task/task-detail-sidebar'
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import {
+  makeTaskDetail,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import { TaskSidebarStoryProviders } from '#components/task/task-sidebar-story-test-fixtures'
 import type { ProjectField } from '#hooks/use-project-fields'
 import type { ProjectDetail } from '#hooks/use-projects'
@@ -73,12 +76,12 @@ export const MobileSidebarWithCustomField: Story = {
     task: makeTaskDetail({
       projectId: mobileProject.id,
       fieldValues: [
-        {
+        makeTaskFieldValue({
           fieldId: mobileField.id,
           fieldName: mobileField.name,
           optionId: mobileFieldOption.id,
           optionName: mobileFieldOption.name,
-        },
+        }),
       ],
     }),
     project: mobileProject,

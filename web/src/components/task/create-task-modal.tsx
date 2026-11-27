@@ -93,10 +93,6 @@ export function CreateTaskModal({
   const [plan, setPlan] = useState<PlanValue | ''>('')
   const prioritySettings = usePrioritySettings()
   const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
-  const projectFieldValues = useCreateTaskModalProjectFieldsState(
-    projectId,
-    open,
-  )
   // Set when the user types a `^N` shorthand token, overriding the
   // parent passed in via props (e.g. from "Add subtask").
   const [parentOverrideNumber, setParentOverrideNumber] = useState<
@@ -110,6 +106,11 @@ export function CreateTaskModal({
   const [recurrenceRule, setRecurrenceRule] = useState<
     ShorthandRecurrenceRule | undefined
   >(undefined)
+  const projectFieldValues = useCreateTaskModalProjectFieldsState(
+    projectId,
+    open,
+    recurrenceRule != null,
+  )
   const createTask = useCreateTask()
   const linkGithub = useLinkTaskToGithub()
   const today = useMemo(() => formatLocalDate(new Date()), [])
@@ -241,6 +242,7 @@ export function CreateTaskModal({
     title.trim() !== '' &&
     !createTask.isPending &&
     !planQueueLoading &&
+    projectFieldValues.isReady &&
     !parentNotFound &&
     !parentPending &&
     !githubPending &&

@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@fohte/ui/select'
+import { useEffect, useState } from 'react'
 
 import { SidebarField } from '#components/task/sidebar-field'
 import type { ProjectField } from '#hooks/use-project-fields'
@@ -22,22 +23,43 @@ export function SidebarCustomField({
   optionId: string | undefined
 }) {
   const updateTask = useUpdateTask()
+  const [selectedOptionId, setSelectedOptionId] = useState(
+    optionId ?? UNSET_VALUE,
+  )
+  const selectedOption = field.options.find(({ id }) => id === selectedOptionId)
+
+  useEffect(() => {
+    setSelectedOptionId(optionId ?? UNSET_VALUE)
+  }, [optionId])
 
   return (
     <SidebarField label={field.name}>
       <div className="px-1">
         <Select
-          value={optionId ?? UNSET_VALUE}
+          value={selectedOptionId}
+          disabled={updateTask.isPending}
           onValueChange={(nextOptionId) => {
-            updateTask.mutate({
-              id: taskId,
-              input: {
-                fieldValues: {
-                  [field.id]:
-                    nextOptionId === UNSET_VALUE ? null : nextOptionId,
+            const normalizedNextOptionId = nextOptionId ?? UNSET_VALUE
+            const previousOptionId = selectedOptionId
+            setSelectedOptionId(normalizedNextOptionId)
+            updateTask.mutate(
+              {
+                id: taskId,
+                input: {
+                  fieldValues: {
+                    [field.id]:
+                      normalizedNextOptionId === UNSET_VALUE
+                        ? null
+                        : normalizedNextOptionId,
+                  },
                 },
               },
-            })
+              {
+                onError: () => {
+                  setSelectedOptionId(previousOptionId)
+                },
+              },
+            )
           }}
         >
           <SelectTrigger
@@ -46,7 +68,7 @@ export function SidebarCustomField({
             className="w-full justify-start"
             aria-label={field.name}
           >
-            <SelectValue placeholder="—" />
+            <SelectValue>{selectedOption?.name ?? '—'}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={UNSET_VALUE}>—</SelectItem>

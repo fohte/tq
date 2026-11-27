@@ -6,6 +6,7 @@ import { useProjectFields } from '#hooks/use-project-fields'
 export function useCreateTaskModalProjectFieldsState(
   projectId: string | undefined,
   open: boolean,
+  recurring: boolean,
 ) {
   const [values, setValues] = useState<Record<string, string>>({})
   const query = useProjectFields(projectId ?? '', {
@@ -38,21 +39,26 @@ export function useCreateTaskModalProjectFieldsState(
   }
 
   const fields = query.data ?? []
-  const input = (
-    <CreateTaskModalProjectFields
-      fields={fields}
-      values={values}
-      onValueChange={onValueChange}
-    />
-  )
-  const compactInput = (
-    <CreateTaskModalProjectFields
-      fields={fields}
-      values={values}
-      onValueChange={onValueChange}
-      compact
-    />
-  )
+  const onRetry = () => {
+    void query.refetch()
+  }
+  const commonProps = {
+    fields,
+    values,
+    onValueChange,
+    isLoading: projectId != null && query.isLoading,
+    loadError: projectId != null && query.isError,
+    onRetry,
+    recurring,
+  }
+  const input = <CreateTaskModalProjectFields {...commonProps} />
+  const compactInput = <CreateTaskModalProjectFields {...commonProps} compact />
 
-  return { values, reset, input, compactInput }
+  return {
+    values,
+    reset,
+    input,
+    compactInput,
+    isReady: projectId == null || query.isSuccess,
+  }
 }

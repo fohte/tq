@@ -206,17 +206,23 @@ describe('useUpdateTask custom field values', () => {
       expect(mockTaskPatch).toHaveBeenCalled()
     })
 
-    expect(mockTaskPatch.mock.calls).toEqual([
-      [
-        {
-          param: { id: taskId },
-          json: { fieldValues: { [fieldValue.fieldId]: 'option-review' } },
-        },
+    const readResult = () => ({
+      patchCalls: mockTaskPatch.mock.calls,
+      cache: readFieldValueState(),
+    })
+    expect(readResult()).toEqual({
+      patchCalls: [
+        [
+          {
+            param: { id: taskId },
+            json: { fieldValues: { [fieldValue.fieldId]: 'option-review' } },
+          },
+        ],
       ],
-    ])
-    expect(readFieldValueState()).toEqual({
-      list: [normalizeUpdatedAt(task)],
-      detail: normalizeUpdatedAt(detail),
+      cache: {
+        list: [normalizeUpdatedAt(task)],
+        detail: normalizeUpdatedAt(detail),
+      },
     })
 
     assertDefined(resolvePatch)(

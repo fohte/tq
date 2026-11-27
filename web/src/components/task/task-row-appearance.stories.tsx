@@ -7,7 +7,10 @@ import { makeProject } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import { getTaskRowTimeBlockExtras } from '#components/task/task-row-time-block'
 import { makeTaskRowTimeBlockState } from '#components/task/task-row-time-block-test-fixtures'
 import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
@@ -522,18 +525,18 @@ export const WithFieldValues: Story = {
       title: 'Prepare the sample workspace',
       projectId: 'project-field-values',
       fieldValues: [
-        {
+        makeTaskFieldValue({
           fieldId: 'field-phase',
           fieldName: 'Phase',
           optionId: 'option-draft',
           optionName: 'Draft',
-        },
-        {
+        }),
+        makeTaskFieldValue({
           fieldId: 'field-region',
           fieldName: 'Region',
           optionId: 'option-east',
           optionName: 'East',
-        },
+        }),
       ],
     }),
   },

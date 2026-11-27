@@ -7,7 +7,10 @@ import {
 } from '#components/project/project-test-fixtures'
 import { makeGithubLink } from '#components/task/github-link-test-fixtures'
 import { TaskSidebar } from '#components/task/task-detail-sidebar'
-import { makeTaskDetail } from '#components/task/task-row-test-fixtures'
+import {
+  makeTaskDetail,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import { TaskSidebarStoryProviders } from '#components/task/task-sidebar-story-test-fixtures'
 import { makeTimeBlock } from '#components/task/time-block-test-fixtures'
 import type { ProjectField } from '#hooks/use-project-fields'
@@ -152,12 +155,12 @@ export const SidebarWithCustomField: Story = {
     task: makeTaskDetail({
       projectId: sampleProject.id,
       fieldValues: [
-        {
+        makeTaskFieldValue({
           fieldId: categoryField.id,
           fieldName: categoryField.name,
           optionId: selectedCategoryOption.id,
           optionName: selectedCategoryOption.name,
-        },
+        }),
       ],
     }),
     project: sampleProject,

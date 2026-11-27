@@ -1,12 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { makeProjectField } from '#components/project/project-test-fixtures'
 import { SidebarCustomField } from '#components/task/sidebar-custom-field'
 import { useUpdateTask } from '#hooks/use-tasks'
-import { clickSelectOption, partialMutation } from '#lib/test-utils'
+import {
+  assertDefined,
+  clickSelectOption,
+  partialMutation,
+} from '#lib/test-utils'
 
 vi.mock('#hooks/use-tasks', async (importOriginal) => {
   const original = await importOriginal<typeof import('#hooks/use-tasks')>()
@@ -50,9 +54,17 @@ describe('SidebarCustomField', () => {
       await screen.findByRole('option', { name: 'Review' }),
     )
 
-    expect(mutate.mock.calls).toEqual([
-      [{ id: taskId, input: { fieldValues: { [field.id]: 'option-review' } } }],
-    ])
+    const readResult = () => ({
+      displayedOption: screen.getByRole('combobox', { name: field.name })
+        .textContent,
+      updates: mutate.mock.calls.map(([input]) => input),
+    })
+    expect(readResult()).toEqual({
+      displayedOption: 'Review',
+      updates: [
+        { id: taskId, input: { fieldValues: { [field.id]: 'option-review' } } },
+      ],
+    })
   })
 
   it('clears the field when the dash option is selected', async () => {
@@ -71,8 +83,52 @@ describe('SidebarCustomField', () => {
       await screen.findByRole('option', { name: '—' }),
     )
 
-    expect(mutate.mock.calls).toEqual([
-      [{ id: taskId, input: { fieldValues: { [field.id]: null } } }],
-    ])
+    const readResult = () => ({
+      displayedOption: screen.getByRole('combobox', { name: field.name })
+        .textContent,
+      updates: mutate.mock.calls.map(([input]) => input),
+    })
+    expect(readResult()).toEqual({
+      displayedOption: '—',
+      updates: [{ id: taskId, input: { fieldValues: { [field.id]: null } } }],
+    })
+  })
+
+  it('restores the previous option when the update fails', async () => {
+    const mutate = vi.fn<ReturnType<typeof useUpdateTask>['mutate']>()
+    mockUseUpdateTask.mockReturnValue(
+      partialMutation<ReturnType<typeof useUpdateTask>>({ mutate }),
+    )
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    renderSidebarField(field.options[0]?.id)
+
+    await user.click(screen.getByRole('combobox', { name: field.name }))
+    await clickSelectOption(
+      user,
+      await screen.findByRole('option', { name: 'Review' }),
+    )
+    const [variables, options] = assertDefined(mutate.mock.calls[0])
+    act(() => {
+      assertDefined(options?.onError)(
+        new Error('Update failed'),
+        variables,
+        undefined,
+        { client: new QueryClient(), meta: undefined },
+      )
+    })
+
+    const readResult = () => ({
+      displayedOption: screen.getByRole('combobox', { name: field.name })
+        .textContent,
+      updates: mutate.mock.calls.map(([input]) => input),
+    })
+    expect(readResult()).toEqual({
+      displayedOption: 'Triage',
+      updates: [
+        { id: taskId, input: { fieldValues: { [field.id]: 'option-review' } } },
+      ],
+    })
   })
 })

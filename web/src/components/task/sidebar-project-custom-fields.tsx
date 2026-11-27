@@ -1,4 +1,5 @@
 import { SidebarCustomField } from '#components/task/sidebar-custom-field'
+import { SidebarProjectFieldsLoadError } from '#components/task/sidebar-project-fields-load-error'
 import { useProjectFields } from '#hooks/use-project-fields'
 
 export function SidebarProjectCustomFields({
@@ -36,26 +37,38 @@ function SidebarProjectCustomFieldsForProject({
 }) {
   const fields = useProjectFields(projectId)
 
-  return (fields.data ?? []).map((field) => {
-    const content = (
-      <SidebarCustomField
-        taskId={taskId}
-        field={field}
-        optionId={
-          fieldValues.find((value) => value.fieldId === field.id)?.optionId
-        }
-      />
-    )
+  return (
+    <>
+      {fields.isError && (
+        <SidebarProjectFieldsLoadError
+          mobile={mobile}
+          onRetry={() => {
+            void fields.refetch()
+          }}
+        />
+      )}
+      {(fields.data ?? []).map((field) => {
+        const content = (
+          <SidebarCustomField
+            taskId={taskId}
+            field={field}
+            optionId={
+              fieldValues.find((value) => value.fieldId === field.id)?.optionId
+            }
+          />
+        )
 
-    return mobile ? (
-      <div
-        key={field.id}
-        className="col-span-2 border-b border-border p-2.5 last:border-b-0"
-      >
-        {content}
-      </div>
-    ) : (
-      <div key={field.id}>{content}</div>
-    )
-  })
+        return mobile ? (
+          <div
+            key={field.id}
+            className="col-span-2 border-b border-border p-2.5 last:border-b-0"
+          >
+            {content}
+          </div>
+        ) : (
+          <div key={field.id}>{content}</div>
+        )
+      })}
+    </>
+  )
 }

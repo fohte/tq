@@ -299,7 +299,10 @@ describe('CreateTaskModal', () => {
       }),
     )
     mockUseProjectFields.mockReturnValue(
-      partialMutation<ReturnType<typeof useProjectFields>>({ data: [] }),
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: [],
+        isSuccess: true,
+      }),
     )
     mockUseCreateTask.mockReturnValue(
       partialMutation<ReturnType<typeof useCreateTask>>({
@@ -393,7 +396,10 @@ describe('CreateTaskModal', () => {
         ],
       })
       mockUseProjectFields.mockReturnValue(
-        partialMutation<ReturnType<typeof useProjectFields>>({ data: [field] }),
+        partialMutation<ReturnType<typeof useProjectFields>>({
+          data: [field],
+          isSuccess: true,
+        }),
       )
       const mutate = mockCreateTaskSuccess(makeTask())
       renderControlledModal(CreateTaskModal, {
@@ -436,6 +442,131 @@ describe('CreateTaskModal', () => {
       await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
     },
   )
+
+  it.each([
+    ['desktop', DESKTOP_VIEWPORT],
+    ['mobile', MOBILE_VIEWPORT],
+  ] as const)(
+    'omits a project field after clearing it in the %s form',
+    async (_viewportName, viewport) => {
+      await page.viewport(viewport.width, viewport.height)
+      const user = userEvent.setup({
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+      const field = makeProjectField({
+        id: 'field-delivery-zone',
+        projectId: 'project-demo',
+        name: 'DeliveryZone',
+        options: [{ id: 'option-coastal', name: 'Coastal' }],
+      })
+      mockUseProjectFields.mockReturnValue(
+        partialMutation<ReturnType<typeof useProjectFields>>({
+          data: [field],
+          isSuccess: true,
+        }),
+      )
+      const mutate = mockCreateTaskSuccess(makeTask())
+      renderControlledModal(CreateTaskModal, {
+        projectId: 'project-demo',
+        defaultContext: 'personal',
+      })
+
+      if (viewport.width < DESKTOP_VIEWPORT.width) {
+        await user.click(
+          assertDefined(
+            findVisible(
+              screen.getAllByRole('button', { name: 'DeliveryZone' }),
+            ),
+          ),
+        )
+      }
+      await user.click(
+        assertDefined(
+          findVisible(
+            screen.getAllByRole('combobox', { name: 'DeliveryZone' }),
+          ),
+        ),
+      )
+      await user.click(await screen.findByRole('option', { name: 'Coastal' }))
+
+      if (viewport.width < DESKTOP_VIEWPORT.width) {
+        await user.click(
+          assertDefined(
+            findVisible(
+              screen.getAllByRole('button', { name: /DeliveryZone/ }),
+            ),
+          ),
+        )
+      }
+      await user.click(
+        assertDefined(
+          findVisible(
+            screen.getAllByRole('combobox', { name: 'DeliveryZone' }),
+          ),
+        ),
+      )
+      await user.click(await screen.findByRole('option', { name: '—' }))
+
+      const titleInput = assertDefined(
+        findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+      )
+      await user.type(titleInput, 'Prepare delivery guide')
+      await user.keyboard('{Meta>}{Enter}{/Meta}')
+
+      expect(mutate.inputs).toEqual([
+        {
+          title: 'Prepare delivery guide',
+          context: 'personal',
+          projectId: 'project-demo',
+        },
+      ])
+      await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height)
+    },
+  )
+
+  it('blocks task creation and offers retry when project fields fail to load', async () => {
+    const user = userEvent.setup({
+      pointerEventsCheck: PointerEventsCheckLevel.Never,
+    })
+    const refetch = vi.fn<ReturnType<typeof useProjectFields>['refetch']>()
+    mockUseProjectFields.mockReturnValue(
+      partialMutation<ReturnType<typeof useProjectFields>>({
+        data: undefined,
+        isError: true,
+        isSuccess: false,
+        isLoading: false,
+        refetch,
+      }),
+    )
+    const mutate = mockCreateTaskSuccess(makeTask())
+    renderControlledModal(CreateTaskModal, {
+      projectId: 'project-demo',
+    })
+    const titleInput = assertDefined(
+      findVisible(screen.getAllByPlaceholderText(titleInputPlaceholder)),
+    )
+    await user.type(titleInput, 'Prepare delivery guide')
+    await user.click(
+      assertDefined(
+        findVisible(screen.getAllByRole('button', { name: 'Retry' })),
+      ),
+    )
+
+    const readResult = () => ({
+      alert: screen.getByRole('alert').textContent,
+      retries: refetch.mock.calls,
+      createdTasks: mutate.inputs,
+      enabledCreateButtons: screen
+        .getAllByRole('button', { name: /create/i })
+        .filter((button) => !button.hasAttribute('disabled')).length,
+    })
+    expect(readResult()).toEqual({
+      alert: 'Could not load project fields.Retry',
+      retries: [[]],
+      createdTasks: [],
+      enabledCreateButtons: 0,
+    })
+  })
 
   it('replaces an untouched template body immediately after another template is selected', async () => {
     const user = userEvent.setup()

@@ -42,8 +42,8 @@ export interface TaskRowAppearanceProps {
   showChildCompletionCount?: boolean
   onClick?: (e: React.MouseEvent) => void
   draggable?: boolean
-  // Appended after the row's canonical second-line items (labels, project,
-  // context, parent, dateRange, remindAt, recurrence, githubLink,
+  // Appended after the row's canonical second-line items (labels, fieldValues,
+  // project, context, parent, dateRange, remindAt, recurrence, githubLink,
   // closeReason, blockedBy) — keep their order intact.
   secondLineExtras?: React.ReactNode[]
   isCurrentTimeBlock?: boolean

@@ -13,7 +13,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { makeBlockedByGithubRef } from '#components/task/github-link-test-fixtures'
 import { makePrioritySettings } from '#components/task/priority-settings-test-fixtures'
 import { TaskRowAppearance } from '#components/task/task-row-appearance'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import { makeTaskWaitSummary } from '#components/task/task-wait-test-fixtures'
 import type { Task } from '#hooks/use-tasks'
 import { prioritySettingsKeys } from '#lib/query-keys'
@@ -85,18 +88,18 @@ describe('TaskRowAppearance', () => {
     const { container } = await renderTaskRow(
       makeTask({
         fieldValues: [
-          {
+          makeTaskFieldValue({
             fieldId: 'field-phase',
             fieldName: 'Phase',
             optionId: 'option-draft',
             optionName: 'Draft',
-          },
-          {
+          }),
+          makeTaskFieldValue({
             fieldId: 'field-region',
             fieldName: 'Region',
             optionId: 'option-east',
             optionName: 'East',
-          },
+          }),
         ],
       }),
     )
