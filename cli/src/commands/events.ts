@@ -3,6 +3,7 @@ import { ResultAsync } from 'neverthrow'
 
 import { fetchWithNetworkError, toApiError } from '#client'
 import { buildClientConfig } from '#command-context'
+import { errorFromCause } from '#errors'
 import { fail, tryParseJson } from '#result'
 
 type SseEvent = {
@@ -35,8 +36,9 @@ function readChunk(
   let timer: ReturnType<typeof setTimeout> | undefined
   const idleTimeout = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(() => {
-      abortController.abort()
-      reject(new Error('Event stream idle for 90 seconds.'))
+      const timeoutError = new Error('Event stream idle for 90 seconds.')
+      abortController.abort(timeoutError)
+      reject(timeoutError)
     }, EVENT_STREAM_IDLE_TIMEOUT_MS)
   })
 
@@ -44,8 +46,7 @@ function readChunk(
     Promise.race([reader.read(), idleTimeout]).finally(() => {
       if (timer != null) clearTimeout(timer)
     }),
-    (cause: unknown) =>
-      cause instanceof Error ? cause : new Error(String(cause)),
+    errorFromCause,
   )
 }
 

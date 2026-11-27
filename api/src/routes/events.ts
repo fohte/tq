@@ -22,7 +22,7 @@ export const eventsApp = new Hono().get('/events', (c) =>
       resolveWait?.()
     }
     const unsubscribe = subscribeToChangeEvents((event) => {
-      // 遅い購読者は再接続後に全件を取り直すため、キューが上限を超えたら切断する。
+      // 購読ごとのメモリ使用量を制限するため、キュー上限を超えたら切断する。
       if (pending.length >= MAX_PENDING_EVENTS) {
         stream.abort()
         return

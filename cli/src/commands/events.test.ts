@@ -241,9 +241,23 @@ describe('events', () => {
     })
     const fetchStub = vi.fn(
       (_input: string | URL | Request, init?: RequestInit) => {
-        requestSignal = init?.signal
+        const signal = init?.signal
+        requestSignal = signal
         return Promise.resolve(
-          new Response(new ReadableStream<Uint8Array>(), { status: 200 }),
+          new Response(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                signal?.addEventListener(
+                  'abort',
+                  () => {
+                    controller.error(signal.reason)
+                  },
+                  { once: true },
+                )
+              },
+            }),
+            { status: 200 },
+          ),
         )
       },
     ) as typeof fetch
