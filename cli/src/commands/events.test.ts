@@ -129,7 +129,10 @@ describe('events', () => {
               controller.close()
             },
           }),
-          { status: 200 },
+          {
+            status: 200,
+            headers: { 'content-type': 'text/event-stream' },
+          },
         ),
     )
     const writes: string[] = []
@@ -232,6 +235,45 @@ describe('events', () => {
     })
   })
 
+  it('rejects a successful HTTP response that is not an event stream', async () => {
+    const { fetchStub, calls } = captureFetch(
+      () =>
+        new Response('<html></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        }),
+    )
+    const stdout = spyStdout()
+    const stderr = spyStderr()
+
+    const exitCode = await runCli(
+      ['--api-url', apiUrl, 'events'],
+      fetchStub,
+      fakeStdin(true),
+    )
+
+    expect(
+      eventsResultSnapshot(
+        exitCode,
+        calls,
+        stdout.mock.calls,
+        stderr.mock.calls,
+      ),
+    ).toEqual({
+      exitCode: 1,
+      requests: [
+        {
+          method: 'GET',
+          url: `${apiUrl}/api/events`,
+          headers: { accept: 'text/event-stream' },
+          body: undefined,
+        },
+      ],
+      stdout: [],
+      stderr: [['Error: Expected text/event-stream response.\n']],
+    })
+  })
+
   it('exits when no event or heartbeat arrives for 90 seconds', async () => {
     vi.useFakeTimers()
     let resolveConnected: () => void = () => undefined
@@ -256,7 +298,10 @@ describe('events', () => {
                 )
               },
             }),
-            { status: 200 },
+            {
+              status: 200,
+              headers: { 'content-type': 'text/event-stream' },
+            },
           ),
         )
       },

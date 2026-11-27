@@ -115,6 +115,14 @@ export function registerEventsCommand(
       )
 
       if (!response.ok) fail(command, await toApiError(response))
+      const mediaType = response.headers
+        .get('content-type')
+        ?.split(';', 1)[0]
+        ?.trim()
+        .toLowerCase()
+      if (mediaType !== 'text/event-stream') {
+        fail(command, new Error('Expected text/event-stream response.'))
+      }
       if (response.body == null) {
         fail(command, new Error('Event stream response has no body.'))
       }
