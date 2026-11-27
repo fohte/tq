@@ -124,9 +124,11 @@ export const tasksUpdateApp = new Hono().patch(
         : []
 
     const result = await db.transaction(async (tx) => {
-      if (blockedByResolution != null) {
-        // project 削除が task row を順番にロックするため、relation の書き込みは先に gate を取得する。
+      if (blockedByResolution != null || recurrenceRuleInput != null) {
+        // project 削除による project_id 更新と FK 参照の競合を避けるため、先に gate を取得する。
         await lockTaskRelationWrites(tx)
+      }
+      if (blockedByResolution != null) {
         // GitHub link の FK 挿入も task 行をロックするため、同じ advisory lock を先に取る。
         await lockTaskGithubLinks(tx, id)
       }

@@ -1764,6 +1764,187 @@ describe('task field values API', () => {
     }
   }, 20_000)
 
+  it('serializes recurrence setting with concurrent project deletion', async () => {
+    const invocationId = randomUUID()
+    const updateApplicationName = `recurrence-update-${invocationId}`
+    const deleteApplicationName = `recurrence-delete-${invocationId}`
+    const isolatedDatabase = await createIsolatedTestDatabase()
+    const fixtureClient = isolatedDatabase.client
+    const updateClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      updateApplicationName,
+    )
+    const deleteClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+      deleteApplicationName,
+    )
+    const barrierClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const monitorClient = connectToIsolatedTestDatabase(
+      isolatedDatabase.databaseName,
+    )
+    const fixtureDb = isolatedDatabase.database
+    const updateDb = drizzle(updateClient, { schema })
+    const deleteDb = drizzle(deleteClient, { schema })
+    const barrierDb = drizzle(barrierClient, { schema })
+    let releaseParentLock: (() => void) | undefined
+    let parentLockTransaction: Promise<unknown> | undefined
+    let pendingUpdateResponse: Promise<Response> | undefined
+    let pendingDeleteResponse: Promise<Response> | undefined
+
+    try {
+      const project = await dbContext.run(fixtureDb, () =>
+        createProject('Sample Archive'),
+      )
+      await fixtureDb.insert(tasks).values({
+        id: 'task-a-parent',
+        title: 'Parent record',
+        projectId: project.id,
+      })
+      await fixtureDb.insert(tasks).values({
+        id: 'task-z-child',
+        title: 'Child record',
+        projectId: project.id,
+        parentId: 'task-a-parent',
+      })
+
+      let parentLockAcquired: (() => void) | undefined
+      const parentLockReady = new Promise<void>((resolve) => {
+        parentLockAcquired = resolve
+      })
+      const parentLockReleased = new Promise<void>((resolve) => {
+        releaseParentLock = resolve
+      })
+      parentLockTransaction = barrierDb.transaction(async (tx) => {
+        await tx
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.id, 'task-a-parent'))
+          .for('update')
+        parentLockAcquired?.()
+        await parentLockReleased
+      })
+      void parentLockTransaction.catch(() => undefined)
+      await parentLockReady
+
+      const deleteResponsePromise = dbContext.run(
+        deleteDb,
+        async () =>
+          await app.request(`/api/projects/${project.id}`, {
+            method: 'DELETE',
+          }),
+      )
+      pendingDeleteResponse = deleteResponsePromise
+
+      const waitForLockWait = async (applicationName: string) => {
+        const deadline = Date.now() + 10_000
+        while (Date.now() < deadline) {
+          const [activity] = await monitorClient`
+            SELECT EXISTS (
+              SELECT 1
+              FROM pg_stat_activity
+              WHERE application_name = ${applicationName}
+                AND state = 'active'
+                AND wait_event_type = 'Lock'
+            ) AS waiting
+          `
+          if (activity?.['waiting'] === true) return
+          await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        throw new Error(`Database lock wait did not start: ${applicationName}`)
+      }
+
+      await waitForLockWait(deleteApplicationName)
+      const updateResponsePromise = requestJsonWithDb(
+        updateDb,
+        '/api/tasks/task-z-child',
+        'PATCH',
+        { recurrenceRule: { type: 'daily', interval: 1 } },
+      )
+      pendingUpdateResponse = updateResponsePromise
+      await waitForLockWait(updateApplicationName)
+      releaseParentLock?.()
+
+      const [updateResponse, deleteResponse] = await Promise.all([
+        updateResponsePromise,
+        deleteResponsePromise,
+      ])
+      const taskRows = await fixtureDb
+        .select({
+          id: tasks.id,
+          projectId: tasks.projectId,
+          parentId: tasks.parentId,
+          templateId: tasks.templateId,
+        })
+        .from(tasks)
+        .where(inArray(tasks.id, ['task-a-parent', 'task-z-child']))
+        .orderBy(asc(tasks.id))
+      const templates = await fixtureDb
+        .select({
+          projectId: recurringTaskTemplates.projectId,
+          parentId: recurringTaskTemplates.parentId,
+        })
+        .from(recurringTaskTemplates)
+        .where(eq(recurringTaskTemplates.parentId, 'task-a-parent'))
+
+      const output = () => ({
+        updateStatus: updateResponse.status,
+        deleteStatus: deleteResponse.status,
+        tasks: taskRows.map((task) => ({
+          id: task.id === 'task-a-parent' ? 'PARENT_TASK_ID' : 'CHILD_TASK_ID',
+          projectId: task.projectId,
+          parentId: task.parentId == null ? null : 'PARENT_TASK_ID',
+          templateId: task.templateId == null ? null : 'TEMPLATE_ID',
+        })),
+        templates: templates.map((template) => ({
+          projectId: template.projectId,
+          parentId: template.parentId == null ? null : 'PARENT_TASK_ID',
+        })),
+      })
+      expect(output()).toEqual({
+        updateStatus: 200,
+        deleteStatus: 204,
+        tasks: [
+          {
+            id: 'PARENT_TASK_ID',
+            projectId: null,
+            parentId: null,
+            templateId: null,
+          },
+          {
+            id: 'CHILD_TASK_ID',
+            projectId: null,
+            parentId: 'PARENT_TASK_ID',
+            templateId: 'TEMPLATE_ID',
+          },
+        ],
+        templates: [{ projectId: null, parentId: 'PARENT_TASK_ID' }],
+      })
+    } finally {
+      releaseParentLock?.()
+      await Promise.all([
+        parentLockTransaction?.catch(() => undefined),
+        pendingUpdateResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+        pendingDeleteResponse?.then(
+          () => undefined,
+          () => undefined,
+        ),
+      ])
+      await Promise.all([
+        fixtureClient.end(),
+        updateClient.end(),
+        deleteClient.end(),
+        barrierClient.end(),
+        monitorClient.end(),
+      ])
+      await dropIsolatedTestDatabase(isolatedDatabase)
+    }
+  }, 20_000)
+
   it('generates occurrences from the current template after project deletion', async () => {
     const invocationId = randomUUID()
     const deleteApplicationName = `template-project-delete-${invocationId}`
