@@ -17,7 +17,7 @@ import type {
   PlanValue,
 } from '#components/task/create-task-modal-fields'
 import { CreateTaskModalMobile } from '#components/task/create-task-modal-mobile'
-import { CreateTaskModalProjectFields } from '#components/task/create-task-modal-project-fields'
+import { useCreateTaskModalProjectFieldsState } from '#components/task/create-task-modal-project-fields-state'
 import { createTaskModalTitleChangeHandler } from '#components/task/create-task-modal-title-change'
 import { GithubRefSummary } from '#components/task/github-ref-summary'
 import { toGithubUrlSummary } from '#components/task/github-url-summary'
@@ -28,7 +28,6 @@ import { useLinkTaskToGithub } from '#hooks/use-github-link'
 import { useGithubUrlPreview } from '#hooks/use-github-url-preview'
 import type { TaskPriority } from '#hooks/use-priority-settings'
 import { usePrioritySettings } from '#hooks/use-priority-settings'
-import { useProjectFields } from '#hooks/use-project-fields'
 import {
   DAY_QUEUE_KEY,
   queueKeyForPlan,
@@ -94,13 +93,10 @@ export function CreateTaskModal({
   const [plan, setPlan] = useState<PlanValue | ''>('')
   const prioritySettings = usePrioritySettings()
   const [labels, setLabels] = useState<string[]>(defaultLabels ?? [])
-  const [projectFieldValues, setProjectFieldValues] = useState<
-    Record<string, string>
-  >({})
-  const projectFieldsQuery = useProjectFields(projectId ?? '', {
-    enabled: open && projectId != null,
-  })
-  const projectFields = projectFieldsQuery.data ?? []
+  const projectFieldValues = useCreateTaskModalProjectFieldsState(
+    projectId,
+    open,
+  )
   // Set when the user types a `^N` shorthand token, overriding the
   // parent passed in via props (e.g. from "Add subtask").
   const [parentOverrideNumber, setParentOverrideNumber] = useState<
@@ -173,13 +169,8 @@ export function CreateTaskModal({
       setStartDate(defaultStartDate ?? '')
       setContext(effectiveDefaultContext)
       setLabels(defaultLabels ?? [])
-      setProjectFieldValues({})
     }
   }, [defaultStartDate, effectiveDefaultContext, defaultLabels, open])
-
-  useEffect(() => {
-    setProjectFieldValues({})
-  }, [projectId])
 
   useEffect(() => {
     if (!open) setDiscardConfirmationOpen(false)
@@ -194,7 +185,7 @@ export function CreateTaskModal({
     setPriority(null)
     setPlan('')
     setLabels(defaultLabels ?? [])
-    setProjectFieldValues({})
+    projectFieldValues.reset()
     setParentOverrideNumber(undefined)
     setGithubUrl(undefined)
     setRecurrenceRule(undefined)
@@ -203,6 +194,7 @@ export function CreateTaskModal({
     effectiveDefaultContext,
     defaultLabels,
     descriptionTemplate.reset,
+    projectFieldValues.reset,
   ])
 
   const handleOpenChange = useCallback(
@@ -270,8 +262,8 @@ export function CreateTaskModal({
       ...(effectivePriority === null ? {} : { priority: effectivePriority }),
       ...(labels.length > 0 ? { labels } : {}),
       ...(projectId != null ? { projectId } : {}),
-      ...(Object.keys(projectFieldValues).length > 0
-        ? { fieldValues: projectFieldValues }
+      ...(Object.keys(projectFieldValues.values).length > 0
+        ? { fieldValues: projectFieldValues.values }
         : {}),
       ...(effectiveParentId != null ? { parentId: effectiveParentId } : {}),
       ...(recurrenceRule != null ? { recurrenceRule } : {}),
@@ -404,35 +396,6 @@ export function CreateTaskModal({
 
   const submitDisabled = !canSubmit
 
-  const handleProjectFieldValueChange = (fieldId: string, optionId: string) => {
-    setProjectFieldValues((current) => {
-      if (optionId === '') {
-        return Object.fromEntries(
-          Object.entries(current).filter(
-            ([currentFieldId]) => currentFieldId !== fieldId,
-          ),
-        )
-      }
-      return { ...current, [fieldId]: optionId }
-    })
-  }
-
-  const projectFieldValuesInput = (
-    <CreateTaskModalProjectFields
-      fields={projectFields}
-      values={projectFieldValues}
-      onValueChange={handleProjectFieldValueChange}
-    />
-  )
-  const compactProjectFieldValuesInput = (
-    <CreateTaskModalProjectFields
-      fields={projectFields}
-      values={projectFieldValues}
-      onValueChange={handleProjectFieldValueChange}
-      compact
-    />
-  )
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPortal>
@@ -458,7 +421,7 @@ export function CreateTaskModal({
             setPlan={setPlan}
             labels={labels}
             setLabels={setLabels}
-            projectFieldValues={projectFieldValuesInput}
+            projectFieldValues={projectFieldValues.input}
             handleOpenChange={handleOpenChange}
             handleSubmit={handleSubmit}
             submitDisabled={submitDisabled}
@@ -483,7 +446,7 @@ export function CreateTaskModal({
             setPlan={setPlan}
             labels={labels}
             setLabels={setLabels}
-            projectFieldValues={compactProjectFieldValuesInput}
+            projectFieldValues={projectFieldValues.compactInput}
             handleOpenChange={handleOpenChange}
             handleSubmit={handleSubmit}
             submitDisabled={submitDisabled}
