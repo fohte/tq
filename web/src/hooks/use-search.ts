@@ -135,9 +135,8 @@ export function extractCurrentPrefix(query: string): string {
 }
 
 /**
- * Replace the token currently being typed (the last whitespace-delimited
- * word, i.e. what extractCurrentPrefix matched) with a chosen suggestion,
- * leaving a trailing space so the next word can start immediately.
+ * 入力中の token を suggestion で置き換える。
+ * `field:` はフィールド名が同じ token に続くよう、末尾に空白を付けない。
  */
 export function applySuggestionToQuery(
   query: string,
@@ -145,7 +144,7 @@ export function applySuggestionToQuery(
 ): string {
   const parts = query.split(/\s+/)
   parts[parts.length - 1] = suggestion.value
-  return parts.join(' ') + ' '
+  return parts.join(' ') + (suggestion.category === 'field' ? '' : ' ')
 }
 
 export function useSearchSuggestions(prefix: string) {

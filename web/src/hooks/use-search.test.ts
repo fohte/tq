@@ -188,4 +188,13 @@ describe('applySuggestionToQuery', () => {
   it('replaces the sole token when the query is a single bare word', () => {
     expect(applySuggestionToQuery('is', makeSuggestion())).toBe('is:todo ')
   })
+
+  it('leaves the field suggestion ready for a quoted field value', () => {
+    expect(
+      applySuggestionToQuery(
+        'field',
+        makeSuggestion({ value: 'field:', category: 'field' }),
+      ),
+    ).toBe('field:')
+  })
 })
