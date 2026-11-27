@@ -61,7 +61,7 @@ export interface TaskTreeListProps {
   tree: TreeNode[]
   tasks: Task[]
   sessionsByTaskId: ReadonlyMap<string, TaskAgentSession[]>
-  /** グループ内の複数リストが同じキー入力に応答しないよう制御します。 */
+  /** ツリー操作のキーボードショートカットを有効にするかどうか。 */
   enableKeyboardShortcuts?: boolean
   /** Forwarded to useLazyTaskTree; see its docstring for behavior. */
   lazyChildrenFilter?: TaskListFilter<'row'> | undefined

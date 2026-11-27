@@ -53,39 +53,7 @@ vi.mock('#hooks/use-projects', async (importOriginal) => {
 // The router's first route match resolves asynchronously even with no
 // loaders, so router.load() is awaited before render() to avoid an initial
 // blank paint (see https://tanstack.com/router/latest/docs/framework/react/guide/testing).
-async function renderTaskTreeList(
-  tree: TreeNode[],
-  extraProps: Partial<TaskTreeListProps> = {},
-) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  })
-  const rootRoute = createRootRoute({
-    validateSearch: (search: Record<string, unknown>) => search,
-    component: () => (
-      <TaskTreeList
-        isLoading={false}
-        tree={tree}
-        tasks={[]}
-        sessionsByTaskId={new Map()}
-        {...extraProps}
-      />
-    ),
-  })
-  const router = createRouter({
-    routeTree: rootRoute,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  })
-  await router.load()
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  )
-}
-
-async function renderGroupedTaskTreeLists(
+async function renderTaskTreeLists(
   lists: Array<{
     tree: TreeNode[]
     props: Partial<TaskTreeListProps>
@@ -122,6 +90,13 @@ async function renderGroupedTaskTreeLists(
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
+}
+
+async function renderTaskTreeList(
+  tree: TreeNode[],
+  extraProps: Partial<TaskTreeListProps> = {},
+) {
+  return renderTaskTreeLists([{ tree, props: extraProps }])
 }
 
 beforeEach(() => {
@@ -296,7 +271,7 @@ describe('TaskTreeList', () => {
       number: 2,
       title: 'Second Group Task',
     })
-    await renderGroupedTaskTreeLists([
+    await renderTaskTreeLists([
       {
         tree: [firstRoot],
         props: { enableKeyboardShortcuts: false },

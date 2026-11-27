@@ -457,6 +457,17 @@ describe('parseSearchQuery and buildSearchQuery round-trip', () => {
     })
   })
 
+  it('round-trips an unquoted field with an unset value', () => {
+    expect(
+      parseSearchQuery(
+        buildSearchQuery({ freeText: '', fields: { Unassigned: null } }),
+      ),
+    ).toEqual({
+      freeText: '',
+      fields: { Unassigned: null },
+    })
+  })
+
   it('preserves consecutive backslashes in an existing quoted label query', () => {
     expect(parseSearchQuery('label:"Team\\\\Ops"')).toEqual({
       freeText: '',

@@ -14,7 +14,10 @@ import {
   makeProjectField,
   makeProjectFieldOption,
 } from '#components/project/project-test-fixtures'
-import { makeTask } from '#components/task/task-row-test-fixtures'
+import {
+  makeTask,
+  makeTaskFieldValue,
+} from '#components/task/task-row-test-fixtures'
 import type { ProjectField } from '#hooks/use-project-fields'
 import type { ProjectDetail, ProjectTask } from '#hooks/use-projects'
 import { projectKeys } from '#hooks/use-projects'
@@ -92,6 +95,40 @@ const sampleProjectField = makeProjectField({
   ],
 })
 const sampleProjectFields = [sampleProjectField]
+
+const groupedStoryTasks = [
+  makeProjectTask({
+    id: 'group-alpha',
+    number: 6,
+    title: 'Sort incoming requests',
+    fieldValues: [
+      makeTaskFieldValue({
+        fieldId: sampleProjectField.id,
+        fieldName: sampleProjectField.name,
+        optionId: 'option-alpha',
+        optionName: 'Alpha',
+      }),
+    ],
+  }),
+  makeProjectTask({
+    id: 'group-beta',
+    number: 7,
+    title: 'Review pending changes',
+    fieldValues: [
+      makeTaskFieldValue({
+        fieldId: sampleProjectField.id,
+        fieldName: sampleProjectField.name,
+        optionId: 'option-beta',
+        optionName: 'Beta',
+      }),
+    ],
+  }),
+  makeProjectTask({
+    id: 'group-unset',
+    number: 8,
+    title: 'Prepare a work plan',
+  }),
+]
 
 function Providers({
   project,
@@ -259,7 +296,7 @@ export const GroupedByField: Story = {
   name: 'a project task list shows groups for each field option and unset tasks',
   args: {
     project: { ...baseProject },
-    tasks: sampleTasks,
+    tasks: groupedStoryTasks,
     projectFields: sampleProjectFields,
     groupByField: sampleProjectField,
   },
