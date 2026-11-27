@@ -468,6 +468,17 @@ describe('TaskFilterChipRow', () => {
     })
   })
 
+  it('shows initially applied project field filters in the query input', () => {
+    renderRow({
+      parsed: makeParsedQuery({ fields: { 'Review stage': 'Draft' } }),
+    })
+
+    const input = screen.getByRole('textbox', { name: 'Filter query' })
+    const inputValue = input instanceof HTMLInputElement ? input.value : null
+
+    expect(inputValue).toEqual('field:"Review stage=Draft" ')
+  })
+
   it('does not duplicate a typed token already applied to the query', async () => {
     const { onQueryChange } = renderRow()
     const user = userEvent.setup()

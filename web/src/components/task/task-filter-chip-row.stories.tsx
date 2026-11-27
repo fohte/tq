@@ -165,6 +165,13 @@ export const FreeTextInInput: Story = {
   },
 }
 
+export const FieldsSelected: Story = {
+  name: 'the search input shows an applied project field filter',
+  args: {
+    parsed: makeParsedQuery({ fields: { 'Review stage': 'Draft' } }),
+  },
+}
+
 export const SyntaxHelpFocused: Story = {
   name: 'the focused filter input displays syntax help',
   args: {
